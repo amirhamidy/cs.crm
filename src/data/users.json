@@ -1,0 +1,25 @@
+{
+    "users": [
+        {
+            "id": 1,
+            "username": "admin",
+            "password": "admin123",
+            "role": "admin",
+            "name": "مدیر سیستم"
+        },
+        {
+            "id": 2,
+            "username": "karfarma",
+            "password": "karfarma123",
+            "role": "employer",
+            "name": "علی رضایی"
+        },
+        {
+            "id": 3,
+            "username": "karmond1",
+            "password": "karmond123",
+            "role": "employee",
+            "name": "سارا محمدی"
+        }
+    ]
+}
