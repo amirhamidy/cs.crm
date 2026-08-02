@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
     CheckCircle2,
@@ -8,8 +8,9 @@ import {
     Clock,
     ListTodo,
     Calendar,
-    Tag,
-    ChevronDown,
+    ChevronLeft,
+    ChevronRight,
+    X,
 } from "lucide-react";
 
 type TaskStatus = "done" | "pending_approval" | "not_done";
@@ -19,202 +20,293 @@ interface Task {
     title: string;
     description?: string;
     dueDate?: string;
-    tags?: string[];
     status: TaskStatus;
 }
 
 interface TasksWidgetProps {
     tasks?: Task[];
-    onStatusChange?: (taskId: string, status: TaskStatus) => void;
 }
 
-const statusConfig: Record<
-    TaskStatus,
-    {
-        label: string;
-        icon: React.ReactNode;
-        darkClass: string;
-        lightClass: string;
-    }
-> = {
+const statusConfig: Record<TaskStatus, { label: string; icon: React.ReactNode; className: string }> = {
     done: {
         label: "انجام شده",
-        icon: <CheckCircle2 className="w-4 h-4" />,
-        darkClass: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20",
-        lightClass: "text-emerald-700 bg-emerald-50 border-emerald-200",
+        icon: <CheckCircle2 className="w-3.5 h-3.5" />,
+        className: "text-emerald-500 dark:text-emerald-400",
     },
     pending_approval: {
-        label: "منتظر تایید کارفرما",
-        icon: <Clock className="w-4 h-4" />,
-        darkClass: "text-amber-400 bg-amber-500/10 border-amber-500/20",
-        lightClass: "text-amber-700 bg-amber-50 border-amber-200",
+        label: "در انتظار تایید",
+        icon: <Clock className="w-3.5 h-3.5" />,
+        className: "text-amber-500 dark:text-amber-400",
     },
     not_done: {
         label: "انجام نشده",
-        icon: <Circle className="w-4 h-4" />,
-        darkClass: "text-gray-400 bg-white/5 border-white/10",
-        lightClass: "text-gray-500 bg-gray-100 border-gray-200",
+        icon: <Circle className="w-3.5 h-3.5" />,
+        className: "text-gray-400 dark:text-gray-500",
     },
 };
 
-export default function TasksWidget({ tasks = [], onStatusChange }: TasksWidgetProps) {
-    const [menuOpen, setMenuOpen] = useState(false);
+const statusBar: Record<TaskStatus, string> = {
+    done: "bg-emerald-500",
+    pending_approval: "bg-amber-500",
+    not_done: "bg-gray-300 dark:bg-gray-700",
+};
 
-    const task = tasks[0] ?? null;
+function DescriptionModal({
+    open,
+    title,
+    description,
+    onClose,
+}: {
+    open: boolean;
+    title: string;
+    description: string;
+    onClose: () => void;
+}) {
+    useEffect(() => {
+        if (!open) return;
+        const handler = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+        window.addEventListener("keydown", handler);
+        return () => window.removeEventListener("keydown", handler);
+    }, [open, onClose]);
+
+    return (
+        <AnimatePresence>
+            {open && (
+                <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.18 }}
+                    className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+                    onClick={onClose}
+                >
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.94, y: 12 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.94, y: 12 }}
+                        transition={{ duration: 0.2, ease: "easeOut" }}
+                        onClick={(e) => e.stopPropagation()}
+                        className="w-full max-w-md rounded-2xl border dark:border-white/[0.07] border-gray-100 dark:bg-[#111118] bg-white p-6 shadow-2xl"
+                    >
+                        <div className="flex items-start justify-between gap-4 mb-4">
+                            <h3 className="text-base font-bold dark:text-white text-gray-900 leading-relaxed">
+                                {title}
+                            </h3>
+                            <button
+                                onClick={onClose}
+                                className="p-1.5 rounded-lg shrink-0 dark:hover:bg-white/5 hover:bg-gray-100 transition-colors"
+                            >
+                                <X className="w-4 h-4 dark:text-gray-400 text-gray-500" />
+                            </button>
+                        </div>
+                        <p className="text-sm leading-7 dark:text-gray-400 text-gray-600 whitespace-pre-wrap">
+                            {description}
+                        </p>
+                    </motion.div>
+                </motion.div>
+            )}
+        </AnimatePresence>
+    );
+}
+
+function TruncatedText({
+    text,
+    onExpand,
+}: {
+    text: string;
+    onExpand: () => void;
+}) {
+    const ref = useRef<HTMLParagraphElement>(null);
+    const [isClamped, setIsClamped] = useState(false);
+
+    useEffect(() => {
+        const el = ref.current;
+        if (!el) return;
+        setIsClamped(el.scrollHeight > el.clientHeight + 1);
+    }, [text]);
+
+    return (
+        <div>
+            <p
+                ref={ref}
+                className="text-sm leading-6 dark:text-gray-400 text-gray-500 line-clamp-2"
+            >
+                {text}
+            </p>
+            {isClamped && (
+                <button
+                    onClick={onExpand}
+                    className="text-xs font-medium dark:text-violet-400 text-violet-500 mt-1 hover:underline"
+                >
+                    بیشتر...
+                </button>
+            )}
+        </div>
+    );
+}
+
+export default function TasksWidget({ tasks = [] }: TasksWidgetProps) {
+    const recent = tasks.slice(0, 5);
+    const [index, setIndex] = useState(0);
+    const [direction, setDirection] = useState(0);
+    const [modalOpen, setModalOpen] = useState(false);
+
+    const task = recent[index] ?? null;
+    const total = recent.length;
+
+    useEffect(() => {
+        setIndex(0);
+    }, [tasks]);
+
+    function go(dir: 1 | -1) {
+        const next = index + dir;
+        if (next < 0 || next >= total) return;
+        setDirection(dir);
+        setIndex(next);
+    }
+
+    const variants = {
+        enter: (d: number) => ({ opacity: 0, x: d > 0 ? -24 : 24 }),
+        center: { opacity: 1, x: 0 },
+        exit: (d: number) => ({ opacity: 0, x: d > 0 ? 24 : -24 }),
+    };
+
     const s = task ? statusConfig[task.status] : null;
 
     return (
-        <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, ease: "easeOut" }}
-            className="rounded-2xl border  dark:border-white/[0.07] dark:bg-[#111118] border-gray-100 bg-white shadow-sm"
-        >
-            <div className="flex items-center gap-3 px-5 py-4 border-b dark:border-white/[0.06] border-gray-100">
-                <div className="p-2 rounded-xl dark:bg-violet-500/10 dark:border-violet-500/20 bg-violet-50 border-violet-200 border">
-                    <ListTodo className="w-4 h-4 dark:text-violet-400 text-violet-500" />
-                </div>
-                <div>
-                    <h2 className="text-sm font-semibold dark:text-white text-gray-900">
-                        وظیفه من
-                    </h2>
-                    <p className="text-xs dark:text-gray-500 text-gray-400 mt-0.5">
-                        دستور ارسال‌شده توسط کارفرما
-                    </p>
-                </div>
-            </div>
+        <>
+            {task && (
+                <DescriptionModal
+                    open={modalOpen}
+                    title={task.title}
+                    description={task.description ?? ""}
+                    onClose={() => setModalOpen(false)}
+                />
+            )}
 
-            <div className="p-5">
-                <AnimatePresence mode="wait">
-                    {!task ? (
-                        <motion.div
-                            key="empty"
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            className="flex flex-col items-center justify-center py-10 text-center"
-                        >
-                            <div className="w-12 h-12 rounded-2xl flex items-center justify-center mb-3 dark:bg-white/5 bg-gray-50 border dark:border-white/10 border-gray-200">
-                                <ListTodo className="w-5 h-5 dark:text-gray-600 text-gray-300" />
-                            </div>
-                            <p className="text-sm dark:text-gray-500 text-gray-400">
-                                وظیفه‌ای ثبت نشده
-                            </p>
-                            <p className="text-xs mt-1 dark:text-gray-600 text-gray-300">
-                                وظایف از طرف کارفرما اضافه می‌شوند
-                            </p>
-                        </motion.div>
-                    ) : (
-                        <motion.div
-                            key={task.id}
-                            initial={{ opacity: 0, y: 8 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0 }}
-                            transition={{ duration: 0.3 }}
-                        >
-                            <p className="text-base font-bold leading-relaxed dark:text-white text-gray-900">
-                                {task.title}
-                            </p>
+            <motion.div
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.35, ease: "easeOut" }}
+                className="rounded-2xl border dark:border-white/[0.07] border-gray-100 dark:bg-[#111118] bg-white overflow-hidden flex flex-col"
+                style={{ height: 240 }}
+            >
+                <div className="flex items-center justify-between px-5 py-4 shrink-0">
+                    <div className="flex items-center gap-2.5">
+                        <div className="p-1.5 rounded-lg dark:bg-violet-500/10 bg-violet-50">
+                            <ListTodo className="w-4 h-4 dark:text-violet-400 text-violet-500" />
+                        </div>
+                        <span className="text-sm font-bold dark:text-white text-gray-900">
+                            وظایف من
+                        </span>
+                    </div>
 
-                            {task.description && (
-                                <p className="mt-2 text-sm leading-relaxed dark:text-gray-400 text-gray-500">
-                                    {task.description}
+                    {total > 0 && (
+                        <div className="flex items-center gap-1">
+                            <button
+                                onClick={() => go(1)}
+                                disabled={index >= total - 1}
+                                className="p-1 rounded-lg transition-colors disabled:opacity-25 dark:hover:bg-white/5 hover:bg-gray-100"
+                            >
+                                <ChevronRight className="w-4 h-4 dark:text-gray-400 text-gray-500" />
+                            </button>
+                            <span className="text-xs tabular-nums dark:text-gray-500 text-gray-400 min-w-[32px] text-center">
+                                {index + 1}/{total}
+                            </span>
+                            <button
+                                onClick={() => go(-1)}
+                                disabled={index <= 0}
+                                className="p-1 rounded-lg transition-colors disabled:opacity-25 dark:hover:bg-white/5 hover:bg-gray-100"
+                            >
+                                <ChevronLeft className="w-4 h-4 dark:text-gray-400 text-gray-500" />
+                            </button>
+                        </div>
+                    )}
+                </div>
+
+                <div className="flex-1 px-5 overflow-hidden">
+                    <AnimatePresence mode="wait" custom={direction}>
+                        {!task ? (
+                            <motion.div
+                                key="empty"
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                className="flex flex-col items-center justify-center h-full gap-2"
+                            >
+                                <ListTodo className="w-8 h-8 dark:text-gray-700 text-gray-200" />
+                                <p className="text-sm dark:text-gray-600 text-gray-400">
+                                    وظیفه‌ای ثبت نشده
                                 </p>
-                            )}
+                            </motion.div>
+                        ) : (
+                            <motion.div
+                                key={task.id}
+                                custom={direction}
+                                variants={variants}
+                                initial="enter"
+                                animate="center"
+                                exit="exit"
+                                transition={{ duration: 0.22, ease: "easeInOut" }}
+                                className="flex flex-col gap-2.5 h-full"
+                            >
+                                <div className={`h-0.5 w-full rounded-full shrink-0 ${statusBar[task.status]}`} />
 
-                            {(task.dueDate || (task.tags && task.tags.length > 0)) && (
-                                <div className="flex flex-wrap items-center gap-2 mt-4">
-                                    {task.dueDate && (
-                                        <span className="flex items-center gap-1.5 text-xs dark:text-gray-500 text-gray-400">
+                                <p className="text-base font-bold leading-relaxed dark:text-white text-gray-900 line-clamp-1">
+                                    {task.title}
+                                </p>
+
+                                <div className="flex-1 min-h-0">
+                                    {task.description ? (
+                                        <TruncatedText
+                                            text={task.description}
+                                            onExpand={() => setModalOpen(true)}
+                                        />
+                                    ) : (
+                                        <p className="text-sm dark:text-gray-600 text-gray-300 italic">
+                                            توضیحاتی ثبت نشده
+                                        </p>
+                                    )}
+                                </div>
+
+                                <div className="flex items-center justify-between pb-3 shrink-0">
+                                    {task.dueDate ? (
+                                        <span className="flex items-center gap-1.5 text-xs font-medium dark:text-gray-500 text-gray-400">
                                             <Calendar className="w-3.5 h-3.5" />
                                             {task.dueDate}
                                         </span>
+                                    ) : (
+                                        <span />
                                     )}
-                                    {task.tags?.map((tag) => (
-                                        <span
-                                            key={tag}
-                                            className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-full border dark:text-gray-400 dark:bg-white/5 dark:border-white/10 text-gray-500 bg-gray-100 border-gray-200"
-                                        >
-                                            <Tag className="w-3 h-3" />
-                                            {tag}
-                                        </span>
-                                    ))}
-                                </div>
-                            )}
 
-                            <div className="mt-5 pt-4 border-t dark:border-white/[0.06] border-gray-100 flex items-center justify-between gap-3">
-                                <span className="text-xs dark:text-gray-500 text-gray-400">
-                                    وضعیت
-                                </span>
-
-                                <div className="relative">
-                                    <button
-                                        onClick={() => setMenuOpen((p) => !p)}
-                                        className={`inline-flex items-center gap-2 text-sm font-semibold px-3.5 py-2 rounded-xl border transition-all ${typeof window !== "undefined" &&
-                                                document.documentElement.classList.contains("dark")
-                                                ? s!.darkClass
-                                                : s!.lightClass
-                                            }`}
-                                    >
+                                    <span className={`flex items-center gap-1.5 text-xs font-bold ${s!.className}`}>
                                         {s!.icon}
                                         {s!.label}
-                                        <ChevronDown
-                                            className={`w-3.5 h-3.5 transition-transform ${menuOpen ? "rotate-180" : ""
-                                                }`}
-                                        />
-                                    </button>
-
-                                    <AnimatePresence>
-                                        {menuOpen && (
-                                            <>
-                                                <div
-                                                    className="fixed inset-0 z-10"
-                                                    onClick={() => setMenuOpen(false)}
-                                                />
-                                                <motion.div
-                                                    initial={{ opacity: 0, scale: 0.95, y: -4 }}
-                                                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                                                    exit={{ opacity: 0, scale: 0.95, y: -4 }}
-                                                    transition={{ duration: 0.15 }}
-                                                    className="absolute left-0 top-12 z-20 min-w-[220px] rounded-2xl border shadow-xl overflow-hidden dark:border-white/10 dark:bg-[#18181f] border-gray-100 bg-white shadow-gray-200/80"
-                                                >
-                                                    <p className="px-4 pt-3 pb-2 text-[10px] uppercase tracking-widest dark:text-gray-600 text-gray-400">
-                                                        انتخاب وضعیت
-                                                    </p>
-                                                    {(
-                                                        Object.entries(statusConfig) as [
-                                                            TaskStatus,
-                                                            (typeof statusConfig)[TaskStatus]
-                                                        ][]
-                                                    ).map(([key, cfg]) => (
-                                                        <button
-                                                            key={key}
-                                                            onClick={() => {
-                                                                onStatusChange?.(task.id, key);
-                                                                setMenuOpen(false);
-                                                            }}
-                                                            className={`w-full flex items-center gap-2.5 px-4 py-3 text-sm transition-colors ${task.status === key
-                                                                    ? "font-semibold dark:text-white text-gray-900 dark:bg-white/5 bg-gray-50"
-                                                                    : "dark:text-gray-400 dark:hover:bg-white/5 text-gray-500 hover:bg-gray-50"
-                                                                }`}
-                                                        >
-                                                            {cfg.icon}
-                                                            {cfg.label}
-                                                            {task.status === key && (
-                                                                <CheckCircle2 className="w-3.5 h-3.5 mr-auto" />
-                                                            )}
-                                                        </button>
-                                                    ))}
-                                                </motion.div>
-                                            </>
-                                        )}
-                                    </AnimatePresence>
+                                    </span>
                                 </div>
-                            </div>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
-            </div>
-        </motion.div>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+                </div>
+
+                {total > 1 && (
+                    <div className="flex items-center justify-center gap-1 pb-3 shrink-0">
+                        {recent.map((_, i) => (
+                            <button
+                                key={i}
+                                onClick={() => {
+                                    setDirection(i > index ? 1 : -1);
+                                    setIndex(i);
+                                }}
+                                className={`rounded-full transition-all duration-200 ${i === index
+                                        ? "w-4 h-1.5 dark:bg-violet-400 bg-violet-500"
+                                        : "w-1.5 h-1.5 dark:bg-white/10 bg-gray-200"
+                                    }`}
+                            />
+                        ))}
+                    </div>
+                )}
+            </motion.div>
+        </>
     );
 }

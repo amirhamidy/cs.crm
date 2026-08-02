@@ -7,6 +7,7 @@ import PersianCalendar from "@/components/user/dashboard/PersianCalendar";
 import CalendarNoteModal, { loadAllNotes, type CalendarNote } from "@/components/user/dashboard/CalendarNoteModal";
 import QuickNotes from "@/components/user/dashboard/QuickNotes";
 import ActivityFeed from "@/components/user/dashboard/ActivityFeed";
+import SalesTargetWidget from "@/components/charts/SalesTargetWidget";
 
 type TaskStatus = "done" | "pending_approval" | "not_done";
 
@@ -29,7 +30,7 @@ const mockTasks: Task[] = [
     {
         id: "1",
         title: "تهیه گزارش فروش هفتگی",
-        description: "گزارش کامل فروش هفته جاری رو تا پنجشنبه آماده کن و بفرست.",
+        description: "گزارش کامل فروش هفته جاری رو تا پنجشنبه آماده کن و بفرست. گزارش کامل فروش هفته جاری رو تا پنجشنبه آماده کن و بفرست. گزارش کامل فروش هفته جاری رو تا پنجشنبه آماده کن و بفرست. گزارش کامل فروش هفته جاری رو تا پنجشنبه آماده کن و بفرست. گزارش کامل فروش هفته جاری رو تا پنجشنبه آماده کن و بفرست.",
         dueDate: "۱۴۰۵/۰۵/۱۵",
         tags: ["گزارش", "فروش"],
         status: "pending_approval",
@@ -90,6 +91,7 @@ export default function EmployeeDashboardPage() {
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     <div className="lg:col-span-2 space-y-6">
                         <TasksWidget tasks={tasks} onStatusChange={handleStatusChange} />
+                        <SalesTargetWidget />
                         <ActivityFeed />
                     </div>
 
