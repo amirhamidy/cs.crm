@@ -1,4 +1,3 @@
-// PersianCalendar.tsx
 "use client";
 
 import { useState, useMemo, useRef, useEffect } from "react";
@@ -24,6 +23,8 @@ const MONTHS = [
     "مهر", "آبان", "آذر", "دی", "بهمن", "اسفند",
 ];
 const WEEKDAYS = ["ش", "ی", "د", "س", "چ", "پ", "ج"];
+const WEEKDAY_NAMES = ["شنبه", "یک‌شنبه", "دوشنبه", "سه‌شنبه", "چهارشنبه", "پنج‌شنبه", "جمعه"];
+const ease = [0.25, 0, 0, 1] as const;
 
 function toJalali(gy: number, gm: number, gd: number): [number, number, number] {
     const gDaysInMonth = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
@@ -31,7 +32,7 @@ function toJalali(gy: number, gm: number, gd: number): [number, number, number] 
     const isGregorianLeap = (y: number) => (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0;
     const isJalaliLeap = (y: number) => {
         const cycle = y % 33;
-        return cycle === 1 || cycle === 5 || cycle === 9 || cycle === 13 || cycle === 17 || cycle === 22 || cycle === 26 || cycle === 30;
+        return [1, 5, 9, 13, 17, 22, 26, 30].includes(cycle);
     };
 
     let gregorianDayOfYear = gd;
@@ -90,7 +91,7 @@ function toGregorian(jy: number, jm: number, jd: number): [number, number, numbe
     const isGregorianLeap = (y: number) => (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0;
     const isJalaliLeap = (y: number) => {
         const cycle = y % 33;
-        return cycle === 1 || cycle === 5 || cycle === 9 || cycle === 13 || cycle === 17 || cycle === 22 || cycle === 26 || cycle === 30;
+        return [1, 5, 9, 13, 17, 22, 26, 30].includes(cycle);
     };
 
     let totalJalaliDays = jd;
@@ -138,43 +139,44 @@ function firstWeekday(jy: number, jm: number): number {
 
 function isLeap(jy: number) {
     const cycle = jy % 33;
-    return cycle === 1 || cycle === 5 || cycle === 9 || cycle === 13 || cycle === 17 || cycle === 22 || cycle === 26 || cycle === 30;
+    return [1, 5, 9, 13, 17, 22, 26, 30].includes(cycle);
 }
+
 function daysInMonth(jm: number, jy: number) {
     return jm <= 6 ? 31 : jm <= 11 ? 30 : isLeap(jy) ? 30 : 29;
 }
-function todayJalali(): [number, number, number] {
-    const n = new Date();
-    return toJalali(n.getFullYear(), n.getMonth() + 1, n.getDate());
-}
+
 function p(n: number | string) {
     return String(n).replace(/\d/g, d => "۰۱۲۳۴۵۶۷۸۹"[+d]);
 }
 
-const ease = [0.25, 0, 0, 1] as const;
-
-const WEEKDAY_NAMES = ["شنبه", "یک‌شنبه", "دوشنبه", "سه‌شنبه", "چهارشنبه", "پنج‌شنبه", "جمعه"];
-
 function getWeekdayName(jy: number, jm: number, jd: number): string {
     const [gy, gm, gd] = toGregorian(jy, jm, jd);
     const dow = new Date(gy, gm - 1, gd).getDay();
-    const jalaliDow = dow === 6 ? 0 : dow + 1;
-    return WEEKDAY_NAMES[jalaliDow];
+    return WEEKDAY_NAMES[dow === 6 ? 0 : dow + 1];
 }
+
+// ← یه بار محاسبه میشه، نه هر render
+const TODAY = (() => {
+    const n = new Date();
+    return toJalali(n.getFullYear(), n.getMonth() + 1, n.getDate());
+})();
 
 interface DatePickerModalProps {
     currentYear: number;
     currentMonth: number;
-    todayYear: number;
     onSelect: (year: number, month: number) => void;
     onClose: () => void;
 }
 
-function DatePickerModal({ currentYear, currentMonth, todayYear, onSelect, onClose }: DatePickerModalProps) {
+function DatePickerModal({ currentYear, currentMonth, onSelect, onClose }: DatePickerModalProps) {
     const [draftYear, setDraftYear] = useState(currentYear);
     const [draftMonth, setDraftMonth] = useState(currentMonth);
     const yearListRef = useRef<HTMLDivElement>(null);
-    const years = Array.from({ length: 20 }, (_, i) => todayYear - 5 + i);
+    const years = useMemo(
+        () => Array.from({ length: 20 }, (_, i) => TODAY[0] - 5 + i),
+        []
+    );
 
     useEffect(() => {
         const handler = (e: KeyboardEvent) => {
@@ -189,9 +191,7 @@ function DatePickerModal({ currentYear, currentMonth, todayYear, onSelect, onClo
         const idx = years.indexOf(draftYear);
         if (idx === -1) return;
         const item = yearListRef.current.children[idx] as HTMLElement;
-        if (item) {
-            item.scrollIntoView({ block: "nearest", behavior: "smooth" });
-        }
+        item?.scrollIntoView({ block: "nearest", behavior: "smooth" });
     }, []);
 
     function handleConfirm() {
@@ -239,9 +239,7 @@ function DatePickerModal({ currentYear, currentMonth, todayYear, onSelect, onClo
 
                     <div className="p-4 space-y-4">
                         <div>
-                            <p className="text-[11px] font-semibold text-gray-400 dark:text-gray-500 mb-2 tracking-wide">
-                                ماه
-                            </p>
+                            <p className="text-[11px] font-semibold text-gray-400 dark:text-gray-500 mb-2 tracking-wide">ماه</p>
                             <div className="grid grid-cols-4 gap-1.5">
                                 {MONTHS.map((m, i) => {
                                     const isSelected = draftMonth === i + 1;
@@ -250,15 +248,12 @@ function DatePickerModal({ currentYear, currentMonth, todayYear, onSelect, onClo
                                         <button
                                             key={i}
                                             onClick={() => setDraftMonth(i + 1)}
-                                            className={`
-                                                py-2 rounded-xl text-xs font-medium transition-all duration-150
-                                                ${isSelected
+                                            className={`py-2 rounded-xl text-xs font-medium transition-all duration-150 ${isSelected
                                                     ? "bg-indigo-500 text-white shadow-sm shadow-indigo-200 dark:shadow-indigo-500/20"
                                                     : isCurrentMonth
                                                         ? "bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-500/20"
                                                         : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5"
-                                                }
-                                            `}
+                                                }`}
                                         >
                                             {m}
                                         </button>
@@ -270,29 +265,24 @@ function DatePickerModal({ currentYear, currentMonth, todayYear, onSelect, onClo
                         <div className="h-px bg-gray-100 dark:bg-white/[0.05]" />
 
                         <div>
-                            <p className="text-[11px] font-semibold text-gray-400 dark:text-gray-500 mb-2 tracking-wide">
-                                سال
-                            </p>
+                            <p className="text-[11px] font-semibold text-gray-400 dark:text-gray-500 mb-2 tracking-wide">سال</p>
                             <div
                                 ref={yearListRef}
                                 className="grid grid-cols-4 gap-1.5 max-h-[108px] overflow-y-auto pr-0.5 scrollbar-thin scrollbar-thumb-gray-200 dark:scrollbar-thumb-white/10"
                             >
                                 {years.map(y => {
                                     const isSelected = draftYear === y;
-                                    const isCurrentYear = currentYear === y;
+                                    const isCurrentYear = currentYear === y && !isSelected;
                                     return (
                                         <button
                                             key={y}
                                             onClick={() => setDraftYear(y)}
-                                            className={`
-                                                py-2 rounded-xl text-xs font-medium transition-all duration-150
-                                                ${isSelected
+                                            className={`py-2 rounded-xl text-xs font-medium transition-all duration-150 ${isSelected
                                                     ? "bg-indigo-500 text-white shadow-sm shadow-indigo-200 dark:shadow-indigo-500/20"
-                                                    : isCurrentYear && !isSelected
+                                                    : isCurrentYear
                                                         ? "bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-500/20"
                                                         : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5"
-                                                }
-                                            `}
+                                                }`}
                                         >
                                             {p(y)}
                                         </button>
@@ -323,7 +313,7 @@ function DatePickerModal({ currentYear, currentMonth, todayYear, onSelect, onClo
 }
 
 export default function PersianCalendar({ onDayClick, notes = {} }: PersianCalendarProps) {
-    const [ty, tm, td] = todayJalali();
+    const [ty, tm, td] = TODAY;
     const [vy, setVy] = useState(ty);
     const [vm, setVm] = useState(tm);
     const [sel, setSel] = useState<[number, number, number]>([ty, tm, td]);
@@ -335,7 +325,8 @@ export default function PersianCalendar({ onDayClick, notes = {} }: PersianCalen
         let m = vm + d, y = vy;
         if (m > 12) { m = 1; y++; }
         if (m < 1) { m = 12; y--; }
-        setVm(m); setVy(y);
+        setVm(m);
+        setVy(y);
     }
 
     function clickDay(day: number) {
@@ -343,23 +334,21 @@ export default function PersianCalendar({ onDayClick, notes = {} }: PersianCalen
         onDayClick(vy, vm, day);
     }
 
-    const dim = daysInMonth(vm, vy);
-    const fw = firstWeekday(vy, vm);
-
-    const cells = useMemo(() => {
+    // ← فقط وقتی vy یا vm عوض میشه recompute میشه
+    const { dim, fw, cells } = useMemo(() => {
+        const dim = daysInMonth(vm, vy);
+        const fw = firstWeekday(vy, vm);
         const arr: (number | null)[] = Array.from({ length: fw }, () => null);
         for (let d = 1; d <= dim; d++) arr.push(d);
         while (arr.length % 7 !== 0) arr.push(null);
-        return arr;
-    }, [vy, vm, fw, dim]);
+        return { dim, fw, cells: arr };
+    }, [vy, vm]);
 
     const slideVar = {
         enter: (d: number) => ({ opacity: 0, x: d > 0 ? -14 : 14 }),
         center: { opacity: 1, x: 0 },
         exit: (d: number) => ({ opacity: 0, x: d > 0 ? 14 : -14 }),
     };
-
-    const selectedWeekday = sel ? getWeekdayName(sel[0], sel[1], sel[2]) : "";
 
     return (
         <>
@@ -459,36 +448,28 @@ export default function PersianCalendar({ onDayClick, notes = {} }: PersianCalen
                                     <button
                                         key={key}
                                         onClick={() => clickDay(day)}
-                                        className={`
-                                            relative flex items-center justify-center h-10 mx-0.5 rounded-xl
-                                            transition-colors duration-150
-                                            ${isSel
+                                        className={`relative flex items-center justify-center h-10 mx-0.5 rounded-xl transition-colors duration-150 ${isSel
                                                 ? "bg-indigo-500 text-white shadow-sm shadow-indigo-200 dark:shadow-indigo-500/20"
                                                 : isToday
                                                     ? "bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-300"
                                                     : isJumah
                                                         ? "text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/8"
                                                         : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5"
-                                            }
-                                        `}
+                                            }`}
                                     >
                                         <span className={`text-xs leading-none ${isToday ? "font-bold" : "font-medium"}`}>
                                             {p(day)}
                                         </span>
 
                                         {isToday && !isSel && (
-                                            <span className="absolute bottom-1.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-indigo-400 dark:bg-indigo-400" />
+                                            <span className="absolute bottom-1.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-indigo-400" />
                                         )}
 
                                         {noteCount > 0 && (
-                                            <span className={`
-                                                absolute top-1 right-1 min-w-[14px] h-[14px] px-[3px]
-                                                rounded-full text-[9px] font-bold leading-[14px] text-center
-                                                ${isSel
+                                            <span className={`absolute top-1 right-1 min-w-[14px] h-[14px] px-[3px] rounded-full text-[9px] font-bold leading-[14px] text-center ${isSel
                                                     ? "bg-white/25 text-white"
                                                     : "bg-indigo-100 dark:bg-indigo-500/20 text-indigo-500 dark:text-indigo-300"
-                                                }
-                                            `}>
+                                                }`}>
                                                 {noteCount > 9 ? "۹+" : p(noteCount)}
                                             </span>
                                         )}
@@ -501,7 +482,12 @@ export default function PersianCalendar({ onDayClick, notes = {} }: PersianCalen
                     {(vy !== ty || vm !== tm) && (
                         <div className="mt-2 flex justify-center">
                             <button
-                                onClick={() => { setVy(ty); setVm(tm); setSel([ty, tm, td]); onDayClick(ty, tm, td); }}
+                                onClick={() => {
+                                    setVy(ty);
+                                    setVm(tm);
+                                    setSel([ty, tm, td]);
+                                    onDayClick(ty, tm, td);
+                                }}
                                 className="text-[11px] text-indigo-500 dark:text-indigo-400 hover:text-indigo-600 dark:hover:text-indigo-300 py-1 px-3 rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-500/8 transition-colors"
                             >
                                 برو به امروز
@@ -515,11 +501,10 @@ export default function PersianCalendar({ onDayClick, notes = {} }: PersianCalen
                 <DatePickerModal
                     currentYear={vy}
                     currentMonth={vm}
-                    todayYear={ty}
-                    onSelect={(y, m) => {
-                        setDir(y !== vy ? (y > vy ? -1 : 1) : (m > vm ? -1 : 1));
-                        setVy(y);
-                        setVm(m);
+                    onSelect={(year, month) => {
+                        setDir(0);
+                        setVy(year);
+                        setVm(month);
                     }}
                     onClose={() => setPicker(false)}
                 />

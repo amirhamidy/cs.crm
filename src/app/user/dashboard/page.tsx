@@ -1,13 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import DashboardHero from "@/components/user/dashboard/DashboardHero";
 import TasksWidget from "@/components/user/dashboard/TasksWidget";
 import PersianCalendar from "@/components/user/dashboard/PersianCalendar";
 import CalendarNoteModal, { loadAllNotes, type CalendarNote } from "@/components/user/dashboard/CalendarNoteModal";
-import QuickNotes from "@/components/user/dashboard/QuickNotes";
-import ActivityFeed from "@/components/user/dashboard/ActivityFeed";
 import SalesTargetWidget from "@/components/charts/SalesTargetWidget";
+import CompanyNews from "@/components/user/dashboard/CompanyNews";
 
 type TaskStatus = "done" | "pending_approval" | "not_done";
 
@@ -85,14 +83,13 @@ export default function EmployeeDashboardPage() {
 
     return (
         <div className="min-h-screen bg-gray-50 dark:bg-[#0a0a12]" dir="rtl">
-            <div className="max-w-7xl mx-auto p-6 space-y-6">
-                <DashboardHero user={user} stats={stats} />
+            <div className="space-y-6">
+                
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     <div className="lg:col-span-2 space-y-6">
                         <TasksWidget tasks={tasks} onStatusChange={handleStatusChange} />
                         <SalesTargetWidget />
-                        <ActivityFeed />
                     </div>
 
                     <div className="space-y-6">
@@ -100,7 +97,7 @@ export default function EmployeeDashboardPage() {
                             onDayClick={handleDayClick}
                             notes={allNotes}
                         />
-                        <QuickNotes />
+                        <CompanyNews />
                     </div>
                 </div>
             </div>
