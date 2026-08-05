@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Building2, ChevronLeft, Users, GitBranch, Calendar, Trash2 } from "lucide-react";
+import { ChevronLeft, Users, GitBranch, Calendar, Trash2, ArrowLeft } from "lucide-react";
+import { useTheme } from "next-themes";
 import { Department } from "./types";
 
 interface Props {
@@ -11,56 +12,103 @@ interface Props {
     isSelected: boolean;
     onSelect: () => void;
     onDelete: () => void;
+    onView: () => void;
 }
 
-export default function DepartmentCard({ department, index, isSelected, onSelect, onDelete }: Props) {
+export default function DepartmentCard({
+    department,
+    index,
+    isSelected,
+    onSelect,
+    onDelete,
+    onView,
+}: Props) {
+    const { resolvedTheme } = useTheme();
+    const isDark = resolvedTheme === "dark";
     const [hovered, setHovered] = useState(false);
     const accent = department.accent;
+
     const initials = department.name
         .split(" ")
         .slice(0, 2)
         .map((w) => w[0])
         .join("");
 
+    const showActions = hovered && !isSelected;
+
     return (
         <motion.div
-            initial={{ opacity: 0, y: 20, scale: 0.96 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            transition={{ duration: 0.4, delay: index * 0.04, ease: [0.23, 1, 0.32, 1] }}
-            onMouseEnter={() => setHovered(true)}
-            onMouseLeave={() => setHovered(false)}
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.2, delay: index * 0.05 }}
+            onHoverStart={() => setHovered(true)}
+            onHoverEnd={() => setHovered(false)}
             onClick={onSelect}
-            className="relative rounded-2xl p-4 border backdrop-blur-xl transition-all duration-300 cursor-pointer"
+            className="relative rounded-2xl p-4 flex flex-col gap-3 overflow-hidden cursor-pointer"
             style={{
-                borderColor: isSelected ? `${accent}44` : `${accent}22`,
-                boxShadow: isSelected
-                    ? `0 0 0 2px ${accent}33, 0 8px 32px ${accent}15`
-                    : `0 0 0 1px ${accent}11, 0 4px 24px 0 ${accent}0a`,
                 background: isSelected
                     ? `radial-gradient(ellipse at top right, ${accent}18 0%, transparent 70%)`
-                    : `radial-gradient(ellipse at top right, ${accent}0a 0%, transparent 65%)`,
+                    : "transparent",
+                border: isSelected
+                    ? `1px solid ${accent}44`
+                    : isDark
+                        ? "1px solid rgba(255,255,255,0.06)"
+                        : "1px solid rgba(0,0,0,0.06)",
+                boxShadow: isSelected
+                    ? `0 0 0 2px ${accent}33, 0 8px 32px ${accent}15`
+                    : "none",
+                minHeight: "130px",
             }}
         >
+            <svg
+                className="absolute inset-0 w-full h-full pointer-events-none"
+                style={{ borderRadius: "1rem" }}
+            >
+                <defs>
+                    <linearGradient
+                        id={`deptBorder-${department.id}`}
+                        x1="100%" y1="100%" x2="0%" y2="0%"
+                    >
+                        <stop offset="0%" stopColor={accent} />
+                        <stop offset="100%" stopColor={accent} stopOpacity="0.4" />
+                    </linearGradient>
+                </defs>
+                <motion.rect
+                    x="1" y="1"
+                    width="calc(100% - 2px)"
+                    height="calc(100% - 2px)"
+                    rx="15" ry="15"
+                    fill="none"
+                    stroke={`url(#deptBorder-${department.id})`}
+                    strokeWidth="1.5"
+                    pathLength="1"
+                    initial={{ pathLength: 0, opacity: 0 }}
+                    animate={
+                        hovered && !isSelected
+                            ? { pathLength: 1, opacity: 1 }
+                            : { pathLength: 0, opacity: 0 }
+                    }
+                    transition={{ duration: 0.55, ease: "easeInOut" }}
+                />
+            </svg>
+
             <div
                 className="absolute top-0 right-0 w-32 h-32 rounded-full blur-3xl opacity-10 pointer-events-none"
                 style={{ background: accent }}
             />
 
-            <div className="relative z-10 flex items-start gap-3">
+            <div className="relative z-10 flex items-center gap-3">
                 <div
-                    className="flex-shrink-0 flex items-center justify-center rounded-xl font-bold text-white text-sm"
+                    className="w-11 h-11 rounded-2xl flex items-center justify-center text-white text-[15px] font-extrabold flex-shrink-0"
                     style={{
                         background: `linear-gradient(135deg, ${accent}cc, ${accent}66)`,
                         boxShadow: `0 4px 16px ${accent}35`,
-                        width: 42,
-                        height: 42,
                     }}
                 >
                     {initials}
                 </div>
                 <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-sm text-gray-900 dark:text-white leading-tight">
+                    <p className="text-[13.5px] font-extrabold text-gray-800 dark:text-gray-100 leading-tight">
                         {department.name}
                     </p>
                     <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5 line-clamp-1">
@@ -69,13 +117,12 @@ export default function DepartmentCard({ department, index, isSelected, onSelect
                 </div>
                 <ChevronLeft
                     size={16}
-                    className={`flex-shrink-0 transition-transform duration-300 ${isSelected ? "rotate-180" : ""
-                        }`}
+                    className={`flex-shrink-0 transition-transform duration-300 ${isSelected ? "rotate-180" : ""}`}
                     style={{ color: isSelected ? accent : "rgb(156 163 175 / 0.5)" }}
                 />
             </div>
 
-            <div className="relative z-10 mt-3 flex items-center gap-3 pt-3 border-t border-gray-100 dark:border-white/10">
+            <div className="relative z-10 flex items-center gap-3 pt-2 border-t border-gray-100 dark:border-white/[0.05]">
                 <div className="flex items-center gap-1.5 text-gray-500 dark:text-gray-400">
                     <Users size={12} />
                     <span className="text-[11px]">{department.employees.length}</span>
@@ -91,19 +138,44 @@ export default function DepartmentCard({ department, index, isSelected, onSelect
             </div>
 
             <AnimatePresence>
-                {hovered && !isSelected && (
-                    <motion.button
-                        initial={{ opacity: 0, scale: 0.8 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.8 }}
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            onDelete();
-                        }}
-                        className="absolute top-3 left-3 z-20 p-1.5 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors"
+                {showActions && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 6 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 6 }}
+                        transition={{ duration: 0.15 }}
+                        className="absolute bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-1.5"
                     >
-                        <Trash2 size={14} />
-                    </motion.button>
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onView();
+                            }}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11.5px] font-bold transition-colors"
+                            style={{
+                                background: isDark ? `${accent}25` : `${accent}15`,
+                                color: isDark ? `${accent}dd` : accent,
+                            }}
+                        >
+                            مشاهده
+                            <ArrowLeft size={11} />
+                        </button>
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onDelete();
+                            }}
+                            className="w-7 h-7 rounded-xl flex items-center justify-center transition-colors"
+                            style={{
+                                background: isDark
+                                    ? "rgba(239,68,68,0.1)"
+                                    : "rgba(239,68,68,0.07)",
+                                color: "#ef4444",
+                            }}
+                        >
+                            <Trash2 size={12} />
+                        </button>
+                    </motion.div>
                 )}
             </AnimatePresence>
 

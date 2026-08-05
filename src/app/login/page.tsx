@@ -2,8 +2,10 @@
 
 import { useState, useEffect } from "react";
 import { AnimatePresence } from "framer-motion";
+import { Loader } from "lucide-react";
 import { useLogin } from "@/hooks/useLogin";
 import { Notification } from "@/components/Notification";
+import { FloatingInput } from "@/components/login/login";
 
 export default function LoginPage() {
     const [username, setUsername] = useState("");
@@ -24,8 +26,8 @@ export default function LoginPage() {
     };
 
     return (
-        <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4" dir="rtl">
-             <AnimatePresence>
+        <div className="min-h-screen flex items-center justify-center p-4" dir="rtl">
+            <AnimatePresence>
                 {errorMsg && (
                     <Notification
                         message={errorMsg}
@@ -36,34 +38,33 @@ export default function LoginPage() {
             </AnimatePresence>
 
             <div className="bg-white rounded-[2rem] shadow-sm border border-gray-100 p-8 w-full max-w-sm">
-                <div className="mb-8 text-center">
-                    <h1 className="text-xl font-bold text-gray-900">ویز مارکت</h1>
-                    <p className="text-sm text-gray-500 mt-1">پنل مدیریت</p>
-                </div>
-
-                <form onSubmit={handleLogin} className="flex flex-col gap-4 !text-black">
-                    <input
+                <form onSubmit={handleLogin} autoComplete="off" className="flex flex-col gap-6 !text-black">
+                    <FloatingInput
+                        label="نام کاربری"
+                        id="username"
                         type="text"
                         value={username}
                         onChange={(e) => setUsername(e.target.value)}
-                        className="bg-gray-50 border border-gray-100 rounded-2xl px-4 py-3 text-sm outline-none focus:border-black transition-all"
-                        placeholder="نام کاربری"
-                        required
                     />
-                    <input
+
+                    <FloatingInput
+                        label="رمز عبور"
+                        id="password"
                         type="password"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
-                        className="bg-gray-50 border border-gray-100 rounded-2xl px-4 py-3 text-sm outline-none focus:border-black transition-all"
-                        placeholder="رمز عبور"
-                        required
                     />
+
                     <button
                         type="submit"
                         disabled={loading}
-                        className="bg-black hover:bg-neutral-800 disabled:opacity-50 text-white font-semibold rounded-2xl py-3.5 text-sm transition-all active:scale-[0.98]"
+                        className="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-semibold rounded-4xl py-3 text-sm transition-all active:scale-[0.98] flex items-center justify-center"
                     >
-                        {loading ? "در حال تایید..." : "ورود"}
+                        {loading ? (
+                            <Loader className="animate-spin" size={18} />
+                        ) : (
+                            "ورود"
+                        )}
                     </button>
                 </form>
             </div>

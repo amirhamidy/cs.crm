@@ -23,22 +23,18 @@ const dataByRange: Record<TimeRange, User[]> = {
     { id: 1, name: "علی رضایی", role: "مدیر فروش", avatar: "ع", sales: 124000000, deals: 8, trend: "up", trendPct: 12 },
     { id: 2, name: "سارا محمدی", role: "کارشناس فروش", avatar: "س", sales: 98000000, deals: 6, trend: "up", trendPct: 5 },
     { id: 3, name: "مهدی کریمی", role: "کارشناس فروش", avatar: "م", sales: 87500000, deals: 5, trend: "down", trendPct: 3 },
-    { id: 4, name: "فاطمه احمدی", role: "سرپرست فروش", avatar: "ف", sales: 76000000, deals: 4, trend: "up", trendPct: 8 },
-    { id: 5, name: "رضا حسینی", role: "کارشناس فروش", avatar: "ر", sales: 61000000, deals: 3, trend: "down", trendPct: 7 },
   ],
   monthly: [
     { id: 1, name: "سارا محمدی", role: "کارشناس فروش", avatar: "س", sales: 412000000, deals: 28, trend: "up", trendPct: 18 },
     { id: 2, name: "علی رضایی", role: "مدیر فروش", avatar: "ع", sales: 387000000, deals: 24, trend: "up", trendPct: 9 },
     { id: 3, name: "فاطمه احمدی", role: "سرپرست فروش", avatar: "ف", sales: 334000000, deals: 21, trend: "up", trendPct: 14 },
-    { id: 4, name: "مهدی کریمی", role: "کارشناس فروش", avatar: "م", sales: 298000000, deals: 18, trend: "down", trendPct: 4 },
-    { id: 5, name: "رضا حسینی", role: "کارشناس فروش", avatar: "ر", sales: 245000000, deals: 15, trend: "same", trendPct: 0 },
+
   ],
   yearly: [
     { id: 1, name: "علی رضایی", role: "مدیر فروش", avatar: "ع", sales: 4820000000, deals: 287, trend: "up", trendPct: 23 },
     { id: 2, name: "فاطمه احمدی", role: "سرپرست فروش", avatar: "ف", sales: 4210000000, deals: 251, trend: "up", trendPct: 31 },
     { id: 3, name: "سارا محمدی", role: "کارشناس فروش", avatar: "س", sales: 3760000000, deals: 219, trend: "up", trendPct: 17 },
-    { id: 4, name: "مهدی کریمی", role: "کارشناس فروش", avatar: "م", sales: 3140000000, deals: 184, trend: "down", trendPct: 6 },
-    { id: 5, name: "رضا حسینی", role: "کارشناس فروش", avatar: "ر", sales: 2890000000, deals: 168, trend: "up", trendPct: 11 },
+
   ],
 };
 

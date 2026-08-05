@@ -76,7 +76,7 @@ export default function AddEmployeeModal({ open, department, onClose, onSubmit }
                         exit={{ opacity: 0 }}
                         transition={{ duration: 0.22 }}
                         onClick={handleClose}
-                        className="fixed inset-0 z-40 bg-black/40 dark:bg-black/60 backdrop-blur-sm"
+                        className="fixed inset-0 z-40 bg-black/40 dark:bg-black/60"
                     />
 
                     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -85,7 +85,7 @@ export default function AddEmployeeModal({ open, department, onClose, onSubmit }
                             initial={{ opacity: 0, scale: 0.93, y: 16 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.93, y: 16 }}
-                            transition={{ duration: 0.3, ease: [0.23, 1, 0.32, 1] }}
+                            transition={{ duration: 0.25, ease: [0.23, 1, 0.32, 1] }}
                             onClick={(e) => e.stopPropagation()}
                             className="relative w-full max-w-md max-h-[90vh] flex flex-col
                                 bg-white dark:bg-[#0f0f13]
@@ -136,96 +136,79 @@ export default function AddEmployeeModal({ open, department, onClose, onSubmit }
                                     </div>
                                 </div>
 
-                                <div className="space-y-1.5">
-                                    <label className="text-[11px] font-medium text-gray-600 dark:text-gray-300">
-                                        انتخاب کاربر
-                                    </label>
-                                    <div className="space-y-2 max-h-48 overflow-y-auto">
-                                        {filteredUsers.length === 0 ? (
-                                            <p className="text-center text-sm text-gray-400 dark:text-gray-500 py-4">
-                                                کاربری یافت نشد
-                                            </p>
-                                        ) : (
-                                            filteredUsers.map((user) => (
-                                                <motion.button
-                                                    key={user.id}
-                                                    whileHover={{ scale: 1 }}
-                                                    whileTap={{ scale: 0.95 }}
-                                                    onClick={() => setSelectedId(user.id)}
-                                                    className={`w-full flex items-center gap-3 p-3 rounded-xl border transition-all duration-200 text-right
+                                <div className="space-y-2 max-h-48 overflow-y-auto">
+                                    {filteredUsers.length === 0 ? (
+                                        <p className="text-center text-sm text-gray-400 dark:text-gray-500 py-4">
+                                            کاربری یافت نشد
+                                        </p>
+                                    ) : (
+                                        filteredUsers.map((user) => (
+                                            <button
+                                                key={user.id}
+                                                onClick={() => setSelectedId(user.id)}
+                                                className={`w-full flex items-center gap-3 p-3 rounded-xl border transition-all duration-150 text-right active:scale-95
+                                                    ${selectedId === user.id
+                                                        ? "border-blue-400 dark:border-blue-500 bg-blue-50 dark:bg-blue-500/10"
+                                                        : "border-gray-200 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/5"
+                                                    }`}
+                                            >
+                                                <div
+                                                    className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0
                                                         ${selectedId === user.id
-                                                            ? "border-blue-400 dark:border-blue-500 bg-blue-50 dark:bg-blue-500/10"
-                                                            : "border-gray-200 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/5"
+                                                            ? "bg-blue-500/10"
+                                                            : "bg-gray-100 dark:bg-white/5"
                                                         }`}
                                                 >
-                                                    <div
-                                                        className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0
-                                                            ${selectedId === user.id
-                                                                ? "bg-blue-500/10"
-                                                                : "bg-gray-100 dark:bg-white/5"
-                                                            }`}
-                                                    >
-                                                        <User
-                                                            size={16}
-                                                            className={selectedId === user.id
-                                                                ? "text-blue-500"
-                                                                : "text-gray-400 dark:text-gray-500"
-                                                            }
-                                                        />
-                                                    </div>
-                                                    <div className="flex-1 min-w-0">
-                                                        <p className="text-sm text-gray-900 dark:text-white font-medium truncate">
-                                                            {user.name}
-                                                        </p>
-                                                        <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                                                            {user.role}
-                                                        </p>
-                                                    </div>
-                                                    {selectedId === user.id && (
-                                                        <div className="w-2 h-2 rounded-full bg-blue-500 shrink-0" />
-                                                    )}
-                                                </motion.button>
-                                            ))
-                                        )}
-                                    </div>
+                                                    <User
+                                                        size={16}
+                                                        className={selectedId === user.id
+                                                            ? "text-blue-500"
+                                                            : "text-gray-400 dark:text-gray-500"
+                                                        }
+                                                    />
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="text-sm text-gray-900 dark:text-white font-medium truncate">
+                                                        {user.name}
+                                                    </p>
+                                                    <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                                                        {user.role}
+                                                    </p>
+                                                </div>
+                                                {selectedId === user.id && (
+                                                    <div className="w-2 h-2 rounded-full bg-blue-500 shrink-0" />
+                                                )}
+                                            </button>
+                                        ))
+                                    )}
                                 </div>
                             </div>
 
                             <div className="px-6 py-4 border-t border-gray-100 dark:border-white/10 flex-shrink-0">
-                                <AnimatePresence mode="wait">
+                                <div
+                                    className={`transition-all duration-300 ${success ? "opacity-100 scale-100" : "opacity-100"
+                                        }`}
+                                >
                                     {success ? (
-                                        <motion.div
-                                            key="success"
-                                            initial={{ opacity: 0, scale: 0.9 }}
-                                            animate={{ opacity: 1, scale: 1 }}
-                                            exit={{ opacity: 0, scale: 0.9 }}
-                                            className="flex items-center justify-center gap-2 py-3 rounded-xl
-                                                bg-green-50 dark:bg-green-500/10 text-green-600 dark:text-green-400 text-sm font-medium"
-                                        >
+                                        <div className="flex items-center justify-center gap-2 py-3 rounded-xl
+                                            bg-green-50 dark:bg-green-500/10 text-green-600 dark:text-green-400 text-sm font-medium">
                                             <CheckCircle2 size={16} />
                                             عضو با موفقیت اضافه شد
-                                        </motion.div>
+                                        </div>
                                     ) : (
-                                        <motion.div
-                                            key="actions"
-                                            initial={{ opacity: 0 }}
-                                            animate={{ opacity: 1 }}
-                                            exit={{ opacity: 0 }}
+                                        <button
+                                            onClick={handleSubmit}
+                                            disabled={!selectedId}
+                                            className="w-full py-2.5 rounded-4xl text-sm font-medium
+                                                text-white transition-all duration-200 active:scale-95
+                                                disabled:opacity-40 disabled:cursor-not-allowed
+                                                bg-blue-500 hover:bg-blue-600
+                                                shadow-lg shadow-blue-500/25"
                                         >
-                                            <button
-                                                onClick={handleSubmit}
-                                                disabled={!selectedId}
-                                                className="w-full py-2.5 rounded-4xl text-sm font-medium
-                                                    text-white transition-all duration-200
-                                                    disabled:opacity-40 disabled:cursor-not-allowed
-                                                    bg-blue-500 hover:bg-blue-600
-                                                    shadow-lg shadow-blue-500/25"
-                                            >
-                                                افزودن عضو
-                                            </button>
-                                        </motion.div>
+                                            افزودن عضو
+                                        </button>
                                     )}
-                                </AnimatePresence>
+                                </div>
                             </div>
                         </motion.div>
                     </div>

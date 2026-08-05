@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTheme } from "next-themes";
-import { motion, AnimatePresence } from "framer-motion";
 import {
   Area,
   AreaChart,
@@ -12,9 +12,14 @@ import {
   YAxis,
 } from "recharts";
 import { ChartContainer, type ChartConfig } from "@/components/ui/chart";
-import { ChevronDown } from "lucide-react";
 
-const salesData = {
+type TimeRange = "weekly" | "monthly" | "yearly";
+
+type MouseMoveState = {
+  activeLabel?: string;
+};
+
+const salesData: Record<TimeRange, { name: string; sales: number; revenue: number }[]> = {
   weekly: [
     { name: "شنبه", sales: 1200, revenue: 800 },
     { name: "یک", sales: 1900, revenue: 1200 },
@@ -44,121 +49,226 @@ const chartConfig: ChartConfig = {
   revenue: { label: "درآمد", color: "#c084fc" },
 };
 
-type TimeRange = "weekly" | "monthly" | "yearly";
+const ranges: { key: TimeRange; label: string; sub: string }[] = [
+  { key: "weekly", label: "هفتگی", sub: "هفته" },
+  { key: "monthly", label: "ماهانه", sub: "ماه" },
+  { key: "yearly", label: "سالانه", sub: "سال" },
+];
+
+const CHART_DEFS = (
+  <defs>
+    <linearGradient id="salesGradFill" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stopColor="#38bdf8" stopOpacity={0.3} />
+      <stop offset="100%" stopColor="#38bdf8" stopOpacity={0} />
+    </linearGradient>
+    <linearGradient id="revenueGradFill" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stopColor="#c084fc" stopOpacity={0.25} />
+      <stop offset="100%" stopColor="#c084fc" stopOpacity={0} />
+    </linearGradient>
+  </defs>
+);
+
+function SalesChartSkeleton() {
+  return (
+    <div className="relative rounded-2xl border border-gray-100 bg-white p-4 shadow-sm dark:border-white/5 dark:bg-slate-950">
+      <div className="mb-3 flex items-center justify-between" dir="rtl">
+        <div className="space-y-1.5">
+          <div className="h-3.5 w-24 animate-pulse rounded-md bg-gray-200 dark:bg-slate-800" />
+          <div className="h-3 w-32 animate-pulse rounded-md bg-gray-100 dark:bg-slate-800/70" />
+        </div>
+        <div className="flex items-center gap-1 rounded-xl border border-gray-100 bg-gray-50/80 p-1 dark:border-white/5 dark:bg-slate-900/50">
+          {[1, 2, 3].map((i) => (
+            <div
+              key={i}
+              className="h-6 w-12 animate-pulse rounded-lg bg-gray-200 dark:bg-slate-800"
+            />
+          ))}
+        </div>
+      </div>
+
+      <div className="relative h-[180px] w-full overflow-hidden rounded-xl">
+        <div className="absolute inset-0 animate-pulse bg-gray-50 dark:bg-slate-900/50" />
+        <svg
+          className="absolute inset-0 h-full w-full"
+          preserveAspectRatio="none"
+          viewBox="0 0 400 180"
+        >
+          <defs>
+            <linearGradient id="skeletonWave1" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#38bdf8" stopOpacity={0.08} />
+              <stop offset="100%" stopColor="#38bdf8" stopOpacity={0} />
+            </linearGradient>
+            <linearGradient id="skeletonWave2" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#c084fc" stopOpacity={0.07} />
+              <stop offset="100%" stopColor="#c084fc" stopOpacity={0} />
+            </linearGradient>
+          </defs>
+          <path
+            d="M0,120 C50,100 100,60 150,80 C200,100 250,40 300,60 C350,80 380,50 400,55 L400,180 L0,180 Z"
+            fill="url(#skeletonWave1)"
+            stroke="#38bdf8"
+            strokeWidth="1.5"
+            strokeOpacity={0.2}
+          />
+          <path
+            d="M0,140 C60,120 110,90 170,100 C230,110 270,70 320,85 C360,95 385,75 400,80 L400,180 L0,180 Z"
+            fill="url(#skeletonWave2)"
+            stroke="#c084fc"
+            strokeWidth="1.5"
+            strokeOpacity={0.18}
+          />
+        </svg>
+        <div className="absolute bottom-0 left-0 right-0 flex items-end justify-around px-2 pb-1">
+          {[40, 60, 45, 75, 55, 80].map((h, i) => (
+            <div
+              key={i}
+              className="animate-pulse rounded-t-sm bg-gray-200/60 dark:bg-slate-700/40"
+              style={{ height: `${h}%`, width: "8px" }}
+            />
+          ))}
+        </div>
+      </div>
+
+      <div className="mt-2 flex items-center justify-end gap-4" dir="rtl">
+        {[1, 2].map((i) => (
+          <div key={i} className="flex items-center gap-1.5">
+            <div className="h-0.5 w-3 animate-pulse rounded-full bg-gray-200 dark:bg-slate-700" />
+            <div className="h-3 w-8 animate-pulse rounded-md bg-gray-200 dark:bg-slate-700" />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 export default function SalesChart() {
   const [activeRange, setActiveRange] = useState<TimeRange>("monthly");
-  const [isOpen, setIsOpen] = useState(false);
   const [activeLabel, setActiveLabel] = useState<string | null>(null);
-  const dropdownRef = useRef<HTMLDivElement>(null);
+  const [isLoaded, setIsLoaded] = useState(false);
   const { resolvedTheme } = useTheme();
 
   useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node))
-        setIsOpen(false);
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    const timer = setTimeout(() => setIsLoaded(true), 700);
+    return () => clearTimeout(timer);
   }, []);
 
   const isDark = resolvedTheme === "dark";
   const data = salesData[activeRange];
-  const activeData = activeLabel ? data.find((d) => d.name === activeLabel) : null;
 
-  const rangeLabel =
-    activeRange === "weekly" ? "هفتگی" : activeRange === "monthly" ? "ماهانه" : "سالانه";
-  const rangeSub =
-    activeRange === "weekly" ? "هفته" : activeRange === "monthly" ? "ماه" : "سال";
+  const activeData = useMemo(
+    () => (activeLabel ? data.find((d) => d.name === activeLabel) ?? null : null),
+    [activeLabel, data]
+  );
+
+  const currentRange = useMemo(
+    () => ranges.find((r) => r.key === activeRange),
+    [activeRange]
+  );
+
+  const formattedValues = useMemo(() => {
+    if (!activeData) return null;
+    return {
+      sales: activeData.sales.toLocaleString("fa-IR"),
+      revenue: activeData.revenue.toLocaleString("fa-IR"),
+    };
+  }, [activeData]);
+
+  const handleMouseMove = useCallback((state: MouseMoveState) => {
+    if (state?.activeLabel) setActiveLabel(state.activeLabel);
+  }, []);
+
+  const handleMouseLeave = useCallback(() => setActiveLabel(null), []);
+
+  const gridColor = isDark ? "rgba(255,255,255,0.04)" : "#f3f4f6";
+
+  if (!isLoaded) {
+    return <SalesChartSkeleton />;
+  }
 
   return (
-    <div className="bg-white border border-gray-100 relative rounded-2xl p-4 dark:bg-slate-950 dark:border-white/5 shadow-sm">
-      <div className="flex items-center justify-between mb-3" dir="rtl">
+    <motion.div
+      initial={{ opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3, ease: [0.25, 0.46, 0.45, 0.94] }}
+      className="relative rounded-2xl border border-gray-100 bg-white p-4 shadow-sm dark:border-white/5 dark:bg-slate-950"
+    >
+      <div className="mb-3 flex items-center justify-between" dir="rtl">
         <div>
           <h3 className="text-[14px] font-semibold text-gray-900 dark:text-white">
             نمودار فروش
           </h3>
-          <p className="text-[13px] text-gray-500 mt-0.5 dark:text-gray-400">
-            گزارش عملکرد {rangeSub}
+          <p className="mt-0.5 text-[13px] text-gray-500 dark:text-gray-400">
+            گزارش عملکرد {currentRange?.sub}
           </p>
         </div>
 
-        <div className="relative" ref={dropdownRef}>
-          <button
-            onClick={() => setIsOpen(!isOpen)}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gray-50 dark:bg-slate-900 text-[11px] font-medium text-gray-700 dark:text-gray-300 border border-gray-100 dark:border-white/5 hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors"
-          >
-            {rangeLabel}
-            <ChevronDown
-              size={12}
-              className={`transition-transform ${isOpen ? "rotate-180" : ""}`}
-            />
-          </button>
-
-          <AnimatePresence>
-            {isOpen && (
-              <motion.div
-                initial={{ opacity: 0, y: 5, scale: 0.95 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: 5, scale: 0.95 }}
-                className="absolute left-0 top-full mt-2 w-28 bg-white dark:bg-slate-900 border border-gray-100 dark:border-white/10 rounded-xl shadow-xl z-50 overflow-hidden"
+        <div className="flex items-center gap-1 rounded-xl border border-gray-100 bg-gray-50/80 p-1 dark:border-white/5 dark:bg-slate-900/50">
+          {ranges.map((range) => (
+            <button
+              key={range.key}
+              type="button"
+              onClick={() => setActiveRange(range.key)}
+              className="relative rounded-lg px-2.5 py-1 text-[11px] font-medium"
+            >
+              {activeRange === range.key && (
+                <motion.span
+                  layoutId="salesChartRangeIndicator"
+                  className="absolute inset-0 rounded-lg bg-white shadow-sm dark:bg-slate-800"
+                  transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                />
+              )}
+              <span
+                className={`relative z-10 transition-colors ${activeRange === range.key
+                    ? "text-gray-900 dark:text-white"
+                    : "text-gray-500 dark:text-gray-400"
+                  }`}
               >
-                {(["weekly", "monthly", "yearly"] as TimeRange[]).map((range) => (
-                  <button
-                    key={range}
-                    onClick={() => { setActiveRange(range); setIsOpen(false); }}
-                    className="w-full text-right px-4 py-2 text-[11px] text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors"
-                  >
-                    {range === "weekly" ? "هفتگی" : range === "monthly" ? "ماهانه" : "سالانه"}
-                  </button>
-                ))}
-              </motion.div>
-            )}
-          </AnimatePresence>
+                {range.label}
+              </span>
+            </button>
+          ))}
         </div>
       </div>
 
-      <div className="absolute top-14 left-2 z-10 min-w-[140px]">
+      <div className="absolute left-2 top-14 z-10 min-w-[140px]">
         <AnimatePresence mode="wait">
-          {activeLabel && activeData && (
+          {activeLabel && activeData && formattedValues && (
             <motion.div
               key={activeLabel}
-              initial={{ filter: "blur(8px)", opacity: 0, y: 4, scale: 0.96 }}
-              animate={{ filter: "blur(0px)", opacity: 1, y: 0, scale: 1 }}
-              exit={{ filter: "blur(6px)", opacity: 0, y: 4, scale: 0.96 }}
+              initial={{ opacity: 0, y: 4, scale: 0.96 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 4, scale: 0.96 }}
               transition={{ duration: 0.15, ease: [0.25, 0.46, 0.45, 0.94] }}
-              className="bg-white/95 backdrop-blur-sm border border-gray-200/60 shadow-lg rounded-xl px-3 py-2.5 pointer-events-none dark:bg-slate-900/95 dark:border-white/10"
+              className="pointer-events-none rounded-xl border border-gray-200/60 bg-white/95 px-3 py-2.5 shadow-lg backdrop-blur-sm dark:border-white/10 dark:bg-slate-900/95"
               style={{ boxShadow: "0 4px 20px rgba(56,189,248,0.15)" }}
             >
-              <div className="flex items-center gap-1.5 mb-1.5">
-                <span className="text-[12px] font-semibold text-gray-800 dark:text-gray-100">
-                  {activeData.name}
-                </span>
-              </div>
-              <p className="text-[11px] text-gray-500 dark:text-gray-400 flex items-center gap-1.5 mb-0.5">
+              <p className="mb-1.5 text-[12px] font-semibold text-gray-800 dark:text-gray-100">
+                {activeData.name}
+              </p>
+              <p className="mb-0.5 flex items-center gap-1.5 text-[11px] text-gray-500 dark:text-gray-400">
                 <span
-                  className="w-2 h-2 rounded-full flex-shrink-0"
+                  className="h-2 w-2 flex-shrink-0 rounded-full"
                   style={{
-                    backgroundColor: chartConfig.sales.color,
-                    boxShadow: `0 0 6px rgba(56,189,248,0.5)`,
+                    backgroundColor: "#38bdf8",
+                    boxShadow: "0 0 6px rgba(56,189,248,0.5)",
                   }}
                 />
                 {chartConfig.sales.label}:{" "}
-                <span className="font-bold tabular-nums" style={{ color: chartConfig.sales.color }}>
-                  {activeData.sales.toLocaleString("fa-IR")}
+                <span className="font-bold tabular-nums" style={{ color: "#38bdf8" }}>
+                  {formattedValues.sales}
                 </span>
               </p>
-              <p className="text-[11px] text-gray-500 dark:text-gray-400 flex items-center gap-1.5">
+              <p className="flex items-center gap-1.5 text-[11px] text-gray-500 dark:text-gray-400">
                 <span
-                  className="w-2 h-2 rounded-full flex-shrink-0"
+                  className="h-2 w-2 flex-shrink-0 rounded-full"
                   style={{
-                    backgroundColor: chartConfig.revenue.color,
-                    boxShadow: `0 0 6px rgba(192,132,252,0.5)`,
+                    backgroundColor: "#c084fc",
+                    boxShadow: "0 0 6px rgba(192,132,252,0.5)",
                   }}
                 />
                 {chartConfig.revenue.label}:{" "}
-                <span className="font-bold tabular-nums" style={{ color: chartConfig.revenue.color }}>
-                  {activeData.revenue.toLocaleString("fa-IR")}
+                <span className="font-bold tabular-nums" style={{ color: "#c084fc" }}>
+                  {formattedValues.revenue}
                 </span>
               </p>
             </motion.div>
@@ -171,31 +281,13 @@ export default function SalesChart() {
           <AreaChart
             data={data}
             margin={{ top: 4, right: 4, left: -24, bottom: 0 }}
-            onMouseMove={(state: any) => {
-              if (state?.activeLabel) setActiveLabel(state.activeLabel);
-            }}
-            onMouseLeave={() => setActiveLabel(null)}
+            onMouseMove={handleMouseMove}
+            onMouseLeave={handleMouseLeave}
           >
-            <defs>
-              <linearGradient id="salesGradFill" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#38bdf8" stopOpacity={isDark ? 0.4 : 0.25} />
-                <stop offset="100%" stopColor="#38bdf8" stopOpacity={0} />
-              </linearGradient>
-              <linearGradient id="revenueGradFill" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#c084fc" stopOpacity={isDark ? 0.35 : 0.2} />
-                <stop offset="100%" stopColor="#c084fc" stopOpacity={0} />
-              </linearGradient>
-              <filter id="salesGlow">
-                <feGaussianBlur stdDeviation="3" result="blur" />
-                <feMerge>
-                  <feMergeNode in="blur" />
-                  <feMergeNode in="SourceGraphic" />
-                </feMerge>
-              </filter>
-            </defs>
+            {CHART_DEFS}
             <CartesianGrid
               strokeDasharray="3 3"
-              stroke={isDark ? "rgba(255,255,255,0.04)" : "#f3f4f6"}
+              stroke={gridColor}
               vertical={false}
             />
             <XAxis
@@ -211,7 +303,7 @@ export default function SalesChart() {
               className="[&_text]:fill-gray-500 dark:[&_text]:fill-gray-400"
               axisLine={false}
               tickLine={false}
-              tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`}
+              tickFormatter={(v: number) => `${(v / 1000).toFixed(0)}k`}
             />
             <Area
               type="monotone"
@@ -224,7 +316,7 @@ export default function SalesChart() {
                 r: 5,
                 strokeWidth: 0,
                 fill: "#38bdf8",
-                style: { filter: "drop-shadow(0 0 6px rgba(56,189,248,0.8))" },
+                style: { filter: "drop-shadow(0 0 6px #38bdf8)" },
               }}
             />
             <Area
@@ -238,27 +330,24 @@ export default function SalesChart() {
                 r: 5,
                 strokeWidth: 0,
                 fill: "#c084fc",
-                style: { filter: "drop-shadow(0 0 6px rgba(192,132,252,0.8))" },
+                style: { filter: "drop-shadow(0 0 6px #c084fc)" },
               }}
             />
           </AreaChart>
         </ResponsiveContainer>
       </ChartContainer>
 
-      <div className="flex items-center gap-4 mt-2 justify-end" dir="rtl">
+      <div className="mt-2 flex items-center justify-end gap-4" dir="rtl">
         {Object.entries(chartConfig).map(([key, val]) => (
           <div key={key} className="flex items-center gap-1.5">
             <span
-              className="w-3 h-0.5 rounded-full inline-block"
-              style={{
-                backgroundColor: val.color,
-                boxShadow: `0 0 6px ${val.color}`,
-              }}
+              className="inline-block h-0.5 w-3 rounded-full"
+              style={{ backgroundColor: val.color, boxShadow: `0 0 6px ${val.color}` }}
             />
             <span className="text-[11px] text-gray-500 dark:text-gray-400">{val.label}</span>
           </div>
         ))}
       </div>
-    </div>
+    </motion.div>
   );
 }

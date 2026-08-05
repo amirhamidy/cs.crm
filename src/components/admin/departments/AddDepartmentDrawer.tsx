@@ -90,9 +90,6 @@ export default function AddDepartmentModal({ open, onClose, onSubmit }: Props) {
 
                             <div className="flex-1 px-6 py-5 space-y-4">
                                 <div className="space-y-1.5">
-                                    <label className="text-[11px] font-medium text-gray-600 dark:text-gray-300">
-                                        نام دپارتمان
-                                    </label>
                                     <div className="relative">
                                         <Building2 size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500" />
                                         <input

@@ -1,9 +1,8 @@
 "use client";
 
-import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Trash2, Users, User, CheckCircle2 } from "lucide-react";
-import { Department } from "./types";
+import { AnimatePresence, motion } from "framer-motion";
+import { Plus, Trash2, Users, User } from "lucide-react";
+import { Department, Employee } from "./types";
 
 interface Props {
     department: Department;
@@ -12,14 +11,11 @@ interface Props {
 }
 
 export default function EmployeesPanel({ department, onAddEmployee, onDeleteEmployee }: Props) {
-    const [hoveredId, setHoveredId] = useState<string | null>(null);
     const accent = department.accent;
 
     return (
-        <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="rounded-2xl border border-gray-200 dark:border-white/10 bg-white/50 dark:bg-white/[0.02] backdrop-blur-xl p-5"
+        <div
+            className="rounded-2xl border p-5 bg-white/50 dark:bg-white/[0.02]"
             style={{
                 borderColor: `${accent}22`,
                 boxShadow: `0 0 0 1px ${accent}11`,
@@ -40,11 +36,10 @@ export default function EmployeesPanel({ department, onAddEmployee, onDeleteEmpl
                         {department.employees.length}
                     </span>
                 </div>
-                <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
+                <button
                     onClick={onAddEmployee}
-                    className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-xl transition-all font-medium"
+                    className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-xl font-medium
+                        active:scale-95 transition-all duration-150"
                     style={{
                         backgroundColor: `${accent}18`,
                         color: accent,
@@ -53,7 +48,7 @@ export default function EmployeesPanel({ department, onAddEmployee, onDeleteEmpl
                 >
                     <Plus size={13} />
                     افزودن عضو
-                </motion.button>
+                </button>
             </div>
 
             {department.employees.length === 0 ? (
@@ -70,12 +65,12 @@ export default function EmployeesPanel({ department, onAddEmployee, onDeleteEmpl
                                 initial={{ opacity: 0, scale: 0.95 }}
                                 animate={{ opacity: 1, scale: 1 }}
                                 exit={{ opacity: 0, scale: 0.9 }}
-                                onHoverStart={() => setHoveredId(emp.id)}
-                                onHoverEnd={() => setHoveredId(null)}
-                                className="flex items-center gap-3 p-3 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50/50 dark:bg-white/[0.02] hover:bg-gray-100/50 dark:hover:bg-white/[0.05] transition-all group"
-                                style={{
-                                    borderColor: hoveredId === emp.id ? `${accent}40` : undefined,
-                                }}
+                                transition={{ duration: 0.2 }}
+                                className="group flex items-center gap-3 p-3 rounded-xl border
+                                    border-gray-200 dark:border-white/10
+                                    bg-gray-50/50 dark:bg-white/[0.02]
+                                    hover:bg-gray-100/50 dark:hover:bg-white/[0.05]
+                                    transition-colors duration-200"
                             >
                                 <div
                                     className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
@@ -93,24 +88,21 @@ export default function EmployeesPanel({ department, onAddEmployee, onDeleteEmpl
                                         {emp.role}
                                     </p>
                                 </div>
-                                <AnimatePresence>
-                                    {hoveredId === emp.id && (
-                                        <motion.button
-                                            initial={{ opacity: 0, scale: 0.8 }}
-                                            animate={{ opacity: 1, scale: 1 }}
-                                            exit={{ opacity: 0, scale: 0.8 }}
-                                            onClick={() => onDeleteEmployee(emp)}
-                                            className="p-1.5 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors shrink-0"
-                                        >
-                                            <Trash2 size={14} />
-                                        </motion.button>
-                                    )}
-                                </AnimatePresence>
+                                <button
+                                    onClick={() => onDeleteEmployee(emp)}
+                                    className="p-1.5 rounded-lg bg-red-500/10 text-red-400
+                                        hover:bg-red-500/20 transition-colors shrink-0
+                                        opacity-0 group-hover:opacity-100
+                                        scale-90 group-hover:scale-100
+                                        transition-all duration-200"
+                                >
+                                    <Trash2 size={14} />
+                                </button>
                             </motion.div>
                         ))}
                     </AnimatePresence>
                 </div>
             )}
-        </motion.div>
+        </div>
     );
 }

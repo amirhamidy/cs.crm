@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Plus, Search, Building2, Users } from "lucide-react";
 import { mockDepartments } from "@/components/admin/departments/mock";
@@ -29,16 +29,18 @@ export default function DepartmentsPage() {
     const [addEmployeeOpen, setAddEmployeeOpen] = useState(false);
 
     const filteredDepts = useMemo(
-        () => departments.filter((d) => 
-            d.name.includes(search) || 
-            d.description.includes(search)
+        () => departments.filter((d) =>
+            d.name.includes(search) || d.description.includes(search)
         ),
         [departments, search]
     );
 
-    const selectedDept = departments.find((d) => d.id === selectedId) ?? null;
+    const selectedDept = useMemo(
+        () => departments.find((d) => d.id === selectedId) ?? null,
+        [departments, selectedId]
+    );
 
-    const handleAddDepartment = (data: { name: string; description: string; accent: string }) => {
+    const handleAddDepartment = useCallback((data: { name: string; description: string; accent: string }) => {
         const newDept: Department = {
             id: crypto.randomUUID(),
             name: data.name,
@@ -50,9 +52,9 @@ export default function DepartmentsPage() {
         };
         setDepartments((prev) => [newDept, ...prev]);
         setSelectedId(newDept.id);
-    };
+    }, []);
 
-    const handleAddStage = (data: { name: string; color: string }) => {
+    const handleAddStage = useCallback((data: { name: string; color: string }) => {
         if (!selectedId) return;
         setDepartments((prev) =>
             prev.map((d) => {
@@ -66,9 +68,9 @@ export default function DepartmentsPage() {
                 return { ...d, stages: [...d.stages, newStage] };
             })
         );
-    };
+    }, [selectedId]);
 
-    const handleAddEmployee = (data: { name: string; role: string }) => {
+    const handleAddEmployee = useCallback((data: { name: string; role: string }) => {
         if (!selectedId) return;
         setDepartments((prev) =>
             prev.map((d) => {
@@ -81,47 +83,62 @@ export default function DepartmentsPage() {
                 return { ...d, employees: [...d.employees, newEmp] };
             })
         );
-    };
+    }, [selectedId]);
 
-    const handleReorderStages = (stages: Stage[]) => {
+    const handleReorderStages = useCallback((stages: Stage[]) => {
         if (!selectedId) return;
         setDepartments((prev) =>
-            prev.map((d) => {
-                if (d.id !== selectedId) return d;
-                return { ...d, stages };
-            })
+            prev.map((d) => (d.id !== selectedId ? d : { ...d, stages }))
         );
-    };
+    }, [selectedId]);
 
-    const handleConfirmDelete = () => {
+    const handleEditStage = useCallback((stage: Stage, newName: string) => {
+        if (!selectedId) return;
+        setDepartments((prev) =>
+            prev.map((d) =>
+                d.id !== selectedId
+                    ? d
+                    : {
+                        ...d,
+                        stages: d.stages.map((s) =>
+                            s.id === stage.id ? { ...s, name: newName } : s
+                        ),
+                    }
+            )
+        );
+    }, [selectedId]);
+
+    const handleConfirmDelete = useCallback(() => {
         if (!deleteTarget) return;
 
         if (deleteTarget.type === "department") {
-            const remaining = departments.filter((d) => d.id !== deleteTarget.id);
-            setDepartments(remaining);
-            setSelectedId(remaining[0]?.id ?? null);
-        }
-
-        if (deleteTarget.type === "stage") {
+            setDepartments((prev) => {
+                const remaining = prev.filter((d) => d.id !== deleteTarget.id);
+                setSelectedId(remaining[0]?.id ?? null);
+                return remaining;
+            });
+        } else if (deleteTarget.type === "stage") {
             setDepartments((prev) =>
-                prev.map((d) => {
-                    if (d.id !== deleteTarget.departmentId) return d;
-                    return { ...d, stages: d.stages.filter((s) => s.id !== deleteTarget.stage.id) };
-                })
+                prev.map((d) =>
+                    d.id !== deleteTarget.departmentId
+                        ? d
+                        : { ...d, stages: d.stages.filter((s) => s.id !== deleteTarget.stage.id) }
+                )
             );
-        }
-
-        if (deleteTarget.type === "employee") {
+        } else if (deleteTarget.type === "employee") {
             setDepartments((prev) =>
-                prev.map((d) => {
-                    if (d.id !== deleteTarget.departmentId) return d;
-                    return { ...d, employees: d.employees.filter((e) => e.id !== deleteTarget.employee.id) };
-                })
+                prev.map((d) =>
+                    d.id !== deleteTarget.departmentId
+                        ? d
+                        : { ...d, employees: d.employees.filter((e) => e.id !== deleteTarget.employee.id) }
+                )
             );
         }
 
         setDeleteTarget(null);
-    };
+    }, [deleteTarget]);
+
+    const handleCancelDelete = useCallback(() => setDeleteTarget(null), []);
 
     const deleteModalMeta = useMemo(() => {
         if (!deleteTarget) return { title: "", description: "" };
@@ -144,13 +161,13 @@ export default function DepartmentsPage() {
     }, [deleteTarget]);
 
     return (
-        <div className="min-h-screen p-6 md:p-8 bg-gray-50 dark:bg-[#0a0a0f]" dir="rtl">
+        <div className="min-h-screen p-3 md:p-6 " dir="rtl">
             <DeleteModal
                 open={!!deleteTarget}
                 title={deleteModalMeta.title}
                 description={deleteModalMeta.description}
                 onConfirm={handleConfirmDelete}
-                onCancel={() => setDeleteTarget(null)}
+                onCancel={handleCancelDelete}
             />
 
             <AddDepartmentModal
@@ -173,12 +190,7 @@ export default function DepartmentsPage() {
                 department={selectedDept}
             />
 
-            <motion.div
-                initial={{ opacity: 0, y: -16 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4 }}
-                className="max-w-7xl mx-auto"
-            >
+            <div className="max-w-7xl mx-auto">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
                     <div className="flex items-center gap-3">
                         <div className="p-2.5 rounded-xl bg-blue-500/10 border border-blue-500/20">
@@ -211,64 +223,54 @@ export default function DepartmentsPage() {
                                     outline-none transition-all duration-200"
                             />
                         </div>
-                        <motion.button
-                            whileHover={{ scale: 1.03 }}
-                            whileTap={{ scale: 0.97 }}
+                        <button
                             onClick={() => setAddDeptOpen(true)}
                             className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium
-                                bg-blue-500 hover:bg-blue-600 text-white
-                                transition-colors shadow-lg shadow-blue-500/25"
+                                bg-blue-500 hover:bg-blue-600 active:scale-95 text-white
+                                transition-all duration-150 shadow-lg shadow-blue-500/25"
                         >
                             <Plus size={15} />
                             دپارتمان جدید
-                        </motion.button>
+                        </button>
                     </div>
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <div className="lg:col-span-1">
-                        <AnimatePresence mode="popLayout">
-                            {filteredDepts.length === 0 ? (
-                                <motion.div
-                                    key="empty"
-                                    initial={{ opacity: 0 }}
-                                    animate={{ opacity: 1 }}
-                                    exit={{ opacity: 0 }}
-                                    className="flex flex-col items-center justify-center py-16 text-gray-400"
-                                >
-                                    <Building2 size={40} className="mb-3 opacity-30" />
-                                    <p className="text-sm">
-                                        {search ? "نتیجه‌ای برای جستجو یافت نشد" : "دپارتمانی ثبت نشده"}
-                                    </p>
-                                </motion.div>
-                            ) : (
-                                <motion.div
-                                    key="list"
-                                    className="space-y-3"
-                                >
-                                    {filteredDepts.map((dept, index) => (
-                                        <DepartmentCard
-                                            key={dept.id}
-                                            department={dept}
-                                            index={index}
-                                            isSelected={selectedId === dept.id}
-                                            onSelect={() => setSelectedId(dept.id)}
-                                            onDelete={() =>
-                                                setDeleteTarget({ type: "department", id: dept.id, name: dept.name })
-                                            }
-                                        />
-                                    ))}
-                                </motion.div>
-                            )}
-                        </AnimatePresence>
+                    <div className="lg:col-span-1 space-y-3">
+                        {filteredDepts.length === 0 ? (
+                            <motion.div
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                transition={{ duration: 0.2 }}
+                                className="flex flex-col items-center justify-center py-16 text-gray-400"
+                            >
+                                <Building2 size={40} className="mb-3 opacity-30" />
+                                <p className="text-sm">
+                                    {search ? "نتیجه‌ای برای جستجو یافت نشد" : "دپارتمانی ثبت نشده"}
+                                </p>
+                            </motion.div>
+                        ) : (
+                            filteredDepts.map((dept, index) => (
+                                <DepartmentCard
+                                    key={dept.id}
+                                    department={dept}
+                                    index={index}
+                                    isSelected={selectedId === dept.id}
+                                    onSelect={() => setSelectedId(dept.id)}
+                                    onDelete={() =>
+                                        setDeleteTarget({ type: "department", id: dept.id, name: dept.name })
+                                    }
+                                    onView={() => setSelectedId(dept.id)}
+                                />
+                            ))
+                        )}
                     </div>
 
                     <div className="lg:col-span-2">
                         {!selectedDept ? (
                             <div className="flex flex-col items-center justify-center h-[400px] rounded-2xl
                                 border border-gray-200 dark:border-white/10
-                                bg-white/50 dark:bg-white/[0.02]
-                                backdrop-blur-xl text-gray-400"
+                                bg-white/50 dark:bg-white/[0.02] text-gray-400"
                             >
                                 <Building2 size={48} className="mb-4 opacity-20" />
                                 <p className="text-sm">یک دپارتمان انتخاب کنید</p>
@@ -276,15 +278,14 @@ export default function DepartmentsPage() {
                         ) : (
                             <motion.div
                                 key={selectedDept.id}
-                                initial={{ opacity: 0, y: 8 }}
+                                initial={{ opacity: 0, y: 6 }}
                                 animate={{ opacity: 1, y: 0 }}
-                                transition={{ duration: 0.3 }}
+                                transition={{ duration: 0.2, ease: "easeOut" }}
                                 className="space-y-4"
                             >
-                                <div className="p-5 rounded-2xl
-                                    border border-gray-200 dark:border-white/10
-                                    bg-white/50 dark:bg-white/[0.02]
-                                    backdrop-blur-xl"
+                                <div
+                                    className="p-5 rounded-2xl border
+                                        bg-white/50 dark:bg-white/[0.02]"
                                     style={{
                                         borderColor: `${selectedDept.accent}22`,
                                         boxShadow: `0 0 0 1px ${selectedDept.accent}11`,
@@ -292,7 +293,7 @@ export default function DepartmentsPage() {
                                 >
                                     <div className="flex items-center gap-3">
                                         <div
-                                            className="w-12 h-12 rounded-xl flex items-center justify-center"
+                                            className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0"
                                             style={{
                                                 background: `linear-gradient(135deg, ${selectedDept.accent}cc, ${selectedDept.accent}66)`,
                                                 boxShadow: `0 4px 16px ${selectedDept.accent}35`,
@@ -323,7 +324,6 @@ export default function DepartmentsPage() {
                                         </div>
                                     </div>
                                 </div>
-
                                 <StagesPanel
                                     department={selectedDept}
                                     onAddStage={() => setAddStageOpen(true)}
@@ -331,8 +331,8 @@ export default function DepartmentsPage() {
                                         setDeleteTarget({ type: "stage", departmentId: selectedDept.id, stage })
                                     }
                                     onReorder={handleReorderStages}
+                                    onEditStage={handleEditStage}
                                 />
-
                                 <EmployeesPanel
                                     department={selectedDept}
                                     onAddEmployee={() => setAddEmployeeOpen(true)}
@@ -344,7 +344,7 @@ export default function DepartmentsPage() {
                         )}
                     </div>
                 </div>
-            </motion.div>
+            </div>
         </div>
     );
 }

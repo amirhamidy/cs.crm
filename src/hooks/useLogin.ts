@@ -17,10 +17,10 @@ export function useLogin() {
       setAuth(user, token);
       const destination =
         user.role === "admin" ? "/admin/dashboard" : "/user/dashboard";
+      await new Promise((res) => setTimeout(res, 1500));
       router.push(destination);
     } catch {
       setError("نام کاربری یا رمز عبور اشتباه است");
-    } finally {
       setLoading(false);
     }
   };

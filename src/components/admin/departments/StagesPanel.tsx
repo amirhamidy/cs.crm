@@ -1,26 +1,37 @@
 "use client";
 
 import { useState } from "react";
-import { motion, AnimatePresence, Reorder } from "framer-motion";
-import { Plus, GripVertical, Trash2, GitBranch, CheckCircle2 } from "lucide-react";
+import { Reorder } from "framer-motion";
+import { Plus, GripVertical, Trash2, GitBranch, Pencil } from "lucide-react";
 import { Stage, Department } from "./types";
+import EditStageModal from "./EditStageModal";
 
 interface Props {
     department: Department;
     onAddStage: () => void;
     onDeleteStage: (stage: Stage) => void;
     onReorder: (stages: Stage[]) => void;
+    onEditStage?: (stage: Stage, values: { name: string; number: number }) => void;
 }
 
-export default function StagesPanel({ department, onAddStage, onDeleteStage, onReorder }: Props) {
-    const [hoveredId, setHoveredId] = useState<string | null>(null);
+const getStageNumber = (stage: Stage, index: number) => {
+    const n = (stage as Stage & { number?: number }).number;
+    return typeof n === "number" ? n : index + 1;
+};
+
+export default function StagesPanel({
+    department,
+    onAddStage,
+    onDeleteStage,
+    onReorder,
+    onEditStage,
+}: Props) {
     const accent = department.accent;
+    const [editingStage, setEditingStage] = useState<Stage | null>(null);
 
     return (
-        <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="rounded-2xl border border-gray-200 dark:border-white/10 bg-white/50 dark:bg-white/[0.02] backdrop-blur-xl p-5"
+        <div
+            className="rounded-2xl border p-5 bg-white/50 dark:bg-white/[0.02]"
             style={{
                 borderColor: `${accent}22`,
                 boxShadow: `0 0 0 1px ${accent}11`,
@@ -29,7 +40,9 @@ export default function StagesPanel({ department, onAddStage, onDeleteStage, onR
             <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
                     <GitBranch size={16} style={{ color: accent }} />
-                    <h3 className="text-sm font-semibold text-gray-900 dark:text-white">مراحل</h3>
+                    <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
+                        مراحل
+                    </h3>
                     <span
                         className="text-[10px] font-medium px-2 py-0.5 rounded-full"
                         style={{
@@ -41,11 +54,10 @@ export default function StagesPanel({ department, onAddStage, onDeleteStage, onR
                         {department.stages.length}
                     </span>
                 </div>
-                <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
+
+                <button
                     onClick={onAddStage}
-                    className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-xl transition-all font-medium"
+                    className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-xl font-medium active:scale-95 transition-transform"
                     style={{
                         backgroundColor: `${accent}18`,
                         color: accent,
@@ -54,7 +66,7 @@ export default function StagesPanel({ department, onAddStage, onDeleteStage, onR
                 >
                     <Plus size={13} />
                     افزودن مرحله
-                </motion.button>
+                </button>
             </div>
 
             {department.stages.length === 0 ? (
@@ -63,56 +75,117 @@ export default function StagesPanel({ department, onAddStage, onDeleteStage, onR
                     <p className="text-sm">هنوز مرحله‌ای تعریف نشده</p>
                 </div>
             ) : (
-                <Reorder.Group axis="y" values={department.stages} onReorder={onReorder} className="space-y-2">
-                    <AnimatePresence>
-                        {department.stages.map((stage, index) => (
-                            <Reorder.Item key={stage.id} value={stage}>
-                                <motion.div
-                                    initial={{ opacity: 0, x: -10 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    exit={{ opacity: 0, x: 10 }}
-                                    onHoverStart={() => setHoveredId(stage.id)}
-                                    onHoverEnd={() => setHoveredId(null)}
-                                    className="flex items-center gap-3 p-3 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50/50 dark:bg-white/[0.02] hover:bg-gray-100/50 dark:hover:bg-white/[0.05] transition-colors group cursor-grab active:cursor-grabbing"
+                <Reorder.Group
+                    axis="x"
+                    values={department.stages}
+                    onReorder={onReorder}
+                    as="div"
+                    className="flex flex-wrap gap-2"
+                >
+                    {department.stages.map((stage, index) => (
+                        <Reorder.Item
+                            key={stage.id}
+                            value={stage}
+                            as="div"
+                            className="group relative h-[92px] w-[calc(50%-0.25rem)] md:w-[calc(33.333%-0.334rem)] xl:w-[calc(25%-0.375rem)] overflow-hidden rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50/50 dark:bg-white/[0.02] cursor-grab active:cursor-grabbing select-none"
+                        >
+                            <svg
+                                className="absolute inset-0 w-full h-full pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+                                style={{ borderRadius: "0.75rem" }}
+                            >
+                                <defs>
+                                    <linearGradient
+                                        id={`stage-border-${stage.id}`}
+                                        x1="100%"
+                                        y1="100%"
+                                        x2="0%"
+                                        y2="0%"
+                                    >
+                                        <stop offset="0%" stopColor={accent} />
+                                        <stop offset="100%" stopColor={accent} stopOpacity="0.4" />
+                                    </linearGradient>
+                                </defs>
+                                <rect
+                                    x="1"
+                                    y="1"
+                                    width="calc(100% - 2px)"
+                                    height="calc(100% - 2px)"
+                                    rx="11"
+                                    ry="11"
+                                    fill="none"
+                                    stroke={`url(#stage-border-${stage.id})`}
+                                    strokeWidth="1.5"
+                                />
+                            </svg>
+
+                            <div className="relative z-10 flex items-center gap-2 px-3 pt-3 pb-8">
+                                <GripVertical
+                                    size={15}
+                                    className="text-gray-300 dark:text-gray-600 shrink-0"
+                                />
+
+                                <div
+                                    className="w-6 h-6 rounded-md flex items-center justify-center text-[10px] font-bold text-white shrink-0"
+                                    style={{ backgroundColor: stage.color }}
+                                >
+                                    {getStageNumber(stage, index)}
+                                </div>
+
+                                <p className="flex-1 min-w-0 text-sm font-medium text-gray-800 dark:text-white truncate">
+                                    {stage.name}
+                                </p>
+
+                                <div
+                                    className="w-2 h-2 rounded-full shrink-0"
+                                    style={{ backgroundColor: stage.color }}
+                                />
+                            </div>
+
+                            <div
+                                className="absolute bottom-2 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1.5 opacity-0 translate-y-1.5 pointer-events-none group-hover:opacity-100 group-hover:translate-y-0 group-hover:pointer-events-auto transition duration-150"
+                                onPointerDown={(e) => e.stopPropagation()}
+                            >
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setEditingStage(stage);
+                                    }}
+                                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-bold active:scale-95 transition-transform"
                                     style={{
-                                        borderColor: hoveredId === stage.id ? `${stage.color}40` : undefined,
+                                        backgroundColor: `${accent}18`,
+                                        color: accent,
+                                        border: `1px solid ${accent}30`,
                                     }}
                                 >
-                                    <GripVertical size={16} className="text-gray-300 dark:text-gray-600 group-hover:text-gray-400 dark:group-hover:text-gray-500 transition-colors shrink-0" />
-                                    <div
-                                        className="w-6 h-6 rounded-lg flex items-center justify-center text-[10px] font-bold shrink-0 text-white"
-                                        style={{ backgroundColor: stage.color }}
-                                    >
-                                        {index + 1}
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                        <p className="text-sm text-gray-800 dark:text-white font-medium truncate">
-                                            {stage.name}
-                                        </p>
-                                    </div>
-                                    <div
-                                        className="w-2 h-2 rounded-full shrink-0"
-                                        style={{ backgroundColor: stage.color }}
-                                    />
-                                    <AnimatePresence>
-                                        {hoveredId === stage.id && (
-                                            <motion.button
-                                                initial={{ opacity: 0, scale: 0.8 }}
-                                                animate={{ opacity: 1, scale: 1 }}
-                                                exit={{ opacity: 0, scale: 0.8 }}
-                                                onClick={() => onDeleteStage(stage)}
-                                                className="p-1.5 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors shrink-0"
-                                            >
-                                                <Trash2 size={14} />
-                                            </motion.button>
-                                        )}
-                                    </AnimatePresence>
-                                </motion.div>
-                            </Reorder.Item>
-                        ))}
-                    </AnimatePresence>
+                                    ویرایش
+                                    <Pencil size={11} />
+                                </button>
+
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        onDeleteStage(stage);
+                                    }}
+                                    className="w-7 h-7 rounded-xl flex items-center justify-center text-red-400 bg-red-500/10 active:scale-95 transition-transform"
+                                >
+                                    <Trash2 size={12} />
+                                </button>
+                            </div>
+                        </Reorder.Item>
+                    ))}
                 </Reorder.Group>
             )}
-        </motion.div>
+
+            <EditStageModal
+                open={!!editingStage}
+                stage={editingStage}
+                accent={accent}
+                onClose={() => setEditingStage(null)}
+                onSubmit={(values) => {
+                    if (editingStage) onEditStage?.(editingStage, values);
+                    setEditingStage(null);
+                }}
+            />
+        </div>
     );
 }
