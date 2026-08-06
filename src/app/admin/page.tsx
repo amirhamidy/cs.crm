@@ -1,14 +1,13 @@
 "use client";
-
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 
-export default function UserRootPage() {
+export default function AdminPage() {
     const router = useRouter();
 
     useEffect(() => {
-        router.replace("/user/dashboard");
-    }, [router]);
+        router.replace("/admin/dashboard");
+    }, []);
 
     return null;
 }

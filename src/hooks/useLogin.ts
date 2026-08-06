@@ -1,29 +1,33 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { loginService } from "@/services/authService";
+import { authService } from "@/services/authService";
 import { useAuthStore } from "@/store/authStore";
 
-export function useLogin() {
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const setAuth = useAuthStore((s) => s.setAuth);
+export const useLogin = () => {
   const router = useRouter();
+  const setAuth = useAuthStore((s) => s.setAuth);
+
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const login = async (username: string, password: string) => {
     setLoading(true);
-    setError("");
+    setError(null);
     try {
-      const { user, token } = await loginService({ username, password });
-      setAuth(user, token);
-      const destination =
-        user.role === "admin" ? "/admin/dashboard" : "/user/dashboard";
-      await new Promise((res) => setTimeout(res, 1500));
-      router.push(destination);
+      const { data } = await authService.login({ username, password });
+      setAuth({
+        access: data.access,
+        refresh: data.refresh,
+        username: data.user.username,
+        userType: data.user.type,
+      });
+      router.push(data.user.type === 1 ? "/admin" : "/user");
     } catch {
       setError("نام کاربری یا رمز عبور اشتباه است");
+    } finally {
       setLoading(false);
     }
   };
 
   return { login, loading, error };
-}
+};

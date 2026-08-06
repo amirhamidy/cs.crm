@@ -25,8 +25,8 @@ const vazir = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "ویز مارکت - پنل مدیریت",
-  description: "پنل مدیریت حرفه‌ای فروشگاه دیجیتال",
+  title: "ویز  - پنل مدیریت",
+  description: "پنل مدیریت حرفه‌ای crm ",
 };
 
 export default function RootLayout({

@@ -4,6 +4,7 @@ import Sidebar from "@/components/sidebar/Sidebar";
 import MobileSidebar from "@/components/sidebar/MobileSidebar";
 import Topbar from "@/components/topbar/Topbar";
 import { useSidebar } from "@/hooks/useSidebar";
+import { useAuthGuard } from "@/hooks/useAuthGuard";
 import { motion } from "framer-motion";
 
 export default function UserLayout({
@@ -12,6 +13,9 @@ export default function UserLayout({
     children: React.ReactNode;
 }) {
     const { isOpen } = useSidebar();
+    const { isReady } = useAuthGuard(2);
+
+    if (!isReady) return null;
 
     return (
         <div className="min-h-screen bg-gray-50/30 dark:bg-black transition-colors duration-300">

@@ -4,6 +4,7 @@ import Sidebar from "@/components/sidebar/Sidebar";
 import MobileSidebar from "@/components/sidebar/MobileSidebar";
 import Topbar from "@/components/topbar/Topbar";
 import { useSidebar } from "@/hooks/useSidebar";
+import { useAuthGuard } from "@/hooks/useAuthGuard";
 import { motion } from "framer-motion";
 
 export default function AdminLayout({
@@ -11,6 +12,7 @@ export default function AdminLayout({
 }: {
     children: React.ReactNode;
 }) {
+    useAuthGuard(1);
     const { isOpen } = useSidebar();
 
     return (

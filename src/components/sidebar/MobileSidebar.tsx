@@ -29,7 +29,7 @@ const itemVariants = {
 export default function MobileSidebar() {
   const pathname = usePathname();
   const { isOpen, toggle } = useSidebar();
-  const logout = useLogout();
+  const {logout} = useLogout();
   const menuItems = useMenuItems();
 
   return (

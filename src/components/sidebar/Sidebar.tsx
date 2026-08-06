@@ -24,7 +24,7 @@ const itemVariants = {
 export default function Sidebar() {
   const pathname = usePathname();
   const { isOpen } = useSidebar();
-  const logout = useLogout();
+  const {logout} = useLogout();
   const menuItems = useMenuItems();
 
   return (

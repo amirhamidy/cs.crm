@@ -1,30 +1,78 @@
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
-import Cookies from "js-cookie";
 
 interface AuthState {
-  user: any | null;
+  accessToken: string | null;
+  refreshToken: string | null;
+  username: string | null;
+  userType: 1 | 2 | null;
   isAuthenticated: boolean;
-  setAuth: (user: any, token: string) => void;
+  setAuth: (params: {
+    access: string;
+    refresh: string;
+    username: string;
+    userType: 1 | 2;
+  }) => void;
   clearAuth: () => void;
+  initFromStorage: () => void;
 }
 
-export const useAuthStore = create<AuthState>()(
-  persist(
-    (set) => ({
-      user: null,
+function syncCookies(access: string, type: 1 | 2) {
+  document.cookie = `crm-access=${access}; Max-Age=86400; path=/`;
+  document.cookie = `crm-type=${type}; Max-Age=604800; path=/`;
+}
+
+function clearCookies() {
+  document.cookie = "crm-access=; Max-Age=0; path=/";
+  document.cookie = "crm-type=; Max-Age=0; path=/";
+}
+
+export const useAuthStore = create<AuthState>((set) => ({
+  accessToken: null,
+  refreshToken: null,
+  username: null,
+  userType: null,
+  isAuthenticated: false,
+
+  setAuth: ({ access, refresh, username, userType }) => {
+    localStorage.setItem("crm-access", access);
+    localStorage.setItem("crm-refresh", refresh);
+    localStorage.setItem("crm-type", String(userType));
+    syncCookies(access, userType);
+    set({
+      accessToken: access,
+      refreshToken: refresh,
+      username,
+      userType,
+      isAuthenticated: true,
+    });
+  },
+
+  clearAuth: () => {
+    localStorage.removeItem("crm-access");
+    localStorage.removeItem("crm-refresh");
+    localStorage.removeItem("crm-type");
+    clearCookies();
+    set({
+      accessToken: null,
+      refreshToken: null,
+      username: null,
+      userType: null,
       isAuthenticated: false,
-      setAuth: (user, token) => {
-        Cookies.set("crm-auth", token, { expires: 7, secure: true });
-        Cookies.set("crm-role", user.role, { expires: 7, secure: true });
-        set({ user, isAuthenticated: true });
-      },
-      clearAuth: () => {
-        Cookies.remove("crm-auth");
-        Cookies.remove("crm-role");
-        set({ user: null, isAuthenticated: false });
-      },
-    }),
-    { name: "crm-auth-storage" },
-  ),
-);
+    });
+  },
+
+  initFromStorage: () => {
+    const access = localStorage.getItem("crm-access");
+    const refresh = localStorage.getItem("crm-refresh");
+    const raw = localStorage.getItem("crm-type");
+    const userType = raw === "1" ? 1 : raw === "2" ? 2 : null;
+    if (access && refresh && userType) {
+      set({
+        accessToken: access,
+        refreshToken: refresh,
+        userType,
+        isAuthenticated: true,
+      });
+    }
+  },
+}));

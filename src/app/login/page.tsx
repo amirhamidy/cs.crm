@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { Loader } from "lucide-react";
 import { useLogin } from "@/hooks/useLogin";
 import { Notification } from "@/components/Notification";
@@ -15,13 +15,15 @@ export default function LoginPage() {
     const { login, loading, error } = useLogin();
 
     useEffect(() => {
-        if (error) {
-            setErrorMsg(error);
-        }
+        if (error) setErrorMsg(error);
     }, [error]);
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (!username.trim() || !password.trim()) {
+            setErrorMsg("لطفاً همه فیلدها را پر کنید");
+            return;
+        }
         await login(username, password);
     };
 
@@ -37,8 +39,13 @@ export default function LoginPage() {
                 )}
             </AnimatePresence>
 
-            <div className="bg-white rounded-[2rem] shadow-sm border border-gray-100 p-8 w-full max-w-sm">
-                <form onSubmit={handleLogin} autoComplete="off" className="flex flex-col gap-6 !text-black">
+            <motion.div
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.35, ease: "easeOut" }}
+                className="bg-white rounded-[2rem] shadow-sm border border-gray-100 p-8 w-full max-w-sm"
+            >
+                <form onSubmit={handleLogin} autoComplete="off" className="flex flex-col gap-6">
                     <FloatingInput
                         label="نام کاربری"
                         id="username"
@@ -55,19 +62,17 @@ export default function LoginPage() {
                         onChange={(e) => setPassword(e.target.value)}
                     />
 
-                    <button
+                    <motion.button
                         type="submit"
                         disabled={loading}
-                        className="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-semibold rounded-4xl py-3 text-sm transition-all active:scale-[0.98] flex items-center justify-center"
+                        whileTap={{ scale: 0.97 }}
+                        className="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-bold rounded-full py-3 text-sm transition-colors flex items-center justify-center gap-2"
                     >
-                        {loading ? (
-                            <Loader className="animate-spin" size={18} />
-                        ) : (
-                            "ورود"
-                        )}
-                    </button>
+                        {loading && <Loader size={15} className="animate-spin" />}
+                        ورود
+                    </motion.button>
                 </form>
-            </div>
+            </motion.div>
         </div>
     );
 }

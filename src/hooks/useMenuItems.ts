@@ -1,12 +1,12 @@
 "use client";
 
 import { useMemo } from "react";
-import Cookies from "js-cookie";
 import { adminMenuItems, userMenuItems } from "@/config/menu";
 
 export function useMenuItems() {
   return useMemo(() => {
-    const role = Cookies.get("crm-role");
-    return role === "admin" ? adminMenuItems : userMenuItems;
+    if (typeof window === "undefined") return userMenuItems;
+    const role = localStorage.getItem("crm-type");
+    return role === "1" ? adminMenuItems : userMenuItems;
   }, []);
 }

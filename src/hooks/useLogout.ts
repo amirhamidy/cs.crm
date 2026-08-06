@@ -1,15 +1,14 @@
 import { useRouter } from "next/navigation";
-import Cookies from "js-cookie";
 import { useAuthStore } from "@/store/authStore";
 
-export function useLogout() {
+export const useLogout = () => {
   const router = useRouter();
   const clearAuth = useAuthStore((s) => s.clearAuth);
 
-  return () => {
+  const logout = () => {
     clearAuth();
-    Cookies.remove("crm-token");
-    Cookies.remove("crm-role");
     router.push("/login");
   };
-}
+
+  return { logout };
+};
