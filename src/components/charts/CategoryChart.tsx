@@ -50,6 +50,7 @@ type ActiveSlice = {
   pct: string;
 };
 
+// SVG defs رو خارج از کامپوننت تعریف کن تا هر render دوباره ساخته نشه
 const PIE_DEFS = (
   <defs>
     {(Object.entries(chartMeta) as [SliceKey, (typeof chartMeta)[SliceKey]][]).map(
@@ -60,37 +61,25 @@ const PIE_DEFS = (
         </radialGradient>
       )
     )}
+    {/* drop-shadow filter رو یه بار تعریف کن برای هر رنگ */}
+    {(Object.entries(chartMeta) as [SliceKey, (typeof chartMeta)[SliceKey]][]).map(
+      ([key, meta]) => (
+        <filter key={`filter-${key}`} id={`glow-${key}`} x="-20%" y="-20%" width="140%" height="140%">
+          <feDropShadow dx="0" dy="0" stdDeviation="3" floodColor={meta.color} floodOpacity="0.6" />
+        </filter>
+      )
+    )}
   </defs>
 );
 
-function CategoryChartSkeleton() {
-  return (
-    <div className="rounded-2xl border border-gray-100 bg-white p-4 dark:border-white/5 dark:bg-slate-950">
-      <div className="mb-3 flex items-start justify-between gap-3" dir="rtl">
-        <div className="space-y-2">
-          <div className="h-4 w-28 animate-pulse rounded-full bg-gray-100 dark:bg-slate-900" />
-          <div className="h-3 w-20 animate-pulse rounded-full bg-gray-100/80 dark:bg-slate-900/60" />
-        </div>
-        <div className="h-8 w-24 animate-pulse rounded-lg bg-gray-100 dark:bg-slate-900" />
-      </div>
-      <div className="flex h-[180px] items-center justify-center">
-        <div className="h-[140px] w-[140px] animate-pulse rounded-full bg-gray-100 dark:bg-slate-900" />
-      </div>
-    </div>
-  );
-}
-
 export default function CategoryChart() {
-  const [loading, setLoading] = useState(true);
   const [activeRange, setActiveRange] = useState<TimeRange>("weekly");
   const [activeSlice, setActiveSlice] = useState<ActiveSlice | null>(null);
 
   const data = dataByRange[activeRange];
 
   const total = useMemo(() => data.reduce((sum, i) => sum + i.value, 0), [data]);
-
   const totalFormatted = useMemo(() => total.toLocaleString("fa-IR"), [total]);
-
   const currentRange = useMemo(() => ranges.find((r) => r.key === activeRange), [activeRange]);
 
   const handleMouseEnter = useCallback(
@@ -112,14 +101,7 @@ export default function CategoryChart() {
 
   const handleMouseLeave = useCallback(() => setActiveSlice(null), []);
 
-  useEffect(() => {
-    const timer = setTimeout(() => setLoading(false), 700);
-    return () => clearTimeout(timer);
-  }, []);
-
   useEffect(() => setActiveSlice(null), [activeRange]);
-
-  if (loading) return <CategoryChartSkeleton />;
 
   return (
     <div className="relative rounded-2xl border border-gray-100 bg-white p-4 shadow-sm dark:border-white/5 dark:bg-slate-950">
@@ -177,10 +159,7 @@ export default function CategoryChart() {
                 <div className="mb-1 flex items-center gap-1.5">
                   <span
                     className="h-2 w-2 rounded-full"
-                    style={{
-                      backgroundColor: activeSlice.color,
-                      boxShadow: `0 0 6px ${activeSlice.glow}`,
-                    }}
+                    style={{ backgroundColor: activeSlice.color }}
                   />
                   <span className="text-[12px] font-semibold text-gray-800 dark:text-gray-100">
                     {activeSlice.label}
@@ -188,10 +167,7 @@ export default function CategoryChart() {
                 </div>
                 <p className="text-[11px] text-gray-500 dark:text-gray-400">
                   سهم فروش:{" "}
-                  <span
-                    className="font-bold tabular-nums"
-                    style={{ color: activeSlice.color }}
-                  >
+                  <span className="font-bold tabular-nums" style={{ color: activeSlice.color }}>
                     {activeSlice.pct}%
                   </span>
                 </p>
@@ -215,6 +191,7 @@ export default function CategoryChart() {
               strokeWidth={0}
               onMouseEnter={handleMouseEnter}
               onMouseLeave={handleMouseLeave}
+              isAnimationActive={false}
             >
               {data.map((entry) => {
                 const isActive = activeSlice?.name === entry.name;
@@ -223,12 +200,8 @@ export default function CategoryChart() {
                     key={`${activeRange}-${entry.name}`}
                     fill={`url(#pieGrad-${entry.name})`}
                     stroke="none"
-                    style={{
-                      filter: isActive
-                        ? `drop-shadow(0 0 6px ${chartMeta[entry.name].color})`
-                        : "none",
-                      transition: "filter 0.2s ease",
-                    }}
+                    // به جای inline style با filter string، از SVG filter ref استفاده می‌کنیم
+                    filter={isActive ? `url(#glow-${entry.name})` : undefined}
                   />
                 );
               })}
@@ -247,10 +220,7 @@ export default function CategoryChart() {
                 transition={{ duration: 0.12 }}
                 className="text-center"
               >
-                <p
-                  className="text-[20px] font-bold tabular-nums"
-                  style={{ color: activeSlice.color }}
-                >
+                <p className="text-[20px] font-bold tabular-nums" style={{ color: activeSlice.color }}>
                   {activeSlice.pct}%
                 </p>
               </motion.div>
@@ -283,24 +253,16 @@ export default function CategoryChart() {
             <div
               key={`${activeRange}-${entry.name}`}
               className="flex cursor-default items-center gap-1.5 rounded-lg px-2 py-1 transition-colors duration-150"
-              style={{
-                backgroundColor: isActive ? meta.glow : "transparent",
-              }}
+              style={{ backgroundColor: isActive ? meta.glow : "transparent" }}
             >
               <span
                 className="h-2 w-2 flex-shrink-0 rounded-full"
-                style={{
-                  backgroundColor: meta.color,
-                  boxShadow: isActive ? `0 0 6px ${meta.glow}` : "none",
-                }}
+                style={{ backgroundColor: meta.color }}
               />
               <span className="flex-1 text-[12px] text-gray-600 dark:text-gray-300">
                 {meta.label}
               </span>
-              <span
-                className="tabular-nums text-[12px] font-bold"
-                style={{ color: meta.color }}
-              >
+              <span className="tabular-nums text-[12px] font-bold" style={{ color: meta.color }}>
                 {pct}%
               </span>
             </div>

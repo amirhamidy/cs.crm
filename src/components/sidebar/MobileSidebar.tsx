@@ -17,11 +17,10 @@ const containerVariants = {
 };
 
 const itemVariants = {
-  hidden: { opacity: 0, x: 16, filter: "blur(4px)" },
+  hidden: { opacity: 0, x: 16 },
   visible: {
     opacity: 1,
     x: 0,
-    filter: "blur(0px)",
     transition: { duration: 0.22, ease: [0.25, 0.46, 0.45, 0.94] },
   },
 };
@@ -29,7 +28,7 @@ const itemVariants = {
 export default function MobileSidebar() {
   const pathname = usePathname();
   const { isOpen, toggle } = useSidebar();
-  const {logout} = useLogout();
+  const { logout } = useLogout();
   const menuItems = useMenuItems();
 
   return (
@@ -108,22 +107,15 @@ export default function MobileSidebar() {
                         </>
                       )}
 
-                      <motion.div
-                        whileHover={{ scale: 1.1 }}
-                        whileTap={{ scale: 0.9 }}
-                        transition={{ type: "spring", stiffness: 500, damping: 25 }}
-                        className="relative z-10"
-                      >
-                        <Icon
-                          className={cn(
-                            "w-[18px] h-[18px] flex-shrink-0 transition-colors",
-                            isActive
-                              ? "text-blue-600 dark:text-blue-400"
-                              : "text-gray-500 group-hover:text-gray-700 dark:text-gray-400 dark:group-hover:text-gray-200"
-                          )}
-                          strokeWidth={isActive ? 2 : 1.5}
-                        />
-                      </motion.div>
+                      <Icon
+                        className={cn(
+                          "w-[18px] h-[18px] flex-shrink-0 transition-colors relative z-10",
+                          isActive
+                            ? "text-blue-600 dark:text-blue-400"
+                            : "text-gray-500 group-hover:text-gray-700 dark:text-gray-400 dark:group-hover:text-gray-200"
+                        )}
+                        strokeWidth={isActive ? 2 : 1.5}
+                      />
 
                       <span className="font-medium text-[13px] relative z-10">
                         {item.label}
@@ -139,14 +131,9 @@ export default function MobileSidebar() {
                 onClick={logout}
                 whileHover={{ scale: 1.01, x: -2 }}
                 whileTap={{ scale: 0.98 }}
-                className="flex items-center gap-3 w-full px-3 py-2.5 text-[13px] text-red-400 hover:bg-red-500/10 rounded-lg transition-colors group"
+                className="flex items-center gap-3 w-full px-3 py-2.5 text-[13px] text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
               >
-                <motion.div
-                  whileHover={{ rotate: -15 }}
-                  transition={{ type: "spring", stiffness: 400, damping: 20 }}
-                >
-                  <LogOut size={18} />
-                </motion.div>
+                <LogOut size={18} />
                 <span>خروج</span>
               </motion.button>
             </div>

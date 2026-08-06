@@ -1,14 +1,20 @@
-import { redirect } from "next/navigation";
-import { cookies } from "next/headers";
+"use client";
 
-export default async function Home() {
-  const cookieStore = await cookies();
-  const accessToken = cookieStore.get("crm-access")?.value;
-  const userType = cookieStore.get("crm-type")?.value;
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useAuthStore } from "@/store/authStore";
 
-  if (accessToken && userType) {
-    redirect(userType === "admin" ? "/admin" : "/user");
-  }
+export default function Home() {
+  const router = useRouter();
+  const { isAuthenticated, userType } = useAuthStore();
 
-  redirect("/login");
+  useEffect(() => {
+    if (!isAuthenticated) {
+      router.replace("/login");
+    } else {
+      router.replace(userType === 1 ? "/admin/dashboard" : "/user/dashboard");
+    }
+  }, [isAuthenticated, userType]);
+
+  return null;
 }

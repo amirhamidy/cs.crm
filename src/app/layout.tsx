@@ -4,8 +4,10 @@ import "./globals.css";
 import { Providers } from "@/components/providers";
 import { Geist } from "next/font/google";
 import { cn } from "@/lib/utils";
+import { AuthInitializer } from "@/components/AuthInitializer";
 
-const geist = Geist({subsets:['latin'],variable:'--font-sans'});
+
+const geist = Geist({ subsets: ['latin'], variable: '--font-sans' });
 
 const vazir = localFont({
   src: [
@@ -29,16 +31,16 @@ export const metadata: Metadata = {
   description: "پنل مدیریت حرفه‌ای crm ",
 };
 
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="fa" dir="rtl" suppressHydrationWarning className={cn("font-sans", geist.variable)}>
       <body className={`${vazir.variable} font-vazir antialiased`}>
-        <Providers>{children}</Providers>{" "}
+        <Providers>
+          <AuthInitializer />
+          {children}
+        </Providers>
       </body>
     </html>
   );
 }
+

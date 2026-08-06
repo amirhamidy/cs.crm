@@ -1,26 +1,37 @@
-export interface User {
+export type UserType = 1 | 2;
+
+export interface ApiEmployee {
   id: number;
-  name: string;
-  email: string;
-  role: "admin" | "user";
-  jobType: "accountant" | "marketer" | "warehouse" | "specialist";
-  joined: string;
-  avatarUrl?: string;
+  full_name: string;
+  username: string;
+  created_at: string;
+  updated_at?: string;
 }
 
-export interface UsersFiltersState {
-  search: string;
-  role: "all" | "admin" | "user";
+export interface ApiUser {
+  id: number;
+  username: string;
+  type: UserType;
 }
 
-export const JOB_TYPE_LABELS: Record<User["jobType"], string> = {
-  accountant: "حسابدار",
-  marketer: "بازاریاب",
-  warehouse: "انبار دار",
-  specialist: "کارشناس",
-};
-
-export const ROLE_LABELS: Record<User["role"], string> = {
-  admin: "ادمین",
-  user: "کاربر",
-};
+export interface CreateUserResponse {
+  id?: number;
+  username?: string;
+  type?: UserType;
+  user?: {
+    id?: number;
+    username?: string;
+    type?: UserType;
+  };
+  data?: {
+    id?: number;
+    username?: string;
+    type?: UserType;
+    user?: {
+      id?: number;
+      username?: string;
+      type?: UserType;
+    };
+  };
+  detail?: string;
+}

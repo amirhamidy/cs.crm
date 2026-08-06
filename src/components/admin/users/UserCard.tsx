@@ -2,15 +2,16 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Trash2, ArrowLeft } from "lucide-react";
+import { Trash2, Pencil, X } from "lucide-react";
 import { useTheme } from "next-themes";
-import type { User } from "@/types/users";
+import axiosInstance from "@/lib/axiosInstance";
+import type { AxiosError } from "axios";
+import type { ApiEmployee } from "@/types/users";
 
 interface UserCardProps {
-    user: User;
+    employee?: ApiEmployee;
     index: number;
-    onView?: (user: User) => void;
-    onDelete?: (user: User) => void;
+    onDelete: (id: number) => void;
 }
 
 const AVATAR_GRADIENTS = [
@@ -21,29 +22,92 @@ const AVATAR_GRADIENTS = [
     ["#f59e0b", "#ef4444"],
 ];
 
-export default function UserCard({ user, index, onView, onDelete }: UserCardProps) {
+function getErrorMessage(err: unknown, fallback: string) {
+    const error = err as AxiosError<Record<string, unknown>>;
+    const data = error.response?.data;
+
+    if (!data) return fallback;
+
+    const possibleKeys = ["detail", "message", "error", "non_field_errors"];
+
+    for (const key of possibleKeys) {
+        const value = data[key];
+
+        if (typeof value === "string") return value;
+
+        if (Array.isArray(value) && typeof value[0] === "string") {
+            return value[0];
+        }
+    }
+
+    return fallback;
+}
+
+export default function UserCard({ employee, index, onDelete }: UserCardProps) {
     const { resolvedTheme } = useTheme();
     const isDark = resolvedTheme === "dark";
+
     const [hovered, setHovered] = useState(false);
     const [showConfirm, setShowConfirm] = useState(false);
+    const [deleting, setDeleting] = useState(false);
+    const [deleteError, setDeleteError] = useState("");
 
-    const [start, end] = AVATAR_GRADIENTS[user.id % AVATAR_GRADIENTS.length];
+    if (
+        !employee ||
+        typeof employee.id !== "number" ||
+        typeof employee.full_name !== "string" ||
+        typeof employee.username !== "string"
+    ) {
+        return null;
+    }
+
+    const employeeName = employee.full_name.trim() || "بدون نام";
+    const username = employee.username.trim() || "unknown";
+    const gradient = AVATAR_GRADIENTS[employee.id % AVATAR_GRADIENTS.length];
+    const start = gradient[0];
+    const end = gradient[1];
+
+    const joinedDate = employee.created_at
+        ? new Date(employee.created_at).toLocaleDateString("fa-IR", {
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit",
+        })
+        : "نامشخص";
+
+    async function handleDelete() {
+        if (!employee) return;
+
+        setDeleting(true);
+        setDeleteError("");
+
+        try {
+            await axiosInstance.delete(`/accounts/api/v1/user/${employee.id}/delete/`);
+            onDelete(employee.id);
+            setShowConfirm(false);
+        } catch (err) {
+            setDeleteError(getErrorMessage(err, "خطا در حذف کاربر"));
+        } finally {
+            setDeleting(false);
+        }
+    }
 
     return (
         <>
             <motion.div
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95 }}
                 transition={{ duration: 0.2, delay: index * 0.05 }}
                 onHoverStart={() => setHovered(true)}
                 onHoverEnd={() => setHovered(false)}
                 className="relative rounded-2xl p-4 flex flex-col gap-3 overflow-hidden"
                 style={{
-                    background: "transparent",
                     border: isDark
                         ? "1px solid rgba(255,255,255,0.06)"
                         : "1px solid rgba(0,0,0,0.06)",
                     minHeight: "130px",
+                    background: isDark ? "rgba(255,255,255,0.02)" : "#fafafa",
                 }}
             >
                 <svg
@@ -51,18 +115,27 @@ export default function UserCard({ user, index, onView, onDelete }: UserCardProp
                     style={{ borderRadius: "1rem" }}
                 >
                     <defs>
-                        <linearGradient id={`borderGrad-${user.id}`} x1="100%" y1="100%" x2="0%" y2="0%">
+                        <linearGradient
+                            id={`borderGrad-${employee.id}`}
+                            x1="100%"
+                            y1="100%"
+                            x2="0%"
+                            y2="0%"
+                        >
                             <stop offset="0%" stopColor="#6366f1" />
                             <stop offset="100%" stopColor="#8b5cf6" />
                         </linearGradient>
                     </defs>
+
                     <motion.rect
-                        x="1" y="1"
+                        x="1"
+                        y="1"
                         width="calc(100% - 2px)"
                         height="calc(100% - 2px)"
-                        rx="15" ry="15"
+                        rx="15"
+                        ry="15"
                         fill="none"
-                        stroke={`url(#borderGrad-${user.id})`}
+                        stroke={`url(#borderGrad-${employee.id})`}
                         strokeWidth="1.5"
                         pathLength="1"
                         initial={{ pathLength: 0, opacity: 0 }}
@@ -75,86 +148,85 @@ export default function UserCard({ user, index, onView, onDelete }: UserCardProp
                     />
                 </svg>
 
-                <div className="flex items-center gap-3">
-                    <div
-                        className="w-11 h-11 rounded-2xl flex items-center justify-center duration-75 text-white text-[15px] font-extrabold flex-shrink-0"
-                        style={{ background: `linear-gradient(135deg, ${start}, ${end})` }}
+                <div className="absolute top-3 left-3 flex items-center gap-1.5 z-10">
+                    <button
+                        onClick={() => { }}
+                        className="w-7 h-7 rounded-xl flex items-center justify-center transition-colors"
+                        style={{
+                            background: isDark
+                                ? "rgba(99,102,241,0.1)"
+                                : "rgba(99,102,241,0.07)",
+                            color: isDark ? "#a5b4fc" : "#6366f1",
+                        }}
+                        title="ویرایش"
+                        type="button"
                     >
-                        {user.name.charAt(0)}
+                        <Pencil size={11} />
+                    </button>
+
+                    <button
+                        onClick={() => setShowConfirm(true)}
+                        className="w-7 h-7 rounded-xl flex items-center justify-center transition-colors"
+                        style={{
+                            background: isDark
+                                ? "rgba(239,68,68,0.1)"
+                                : "rgba(239,68,68,0.07)",
+                            color: "#ef4444",
+                        }}
+                        title="حذف"
+                        type="button"
+                    >
+                        <Trash2 size={11} />
+                    </button>
+                </div>
+
+                <div className="flex items-center gap-3 pt-1">
+                    <div
+                        className="w-11 h-11 rounded-2xl flex items-center justify-center text-white text-[15px] font-extrabold flex-shrink-0"
+                        style={{
+                            background: `linear-gradient(135deg, ${start}, ${end})`,
+                        }}
+                    >
+                        {employeeName.charAt(0)}
                     </div>
-                    <div>
-                        <p className="text-[13.5px] font-extrabold text-gray-800 dark:text-gray-100 leading-tight">
-                            {user.name}
+
+                    <div className="flex flex-col gap-1 min-w-0">
+                        <p className="text-[13.5px] font-extrabold text-gray-800 dark:text-gray-100 leading-tight truncate">
+                            {employeeName}
                         </p>
+
+                        <p className="text-[11.5px] text-gray-400 dark:text-gray-500 truncate">
+                            @{username}
+                        </p>
+                    </div>
+                </div>
+
+                <div
+                    className="pt-2.5 border-t"
+                    style={{
+                        borderColor: isDark
+                            ? "rgba(255,255,255,0.05)"
+                            : "rgba(0,0,0,0.05)",
+                    }}
+                >
+                    <div className="flex items-center justify-between">
+                        <p className="text-[11.5px] text-gray-400 dark:text-gray-500">
+                            عضویت از {joinedDate}
+                        </p>
+
                         <span
-                            className="inline-flex items-center mt-1 px-2 py-0.5 rounded-lg text-[11px] font-bold"
-                            style={
-                                user.role === "admin"
-                                    ? {
-                                        background: isDark
-                                            ? "rgba(139,92,246,0.12)"
-                                            : "rgba(139,92,246,0.08)",
-                                        color: isDark ? "#c4b5fd" : "#7c3aed",
-                                    }
-                                    : {
-                                        background: isDark
-                                            ? "rgba(255,255,255,0.05)"
-                                            : "rgba(0,0,0,0.04)",
-                                        color: isDark ? "#94a3b8" : "#64748b",
-                                    }
-                            }
+                            className="text-[11px] font-bold px-2 py-0.5 rounded-lg"
+                            style={{
+                                background: isDark
+                                    ? "rgba(99,102,241,0.12)"
+                                    : "rgba(99,102,241,0.07)",
+                                color: isDark ? "#a5b4fc" : "#6366f1",
+                            }}
                         >
-                            {user.role === "admin" ? "ادمین" : "کاربر"}
+                            کارمند
                         </span>
                     </div>
                 </div>
-
-                <div className="flex flex-col gap-1 pt-2 border-t border-gray-100 dark:border-white/[0.05]">
-                    <p className="text-[11.5px] font-mono text-gray-400 dark:text-gray-500 truncate">
-                        {user.email}
-                    </p>
-                    <p className="text-[11.5px] text-gray-400 dark:text-gray-500">
-                        عضویت از {user.joined}
-                    </p>
-                </div>
-
-                <AnimatePresence>
-                    {hovered && (
-                        <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            transition={{ duration: 0.15 }}
-                            className="absolute bottom-3 left-3 flex items-center gap-1.5"
-                        >
-                            <button
-                                onClick={() => onView?.(user)}
-                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11.5px] font-bold transition-colors"
-                                style={{
-                                    background: isDark
-                                        ? "rgba(99,102,241,0.15)"
-                                        : "rgba(99,102,241,0.09)",
-                                    color: isDark ? "#a5b4fc" : "#6366f1",
-                                }}
-                            >
-                                مشاهده
-                                <ArrowLeft size={11} />
-                            </button>
-                            <button
-                                onClick={() => setShowConfirm(true)}
-                                className="w-7 h-7 rounded-xl flex items-center justify-center transition-colors"
-                                style={{
-                                    background: isDark
-                                        ? "rgba(239,68,68,0.1)"
-                                        : "rgba(239,68,68,0.07)",
-                                    color: "#ef4444",
-                                }}
-                            >
-                                <Trash2 size={12} />
-                            </button>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
             </motion.div>
 
             <AnimatePresence>
@@ -163,59 +235,142 @@ export default function UserCard({ user, index, onView, onDelete }: UserCardProp
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-50 flex items-center justify-center"
-                        style={{ background: "rgba(0,0,0,0.45)", backdropFilter: "blur(1px)" }}
-                        onClick={() => setShowConfirm(false)}
+                        className="fixed inset-0 z-50 flex items-center justify-center px-4"
+                        style={{
+                            background: "rgba(0,0,0,0.5)",
+                            backdropFilter: "blur(2px)",
+                        }}
+                        onClick={() => !deleting && setShowConfirm(false)}
                     >
                         <motion.div
-                            initial={{ scale: 0.93, y: 16 }}
+                            initial={{ scale: 0.9, y: 12 }}
                             animate={{ scale: 1, y: 0 }}
-                            exit={{ scale: 0.93, y: 16 }}
-                            transition={{ duration: 0.2 }}
-                            className="rounded-2xl border p-5 w-full max-w-[320px] mx-4"
+                            exit={{ scale: 0.9, y: 12 }}
+                            transition={{ duration: 0.2, ease: "easeOut" }}
+                            className="w-full max-w-[320px] rounded-2xl overflow-hidden border"
                             style={{
                                 background: isDark ? "#0f172a" : "#ffffff",
                                 borderColor: isDark
                                     ? "rgba(255,255,255,0.07)"
-                                    : "rgba(0,0,0,0.06)",
-                                boxShadow: "0 20px 60px rgba(0,0,0,0.25)",
+                                    : "rgba(0,0,0,0.07)",
+                                boxShadow: "0 20px 60px rgba(0,0,0,0.3)",
                             }}
                             onClick={(e) => e.stopPropagation()}
                             dir="rtl"
                         >
-                            <div className="w-10 h-10 rounded-2xl bg-red-50 dark:bg-red-500/10 flex items-center justify-center mb-3">
-                                <Trash2 size={18} className="text-red-500" />
-                            </div>
-                            <h3 className="text-[14px] font-extrabold text-gray-900 dark:text-white mb-1">
-                                حذف کاربر
-                            </h3>
-                            <p className="text-[12.5px] text-gray-400 dark:text-gray-500 leading-relaxed mb-5">
-                                آیا مطمئنی می‌خوای{" "}
-                                <span className="font-bold text-gray-700 dark:text-gray-300">
-                                    {user.name}
-                                </span>{" "}
-                                رو حذف کنی؟ این عمل برگشت‌پذیر نیست.
-                            </p>
-                            <div className="flex items-center gap-2">
+                            <div
+                                className="flex items-center justify-between px-5 py-4 border-b"
+                                style={{
+                                    borderColor: isDark
+                                        ? "rgba(255,255,255,0.06)"
+                                        : "rgba(0,0,0,0.06)",
+                                }}
+                            >
+                                <div className="flex items-center gap-2.5">
+                                    <div
+                                        className="w-8 h-8 rounded-xl flex items-center justify-center"
+                                        style={{
+                                            background: isDark
+                                                ? "rgba(239,68,68,0.12)"
+                                                : "rgba(239,68,68,0.08)",
+                                        }}
+                                    >
+                                        <Trash2 size={14} className="text-red-500" />
+                                    </div>
+
+                                    <h3 className="text-[13.5px] font-extrabold text-gray-900 dark:text-white">
+                                        حذف کارمند
+                                    </h3>
+                                </div>
+
                                 <button
-                                    onClick={() => setShowConfirm(false)}
-                                    className="flex-1 py-2 rounded-xl text-[12.5px] font-bold border border-gray-200 dark:border-white/[0.08] text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-white/[0.04] transition-colors"
-                                >
-                                    انصراف
-                                </button>
-                                <button
-                                    onClick={() => {
-                                        setShowConfirm(false);
-                                        onDelete?.(user);
-                                    }}
-                                    className="flex-1 py-2 rounded-xl text-[12.5px] font-bold text-white"
+                                    onClick={() => !deleting && setShowConfirm(false)}
+                                    className="w-7 h-7 rounded-xl flex items-center justify-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
                                     style={{
-                                        background: "linear-gradient(135deg, #ef4444, #dc2626)",
-                                        boxShadow: "0 4px 12px rgba(239,68,68,0.3)",
+                                        background: isDark
+                                            ? "rgba(255,255,255,0.05)"
+                                            : "rgba(0,0,0,0.04)",
                                     }}
+                                    type="button"
                                 >
-                                    حذف کاربر
+                                    <X size={13} />
                                 </button>
+                            </div>
+
+                            <div className="px-5 py-4 flex flex-col gap-4">
+                                <p className="text-[12.5px] text-gray-500 dark:text-gray-400 leading-relaxed">
+                                    کارمند{" "}
+                                    <span className="font-extrabold text-gray-800 dark:text-gray-200">
+                                        {employeeName}
+                                    </span>{" "}
+                                    حذف خواهد شد. این عملیات قابل بازگشت نیست.
+                                </p>
+
+                                {deleteError && (
+                                    <p className="text-[11.5px] text-red-500 dark:text-red-400 font-semibold text-center">
+                                        {deleteError}
+                                    </p>
+                                )}
+
+                                <div className="flex gap-2">
+                                    <button
+                                        onClick={() => !deleting && setShowConfirm(false)}
+                                        disabled={deleting}
+                                        className="flex-1 py-2.5 rounded-xl text-[12.5px] font-bold transition-colors disabled:opacity-40"
+                                        style={{
+                                            background: isDark
+                                                ? "rgba(255,255,255,0.05)"
+                                                : "rgba(0,0,0,0.04)",
+                                            color: isDark ? "#94a3b8" : "#64748b",
+                                        }}
+                                        type="button"
+                                    >
+                                        انصراف
+                                    </button>
+
+                                    <button
+                                        onClick={handleDelete}
+                                        disabled={deleting}
+                                        className="flex-1 py-2.5 rounded-xl text-[12.5px] font-bold text-white flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
+                                        style={{
+                                            background:
+                                                "linear-gradient(135deg, #ef4444, #dc2626)",
+                                            boxShadow: "0 4px 14px rgba(239,68,68,0.3)",
+                                        }}
+                                        type="button"
+                                    >
+                                        {deleting ? (
+                                            <>
+                                                <svg
+                                                    className="w-3.5 h-3.5 animate-spin"
+                                                    viewBox="0 0 24 24"
+                                                    fill="none"
+                                                >
+                                                    <circle
+                                                        cx="12"
+                                                        cy="12"
+                                                        r="10"
+                                                        stroke="currentColor"
+                                                        strokeWidth="3"
+                                                        strokeOpacity="0.25"
+                                                    />
+                                                    <path
+                                                        d="M12 2a10 10 0 0 1 10 10"
+                                                        stroke="currentColor"
+                                                        strokeWidth="3"
+                                                        strokeLinecap="round"
+                                                    />
+                                                </svg>
+                                                در حال حذف...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Trash2 size={13} />
+                                                حذف کن
+                                            </>
+                                        )}
+                                    </button>
+                                </div>
                             </div>
                         </motion.div>
                     </motion.div>

@@ -7,7 +7,7 @@ export const useLogout = () => {
 
   const logout = () => {
     clearAuth();
-    router.push("/login");
+    router.replace("/login");
   };
 
   return { logout };

@@ -21,7 +21,7 @@ export const useLogin = () => {
         username: data.user.username,
         userType: data.user.type,
       });
-      router.push(data.user.type === 1 ? "/admin" : "/user");
+      router.push(data.user.type === 1 ? "/admin/dashboard" : "/user/dashboard");
     } catch {
       setError("نام کاربری یا رمز عبور اشتباه است");
     } finally {

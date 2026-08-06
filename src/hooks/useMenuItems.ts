@@ -2,11 +2,11 @@
 
 import { useMemo } from "react";
 import { adminMenuItems, userMenuItems } from "@/config/menu";
+import { useAuthStore } from "@/store/authStore";
 
 export function useMenuItems() {
+  const userType = useAuthStore((s) => s.userType);
   return useMemo(() => {
-    if (typeof window === "undefined") return userMenuItems;
-    const role = localStorage.getItem("crm-type");
-    return role === "1" ? adminMenuItems : userMenuItems;
-  }, []);
+    return userType === 1 ? adminMenuItems : userMenuItems;
+  }, [userType]);
 }

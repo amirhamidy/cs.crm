@@ -1,8 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { useTheme } from "next-themes";
+import { useCallback, useMemo, useState } from "react";
 import {
   Area,
   AreaChart,
@@ -68,91 +67,14 @@ const CHART_DEFS = (
   </defs>
 );
 
-function SalesChartSkeleton() {
-  return (
-    <div className="relative rounded-2xl border border-gray-100 bg-white p-4 shadow-sm dark:border-white/5 dark:bg-slate-950">
-      <div className="mb-3 flex items-center justify-between" dir="rtl">
-        <div className="space-y-1.5">
-          <div className="h-3.5 w-24 animate-pulse rounded-md bg-gray-200 dark:bg-slate-800" />
-          <div className="h-3 w-32 animate-pulse rounded-md bg-gray-100 dark:bg-slate-800/70" />
-        </div>
-        <div className="flex items-center gap-1 rounded-xl border border-gray-100 bg-gray-50/80 p-1 dark:border-white/5 dark:bg-slate-900/50">
-          {[1, 2, 3].map((i) => (
-            <div
-              key={i}
-              className="h-6 w-12 animate-pulse rounded-lg bg-gray-200 dark:bg-slate-800"
-            />
-          ))}
-        </div>
-      </div>
-
-      <div className="relative h-[180px] w-full overflow-hidden rounded-xl">
-        <div className="absolute inset-0 animate-pulse bg-gray-50 dark:bg-slate-900/50" />
-        <svg
-          className="absolute inset-0 h-full w-full"
-          preserveAspectRatio="none"
-          viewBox="0 0 400 180"
-        >
-          <defs>
-            <linearGradient id="skeletonWave1" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#38bdf8" stopOpacity={0.08} />
-              <stop offset="100%" stopColor="#38bdf8" stopOpacity={0} />
-            </linearGradient>
-            <linearGradient id="skeletonWave2" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#c084fc" stopOpacity={0.07} />
-              <stop offset="100%" stopColor="#c084fc" stopOpacity={0} />
-            </linearGradient>
-          </defs>
-          <path
-            d="M0,120 C50,100 100,60 150,80 C200,100 250,40 300,60 C350,80 380,50 400,55 L400,180 L0,180 Z"
-            fill="url(#skeletonWave1)"
-            stroke="#38bdf8"
-            strokeWidth="1.5"
-            strokeOpacity={0.2}
-          />
-          <path
-            d="M0,140 C60,120 110,90 170,100 C230,110 270,70 320,85 C360,95 385,75 400,80 L400,180 L0,180 Z"
-            fill="url(#skeletonWave2)"
-            stroke="#c084fc"
-            strokeWidth="1.5"
-            strokeOpacity={0.18}
-          />
-        </svg>
-        <div className="absolute bottom-0 left-0 right-0 flex items-end justify-around px-2 pb-1">
-          {[40, 60, 45, 75, 55, 80].map((h, i) => (
-            <div
-              key={i}
-              className="animate-pulse rounded-t-sm bg-gray-200/60 dark:bg-slate-700/40"
-              style={{ height: `${h}%`, width: "8px" }}
-            />
-          ))}
-        </div>
-      </div>
-
-      <div className="mt-2 flex items-center justify-end gap-4" dir="rtl">
-        {[1, 2].map((i) => (
-          <div key={i} className="flex items-center gap-1.5">
-            <div className="h-0.5 w-3 animate-pulse rounded-full bg-gray-200 dark:bg-slate-700" />
-            <div className="h-3 w-8 animate-pulse rounded-md bg-gray-200 dark:bg-slate-700" />
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
+// grid color رو از CSS variable بگیر نه از useTheme
+const GRID_COLOR_LIGHT = "#f3f4f6";
+const GRID_COLOR_DARK = "rgba(255,255,255,0.04)";
 
 export default function SalesChart() {
   const [activeRange, setActiveRange] = useState<TimeRange>("monthly");
   const [activeLabel, setActiveLabel] = useState<string | null>(null);
-  const [isLoaded, setIsLoaded] = useState(false);
-  const { resolvedTheme } = useTheme();
 
-  useEffect(() => {
-    const timer = setTimeout(() => setIsLoaded(true), 700);
-    return () => clearTimeout(timer);
-  }, []);
-
-  const isDark = resolvedTheme === "dark";
   const data = salesData[activeRange];
 
   const activeData = useMemo(
@@ -178,12 +100,6 @@ export default function SalesChart() {
   }, []);
 
   const handleMouseLeave = useCallback(() => setActiveLabel(null), []);
-
-  const gridColor = isDark ? "rgba(255,255,255,0.04)" : "#f3f4f6";
-
-  if (!isLoaded) {
-    return <SalesChartSkeleton />;
-  }
 
   return (
     <motion.div
@@ -248,10 +164,7 @@ export default function SalesChart() {
               <p className="mb-0.5 flex items-center gap-1.5 text-[11px] text-gray-500 dark:text-gray-400">
                 <span
                   className="h-2 w-2 flex-shrink-0 rounded-full"
-                  style={{
-                    backgroundColor: "#38bdf8",
-                    boxShadow: "0 0 6px rgba(56,189,248,0.5)",
-                  }}
+                  style={{ backgroundColor: "#38bdf8", boxShadow: "0 0 6px rgba(56,189,248,0.5)" }}
                 />
                 {chartConfig.sales.label}:{" "}
                 <span className="font-bold tabular-nums" style={{ color: "#38bdf8" }}>
@@ -261,10 +174,7 @@ export default function SalesChart() {
               <p className="flex items-center gap-1.5 text-[11px] text-gray-500 dark:text-gray-400">
                 <span
                   className="h-2 w-2 flex-shrink-0 rounded-full"
-                  style={{
-                    backgroundColor: "#c084fc",
-                    boxShadow: "0 0 6px rgba(192,132,252,0.5)",
-                  }}
+                  style={{ backgroundColor: "#c084fc", boxShadow: "0 0 6px rgba(192,132,252,0.5)" }}
                 />
                 {chartConfig.revenue.label}:{" "}
                 <span className="font-bold tabular-nums" style={{ color: "#c084fc" }}>
@@ -287,7 +197,8 @@ export default function SalesChart() {
             {CHART_DEFS}
             <CartesianGrid
               strokeDasharray="3 3"
-              stroke={gridColor}
+              // از CSS variable استفاده می‌کنیم - dark mode رو Tailwind هندل می‌کنه
+              className="[&_line]:stroke-gray-100 dark:[&_line]:stroke-white/[0.04]"
               vertical={false}
             />
             <XAxis
@@ -312,12 +223,8 @@ export default function SalesChart() {
               strokeWidth={2.5}
               fill="url(#salesGradFill)"
               dot={false}
-              activeDot={{
-                r: 5,
-                strokeWidth: 0,
-                fill: "#38bdf8",
-                style: { filter: "drop-shadow(0 0 6px #38bdf8)" },
-              }}
+              activeDot={{ r: 5, strokeWidth: 0, fill: "#38bdf8" }}
+              isAnimationActive={false}
             />
             <Area
               type="monotone"
@@ -326,12 +233,8 @@ export default function SalesChart() {
               strokeWidth={2.5}
               fill="url(#revenueGradFill)"
               dot={false}
-              activeDot={{
-                r: 5,
-                strokeWidth: 0,
-                fill: "#c084fc",
-                style: { filter: "drop-shadow(0 0 6px #c084fc)" },
-              }}
+              activeDot={{ r: 5, strokeWidth: 0, fill: "#c084fc" }}
+              isAnimationActive={false}
             />
           </AreaChart>
         </ResponsiveContainer>
@@ -342,7 +245,7 @@ export default function SalesChart() {
           <div key={key} className="flex items-center gap-1.5">
             <span
               className="inline-block h-0.5 w-3 rounded-full"
-              style={{ backgroundColor: val.color, boxShadow: `0 0 6px ${val.color}` }}
+              style={{ backgroundColor: val.color }}
             />
             <span className="text-[11px] text-gray-500 dark:text-gray-400">{val.label}</span>
           </div>

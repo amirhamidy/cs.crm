@@ -2,7 +2,7 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 import { Crown, TrendingDown, TrendingUp } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 type TimeRange = "weekly" | "monthly" | "yearly";
 type Trend = "up" | "down" | "same";
@@ -28,13 +28,11 @@ const dataByRange: Record<TimeRange, User[]> = {
     { id: 1, name: "سارا محمدی", role: "کارشناس فروش", avatar: "س", sales: 412000000, deals: 28, trend: "up", trendPct: 18 },
     { id: 2, name: "علی رضایی", role: "مدیر فروش", avatar: "ع", sales: 387000000, deals: 24, trend: "up", trendPct: 9 },
     { id: 3, name: "فاطمه احمدی", role: "سرپرست فروش", avatar: "ف", sales: 334000000, deals: 21, trend: "up", trendPct: 14 },
-
   ],
   yearly: [
     { id: 1, name: "علی رضایی", role: "مدیر فروش", avatar: "ع", sales: 4820000000, deals: 287, trend: "up", trendPct: 23 },
     { id: 2, name: "فاطمه احمدی", role: "سرپرست فروش", avatar: "ف", sales: 4210000000, deals: 251, trend: "up", trendPct: 31 },
     { id: 3, name: "سارا محمدی", role: "کارشناس فروش", avatar: "س", sales: 3760000000, deals: 219, trend: "up", trendPct: 17 },
-
   ],
 };
 
@@ -64,50 +62,9 @@ function formatSales(value: number): string {
   return value.toLocaleString("fa-IR");
 }
 
-function Skeleton() {
-  return (
-    <div className="rounded-2xl border border-gray-100 bg-white p-4 dark:border-white/5 dark:bg-slate-950">
-      <div className="mb-4 flex items-start justify-between" dir="rtl">
-        <div className="space-y-2">
-          <div className="h-4 w-32 animate-pulse rounded-full bg-gray-100 dark:bg-slate-900" />
-          <div className="h-3 w-20 animate-pulse rounded-full bg-gray-100/70 dark:bg-slate-900/70" />
-        </div>
-        <div className="flex gap-1">
-          {[0, 1, 2].map((i) => (
-            <div key={i} className="h-7 w-14 animate-pulse rounded-lg bg-gray-100 dark:bg-slate-900" />
-          ))}
-        </div>
-      </div>
-      <div className="space-y-2.5">
-        {[0, 1, 2, 3, 4].map((i) => (
-          <div key={i} className="flex items-center gap-3" dir="rtl">
-            <div className="h-9 w-9 animate-pulse rounded-full bg-gray-100 dark:bg-slate-900" />
-            <div className="flex-1 space-y-1.5">
-              <div className="h-3 w-24 animate-pulse rounded-full bg-gray-100 dark:bg-slate-900" />
-              <div className="h-2.5 w-16 animate-pulse rounded-full bg-gray-100/70 dark:bg-slate-900/70" />
-            </div>
-            <div className="space-y-1.5 text-left">
-              <div className="h-3 w-20 animate-pulse rounded-full bg-gray-100 dark:bg-slate-900" />
-              <div className="h-2.5 w-12 animate-pulse rounded-full bg-gray-100/70 dark:bg-slate-900/70" />
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 export default function TopUsersCard() {
-  const [loading, setLoading] = useState(true);
   const [range, setRange] = useState<TimeRange>("monthly");
   const [hoveredId, setHoveredId] = useState<number | null>(null);
-
-  useEffect(() => {
-    const t = setTimeout(() => setLoading(false), 700);
-    return () => clearTimeout(t);
-  }, []);
-
-  if (loading) return <Skeleton />;
 
   const users = dataByRange[range];
 
@@ -154,10 +111,10 @@ export default function TopUsersCard() {
       <AnimatePresence mode="wait">
         <motion.div
           key={range}
-          initial={{ opacity: 0, y: 10 }}
+          initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -10 }}
-          transition={{ duration: 0.22, ease: [0.25, 0.46, 0.45, 0.94] }}
+          exit={{ opacity: 0, y: -8 }}
+          transition={{ duration: 0.18, ease: [0.25, 0.46, 0.45, 0.94] }}
           className="space-y-1"
         >
           {users.map((user, index) => {
@@ -168,9 +125,9 @@ export default function TopUsersCard() {
             return (
               <motion.div
                 key={user.id}
-                initial={{ opacity: 0, x: 14 }}
+                initial={{ opacity: 0, x: 10 }}
                 animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: index * 0.055, duration: 0.2 }}
+                transition={{ delay: index * 0.04, duration: 0.16 }}
                 onMouseEnter={() => setHoveredId(user.id)}
                 onMouseLeave={() => setHoveredId(null)}
                 className="relative flex cursor-default items-center gap-3 rounded-xl px-2.5 py-2 transition-colors duration-150"
@@ -179,15 +136,7 @@ export default function TopUsersCard() {
                 }}
                 dir="rtl"
               >
-                {isHovered && (
-                  <motion.div
-                    layoutId="userHoverBg"
-                    className="absolute inset-0 rounded-xl"
-                    style={{ backgroundColor: "rgba(99,102,241,0.06)" }}
-                    transition={{ type: "spring", stiffness: 400, damping: 35 }}
-                  />
-                )}
-
+                {/* avatar */}
                 <div className="relative z-10 flex-shrink-0">
                   <div
                     className="flex h-9 w-9 items-center justify-center rounded-full border text-[14px] font-bold"
@@ -206,7 +155,7 @@ export default function TopUsersCard() {
                     <motion.div
                       initial={{ scale: 0 }}
                       animate={{ scale: 1 }}
-                      transition={{ delay: index * 0.055 + 0.12, type: "spring", stiffness: 420 }}
+                      transition={{ delay: index * 0.04 + 0.1, type: "spring", stiffness: 420 }}
                       className="absolute -bottom-1 -left-1 flex h-[18px] w-[18px] items-center justify-center rounded-full border text-[8px] font-bold"
                       style={{
                         backgroundColor: rankMeta.bg,
@@ -225,6 +174,7 @@ export default function TopUsersCard() {
                   )}
                 </div>
 
+                {/* name + role */}
                 <div className="relative z-10 min-w-0 flex-1">
                   <p className="truncate text-[13px] font-semibold text-gray-900 dark:text-white">
                     {user.name}
@@ -234,6 +184,7 @@ export default function TopUsersCard() {
                   </p>
                 </div>
 
+                {/* sales + trend */}
                 <div className="relative z-10 flex-shrink-0 text-left">
                   <p className="text-[13px] font-bold tabular-nums text-gray-900 dark:text-white">
                     {formatSales(user.sales)}
@@ -268,6 +219,7 @@ export default function TopUsersCard() {
         </motion.div>
       </AnimatePresence>
 
+      {/* footer */}
       <div className="mt-3 border-t border-gray-100 pt-3 dark:border-white/5" dir="rtl">
         <div className="flex items-center justify-between">
           <p className="text-[11px] text-gray-400 dark:text-gray-500">

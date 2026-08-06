@@ -1,75 +1,150 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { UserPlus } from "lucide-react";
 import UserCard from "./UserCard";
-import type { User } from "@/types/users";
-import Link from "next/link";
+import AddUserModal from "./AddUserPage";
+import type { ApiEmployee } from "@/types/users";
+import axiosInstance from "@/lib/axiosInstance";
 
-const MOCK_USERS: User[] = [
-    { id: 1, name: "علی رضایی", email: "ali@example.com", role: "admin", joined: "۱۴۰۴/۰۳/۱۲" },
-    { id: 2, name: "سارا محمدی", email: "sara@example.com", role: "user", joined: "۱۴۰۴/۰۴/۰۵" },
-    { id: 3, name: "محمد کریمی", email: "mohammad@example.com", role: "user", joined: "۱۴۰۴/۰۱/۲۰" },
-    { id: 4, name: "نیلوفر احمدی", email: "niloofar@example.com", role: "user", joined: "۱۴۰۴/۰۵/۰۱" },
-    { id: 5, name: "رضا حسینی", email: "reza@example.com", role: "admin", joined: "۱۴۰۳/۱۲/۱۵" },
-    { id: 6, name: "مریم صادقی", email: "maryam@example.com", role: "user", joined: "۱۴۰۴/۰۲/۱۰" },
-    { id: 7, name: "حسین قاسمی", email: "hossein@example.com", role: "user", joined: "۱۴۰۴/۰۳/۲۸" },
-];
+type EmployeeListResponse =
+    | ApiEmployee[]
+    | {
+        results?: ApiEmployee[];
+        data?: ApiEmployee[];
+        employees?: ApiEmployee[];
+    };
 
-interface UsersPageProps {
-    onAddUser?: () => void;
-    onViewUser?: (user: User) => void;
-    onDeleteUser?: (user: User) => void;
+function extractEmployeeList(data: EmployeeListResponse): ApiEmployee[] {
+    if (Array.isArray(data)) return data;
+
+    if (data && typeof data === "object") {
+        if (Array.isArray(data.results)) return data.results;
+        if (Array.isArray(data.data)) return data.data;
+        if (Array.isArray(data.employees)) return data.employees;
+    }
+
+    return [];
 }
 
-export default function UsersPage({ onAddUser, onViewUser, onDeleteUser }: UsersPageProps) {
-    const [users] = useState<User[]>(MOCK_USERS);
+function isValidEmployee(emp: unknown): emp is ApiEmployee {
+    if (!emp || typeof emp !== "object") return false;
+
+    const item = emp as Partial<ApiEmployee>;
+
+    return (
+        typeof item.id === "number" &&
+        typeof item.full_name === "string" &&
+        typeof item.username === "string" &&
+        typeof item.created_at === "string"
+    );
+}
+
+export default function UsersPage() {
+    const [employees, setEmployees] = useState<ApiEmployee[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [showModal, setShowModal] = useState(false);
+
+    const fetchEmployees = useCallback(async () => {
+        try {
+            setLoading(true);
+
+            const res = await axiosInstance.get<EmployeeListResponse>(
+                "/accounts/api/v1/employee/list/"
+            );
+
+            const list = extractEmployeeList(res.data);
+            const validList = list.filter(isValidEmployee);
+
+            setEmployees(validList);
+        } catch (err) {
+            console.log("fetch employees error:", err);
+            setEmployees([]);
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        fetchEmployees();
+    }, [fetchEmployees]);
+
+    function handleDelete(id: number) {
+        setEmployees((prev) => prev.filter((e) => e.id !== id));
+    }
+
+    const validEmployees = useMemo(() => {
+        return employees.filter(isValidEmployee);
+    }, [employees]);
 
     return (
         <div className="flex flex-col gap-6 p-4 md:p-6" dir="rtl">
             <div className="flex items-center justify-between">
                 <div>
                     <h1 className="text-[22px] font-extrabold text-gray-900 dark:text-white leading-tight">
-                        کاربران
+                        کارمندان
                     </h1>
+
                     <p className="text-[12.5px] text-gray-400 dark:text-gray-500 mt-0.5">
-                        {users.length} کاربر در سیستم
+                        {validEmployees.length} نفر در سیستم
                     </p>
                 </div>
 
                 <motion.button
                     whileTap={{ scale: 0.97 }}
-                    onClick={onAddUser}
-                    className=" text-[13px] font-bold text-white px-4 py-2 rounded-xl"
+                    onClick={() => setShowModal(true)}
+                    className="flex items-center gap-2 text-[13px] font-bold text-white px-4 py-2 rounded-xl"
                     style={{
                         background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
                         boxShadow: "0 4px 14px rgba(99,102,241,0.3)",
                     }}
+                    type="button"
                 >
-                    <Link href="/add" className="flex items-center gap-2">
-                        <UserPlus size={15} />
-                        افزودن
-                    </Link>
+                    <UserPlus size={15} />
+                    افزودن
                 </motion.button>
             </div>
 
-            <motion.div
-                layout
-                className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3"
-            >
-                <AnimatePresence mode="popLayout">
-                    {users.map((user, i) => (
-                        <UserCard
-                            key={user.id}
-                            user={user}
-                            index={i}
-                            onView={onViewUser}
-                            onDelete={onDeleteUser}
-                        />
-                    ))}
-                </AnimatePresence>
-            </motion.div>
+            {loading ? (
+                <div className="flex items-center justify-center py-20">
+                    <div className="w-6 h-6 rounded-full border-2 border-indigo-500 border-t-transparent animate-spin" />
+                </div>
+            ) : validEmployees.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-20 gap-3">
+                    <p className="text-[13px] text-gray-400 dark:text-gray-500">
+                        هنوز کارمندی ثبت نشده
+                    </p>
+                </div>
+            ) : (
+                <motion.div
+                    layout
+                    className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3"
+                >
+                    <AnimatePresence mode="popLayout">
+                        {validEmployees.map((emp, i) => (
+                            <UserCard
+                                key={emp.id}
+                                employee={emp}
+                                index={i}
+                                onDelete={handleDelete}
+                            />
+                        ))}
+                    </AnimatePresence>
+                </motion.div>
+            )}
+
+            <AnimatePresence>
+                {showModal && (
+                    <AddUserModal
+                        onClose={() => setShowModal(false)}
+                        onSuccess={() => {
+                            setShowModal(false);
+                            fetchEmployees();
+                        }}
+                    />
+                )}
+            </AnimatePresence>
         </div>
     );
 }
