@@ -25,28 +25,19 @@ const AVATAR_GRADIENTS = [
 function getErrorMessage(err: unknown, fallback: string) {
     const error = err as AxiosError<Record<string, unknown>>;
     const data = error.response?.data;
-
     if (!data) return fallback;
-
     const possibleKeys = ["detail", "message", "error", "non_field_errors"];
-
     for (const key of possibleKeys) {
         const value = data[key];
-
         if (typeof value === "string") return value;
-
-        if (Array.isArray(value) && typeof value[0] === "string") {
-            return value[0];
-        }
+        if (Array.isArray(value) && typeof value[0] === "string") return value[0];
     }
-
     return fallback;
 }
 
 export default function UserCard({ employee, index, onDelete }: UserCardProps) {
     const { resolvedTheme } = useTheme();
     const isDark = resolvedTheme === "dark";
-
     const [hovered, setHovered] = useState(false);
     const [showConfirm, setShowConfirm] = useState(false);
     const [deleting, setDeleting] = useState(false);
@@ -56,13 +47,15 @@ export default function UserCard({ employee, index, onDelete }: UserCardProps) {
         !employee ||
         typeof employee.id !== "number" ||
         typeof employee.full_name !== "string" ||
-        typeof employee.username !== "string"
+        typeof employee.username !== "string" 
     ) {
         return null;
     }
 
     const employeeName = employee.full_name.trim() || "بدون نام";
-    const username = employee.username.trim() || "unknown";
+    const username = employee.username.trim() || "unknown"; 
+
+
     const gradient = AVATAR_GRADIENTS[employee.id % AVATAR_GRADIENTS.length];
     const start = gradient[0];
     const end = gradient[1];
@@ -77,16 +70,16 @@ export default function UserCard({ employee, index, onDelete }: UserCardProps) {
 
     async function handleDelete() {
         if (!employee) return;
-
         setDeleting(true);
         setDeleteError("");
-
         try {
-            await axiosInstance.delete(`/accounts/api/v1/user/${employee.id}/delete/`);
+            await axiosInstance.delete(
+                `/accounts/api/v1/employee/${employee.id}/delete/`
+            );
             onDelete(employee.id);
             setShowConfirm(false);
         } catch (err) {
-            setDeleteError(getErrorMessage(err, "خطا در حذف کاربر"));
+            setDeleteError(getErrorMessage(err, "خطا در حذف کارمند"));
         } finally {
             setDeleting(false);
         }
@@ -126,7 +119,6 @@ export default function UserCard({ employee, index, onDelete }: UserCardProps) {
                             <stop offset="100%" stopColor="#8b5cf6" />
                         </linearGradient>
                     </defs>
-
                     <motion.rect
                         x="1"
                         y="1"
@@ -163,7 +155,6 @@ export default function UserCard({ employee, index, onDelete }: UserCardProps) {
                     >
                         <Pencil size={11} />
                     </button>
-
                     <button
                         onClick={() => setShowConfirm(true)}
                         className="w-7 h-7 rounded-xl flex items-center justify-center transition-colors"
@@ -189,12 +180,10 @@ export default function UserCard({ employee, index, onDelete }: UserCardProps) {
                     >
                         {employeeName.charAt(0)}
                     </div>
-
                     <div className="flex flex-col gap-1 min-w-0">
                         <p className="text-[13.5px] font-extrabold text-gray-800 dark:text-gray-100 leading-tight truncate">
                             {employeeName}
                         </p>
-
                         <p className="text-[11.5px] text-gray-400 dark:text-gray-500 truncate">
                             @{username}
                         </p>
@@ -213,7 +202,6 @@ export default function UserCard({ employee, index, onDelete }: UserCardProps) {
                         <p className="text-[11.5px] text-gray-400 dark:text-gray-500">
                             عضویت از {joinedDate}
                         </p>
-
                         <span
                             className="text-[11px] font-bold px-2 py-0.5 rounded-lg"
                             style={{
@@ -277,12 +265,10 @@ export default function UserCard({ employee, index, onDelete }: UserCardProps) {
                                     >
                                         <Trash2 size={14} className="text-red-500" />
                                     </div>
-
                                     <h3 className="text-[13.5px] font-extrabold text-gray-900 dark:text-white">
                                         حذف کارمند
                                     </h3>
                                 </div>
-
                                 <button
                                     onClick={() => !deleting && setShowConfirm(false)}
                                     className="w-7 h-7 rounded-xl flex items-center justify-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
@@ -305,16 +291,16 @@ export default function UserCard({ employee, index, onDelete }: UserCardProps) {
                                     </span>{" "}
                                     حذف خواهد شد. این عملیات قابل بازگشت نیست.
                                 </p>
-
                                 {deleteError && (
                                     <p className="text-[11.5px] text-red-500 dark:text-red-400 font-semibold text-center">
                                         {deleteError}
                                     </p>
                                 )}
-
                                 <div className="flex gap-2">
                                     <button
-                                        onClick={() => !deleting && setShowConfirm(false)}
+                                        onClick={() =>
+                                            !deleting && setShowConfirm(false)
+                                        }
                                         disabled={deleting}
                                         className="flex-1 py-2.5 rounded-xl text-[12.5px] font-bold transition-colors disabled:opacity-40"
                                         style={{
@@ -327,7 +313,6 @@ export default function UserCard({ employee, index, onDelete }: UserCardProps) {
                                     >
                                         انصراف
                                     </button>
-
                                     <button
                                         onClick={handleDelete}
                                         disabled={deleting}
@@ -335,7 +320,8 @@ export default function UserCard({ employee, index, onDelete }: UserCardProps) {
                                         style={{
                                             background:
                                                 "linear-gradient(135deg, #ef4444, #dc2626)",
-                                            boxShadow: "0 4px 14px rgba(239,68,68,0.3)",
+                                            boxShadow:
+                                                "0 4px 14px rgba(239,68,68,0.3)",
                                         }}
                                         type="button"
                                     >

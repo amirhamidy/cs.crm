@@ -34,10 +34,10 @@ type Step2Errors = Partial<Record<keyof Step2Form, string>>;
 type UserListResponse =
     | ApiUser[]
     | {
-          results?: ApiUser[];
-          data?: ApiUser[];
-          users?: ApiUser[];
-      };
+        results?: ApiUser[];
+        data?: ApiUser[];
+        users?: ApiUser[];
+    };
 
 interface Props {
     onClose: () => void;
@@ -49,28 +49,23 @@ function extractCreatedUserId(data: CreateUserResponse): number | null {
     if (typeof data?.user?.id === "number") return data.user.id;
     if (typeof data?.data?.id === "number") return data.data.id;
     if (typeof data?.data?.user?.id === "number") return data.data.user.id;
-
     return null;
 }
 
 function extractUserList(data: UserListResponse): ApiUser[] {
     if (Array.isArray(data)) return data;
-
     if (data && typeof data === "object") {
         if (Array.isArray(data.results)) return data.results;
         if (Array.isArray(data.data)) return data.data;
         if (Array.isArray(data.users)) return data.users;
     }
-
     return [];
 }
 
 function getApiErrorMessage(err: unknown, fallback: string) {
     const error = err as AxiosError<Record<string, unknown>>;
     const data = error.response?.data;
-
     if (!data) return fallback;
-
     const possibleKeys = [
         "detail",
         "username",
@@ -82,37 +77,29 @@ function getApiErrorMessage(err: unknown, fallback: string) {
         "message",
         "error",
     ];
-
     for (const key of possibleKeys) {
         const value = data[key];
-
         if (typeof value === "string") return value;
-
         if (Array.isArray(value) && typeof value[0] === "string") {
             return value[0];
         }
     }
-
     return fallback;
 }
 
 export default function AddUserModal({ onClose, onSuccess }: Props) {
     const { resolvedTheme } = useTheme();
     const isDark = resolvedTheme === "dark";
-
     const [step, setStep] = useState<1 | 2>(1);
     const [createdUserId, setCreatedUserId] = useState<number | null>(null);
-
     const [step1, setStep1] = useState<Step1Form>({
         username: "",
         password: "",
         type: 2,
     });
-
     const [step2, setStep2] = useState<Step2Form>({
         full_name: "",
     });
-
     const [errors1, setErrors1] = useState<Step1Errors>({});
     const [errors2, setErrors2] = useState<Step2Errors>({});
     const [loading, setLoading] = useState(false);
@@ -125,41 +112,32 @@ export default function AddUserModal({ onClose, onSuccess }: Props) {
         if (hasError) {
             return `${inputBase} border-red-400 dark:border-red-500/50 bg-red-50/20 dark:bg-red-500/[0.02]`;
         }
-
         if (hasValue) {
             return `${inputBase} border-indigo-400 dark:border-indigo-500/70 bg-indigo-50/40 dark:bg-indigo-500/[0.06]`;
         }
-
         return `${inputBase} border-gray-200 dark:border-white/[0.08] bg-gray-50 dark:bg-white/[0.04] focus:border-indigo-400 dark:focus:border-indigo-500/60`;
     }
 
     function validateStep1(): boolean {
         const e: Step1Errors = {};
-
         if (!step1.username.trim()) {
             e.username = "نام کاربری الزامی است";
         }
-
         if (!step1.password.trim()) {
             e.password = "رمز عبور الزامی است";
         } else if (step1.password.length < 3) {
             e.password = "رمز عبور باید حداقل ۳ کاراکتر باشد";
         }
-
         setErrors1(e);
-
         return Object.keys(e).length === 0;
     }
 
     function validateStep2(): boolean {
         const e: Step2Errors = {};
-
         if (!step2.full_name.trim()) {
             e.full_name = "نام کامل الزامی است";
         }
-
         setErrors2(e);
-
         return Object.keys(e).length === 0;
     }
 
@@ -167,51 +145,39 @@ export default function AddUserModal({ onClose, onSuccess }: Props) {
         const res = await axiosInstance.get<UserListResponse>(
             "/accounts/api/v1/user/list/"
         );
-
         const users = extractUserList(res.data);
         const foundUser = users.find((u) => u.username === username);
-
         return foundUser?.id ?? null;
     }
 
     async function handleStep1Submit(e: React.FormEvent<HTMLFormElement>) {
         e.preventDefault();
-
         if (!validateStep1()) return;
-
         setLoading(true);
         setApiError("");
-
         try {
             const payload = {
                 username: step1.username.trim(),
                 password: step1.password,
                 type: step1.type,
             };
-
             const { data } = await axiosInstance.post<CreateUserResponse>(
                 "/accounts/api/v1/user/create/",
                 payload
             );
-
             let userId = extractCreatedUserId(data);
-
             if (!userId) {
                 userId = await findUserIdByUsername(payload.username);
             }
-
             if (!userId) {
                 setApiError("کاربر ساخته شد، اما شناسه کاربر پیدا نشد");
                 return;
             }
-
             setCreatedUserId(userId);
-
             if (step1.type === 1) {
                 onSuccess();
                 return;
             }
-
             setStep(2);
         } catch (err) {
             setApiError(getApiErrorMessage(err, "خطا در ثبت کاربر"));
@@ -222,23 +188,18 @@ export default function AddUserModal({ onClose, onSuccess }: Props) {
 
     async function handleStep2Submit(e: React.FormEvent<HTMLFormElement>) {
         e.preventDefault();
-
         if (!validateStep2()) return;
-
         if (!createdUserId) {
             setApiError("شناسه کاربر یافت نشد، لطفاً دوباره از مرحله اول شروع کنید");
             return;
         }
-
         setLoading(true);
         setApiError("");
-
         try {
             await axiosInstance.post("/accounts/api/v1/employee/create/", {
                 user: createdUserId,
                 full_name: step2.full_name.trim(),
             });
-
             onSuccess();
         } catch (err) {
             setApiError(getApiErrorMessage(err, "خطا در ثبت کارمند"));
@@ -298,12 +259,10 @@ export default function AddUserModal({ onClose, onSuccess }: Props) {
                         <div className="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center">
                             <UserPlus size={15} className="text-indigo-500" />
                         </div>
-
                         <div>
                             <h3 className="text-[14px] font-extrabold text-gray-900 dark:text-white">
                                 {step === 1 ? "افزودن کاربر" : "اطلاعات کارمند"}
                             </h3>
-
                             <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-0.5">
                                 {step === 1
                                     ? "مرحله ۱ از ۲ — اطلاعات حساب"
@@ -311,7 +270,6 @@ export default function AddUserModal({ onClose, onSuccess }: Props) {
                             </p>
                         </div>
                     </div>
-
                     <button
                         onClick={handleClose}
                         disabled={loading}
@@ -337,8 +295,8 @@ export default function AddUserModal({ onClose, onSuccess }: Props) {
                                     step >= s
                                         ? "linear-gradient(90deg, #6366f1, #8b5cf6)"
                                         : isDark
-                                          ? "rgba(255,255,255,0.07)"
-                                          : "rgba(0,0,0,0.07)",
+                                            ? "rgba(255,255,255,0.07)"
+                                            : "rgba(0,0,0,0.07)",
                             }}
                         />
                     ))}
@@ -360,13 +318,11 @@ export default function AddUserModal({ onClose, onSuccess }: Props) {
                                 <label className="block text-[11.5px] font-bold text-gray-500 dark:text-gray-400 mb-1.5">
                                     نام کاربری
                                 </label>
-
                                 <div className="relative">
                                     <User
                                         size={13}
                                         className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
                                     />
-
                                     <input
                                         type="text"
                                         value={step1.username}
@@ -390,7 +346,6 @@ export default function AddUserModal({ onClose, onSuccess }: Props) {
                                         autoComplete="off"
                                     />
                                 </div>
-
                                 {errors1.username && (
                                     <p className="text-[11px] text-red-500 mt-1 font-semibold">
                                         {errors1.username}
@@ -402,13 +357,11 @@ export default function AddUserModal({ onClose, onSuccess }: Props) {
                                 <label className="block text-[11.5px] font-bold text-gray-500 dark:text-gray-400 mb-1.5">
                                     رمز عبور
                                 </label>
-
                                 <div className="relative">
                                     <Lock
                                         size={13}
                                         className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
                                     />
-
                                     <input
                                         type="password"
                                         value={step1.password}
@@ -432,7 +385,6 @@ export default function AddUserModal({ onClose, onSuccess }: Props) {
                                         autoComplete="new-password"
                                     />
                                 </div>
-
                                 {errors1.password && (
                                     <p className="text-[11px] text-red-500 mt-1 font-semibold">
                                         {errors1.password}
@@ -444,7 +396,6 @@ export default function AddUserModal({ onClose, onSuccess }: Props) {
                                 <label className="block text-[11.5px] font-bold text-gray-500 dark:text-gray-400 mb-1.5">
                                     نوع حساب
                                 </label>
-
                                 <div className="grid grid-cols-2 gap-2">
                                     {(
                                         [
@@ -468,24 +419,24 @@ export default function AddUserModal({ onClose, onSuccess }: Props) {
                                                     step1.type === v
                                                         ? "#6366f1"
                                                         : isDark
-                                                          ? "rgba(255,255,255,0.07)"
-                                                          : "rgba(0,0,0,0.07)",
+                                                            ? "rgba(255,255,255,0.07)"
+                                                            : "rgba(0,0,0,0.07)",
                                                 background:
                                                     step1.type === v
                                                         ? isDark
                                                             ? "rgba(99,102,241,0.15)"
                                                             : "rgba(99,102,241,0.07)"
                                                         : isDark
-                                                          ? "rgba(255,255,255,0.03)"
-                                                          : "rgba(0,0,0,0.02)",
+                                                            ? "rgba(255,255,255,0.03)"
+                                                            : "rgba(0,0,0,0.02)",
                                                 color:
                                                     step1.type === v
                                                         ? isDark
                                                             ? "#a5b4fc"
                                                             : "#6366f1"
                                                         : isDark
-                                                          ? "#94a3b8"
-                                                          : "#64748b",
+                                                            ? "#94a3b8"
+                                                            : "#64748b",
                                             }}
                                         >
                                             <Shield size={12} />
@@ -544,13 +495,11 @@ export default function AddUserModal({ onClose, onSuccess }: Props) {
                                 <label className="block text-[11.5px] font-bold text-gray-500 dark:text-gray-400 mb-1.5">
                                     نام و نام خانوادگی
                                 </label>
-
                                 <div className="relative">
                                     <User
                                         size={13}
                                         className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
                                     />
-
                                     <input
                                         type="text"
                                         value={step2.full_name}
@@ -571,7 +520,6 @@ export default function AddUserModal({ onClose, onSuccess }: Props) {
                                         autoFocus
                                     />
                                 </div>
-
                                 {errors2.full_name && (
                                     <p className="text-[11px] text-red-500 mt-1 font-semibold">
                                         {errors2.full_name}
@@ -601,7 +549,6 @@ export default function AddUserModal({ onClose, onSuccess }: Props) {
                                     <ChevronRight size={14} />
                                     برگشت
                                 </button>
-
                                 <button
                                     type="submit"
                                     disabled={loading}

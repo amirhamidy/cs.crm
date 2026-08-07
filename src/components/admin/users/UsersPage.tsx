@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { UserPlus } from "lucide-react";
 import UserCard from "./UserCard";
@@ -18,28 +18,26 @@ type EmployeeListResponse =
 
 function extractEmployeeList(data: EmployeeListResponse): ApiEmployee[] {
     if (Array.isArray(data)) return data;
-
     if (data && typeof data === "object") {
         if (Array.isArray(data.results)) return data.results;
         if (Array.isArray(data.data)) return data.data;
         if (Array.isArray(data.employees)) return data.employees;
     }
-
     return [];
 }
 
 function isValidEmployee(emp: unknown): emp is ApiEmployee {
     if (!emp || typeof emp !== "object") return false;
-
-    const item = emp as Partial<ApiEmployee>;
+    const item = emp as Record<string, unknown>;
 
     return (
         typeof item.id === "number" &&
         typeof item.full_name === "string" &&
-        typeof item.username === "string" &&
+        typeof item.username === "string" && 
         typeof item.created_at === "string"
     );
 }
+
 
 export default function UsersPage() {
     const [employees, setEmployees] = useState<ApiEmployee[]>([]);
@@ -49,17 +47,13 @@ export default function UsersPage() {
     const fetchEmployees = useCallback(async () => {
         try {
             setLoading(true);
-
             const res = await axiosInstance.get<EmployeeListResponse>(
                 "/accounts/api/v1/employee/list/"
             );
-
             const list = extractEmployeeList(res.data);
             const validList = list.filter(isValidEmployee);
-
             setEmployees(validList);
-        } catch (err) {
-            console.log("fetch employees error:", err);
+        } catch {
             setEmployees([]);
         } finally {
             setLoading(false);
@@ -74,10 +68,6 @@ export default function UsersPage() {
         setEmployees((prev) => prev.filter((e) => e.id !== id));
     }
 
-    const validEmployees = useMemo(() => {
-        return employees.filter(isValidEmployee);
-    }, [employees]);
-
     return (
         <div className="flex flex-col gap-6 p-4 md:p-6" dir="rtl">
             <div className="flex items-center justify-between">
@@ -85,12 +75,10 @@ export default function UsersPage() {
                     <h1 className="text-[22px] font-extrabold text-gray-900 dark:text-white leading-tight">
                         کارمندان
                     </h1>
-
                     <p className="text-[12.5px] text-gray-400 dark:text-gray-500 mt-0.5">
-                        {validEmployees.length} نفر در سیستم
+                        {employees.length} نفر در سیستم
                     </p>
                 </div>
-
                 <motion.button
                     whileTap={{ scale: 0.97 }}
                     onClick={() => setShowModal(true)}
@@ -110,7 +98,7 @@ export default function UsersPage() {
                 <div className="flex items-center justify-center py-20">
                     <div className="w-6 h-6 rounded-full border-2 border-indigo-500 border-t-transparent animate-spin" />
                 </div>
-            ) : validEmployees.length === 0 ? (
+            ) : employees.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-20 gap-3">
                     <p className="text-[13px] text-gray-400 dark:text-gray-500">
                         هنوز کارمندی ثبت نشده
@@ -122,7 +110,7 @@ export default function UsersPage() {
                     className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3"
                 >
                     <AnimatePresence mode="popLayout">
-                        {validEmployees.map((emp, i) => (
+                        {employees.map((emp, i) => (
                             <UserCard
                                 key={emp.id}
                                 employee={emp}

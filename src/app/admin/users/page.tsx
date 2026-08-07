@@ -6,7 +6,7 @@ import { useTheme } from "next-themes";
 import { Users, UserPlus, Search, Loader2, RefreshCw } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
 import type { AxiosError } from "axios";
-import type { ApiUser } from "@/types/users";
+import type { ApiEmployee } from "@/types/users";
 import UserCard from "@/components/admin/users/UserCard";
 import AddUserModal from "@/components/admin/users/AddUserPage";
 
@@ -14,35 +14,35 @@ export default function UsersPage() {
     const { resolvedTheme } = useTheme();
     const isDark = resolvedTheme === "dark";
 
-    const [users, setUsers] = useState<ApiUser[]>([]);
+    const [employees, setEmployees] = useState<ApiEmployee[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
     const [search, setSearch] = useState("");
     const [showAddModal, setShowAddModal] = useState(false);
 
-    async function fetchUsers() {
+    async function fetchEmployees() {
         setLoading(true);
         setError("");
         try {
-            const { data } = await axiosInstance.get<ApiUser[]>(
-                "/accounts/api/v1/user/list/"
+            const { data } = await axiosInstance.get<ApiEmployee[]>(
+                "/accounts/api/v1/employee/list/"
             );
-            // فقط کاربران نوع ۲ (کارمند) نمایش داده می‌شن
-            setUsers(data.filter((u) => u.type === 2));
+            setEmployees(data);
         } catch (err) {
             const e = err as AxiosError<{ detail?: string }>;
-            setError(e.response?.data?.detail ?? "خطا در دریافت لیست کاربران");
+            setError(e.response?.data?.detail ?? "خطا در دریافت لیست کارمندان");
         } finally {
             setLoading(false);
         }
     }
 
     useEffect(() => {
-        fetchUsers();
+        fetchEmployees();
     }, []);
 
-    const filtered = users.filter((u) =>
-        u.username.toLowerCase().includes(search.toLowerCase())
+    const filtered = employees.filter((emp) =>
+        emp.full_name.toLowerCase().includes(search.toLowerCase()) ||
+        emp.username.toLowerCase().includes(search.toLowerCase())
     );
 
     return (
@@ -65,14 +65,14 @@ export default function UsersPage() {
                             مدیریت کاربران
                         </h1>
                         <p className="text-[11.5px] text-gray-400 dark:text-gray-500 mt-0.5">
-                            {loading ? "در حال بارگذاری..." : `${users.length} کارمند ثبت‌شده`}
+                            {loading ? "در حال بارگذاری..." : `${employees.length} کارمند ثبت‌شده`}
                         </p>
                     </div>
                 </div>
 
                 <div className="flex items-center gap-2">
                     <button
-                        onClick={fetchUsers}
+                        onClick={fetchEmployees}
                         disabled={loading}
                         className="w-8 h-8 rounded-xl flex items-center justify-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors disabled:opacity-40"
                         style={{
@@ -109,7 +109,7 @@ export default function UsersPage() {
                     type="text"
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
-                    placeholder="جستجو بر اساس نام کاربری..."
+                    placeholder="جستجو بر اساس نام یا نام کاربری..."
                     dir="rtl"
                     className="w-full rounded-xl text-[13px] py-2.5 pr-9 pl-4 outline-none transition-all duration-200 text-gray-800 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-600 border border-gray-200 dark:border-white/[0.07] bg-gray-50 dark:bg-white/[0.03] focus:border-indigo-400 dark:focus:border-indigo-500/60"
                 />
@@ -120,7 +120,7 @@ export default function UsersPage() {
                 <div className="flex flex-col items-center justify-center gap-3 py-16">
                     <Loader2 size={22} className="text-indigo-500 animate-spin" />
                     <p className="text-[12.5px] text-gray-400 dark:text-gray-500">
-                        در حال دریافت لیست کاربران...
+                        در حال دریافت لیست کارمندان...
                     </p>
                 </div>
             )}
@@ -141,7 +141,7 @@ export default function UsersPage() {
                         {error}
                     </p>
                     <button
-                        onClick={fetchUsers}
+                        onClick={fetchEmployees}
                         className="text-[12px] font-bold text-indigo-500 hover:underline"
                     >
                         تلاش مجدد
@@ -153,7 +153,7 @@ export default function UsersPage() {
                 <div className="flex flex-col items-center justify-center gap-2 py-16">
                     <Users size={28} className="text-gray-300 dark:text-gray-700" />
                     <p className="text-[12.5px] text-gray-400 dark:text-gray-500">
-                        {search ? "کاربری با این نام یافت نشد" : "هنوز کاربری ثبت نشده"}
+                        {search ? "کارمندی با این مشخصات یافت نشد" : "هنوز کارمندی ثبت نشده"}
                     </p>
                 </div>
             )}
@@ -165,13 +165,13 @@ export default function UsersPage() {
                     className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3"
                 >
                     <AnimatePresence mode="popLayout">
-                        {filtered.map((user, i) => (
+                        {filtered.map((emp, i) => (
                             <UserCard
-                                key={user.id}
-                                user={user}
+                                key={emp.id}
+                                employee={emp}
                                 index={i}
                                 onDelete={(id) =>
-                                    setUsers((prev) => prev.filter((u) => u.id !== id))
+                                    setEmployees((prev) => prev.filter((e) => e.id !== id))
                                 }
                             />
                         ))}
@@ -186,7 +186,7 @@ export default function UsersPage() {
                         onClose={() => setShowAddModal(false)}
                         onSuccess={() => {
                             setShowAddModal(false);
-                            fetchUsers();
+                            fetchEmployees();
                         }}
                     />
                 )}

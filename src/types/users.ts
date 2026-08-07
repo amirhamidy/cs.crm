@@ -5,13 +5,21 @@ export interface ApiEmployee {
   full_name: string;
   username: string;
   created_at: string;
-  updated_at?: string;
 }
 
 export interface ApiUser {
   id: number;
   username: string;
   type: UserType;
+  is_active?: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
+interface UserCardProps {
+    employee?: ApiEmployee; 
+    index: number;
+    onDelete: (id: number) => void;
 }
 
 export interface CreateUserResponse {
