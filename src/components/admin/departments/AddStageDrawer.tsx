@@ -65,9 +65,9 @@ export default function AddStageModal({ open, department, onClose, onSubmit }: P
                             transition={{ duration: 0.3, ease: [0.23, 1, 0.32, 1] }}
                             onClick={(e) => e.stopPropagation()}
                             className="relative w-full max-w-md flex flex-col
-                                bg-white dark:bg-[#0f0f13]
-                                border border-gray-200 dark:border-white/10
-                                rounded-2xl shadow-2xl"
+                bg-white dark:bg-[#0f0f13]
+                border border-gray-200 dark:border-white/10
+                rounded-2xl shadow-2xl"
                             dir="rtl"
                         >
                             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-white/10 flex-shrink-0">
@@ -83,8 +83,8 @@ export default function AddStageModal({ open, department, onClose, onSubmit }: P
                                     onClick={handleClose}
                                     disabled={success}
                                     className="p-2 rounded-xl text-gray-400 hover:text-gray-600 dark:text-gray-300
-                                        hover:bg-gray-100 dark:hover:bg-white/10
-                                        transition-colors duration-200 disabled:opacity-40 disabled:cursor-not-allowed"
+                    hover:bg-gray-100 dark:hover:bg-white/10
+                    transition-colors duration-200 disabled:opacity-40 disabled:cursor-not-allowed"
                                 >
                                     <X size={16} />
                                 </button>
@@ -93,20 +93,23 @@ export default function AddStageModal({ open, department, onClose, onSubmit }: P
                             <div className="flex-1 px-6 py-5 space-y-4">
                                 <div className="space-y-1.5">
                                     <div className="relative">
-                                        <GitBranch size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500" />
+                                        <GitBranch
+                                            size={14}
+                                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500"
+                                        />
                                         <input
                                             value={name}
                                             onChange={(e) => setName(e.target.value)}
                                             onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
                                             placeholder="مثال: ارزیابی اولیه"
                                             className="w-full rounded-xl pr-9 pl-3 py-2.5 text-sm
-                                                bg-gray-50 dark:bg-white/5
-                                                border border-gray-200 dark:border-white/10
-                                                text-gray-900 dark:text-white
-                                                placeholder:text-gray-400 dark:placeholder:text-gray-500
-                                                focus:border-blue-400 dark:focus:border-blue-500
-                                                focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-500/20
-                                                outline-none transition-all duration-200"
+                        bg-gray-50 dark:bg-white/5
+                        border border-gray-200 dark:border-white/10
+                        text-gray-900 dark:text-white
+                        placeholder:text-gray-400 dark:placeholder:text-gray-500
+                        focus:border-blue-400 dark:focus:border-blue-500
+                        focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-500/20
+                        outline-none transition-all duration-200"
                                         />
                                     </div>
                                 </div>
@@ -121,7 +124,7 @@ export default function AddStageModal({ open, department, onClose, onSubmit }: P
                                             animate={{ opacity: 1, scale: 1 }}
                                             exit={{ opacity: 0, scale: 0.9 }}
                                             className="flex items-center justify-center gap-2 py-3 rounded-xl
-                                                bg-green-50 dark:bg-green-500/10 text-green-600 dark:text-green-400 text-sm font-medium"
+                        bg-green-50 dark:bg-green-500/10 text-green-600 dark:text-green-400 text-sm font-medium"
                                         >
                                             <CheckCircle2 size={16} />
                                             مرحله با موفقیت اضافه شد
@@ -137,10 +140,10 @@ export default function AddStageModal({ open, department, onClose, onSubmit }: P
                                                 onClick={handleSubmit}
                                                 disabled={!name.trim()}
                                                 className="w-full py-2.5 rounded-4xl text-sm font-medium
-                                                    text-white transition-all duration-200
-                                                    disabled:opacity-40 disabled:cursor-not-allowed
-                                                    bg-blue-500 hover:bg-blue-600
-                                                    shadow-lg shadow-blue-500/25"
+                          text-white transition-all duration-200
+                          disabled:opacity-40 disabled:cursor-not-allowed
+                          bg-blue-500 hover:bg-blue-600
+                          shadow-lg shadow-blue-500/25"
                                             >
                                                 افزودن مرحله
                                             </button>

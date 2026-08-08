@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, Users, GitBranch, Calendar, Trash2, ArrowLeft } from "lucide-react";
+import { ChevronLeft, Users, GitBranch, Calendar, Trash2, Pencil } from "lucide-react";
 import { useTheme } from "next-themes";
 import { Department } from "./types";
 
@@ -10,18 +10,18 @@ interface Props {
     department: Department;
     index: number;
     isSelected: boolean;
-    onSelect: () => void;
+    onClick: () => void;
     onDelete: () => void;
-    onView: () => void;
+    onEdit: () => void;
 }
 
 export default function DepartmentCard({
     department,
     index,
     isSelected,
-    onSelect,
+    onClick,
     onDelete,
-    onView,
+    onEdit,
 }: Props) {
     const { resolvedTheme } = useTheme();
     const isDark = resolvedTheme === "dark";
@@ -34,7 +34,8 @@ export default function DepartmentCard({
         .map((w) => w[0])
         .join("");
 
-    const showActions = hovered && !isSelected;
+    const showActions = hovered;
+
 
     return (
         <motion.div
@@ -43,7 +44,7 @@ export default function DepartmentCard({
             transition={{ duration: 0.2, delay: index * 0.05 }}
             onHoverStart={() => setHovered(true)}
             onHoverEnd={() => setHovered(false)}
-            onClick={onSelect}
+            onClick={onClick}
             className="relative rounded-2xl p-4 flex flex-col gap-3 overflow-hidden cursor-pointer"
             style={{
                 background: isSelected
@@ -60,6 +61,7 @@ export default function DepartmentCard({
                 minHeight: "130px",
             }}
         >
+            {/* Animated border on hover */}
             <svg
                 className="absolute inset-0 w-full h-full pointer-events-none"
                 style={{ borderRadius: "1rem" }}
@@ -92,11 +94,13 @@ export default function DepartmentCard({
                 />
             </svg>
 
+            {/* Accent glow */}
             <div
                 className="absolute top-0 right-0 w-32 h-32 rounded-full blur-3xl opacity-10 pointer-events-none"
                 style={{ background: accent }}
             />
 
+            {/* Top row */}
             <div className="relative z-10 flex items-center gap-3">
                 <div
                     className="w-11 h-11 rounded-2xl flex items-center justify-center text-white text-[15px] font-extrabold flex-shrink-0"
@@ -122,6 +126,7 @@ export default function DepartmentCard({
                 />
             </div>
 
+            {/* Stats row */}
             <div className="relative z-10 flex items-center gap-3 pt-2 border-t border-gray-100 dark:border-white/[0.05]">
                 <div className="flex items-center gap-1.5 text-gray-500 dark:text-gray-400">
                     <Users size={12} />
@@ -137,6 +142,7 @@ export default function DepartmentCard({
                 </div>
             </div>
 
+            {/* Hover actions */}
             <AnimatePresence>
                 {showActions && (
                     <motion.div
@@ -149,7 +155,7 @@ export default function DepartmentCard({
                         <button
                             onClick={(e) => {
                                 e.stopPropagation();
-                                onView();
+                                onEdit();
                             }}
                             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11.5px] font-bold transition-colors"
                             style={{
@@ -157,8 +163,8 @@ export default function DepartmentCard({
                                 color: isDark ? `${accent}dd` : accent,
                             }}
                         >
-                            مشاهده
-                            <ArrowLeft size={11} />
+                            <Pencil size={11} />
+                            ویرایش
                         </button>
                         <button
                             onClick={(e) => {
@@ -179,6 +185,7 @@ export default function DepartmentCard({
                 )}
             </AnimatePresence>
 
+            {/* Selected inner glow */}
             {isSelected && (
                 <div
                     className="absolute inset-0 rounded-2xl pointer-events-none"

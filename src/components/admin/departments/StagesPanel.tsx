@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Reorder } from "framer-motion";
-import { Plus, GripVertical, Trash2, GitBranch, Pencil } from "lucide-react";
+import { motion } from "framer-motion";
+import { Plus, Trash2, GitBranch, Pencil } from "lucide-react";
 import { Stage, Department } from "./types";
 import EditStageModal from "./EditStageModal";
 
@@ -75,19 +75,15 @@ export default function StagesPanel({
                     <p className="text-sm">هنوز مرحله‌ای تعریف نشده</p>
                 </div>
             ) : (
-                <Reorder.Group
-                    axis="x"
-                    values={department.stages}
-                    onReorder={onReorder}
-                    as="div"
-                    className="flex flex-wrap gap-2"
-                >
+                <div className="flex flex-wrap gap-2">
                     {department.stages.map((stage, index) => (
-                        <Reorder.Item
-                            key={stage.id}
-                            value={stage}
-                            as="div"
-                            className="group relative h-[92px] w-[calc(50%-0.25rem)] md:w-[calc(33.333%-0.334rem)] xl:w-[calc(25%-0.375rem)] overflow-hidden rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50/50 dark:bg-white/[0.02] cursor-grab active:cursor-grabbing select-none"
+                        <motion.div key={stage.id ?? `stage-${index}`}
+                            layout
+                            initial={{ opacity: 0, scale: 0.92 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.92 }}
+                            transition={{ duration: 0.2, ease: [0.23, 1, 0.32, 1] }}
+                            className="group relative h-[92px] w-[calc(50%-0.25rem)] xl:w-[calc(33.333%-0.334rem)] overflow-hidden rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50/50 dark:bg-white/[0.02] select-none"
                         >
                             <svg
                                 className="absolute inset-0 w-full h-full pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-500"
@@ -119,11 +115,6 @@ export default function StagesPanel({
                             </svg>
 
                             <div className="relative z-10 flex items-center gap-2 px-3 pt-3 pb-8">
-                                <GripVertical
-                                    size={15}
-                                    className="text-gray-300 dark:text-gray-600 shrink-0"
-                                />
-
                                 <div
                                     className="w-6 h-6 rounded-md flex items-center justify-center text-[10px] font-bold text-white shrink-0"
                                     style={{ backgroundColor: stage.color }}
@@ -141,15 +132,9 @@ export default function StagesPanel({
                                 />
                             </div>
 
-                            <div
-                                className="absolute bottom-2 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1.5 opacity-0 translate-y-1.5 pointer-events-none group-hover:opacity-100 group-hover:translate-y-0 group-hover:pointer-events-auto transition duration-150"
-                                onPointerDown={(e) => e.stopPropagation()}
-                            >
+                            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1.5 opacity-0 translate-y-1.5 pointer-events-none group-hover:opacity-100 group-hover:translate-y-0 group-hover:pointer-events-auto transition duration-150">
                                 <button
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        setEditingStage(stage);
-                                    }}
+                                    onClick={() => setEditingStage(stage)}
                                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-bold active:scale-95 transition-transform"
                                     style={{
                                         backgroundColor: `${accent}18`,
@@ -162,18 +147,15 @@ export default function StagesPanel({
                                 </button>
 
                                 <button
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        onDeleteStage(stage);
-                                    }}
+                                    onClick={() => onDeleteStage(stage)}
                                     className="w-7 h-7 rounded-xl flex items-center justify-center text-red-400 bg-red-500/10 active:scale-95 transition-transform"
                                 >
                                     <Trash2 size={12} />
                                 </button>
                             </div>
-                        </Reorder.Item>
+                        </motion.div>
                     ))}
-                </Reorder.Group>
+                </div>
             )}
 
             <EditStageModal

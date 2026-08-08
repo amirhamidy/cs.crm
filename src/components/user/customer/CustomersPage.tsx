@@ -134,7 +134,7 @@ export default function CustomersPage() {
                                     customer={customer}
                                     index={i}
                                     onDelete={() => handleDelete(customer.id)}
-                                    onEdited={handleEdited} // ✅ جایگزین onEdit شد
+                                    onEdited={handleEdited} 
                                 />
                             ))}
                         </div>

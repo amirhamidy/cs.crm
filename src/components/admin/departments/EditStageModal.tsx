@@ -10,7 +10,7 @@ interface Props {
     stage: Stage | null;
     accent: string;
     onClose: () => void;
-    onSubmit: (values: { name: string; number: number }) => void;
+    onSubmit: (values: { name: string; description?: string; order: number }) => void;
 }
 
 export default function EditStageModal({
@@ -21,21 +21,21 @@ export default function EditStageModal({
     onSubmit,
 }: Props) {
     const [name, setName] = useState("");
-    const [number, setNumber] = useState("1");
+    const [description, setDescription] = useState("");
+    const [order, setOrder] = useState("1");
 
     useEffect(() => {
         if (!open || !stage) return;
         setName(stage.name);
-        setNumber(String((stage as Stage & { number?: number }).number ?? 1));
+        setDescription(stage.description ?? "");
+        setOrder(String(stage.order));
     }, [open, stage]);
 
     useEffect(() => {
         if (!open) return;
-
         const onKey = (e: KeyboardEvent) => {
             if (e.key === "Escape") onClose();
         };
-
         window.addEventListener("keydown", onKey);
         return () => window.removeEventListener("keydown", onKey);
     }, [open, onClose]);
@@ -45,15 +45,16 @@ export default function EditStageModal({
     const handleSubmit = () => {
         if (!canSubmit) return;
 
-        const parsedNumber = Number(number);
-        const validNumber =
-            Number.isFinite(parsedNumber) && parsedNumber > 0
-                ? Math.floor(parsedNumber)
+        const parsedOrder = Number(order);
+        const validOrder =
+            Number.isFinite(parsedOrder) && parsedOrder > 0
+                ? Math.floor(parsedOrder)
                 : 1;
 
         onSubmit({
             name: name.trim(),
-            number: validNumber,
+            description: description.trim() || undefined,
+            order: validOrder,
         });
 
         onClose();
@@ -84,13 +85,13 @@ export default function EditStageModal({
                             className="relative w-full max-w-md max-h-[90vh] flex flex-col bg-white dark:bg-[#0f0f13] border border-gray-200 dark:border-white/10 rounded-2xl shadow-2xl pointer-events-auto"
                             dir="rtl"
                         >
+                            {/* Header */}
                             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-white/10">
                                 <div className="flex items-center gap-2">
                                     <div
                                         className="w-8 h-8 rounded-xl flex items-center justify-center text-white"
                                         style={{
-                                            background: `linear-gradient(135deg, ${accent}cc, ${accent}66),
-                                            `,
+                                            background: `linear-gradient(135deg, ${accent}cc, ${accent}66)`,
                                         }}
                                     >
                                         <GitBranch size={14} />
@@ -100,7 +101,7 @@ export default function EditStageModal({
                                             ویرایش مرحله
                                         </h2>
                                         <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
-                                            نام و شماره مرحله را ویرایش کنید
+                                            مشخصات مرحله را ویرایش کنید
                                         </p>
                                     </div>
                                 </div>
@@ -113,7 +114,9 @@ export default function EditStageModal({
                                 </button>
                             </div>
 
+                            {/* Body */}
                             <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
+                                {/* Name */}
                                 <div className="space-y-1.5">
                                     <label className="text-[11px] font-medium text-gray-600 dark:text-gray-300">
                                         نام مرحله
@@ -126,20 +129,37 @@ export default function EditStageModal({
                                     />
                                 </div>
 
+                                {/* Description */}
                                 <div className="space-y-1.5">
                                     <label className="text-[11px] font-medium text-gray-600 dark:text-gray-300">
-                                        شماره مرحله
+                                        توضیحات
+                                        <span className="text-gray-400 dark:text-gray-600 mr-1">(اختیاری)</span>
+                                    </label>
+                                    <textarea
+                                        value={description}
+                                        onChange={(e) => setDescription(e.target.value)}
+                                        placeholder="توضیحات مرحله..."
+                                        rows={3}
+                                        className="w-full rounded-xl px-3 py-2.5 text-sm bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:border-blue-400 dark:focus:border-blue-500 focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-500/20 outline-none transition-all duration-200 resize-none"
+                                    />
+                                </div>
+
+                                {/* Order */}
+                                <div className="space-y-1.5">
+                                    <label className="text-[11px] font-medium text-gray-600 dark:text-gray-300">
+                                        ترتیب مرحله
                                     </label>
                                     <input
                                         type="number"
                                         min={1}
-                                        value={number}
-                                        onChange={(e) => setNumber(e.target.value)}
+                                        value={order}
+                                        onChange={(e) => setOrder(e.target.value)}
                                         className="w-full rounded-xl px-3 py-2.5 text-sm bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white focus:border-blue-400 dark:focus:border-blue-500 focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-500/20 outline-none transition-all duration-200"
                                     />
                                 </div>
                             </div>
 
+                            {/* Footer */}
                             <div className="px-6 py-4 border-t border-gray-100 dark:border-white/10">
                                 <button
                                     onClick={handleSubmit}
