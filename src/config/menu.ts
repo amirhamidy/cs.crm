@@ -27,7 +27,6 @@ export const adminMenuItems: MenuItem[] = [
 
 export const userMenuItems: MenuItem[] = [
   { icon: Home, label: "داشبورد", href: "/user/dashboard" },
-  { icon: ClipboardList, label: "فرآیندها", href: "/user/processes" },
-  { icon: FileText, label: "گزارشات", href: "/user/reports" },
-  { icon: Settings, label: "تنظیمات", href: "/user/settings" },
+  { icon: ClipboardList, label: "وظایف", href: "/user/processes" },
+  { icon: FileText, label: "مشتری", href: "/user/customer" },
 ];

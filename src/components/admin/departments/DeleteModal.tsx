@@ -2,6 +2,7 @@
 
 import { motion, AnimatePresence } from "framer-motion";
 import { X, AlertTriangle, Loader2 } from "lucide-react";
+import { useTheme } from "next-themes";
 
 interface Props {
     open: boolean;
@@ -20,85 +21,121 @@ export default function DeleteModal({
     onConfirm,
     onCancel,
 }: Props) {
+    const { resolvedTheme } = useTheme();
+    const isDark = resolvedTheme === "dark";
+
     return (
         <AnimatePresence>
             {open && (
-                <>
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center px-4"
+                    style={{
+                        background: "rgba(0,0,0,0.5)",
+                        backdropFilter: "blur(2px)",
+                    }}
+                    onClick={loading ? undefined : onCancel}
+                >
                     <motion.div
-                        key="backdrop"
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        transition={{ duration: 0.2 }}
-                        onClick={onCancel}
-                        className="fixed inset-0 z-40 bg-black/40 dark:bg-black/60"
-                    />
-
-                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
-                        <motion.div
-                            key="modal"
-                            initial={{ opacity: 0, scale: 0.93, y: 16 }}
-                            animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.93, y: 16 }}
-                            transition={{ duration: 0.25, ease: [0.23, 1, 0.32, 1] }}
-                            onClick={(e) => e.stopPropagation()}
-                            className="relative w-full max-w-md bg-white dark:bg-[#0f0f13] border border-gray-200 dark:border-white/10 rounded-2xl shadow-2xl pointer-events-auto"
-                            dir="rtl"
+                        initial={{ scale: 0.93, y: 16 }}
+                        animate={{ scale: 1, y: 0 }}
+                        exit={{ scale: 0.93, y: 16 }}
+                        transition={{ duration: 0.22, ease: "easeOut" }}
+                        onClick={(e) => e.stopPropagation()}
+                        className="w-full max-w-[400px] rounded-3xl overflow-hidden border"
+                        style={{
+                            background: isDark ? "#0f172a" : "#ffffff",
+                            borderColor: isDark
+                                ? "rgba(255,255,255,0.07)"
+                                : "rgba(0,0,0,0.06)",
+                            boxShadow: "0 24px 64px rgba(0,0,0,0.3)",
+                        }}
+                        dir="rtl"
+                    >
+                        <div
+                            className="px-5 py-4 border-b flex items-center justify-between"
+                            style={{
+                                borderColor: isDark
+                                    ? "rgba(255,255,255,0.06)"
+                                    : "rgba(0,0,0,0.06)",
+                            }}
                         >
-                            {/* Header */}
-                            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-white/10">
-                                <div className="flex items-center gap-2">
-                                    <div className="w-8 h-8 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center">
-                                        <AlertTriangle size={14} className="text-red-500" />
-                                    </div>
-                                    <h2 className="text-base font-semibold text-gray-900 dark:text-white">
-                                        {title}
-                                    </h2>
+                            <div className="flex items-center gap-3">
+                                <div className="w-8 h-8 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center justify-center">
+                                    <AlertTriangle size={15} className="text-red-500" />
                                 </div>
-
-                                <button
-                                    onClick={onCancel}
-                                    disabled={loading}
-                                    className="p-2 rounded-xl text-gray-400 hover:text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                                >
-                                    <X size={16} />
-                                </button>
+                                <div>
+                                    <h3 className="text-[14px] font-extrabold text-gray-900 dark:text-white">
+                                        {title}
+                                    </h3>
+                                </div>
                             </div>
 
-                            {/* Body */}
-                            <div className="px-6 py-5">
-                                <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-                                    {description}
-                                </p>
-                            </div>
+                            <button
+                                onClick={onCancel}
+                                disabled={loading}
+                                className="w-8 h-8 rounded-xl flex items-center justify-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors disabled:opacity-40"
+                                style={{
+                                    background: isDark
+                                        ? "rgba(255,255,255,0.05)"
+                                        : "rgba(0,0,0,0.04)",
+                                }}
+                                type="button"
+                            >
+                                <X size={15} />
+                            </button>
+                        </div>
 
-                            {/* Footer */}
-                            <div className="px-6 py-4 border-t border-gray-100 dark:border-white/10 flex items-center gap-3">
-                                <button
-                                    onClick={onCancel}
-                                    disabled={loading}
-                                    className="flex-1 py-2.5 rounded-xl text-sm font-medium bg-gray-100 dark:bg-white/5 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-white/10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                                >
-                                    انصراف
-                                </button>
-                                <button
-                                    onClick={onConfirm}
-                                    disabled={loading}
-                                    className="flex-1 py-2.5 rounded-xl text-sm font-medium bg-red-500 text-white hover:bg-red-600 active:scale-95 transition-all duration-150 shadow-lg shadow-red-500/25 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                                >
-                                    {loading ? (
-                                        <>
-                                            <Loader2 size={14} className="animate-spin" />
-                                            در حال حذف...
-                                        </>
-                                    ) : (
-                                        "حذف"
-                                    )}
-                                </button>
-                            </div>
-                        </motion.div>
-                    </div>
-                </>
+                        <div className="p-5">
+                            <p className="text-[13px] leading-7 text-gray-600 dark:text-gray-400">
+                                {description}
+                            </p>
+                        </div>
+
+                        <div
+                            className="px-5 py-4 border-t flex items-center gap-2"
+                            style={{
+                                borderColor: isDark
+                                    ? "rgba(255,255,255,0.06)"
+                                    : "rgba(0,0,0,0.06)",
+                            }}
+                        >
+                            <button
+                                onClick={onCancel}
+                                disabled={loading}
+                                className="flex-1 py-2.5 rounded-xl text-[12.5px] font-bold transition-colors disabled:opacity-40"
+                                style={{
+                                    background: isDark
+                                        ? "rgba(255,255,255,0.05)"
+                                        : "rgba(0,0,0,0.04)",
+                                    color: isDark ? "#cbd5e1" : "#475569",
+                                }}
+                                type="button"
+                            >
+                                انصراف
+                            </button>
+
+                            <button
+                                onClick={onConfirm}
+                                disabled={loading}
+                                className="flex-1 py-2.5 rounded-xl text-[13px] font-bold text-white flex items-center justify-center gap-2 disabled:opacity-40"
+                                style={{
+                                    background: "linear-gradient(135deg, #ef4444, #dc2626)",
+                                    boxShadow: "0 4px 14px rgba(239,68,68,0.28)",
+                                }}
+                                type="button"
+                            >
+                                {loading ? (
+                                    <>
+                                        <Loader2 size={14} className="animate-spin" />
+                                        در حال حذف...
+                                    </>
+                                ) : (
+                                    "حذف"
+                                )}
+                            </button>
+                        </div>
+                    </motion.div>
+                </div>
             )}
         </AnimatePresence>
     );

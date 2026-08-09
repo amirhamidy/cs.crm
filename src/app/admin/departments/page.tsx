@@ -1,16 +1,16 @@
 "use client";
 
-import { useState, useMemo, useCallback, useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
     Plus,
-    Search,
     Building2,
     Users,
     Loader2,
     AlertCircle,
     Check,
     X,
+    Pencil,
 } from "lucide-react";
 import { useDepartmentStore } from "@/components/admin/departments/departmentStore";
 import { Department, Stage, Employee } from "@/components/admin/departments/types";
@@ -46,14 +46,12 @@ export default function DepartmentsPage() {
     } = useDepartmentStore();
 
     const [selectedId, setSelectedId] = useState<string | null>(null);
-    const [search, setSearch] = useState("");
     const [deleteTarget, setDeleteTarget] = useState<DeleteTarget>(null);
     const [deleteLoading, setDeleteLoading] = useState(false);
     const [addDeptOpen, setAddDeptOpen] = useState(false);
     const [addStageOpen, setAddStageOpen] = useState(false);
     const [addEmployeeOpen, setAddEmployeeOpen] = useState(false);
 
-    // ─── Edit dept state ───────────────────────────────────────
     const [editDept, setEditDept] = useState<Department | null>(null);
     const [editName, setEditName] = useState("");
     const [editLoading, setEditLoading] = useState(false);
@@ -69,169 +67,154 @@ export default function DepartmentsPage() {
         }
     }, [departments, selectedId]);
 
-    // focus input وقتی modal باز میشه
     useEffect(() => {
         if (editDept) {
-            setTimeout(() => editInputRef.current?.focus(), 50);
+            const timer = setTimeout(() => editInputRef.current?.focus(), 60);
+            return () => clearTimeout(timer);
         }
     }, [editDept]);
 
-    const filteredDepts = useMemo(
-        () =>
-            departments.filter(
-                (d) => d.name.includes(search) || d.description.includes(search),
-            ),
-        [departments, search],
-    );
-
     const selectedDept = useMemo(
         () => departments.find((d) => d.id === selectedId) ?? null,
-        [departments, selectedId],
+        [departments, selectedId]
     );
 
-    // ─── Handlers ──────────────────────────────────────────────
-    const handleAddDepartment = useCallback(
-        async (data: { name: string; description: string; accent: string }) => {
-            const newDept = await addDepartment(data.name);
-            setSelectedId(newDept.id);
-            setAddDeptOpen(false);
-        },
-        [addDepartment],
-    );
+    const handleAddDepartment = async (data: { name: string }) => {
+        const newDept = await addDepartment(data.name);
+        setSelectedId(newDept.id);
+        setAddDeptOpen(false);
+    };
 
-    const handleOpenEdit = useCallback((dept: Department) => {
+    const handleOpenEdit = (dept: Department) => {
         setEditDept(dept);
         setEditName(dept.name);
-    }, []);
+    };
 
-    const handleEditDepartment = useCallback(async () => {
-        if (!editDept || !editName.trim() || editName.trim() === editDept.name) {
+    const handleEditDepartment = async () => {
+        if (!editDept) return;
+        const nextName = editName.trim();
+
+        if (!nextName || nextName === editDept.name) {
             setEditDept(null);
             return;
         }
+
         setEditLoading(true);
         try {
-            await updateDepartment(editDept.id, editName.trim());
+            await updateDepartment(editDept.id, nextName);
         } finally {
             setEditLoading(false);
             setEditDept(null);
         }
-    }, [editDept, editName, updateDepartment]);
+    };
 
-    const handleAddStage = useCallback(
-        async (data: { name: string; color: string }) => {
-            if (!selectedId) return;
-            await addStage(selectedId, { name: data.name });
-            setAddStageOpen(false);
-        },
-        [selectedId, addStage],
-    );
+    const handleAddStage = async (data: { name: string }) => {
+        if (!selectedId) return;
+        await addStage(selectedId, { name: data.name });
+        setAddStageOpen(false);
+    };
 
-    const handleAddEmployee = useCallback(
-        async (employeeId: string) => {
-            if (!selectedId) return;
-            await assignEmployee(selectedId, employeeId);
-        },
-        [selectedId, assignEmployee],
-    );
+    const handleAddEmployee = async (employeeId: string) => {
+        if (!selectedId) return;
+        await assignEmployee(selectedId, employeeId);
+    };
 
-    const handleEditStage = useCallback(
-        async (
-            stage: Stage,
-            values: { name: string; description?: string; order: number },
-        ) => {
-            if (!selectedId) return;
-            await updateStage(selectedId, stage.id, values);
-        },
-        [selectedId, updateStage],
-    );
+    const handleEditStage = async (
+        stage: Stage,
+        values: { name: string; description?: string; order: number }
+    ) => {
+        if (!selectedId) return;
+        await updateStage(selectedId, stage.id, values);
+    };
 
-    const handleReorderStages = useCallback(
-        (stages: Stage[]) => {
-            if (!selectedId) return;
-            useDepartmentStore.setState((s) => ({
-                departments: s.departments.map((d) =>
-                    d.id !== selectedId ? d : { ...d, stages },
-                ),
-            }));
-        },
-        [selectedId],
-    );
+    const handleReorderStages = (stages: Stage[]) => {
+        if (!selectedId) return;
+        useDepartmentStore.setState((state) => ({
+            departments: state.departments.map((dept) =>
+                dept.id === selectedId ? { ...dept, stages } : dept
+            ),
+        }));
+    };
 
-    const handleConfirmDelete = useCallback(async () => {
+    const handleConfirmDelete = async () => {
         if (!deleteTarget) return;
+
         setDeleteLoading(true);
         try {
             if (deleteTarget.type === "department") {
                 await deleteDepartment(deleteTarget.id);
                 const remaining = departments.filter((d) => d.id !== deleteTarget.id);
                 setSelectedId(remaining[0]?.id ?? null);
-            } else if (deleteTarget.type === "stage") {
+            }
+
+            if (deleteTarget.type === "stage") {
                 await deleteStage(deleteTarget.departmentId, deleteTarget.stage.id);
-            } else if (deleteTarget.type === "employee") {
-                await removeEmployee(
-                    deleteTarget.departmentId,
-                    deleteTarget.employee.id,
-                );
+            }
+
+            if (deleteTarget.type === "employee") {
+                await removeEmployee(deleteTarget.departmentId, deleteTarget.employee.id);
             }
         } finally {
             setDeleteLoading(false);
             setDeleteTarget(null);
         }
-    }, [deleteTarget, departments, deleteDepartment, deleteStage, removeEmployee]);
+    };
 
     const deleteModalMeta = useMemo(() => {
-        if (!deleteTarget) return { title: "", description: "" };
+        if (!deleteTarget) {
+            return { title: "", description: "" };
+        }
+
         if (deleteTarget.type === "department") {
             return {
                 title: `حذف دپارتمان "${deleteTarget.name}"`,
                 description:
-                    "تمام مراحل و کارمندان این دپارتمان نیز حذف خواهند شد. این عمل قابل بازگشت نیست.",
+                    "تمام مراحل و اعضای این دپارتمان نیز حذف خواهند شد. این عملیات قابل بازگشت نیست.",
             };
         }
+
         if (deleteTarget.type === "stage") {
             return {
                 title: `حذف مرحله "${deleteTarget.stage.name}"`,
                 description: "این مرحله از دپارتمان حذف می‌شود.",
             };
         }
+
         return {
-            title: `حذف کارمند "${deleteTarget.employee.name}"`,
-            description: "این کارمند از دپارتمان حذف می‌شود.",
+            title: `حذف عضو "${deleteTarget.employee.name}"`,
+            description: "این عضو از دپارتمان حذف می‌شود.",
         };
     }, [deleteTarget]);
 
     if (loading && departments.length === 0) {
         return (
-            <div className="min-h-screen flex items-center justify-center" dir="rtl">
-                <div className="flex flex-col items-center gap-3 text-gray-400">
-                    <Loader2 size={32} className="animate-spin text-blue-500" />
-                    <p className="text-sm">در حال دریافت اطلاعات...</p>
-                </div>
+            <div className="flex items-center justify-center py-24" dir="rtl">
+                <div className="w-6 h-6 rounded-full border-2 border-indigo-500 border-t-transparent animate-spin" />
             </div>
         );
     }
 
     if (error && departments.length === 0) {
         return (
-            <div className="min-h-screen flex items-center justify-center" dir="rtl">
-                <div className="flex flex-col items-center gap-3 text-gray-400">
-                    <AlertCircle size={32} className="text-red-500" />
-                    <p className="text-sm text-red-500">{error}</p>
-                    <button
-                        onClick={fetchAll}
-                        className="px-4 py-2 rounded-xl text-sm bg-blue-500 text-white hover:bg-blue-600 transition-colors"
-                    >
-                        تلاش مجدد
-                    </button>
-                </div>
+            <div className="flex flex-col items-center justify-center py-24 gap-3" dir="rtl">
+                <AlertCircle size={28} className="text-red-500" />
+                <p className="text-[13px] font-semibold text-red-500">{error}</p>
+                <button
+                    onClick={fetchAll}
+                    className="px-4 py-2 rounded-xl text-[12.5px] font-bold text-white"
+                    style={{
+                        background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
+                    }}
+                    type="button"
+                >
+                    تلاش مجدد
+                </button>
             </div>
         );
     }
 
     return (
-        <div className="min-h-screen p-3 md:p-6" dir="rtl">
-            {/* ─── Modals ─────────────────────────────────────────── */}
+        <div className="flex flex-col gap-6 p-4 md:p-6" dir="rtl">
             <DeleteModal
                 open={!!deleteTarget}
                 title={deleteModalMeta.title}
@@ -249,9 +232,9 @@ export default function DepartmentsPage() {
 
             <AddStageModal
                 open={addStageOpen}
+                department={selectedDept}
                 onClose={() => setAddStageOpen(false)}
                 onSubmit={handleAddStage}
-                department={selectedDept}
             />
 
             <AddEmployeeModal
@@ -262,117 +245,167 @@ export default function DepartmentsPage() {
                 onSubmit={handleAddEmployee}
             />
 
-            {/* ─── Edit Department Modal ───────────────────────────── */}
             <AnimatePresence>
                 {editDept && (
-                    <motion.div
-                        key="edit-dept-backdrop"
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4"
+                    <div
+                        className="fixed inset-0 z-50 flex items-center justify-center px-4"
+                        style={{
+                            background: "rgba(0,0,0,0.5)",
+                            backdropFilter: "blur(2px)",
+                        }}
                         onClick={() => !editLoading && setEditDept(null)}
                     >
                         <motion.div
-                            initial={{ opacity: 0, scale: 0.95, y: 10 }}
-                            animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.95, y: 10 }}
-                            transition={{ duration: 0.2, ease: "easeOut" }}
+                            initial={{ scale: 0.93, y: 16 }}
+                            animate={{ scale: 1, y: 0 }}
+                            exit={{ scale: 0.93, y: 16 }}
+                            transition={{ duration: 0.22, ease: "easeOut" }}
                             onClick={(e) => e.stopPropagation()}
-                            className="w-full max-w-sm rounded-2xl p-5 bg-white dark:bg-gray-900 border border-gray-200 dark:border-white/10 shadow-2xl"
+                            className="w-full max-w-[400px] rounded-3xl overflow-hidden border bg-white dark:bg-[#0f172a]"
+                            style={{
+                                borderColor: "rgba(255,255,255,0.07)",
+                                boxShadow: "0 24px 64px rgba(0,0,0,0.3)",
+                            }}
                         >
-                            <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-4">
-                                ویرایش نام دپارتمان
-                            </h3>
-                            <input
-                                ref={editInputRef}
-                                value={editName}
-                                onChange={(e) => setEditName(e.target.value)}
-                                onKeyDown={(e) => {
-                                    if (e.key === "Enter") handleEditDepartment();
-                                    if (e.key === "Escape" && !editLoading) setEditDept(null);
-                                }}
-                                disabled={editLoading}
-                                placeholder="نام دپارتمان"
-                                className="w-full px-4 py-2.5 rounded-xl text-sm bg-gray-50 dark:bg-white/[0.05] border border-gray-200 dark:border-white/10 text-gray-800 dark:text-white placeholder:text-gray-400 focus:border-blue-400 dark:focus:border-blue-500 focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-500/10 outline-none transition-all disabled:opacity-50"
-                            />
-                            <div className="flex items-center justify-end gap-2 mt-4">
+                            <div className="px-5 py-4 border-b flex items-center justify-between border-gray-100 dark:border-white/[0.06]">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center">
+                                        <Pencil size={15} className="text-indigo-500" />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-[14px] font-extrabold text-gray-900 dark:text-white">
+                                            ویرایش نام دپارتمان
+                                        </h3>
+                                    </div>
+                                </div>
+
                                 <button
                                     onClick={() => setEditDept(null)}
                                     disabled={editLoading}
-                                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/[0.05] transition-colors disabled:opacity-50"
+                                    className="w-8 h-8 rounded-xl flex items-center justify-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                                    style={{ background: "rgba(255,255,255,0.05)" }}
+                                    type="button"
                                 >
-                                    <X size={13} />
-                                    انصراف
-                                </button>
-                                <button
-                                    onClick={handleEditDepartment}
-                                    disabled={editLoading || !editName.trim()}
-                                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-blue-500 hover:bg-blue-600 text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
-                                    {editLoading ? (
-                                        <Loader2 size={13} className="animate-spin" />
-                                    ) : (
-                                        <Check size={13} />
-                                    )}
-                                    ذخیره
+                                    <X size={15} />
                                 </button>
                             </div>
+
+                            <div className="p-5 space-y-4">
+                                <div className="relative">
+                                    <input
+                                        ref={editInputRef}
+                                        id="edit_dept_name"
+                                        placeholder=" "
+                                        value={editName}
+                                        onChange={(e) => setEditName(e.target.value)}
+                                        onKeyDown={(e) => {
+                                            if (e.key === "Enter") handleEditDepartment();
+                                            if (e.key === "Escape" && !editLoading) setEditDept(null);
+                                        }}
+                                        disabled={editLoading}
+                                        className="peer w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm text-black outline-none transition-all duration-200 focus:border-indigo-500 dark:border-white/[0.08] dark:bg-white/[0.04] dark:text-white dark:focus:border-violet-500"
+                                    />
+                                    <label
+                                        htmlFor="edit_dept_name"
+                                        className={`absolute right-4 pointer-events-none transition-all duration-200 bg-white dark:bg-[#0f172a] px-1 rounded ${editName.trim()
+                                            ? "top-0 -translate-y-1/2 text-[11px] text-indigo-500 dark:text-violet-400"
+                                            : "top-1/2 -translate-y-1/2 text-sm text-gray-400 peer-focus:top-0 peer-focus:text-[11px] peer-focus:text-indigo-500 dark:peer-focus:text-violet-400"
+                                            }`}
+                                    >
+                                        نام دپارتمان
+                                    </label>
+                                </div>
+
+                                <div className="flex gap-2">
+                                    <button
+                                        onClick={() => setEditDept(null)}
+                                        disabled={editLoading}
+                                        className="flex-1 py-2.5 rounded-xl text-[12.5px] font-bold transition-colors"
+                                        style={{
+                                            background: "rgba(255,255,255,0.05)",
+                                            color: "#94a3b8",
+                                        }}
+                                        type="button"
+                                    >
+                                        انصراف
+                                    </button>
+                                    <button
+                                        onClick={handleEditDepartment}
+                                        disabled={editLoading || !editName.trim()}
+                                        className="flex-1 py-2.5 rounded-xl text-[13px] font-bold text-white flex items-center justify-center gap-2 disabled:opacity-40"
+                                        style={{
+                                            background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
+                                            boxShadow: "0 4px 14px rgba(99,102,241,0.3)",
+                                        }}
+                                        type="button"
+                                    >
+                                        {editLoading ? (
+                                            <Loader2 size={13} className="animate-spin" />
+                                        ) : (
+                                            <Check size={13} />
+                                        )}
+                                        ذخیره
+                                    </button>
+                                </div>
+                            </div>
                         </motion.div>
-                    </motion.div>
+                    </div>
                 )}
             </AnimatePresence>
 
-            <div className="max-w-7xl mx-auto">
-                {/* Header */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
-                    <div className="flex items-center gap-3">
-                        <div className="p-2.5 rounded-xl bg-blue-500/10 border border-blue-500/20">
-                            <Building2 size={20} className="text-blue-500" />
-                        </div>
-                        <div>
-                            <h1 className="text-xl font-bold text-gray-900 dark:text-white">
-                                دپارتمان‌ها
-                            </h1>
-                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                                {departments.length} دپارتمان فعال
-                            </p>
-                        </div>
+            <div className="flex items-center justify-between mb-8">
+                <div className="flex items-center gap-4">
+                    <div
+                        className="w-12 h-12 rounded-2xl flex items-center justify-center"
+                      
+                    >
+                        <Building2 size={24} className="text-[#6366f1]" />
                     </div>
 
-                    <div className="flex items-center gap-3">
-                        <button
-                            onClick={() => setAddDeptOpen(true)}
-                            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium bg-blue-500 hover:bg-blue-600 active:scale-95 text-white transition-all duration-150 shadow-lg shadow-blue-500/25"
-                        >
-                            <Plus size={15} />
-                            دپارتمان جدید
-                        </button>
+                    <div>
+                        <h1 className="text-[14px] font-extrabold text-gray-900 dark:text-white leading-tight transition-colors">
+                            دپارتمان‌ها
+                        </h1>
+                        <p className="text-[12.5px] text-gray-400 dark:text-gray-500 mt-0.5 font-medium">
+                            {departments.length} دپارتمان فعال در سیستم مدیریت
+                        </p>
                     </div>
                 </div>
 
-                {/* Main grid */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    {/* Department list */}
-                    <div className="lg:col-span-1 space-y-3">
-                        {filteredDepts.length === 0 ? (
-                            <motion.div
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                className="flex flex-col items-center justify-center py-16 text-gray-400 dark:text-gray-600"
-                            >
-                                <Building2 size={32} className="mb-3 opacity-50" />
-                                <p className="text-sm">دپارتمانی یافت نشد</p>
-                            </motion.div>
-                        ) : (
-                            filteredDepts.map((dept, i) => (
+                <motion.button
+                    whileHover={{ scale: 1.02, translateY: -1 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => setAddDeptOpen(true)}
+                    className="flex items-center gap-2.5 text-[13.5px] font-bold text-white px-3 py-2 rounded-2xl transition-all"
+                    style={{
+                        background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
+                        boxShadow: "0 8px 20px -6px rgba(99,102,241,0.5)",
+                    }}
+                    type="button"
+                >
+                    <Plus size={15} strokeWidth={2.5} />
+                    <span>افزودن دپارتمان</span>
+                </motion.button>
+            </div>
+
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="lg:col-span-1 space-y-3">
+                    {departments.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center py-20 gap-3">
+                            <p className="text-[13px] text-gray-400 dark:text-gray-500">
+                                دپارتمانی یافت نشد
+                            </p>
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-1 gap-3">
+                            {departments.map((dept, index) => (
                                 <DepartmentCard
                                     key={dept.id}
                                     department={dept}
+                                    index={index}
                                     isSelected={dept.id === selectedId}
-                                    index={i}
                                     onClick={() => setSelectedId(dept.id)}
-                                    onEdit={() => handleOpenEdit(dept)}
                                     onDelete={() =>
                                         setDeleteTarget({
                                             type: "department",
@@ -380,85 +413,95 @@ export default function DepartmentsPage() {
                                             name: dept.name,
                                         })
                                     }
+                                    onEdit={() => handleOpenEdit(dept)}
                                 />
-                            ))
-                        )}
-                    </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
 
-                    {/* Detail panel */}
-                    <div className="lg:col-span-2 space-y-5">
-                        {!selectedDept ? (
-                            <div className="flex flex-col items-center justify-center py-24 text-gray-400 dark:text-gray-600">
-                                <Building2 size={40} className="mb-3 opacity-40" />
-                                <p className="text-sm">یک دپارتمان انتخاب کنید</p>
-                            </div>
-                        ) : (
-                            <>
-                                <motion.div
-                                    key={selectedDept.id}
-                                    initial={{ opacity: 0, y: 8 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    transition={{ duration: 0.2 }}
-                                    className="rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/[0.03] p-5"
-                                >
-                                    <div className="flex items-start justify-between gap-4">
-                                        <div className="flex items-center gap-3">
-                                            <div
-                                                className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+                <div className="lg:col-span-2 space-y-5">
+                    {!selectedDept ? (
+                        <div className="flex flex-col items-center justify-center py-20 gap-3">
+                            <Building2 size={32} className="text-gray-400 opacity-40" />
+                            <p className="text-[13px] text-gray-400 dark:text-gray-500">
+                                یک دپارتمان انتخاب کنید
+                            </p>
+                        </div>
+                    ) : (
+                        <>
+                            <motion.div
+                                key={selectedDept.id}
+                                initial={{ opacity: 0, y: 8 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ duration: 0.2 }}
+                                className="rounded-2xl p-5 border relative overflow-hidden"
+                                style={{
+                                    borderColor: "rgba(255,255,255,0.06)",
+                                    background: "rgba(255,255,255,0.02)",
+                                }}
+                            >
+                                <div className="flex items-start justify-between gap-4">
+                                    <div className="flex items-center gap-3">
+                                        <div
+                                            className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+                                            style={{
+                                                backgroundColor: `${selectedDept.accent || "#6366f1"}20`,
+                                                border: `1px solid ${(selectedDept.accent || "#6366f1")}40`,
+                                            }}
+                                        >
+                                            <Building2
+                                                size={18}
                                                 style={{
-                                                    backgroundColor: selectedDept.accent + "20",
-                                                    border: `1px solid ${selectedDept.accent}40`,
+                                                    color: selectedDept.accent || "#6366f1",
                                                 }}
-                                            >
-                                                <Building2
-                                                    size={18}
-                                                    style={{ color: selectedDept.accent }}
-                                                />
-                                            </div>
-                                            <div>
-                                                <h2 className="text-base font-semibold text-gray-900 dark:text-white">
-                                                    {selectedDept.name}
-                                                </h2>
-                                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                                                    ایجاد شده در {selectedDept.createdAt}
-                                                </p>
-                                            </div>
+                                            />
                                         </div>
-                                        <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
-                                            <Users size={13} />
-                                            <span>{selectedDept.employees.length} عضو</span>
+
+                                        <div>
+                                            <h2 className="text-[15px] font-extrabold text-gray-900 dark:text-white">
+                                                {selectedDept.name}
+                                            </h2>
+                                            <p className="text-[11.5px] text-gray-400 dark:text-gray-500 mt-0.5">
+                                                ایجاد شده در {selectedDept.createdAt}
+                                            </p>
                                         </div>
                                     </div>
-                                </motion.div>
 
-                                <StagesPanel
-                                    department={selectedDept}
-                                    onAddStage={() => setAddStageOpen(true)}
-                                    onEditStage={handleEditStage}
-                                    onDeleteStage={(stage) =>
-                                        setDeleteTarget({
-                                            type: "stage",
-                                            departmentId: selectedDept.id,
-                                            stage,
-                                        })
-                                    }
-                                    onReorder={handleReorderStages}
-                                />
+                                    <div className="flex items-center gap-2 text-[11.5px] text-gray-400 dark:text-gray-500">
+                                        <Users size={13} />
+                                        <span>{selectedDept.employees.length} عضو</span>
+                                    </div>
+                                </div>
+                            </motion.div>
 
-                                <EmployeesPanel
-                                    department={selectedDept}
-                                    onAddEmployee={() => setAddEmployeeOpen(true)}
-                                    onDeleteEmployee={(employee) =>
-                                        setDeleteTarget({
-                                            type: "employee",
-                                            departmentId: selectedDept.id,
-                                            employee,
-                                        })
-                                    }
-                                />
-                            </>
-                        )}
-                    </div>
+                            <StagesPanel
+                                department={selectedDept}
+                                onAddStage={() => setAddStageOpen(true)}
+                                onEditStage={handleEditStage}
+                                onDeleteStage={(stage) =>
+                                    setDeleteTarget({
+                                        type: "stage",
+                                        departmentId: selectedDept.id,
+                                        stage,
+                                    })
+                                }
+                                onReorder={handleReorderStages}
+                            />
+
+                            <EmployeesPanel
+                                department={selectedDept}
+                                onAddEmployee={() => setAddEmployeeOpen(true)}
+                                onDeleteEmployee={(employee) =>
+                                    setDeleteTarget({
+                                        type: "employee",
+                                        departmentId: selectedDept.id,
+                                        employee,
+                                    })
+                                }
+                            />
+                        </>
+                    )}
                 </div>
             </div>
         </div>

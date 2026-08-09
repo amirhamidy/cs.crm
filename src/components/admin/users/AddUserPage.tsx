@@ -2,7 +2,6 @@
 
 import {
     useState,
-    useEffect,
     forwardRef,
     InputHTMLAttributes,
 } from "react";
@@ -11,8 +10,6 @@ import {
     X,
     Loader2,
     UserPlus,
-    User,
-    Lock,
     Shield,
     Eye,
     EyeOff,

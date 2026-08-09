@@ -6,6 +6,7 @@ import { Users, Plus, Loader2 } from "lucide-react";
 import { useTheme } from "next-themes";
 import CustomerCard from "./CustomerCard";
 import AddCustomerModal from "./AddCustomerModal";
+import CustomerEditModal from "./CustomerEditModal";
 import { Customer } from "@/types/customer";
 import axiosInstance from "@/lib/axiosInstance";
 
@@ -16,6 +17,7 @@ export default function CustomersPage() {
     const [customers, setCustomers] = useState<Customer[]>([]);
     const [loading, setLoading] = useState(true);
     const [showAdd, setShowAdd] = useState(false);
+    const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
 
     const fetchCustomers = useCallback(async () => {
         setLoading(true);
@@ -44,12 +46,16 @@ export default function CustomersPage() {
         setCustomers((prev) => [c, ...prev]);
     };
 
-    // ✅ اضافه شد
     const handleEdited = useCallback((updated: Customer) => {
         setCustomers((prev) =>
             prev.map((c) => (c.id === updated.id ? updated : c))
         );
+        setEditingCustomer(null);
     }, []);
+
+    const handleOpenEdit = (customer: Customer) => {
+        setEditingCustomer(customer);
+    };
 
     return (
         <div className="min-h-screen p-4 sm:p-6 font-vazir transition-colors">
@@ -134,7 +140,8 @@ export default function CustomersPage() {
                                     customer={customer}
                                     index={i}
                                     onDelete={() => handleDelete(customer.id)}
-                                    onEdited={handleEdited} 
+                                    onEdited={handleEdited}
+                                    onEdit={() => handleOpenEdit(customer)}
                                 />
                             ))}
                         </div>
@@ -147,6 +154,15 @@ export default function CustomersPage() {
                 onClose={() => setShowAdd(false)}
                 onAdded={handleAdded}
             />
+
+            {editingCustomer && (
+                <CustomerEditModal
+                    customer={editingCustomer}
+                    isOpen={!!editingCustomer}
+                    onClose={() => setEditingCustomer(null)}
+                    onEdited={handleEdited}
+                />
+            )}
         </div>
     );
 }

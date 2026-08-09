@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, GitBranch } from "lucide-react";
+import { useTheme } from "next-themes";
 import { Stage } from "./types";
 
 interface Props {
@@ -20,6 +21,9 @@ export default function EditStageModal({
     onClose,
     onSubmit,
 }: Props) {
+    const { resolvedTheme } = useTheme();
+    const isDark = resolvedTheme === "dark";
+
     const [name, setName] = useState("");
     const [description, setDescription] = useState("");
     const [order, setOrder] = useState("1");
@@ -33,9 +37,11 @@ export default function EditStageModal({
 
     useEffect(() => {
         if (!open) return;
+
         const onKey = (e: KeyboardEvent) => {
             if (e.key === "Escape") onClose();
         };
+
         window.addEventListener("keydown", onKey);
         return () => window.removeEventListener("keydown", onKey);
     }, [open, onClose]);
@@ -47,9 +53,7 @@ export default function EditStageModal({
 
         const parsedOrder = Number(order);
         const validOrder =
-            Number.isFinite(parsedOrder) && parsedOrder > 0
-                ? Math.floor(parsedOrder)
-                : 1;
+            Number.isFinite(parsedOrder) && parsedOrder > 0 ? Math.floor(parsedOrder) : 1;
 
         onSubmit({
             name: name.trim(),
@@ -63,119 +67,151 @@ export default function EditStageModal({
     return (
         <AnimatePresence>
             {open && (
-                <>
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center px-4"
+                    style={{
+                        background: "rgba(0,0,0,0.5)",
+                        backdropFilter: "blur(2px)",
+                    }}
+                    onClick={onClose}
+                >
                     <motion.div
-                        key="backdrop"
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        transition={{ duration: 0.22 }}
-                        onClick={onClose}
-                        className="fixed inset-0 z-40 bg-black/40 dark:bg-black/60"
-                    />
-
-                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
-                        <motion.div
-                            key="modal"
-                            initial={{ opacity: 0, scale: 0.93, y: 16 }}
-                            animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.93, y: 16 }}
-                            transition={{ duration: 0.25, ease: [0.23, 1, 0.32, 1] }}
-                            onClick={(e) => e.stopPropagation()}
-                            className="relative w-full max-w-md max-h-[90vh] flex flex-col bg-white dark:bg-[#0f0f13] border border-gray-200 dark:border-white/10 rounded-2xl shadow-2xl pointer-events-auto"
-                            dir="rtl"
+                        initial={{ scale: 0.93, y: 16 }}
+                        animate={{ scale: 1, y: 0 }}
+                        exit={{ scale: 0.93, y: 16 }}
+                        transition={{ duration: 0.22, ease: "easeOut" }}
+                        onClick={(e) => e.stopPropagation()}
+                        className="w-full max-w-[420px] max-h-[90vh] flex flex-col rounded-3xl overflow-hidden border"
+                        style={{
+                            background: isDark ? "#0f172a" : "#ffffff",
+                            borderColor: isDark
+                                ? "rgba(255,255,255,0.07)"
+                                : "rgba(0,0,0,0.06)",
+                            boxShadow: "0 24px 64px rgba(0,0,0,0.3)",
+                        }}
+                        dir="rtl"
+                    >
+                        <div
+                            className="px-5 py-4 border-b flex items-center justify-between"
+                            style={{
+                                borderColor: isDark
+                                    ? "rgba(255,255,255,0.06)"
+                                    : "rgba(0,0,0,0.06)",
+                            }}
                         >
-                            {/* Header */}
-                            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-white/10">
-                                <div className="flex items-center gap-2">
-                                    <div
-                                        className="w-8 h-8 rounded-xl flex items-center justify-center text-white"
-                                        style={{
-                                            background: `linear-gradient(135deg, ${accent}cc, ${accent}66)`,
-                                        }}
-                                    >
-                                        <GitBranch size={14} />
-                                    </div>
-                                    <div>
-                                        <h2 className="text-base font-semibold text-gray-900 dark:text-white">
-                                            ویرایش مرحله
-                                        </h2>
-                                        <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
-                                            مشخصات مرحله را ویرایش کنید
-                                        </p>
-                                    </div>
+                            <div className="flex items-center gap-3">
+                                <div className="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center">
+                                    <GitBranch size={15} className="text-indigo-500" />
                                 </div>
+                                <div>
+                                    <h3 className="text-[14px] font-extrabold text-gray-900 dark:text-white">
+                                        ویرایش مرحله
+                                    </h3>
+                                    <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-0.5">
+                                        مشخصات مرحله را ویرایش کنید
+                                    </p>
+                                </div>
+                            </div>
 
-                                <button
-                                    onClick={onClose}
-                                    className="p-2 rounded-xl text-gray-400 hover:text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
+                            <button
+                                onClick={onClose}
+                                className="w-8 h-8 rounded-xl flex items-center justify-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                                style={{
+                                    background: isDark
+                                        ? "rgba(255,255,255,0.05)"
+                                        : "rgba(0,0,0,0.04)",
+                                }}
+                                type="button"
+                            >
+                                <X size={15} />
+                            </button>
+                        </div>
+
+                        <div className="p-5 space-y-4 overflow-y-auto">
+                            <div className="relative">
+                                <input
+                                    id="edit_stage_name"
+                                    placeholder=" "
+                                    value={name}
+                                    onChange={(e) => setName(e.target.value)}
+                                    className="peer w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm text-black outline-none transition-all duration-200 focus:border-indigo-500 dark:border-white/[0.08] dark:bg-white/[0.04] dark:text-white dark:focus:border-violet-500"
+                                />
+                                <label
+                                    htmlFor="edit_stage_name"
+                                    className={`absolute right-4 pointer-events-none transition-all duration-200 bg-white dark:bg-[#0f172a] px-1 rounded ${name.trim()
+                                            ? "top-0 -translate-y-1/2 text-[11px] text-indigo-500 dark:text-violet-400"
+                                            : "top-1/2 -translate-y-1/2 text-sm text-gray-400 peer-focus:top-0 peer-focus:text-[11px] peer-focus:text-indigo-500 dark:peer-focus:text-violet-400"
+                                        }`}
                                 >
-                                    <X size={16} />
-                                </button>
+                                    نام مرحله
+                                </label>
                             </div>
 
-                            {/* Body */}
-                            <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
-                                {/* Name */}
-                                <div className="space-y-1.5">
-                                    <label className="text-[11px] font-medium text-gray-600 dark:text-gray-300">
-                                        نام مرحله
-                                    </label>
-                                    <input
-                                        value={name}
-                                        onChange={(e) => setName(e.target.value)}
-                                        placeholder="نام مرحله..."
-                                        className="w-full rounded-xl px-3 py-2.5 text-sm bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:border-blue-400 dark:focus:border-blue-500 focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-500/20 outline-none transition-all duration-200"
-                                    />
-                                </div>
-
-                                {/* Description */}
-                                <div className="space-y-1.5">
-                                    <label className="text-[11px] font-medium text-gray-600 dark:text-gray-300">
-                                        توضیحات
-                                        <span className="text-gray-400 dark:text-gray-600 mr-1">(اختیاری)</span>
-                                    </label>
-                                    <textarea
-                                        value={description}
-                                        onChange={(e) => setDescription(e.target.value)}
-                                        placeholder="توضیحات مرحله..."
-                                        rows={3}
-                                        className="w-full rounded-xl px-3 py-2.5 text-sm bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:border-blue-400 dark:focus:border-blue-500 focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-500/20 outline-none transition-all duration-200 resize-none"
-                                    />
-                                </div>
-
-                                {/* Order */}
-                                <div className="space-y-1.5">
-                                    <label className="text-[11px] font-medium text-gray-600 dark:text-gray-300">
-                                        ترتیب مرحله
-                                    </label>
-                                    <input
-                                        type="number"
-                                        min={1}
-                                        value={order}
-                                        onChange={(e) => setOrder(e.target.value)}
-                                        className="w-full rounded-xl px-3 py-2.5 text-sm bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white focus:border-blue-400 dark:focus:border-blue-500 focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-500/20 outline-none transition-all duration-200"
-                                    />
-                                </div>
-                            </div>
-
-                            {/* Footer */}
-                            <div className="px-6 py-4 border-t border-gray-100 dark:border-white/10">
-                                <button
-                                    onClick={handleSubmit}
-                                    disabled={!canSubmit}
-                                    className="w-full py-2.5 rounded-xl text-sm font-medium text-white transition-all duration-200 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed hover:opacity-90"
-                                    style={{
-                                        backgroundColor: accent,
-                                        boxShadow: `0 8px 20px ${accent}30`,
-                                    }}
+                            <div className="relative">
+                                <textarea
+                                    id="edit_stage_description"
+                                    placeholder=" "
+                                    rows={4}
+                                    value={description}
+                                    onChange={(e) => setDescription(e.target.value)}
+                                    className="peer w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm text-black outline-none transition-all duration-200 resize-none focus:border-indigo-500 dark:border-white/[0.08] dark:bg-white/[0.04] dark:text-white dark:focus:border-violet-500"
+                                />
+                                <label
+                                    htmlFor="edit_stage_description"
+                                    className={`absolute right-4 pointer-events-none transition-all duration-200 bg-white dark:bg-[#0f172a] px-1 rounded ${description.trim()
+                                            ? "top-0 -translate-y-1/2 text-[11px] text-indigo-500 dark:text-violet-400"
+                                            : "top-5 text-sm text-gray-400 peer-focus:top-0 peer-focus:-translate-y-1/2 peer-focus:text-[11px] peer-focus:text-indigo-500 dark:peer-focus:text-violet-400"
+                                        }`}
                                 >
-                                    ذخیره تغییرات
-                                </button>
+                                    توضیحات
+                                </label>
                             </div>
-                        </motion.div>
-                    </div>
-                </>
+
+                            <div className="relative">
+                                <input
+                                    id="edit_stage_order"
+                                    type="number"
+                                    min={1}
+                                    placeholder=" "
+                                    value={order}
+                                    onChange={(e) => setOrder(e.target.value)}
+                                    className="peer w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm text-black outline-none transition-all duration-200 focus:border-indigo-500 dark:border-white/[0.08] dark:bg-white/[0.04] dark:text-white dark:focus:border-violet-500"
+                                />
+                                <label
+                                    htmlFor="edit_stage_order"
+                                    className={`absolute right-4 pointer-events-none transition-all duration-200 bg-white dark:bg-[#0f172a] px-1 rounded ${order.trim()
+                                            ? "top-0 -translate-y-1/2 text-[11px] text-indigo-500 dark:text-violet-400"
+                                            : "top-1/2 -translate-y-1/2 text-sm text-gray-400 peer-focus:top-0 peer-focus:text-[11px] peer-focus:text-indigo-500 dark:peer-focus:text-violet-400"
+                                        }`}
+                                >
+                                    ترتیب مرحله
+                                </label>
+                            </div>
+                        </div>
+
+                        <div
+                            className="px-5 py-4 border-t"
+                            style={{
+                                borderColor: isDark
+                                    ? "rgba(255,255,255,0.06)"
+                                    : "rgba(0,0,0,0.06)",
+                            }}
+                        >
+                            <button
+                                onClick={handleSubmit}
+                                disabled={!canSubmit}
+                                className="w-full py-2.5 rounded-xl text-[13px] font-bold text-white disabled:opacity-40 disabled:cursor-not-allowed"
+                                style={{
+                                    background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
+                                    boxShadow: "0 4px 14px rgba(99,102,241,0.3)",
+                                }}
+                                type="button"
+                            >
+                                ذخیره تغییرات
+                            </button>
+                        </div>
+                    </motion.div>
+                </div>
             )}
         </AnimatePresence>
     );

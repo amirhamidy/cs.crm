@@ -6,14 +6,12 @@ import { Trash2, Pencil, X } from "lucide-react";
 import { useTheme } from "next-themes";
 import axiosInstance from "@/lib/axiosInstance";
 import type { AxiosError } from "axios";
-import type { ApiEmployee } from "@/types/users";
-import EditUserModal from "./EditUserModal";
+import type { ApiEmployee, ApiUser } from "@/types/users";
 
 interface UserCardProps {
     employee?: ApiEmployee;
     index: number;
     onDelete: (id: number) => void;
-    onUpdate?: (updatedEmployee: ApiEmployee) => void;
 }
 
 const AVATAR_GRADIENTS = [
@@ -28,28 +26,42 @@ function getErrorMessage(err: unknown, fallback: string) {
     const error = err as AxiosError<Record<string, unknown>>;
     const data = error.response?.data;
     if (!data) return fallback;
-
     const possibleKeys = ["detail", "message", "error", "non_field_errors"];
     for (const key of possibleKeys) {
         const value = data[key];
         if (typeof value === "string") return value;
         if (Array.isArray(value) && typeof value[0] === "string") return value[0];
     }
-
     return fallback;
 }
 
-export default function UserCard({
-    employee,
-    index,
-    onDelete,
-    onUpdate,
-}: UserCardProps) {
+function extractUserList(data: unknown): ApiUser[] {
+    if (Array.isArray(data)) return data;
+    if (data && typeof data === "object") {
+        const obj = data as Record<string, unknown>;
+        if (Array.isArray(obj.results)) return obj.results as ApiUser[];
+        if (Array.isArray(obj.data)) return obj.data as ApiUser[];
+        if (Array.isArray(obj.users)) return obj.users as ApiUser[];
+    }
+    return [];
+}
+
+function extractEmployeeList(data: unknown): ApiEmployee[] {
+    if (Array.isArray(data)) return data;
+    if (data && typeof data === "object") {
+        const obj = data as Record<string, unknown>;
+        if (Array.isArray(obj.results)) return obj.results as ApiEmployee[];
+        if (Array.isArray(obj.data)) return obj.data as ApiEmployee[];
+        if (Array.isArray(obj.employees)) return obj.employees as ApiEmployee[];
+    }
+    return [];
+}
+
+export default function UserCard({ employee, index, onDelete }: UserCardProps) {
     const { resolvedTheme } = useTheme();
     const isDark = resolvedTheme === "dark";
     const [hovered, setHovered] = useState(false);
     const [showConfirm, setShowConfirm] = useState(false);
-    const [showEditModal, setShowEditModal] = useState(false);
     const [deleting, setDeleting] = useState(false);
     const [deleteError, setDeleteError] = useState("");
 
@@ -62,8 +74,29 @@ export default function UserCard({
         return null;
     }
 
+    const getLoggedUserId = (): number | null => {
+        if (typeof window !== "undefined") {
+            try {
+                const raw = localStorage.getItem("user");
+                if (raw) {
+                    const parsed = JSON.parse(raw);
+                    return typeof parsed.id === "number" ? parsed.id : null;
+                }
+            } catch {
+                return null;
+            }
+        }
+        return null;
+    };
+
+    const loggedUserId = getLoggedUserId();
+    const isSelf = loggedUserId !== null && loggedUserId === employee.id;
+    const isAdmin = employee.type === 1;
+    const canDelete = !isAdmin && !isSelf;
+
     const employeeName = employee.full_name.trim() || "بدون نام";
     const username = employee.username.trim() || "unknown";
+
     const gradient = AVATAR_GRADIENTS[employee.id % AVATAR_GRADIENTS.length];
     const start = gradient[0];
     const end = gradient[1];
@@ -77,12 +110,46 @@ export default function UserCard({
         : "نامشخص";
 
     async function handleDelete() {
+        if (!employee || !canDelete) return;
+
         setDeleting(true);
         setDeleteError("");
+
         try {
-            await axiosInstance.delete(
-                `/accounts/api/v1/employee/${employee.id}/delete/`
+            const [usersRes, employeesRes] = await Promise.all([
+                axiosInstance.get("/accounts/api/v1/user/list/").catch(() => null),
+                axiosInstance.get("/accounts/api/v1/employee/").catch(() => null),
+            ]);
+
+            const users = usersRes ? extractUserList(usersRes.data) : [];
+            const employees = employeesRes ? extractEmployeeList(employeesRes.data) : [];
+
+            const targetUsername = employee.username.trim().toLowerCase();
+
+            const matchedUser = users.find(
+                (u) => u.username?.trim().toLowerCase() === targetUsername
             );
+            const matchedEmployee = employees.find(
+                (e) =>
+                    e.username?.trim().toLowerCase() === targetUsername ||
+                    e.id === employee.id
+            );
+
+            const employeeDeleteId = matchedEmployee?.id ?? employee.id;
+            const userDeleteId = matchedUser?.id;
+
+            if (employeeDeleteId) {
+                await axiosInstance.delete(
+                    `/accounts/api/v1/employee/${employeeDeleteId}/delete/`
+                );
+            }
+
+            if (userDeleteId && matchedUser?.type !== 1) {
+                await axiosInstance.delete(
+                    `/accounts/api/v1/user/${userDeleteId}/delete/`
+                );
+            }
+
             onDelete(employee.id);
             setShowConfirm(false);
         } catch (err) {
@@ -90,10 +157,6 @@ export default function UserCard({
         } finally {
             setDeleting(false);
         }
-    }
-
-    function handleEditSuccess(updatedEmployee: ApiEmployee) {
-        onUpdate?.(updatedEmployee);
     }
 
     return (
@@ -153,7 +216,7 @@ export default function UserCard({
 
                 <div className="absolute top-3 left-3 flex items-center gap-1.5 z-10">
                     <button
-                        onClick={() => setShowEditModal(true)}
+                        onClick={() => { }}
                         className="w-7 h-7 rounded-xl flex items-center justify-center transition-colors"
                         style={{
                             background: isDark
@@ -166,20 +229,22 @@ export default function UserCard({
                     >
                         <Pencil size={11} />
                     </button>
-                    <button
-                        onClick={() => setShowConfirm(true)}
-                        className="w-7 h-7 rounded-xl flex items-center justify-center transition-colors"
-                        style={{
-                            background: isDark
-                                ? "rgba(239,68,68,0.1)"
-                                : "rgba(239,68,68,0.07)",
-                            color: "#ef4444",
-                        }}
-                        title="حذف"
-                        type="button"
-                    >
-                        <Trash2 size={11} />
-                    </button>
+                    {canDelete && (
+                        <button
+                            onClick={() => setShowConfirm(true)}
+                            className="w-7 h-7 rounded-xl flex items-center justify-center transition-colors"
+                            style={{
+                                background: isDark
+                                    ? "rgba(239,68,68,0.1)"
+                                    : "rgba(239,68,68,0.07)",
+                                color: "#ef4444",
+                            }}
+                            title="حذف"
+                            type="button"
+                        >
+                            <Trash2 size={11} />
+                        </button>
+                    )}
                 </div>
 
                 <div className="flex items-center gap-3 pt-1">
@@ -216,13 +281,23 @@ export default function UserCard({
                         <span
                             className="text-[11px] font-bold px-2 py-0.5 rounded-lg"
                             style={{
-                                background: isDark
-                                    ? "rgba(99,102,241,0.12)"
-                                    : "rgba(99,102,241,0.07)",
-                                color: isDark ? "#a5b4fc" : "#6366f1",
+                                background: isAdmin
+                                    ? isDark
+                                        ? "rgba(245,158,11,0.15)"
+                                        : "rgba(245,158,11,0.08)"
+                                    : isDark
+                                        ? "rgba(99,102,241,0.12)"
+                                        : "rgba(99,102,241,0.07)",
+                                color: isAdmin
+                                    ? isDark
+                                        ? "#fbbf24"
+                                        : "#d97706"
+                                    : isDark
+                                        ? "#a5b4fc"
+                                        : "#6366f1",
                             }}
                         >
-                            کارمند
+                            {isAdmin ? "ادمین سیستم" : "کارمند"}
                         </span>
                     </div>
                 </div>
@@ -302,13 +377,11 @@ export default function UserCard({
                                     </span>{" "}
                                     حذف خواهد شد. این عملیات قابل بازگشت نیست.
                                 </p>
-
                                 {deleteError && (
                                     <p className="text-[11.5px] text-red-500 dark:text-red-400 font-semibold text-center">
                                         {deleteError}
                                     </p>
                                 )}
-
                                 <div className="flex gap-2">
                                     <button
                                         onClick={() =>
@@ -375,13 +448,6 @@ export default function UserCard({
                     </motion.div>
                 )}
             </AnimatePresence>
-
-            <EditUserModal
-                isOpen={showEditModal}
-                onClose={() => setShowEditModal(false)}
-                employee={employee}
-                onUpdated={handleEditSuccess}
-            />
         </>
     );
 }
