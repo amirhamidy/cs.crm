@@ -1,11 +1,20 @@
 "use client";
 
 import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { Trash2, Pencil, X } from "lucide-react";
-import { useTheme } from "next-themes";
+import { motion } from "framer-motion";
+import {
+    AlertTriangle,
+    ArrowLeft,
+    CalendarDays,
+    Check,
+    ClipboardList,
+    Loader2,
+    MoreVertical,
+    Pencil,
+    Trash2,
+    UserRound,
+} from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
-import type { AxiosError } from "axios";
 
 interface Task {
     id: number;
@@ -13,36 +22,89 @@ interface Task {
     description: string;
     department: number;
     case: number;
+
+    status?: string;
+    status_display?: string;
+
+    department_name?: string;
+    department_title?: string;
+
+    assigned_employee_name?: string;
+    assigned_employee_full_name?: string;
+
+    created_at?: string;
+    updated_at?: string;
 }
 
 interface TaskCardProps {
-    task?: Task;
+    task: Task;
     index: number;
     onDelete: (id: number) => void;
-    onEdit: (task: Task) => void; // هدایت به مدال ادیت در کامپوننت والد
+    onEdit: (task: Task) => void;
 }
 
-const AVATAR_GRADIENTS = [
-    ["#6366f1", "#8b5cf6"],
-    ["#3b82f6", "#6366f1"],
-    ["#8b5cf6", "#ec4899"],
-    ["#06b6d4", "#6366f1"],
-    ["#f59e0b", "#ef4444"],
-];
+interface StatusStyle {
+    label: string;
+    className: string;
+    dotClassName: string;
+}
 
-function getErrorMessage(err: unknown, fallback: string) {
-    const error = err as AxiosError<Record<string, unknown>>;
-    const data = error.response?.data;
-    if (!data) return fallback;
+const statusStyles: Record<string, StatusStyle> = {
+    pending: {
+        label: "در انتظار",
+        className: "bg-amber-500/10 text-amber-600 dark:text-amber-400",
+        dotClassName: "bg-amber-500",
+    },
+    in_progress: {
+        label: "در حال انجام",
+        className: "bg-blue-500/10 text-blue-600 dark:text-blue-400",
+        dotClassName: "bg-blue-500",
+    },
+    processing: {
+        label: "در حال انجام",
+        className: "bg-blue-500/10 text-blue-600 dark:text-blue-400",
+        dotClassName: "bg-blue-500",
+    },
+    completed: {
+        label: "تکمیل شده",
+        className: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
+        dotClassName: "bg-emerald-500",
+    },
+    cancelled: {
+        label: "لغو شده",
+        className: "bg-red-500/10 text-red-600 dark:text-red-400",
+        dotClassName: "bg-red-500",
+    },
+};
 
-    const possibleKeys = ["detail", "message", "error", "non_field_errors"];
-    for (const key of possibleKeys) {
-        const value = data[key];
-        if (typeof value === "string") return value;
-        if (Array.isArray(value) && typeof value[0] === "string") return value[0];
+function getStatusStyle(status?: string): StatusStyle {
+    if (!status) {
+        return {
+            label: "نامشخص",
+            className: "bg-zinc-500/10 text-zinc-600 dark:text-zinc-400",
+            dotClassName: "bg-zinc-500",
+        };
     }
 
-    return fallback;
+    return (
+        statusStyles[status] || {
+            label: status,
+            className: "bg-zinc-500/10 text-zinc-600 dark:text-zinc-400",
+            dotClassName: "bg-zinc-500",
+        }
+    );
+}
+
+function formatDate(date?: string) {
+    if (!date) return "بدون تاریخ";
+
+    const parsedDate = new Date(date);
+
+    if (Number.isNaN(parsedDate.getTime())) {
+        return "بدون تاریخ";
+    }
+
+    return parsedDate.toLocaleDateString("fa-IR");
 }
 
 export default function TaskCard({
@@ -51,319 +113,279 @@ export default function TaskCard({
     onDelete,
     onEdit,
 }: TaskCardProps) {
-    const { resolvedTheme } = useTheme();
-    const isDark = resolvedTheme === "dark";
-    const [hovered, setHovered] = useState(false);
-    const [showConfirm, setShowConfirm] = useState(false);
+    const [menuOpen, setMenuOpen] = useState(false);
+    const [deleteModalOpen, setDeleteModalOpen] = useState(false);
     const [deleting, setDeleting] = useState(false);
     const [deleteError, setDeleteError] = useState("");
 
-    if (
-        !task ||
-        typeof task.id !== "number" ||
-        typeof task.title !== "string"
-    ) {
-        return null;
-    }
+    const status = getStatusStyle(task.status);
+    const isCompleted = task.status === "completed";
 
-    const taskTitle = task.title.trim() || "بدون عنوان";
-    const gradient = AVATAR_GRADIENTS[task.id % AVATAR_GRADIENTS.length];
-    const start = gradient[0];
-    const end = gradient[1];
+    const departmentName =
+        task.department_name ||
+        task.department_title ||
+        `دپارتمان شماره ${task.department}`;
 
-    async function handleDelete() {
+    const employeeName =
+        task.assigned_employee_name ||
+        task.assigned_employee_full_name ||
+        "بدون مسئول";
+
+    const handleEdit = () => {
+        setMenuOpen(false);
+        onEdit(task);
+    };
+
+    const handleDelete = async () => {
         setDeleting(true);
         setDeleteError("");
+
         try {
-            await axiosInstance.delete(`/tasks/api/v1/tasks/${task.id}/delete`);
+            await axiosInstance.delete(
+                `/tasks/api/v1/tasks/${task.id}/delete/`
+            );
+
+            setDeleteModalOpen(false);
             onDelete(task.id);
-            setShowConfirm(false);
-        } catch (err) {
-            setDeleteError(getErrorMessage(err, "خطا در حذف تسک"));
+        } catch (error) {
+            console.error("خطا در حذف تسک:", error);
+            setDeleteError("حذف تسک انجام نشد. دوباره تلاش کنید.");
         } finally {
             setDeleting(false);
         }
-    }
+    };
 
     return (
         <>
-            <motion.div
-                initial={{ opacity: 0, y: 12 }}
+            <motion.article
+                layout
+                initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                transition={{ duration: 0.2, delay: index * 0.05 }}
-                onHoverStart={() => setHovered(true)}
-                onHoverEnd={() => setHovered(false)}
-                className="relative rounded-2xl p-4 flex flex-col justify-between gap-3 overflow-hidden"
-                style={{
-                    border: isDark
-                        ? "1px solid rgba(255,255,255,0.06)"
-                        : "1px solid rgba(0,0,0,0.06)",
-                    minHeight: "140px",
-                    background: isDark ? "rgba(255,255,255,0.02)" : "#fafafa",
+                exit={{ opacity: 0, scale: 0.94 }}
+                transition={{
+                    duration: 0.28,
+                    delay: Math.min(index * 0.04, 0.2),
                 }}
+                className="group relative overflow-hidden rounded-3xl border border-zinc-200/80 bg-white p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-blue-500/30 hover:shadow-xl hover:shadow-blue-500/[0.08] dark:border-white/[0.07] dark:bg-[#151515]"
+                dir="rtl"
             >
-                <svg
-                    className="absolute inset-0 w-full h-full pointer-events-none"
-                    style={{ borderRadius: "1rem" }}
-                >
-                    <defs>
-                        <linearGradient
-                            id={`borderGrad-${task.id}`}
-                            x1="100%"
-                            y1="100%"
-                            x2="0%"
-                            y2="0%"
-                        >
-                            <stop offset="0%" stopColor="#6366f1" />
-                            <stop offset="100%" stopColor="#8b5cf6" />
-                        </linearGradient>
-                    </defs>
-                    <motion.rect
-                        x="1"
-                        y="1"
-                        width="calc(100% - 2px)"
-                        height="calc(100% - 2px)"
-                        rx="15"
-                        ry="15"
-                        fill="none"
-                        stroke={`url(#borderGrad-${task.id})`}
-                        strokeWidth="1.5"
-                        pathLength="1"
-                        initial={{ pathLength: 0, opacity: 0 }}
-                        animate={
-                            hovered
-                                ? { pathLength: 1, opacity: 1 }
-                                : { pathLength: 0, opacity: 0 }
-                        }
-                        transition={{ duration: 0.55, ease: "easeInOut" }}
-                    />
-                </svg>
+                <div className="pointer-events-none absolute -left-10 -top-10 h-32 w-32 rounded-full bg-blue-500/[0.07] blur-3xl transition-all duration-500 group-hover:bg-blue-500/[0.14]" />
 
-                <div className="absolute top-3 left-3 flex items-center gap-1.5 z-10">
-                    <button
-                        onClick={() => onEdit(task)}
-                        className="w-7 h-7 rounded-xl flex items-center justify-center transition-colors"
-                        style={{
-                            background: isDark
-                                ? "rgba(99,102,241,0.1)"
-                                : "rgba(99,102,241,0.07)",
-                            color: isDark ? "#a5b4fc" : "#6366f1",
-                        }}
-                        title="ویرایش"
-                        type="button"
-                    >
-                        <Pencil size={11} />
-                    </button>
-                    <button
-                        onClick={() => setShowConfirm(true)}
-                        className="w-7 h-7 rounded-xl flex items-center justify-center transition-colors"
-                        style={{
-                            background: isDark
-                                ? "rgba(239,68,68,0.1)"
-                                : "rgba(239,68,68,0.07)",
-                            color: "#ef4444",
-                        }}
-                        title="حذف"
-                        type="button"
-                    >
-                        <Trash2 size={11} />
-                    </button>
-                </div>
+                <div className="relative">
+                    {/* Header */}
+                    <div className="mb-5 flex items-start justify-between gap-3">
+                        <div className="flex min-w-0 items-center gap-2">
+                            <div className="flex h-9 min-w-9 items-center justify-center rounded-xl bg-blue-500/10 px-2 text-xs font-black text-blue-600 dark:text-blue-400">
+                                #{task.id}
+                            </div>
 
-                <div className="flex items-start gap-3 pt-1">
-                    <div
-                        className="w-11 h-11 rounded-2xl flex items-center justify-center text-white text-[15px] font-extrabold flex-shrink-0"
-                        style={{
-                            background: `linear-gradient(135deg, ${start}, ${end})`,
-                        }}
-                    >
-                        {taskTitle.charAt(0)}
-                    </div>
-                    <div className="flex flex-col gap-1 min-w-0 pr-8">
-                        <p className="text-[13.5px] font-extrabold text-gray-800 dark:text-gray-100 leading-tight truncate">
-                            {taskTitle}
-                        </p>
-                        <p className="text-[11.5px] text-gray-400 dark:text-gray-500 line-clamp-2 mt-1 leading-relaxed">
-                            {task.description || "بدون توضیحات"}
-                        </p>
-                    </div>
-                </div>
-
-                <div
-                    className="pt-2.5 border-t mt-auto"
-                    style={{
-                        borderColor: isDark
-                            ? "rgba(255,255,255,0.05)"
-                            : "rgba(0,0,0,0.05)",
-                    }}
-                >
-                    <div className="flex items-center justify-between">
-                        <p className="text-[11.5px] text-gray-400 dark:text-gray-500">
-                            کیس مرتبط: {task.case || "نامشخص"}
-                        </p>
-                        <span
-                            className="text-[11px] font-bold px-2 py-0.5 rounded-lg"
-                            style={{
-                                background: isDark
-                                    ? "rgba(99,102,241,0.12)"
-                                    : "rgba(99,102,241,0.07)",
-                                color: isDark ? "#a5b4fc" : "#6366f1",
-                            }}
-                        >
-                            دپارتمان {task.department}
-                        </span>
-                    </div>
-                </div>
-            </motion.div>
-
-            <AnimatePresence>
-                {showConfirm && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-50 flex items-center justify-center px-4"
-                        style={{
-                            background: "rgba(0,0,0,0.5)",
-                            backdropFilter: "blur(2px)",
-                        }}
-                        onClick={() => !deleting && setShowConfirm(false)}
-                    >
-                        <motion.div
-                            initial={{ scale: 0.9, y: 12 }}
-                            animate={{ scale: 1, y: 0 }}
-                            exit={{ scale: 0.9, y: 12 }}
-                            transition={{ duration: 0.2, ease: "easeOut" }}
-                            className="w-full max-w-[320px] rounded-2xl overflow-hidden border"
-                            style={{
-                                background: isDark ? "#0f172a" : "#ffffff",
-                                borderColor: isDark
-                                    ? "rgba(255,255,255,0.07)"
-                                    : "rgba(0,0,0,0.07)",
-                                boxShadow: "0 20px 60px rgba(0,0,0,0.3)",
-                            }}
-                            onClick={(e) => e.stopPropagation()}
-                            dir="rtl"
-                        >
-                            <div
-                                className="flex items-center justify-between px-5 py-4 border-b"
-                                style={{
-                                    borderColor: isDark
-                                        ? "rgba(255,255,255,0.06)"
-                                        : "rgba(0,0,0,0.06)",
-                                }}
+                            <span
+                                className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[10px] font-bold ${status.className}`}
                             >
-                                <div className="flex items-center gap-2.5">
-                                    <div
-                                        className="w-8 h-8 rounded-xl flex items-center justify-center"
-                                        style={{
-                                            background: isDark
-                                                ? "rgba(239,68,68,0.12)"
-                                                : "rgba(239,68,68,0.08)",
+                                <span
+                                    className={`h-1.5 w-1.5 rounded-full ${status.dotClassName}`}
+                                />
+                                {task.status_display || status.label}
+                            </span>
+                        </div>
+
+                        {/* Action menu */}
+                        <div className="relative">
+                            <button
+                                type="button"
+                                aria-label="عملیات تسک"
+                                onClick={() => setMenuOpen((previous) => !previous)}
+                                className="flex h-9 w-9 items-center justify-center rounded-xl text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-700 dark:hover:bg-white/[0.07] dark:hover:text-zinc-200"
+                            >
+                                <MoreVertical size={17} />
+                            </button>
+
+                            {menuOpen && (
+                                <>
+                                    <button
+                                        type="button"
+                                        aria-label="بستن منو"
+                                        onClick={() => setMenuOpen(false)}
+                                        className="fixed inset-0 z-10 h-full w-full cursor-default"
+                                    />
+
+                                    <motion.div
+                                        initial={{
+                                            opacity: 0,
+                                            scale: 0.95,
+                                            y: -6,
                                         }}
+                                        animate={{
+                                            opacity: 1,
+                                            scale: 1,
+                                            y: 0,
+                                        }}
+                                        className="absolute left-0 top-10 z-20 w-40 overflow-hidden rounded-2xl border border-zinc-200 bg-white p-1.5 shadow-xl dark:border-white/[0.08] dark:bg-[#222]"
                                     >
-                                        <Trash2 size={14} className="text-red-500" />
-                                    </div>
-                                    <h3 className="text-[13.5px] font-extrabold text-gray-900 dark:text-white">
-                                        حذف تسک
-                                    </h3>
-                                </div>
-                                <button
-                                    onClick={() => !deleting && setShowConfirm(false)}
-                                    className="w-7 h-7 rounded-xl flex items-center justify-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
-                                    style={{
-                                        background: isDark
-                                            ? "rgba(255,255,255,0.05)"
-                                            : "rgba(0,0,0,0.04)",
-                                    }}
-                                    type="button"
-                                >
-                                    <X size={13} />
-                                </button>
+                                        <button
+                                            type="button"
+                                            onClick={handleEdit}
+                                            className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-right text-xs font-medium text-zinc-600 transition-colors hover:bg-blue-500/10 hover:text-blue-600 dark:text-zinc-300 dark:hover:text-blue-400"
+                                        >
+                                            <Pencil size={14} />
+                                            ویرایش تسک
+                                        </button>
+
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setMenuOpen(false);
+                                                setDeleteError("");
+                                                setDeleteModalOpen(true);
+                                            }}
+                                            className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-right text-xs font-medium text-red-500 transition-colors hover:bg-red-500/10"
+                                        >
+                                            <Trash2 size={14} />
+                                            حذف تسک
+                                        </button>
+                                    </motion.div>
+                                </>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Content */}
+                    <div className="mb-5">
+                        <h2 className="mb-2 line-clamp-1 text-[16px] font-black text-zinc-800 dark:text-white">
+                            {task.title || "بدون عنوان"}
+                        </h2>
+
+                        <p className="line-clamp-3 min-h-[66px] text-[12px] leading-6 text-zinc-500 dark:text-zinc-400">
+                            {task.description ||
+                                "توضیحاتی برای این تسک ثبت نشده است."}
+                        </p>
+                    </div>
+
+                    {/* Details */}
+                    <div className="mb-5 grid grid-cols-2 gap-3 border-y border-zinc-100 py-4 dark:border-white/[0.06]">
+                        <div className="flex min-w-0 items-center gap-2">
+                            <div className="flex h-9 w-9 min-w-9 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-500">
+                                <ClipboardList size={16} />
                             </div>
 
-                            <div className="px-5 py-4 flex flex-col gap-4">
-                                <p className="text-[12.5px] text-gray-500 dark:text-gray-400 leading-relaxed">
-                                    تسک{" "}
-                                    <span className="font-extrabold text-gray-800 dark:text-gray-200">
-                                        {taskTitle}
-                                    </span>{" "}
-                                    حذف خواهد شد. این عملیات قابل بازگشت نیست.
-                                </p>
+                            <div className="min-w-0">
+                                <span className="mb-1 block text-[9px] text-zinc-400 dark:text-zinc-500">
+                                    دپارتمان
+                                </span>
+                                <span className="block truncate text-[11px] font-bold text-zinc-700 dark:text-zinc-200">
+                                    {departmentName}
+                                </span>
+                            </div>
+                        </div>
 
-                                {deleteError && (
-                                    <p className="text-[11.5px] text-red-500 dark:text-red-400 font-semibold text-center">
-                                        {deleteError}
-                                    </p>
+                        <div className="flex min-w-0 items-center gap-2">
+                            <div className="flex h-9 w-9 min-w-9 items-center justify-center rounded-xl bg-violet-500/10 text-violet-500">
+                                <UserRound size={16} />
+                            </div>
+
+                            <div className="min-w-0">
+                                <span className="mb-1 block text-[9px] text-zinc-400 dark:text-zinc-500">
+                                    مسئول انجام
+                                </span>
+                                <span className="block truncate text-[11px] font-bold text-zinc-700 dark:text-zinc-200">
+                                    {employeeName}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Footer */}
+                    <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-1.5 text-zinc-400 dark:text-zinc-500">
+                            <CalendarDays size={14} />
+                            <span className="text-[10px] font-medium">
+                                {formatDate(task.created_at)}
+                            </span>
+                        </div>
+
+                        <button
+                            type="button"
+                            disabled={isCompleted}
+                            onClick={() => {
+                                // در صورت داشتن advance handler،
+                                // این بخش را به آن متصل کن.
+                            }}
+                            className="flex items-center gap-1.5 rounded-xl bg-blue-600 px-3.5 py-2.5 text-[10px] font-bold text-white shadow-lg shadow-blue-600/20 transition-all hover:bg-blue-700 active:scale-95 disabled:cursor-not-allowed disabled:bg-zinc-400 disabled:shadow-none"
+                        >
+                            {isCompleted ? "تکمیل شده" : "مشاهده جزئیات"}
+                            <ArrowLeft size={14} />
+                        </button>
+                    </div>
+                </div>
+            </motion.article>
+
+            {/* Delete confirmation modal */}
+            {deleteModalOpen && (
+                <div
+                    className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 px-4 backdrop-blur-sm"
+                    dir="rtl"
+                    onClick={() => !deleting && setDeleteModalOpen(false)}
+                >
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.94, y: 12 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        onClick={(event) => event.stopPropagation()}
+                        className="w-full max-w-sm rounded-3xl border border-zinc-200 bg-white p-6 shadow-2xl dark:border-white/[0.08] dark:bg-[#181818]"
+                    >
+                        <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-red-500/10 text-red-500">
+                            <AlertTriangle size={22} />
+                        </div>
+
+                        <h3 className="mb-2 text-base font-black text-zinc-900 dark:text-white">
+                            حذف تسک
+                        </h3>
+
+                        <p className="mb-5 text-xs leading-6 text-zinc-500 dark:text-zinc-400">
+                            آیا از حذف تسک «{task.title}» مطمئن هستید؟ این
+                            عملیات قابل بازگشت نیست.
+                        </p>
+
+                        {deleteError && (
+                            <div className="mb-4 rounded-xl bg-red-500/10 px-3 py-2 text-center text-xs font-medium text-red-500">
+                                {deleteError}
+                            </div>
+                        )}
+
+                        <div className="flex gap-2">
+                            <button
+                                type="button"
+                                disabled={deleting}
+                                onClick={() => setDeleteModalOpen(false)}
+                                className="flex-1 rounded-xl bg-zinc-100 py-3 text-xs font-bold text-zinc-600 transition-colors hover:bg-zinc-200 disabled:opacity-50 dark:bg-white/[0.06] dark:text-zinc-300 dark:hover:bg-white/[0.1]"
+                            >
+                                انصراف
+                            </button>
+
+                            <button
+                                type="button"
+                                disabled={deleting}
+                                onClick={handleDelete}
+                                className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-red-500 py-3 text-xs font-bold text-white transition-colors hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                                {deleting ? (
+                                    <>
+                                        <Loader2
+                                            size={15}
+                                            className="animate-spin"
+                                        />
+                                        در حال حذف
+                                    </>
+                                ) : (
+                                    <>
+                                        <Trash2 size={15} />
+                                        حذف کن
+                                    </>
                                 )}
-
-                                <div className="flex gap-2">
-                                    <button
-                                        onClick={() =>
-                                            !deleting && setShowConfirm(false)
-                                        }
-                                        disabled={deleting}
-                                        className="flex-1 py-2.5 rounded-xl text-[12.5px] font-bold transition-colors disabled:opacity-40"
-                                        style={{
-                                            background: isDark
-                                                ? "rgba(255,255,255,0.05)"
-                                                : "rgba(0,0,0,0.04)",
-                                            color: isDark ? "#94a3b8" : "#64748b",
-                                        }}
-                                        type="button"
-                                    >
-                                        انصراف
-                                    </button>
-                                    <button
-                                        onClick={handleDelete}
-                                        disabled={deleting}
-                                        className="flex-1 py-2.5 rounded-xl text-[12.5px] font-bold text-white flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
-                                        style={{
-                                            background:
-                                                "linear-gradient(135deg, #ef4444, #dc2626)",
-                                            boxShadow:
-                                                "0 4px 14px rgba(239,68,68,0.3)",
-                                        }}
-                                        type="button"
-                                    >
-                                        {deleting ? (
-                                            <>
-                                                <svg
-                                                    className="w-3.5 h-3.5 animate-spin"
-                                                    viewBox="0 0 24 24"
-                                                    fill="none"
-                                                >
-                                                    <circle
-                                                        cx="12"
-                                                        cy="12"
-                                                        r="10"
-                                                        stroke="currentColor"
-                                                        strokeWidth="3"
-                                                        strokeOpacity="0.25"
-                                                    />
-                                                    <path
-                                                        d="M12 2a10 10 0 0 1 10 10"
-                                                        stroke="currentColor"
-                                                        strokeWidth="3"
-                                                        strokeLinecap="round"
-                                                    />
-                                                </svg>
-                                                در حال حذف...
-                                            </>
-                                        ) : (
-                                            <>
-                                                <Trash2 size={13} />
-                                                حذف کن
-                                            </>
-                                        )}
-                                    </button>
-                                </div>
-                            </div>
-                        </motion.div>
+                            </button>
+                        </div>
                     </motion.div>
-                )}
-            </AnimatePresence>
+                </div>
+            )}
         </>
     );
 }

@@ -1,4 +1,3 @@
-// config/menuItems.ts
 import {
   Home,
   Users,

@@ -156,7 +156,6 @@ function getWeekdayName(jy: number, jm: number, jd: number): string {
     return WEEKDAY_NAMES[dow === 6 ? 0 : dow + 1];
 }
 
-// ← یه بار محاسبه میشه، نه هر render
 const TODAY = (() => {
     const n = new Date();
     return toJalali(n.getFullYear(), n.getMonth() + 1, n.getDate());
@@ -249,10 +248,10 @@ function DatePickerModal({ currentYear, currentMonth, onSelect, onClose }: DateP
                                             key={i}
                                             onClick={() => setDraftMonth(i + 1)}
                                             className={`py-2 rounded-xl text-xs font-medium transition-all duration-150 ${isSelected
-                                                    ? "bg-indigo-500 text-white shadow-sm shadow-indigo-200 dark:shadow-indigo-500/20"
-                                                    : isCurrentMonth
-                                                        ? "bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-500/20"
-                                                        : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5"
+                                                ? "bg-indigo-500 text-white shadow-sm shadow-indigo-200 dark:shadow-indigo-500/20"
+                                                : isCurrentMonth
+                                                    ? "bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-500/20"
+                                                    : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5"
                                                 }`}
                                         >
                                             {m}
@@ -278,10 +277,10 @@ function DatePickerModal({ currentYear, currentMonth, onSelect, onClose }: DateP
                                             key={y}
                                             onClick={() => setDraftYear(y)}
                                             className={`py-2 rounded-xl text-xs font-medium transition-all duration-150 ${isSelected
-                                                    ? "bg-indigo-500 text-white shadow-sm shadow-indigo-200 dark:shadow-indigo-500/20"
-                                                    : isCurrentYear
-                                                        ? "bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-500/20"
-                                                        : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5"
+                                                ? "bg-indigo-500 text-white shadow-sm shadow-indigo-200 dark:shadow-indigo-500/20"
+                                                : isCurrentYear
+                                                    ? "bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-500/20"
+                                                    : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5"
                                                 }`}
                                         >
                                             {p(y)}
@@ -320,6 +319,25 @@ export default function PersianCalendar({ onDayClick, notes = {} }: PersianCalen
     const [picker, setPicker] = useState(false);
     const [dir, setDir] = useState(0);
 
+    const [localNotes, setLocalNotes] = useState<Record<string, CalendarNote[]>>(notes);
+    const [hydrated, setHydrated] = useState(false);
+
+    useEffect(() => {
+        setHydrated(true);
+        const stored = localStorage.getItem("persian-calendar-notes");
+        if (!stored) return;
+        try {
+            setLocalNotes(JSON.parse(stored));
+        } catch {
+            setLocalNotes({});
+        }
+    }, []);
+
+    useEffect(() => {
+        if (!hydrated) return;
+        localStorage.setItem("persian-calendar-notes", JSON.stringify(localNotes));
+    }, [localNotes, hydrated]);
+
     function nav(d: number) {
         setDir(d);
         let m = vm + d, y = vy;
@@ -330,18 +348,25 @@ export default function PersianCalendar({ onDayClick, notes = {} }: PersianCalen
     }
 
     function clickDay(day: number) {
+        if (isBeforeToday(vy, vm, day)) return;
         setSel([vy, vm, day]);
         onDayClick(vy, vm, day);
     }
 
-    // ← فقط وقتی vy یا vm عوض میشه recompute میشه
-    const { dim, fw, cells } = useMemo(() => {
+    function isBeforeToday(y: number, m: number, d: number) {
+        if (y < ty) return true;
+        if (y === ty && m < tm) return true;
+        if (y === ty && m === tm && d < td) return true;
+        return false;
+    }
+
+    const { cells } = useMemo(() => {
         const dim = daysInMonth(vm, vy);
         const fw = firstWeekday(vy, vm);
         const arr: (number | null)[] = Array.from({ length: fw }, () => null);
         for (let d = 1; d <= dim; d++) arr.push(d);
         while (arr.length % 7 !== 0) arr.push(null);
-        return { dim, fw, cells: arr };
+        return { cells: arr };
     }, [vy, vm]);
 
     const slideVar = {
@@ -438,24 +463,26 @@ export default function PersianCalendar({ onDayClick, notes = {} }: PersianCalen
                                 if (!day) return <div key={`e-${idx}`} className="h-10" />;
 
                                 const key = `${vy}-${vm}-${day}`;
-                                const dayNotes = notes[key] ?? [];
+                                const dayNotes = localNotes[key] ?? notes[key] ?? [];
                                 const isToday = vy === ty && vm === tm && day === td;
                                 const isSel = sel[0] === vy && sel[1] === vm && sel[2] === day;
                                 const isJumah = idx % 7 === 6;
                                 const noteCount = dayNotes.length;
+                                const disabled = isBeforeToday(vy, vm, day);
 
                                 return (
                                     <button
                                         key={key}
                                         onClick={() => clickDay(day)}
+                                        disabled={disabled}
                                         className={`relative flex items-center justify-center h-10 mx-0.5 rounded-xl transition-colors duration-150 ${isSel
-                                                ? "bg-indigo-500 text-white shadow-sm shadow-indigo-200 dark:shadow-indigo-500/20"
-                                                : isToday
-                                                    ? "bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-300"
-                                                    : isJumah
-                                                        ? "text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/8"
-                                                        : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5"
-                                            }`}
+                                            ? "bg-indigo-500 text-white shadow-sm shadow-indigo-200 dark:shadow-indigo-500/20"
+                                            : isToday
+                                                ? "bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-300"
+                                                : isJumah
+                                                    ? "text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/8"
+                                                    : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5"
+                                            } ${disabled ? "opacity-25 cursor-not-allowed hover:bg-transparent" : ""}`}
                                     >
                                         <span className={`text-xs leading-none ${isToday ? "font-bold" : "font-medium"}`}>
                                             {p(day)}
@@ -467,8 +494,8 @@ export default function PersianCalendar({ onDayClick, notes = {} }: PersianCalen
 
                                         {noteCount > 0 && (
                                             <span className={`absolute top-1 right-1 min-w-[14px] h-[14px] px-[3px] rounded-full text-[9px] font-bold leading-[14px] text-center ${isSel
-                                                    ? "bg-white/25 text-white"
-                                                    : "bg-indigo-100 dark:bg-indigo-500/20 text-indigo-500 dark:text-indigo-300"
+                                                ? "bg-white/25 text-white"
+                                                : "bg-indigo-100 dark:bg-indigo-500/20 text-indigo-500 dark:text-indigo-300"
                                                 }`}>
                                                 {noteCount > 9 ? "۹+" : p(noteCount)}
                                             </span>
