@@ -60,12 +60,14 @@ export default function AddEmployeeModal({
         }
     };
 
-    const assignedIds = new Set(department?.employees.map((e) => e.id) ?? []);
+    const assignedIds = new Set(
+        department?.employees.map((e) => String(e.id)) ?? [],
+    );
 
     const safeEmployees = employees ?? [];
 
     const filteredEmployees = safeEmployees.filter((emp) => {
-        if (assignedIds.has(emp.id)) return false;
+        if (assignedIds.has(String(emp.id))) return false;
         const q = search.toLowerCase();
         return (
             emp.name.toLowerCase().includes(q) ||
@@ -98,7 +100,6 @@ export default function AddEmployeeModal({
                             className="relative w-full max-w-md max-h-[90vh] flex flex-col rounded-2xl shadow-2xl bg-white dark:bg-[#0f0f13] border border-gray-200 dark:border-white/10"
                             dir="rtl"
                         >
-                            {/* Header */}
                             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-white/10 flex-shrink-0">
                                 <div>
                                     <h2 className="text-base font-semibold text-gray-900 dark:text-white">
@@ -117,9 +118,7 @@ export default function AddEmployeeModal({
                                 </button>
                             </div>
 
-                            {/* Body */}
                             <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
-                                {/* Search */}
                                 <div className="relative">
                                     <Search
                                         size={14}
@@ -128,16 +127,18 @@ export default function AddEmployeeModal({
                                     <input
                                         value={search}
                                         onChange={(e) => setSearch(e.target.value)}
-                                        placeholder="جستجوی نام یا سمت..."
+                                        placeholder="جستجوی نام یا نام کاربری..."
                                         className="w-full rounded-xl pr-9 pl-3 py-2.5 text-sm bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:border-blue-400 dark:focus:border-blue-500 focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-500/20 outline-none transition-all duration-200"
                                     />
                                 </div>
 
-                                {/* Employee list */}
                                 <div className="space-y-2 max-h-56 overflow-y-auto">
                                     {loading ? (
                                         <div className="flex items-center justify-center py-8">
-                                            <Loader2 size={20} className="animate-spin text-gray-400" />
+                                            <Loader2
+                                                size={20}
+                                                className="animate-spin text-gray-400"
+                                            />
                                         </div>
                                     ) : filteredEmployees.length === 0 ? (
                                         <p className="text-center text-sm text-gray-400 dark:text-gray-500 py-6">
@@ -151,14 +152,14 @@ export default function AddEmployeeModal({
                                                 key={emp.id}
                                                 onClick={() => setSelectedId(emp.id)}
                                                 className={`w-full flex items-center gap-3 p-3 rounded-xl border transition-all duration-150 text-right active:scale-95 ${selectedId === emp.id
-                                                    ? "border-blue-400 dark:border-blue-500 bg-blue-50 dark:bg-blue-500/10"
-                                                    : "border-gray-200 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/5"
+                                                        ? "border-blue-400 dark:border-blue-500 bg-blue-50 dark:bg-blue-500/10"
+                                                        : "border-gray-200 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/5"
                                                     }`}
                                             >
                                                 <div
                                                     className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${selectedId === emp.id
-                                                        ? "bg-blue-500/10"
-                                                        : "bg-gray-100 dark:bg-white/5"
+                                                            ? "bg-blue-500/10"
+                                                            : "bg-gray-100 dark:bg-white/5"
                                                         }`}
                                                 >
                                                     <User
@@ -193,7 +194,6 @@ export default function AddEmployeeModal({
                                 )}
                             </div>
 
-                            {/* Footer */}
                             <div className="px-6 py-4 border-t border-gray-100 dark:border-white/10 flex-shrink-0">
                                 <AnimatePresence mode="wait">
                                     {success ? (
@@ -219,7 +219,9 @@ export default function AddEmployeeModal({
                                                 disabled={!selectedId || submitting}
                                                 className="w-full py-2.5 rounded-xl text-sm font-medium text-white transition-all duration-200 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed bg-blue-500 hover:bg-blue-600 shadow-lg shadow-blue-500/25 flex items-center justify-center gap-2"
                                             >
-                                                {submitting && <Loader2 size={14} className="animate-spin" />}
+                                                {submitting && (
+                                                    <Loader2 size={14} className="animate-spin" />
+                                                )}
                                                 افزودن عضو
                                             </button>
                                         </motion.div>

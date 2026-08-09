@@ -1,6 +1,6 @@
 export interface Stage {
   id: string;
-  apiId: number; 
+  apiId: number;
   name: string;
   color: string;
   order: number;
@@ -17,7 +17,7 @@ export interface StageAPIItem {
 
 export interface Employee {
   id: string;
-  apiId: number; 
+  apiId: number;
   assignmentId?: number;
   name: string;
   role: string;
@@ -26,7 +26,7 @@ export interface Employee {
 
 export interface Department {
   id: string;
-  apiId: number; 
+  apiId: number;
   name: string;
   description: string;
   accent: string;
@@ -44,10 +44,10 @@ export interface DepartmentAPIItem {
 
 export interface EmployeeAPIItem {
   id: number;
-  first_name: string;
-  last_name: string;
-  role?: string;
-  avatar?: string;
+  full_name: string;
+  username: string;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface DepartmentEmployeeAPIItem {

@@ -33,11 +33,10 @@ function isValidEmployee(emp: unknown): emp is ApiEmployee {
     return (
         typeof item.id === "number" &&
         typeof item.full_name === "string" &&
-        typeof item.username === "string" && 
+        typeof item.username === "string" &&
         typeof item.created_at === "string"
     );
 }
-
 
 export default function UsersPage() {
     const [employees, setEmployees] = useState<ApiEmployee[]>([]);
@@ -66,6 +65,19 @@ export default function UsersPage() {
 
     function handleDelete(id: number) {
         setEmployees((prev) => prev.filter((e) => e.id !== id));
+    }
+
+    function handleUpdate(updatedEmployee: ApiEmployee) {
+        setEmployees((prev) =>
+            prev.map((emp) =>
+                emp.id === updatedEmployee.id ? updatedEmployee : emp
+            )
+        );
+    }
+
+    function handleCreateSuccess() {
+        setShowModal(false);
+        fetchEmployees();
     }
 
     return (
@@ -116,6 +128,7 @@ export default function UsersPage() {
                                 employee={emp}
                                 index={i}
                                 onDelete={handleDelete}
+                                onUpdate={handleUpdate}
                             />
                         ))}
                     </AnimatePresence>
@@ -126,10 +139,7 @@ export default function UsersPage() {
                 {showModal && (
                     <AddUserModal
                         onClose={() => setShowModal(false)}
-                        onSuccess={() => {
-                            setShowModal(false);
-                            fetchEmployees();
-                        }}
+                        onSuccess={handleCreateSuccess}
                     />
                 )}
             </AnimatePresence>

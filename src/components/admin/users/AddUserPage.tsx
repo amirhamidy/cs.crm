@@ -1,19 +1,26 @@
 "use client";
 
-import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { useTheme } from "next-themes";
 import {
-    UserPlus,
-    Check,
-    Loader2,
+    useState,
+    useEffect,
+    forwardRef,
+    InputHTMLAttributes,
+} from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import {
     X,
+    Loader2,
+    UserPlus,
     User,
     Lock,
     Shield,
+    Eye,
+    EyeOff,
+    Check,
     ChevronLeft,
     ChevronRight,
 } from "lucide-react";
+import { useTheme } from "next-themes";
 import axiosInstance from "@/lib/axiosInstance";
 import type { AxiosError } from "axios";
 import type { ApiUser, CreateUserResponse } from "@/types/users";
@@ -44,6 +51,53 @@ interface Props {
     onSuccess: () => void;
 }
 
+interface FloatingInputProps extends InputHTMLAttributes<HTMLInputElement> {
+    label: string;
+    id: string;
+}
+
+const FloatingInput = forwardRef<HTMLInputElement, FloatingInputProps>(
+    ({ label, id, className = "", ...props }, ref) => (
+        <div className="relative">
+            <input
+                ref={ref}
+                id={id}
+                placeholder=" "
+                className={`
+          peer w-full rounded-2xl border
+          bg-white px-4 py-3 text-sm text-black outline-none
+          transition-all duration-200
+          focus:border-indigo-500
+          [&:not(:placeholder-shown)]:border-indigo-500
+          dark:bg-white/[0.04] dark:border-white/[0.08] dark:text-white
+          dark:focus:border-violet-500
+          dark:[&:not(:placeholder-shown)]:border-violet-500
+          ${className}
+        `}
+                {...props}
+            />
+            <label
+                htmlFor={id}
+                className="
+          absolute right-4 top-1/2 -translate-y-1/2
+          text-sm text-gray-400 pointer-events-none
+          transition-all duration-200
+          bg-white dark:bg-[#0f172a] px-1 rounded
+          peer-focus:top-0 peer-focus:text-[11px] peer-focus:text-indigo-500
+          peer-[:not(:placeholder-shown)]:top-0
+          peer-[:not(:placeholder-shown)]:text-[11px]
+          peer-[:not(:placeholder-shown)]:text-indigo-500
+          dark:peer-focus:text-violet-400
+          dark:peer-[:not(:placeholder-shown)]:text-violet-400
+        "
+            >
+                {label}
+            </label>
+        </div>
+    )
+);
+FloatingInput.displayName = "FloatingInput";
+
 function extractCreatedUserId(data: CreateUserResponse): number | null {
     if (typeof data?.id === "number") return data.id;
     if (typeof data?.user?.id === "number") return data.user.id;
@@ -66,6 +120,7 @@ function getApiErrorMessage(err: unknown, fallback: string) {
     const error = err as AxiosError<Record<string, unknown>>;
     const data = error.response?.data;
     if (!data) return fallback;
+
     const possibleKeys = [
         "detail",
         "username",
@@ -77,19 +132,20 @@ function getApiErrorMessage(err: unknown, fallback: string) {
         "message",
         "error",
     ];
+
     for (const key of possibleKeys) {
         const value = data[key];
         if (typeof value === "string") return value;
-        if (Array.isArray(value) && typeof value[0] === "string") {
-            return value[0];
-        }
+        if (Array.isArray(value) && typeof value[0] === "string") return value[0];
     }
+
     return fallback;
 }
 
 export default function AddUserModal({ onClose, onSuccess }: Props) {
     const { resolvedTheme } = useTheme();
     const isDark = resolvedTheme === "dark";
+
     const [step, setStep] = useState<1 | 2>(1);
     const [createdUserId, setCreatedUserId] = useState<number | null>(null);
     const [step1, setStep1] = useState<Step1Form>({
@@ -104,25 +160,11 @@ export default function AddUserModal({ onClose, onSuccess }: Props) {
     const [errors2, setErrors2] = useState<Step2Errors>({});
     const [loading, setLoading] = useState(false);
     const [apiError, setApiError] = useState("");
-
-    const inputBase =
-        "w-full rounded-xl text-[13px] py-2.5 pl-4 pr-10 outline-none transition-all duration-200 text-gray-800 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-600 border";
-
-    function inputClass(hasError: boolean, hasValue: boolean) {
-        if (hasError) {
-            return `${inputBase} border-red-400 dark:border-red-500/50 bg-red-50/20 dark:bg-red-500/[0.02]`;
-        }
-        if (hasValue) {
-            return `${inputBase} border-indigo-400 dark:border-indigo-500/70 bg-indigo-50/40 dark:bg-indigo-500/[0.06]`;
-        }
-        return `${inputBase} border-gray-200 dark:border-white/[0.08] bg-gray-50 dark:bg-white/[0.04] focus:border-indigo-400 dark:focus:border-indigo-500/60`;
-    }
+    const [showPassword, setShowPassword] = useState(false);
 
     function validateStep1(): boolean {
         const e: Step1Errors = {};
-        if (!step1.username.trim()) {
-            e.username = "نام کاربری الزامی است";
-        }
+        if (!step1.username.trim()) e.username = "نام کاربری الزامی است";
         if (!step1.password.trim()) {
             e.password = "رمز عبور الزامی است";
         } else if (step1.password.length < 3) {
@@ -134,9 +176,7 @@ export default function AddUserModal({ onClose, onSuccess }: Props) {
 
     function validateStep2(): boolean {
         const e: Step2Errors = {};
-        if (!step2.full_name.trim()) {
-            e.full_name = "نام کامل الزامی است";
-        }
+        if (!step2.full_name.trim()) e.full_name = "نام کامل الزامی است";
         setErrors2(e);
         return Object.keys(e).length === 0;
     }
@@ -153,31 +193,39 @@ export default function AddUserModal({ onClose, onSuccess }: Props) {
     async function handleStep1Submit(e: React.FormEvent<HTMLFormElement>) {
         e.preventDefault();
         if (!validateStep1()) return;
+
         setLoading(true);
         setApiError("");
+
         try {
             const payload = {
                 username: step1.username.trim(),
                 password: step1.password,
                 type: step1.type,
             };
+
             const { data } = await axiosInstance.post<CreateUserResponse>(
                 "/accounts/api/v1/user/create/",
                 payload
             );
+
             let userId = extractCreatedUserId(data);
             if (!userId) {
                 userId = await findUserIdByUsername(payload.username);
             }
+
             if (!userId) {
                 setApiError("کاربر ساخته شد، اما شناسه کاربر پیدا نشد");
                 return;
             }
+
             setCreatedUserId(userId);
+
             if (step1.type === 1) {
                 onSuccess();
                 return;
             }
+
             setStep(2);
         } catch (err) {
             setApiError(getApiErrorMessage(err, "خطا در ثبت کاربر"));
@@ -189,12 +237,15 @@ export default function AddUserModal({ onClose, onSuccess }: Props) {
     async function handleStep2Submit(e: React.FormEvent<HTMLFormElement>) {
         e.preventDefault();
         if (!validateStep2()) return;
+
         if (!createdUserId) {
             setApiError("شناسه کاربر یافت نشد، لطفاً دوباره از مرحله اول شروع کنید");
             return;
         }
+
         setLoading(true);
         setApiError("");
+
         try {
             await axiosInstance.post("/accounts/api/v1/employee/create/", {
                 user: createdUserId,
@@ -236,12 +287,10 @@ export default function AddUserModal({ onClose, onSuccess }: Props) {
                 animate={{ scale: 1, y: 0 }}
                 exit={{ scale: 0.93, y: 16 }}
                 transition={{ duration: 0.22, ease: "easeOut" }}
-                className="w-full max-w-[400px] rounded-2xl overflow-hidden border"
+                className="w-full max-w-[400px] rounded-3xl overflow-hidden border"
                 style={{
                     background: isDark ? "#0f172a" : "#ffffff",
-                    borderColor: isDark
-                        ? "rgba(255,255,255,0.07)"
-                        : "rgba(0,0,0,0.06)",
+                    borderColor: isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.06)",
                     boxShadow: "0 24px 64px rgba(0,0,0,0.3)",
                 }}
                 onClick={(e) => e.stopPropagation()}
@@ -250,9 +299,7 @@ export default function AddUserModal({ onClose, onSuccess }: Props) {
                 <div
                     className="px-5 py-4 border-b flex items-center justify-between"
                     style={{
-                        borderColor: isDark
-                            ? "rgba(255,255,255,0.06)"
-                            : "rgba(0,0,0,0.06)",
+                        borderColor: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.06)",
                     }}
                 >
                     <div className="flex items-center gap-3">
@@ -270,18 +317,17 @@ export default function AddUserModal({ onClose, onSuccess }: Props) {
                             </p>
                         </div>
                     </div>
+
                     <button
                         onClick={handleClose}
                         disabled={loading}
-                        className="w-7 h-7 rounded-xl flex items-center justify-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors disabled:opacity-40"
+                        className="w-8 h-8 rounded-xl flex items-center justify-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors disabled:opacity-40"
                         style={{
-                            background: isDark
-                                ? "rgba(255,255,255,0.05)"
-                                : "rgba(0,0,0,0.04)",
+                            background: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.04)",
                         }}
                         type="button"
                     >
-                        <X size={14} />
+                        <X size={15} />
                     </button>
                 </div>
 
@@ -315,37 +361,19 @@ export default function AddUserModal({ onClose, onSuccess }: Props) {
                             className="p-5 space-y-4"
                         >
                             <div>
-                                <label className="block text-[11.5px] font-bold text-gray-500 dark:text-gray-400 mb-1.5">
-                                    نام کاربری
-                                </label>
-                                <div className="relative">
-                                    <User
-                                        size={13}
-                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
-                                    />
-                                    <input
-                                        type="text"
-                                        value={step1.username}
-                                        onChange={(e) => {
-                                            setStep1((p) => ({
-                                                ...p,
-                                                username: e.target.value,
-                                            }));
-                                            setErrors1((p) => ({
-                                                ...p,
-                                                username: undefined,
-                                            }));
-                                            setApiError("");
-                                        }}
-                                        placeholder="username"
-                                        dir="ltr"
-                                        className={inputClass(
-                                            !!errors1.username,
-                                            !!step1.username
-                                        )}
-                                        autoComplete="off"
-                                    />
-                                </div>
+                                <FloatingInput
+                                    label="نام کاربری"
+                                    id="username"
+                                    type="text"
+                                    value={step1.username}
+                                    onChange={(e) => {
+                                        setStep1((p) => ({ ...p, username: e.target.value }));
+                                        setErrors1((p) => ({ ...p, username: undefined }));
+                                        setApiError("");
+                                    }}
+                                    dir="ltr"
+                                    autoComplete="off"
+                                />
                                 {errors1.username && (
                                     <p className="text-[11px] text-red-500 mt-1 font-semibold">
                                         {errors1.username}
@@ -354,36 +382,28 @@ export default function AddUserModal({ onClose, onSuccess }: Props) {
                             </div>
 
                             <div>
-                                <label className="block text-[11.5px] font-bold text-gray-500 dark:text-gray-400 mb-1.5">
-                                    رمز عبور
-                                </label>
                                 <div className="relative">
-                                    <Lock
-                                        size={13}
-                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
-                                    />
-                                    <input
-                                        type="password"
+                                    <FloatingInput
+                                        label="رمز عبور"
+                                        id="password"
+                                        type={showPassword ? "text" : "password"}
                                         value={step1.password}
                                         onChange={(e) => {
-                                            setStep1((p) => ({
-                                                ...p,
-                                                password: e.target.value,
-                                            }));
-                                            setErrors1((p) => ({
-                                                ...p,
-                                                password: undefined,
-                                            }));
+                                            setStep1((p) => ({ ...p, password: e.target.value }));
+                                            setErrors1((p) => ({ ...p, password: undefined }));
                                             setApiError("");
                                         }}
-                                        placeholder="••••••"
                                         dir="ltr"
-                                        className={inputClass(
-                                            !!errors1.password,
-                                            !!step1.password
-                                        )}
                                         autoComplete="new-password"
+                                        className="pr-4 pl-12"
                                     />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowPassword((p) => !p)}
+                                        className="absolute left-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-xl flex items-center justify-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
+                                    >
+                                        {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                                    </button>
                                 </div>
                                 {errors1.password && (
                                     <p className="text-[11px] text-red-500 mt-1 font-semibold">
@@ -397,23 +417,18 @@ export default function AddUserModal({ onClose, onSuccess }: Props) {
                                     نوع حساب
                                 </label>
                                 <div className="grid grid-cols-2 gap-2">
-                                    {(
-                                        [
-                                            { v: 2, label: "کارمند" },
-                                            { v: 1, label: "ادمین" },
-                                        ] as { v: 1 | 2; label: string }[]
-                                    ).map(({ v, label }) => (
+                                    {[
+                                        { v: 2, label: "کارمند" },
+                                        { v: 1, label: "ادمین" },
+                                    ].map(({ v, label }) => (
                                         <button
                                             key={v}
                                             type="button"
                                             onClick={() => {
-                                                setStep1((p) => ({
-                                                    ...p,
-                                                    type: v,
-                                                }));
+                                                setStep1((p) => ({ ...p, type: v as 1 | 2 }));
                                                 setApiError("");
                                             }}
-                                            className="flex items-center gap-2 px-3 py-2.5 rounded-xl border text-[12.5px] font-bold transition-all duration-150"
+                                            className="flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl border text-[12.5px] font-bold transition-all duration-150"
                                             style={{
                                                 borderColor:
                                                     step1.type === v
@@ -457,8 +472,7 @@ export default function AddUserModal({ onClose, onSuccess }: Props) {
                                 disabled={loading}
                                 className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-[13px] font-bold text-white disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
                                 style={{
-                                    background:
-                                        "linear-gradient(135deg, #6366f1, #8b5cf6)",
+                                    background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
                                     boxShadow: "0 4px 14px rgba(99,102,241,0.3)",
                                 }}
                             >
@@ -492,34 +506,19 @@ export default function AddUserModal({ onClose, onSuccess }: Props) {
                             className="p-5 space-y-4"
                         >
                             <div>
-                                <label className="block text-[11.5px] font-bold text-gray-500 dark:text-gray-400 mb-1.5">
-                                    نام و نام خانوادگی
-                                </label>
-                                <div className="relative">
-                                    <User
-                                        size={13}
-                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
-                                    />
-                                    <input
-                                        type="text"
-                                        value={step2.full_name}
-                                        onChange={(e) => {
-                                            setStep2({
-                                                full_name: e.target.value,
-                                            });
-                                            setErrors2({});
-                                            setApiError("");
-                                        }}
-                                        placeholder="مثال: علی محمدی"
-                                        dir="rtl"
-                                        className={inputClass(
-                                            !!errors2.full_name,
-                                            !!step2.full_name
-                                        )}
-                                        autoComplete="off"
-                                        autoFocus
-                                    />
-                                </div>
+                                <FloatingInput
+                                    label="نام و نام خانوادگی"
+                                    id="full_name"
+                                    type="text"
+                                    value={step2.full_name}
+                                    onChange={(e) => {
+                                        setStep2({ full_name: e.target.value });
+                                        setErrors2({});
+                                        setApiError("");
+                                    }}
+                                    dir="rtl"
+                                    autoComplete="off"
+                                />
                                 {errors2.full_name && (
                                     <p className="text-[11px] text-red-500 mt-1 font-semibold">
                                         {errors2.full_name}
@@ -549,15 +548,14 @@ export default function AddUserModal({ onClose, onSuccess }: Props) {
                                     <ChevronRight size={14} />
                                     برگشت
                                 </button>
+
                                 <button
                                     type="submit"
                                     disabled={loading}
                                     className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-[13px] font-bold text-white disabled:opacity-40 disabled:cursor-not-allowed"
                                     style={{
-                                        background:
-                                            "linear-gradient(135deg, #6366f1, #8b5cf6)",
-                                        boxShadow:
-                                            "0 4px 14px rgba(99,102,241,0.3)",
+                                        background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
+                                        boxShadow: "0 4px 14px rgba(99,102,241,0.3)",
                                     }}
                                 >
                                     {loading ? (

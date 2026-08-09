@@ -6,14 +6,20 @@ import { Trash2, Pencil, X } from "lucide-react";
 import { useTheme } from "next-themes";
 import axiosInstance from "@/lib/axiosInstance";
 import type { AxiosError } from "axios";
-import type { ApiEmployee } from "@/types/users";
-import EditUserModal from "./EditUserModal";
 
-interface UserCardProps {
-    employee?: ApiEmployee;
+interface Task {
+    id: number;
+    title: string;
+    description: string;
+    department: number;
+    case: number;
+}
+
+interface TaskCardProps {
+    task?: Task;
     index: number;
     onDelete: (id: number) => void;
-    onUpdate?: (updatedEmployee: ApiEmployee) => void;
+    onEdit: (task: Task) => void; // هدایت به مدال ادیت در کامپوننت والد
 }
 
 const AVATAR_GRADIENTS = [
@@ -39,61 +45,44 @@ function getErrorMessage(err: unknown, fallback: string) {
     return fallback;
 }
 
-export default function UserCard({
-    employee,
+export default function TaskCard({
+    task,
     index,
     onDelete,
-    onUpdate,
-}: UserCardProps) {
+    onEdit,
+}: TaskCardProps) {
     const { resolvedTheme } = useTheme();
     const isDark = resolvedTheme === "dark";
     const [hovered, setHovered] = useState(false);
     const [showConfirm, setShowConfirm] = useState(false);
-    const [showEditModal, setShowEditModal] = useState(false);
     const [deleting, setDeleting] = useState(false);
     const [deleteError, setDeleteError] = useState("");
 
     if (
-        !employee ||
-        typeof employee.id !== "number" ||
-        typeof employee.full_name !== "string" ||
-        typeof employee.username !== "string"
+        !task ||
+        typeof task.id !== "number" ||
+        typeof task.title !== "string"
     ) {
         return null;
     }
 
-    const employeeName = employee.full_name.trim() || "بدون نام";
-    const username = employee.username.trim() || "unknown";
-    const gradient = AVATAR_GRADIENTS[employee.id % AVATAR_GRADIENTS.length];
+    const taskTitle = task.title.trim() || "بدون عنوان";
+    const gradient = AVATAR_GRADIENTS[task.id % AVATAR_GRADIENTS.length];
     const start = gradient[0];
     const end = gradient[1];
-
-    const joinedDate = employee.created_at
-        ? new Date(employee.created_at).toLocaleDateString("fa-IR", {
-            year: "numeric",
-            month: "2-digit",
-            day: "2-digit",
-        })
-        : "نامشخص";
 
     async function handleDelete() {
         setDeleting(true);
         setDeleteError("");
         try {
-            await axiosInstance.delete(
-                `/accounts/api/v1/employee/${employee.id}/delete/`
-            );
-            onDelete(employee.id);
+            await axiosInstance.delete(`/tasks/api/v1/tasks/${task.id}/delete`);
+            onDelete(task.id);
             setShowConfirm(false);
         } catch (err) {
-            setDeleteError(getErrorMessage(err, "خطا در حذف کارمند"));
+            setDeleteError(getErrorMessage(err, "خطا در حذف تسک"));
         } finally {
             setDeleting(false);
         }
-    }
-
-    function handleEditSuccess(updatedEmployee: ApiEmployee) {
-        onUpdate?.(updatedEmployee);
     }
 
     return (
@@ -105,12 +94,12 @@ export default function UserCard({
                 transition={{ duration: 0.2, delay: index * 0.05 }}
                 onHoverStart={() => setHovered(true)}
                 onHoverEnd={() => setHovered(false)}
-                className="relative rounded-2xl p-4 flex flex-col gap-3 overflow-hidden"
+                className="relative rounded-2xl p-4 flex flex-col justify-between gap-3 overflow-hidden"
                 style={{
                     border: isDark
                         ? "1px solid rgba(255,255,255,0.06)"
                         : "1px solid rgba(0,0,0,0.06)",
-                    minHeight: "130px",
+                    minHeight: "140px",
                     background: isDark ? "rgba(255,255,255,0.02)" : "#fafafa",
                 }}
             >
@@ -120,7 +109,7 @@ export default function UserCard({
                 >
                     <defs>
                         <linearGradient
-                            id={`borderGrad-${employee.id}`}
+                            id={`borderGrad-${task.id}`}
                             x1="100%"
                             y1="100%"
                             x2="0%"
@@ -138,7 +127,7 @@ export default function UserCard({
                         rx="15"
                         ry="15"
                         fill="none"
-                        stroke={`url(#borderGrad-${employee.id})`}
+                        stroke={`url(#borderGrad-${task.id})`}
                         strokeWidth="1.5"
                         pathLength="1"
                         initial={{ pathLength: 0, opacity: 0 }}
@@ -153,7 +142,7 @@ export default function UserCard({
 
                 <div className="absolute top-3 left-3 flex items-center gap-1.5 z-10">
                     <button
-                        onClick={() => setShowEditModal(true)}
+                        onClick={() => onEdit(task)}
                         className="w-7 h-7 rounded-xl flex items-center justify-center transition-colors"
                         style={{
                             background: isDark
@@ -182,27 +171,27 @@ export default function UserCard({
                     </button>
                 </div>
 
-                <div className="flex items-center gap-3 pt-1">
+                <div className="flex items-start gap-3 pt-1">
                     <div
                         className="w-11 h-11 rounded-2xl flex items-center justify-center text-white text-[15px] font-extrabold flex-shrink-0"
                         style={{
                             background: `linear-gradient(135deg, ${start}, ${end})`,
                         }}
                     >
-                        {employeeName.charAt(0)}
+                        {taskTitle.charAt(0)}
                     </div>
-                    <div className="flex flex-col gap-1 min-w-0">
+                    <div className="flex flex-col gap-1 min-w-0 pr-8">
                         <p className="text-[13.5px] font-extrabold text-gray-800 dark:text-gray-100 leading-tight truncate">
-                            {employeeName}
+                            {taskTitle}
                         </p>
-                        <p className="text-[11.5px] text-gray-400 dark:text-gray-500 truncate">
-                            @{username}
+                        <p className="text-[11.5px] text-gray-400 dark:text-gray-500 line-clamp-2 mt-1 leading-relaxed">
+                            {task.description || "بدون توضیحات"}
                         </p>
                     </div>
                 </div>
 
                 <div
-                    className="pt-2.5 border-t"
+                    className="pt-2.5 border-t mt-auto"
                     style={{
                         borderColor: isDark
                             ? "rgba(255,255,255,0.05)"
@@ -211,7 +200,7 @@ export default function UserCard({
                 >
                     <div className="flex items-center justify-between">
                         <p className="text-[11.5px] text-gray-400 dark:text-gray-500">
-                            عضویت از {joinedDate}
+                            کیس مرتبط: {task.case || "نامشخص"}
                         </p>
                         <span
                             className="text-[11px] font-bold px-2 py-0.5 rounded-lg"
@@ -222,7 +211,7 @@ export default function UserCard({
                                 color: isDark ? "#a5b4fc" : "#6366f1",
                             }}
                         >
-                            کارمند
+                            دپارتمان {task.department}
                         </span>
                     </div>
                 </div>
@@ -277,7 +266,7 @@ export default function UserCard({
                                         <Trash2 size={14} className="text-red-500" />
                                     </div>
                                     <h3 className="text-[13.5px] font-extrabold text-gray-900 dark:text-white">
-                                        حذف کارمند
+                                        حذف تسک
                                     </h3>
                                 </div>
                                 <button
@@ -296,9 +285,9 @@ export default function UserCard({
 
                             <div className="px-5 py-4 flex flex-col gap-4">
                                 <p className="text-[12.5px] text-gray-500 dark:text-gray-400 leading-relaxed">
-                                    کارمند{" "}
+                                    تسک{" "}
                                     <span className="font-extrabold text-gray-800 dark:text-gray-200">
-                                        {employeeName}
+                                        {taskTitle}
                                     </span>{" "}
                                     حذف خواهد شد. این عملیات قابل بازگشت نیست.
                                 </p>
@@ -375,13 +364,6 @@ export default function UserCard({
                     </motion.div>
                 )}
             </AnimatePresence>
-
-            <EditUserModal
-                isOpen={showEditModal}
-                onClose={() => setShowEditModal(false)}
-                employee={employee}
-                onUpdated={handleEditSuccess}
-            />
         </>
     );
 }

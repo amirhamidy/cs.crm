@@ -38,9 +38,9 @@ function mapEmployee(
     id: String(e.id),
     apiId: e.id,
     assignmentId: assignment?.id,
-    name: `${e.first_name} ${e.last_name}`.trim(),
-    role: e.role ?? "—",
-    avatar: e.avatar,
+    name: e.full_name,
+    role: e.username ?? "—",
+    avatar: undefined,
   };
 }
 
@@ -79,13 +79,10 @@ interface DepartmentStore {
   allEmployees: Employee[];
   loading: boolean;
   error: string | null;
-
   fetchAll: () => Promise<void>;
-
   addDepartment: (name: string) => Promise<Department>;
   updateDepartment: (id: string, name: string) => Promise<void>;
   deleteDepartment: (id: string) => Promise<void>;
-
   addStage: (
     departmentId: string,
     payload: { name: string; description?: string },
@@ -96,7 +93,6 @@ interface DepartmentStore {
     payload: { name: string; description?: string; order: number },
   ) => Promise<void>;
   deleteStage: (departmentId: string, stageId: string) => Promise<void>;
-
   assignEmployee: (departmentId: string, employeeId: string) => Promise<void>;
   removeEmployee: (departmentId: string, employeeId: string) => Promise<void>;
 }
@@ -107,19 +103,14 @@ export const useDepartmentStore = create<DepartmentStore>((set, get) => ({
   loading: false,
   error: null,
 
-  
-
   fetchAll: async () => {
-    
     set({ loading: true, error: null });
     try {
       const [depts, employees, assignments, steps] = await Promise.all([
-        
         departmentApi.getDepartments(),
         departmentApi.getEmployees(),
         departmentApi.getAssignments(),
         departmentApi.getSteps(),
-
       ]);
 
       const mappedEmployees = employees.map((e) => mapEmployee(e));
@@ -256,37 +247,33 @@ export const useDepartmentStore = create<DepartmentStore>((set, get) => ({
   },
 
   assignEmployee: async (departmentId: string, employeeId: string) => {
-    const { departments } = get();
+    const { departments, allEmployees } = get();
     const dept = departments.find((d) => d.id === departmentId);
-    if (!dept) return;
+    const emp = allEmployees.find((e) => e.id === employeeId);
+    if (!dept || !emp) return;
 
     const assignment = await departmentApi.assignEmployee({
-      employee: Number(employeeId),
+      employee: emp.apiId,
       department: dept.apiId,
     });
 
-    set((s) => {
-      const emp = s.allEmployees.find((e) => e.id === employeeId);
-      if (!emp) return s;
+    const empWithAssignment: Employee = {
+      ...emp,
+      assignmentId: assignment.id,
+    };
 
-      const empWithAssignment: Employee = {
-        ...emp,
-        assignmentId: assignment.id,
-      };
-
-      return {
-        departments: s.departments.map((d) =>
-          d.id !== departmentId
-            ? d
-            : {
-                ...d,
-                employees: d.employees.some((e) => e.id === employeeId)
-                  ? d.employees
-                  : [...d.employees, empWithAssignment],
-              },
-        ),
-      };
-    });
+    set((s) => ({
+      departments: s.departments.map((d) =>
+        d.id !== departmentId
+          ? d
+          : {
+              ...d,
+              employees: d.employees.some((e) => e.id === employeeId)
+                ? d.employees
+                : [...d.employees, empWithAssignment],
+            },
+      ),
+    }));
   },
 
   removeEmployee: async (departmentId: string, employeeId: string) => {

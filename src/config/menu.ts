@@ -21,9 +21,8 @@ export const adminMenuItems: MenuItem[] = [
   { icon: Home, label: "داشبورد", href: "/admin/dashboard" },
   { icon: Users, label: "کاربران", href: "/admin/users" },
   { icon: Building2, label: "دپارتمان‌ها", href: "/admin/departments" },
-  { icon: BarChart3, label: "گزارشات", href: "/admin/reports" },
-  { icon: ShieldCheck, label: "دسترسی‌ها", href: "/admin/access" },
-  { icon: Settings, label: "تنظیمات", href: "/admin/settings" },
+  { icon: BarChart3, label: "پروژه کاری", href: "/admin/tasks" },
+  { icon: ShieldCheck, label: "مشتری", href: "/admin/customer" },
 ];
 
 export const userMenuItems: MenuItem[] = [
