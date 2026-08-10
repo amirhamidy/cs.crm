@@ -12,8 +12,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-
-type TimeRange = "weekly" | "monthly" | "yearly";
+import { useCancelledTasksByDept, TimeRange } from "@/hooks/useCancelledTasksByDept";
 
 type ActiveBar = {
   stage: string;
@@ -30,41 +29,14 @@ const ranges: { key: TimeRange; label: string; sub: string }[] = [
 ];
 
 const BAR_COLORS = [
-  { color: "#f472b6", glow: "rgba(244,114,182,0.55)" },
-  { color: "#38bdf8", glow: "rgba(56,189,248,0.55)" },
-  { color: "#4ade80", glow: "rgba(74,222,128,0.55)" },
-  { color: "#fb923c", glow: "rgba(251,146,60,0.55)" },
-  { color: "#c084fc", glow: "rgba(192,132,252,0.55)" },
-  { color: "#facc15", glow: "rgba(250,204,21,0.55)" },
   { color: "#f87171", glow: "rgba(248,113,113,0.55)" },
+  { color: "#fb923c", glow: "rgba(251,146,60,0.55)" },
+  { color: "#facc15", glow: "rgba(250,204,21,0.55)" },
+  { color: "#38bdf8", glow: "rgba(56,189,248,0.55)" },
+  { color: "#c084fc", glow: "rgba(192,132,252,0.55)" },
+  { color: "#4ade80", glow: "rgba(74,222,128,0.55)" },
+  { color: "#f472b6", glow: "rgba(244,114,182,0.55)" },
 ];
-
-const dataByRange: Record<TimeRange, { stage: string; issues: number }[]> = {
-  weekly: [
-    { stage: "تماس", issues: 12 },
-    { stage: "پیگیری", issues: 8 },
-    { stage: "پیشنهاد", issues: 5 },
-    { stage: "مذاکره", issues: 9 },
-    { stage: "بسته", issues: 3 },
-  ],
-  monthly: [
-    { stage: "تماس", issues: 45 },
-    { stage: "پیگیری", issues: 31 },
-    { stage: "پیشنهاد", issues: 18 },
-    { stage: "مذاکره", issues: 27 },
-    { stage: "بسته", issues: 11 },
-    { stage: "لغو", issues: 7 },
-  ],
-  yearly: [
-    { stage: "تماس", issues: 312 },
-    { stage: "پیگیری", issues: 228 },
-    { stage: "پیشنهاد", issues: 145 },
-    { stage: "مذاکره", issues: 189 },
-    { stage: "بسته", issues: 76 },
-    { stage: "لغو", issues: 43 },
-    { stage: "معلق", issues: 58 },
-  ],
-};
 
 const STATIC_DEFS_LIGHT = (
   <defs>
@@ -143,7 +115,7 @@ function SalesIssuesChartSkeleton() {
     <div className="rounded-2xl border border-gray-100 bg-white p-4 dark:border-white/5 dark:bg-slate-950">
       <div className="mb-3 flex items-start justify-between gap-3" dir="rtl">
         <div className="space-y-2">
-          <div className="h-4 w-32 animate-pulse rounded-full bg-gray-100 dark:bg-slate-900" />
+          <div className="h-4 w-36 animate-pulse rounded-full bg-gray-100 dark:bg-slate-900" />
           <div className="h-3 w-20 animate-pulse rounded-full bg-gray-100/80 dark:bg-slate-900/60" />
         </div>
         <div className="h-8 w-24 animate-pulse rounded-lg bg-gray-100 dark:bg-slate-900" />
@@ -162,18 +134,13 @@ function SalesIssuesChartSkeleton() {
 }
 
 export default function SalesIssuesChart() {
-  const [isLoaded, setIsLoaded] = useState(false);
+  const { chartData, loading, error } = useCancelledTasksByDept();
   const [activeRange, setActiveRange] = useState<TimeRange>("monthly");
   const [activeBar, setActiveBar] = useState<ActiveBar | null>(null);
   const { resolvedTheme } = useTheme();
 
   const isDark = resolvedTheme === "dark";
-  const data = dataByRange[activeRange];
-
-  useEffect(() => {
-    const timer = setTimeout(() => setIsLoaded(true), 700);
-    return () => clearTimeout(timer);
-  }, []);
+  const data = useMemo(() => chartData[activeRange], [chartData, activeRange]);
 
   useEffect(() => {
     setActiveBar(null);
@@ -192,6 +159,7 @@ export default function SalesIssuesChart() {
   const handleMouseEnter = useCallback(
     (_: unknown, index: number) => {
       const item = data[index];
+      if (!item) return;
       const meta = BAR_COLORS[index % BAR_COLORS.length];
       setActiveBar({ stage: item.stage, issues: item.issues, color: meta.color, glow: meta.glow, index });
     },
@@ -213,7 +181,14 @@ export default function SalesIssuesChart() {
   const gridColor = isDark ? "rgba(255,255,255,0.04)" : "#f3f4f6";
   const chartDefs = isDark ? STATIC_DEFS_DARK : STATIC_DEFS_LIGHT;
 
-  if (!isLoaded) return <SalesIssuesChartSkeleton />;
+  if (loading) return <SalesIssuesChartSkeleton />;
+  if (error) {
+    return (
+      <div className="flex h-[256px] items-center justify-center rounded-2xl border border-red-100 bg-red-50/50 p-4 text-center text-xs text-red-600 dark:border-red-950/20 dark:bg-red-950/5 dark:text-red-400">
+        خطایی در لود کردن اطلاعات رخ داد: {error}
+      </div>
+    );
+  }
 
   return (
     <motion.div
@@ -225,7 +200,7 @@ export default function SalesIssuesChart() {
       <div className="mb-3 flex items-start justify-between gap-3" dir="rtl">
         <div>
           <h3 className="text-[14px] font-semibold text-gray-900 dark:text-white">
-            مشکلات مراحل فروش
+            دپارتمان‌های با بیشترین لغو تسک
           </h3>
           <p className="mt-0.5 text-[13px] text-gray-500 dark:text-gray-400">
             {currentRange?.sub}
@@ -249,8 +224,8 @@ export default function SalesIssuesChart() {
               )}
               <span
                 className={`relative z-10 transition-colors ${activeRange === range.key
-                    ? "text-gray-900 dark:text-white"
-                    : "text-gray-500 dark:text-gray-400"
+                  ? "text-gray-900 dark:text-white"
+                  : "text-gray-500 dark:text-gray-400"
                   }`}
               >
                 {range.label}
@@ -285,7 +260,7 @@ export default function SalesIssuesChart() {
                 </span>
               </div>
               <p className="text-[11px] text-gray-500 dark:text-gray-400">
-                تعداد مشکل:{" "}
+                تعداد لغو شده:{" "}
                 <span
                   className="font-bold tabular-nums"
                   style={{ color: activeBar.color }}
@@ -299,44 +274,50 @@ export default function SalesIssuesChart() {
       </div>
 
       <div className="h-[180px] w-full">
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart
-            data={data}
-            margin={{ top: 8, right: 4, left: -24, bottom: 0 }}
-            barCategoryGap="28%"
-            onMouseLeave={handleMouseLeave}
-          >
-            {chartDefs}
-            <CartesianGrid
-              strokeDasharray="3 3"
-              stroke={gridColor}
-              vertical={false}
-            />
-            <XAxis
-              dataKey="stage"
-              axisLine={false}
-              tickLine={false}
-              tick={{ fontSize: 11, fontWeight: 500 }}
-              className="[&_text]:fill-gray-500 dark:[&_text]:fill-gray-400"
-              dy={5}
-            />
-            <YAxis
-              axisLine={false}
-              tickLine={false}
-              tick={{ fontSize: 11, fontWeight: 500 }}
-              className="[&_text]:fill-gray-500 dark:[&_text]:fill-gray-400"
-            />
-            <Bar
-              dataKey="issues"
-              onMouseEnter={handleMouseEnter}
-              shape={renderShape}
+        {data.length === 0 ? (
+          <div className="flex h-full items-center justify-center text-xs text-gray-400">
+            تسک لغو شده‌ای در این بازه ثبت نشده است.
+          </div>
+        ) : (
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart
+              data={data}
+              margin={{ top: 8, right: 4, left: -24, bottom: 0 }}
+              barCategoryGap="28%"
+              onMouseLeave={handleMouseLeave}
             >
-              {data.map((_, i) => (
-                <Cell key={i} fill={`url(#barGrad-${i})`} />
-              ))}
-            </Bar>
-          </BarChart>
-        </ResponsiveContainer>
+              {chartDefs}
+              <CartesianGrid
+                strokeDasharray="3 3"
+                stroke={gridColor}
+                vertical={false}
+              />
+              <XAxis
+                dataKey="stage"
+                axisLine={false}
+                tickLine={false}
+                tick={{ fontSize: 11, fontWeight: 500 }}
+                className="[&_text]:fill-gray-500 dark:[&_text]:fill-gray-400"
+                dy={5}
+              />
+              <YAxis
+                axisLine={false}
+                tickLine={false}
+                tick={{ fontSize: 11, fontWeight: 500 }}
+                className="[&_text]:fill-gray-500 dark:[&_text]:fill-gray-400"
+              />
+              <Bar
+                dataKey="issues"
+                onMouseEnter={handleMouseEnter}
+                shape={renderShape}
+              >
+                {data.map((_, i) => (
+                  <Cell key={i} fill={`url(#barGrad-${i})`} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        )}
       </div>
     </motion.div>
   );

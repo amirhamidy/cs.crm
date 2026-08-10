@@ -3,42 +3,20 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Cell, Pie, PieChart, ResponsiveContainer } from "recharts";
-
-type TimeRange = "weekly" | "monthly" | "yearly";
-type SliceKey = "instagram" | "website" | "referral" | "ads";
+import { useCustomerSources, type SliceKey, type TimeRange } from "@/hooks/useCustomerSources";
 
 const ranges: { key: TimeRange; label: string; sub: string }[] = [
-  { key: "weekly", label: "هفتگی", sub: "هفته اخیر" },
-  { key: "monthly", label: "ماهانه", sub: "ماه اخیر" },
-  { key: "yearly", label: "سالانه", sub: "سال اخیر" },
+  { key: "weekly", label: "هفتگی", sub: "۷ روز اخیر" },
+  { key: "monthly", label: "ماهانه", sub: "۳۰ روز اخیر" },
+  { key: "yearly", label: "سالانه", sub: "۳۶۵ روز اخیر" },
 ];
-
-const dataByRange: Record<TimeRange, { name: SliceKey; value: number }[]> = {
-  weekly: [
-    { name: "instagram", value: 4200 },
-    { name: "website", value: 3100 },
-    { name: "referral", value: 1800 },
-    { name: "ads", value: 900 },
-  ],
-  monthly: [
-    { name: "instagram", value: 78 },
-    { name: "website", value: 45 },
-    { name: "referral", value: 23 },
-    { name: "ads", value: 54 },
-  ],
-  yearly: [
-    { name: "instagram", value: 378 },
-    { name: "website", value: 145 },
-    { name: "referral", value: 523 },
-    { name: "ads", value: 554 },
-  ],
-};
 
 const chartMeta: Record<SliceKey, { label: string; color: string; glow: string }> = {
   instagram: { label: "اینستاگرام", color: "#f472b6", glow: "rgba(244,114,182,0.35)" },
   website: { label: "وب‌سایت", color: "#38bdf8", glow: "rgba(56,189,248,0.35)" },
   referral: { label: "معرفی", color: "#4ade80", glow: "rgba(74,222,128,0.35)" },
   ads: { label: "تبلیغات", color: "#fb923c", glow: "rgba(251,146,60,0.35)" },
+  other: { label: "سایر", color: "#a78bfa", glow: "rgba(167,139,250,0.35)" },
 };
 
 type ActiveSlice = {
@@ -50,37 +28,44 @@ type ActiveSlice = {
   pct: string;
 };
 
-// SVG defs رو خارج از کامپوننت تعریف کن تا هر render دوباره ساخته نشه
-const PIE_DEFS = (
-  <defs>
-    {(Object.entries(chartMeta) as [SliceKey, (typeof chartMeta)[SliceKey]][]).map(
-      ([key, meta]) => (
-        <radialGradient key={key} id={`pieGrad-${key}`} cx="50%" cy="50%" r="50%">
-          <stop offset="0%" stopColor={meta.color} stopOpacity={1} />
-          <stop offset="100%" stopColor={meta.color} stopOpacity={0.65} />
-        </radialGradient>
-      )
-    )}
-    {/* drop-shadow filter رو یه بار تعریف کن برای هر رنگ */}
-    {(Object.entries(chartMeta) as [SliceKey, (typeof chartMeta)[SliceKey]][]).map(
-      ([key, meta]) => (
-        <filter key={`filter-${key}`} id={`glow-${key}`} x="-20%" y="-20%" width="140%" height="140%">
-          <feDropShadow dx="0" dy="0" stdDeviation="3" floodColor={meta.color} floodOpacity="0.6" />
-        </filter>
-      )
-    )}
-  </defs>
-);
+function ChartSkeleton() {
+  return (
+    <div className="relative rounded-2xl border border-gray-100 bg-white p-4 shadow-sm dark:border-white/5 dark:bg-slate-950">
+      <div className="mb-3 flex items-start justify-between gap-3" dir="rtl">
+        <div className="space-y-2">
+          <div className="h-4 w-36 animate-pulse rounded-md bg-gray-200 dark:bg-slate-800" />
+          <div className="h-3 w-24 animate-pulse rounded-md bg-gray-100 dark:bg-slate-800/60" />
+        </div>
+        <div className="h-8 w-36 animate-pulse rounded-xl bg-gray-100 dark:bg-slate-800/60" />
+      </div>
+      <div className="flex h-[180px] items-center justify-center">
+        <div className="h-[148px] w-[148px] animate-pulse rounded-full bg-gray-100 dark:bg-slate-800/60" />
+      </div>
+      <div className="mt-2 grid grid-cols-2 gap-1" dir="rtl">
+        {[1, 2, 3, 4].map((i) => (
+          <div
+            key={i}
+            className="h-7 animate-pulse rounded-lg bg-gray-100 dark:bg-slate-800/60"
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
 
 export default function CategoryChart() {
+  const { data: rangeData, loading, error } = useCustomerSources();
   const [activeRange, setActiveRange] = useState<TimeRange>("weekly");
   const [activeSlice, setActiveSlice] = useState<ActiveSlice | null>(null);
 
-  const data = dataByRange[activeRange];
+  const data = useMemo(() => rangeData[activeRange] ?? [], [rangeData, activeRange]);
 
   const total = useMemo(() => data.reduce((sum, i) => sum + i.value, 0), [data]);
   const totalFormatted = useMemo(() => total.toLocaleString("fa-IR"), [total]);
-  const currentRange = useMemo(() => ranges.find((r) => r.key === activeRange), [activeRange]);
+  const currentRange = useMemo(
+    () => ranges.find((r) => r.key === activeRange),
+    [activeRange],
+  );
 
   const handleMouseEnter = useCallback(
     (_: unknown, index: number) => {
@@ -96,12 +81,54 @@ export default function CategoryChart() {
         pct: total ? ((item.value / total) * 100).toFixed(1) : "0.0",
       });
     },
-    [data, total]
+    [data, total],
   );
 
   const handleMouseLeave = useCallback(() => setActiveSlice(null), []);
 
   useEffect(() => setActiveSlice(null), [activeRange]);
+
+  const pieDefs = (
+    <defs>
+      {(Object.entries(chartMeta) as [SliceKey, (typeof chartMeta)[SliceKey]][]).map(
+        ([key, meta]) => (
+          <radialGradient key={key} id={`pieGrad-${key}`} cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stopColor={meta.color} stopOpacity={1} />
+            <stop offset="100%" stopColor={meta.color} stopOpacity={0.65} />
+          </radialGradient>
+        ),
+      )}
+      {(Object.entries(chartMeta) as [SliceKey, (typeof chartMeta)[SliceKey]][]).map(
+        ([key, meta]) => (
+          <filter
+            key={`filter-${key}`}
+            id={`glow-${key}`}
+            x="-20%"
+            y="-20%"
+            width="140%"
+            height="140%"
+          >
+            <feDropShadow
+              dx="0"
+              dy="0"
+              stdDeviation="3"
+              floodColor={meta.color}
+              floodOpacity="0.6"
+            />
+          </filter>
+        ),
+      )}
+    </defs>
+  );
+
+  if (loading) return <ChartSkeleton />;
+
+  if (error)
+    return (
+      <div className="flex h-[320px] items-center justify-center rounded-2xl border border-red-200/50 bg-white dark:border-red-500/10 dark:bg-slate-950">
+        <p className="text-[13px] text-red-400">{error}</p>
+      </div>
+    );
 
   return (
     <div className="relative rounded-2xl border border-gray-100 bg-white p-4 shadow-sm dark:border-white/5 dark:bg-slate-950">
@@ -153,7 +180,7 @@ export default function CategoryChart() {
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: 4, scale: 0.96 }}
                 transition={{ duration: 0.15 }}
-                className="pointer-events-none rounded-xl border border-gray-200/60 bg-white/95 backdrop-blur-sm px-3 py-2 shadow-lg dark:border-white/10 dark:bg-slate-900/95"
+                className="pointer-events-none rounded-xl border border-gray-200/60 bg-white/95 px-3 py-2 shadow-lg backdrop-blur-sm dark:border-white/10 dark:bg-slate-900/95"
                 style={{ boxShadow: `0 4px 20px ${activeSlice.glow}` }}
               >
                 <div className="mb-1 flex items-center gap-1.5">
@@ -167,7 +194,10 @@ export default function CategoryChart() {
                 </div>
                 <p className="text-[11px] text-gray-500 dark:text-gray-400">
                   سهم فروش:{" "}
-                  <span className="font-bold tabular-nums" style={{ color: activeSlice.color }}>
+                  <span
+                    className="font-bold tabular-nums"
+                    style={{ color: activeSlice.color }}
+                  >
                     {activeSlice.pct}%
                   </span>
                 </p>
@@ -178,7 +208,7 @@ export default function CategoryChart() {
 
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
-            {PIE_DEFS}
+            {pieDefs}
             <Pie
               data={data}
               dataKey="value"
@@ -200,7 +230,6 @@ export default function CategoryChart() {
                     key={`${activeRange}-${entry.name}`}
                     fill={`url(#pieGrad-${entry.name})`}
                     stroke="none"
-                    // به جای inline style با filter string، از SVG filter ref استفاده می‌کنیم
                     filter={isActive ? `url(#glow-${entry.name})` : undefined}
                   />
                 );
@@ -220,7 +249,10 @@ export default function CategoryChart() {
                 transition={{ duration: 0.12 }}
                 className="text-center"
               >
-                <p className="text-[20px] font-bold tabular-nums" style={{ color: activeSlice.color }}>
+                <p
+                  className="text-[20px] font-bold tabular-nums"
+                  style={{ color: activeSlice.color }}
+                >
                   {activeSlice.pct}%
                 </p>
               </motion.div>
@@ -262,7 +294,10 @@ export default function CategoryChart() {
               <span className="flex-1 text-[12px] text-gray-600 dark:text-gray-300">
                 {meta.label}
               </span>
-              <span className="tabular-nums text-[12px] font-bold" style={{ color: meta.color }}>
+              <span
+                className="tabular-nums text-[12px] font-bold"
+                style={{ color: meta.color }}
+              >
                 {pct}%
               </span>
             </div>

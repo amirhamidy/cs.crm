@@ -6,42 +6,46 @@ import CategoryChart from "@/components/charts/CategoryChart";
 import VisitsChart from "@/components/charts/VisitsChart";
 import UsersCard from "@/components/charts/UsersCard";
 import { ShoppingCart, Users, Package, DollarSign } from "lucide-react";
-
-const statsData = [
-    {
-        title: "درآمد کل",
-        value: "۲۴۵,۰۰۰,۰۰۰",
-        change: "12.5",
-        icon: DollarSign,
-        gradient: "from-blue-500 to-blue-600",
-    },
-    {
-        title: "سفارشات",
-        value: "۱,۲۳۴",
-        change: "8.2",
-        icon: ShoppingCart,
-        gradient: "from-purple-500 to-purple-600",
-    },
-    {
-        title: "کاربران",
-        value: "۳,۴۵۶",
-        change: "33.2",
-        icon: Users,
-        gradient: "from-green-500 to-green-600",
-    },
-    {
-        title: "محصولات",
-        value: "۸۹۲",
-        change: "55.8",
-        icon: Package,
-        gradient: "from-orange-500 to-orange-600",
-    },
-];
+import { useEmployeesStats } from "@/hooks/useEmployeesStats";
+import { useCustomersStats } from "@/hooks/useCustomersStats";
+import { useProjectsStats } from "@/hooks/useProjectsStats";
 
 export default function AdminDashboardPage() {
+    const employees = useEmployeesStats();
+    const customers = useCustomersStats();
+    const projects = useProjectsStats();
+
+    const statsData = [
+        {
+            title: "تعداد کارمندان",
+            value: `${employees.total.toLocaleString("fa-IR")} نفر`,
+            change: String(employees.growth),
+            icon: Users,
+            gradient: "from-blue-500 to-blue-600",
+        },
+        {
+            title: "مشتریان فعال",
+            value: `${customers.activePct.toLocaleString("fa-IR")}٪`,
+            change: String(customers.activePct - customers.potentialPct),
+            icon: ShoppingCart,
+            gradient: "from-green-500 to-green-600",
+        },
+        ...(projects.hasProjects
+            ? [
+                {
+                    title: "پروژه‌های در حال انجام",
+                    value: `${projects.total.toLocaleString("fa-IR")} پروژه`,
+                    change: String(projects.deptCount),
+                    icon: Package,
+                    gradient: "from-purple-500 to-purple-600",
+                },
+            ]
+            : []),
+    ];
+
     return (
         <div className="space-y-5">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <div className={`grid gap-3 ${projects.hasProjects ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3" : "grid-cols-1 sm:grid-cols-2"}`}>
                 {statsData.map((stat, index) => (
                     <StatsCard key={index} {...stat} index={index} />
                 ))}
