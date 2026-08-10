@@ -2,11 +2,12 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Trash2, Pencil, X } from "lucide-react";
+import { Trash2, Pencil, X, Loader } from "lucide-react";
 import { useTheme } from "next-themes";
 import axiosInstance from "@/lib/axiosInstance";
 import type { AxiosError } from "axios";
 import type { ApiEmployee, ApiUser } from "@/types/users";
+import EditUserModal from "./EditUserModal";
 
 interface UserCardProps {
     employee?: ApiEmployee;
@@ -64,12 +65,14 @@ export default function UserCard({ employee, index, onDelete }: UserCardProps) {
     const [showConfirm, setShowConfirm] = useState(false);
     const [deleting, setDeleting] = useState(false);
     const [deleteError, setDeleteError] = useState("");
+    const [showEditModal, setShowEditModal] = useState(false);
+    const [localEmployee, setLocalEmployee] = useState(employee);
 
     if (
-        !employee ||
-        typeof employee.id !== "number" ||
-        typeof employee.full_name !== "string" ||
-        typeof employee.username !== "string"
+        !localEmployee ||
+        typeof localEmployee.id !== "number" ||
+        typeof localEmployee.full_name !== "string" ||
+        typeof localEmployee.username !== "string"
     ) {
         return null;
     }
@@ -90,19 +93,19 @@ export default function UserCard({ employee, index, onDelete }: UserCardProps) {
     };
 
     const loggedUserId = getLoggedUserId();
-    const isSelf = loggedUserId !== null && loggedUserId === employee.id;
-    const isAdmin = employee.type === 1;
+    const isSelf = loggedUserId !== null && loggedUserId === localEmployee.id;
+    const isAdmin = localEmployee.type === 1;
     const canDelete = !isAdmin && !isSelf;
 
-    const employeeName = employee.full_name.trim() || "بدون نام";
-    const username = employee.username.trim() || "unknown";
+    const employeeName = localEmployee.full_name.trim() || "بدون نام";
+    const username = localEmployee.username.trim() || "unknown";
 
-    const gradient = AVATAR_GRADIENTS[employee.id % AVATAR_GRADIENTS.length];
+    const gradient = AVATAR_GRADIENTS[localEmployee.id % AVATAR_GRADIENTS.length];
     const start = gradient[0];
     const end = gradient[1];
 
-    const joinedDate = employee.created_at
-        ? new Date(employee.created_at).toLocaleDateString("fa-IR", {
+    const joinedDate = localEmployee.created_at
+        ? new Date(localEmployee.created_at).toLocaleDateString("fa-IR", {
             year: "numeric",
             month: "2-digit",
             day: "2-digit",
@@ -110,7 +113,7 @@ export default function UserCard({ employee, index, onDelete }: UserCardProps) {
         : "نامشخص";
 
     async function handleDelete() {
-        if (!employee || !canDelete) return;
+        if (!localEmployee || !canDelete) return;
 
         setDeleting(true);
         setDeleteError("");
@@ -124,7 +127,7 @@ export default function UserCard({ employee, index, onDelete }: UserCardProps) {
             const users = usersRes ? extractUserList(usersRes.data) : [];
             const employees = employeesRes ? extractEmployeeList(employeesRes.data) : [];
 
-            const targetUsername = employee.username.trim().toLowerCase();
+            const targetUsername = localEmployee.username.trim().toLowerCase();
 
             const matchedUser = users.find(
                 (u) => u.username?.trim().toLowerCase() === targetUsername
@@ -132,10 +135,10 @@ export default function UserCard({ employee, index, onDelete }: UserCardProps) {
             const matchedEmployee = employees.find(
                 (e) =>
                     e.username?.trim().toLowerCase() === targetUsername ||
-                    e.id === employee.id
+                    e.id === localEmployee.id
             );
 
-            const employeeDeleteId = matchedEmployee?.id ?? employee.id;
+            const employeeDeleteId = matchedEmployee?.id ?? localEmployee.id;
             const userDeleteId = matchedUser?.id;
 
             if (employeeDeleteId) {
@@ -150,13 +153,19 @@ export default function UserCard({ employee, index, onDelete }: UserCardProps) {
                 );
             }
 
-            onDelete(employee.id);
+            onDelete(localEmployee.id);
             setShowConfirm(false);
         } catch (err) {
             setDeleteError(getErrorMessage(err, "خطا در حذف کارمند"));
         } finally {
             setDeleting(false);
         }
+    }
+
+    function handleClose() {
+        if (deleting) return;
+        setShowConfirm(false);
+        setDeleteError("");
     }
 
     return (
@@ -183,7 +192,7 @@ export default function UserCard({ employee, index, onDelete }: UserCardProps) {
                 >
                     <defs>
                         <linearGradient
-                            id={`borderGrad-${employee.id}`}
+                            id={`borderGrad-${localEmployee.id}`}
                             x1="100%"
                             y1="100%"
                             x2="0%"
@@ -201,7 +210,7 @@ export default function UserCard({ employee, index, onDelete }: UserCardProps) {
                         rx="15"
                         ry="15"
                         fill="none"
-                        stroke={`url(#borderGrad-${employee.id})`}
+                        stroke={`url(#borderGrad-${localEmployee.id})`}
                         strokeWidth="1.5"
                         pathLength="1"
                         initial={{ pathLength: 0, opacity: 0 }}
@@ -216,7 +225,7 @@ export default function UserCard({ employee, index, onDelete }: UserCardProps) {
 
                 <div className="absolute top-3 left-3 flex items-center gap-1.5 z-10">
                     <button
-                        onClick={() => { }}
+                        onClick={() => setShowEditModal(true)}
                         className="w-7 h-7 rounded-xl flex items-center justify-center transition-colors"
                         style={{
                             background: isDark
@@ -312,28 +321,28 @@ export default function UserCard({ employee, index, onDelete }: UserCardProps) {
                         className="fixed inset-0 z-50 flex items-center justify-center px-4"
                         style={{
                             background: "rgba(0,0,0,0.5)",
-                            backdropFilter: "blur(2px)",
+                            backdropFilter: "blur(4px)",
                         }}
-                        onClick={() => !deleting && setShowConfirm(false)}
+                        onClick={handleClose}
                     >
                         <motion.div
-                            initial={{ scale: 0.9, y: 12 }}
-                            animate={{ scale: 1, y: 0 }}
-                            exit={{ scale: 0.9, y: 12 }}
+                            initial={{ scale: 0.95, y: 16, opacity: 0 }}
+                            animate={{ scale: 1, y: 0, opacity: 1 }}
+                            exit={{ scale: 0.95, y: 16, opacity: 0 }}
                             transition={{ duration: 0.2, ease: "easeOut" }}
-                            className="w-full max-w-[320px] rounded-2xl overflow-hidden border"
+                            className="w-full max-w-[360px] rounded-[2rem] overflow-hidden border p-5"
                             style={{
                                 background: isDark ? "#0f172a" : "#ffffff",
                                 borderColor: isDark
                                     ? "rgba(255,255,255,0.07)"
                                     : "rgba(0,0,0,0.07)",
-                                boxShadow: "0 20px 60px rgba(0,0,0,0.3)",
+                                boxShadow: "0 24px 64px rgba(0,0,0,0.35)",
                             }}
                             onClick={(e) => e.stopPropagation()}
                             dir="rtl"
                         >
                             <div
-                                className="flex items-center justify-between px-5 py-4 border-b"
+                                className="flex items-center justify-between px-2 py-2 border-b"
                                 style={{
                                     borderColor: isDark
                                         ? "rgba(255,255,255,0.06)"
@@ -356,8 +365,9 @@ export default function UserCard({ employee, index, onDelete }: UserCardProps) {
                                     </h3>
                                 </div>
                                 <button
-                                    onClick={() => !deleting && setShowConfirm(false)}
-                                    className="w-7 h-7 rounded-xl flex items-center justify-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                                    onClick={handleClose}
+                                    disabled={deleting}
+                                    className="w-7 h-7 rounded-xl flex items-center justify-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors disabled:opacity-40"
                                     style={{
                                         background: isDark
                                             ? "rgba(255,255,255,0.05)"
@@ -369,7 +379,7 @@ export default function UserCard({ employee, index, onDelete }: UserCardProps) {
                                 </button>
                             </div>
 
-                            <div className="px-5 py-4 flex flex-col gap-4">
+                            <div className="px-2 py-2 flex flex-col gap-4">
                                 <p className="text-[12.5px] text-gray-500 dark:text-gray-400 leading-relaxed">
                                     کارمند{" "}
                                     <span className="font-extrabold text-gray-800 dark:text-gray-200">
@@ -377,18 +387,18 @@ export default function UserCard({ employee, index, onDelete }: UserCardProps) {
                                     </span>{" "}
                                     حذف خواهد شد. این عملیات قابل بازگشت نیست.
                                 </p>
+
                                 {deleteError && (
                                     <p className="text-[11.5px] text-red-500 dark:text-red-400 font-semibold text-center">
                                         {deleteError}
                                     </p>
                                 )}
+
                                 <div className="flex gap-2">
                                     <button
-                                        onClick={() =>
-                                            !deleting && setShowConfirm(false)
-                                        }
+                                        onClick={handleClose}
                                         disabled={deleting}
-                                        className="flex-1 py-2.5 rounded-xl text-[12.5px] font-bold transition-colors disabled:opacity-40"
+                                        className="flex-1 py-2.5 rounded-2xl text-[12.5px] font-bold transition-colors disabled:opacity-40"
                                         style={{
                                             background: isDark
                                                 ? "rgba(255,255,255,0.05)"
@@ -402,42 +412,19 @@ export default function UserCard({ employee, index, onDelete }: UserCardProps) {
                                     <button
                                         onClick={handleDelete}
                                         disabled={deleting}
-                                        className="flex-1 py-2.5 rounded-xl text-[12.5px] font-bold text-white flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
+                                        className="flex-1 py-2.5 rounded-2xl text-[12.5px] font-bold text-white flex items-center justify-center transition-opacity disabled:opacity-60 disabled:cursor-not-allowed"
                                         style={{
                                             background:
                                                 "linear-gradient(135deg, #ef4444, #dc2626)",
-                                            boxShadow:
-                                                "0 4px 14px rgba(239,68,68,0.3)",
+                                            boxShadow: "0 4px 14px rgba(239,68,68,0.3)",
                                         }}
                                         type="button"
                                     >
                                         {deleting ? (
-                                            <>
-                                                <svg
-                                                    className="w-3.5 h-3.5 animate-spin"
-                                                    viewBox="0 0 24 24"
-                                                    fill="none"
-                                                >
-                                                    <circle
-                                                        cx="12"
-                                                        cy="12"
-                                                        r="10"
-                                                        stroke="currentColor"
-                                                        strokeWidth="3"
-                                                        strokeOpacity="0.25"
-                                                    />
-                                                    <path
-                                                        d="M12 2a10 10 0 0 1 10 10"
-                                                        stroke="currentColor"
-                                                        strokeWidth="3"
-                                                        strokeLinecap="round"
-                                                    />
-                                                </svg>
-                                                در حال حذف...
-                                            </>
+                                            <Loader size={15} className="animate-spin" />
                                         ) : (
                                             <>
-                                                <Trash2 size={13} />
+                                                <Trash2 size={13} className="ml-1.5" />
                                                 حذف کن
                                             </>
                                         )}
@@ -448,6 +435,16 @@ export default function UserCard({ employee, index, onDelete }: UserCardProps) {
                     </motion.div>
                 )}
             </AnimatePresence>
+
+            <EditUserModal
+                isOpen={showEditModal}
+                onClose={() => setShowEditModal(false)}
+                employee={localEmployee}
+                onUpdated={(updatedEmployee) => {
+                    setLocalEmployee(updatedEmployee);
+                    setShowEditModal(false);
+                }}
+            />
         </>
     );
 }

@@ -138,6 +138,7 @@ export default function UsersPage() {
             <AnimatePresence>
                 {showModal && (
                     <AddUserModal
+                        isOpen={showModal}
                         onClose={() => setShowModal(false)}
                         onSuccess={handleCreateSuccess}
                     />

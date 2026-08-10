@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "next-themes";
-import { Users, UserPlus, Search, Loader2, RefreshCw } from "lucide-react";
+import { Users, UserPlus, Search, RefreshCw, Loader } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
 import type { AxiosError } from "axios";
 import type { ApiEmployee } from "@/types/users";
@@ -99,26 +99,10 @@ export default function UsersPage() {
                 </div>
             </div>
 
-            {/* Search */}
-            <div className="relative">
-                <Search
-                    size={13}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
-                />
-                <input
-                    type="text"
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    placeholder="جستجو بر اساس نام یا نام کاربری..."
-                    dir="rtl"
-                    className="w-full rounded-xl text-[13px] py-2.5 pr-9 pl-4 outline-none transition-all duration-200 text-gray-800 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-600 border border-gray-200 dark:border-white/[0.07] bg-gray-50 dark:bg-white/[0.03] focus:border-indigo-400 dark:focus:border-indigo-500/60"
-                />
-            </div>
-
             {/* States */}
             {loading && (
                 <div className="flex flex-col items-center justify-center gap-3 py-16">
-                    <Loader2 size={22} className="text-indigo-500 animate-spin" />
+                    <Loader size={22} className="text-indigo-500 animate-spin" />
                     <p className="text-[12.5px] text-gray-400 dark:text-gray-500">
                         در حال دریافت لیست کارمندان...
                     </p>
