@@ -47,7 +47,6 @@ export default function UsersPage() {
 
     return (
         <div className="flex flex-col gap-5 p-4 md:p-6" dir="rtl">
-            {/* Header */}
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                     <div
@@ -99,7 +98,6 @@ export default function UsersPage() {
                 </div>
             </div>
 
-            {/* States */}
             {loading && (
                 <div className="flex flex-col items-center justify-center gap-3 py-16">
                     <Loader size={22} className="text-indigo-500 animate-spin" />
@@ -142,7 +140,6 @@ export default function UsersPage() {
                 </div>
             )}
 
-            {/* Grid */}
             {!loading && !error && filtered.length > 0 && (
                 <motion.div
                     layout
@@ -163,7 +160,6 @@ export default function UsersPage() {
                 </motion.div>
             )}
 
-            {/* Add Modal */}
             <AnimatePresence>
                 {showAddModal && (
                     <AddUserModal

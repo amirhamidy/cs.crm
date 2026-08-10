@@ -1,9 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, forwardRef, InputHTMLAttributes, TextareaHTMLAttributes } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, GitBranch } from "lucide-react";
-import { useTheme } from "next-themes";
+import { X, GitBranch, Loader, CheckCircle2 } from "lucide-react";
 import { Stage } from "./types";
 
 interface Props {
@@ -11,207 +10,220 @@ interface Props {
     stage: Stage | null;
     accent: string;
     onClose: () => void;
-    onSubmit: (values: { name: string; description?: string; order: number }) => void;
+    onSubmit: (values: { name: string; description?: string; order: number }) => Promise<void>;
 }
 
-export default function EditStageModal({
-    open,
-    stage,
-    accent,
-    onClose,
-    onSubmit,
-}: Props) {
-    const { resolvedTheme } = useTheme();
-    const isDark = resolvedTheme === "dark";
+interface FloatingInputProps extends InputHTMLAttributes<HTMLInputElement> {
+    label: string;
+    id: string;
+}
 
+interface FloatingTextareaProps extends TextareaHTMLAttributes<HTMLTextAreaElement> {
+    label: string;
+    id: string;
+}
+
+const FloatingInput = forwardRef<HTMLInputElement, FloatingInputProps>(
+    ({ label, id, className = "", ...props }, ref) => (
+        <div className="relative">
+            <input
+                ref={ref}
+                id={id}
+                placeholder=" "
+                className={`peer w-full border border-gray-200 rounded-4xl px-5 py-3 text-sm text-black outline-none transition-all duration-200 focus:border-gray-400 dark:bg-white/[0.04] dark:border-white/[0.08] dark:text-white dark:focus:border-blue-500 ${className}`}
+                {...props}
+            />
+            <label
+                htmlFor={id}
+                className="absolute right-5 top-1/2 -translate-y-1/2 text-sm text-gray-400 pointer-events-none transition-all duration-200 bg-white dark:bg-[#0f172a] px-1.5 rounded peer-focus:top-0 peer-focus:text-xs peer-focus:text-gray-500 peer-[:not(:placeholder-shown)]:top-0 peer-[:not(:placeholder-shown)]:text-xs peer-[:not(:placeholder-shown)]:text-gray-500"
+            >
+                {label}
+            </label>
+        </div>
+    )
+);
+FloatingInput.displayName = "FloatingInput";
+
+const FloatingTextarea = forwardRef<HTMLTextAreaElement, FloatingTextareaProps>(
+    ({ label, id, className = "", ...props }, ref) => (
+        <div className="relative">
+            <textarea
+                ref={ref}
+                id={id}
+                placeholder=" "
+                className={`peer w-full border border-gray-200 rounded-3xl px-5 py-3 text-sm text-black outline-none transition-all duration-200 resize-none focus:border-gray-400 dark:bg-white/[0.04] dark:border-white/[0.08] dark:text-white dark:focus:border-blue-500 ${className}`}
+                {...props}
+            />
+            <label
+                htmlFor={id}
+                className="absolute right-5 top-5 text-sm text-gray-400 pointer-events-none transition-all duration-200 bg-white dark:bg-[#0f172a] px-1.5 rounded peer-focus:top-0 peer-focus:text-xs peer-focus:text-gray-500 peer-[:not(:placeholder-shown)]:top-0 peer-[:not(:placeholder-shown)]:text-xs peer-[:not(:placeholder-shown)]:text-gray-500"
+            >
+                {label}
+            </label>
+        </div>
+    )
+);
+FloatingTextarea.displayName = "FloatingTextarea";
+
+export default function EditStageModal({ open, stage, onClose, onSubmit }: Props) {
     const [name, setName] = useState("");
     const [description, setDescription] = useState("");
     const [order, setOrder] = useState("1");
+    const [loading, setLoading] = useState(false);
+    const [success, setSuccess] = useState(false);
 
     useEffect(() => {
         if (!open || !stage) return;
         setName(stage.name);
         setDescription(stage.description ?? "");
         setOrder(String(stage.order));
+        setSuccess(false);
     }, [open, stage]);
 
     useEffect(() => {
         if (!open) return;
-
         const onKey = (e: KeyboardEvent) => {
-            if (e.key === "Escape") onClose();
+            if (e.key === "Escape") handleClose();
         };
-
         window.addEventListener("keydown", onKey);
         return () => window.removeEventListener("keydown", onKey);
-    }, [open, onClose]);
+    }, [open, loading, success]);
 
-    const canSubmit = name.trim().length > 0;
-
-    const handleSubmit = () => {
-        if (!canSubmit) return;
-
-        const parsedOrder = Number(order);
-        const validOrder =
-            Number.isFinite(parsedOrder) && parsedOrder > 0 ? Math.floor(parsedOrder) : 1;
-
-        onSubmit({
-            name: name.trim(),
-            description: description.trim() || undefined,
-            order: validOrder,
-        });
-
+    const handleClose = () => {
+        if (loading || success) return;
+        setName("");
+        setDescription("");
+        setOrder("1");
         onClose();
+    };
+
+    const handleSubmit = async (e?: React.FormEvent) => {
+        e?.preventDefault();
+        if (!name.trim() || loading) return;
+        const parsedOrder = Number(order);
+        const validOrder = Number.isFinite(parsedOrder) && parsedOrder > 0 ? Math.floor(parsedOrder) : 1;
+        setLoading(true);
+        try {
+            await onSubmit({ name: name.trim(), description: description.trim() || undefined, order: validOrder });
+            setSuccess(true);
+            setTimeout(() => {
+                setSuccess(false);
+                setName("");
+                setDescription("");
+                setOrder("1");
+                onClose();
+            }, 1400);
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
         <AnimatePresence>
             {open && (
-                <div
+                <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
                     className="fixed inset-0 z-50 flex items-center justify-center px-4"
-                    style={{
-                        background: "rgba(0,0,0,0.5)",
-                        backdropFilter: "blur(2px)",
-                    }}
-                    onClick={onClose}
+                    style={{ background: "rgba(0,0,0,0.45)", backdropFilter: "blur(3px)" }}
+                    onClick={handleClose}
                 >
                     <motion.div
-                        initial={{ scale: 0.93, y: 16 }}
-                        animate={{ scale: 1, y: 0 }}
-                        exit={{ scale: 0.93, y: 16 }}
-                        transition={{ duration: 0.22, ease: "easeOut" }}
+                        initial={{ opacity: 0, y: 16 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 16 }}
+                        transition={{ duration: 0.35, ease: "easeOut" }}
+                        className="bg-white dark:bg-[#0f172a] rounded-[2rem] shadow-sm border border-gray-100 dark:border-white/[0.06] w-full max-w-sm overflow-hidden"
                         onClick={(e) => e.stopPropagation()}
-                        className="w-full max-w-[420px] max-h-[90vh] flex flex-col rounded-3xl overflow-hidden border"
-                        style={{
-                            background: isDark ? "#0f172a" : "#ffffff",
-                            borderColor: isDark
-                                ? "rgba(255,255,255,0.07)"
-                                : "rgba(0,0,0,0.06)",
-                            boxShadow: "0 24px 64px rgba(0,0,0,0.3)",
-                        }}
                         dir="rtl"
                     >
-                        <div
-                            className="px-5 py-4 border-b flex items-center justify-between"
-                            style={{
-                                borderColor: isDark
-                                    ? "rgba(255,255,255,0.06)"
-                                    : "rgba(0,0,0,0.06)",
-                            }}
-                        >
-                            <div className="flex items-center gap-3">
-                                <div className="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center">
-                                    <GitBranch size={15} className="text-indigo-500" />
+                        <div className="px-8 pt-8 pb-6 flex items-center justify-between">
+                            <div className="flex items-center gap-2.5">
+                                <div className="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center">
+                                    <GitBranch size={15} className="text-blue-500" />
                                 </div>
                                 <div>
                                     <h3 className="text-[14px] font-extrabold text-gray-900 dark:text-white">
                                         ویرایش مرحله
                                     </h3>
-                                    <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-0.5">
+                                    <p className="text-[11px] text-gray-400 mt-0.5">
                                         مشخصات مرحله را ویرایش کنید
                                     </p>
                                 </div>
                             </div>
-
                             <button
-                                onClick={onClose}
-                                className="w-8 h-8 rounded-xl flex items-center justify-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
-                                style={{
-                                    background: isDark
-                                        ? "rgba(255,255,255,0.05)"
-                                        : "rgba(0,0,0,0.04)",
-                                }}
                                 type="button"
+                                onClick={handleClose}
+                                disabled={loading || success}
+                                className="w-8 h-8 rounded-xl flex items-center justify-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors disabled:opacity-40 bg-gray-100 dark:bg-white/[0.05]"
                             >
                                 <X size={15} />
                             </button>
                         </div>
 
-                        <div className="p-5 space-y-4 overflow-y-auto">
-                            <div className="relative">
-                                <input
-                                    id="edit_stage_name"
-                                    placeholder=" "
-                                    value={name}
-                                    onChange={(e) => setName(e.target.value)}
-                                    className="peer w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm text-black outline-none transition-all duration-200 focus:border-indigo-500 dark:border-white/[0.08] dark:bg-white/[0.04] dark:text-white dark:focus:border-violet-500"
-                                />
-                                <label
-                                    htmlFor="edit_stage_name"
-                                    className={`absolute right-4 pointer-events-none transition-all duration-200 bg-white dark:bg-[#0f172a] px-1 rounded ${name.trim()
-                                            ? "top-0 -translate-y-1/2 text-[11px] text-indigo-500 dark:text-violet-400"
-                                            : "top-1/2 -translate-y-1/2 text-sm text-gray-400 peer-focus:top-0 peer-focus:text-[11px] peer-focus:text-indigo-500 dark:peer-focus:text-violet-400"
-                                        }`}
-                                >
-                                    نام مرحله
-                                </label>
-                            </div>
+                        <form onSubmit={handleSubmit} className="px-8 pb-8 flex flex-col gap-4">
+                            <FloatingInput
+                                label="نام مرحله"
+                                id="edit_stage_name"
+                                value={name}
+                                onChange={(e) => setName(e.target.value)}
+                                disabled={loading || success}
+                                dir="rtl"
+                            />
 
-                            <div className="relative">
-                                <textarea
-                                    id="edit_stage_description"
-                                    placeholder=" "
-                                    rows={4}
-                                    value={description}
-                                    onChange={(e) => setDescription(e.target.value)}
-                                    className="peer w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm text-black outline-none transition-all duration-200 resize-none focus:border-indigo-500 dark:border-white/[0.08] dark:bg-white/[0.04] dark:text-white dark:focus:border-violet-500"
-                                />
-                                <label
-                                    htmlFor="edit_stage_description"
-                                    className={`absolute right-4 pointer-events-none transition-all duration-200 bg-white dark:bg-[#0f172a] px-1 rounded ${description.trim()
-                                            ? "top-0 -translate-y-1/2 text-[11px] text-indigo-500 dark:text-violet-400"
-                                            : "top-5 text-sm text-gray-400 peer-focus:top-0 peer-focus:-translate-y-1/2 peer-focus:text-[11px] peer-focus:text-indigo-500 dark:peer-focus:text-violet-400"
-                                        }`}
-                                >
-                                    توضیحات
-                                </label>
-                            </div>
+                            <FloatingTextarea
+                                label="توضیحات"
+                                id="edit_stage_description"
+                                rows={4}
+                                value={description}
+                                onChange={(e) => setDescription(e.target.value)}
+                                disabled={loading || success}
+                                dir="rtl"
+                            />
 
-                            <div className="relative">
-                                <input
-                                    id="edit_stage_order"
-                                    type="number"
-                                    min={1}
-                                    placeholder=" "
-                                    value={order}
-                                    onChange={(e) => setOrder(e.target.value)}
-                                    className="peer w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm text-black outline-none transition-all duration-200 focus:border-indigo-500 dark:border-white/[0.08] dark:bg-white/[0.04] dark:text-white dark:focus:border-violet-500"
-                                />
-                                <label
-                                    htmlFor="edit_stage_order"
-                                    className={`absolute right-4 pointer-events-none transition-all duration-200 bg-white dark:bg-[#0f172a] px-1 rounded ${order.trim()
-                                            ? "top-0 -translate-y-1/2 text-[11px] text-indigo-500 dark:text-violet-400"
-                                            : "top-1/2 -translate-y-1/2 text-sm text-gray-400 peer-focus:top-0 peer-focus:text-[11px] peer-focus:text-indigo-500 dark:peer-focus:text-violet-400"
-                                        }`}
-                                >
-                                    ترتیب مرحله
-                                </label>
-                            </div>
-                        </div>
+                            <FloatingInput
+                                label="ترتیب مرحله"
+                                id="edit_stage_order"
+                                type="number"
+                                min={1}
+                                value={order}
+                                onChange={(e) => setOrder(e.target.value)}
+                                disabled={loading || success}
+                                dir="rtl"
+                            />
 
-                        <div
-                            className="px-5 py-4 border-t"
-                            style={{
-                                borderColor: isDark
-                                    ? "rgba(255,255,255,0.06)"
-                                    : "rgba(0,0,0,0.06)",
-                            }}
-                        >
-                            <button
-                                onClick={handleSubmit}
-                                disabled={!canSubmit}
-                                className="w-full py-2.5 rounded-xl text-[13px] font-bold text-white disabled:opacity-40 disabled:cursor-not-allowed"
-                                style={{
-                                    background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
-                                    boxShadow: "0 4px 14px rgba(99,102,241,0.3)",
-                                }}
-                                type="button"
-                            >
-                                ذخیره تغییرات
-                            </button>
-                        </div>
+                            <AnimatePresence mode="wait">
+                                {success ? (
+                                    <motion.div
+                                        key="success"
+                                        initial={{ opacity: 0, scale: 0.9 }}
+                                        animate={{ opacity: 1, scale: 1 }}
+                                        exit={{ opacity: 0, scale: 0.9 }}
+                                        className="flex items-center justify-center gap-2 py-3 rounded-2xl bg-green-50 dark:bg-green-500/10 text-green-600 dark:text-green-400 text-sm font-medium"
+                                    >
+                                        <CheckCircle2 size={16} />
+                                        تغییرات با موفقیت ذخیره شد
+                                    </motion.div>
+                                ) : (
+                                    <motion.button
+                                        key="submit"
+                                        type="submit"
+                                        disabled={!name.trim() || loading}
+                                        whileTap={{ scale: 0.97 }}
+                                        className="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-bold rounded-full py-3 text-sm transition-colors flex items-center justify-center gap-2"
+                                    >
+                                        {loading ? (
+                                            <Loader size={18} className="animate-spin" />
+                                        ) : (
+                                            "ذخیره تغییرات"
+                                        )}
+                                    </motion.button>
+                                )}
+                            </AnimatePresence>
+                        </form>
                     </motion.div>
-                </div>
+                </motion.div>
             )}
         </AnimatePresence>
     );
