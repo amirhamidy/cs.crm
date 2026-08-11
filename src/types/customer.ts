@@ -43,3 +43,21 @@ export interface CustomerFormData {
     description: string;
     status: number;
 }
+
+// export interface Customer {
+//   id: number
+//   full_name?: string
+//   first_name?: string
+//   last_name?: string
+//   phone_number?: string
+//   email?: string
+//   company_name?: string
+// }
+
+export interface CustomerSelectProps {
+  customers: Customer[]
+  value: number | null
+  onChange: (value: number | null) => void
+  loading?: boolean
+  disabled?: boolean
+}

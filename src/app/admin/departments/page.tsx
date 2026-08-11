@@ -264,6 +264,7 @@ export default function DepartmentsPage() {
                 .departments-mobile-swiper {
                     padding-bottom: 34px;
                 }
+
                 .departments-mobile-swiper .swiper-pagination {
                     bottom: 0 !important;
                     display: flex;
@@ -271,6 +272,7 @@ export default function DepartmentsPage() {
                     justify-content: center;
                     gap: 6px;
                 }
+
                 .departments-mobile-swiper .dept-swiper-bullet {
                     width: 8px;
                     height: 8px;
@@ -280,6 +282,7 @@ export default function DepartmentsPage() {
                     transition: all 0.25s ease;
                     margin: 0 !important;
                 }
+
                 .departments-mobile-swiper .dept-swiper-bullet-active {
                     width: 16px;
                     background: #3b82f6;
@@ -384,6 +387,7 @@ export default function DepartmentsPage() {
                                                 className="flex items-center justify-center gap-2 rounded-2xl bg-green-50 py-3 text-sm font-medium text-green-600 dark:bg-green-500/10 dark:text-green-400"
                                             >
                                                 <CheckCircle2 size={16} />
+                                                تغییرات با موفقیت ذخیره شد
                                             </motion.div>
                                         ) : (
                                             <motion.div
@@ -406,13 +410,14 @@ export default function DepartmentsPage() {
                                                     onClick={handleEditDepartment}
                                                     disabled={editLoading || !editName.trim()}
                                                     whileTap={{ scale: 0.97 }}
-                                                    className="flex flex-1 items-center justify-center rounded-full bg-blue-600 py-3 text-sm font-bold text-white transition-colors hover:bg-blue-500 disabled:opacity-50"
+                                                    className="flex flex-1 items-center justify-center gap-2 rounded-full bg-blue-600 py-3 text-sm font-bold text-white transition-colors hover:bg-blue-500 disabled:opacity-50"
                                                 >
                                                     {editLoading ? (
                                                         <Loader size={18} className="animate-spin" />
                                                     ) : (
-                                                        "ذخیره تغییرات"
+                                                        <Check size={16} />
                                                     )}
+                                                    ذخیره تغییرات
                                                 </motion.button>
                                             </motion.div>
                                         )}
@@ -459,7 +464,7 @@ export default function DepartmentsPage() {
 
                         <button
                             onClick={() => setAddDeptOpen(true)}
-                            className="flex h-9 flex-1 items-center justify-center gap-2 rounded-xl px-3.5 py-2 text-[12.5px] font-bold text-white transition-all duration-200 bg-blue-600 hover:bg-blue-500 hover:opacity-90 sm:flex-none"
+                            className="flex h-9 flex-1 items-center justify-center gap-2 rounded-xl px-3.5 py-2 text-[12.5px] bg-blue-600 hover:bg-blue-100 hover:text-blue-500 transition-all duration-200  font-bold text-white hover:opacity-90 sm:flex-none"
                             type="button"
                         >
                             <Plus size={13} strokeWidth={2.5} />
