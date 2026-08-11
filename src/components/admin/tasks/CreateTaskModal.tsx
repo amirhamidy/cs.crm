@@ -11,7 +11,7 @@ import {
 import { AnimatePresence, motion } from "framer-motion";
 import {
     X,
-    Loader2,
+    Loader,
     ChevronLeft,
     ChevronRight,
     Check,
@@ -568,7 +568,7 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess }: Props) {
 
                                             {loadingCustomers ? (
                                                 <div className="flex h-56 items-center justify-center rounded-3xl border border-dashed border-gray-200 dark:border-white/[0.08]">
-                                                    <Loader2
+                                                    <Loader
                                                         size={24}
                                                         className="animate-spin text-blue-600 dark:text-violet-400"
                                                     />
@@ -747,7 +747,7 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess }: Props) {
                                                                 className="inline-flex items-center justify-center gap-2 rounded-full bg-emerald-600 px-5 py-2 text-sm font-bold text-white transition-colors hover:bg-emerald-500 disabled:opacity-50"
                                                             >
                                                                 {creatingCase && (
-                                                                    <Loader2 size={15} className="animate-spin" />
+                                                                    <Loader size={15} className="animate-spin" />
                                                                 )}
                                                                 ثبت پرونده
                                                             </button>
@@ -771,7 +771,7 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess }: Props) {
 
                                             {loadingCases ? (
                                                 <div className="flex h-52 items-center justify-center rounded-3xl border border-dashed border-gray-200 dark:border-white/[0.08]">
-                                                    <Loader2
+                                                    <Loader
                                                         size={24}
                                                         className="animate-spin text-blue-600 dark:text-violet-400"
                                                     />
@@ -847,7 +847,7 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess }: Props) {
                                                                             className="flex h-9 w-9 items-center justify-center rounded-full text-red-500 transition-colors hover:bg-red-50 disabled:opacity-50 dark:hover:bg-red-500/10"
                                                                         >
                                                                             {isDeleting ? (
-                                                                                <Loader2
+                                                                                <Loader
                                                                                     size={15}
                                                                                     className="animate-spin"
                                                                                 />
@@ -926,7 +926,7 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess }: Props) {
 
                                                         {loadingDepartments ? (
                                                             <div className="flex h-20 items-center justify-center">
-                                                                <Loader2
+                                                                <Loader
                                                                     size={22}
                                                                     className="animate-spin text-blue-600 dark:text-violet-400"
                                                                 />
@@ -987,7 +987,7 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess }: Props) {
 
                                                         {loadingEmployees ? (
                                                             <div className="flex h-20 items-center justify-center">
-                                                                <Loader2
+                                                                <Loader
                                                                     size={22}
                                                                     className="animate-spin text-blue-600 dark:text-violet-400"
                                                                 />
@@ -1133,7 +1133,7 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess }: Props) {
                                             >
                                                 {submitting ? (
                                                     <>
-                                                        <Loader2 size={16} className="animate-spin" />
+                                                        <Loader size={16} className="animate-spin" />
                                                         در حال ثبت...
                                                     </>
                                                 ) : (

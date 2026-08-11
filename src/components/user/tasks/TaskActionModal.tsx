@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { X, Check, Loader2, FileUp, MessageSquare } from "lucide-react";
+import { X, Check, Loader, FileUp, MessageSquare } from "lucide-react";
 import { useTheme } from "next-themes";
 
 type Direction = "next" | "prev";
@@ -219,7 +219,7 @@ export default function TaskActionModal({
                             >
                                 {loading ? (
                                     <>
-                                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                        <Loader className="w-3.5 h-3.5 animate-spin" />
                                         در حال ثبت...
                                     </>
                                 ) : (

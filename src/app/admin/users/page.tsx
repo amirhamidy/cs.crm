@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "next-themes";
-import { Users, UserPlus, Search, RefreshCw, Loader } from "lucide-react";
+import { Users, UserPlus, RefreshCw, Loader } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
 import type { AxiosError } from "axios";
 import type { ApiEmployee } from "@/types/users";
@@ -46,54 +46,48 @@ export default function UsersPage() {
     );
 
     return (
-        <div className="flex flex-col gap-5 p-4 md:p-6" dir="rtl">
-            <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
+        <div className="flex flex-col gap-5 p-3 sm:p-4 md:p-6" dir="rtl">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-start gap-3">
                     <div
-                        className="w-9 h-9 rounded-2xl flex items-center justify-center"
+                        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl"
                         style={{
-                            background: isDark
-                                ? "rgba(99,102,241,0.12)"
-                                : "rgba(99,102,241,0.08)",
+                            background: isDark ? "rgba(99,102,241,0.12)" : "rgba(99,102,241,0.08)",
                         }}
                     >
                         <Users size={16} className="text-indigo-500" />
                     </div>
-                    <div>
+                    <div className="min-w-0">
                         <h1 className="text-[14px] font-extrabold text-gray-900 dark:text-white">
                             مدیریت کاربران
                         </h1>
-                        <p className="text-[11.5px] text-gray-400 dark:text-gray-500 mt-0.5">
+                        <p className="mt-0.5 text-[11.5px] text-gray-400 dark:text-gray-500">
                             {loading ? "در حال بارگذاری..." : `${employees.length} کارمند ثبت‌شده`}
                         </p>
                     </div>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 sm:justify-end">
                     <button
                         onClick={fetchEmployees}
                         disabled={loading}
-                        className="w-8 h-8 rounded-xl flex items-center justify-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors disabled:opacity-40"
+                        className="flex h-9 w-9 items-center justify-center rounded-xl text-gray-400 transition-colors hover:text-gray-600 disabled:opacity-40 dark:hover:text-gray-300"
                         style={{
-                            background: isDark
-                                ? "rgba(255,255,255,0.05)"
-                                : "rgba(0,0,0,0.04)",
+                            background: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.04)",
                         }}
                         title="بارگذاری مجدد"
+                        type="button"
                     >
                         <RefreshCw size={13} className={loading ? "animate-spin" : ""} />
                     </button>
 
                     <button
                         onClick={() => setShowAddModal(true)}
-                        className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-[12.5px] font-bold text-white transition-opacity hover:opacity-90"
-                        style={{
-                            background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
-                            boxShadow: "0 4px 14px rgba(99,102,241,0.3)",
-                        }}
+                        className="flex h-9 flex-1 items-center justify-center gap-2 rounded-xl px-3.5 py-2 text-[12.5px] bg-blue-600 hover:bg-blue-100 hover:text-blue-500 transition-all duration-200  font-bold text-white hover:opacity-90 sm:flex-none"
+                        type="button"
                     >
                         <UserPlus size={13} />
-                        افزودن کاربر
+                        <span className="whitespace-nowrap">افزودن کاربر</span>
                     </button>
                 </div>
             </div>

@@ -76,11 +76,14 @@ export default function LoginPage() {
                     <motion.button
                         type="submit"
                         disabled={loading}
-                        whileTap={{ scale: 0.97 }}
-                        className="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-bold rounded-full py-3 text-sm transition-colors flex items-center justify-center gap-2"
+                        whileTap={!loading ? { scale: 0.97 } : {}}
+                        className="bg-blue-600 hover:bg-blue-500 disabled:opacity-70 text-white font-bold rounded-full py-3 text-sm transition-all flex items-center justify-center min-h-[44px]"
                     >
-                        {loading && <Loader size={15} className="animate-spin" />}
-                        ورود
+                        {loading ? (
+                            <Loader size={18} className="animate-spin" />
+                        ) : (
+                            "ورود"
+                        )}
                     </motion.button>
                 </form>
             </motion.div>

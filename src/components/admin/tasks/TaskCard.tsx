@@ -8,7 +8,7 @@ import {
     CalendarDays,
     Check,
     ClipboardList,
-    Loader2,
+    Loader,
     MoreVertical,
     Pencil,
     Trash2,
@@ -148,8 +148,8 @@ export default function TaskCard({
             setDeleteModalOpen(false);
             onDelete(task.id);
         } catch (error) {
-            console.error("خطا در حذف تسک:", error);
-            setDeleteError("حذف تسک انجام نشد. دوباره تلاش کنید.");
+            console.error("خطا در حذف وظایف:", error);
+            setDeleteError("حذف وظایف انجام نشد. دوباره تلاش کنید.");
         } finally {
             setDeleting(false);
         }
@@ -193,7 +193,7 @@ export default function TaskCard({
                         <div className="relative">
                             <button
                                 type="button"
-                                aria-label="عملیات تسک"
+                                aria-label="عملیات وظایف"
                                 onClick={() => setMenuOpen((previous) => !previous)}
                                 className="flex h-9 w-9 items-center justify-center rounded-xl text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-700 dark:hover:bg-white/[0.07] dark:hover:text-zinc-200"
                             >
@@ -228,7 +228,7 @@ export default function TaskCard({
                                             className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-right text-xs font-medium text-zinc-600 transition-colors hover:bg-blue-500/10 hover:text-blue-600 dark:text-zinc-300 dark:hover:text-blue-400"
                                         >
                                             <Pencil size={14} />
-                                            ویرایش تسک
+                                            ویرایش وظایف
                                         </button>
 
                                         <button
@@ -241,7 +241,7 @@ export default function TaskCard({
                                             className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-right text-xs font-medium text-red-500 transition-colors hover:bg-red-500/10"
                                         >
                                             <Trash2 size={14} />
-                                            حذف تسک
+                                            حذف وظایف
                                         </button>
                                     </motion.div>
                                 </>
@@ -257,7 +257,7 @@ export default function TaskCard({
 
                         <p className="line-clamp-3 min-h-[66px] text-[12px] leading-6 text-zinc-500 dark:text-zinc-400">
                             {task.description ||
-                                "توضیحاتی برای این تسک ثبت نشده است."}
+                                "توضیحاتی برای این وظایف ثبت نشده است."}
                         </p>
                     </div>
 
@@ -337,11 +337,11 @@ export default function TaskCard({
                         </div>
 
                         <h3 className="mb-2 text-base font-black text-zinc-900 dark:text-white">
-                            حذف تسک
+                            حذف وظایف
                         </h3>
 
                         <p className="mb-5 text-xs leading-6 text-zinc-500 dark:text-zinc-400">
-                            آیا از حذف تسک «{task.title}» مطمئن هستید؟ این
+                            آیا از حذف وظایف «{task.title}» مطمئن هستید؟ این
                             عملیات قابل بازگشت نیست.
                         </p>
 
@@ -369,7 +369,7 @@ export default function TaskCard({
                             >
                                 {deleting ? (
                                     <>
-                                        <Loader2
+                                        <Loader
                                             size={15}
                                             className="animate-spin"
                                         />

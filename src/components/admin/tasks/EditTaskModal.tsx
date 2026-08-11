@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { X, Loader2, Check, ChevronLeft, ChevronRight } from "lucide-react";
+import { X, Loader, Check, ChevronLeft, ChevronRight } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
 
 type NullableString = string | null | undefined;
@@ -326,7 +326,7 @@ export default function EditTaskModal({ isOpen, onClose, task, onSuccess }: Prop
                     <div className="flex-1 overflow-y-auto p-6">
                         {loading ? (
                             <div className="flex h-full items-center justify-center">
-                                <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
+                                <Loader className="h-6 w-6 animate-spin text-blue-600" />
                             </div>
                         ) : (
                             <div className="space-y-6">
@@ -344,7 +344,7 @@ export default function EditTaskModal({ isOpen, onClose, task, onSuccess }: Prop
 
                                                 {loadingCustomers ? (
                                                     <div className="flex justify-center py-10">
-                                                        <Loader2 className="h-5 w-5 animate-spin text-blue-600" />
+                                                        <Loader className="h-5 w-5 animate-spin text-blue-600" />
                                                     </div>
                                                 ) : customers.length === 0 ? (
                                                     <div className="py-6 text-center text-xs text-zinc-400">
@@ -381,7 +381,7 @@ export default function EditTaskModal({ isOpen, onClose, task, onSuccess }: Prop
 
                                                 {loadingCases ? (
                                                     <div className="flex justify-center py-10">
-                                                        <Loader2 className="h-5 w-5 animate-spin text-blue-600" />
+                                                        <Loader className="h-5 w-5 animate-spin text-blue-600" />
                                                     </div>
                                                 ) : selectedCustomer === null ? (
                                                     <div className="py-6 text-center text-xs text-zinc-400">
@@ -472,7 +472,7 @@ export default function EditTaskModal({ isOpen, onClose, task, onSuccess }: Prop
 
                                                 {loadingDepartments ? (
                                                     <div className="flex justify-center py-3">
-                                                        <Loader2 className="h-5 w-5 animate-spin text-blue-600" />
+                                                        <Loader className="h-5 w-5 animate-spin text-blue-600" />
                                                     </div>
                                                 ) : (
                                                     <select
@@ -501,7 +501,7 @@ export default function EditTaskModal({ isOpen, onClose, task, onSuccess }: Prop
 
                                                 {loadingEmployees ? (
                                                     <div className="flex justify-center py-3">
-                                                        <Loader2 className="h-5 w-5 animate-spin text-blue-600" />
+                                                        <Loader className="h-5 w-5 animate-spin text-blue-600" />
                                                     </div>
                                                 ) : selectedDepartment === null ? (
                                                     <div className="rounded-2xl border border-dashed border-zinc-300 p-4 text-center text-xs text-zinc-400 dark:border-white/10">
@@ -575,7 +575,7 @@ export default function EditTaskModal({ isOpen, onClose, task, onSuccess }: Prop
                                                 >
                                                     {submitting ? (
                                                         <>
-                                                            <Loader2 size={16} className="animate-spin" />
+                                                            <Loader size={16} className="animate-spin" />
                                                             در حال ذخیره...
                                                         </>
                                                     ) : (

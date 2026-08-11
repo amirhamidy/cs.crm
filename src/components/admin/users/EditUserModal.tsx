@@ -126,20 +126,20 @@ export default function EditUserModal({
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: 16 }}
                         transition={{ duration: 0.35, ease: "easeOut" }}
-                        className="bg-white dark:bg-[#0f172a] rounded-[2rem] shadow-sm border border-gray-100 dark:border-white/[0.06] p-8 w-full max-w-sm"
+                        className="w-full max-w-sm rounded-[2rem] border border-gray-100 bg-white p-8 shadow-sm dark:border-white/[0.06] dark:bg-[#0f172a]"
                         onClick={(e) => e.stopPropagation()}
                         dir="rtl"
                     >
-                        <div className="flex items-center justify-between mb-6">
+                        <div className="mb-6 flex items-center justify-between">
                             <div className="flex items-center gap-2.5">
-                                <div className="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center">
+                                <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-50 dark:bg-blue-500/10">
                                     <User size={15} className="text-blue-500" />
                                 </div>
                                 <div>
                                     <h3 className="text-[14px] font-extrabold text-gray-900 dark:text-white">
                                         ویرایش کارمند
                                     </h3>
-                                    <p className="text-[11px] text-gray-400 mt-0.5">
+                                    <p className="mt-0.5 text-[11px] text-gray-400">
                                         ویرایش نام و نام خانوادگی
                                     </p>
                                 </div>
@@ -148,7 +148,7 @@ export default function EditUserModal({
                                 type="button"
                                 onClick={onClose}
                                 disabled={loading}
-                                className="w-8 h-8 rounded-xl flex items-center justify-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors disabled:opacity-40 bg-gray-100 dark:bg-white/[0.05]"
+                                className="flex h-8 w-8 items-center justify-center rounded-xl bg-gray-100 text-gray-400 transition-colors hover:text-gray-600 disabled:opacity-40 dark:bg-white/[0.05] dark:hover:text-gray-300"
                             >
                                 <X size={15} />
                             </button>
@@ -168,7 +168,7 @@ export default function EditUserModal({
                             />
 
                             {error && (
-                                <p className="text-[11.5px] text-red-500 font-semibold text-center -mt-2">
+                                <p className="text-center text-[11.5px] font-semibold text-red-500 -mt-2">
                                     {error}
                                 </p>
                             )}
@@ -177,10 +177,13 @@ export default function EditUserModal({
                                 type="submit"
                                 disabled={loading}
                                 whileTap={{ scale: 0.97 }}
-                                className="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-bold rounded-full py-3 text-sm transition-colors flex items-center justify-center gap-2"
+                                className="flex items-center justify-center rounded-full bg-blue-600 py-3 text-sm font-bold text-white transition-colors hover:bg-blue-500 disabled:opacity-50"
                             >
-                                {loading && <Loader size={15} className="animate-spin" />}
-                                ذخیره تغییرات
+                                {loading ? (
+                                    <Loader size={18} className="animate-spin" />
+                                ) : (
+                                    "ذخیره تغییرات"
+                                )}
                             </motion.button>
                         </form>
                     </motion.div>

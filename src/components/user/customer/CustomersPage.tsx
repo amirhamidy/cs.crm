@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Users, Plus, Loader2 } from "lucide-react";
+import { Users, Plus, Loader, RefreshCw } from "lucide-react";
 import { useTheme } from "next-themes";
 import CustomerCard from "./CustomerCard";
 import AddCustomerModal from "./AddCustomerModal";
@@ -22,9 +22,7 @@ export default function CustomersPage() {
     const fetchCustomers = useCallback(async () => {
         setLoading(true);
         try {
-            const res = await axiosInstance.get<Customer[]>(
-                "/customers/api/v1/customers/"
-            );
+            const res = await axiosInstance.get<Customer[]>("/customers/api/v1/customers/");
             setCustomers(res.data);
         } catch {
             setCustomers([]);
@@ -47,9 +45,7 @@ export default function CustomersPage() {
     };
 
     const handleEdited = useCallback((updated: Customer) => {
-        setCustomers((prev) =>
-            prev.map((c) => (c.id === updated.id ? updated : c))
-        );
+        setCustomers((prev) => prev.map((c) => (c.id === updated.id ? updated : c)));
         setEditingCustomer(null);
     }, []);
 
@@ -58,93 +54,93 @@ export default function CustomersPage() {
     };
 
     return (
-        <div className="min-h-screen p-4 sm:p-6 font-vazir transition-colors">
-            <motion.div
-                initial={{ opacity: 0, y: -16 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="flex items-center justify-between mb-6"
-            >
-                <div className="flex items-center gap-3">
+        <div className="flex flex-col gap-5 p-3 sm:p-4 md:p-6" dir="rtl">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-start gap-3">
                     <div
-                        className="w-10 h-10 rounded-xl flex items-center justify-center"
+                        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl"
                         style={{
-                            background: isDark
-                                ? "rgba(139,92,246,0.15)"
-                                : "rgba(99,102,241,0.1)",
+                            background: isDark ? "rgba(59,130,246,0.12)" : "rgba(59,130,246,0.08)",
                         }}
                     >
-                        <Users
-                            size={20}
-                            style={{ color: isDark ? "#a78bfa" : "#6366f1" }}
-                        />
+                        <Users size={16} className="text-blue-500" />
                     </div>
-                    <div>
-                        <h1
-                            className="text-[16px] font-extrabold"
-                            style={{ color: isDark ? "#f1f5f9" : "#1e293b" }}
-                        >
+                    <div className="min-w-0">
+                        <h1 className="text-[14px] font-extrabold text-gray-900 dark:text-white">
                             مدیریت مشتریان
                         </h1>
-                        <p
-                            className="text-[12px]"
-                            style={{ color: isDark ? "#475569" : "#94a3b8" }}
-                        >
-                            {customers.length} مشتری ثبت شده
+                        <p className="mt-0.5 text-[11.5px] text-gray-400 dark:text-gray-500">
+                            {loading ? "در حال بارگذاری..." : `${customers.length} مشتری ثبت شده`}
                         </p>
                     </div>
                 </div>
 
-                <motion.button
-                    onClick={() => setShowAdd(true)}
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.97 }}
-                    className="flex items-center gap-2 px-4 py-2 rounded-xl text-[12.5px] font-bold text-white"
-                    style={{
-                        background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
-                        boxShadow: isDark
-                            ? "0 4px 14px rgba(99,102,241,0.3)"
-                            : "0 4px 14px rgba(99,102,241,0.2)",
-                    }}
-                >
-                    <Plus size={14} />
-                    افزودن مشتری
-                </motion.button>
-            </motion.div>
+                <div className="flex items-center gap-2 sm:justify-end">
+                    <button
+                        onClick={fetchCustomers}
+                        disabled={loading}
+                        className="flex h-9 w-9 items-center justify-center rounded-xl text-gray-400 transition-colors hover:text-gray-600 disabled:opacity-40 dark:hover:text-gray-300"
+                        style={{
+                            background: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.04)",
+                        }}
+                        title="بارگذاری مجدد"
+                        type="button"
+                    >
+                        <RefreshCw size={13} className={loading ? "animate-spin" : ""} />
+                    </button>
+
+                    <button
+                        onClick={() => setShowAdd(true)}
+                        className="flex h-9 flex-1 items-center justify-center gap-2 rounded-xl px-3.5 py-2 bg-blue-600 hover:bg-blue-100 hover:text-blue-500 transition-all duration-200 text-[12.5px] font-bold text-white  hover:opacity-90 sm:flex-none"
+                        type="button"
+                    >
+                        <Plus size={13} />
+                        <span className="whitespace-nowrap">افزودن مشتری</span>
+                    </button>
+                </div>
+            </div>
 
             {loading ? (
-                <div className="flex items-center justify-center py-24">
-                    <Loader2
-                        size={26}
-                        className="animate-spin"
-                        style={{ color: isDark ? "#8b5cf6" : "#6366f1" }}
-                    />
+                <div className="flex flex-col items-center justify-center gap-3 py-16">
+                    <Loader size={22} className="animate-spin text-blue-500" />
+                    <p className="text-[12.5px] text-gray-400 dark:text-gray-500">
+                        در حال دریافت لیست مشتریان...
+                    </p>
                 </div>
             ) : (
-                <AnimatePresence>
+                <AnimatePresence mode="wait">
                     {customers.length === 0 ? (
                         <motion.div
                             key="empty"
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            className="text-center py-24 text-[13px]"
-                            style={{ color: isDark ? "#475569" : "#94a3b8" }}
+                            initial={{ opacity: 0, y: 8 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: 8 }}
+                            className="flex flex-col items-center justify-center gap-2 py-16"
                         >
-                            هنوز مشتری‌ای ثبت نشده
+                            <Users size={28} className="text-gray-300 dark:text-gray-700" />
+                            <p className="text-[12.5px] text-gray-400 dark:text-gray-500">
+                                هنوز مشتری‌ای ثبت نشده
+                            </p>
                         </motion.div>
                     ) : (
-                        <div key="grid" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {customers.map((customer, i) => (
-                                <CustomerCard
-                                    key={customer.id}
-                                    customer={customer}
-                                    index={i}
-                                    onDelete={() => handleDelete(customer.id)}
-                                    onEdited={handleEdited}
-                                    onEdit={() => handleOpenEdit(customer)}
-                                />
-                            ))}
-                        </div>
+                        <motion.div
+                            layout
+                            key="grid"
+                            className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+                        >
+                            <AnimatePresence mode="popLayout">
+                                {customers.map((customer, i) => (
+                                    <CustomerCard
+                                        key={customer.id}
+                                        customer={customer}
+                                        index={i}
+                                        onDelete={() => handleDelete(customer.id)}
+                                        onEdited={handleEdited}
+                                        onEdit={() => handleOpenEdit(customer)}
+                                    />
+                                ))}
+                            </AnimatePresence>
+                        </motion.div>
                     )}
                 </AnimatePresence>
             )}

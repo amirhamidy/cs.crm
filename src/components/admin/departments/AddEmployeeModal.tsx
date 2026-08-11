@@ -1,9 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, forwardRef, InputHTMLAttributes } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, User, CheckCircle2, Search, Loader } from "lucide-react";
-import { useTheme } from "next-themes";
 import type { Department, Employee } from "./types";
 
 interface Props {
@@ -16,6 +15,34 @@ interface Props {
     onSubmit: (employeeId: string) => Promise<void>;
 }
 
+interface FloatingInputProps extends InputHTMLAttributes<HTMLInputElement> {
+    label: string;
+    id: string;
+}
+
+const FloatingInput = forwardRef<HTMLInputElement, FloatingInputProps>(
+    ({ label, id, className = "", ...props }, ref) => (
+        <div className="relative">
+            <input
+                ref={ref}
+                id={id}
+                placeholder=" "
+                className={`peer w-full rounded-4xl border border-gray-200 px-5 py-3 text-sm text-black outline-none transition-all duration-200 focus:border-gray-400 dark:border-white/[0.08] dark:bg-white/[0.04] dark:text-white dark:focus:border-blue-500 ${className}`}
+                {...props}
+            />
+
+            <label
+                htmlFor={id}
+                className="pointer-events-none absolute right-5 top-1/2 -translate-y-1/2 rounded bg-white px-1.5 text-sm text-gray-400 transition-all duration-200 peer-focus:top-0 peer-focus:text-xs peer-focus:text-gray-500 peer-[:not(:placeholder-shown)]:top-0 peer-[:not(:placeholder-shown)]:text-xs peer-[:not(:placeholder-shown)]:text-gray-500 dark:bg-[#0f172a]"
+            >
+                {label}
+            </label>
+        </div>
+    )
+);
+
+FloatingInput.displayName = "FloatingInput";
+
 export default function AddEmployeeModal({
     open,
     department,
@@ -25,13 +52,12 @@ export default function AddEmployeeModal({
     onClose,
     onSubmit,
 }: Props) {
-    const { resolvedTheme } = useTheme();
-    const isDark = resolvedTheme === "dark";
-
     const [selectedId, setSelectedId] = useState("");
+    const [search, setSearch] = useState("");
     const [success, setSuccess] = useState(false);
     const [submitting, setSubmitting] = useState(false);
-    const [search, setSearch] = useState("");
+
+    const busy = loading || submitting;
 
     useEffect(() => {
         if (!open) {
@@ -43,30 +69,63 @@ export default function AddEmployeeModal({
 
     useEffect(() => {
         if (!open) return;
-        const onKey = (e: KeyboardEvent) => {
-            if (e.key === "Escape" && !submitting) onClose();
-        };
-        window.addEventListener("keydown", onKey);
-        return () => window.removeEventListener("keydown", onKey);
-    }, [open, onClose, submitting]);
 
-    const handleSubmit = async () => {
+        const handleKeyDown = (event: KeyboardEvent) => {
+            if (event.key === "Escape") {
+                handleClose();
+            }
+        };
+
+        window.addEventListener("keydown", handleKeyDown);
+
+        return () => {
+            window.removeEventListener("keydown", handleKeyDown);
+        };
+    }, [open, busy, success]);
+
+    const handleClose = () => {
+        if (busy || success) return;
+
+        setSelectedId("");
+        setSearch("");
+        onClose();
+    };
+
+    const handleSubmit = async (event?: React.FormEvent) => {
+        event?.preventDefault();
+
         if (!selectedId || submitting) return;
+
         setSubmitting(true);
+
         try {
             await onSubmit(selectedId);
             setSuccess(true);
-            setTimeout(onClose, 1400);
+
+            setTimeout(() => {
+                setSuccess(false);
+                setSelectedId("");
+                setSearch("");
+                onClose();
+            }, 1400);
         } finally {
             setSubmitting(false);
         }
     };
 
-    const assignedIds = new Set(department?.employees.map((e) => String(e.id)) ?? []);
-    const filteredEmployees = (employees ?? []).filter((emp) => {
-        if (assignedIds.has(String(emp.id))) return false;
-        const q = search.toLowerCase();
-        return emp.name.toLowerCase().includes(q) || emp.role.toLowerCase().includes(q);
+    const assignedIds = new Set(
+        department?.employees.map((employee) => String(employee.id)) ?? []
+    );
+
+    const normalizedSearch = search.trim().toLowerCase();
+
+    const filteredEmployees = (employees ?? []).filter((employee) => {
+        if (assignedIds.has(String(employee.id))) return false;
+
+        return (
+            employee.name.toLowerCase().includes(normalizedSearch) ||
+            employee.role.toLowerCase().includes(normalizedSearch)
+        );
     });
 
     return (
@@ -77,117 +136,127 @@ export default function AddEmployeeModal({
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                     className="fixed inset-0 z-50 flex items-center justify-center px-4"
-                    style={{ background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)" }}
-                    onClick={() => !submitting && onClose()}
+                    style={{
+                        background: "rgba(0,0,0,0.45)",
+                        backdropFilter: "blur(3px)",
+                    }}
+                    onClick={handleClose}
                 >
                     <motion.div
-                        initial={{ scale: 0.95, y: 16, opacity: 0 }}
-                        animate={{ scale: 1, y: 0, opacity: 1 }}
-                        exit={{ scale: 0.95, y: 16, opacity: 0 }}
-                        transition={{ duration: 0.2, ease: "easeOut" }}
-                        onClick={(e) => e.stopPropagation()}
-                        className="w-full max-w-[400px] rounded-[2rem] overflow-hidden border"
-                        style={{
-                            background: isDark ? "#0f172a" : "#ffffff",
-                            borderColor: isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.06)",
-                            boxShadow: "0 24px 64px rgba(0,0,0,0.35)",
-                        }}
+                        initial={{ opacity: 0, y: 16 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 16 }}
+                        transition={{ duration: 0.35, ease: "easeOut" }}
+                        className="w-full max-w-sm overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-sm dark:border-white/[0.06] dark:bg-[#0f172a]"
+                        onClick={(event) => event.stopPropagation()}
                         dir="rtl"
                     >
-                        <div
-                            className="flex items-center justify-between px-5 py-4 border-b"
-                            style={{ borderColor: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.06)" }}
-                        >
+                        {/* Header */}
+                        <div className="flex items-center justify-between px-8 pb-6 pt-8">
                             <div className="flex items-center gap-2.5">
-                                <div
-                                    className="w-8 h-8 rounded-xl flex items-center justify-center"
-                                    style={{ background: isDark ? "rgba(99,102,241,0.12)" : "rgba(99,102,241,0.08)" }}
-                                >
-                                    <User size={14} className="text-indigo-500" />
+                                <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-50 dark:bg-blue-500/10">
+                                    <User size={15} className="text-blue-600 dark:text-blue-500" />
                                 </div>
+
                                 <div>
-                                    <h3 className="text-[13.5px] font-extrabold text-gray-900 dark:text-white">افزودن عضو</h3>
-                                    <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-0.5">
-                                        به دپارتمان {department?.name ?? ""}
+                                    <h3 className="text-[14px] font-extrabold text-gray-900 dark:text-white">
+                                        افزودن عضو
+                                    </h3>
+
+                                    <p className="mt-0.5 text-[11px] text-gray-400">
+                                        افزودن عضو به دپارتمان {department?.name ?? ""}
                                     </p>
                                 </div>
                             </div>
+
                             <button
-                                onClick={onClose}
-                                disabled={success || submitting}
-                                className="w-7 h-7 rounded-xl flex items-center justify-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors disabled:opacity-40"
-                                style={{ background: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.04)" }}
                                 type="button"
+                                onClick={handleClose}
+                                disabled={busy || success}
+                                className="flex h-8 w-8 items-center justify-center rounded-xl bg-gray-100 text-gray-400 transition-colors hover:text-gray-600 disabled:opacity-40 dark:bg-white/[0.05] dark:hover:text-gray-300"
                             >
-                                <X size={13} />
+                                <X size={15} />
                             </button>
                         </div>
 
-                        <div className="p-5 space-y-4">
+                        {/* Body */}
+                        <form
+                            onSubmit={handleSubmit}
+                            className="flex flex-col gap-4 px-8 pb-8"
+                        >
                             <div className="relative">
-                                <input
+                                <FloatingInput
+                                    label="جستجوی نام کارمند یا نقش"
                                     id="search_employee"
-                                    placeholder=" "
                                     value={search}
-                                    onChange={(e) => setSearch(e.target.value)}
-                                    className="peer w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm text-black outline-none transition-all duration-200 focus:border-indigo-500 dark:border-white/[0.08] dark:bg-white/[0.04] dark:text-white dark:focus:border-violet-500"
+                                    onChange={(event) => setSearch(event.target.value)}
+                                    disabled={loading || success}
+                                    dir="rtl"
+                                    className="pl-12"
                                 />
-                                <label
-                                    htmlFor="search_employee"
-                                    className={`absolute right-4 pointer-events-none transition-all duration-200 bg-white dark:bg-[#0f172a] px-1 rounded ${
-                                        search.trim()
-                                            ? "top-0 -translate-y-1/2 text-[11px] text-indigo-500 dark:text-violet-400"
-                                            : "top-1/2 -translate-y-1/2 text-sm text-gray-400 peer-focus:top-0 peer-focus:text-[11px] peer-focus:text-indigo-500 dark:peer-focus:text-violet-400"
-                                    }`}
-                                >
-                                    جستجوی نام کارمند یا نقش...
-                                </label>
-                                <Search size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+
+                                <Search
+                                    size={15}
+                                    className="pointer-events-none absolute left-5 top-1/2 -translate-y-1/2 text-gray-400"
+                                />
                             </div>
 
-                            <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                            <div className="max-h-56 space-y-2 overflow-y-auto pr-1">
                                 {loading ? (
                                     <div className="flex items-center justify-center py-8">
-                                        <Loader size={18} className="animate-spin text-indigo-500" />
+                                        <Loader
+                                            size={18}
+                                            className="animate-spin text-blue-600"
+                                        />
                                     </div>
                                 ) : filteredEmployees.length === 0 ? (
-                                    <p className="text-center text-[12.5px] text-gray-400 dark:text-gray-500 py-6">
-                                        {employees.length === 0 ? "کارمندی در سیستم ثبت نشده" : "کارمندی یافت نشد"}
+                                    <p className="py-6 text-center text-[12px] text-gray-400 dark:text-gray-500">
+                                        {employees.length === 0
+                                            ? "کارمندی در سیستم ثبت نشده"
+                                            : "کارمندی یافت نشد"}
                                     </p>
                                 ) : (
-                                    filteredEmployees.map((emp) => {
-                                        const isSelected = selectedId === emp.id;
+                                    filteredEmployees.map((employee) => {
+                                        const employeeId = String(employee.id);
+                                        const isSelected = selectedId === employeeId;
+
                                         return (
                                             <button
-                                                key={emp.id}
+                                                key={employee.id}
                                                 type="button"
-                                                onClick={() => setSelectedId(emp.id)}
-                                                className="w-full rounded-2xl p-3 flex items-center justify-between border transition-all duration-150 text-right"
-                                                style={{
-                                                    borderColor: isSelected ? "#6366f1" : isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.06)",
-                                                    background: isSelected
-                                                        ? isDark ? "rgba(99,102,241,0.12)" : "rgba(99,102,241,0.07)"
-                                                        : isDark ? "rgba(255,255,255,0.02)" : "#fafafa",
-                                                }}
+                                                onClick={() => setSelectedId(employeeId)}
+                                                disabled={submitting || success}
+                                                className={`flex w-full items-center justify-between rounded-2xl border p-3 text-right transition-all duration-200 disabled:opacity-60 ${
+                                                    isSelected
+                                                        ? "border-blue-500 bg-blue-50 dark:bg-blue-500/10"
+                                                        : "border-gray-100 bg-gray-50 hover:border-blue-200 dark:border-white/[0.06] dark:bg-white/[0.025] dark:hover:border-blue-500/30"
+                                                }`}
                                             >
                                                 <div className="flex items-center gap-3">
                                                     <div
-                                                        className="w-9 h-9 rounded-xl flex items-center justify-center text-[13px] font-extrabold flex-shrink-0"
-                                                        style={{
-                                                            background: isSelected
-                                                                ? "linear-gradient(135deg, #6366f1, #8b5cf6)"
-                                                                : isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)",
-                                                            color: isSelected ? "#fff" : isDark ? "#fff" : "#111827",
-                                                        }}
+                                                        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-[13px] font-extrabold ${
+                                                            isSelected
+                                                                ? "bg-blue-600 text-white"
+                                                                : "bg-gray-200 text-gray-600 dark:bg-white/[0.08] dark:text-gray-300"
+                                                        }`}
                                                     >
-                                                        {emp.name.charAt(0)}
+                                                        {employee.name.charAt(0)}
                                                     </div>
+
                                                     <div className="flex flex-col gap-0.5">
-                                                        <p className="text-[13px] font-extrabold text-gray-800 dark:text-gray-100 leading-tight">{emp.name}</p>
-                                                        <p className="text-[11px] text-gray-400 dark:text-gray-500">{emp.role}</p>
+                                                        <p className="text-[13px] font-extrabold leading-tight text-gray-800 dark:text-gray-100">
+                                                            {employee.name}
+                                                        </p>
+
+                                                        <p className="text-[11px] text-gray-400 dark:text-gray-500">
+                                                            {employee.role}
+                                                        </p>
                                                     </div>
                                                 </div>
-                                                {isSelected && <div className="w-2.5 h-2.5 rounded-full bg-indigo-500" />}
+
+                                                {isSelected && (
+                                                    <div className="h-2.5 w-2.5 rounded-full bg-blue-600" />
+                                                )}
                                             </button>
                                         );
                                     })
@@ -195,7 +264,9 @@ export default function AddEmployeeModal({
                             </div>
 
                             {error && (
-                                <p className="text-[11.5px] text-red-500 dark:text-red-400 font-semibold text-center">{error}</p>
+                                <p className="text-center text-[11.5px] font-semibold text-red-500 dark:text-red-400">
+                                    {error}
+                                </p>
                             )}
 
                             <AnimatePresence mode="wait">
@@ -205,29 +276,28 @@ export default function AddEmployeeModal({
                                         initial={{ opacity: 0, scale: 0.9 }}
                                         animate={{ opacity: 1, scale: 1 }}
                                         exit={{ opacity: 0, scale: 0.9 }}
-                                        className="flex items-center justify-center gap-2 py-3 rounded-2xl text-[12.5px] font-bold"
-                                        style={{ background: isDark ? "rgba(34,197,94,0.1)" : "rgba(34,197,94,0.08)", color: isDark ? "#4ade80" : "#16a34a" }}
+                                        className="flex items-center justify-center gap-2 rounded-2xl bg-green-50 py-3 text-sm font-medium text-green-600 dark:bg-green-500/10 dark:text-green-400"
                                     >
-                                        <CheckCircle2 size={15} />
+                                        <CheckCircle2 size={16} />
                                         عضو با موفقیت اضافه شد
                                     </motion.div>
                                 ) : (
                                     <motion.button
                                         key="submit"
-                                        onClick={handleSubmit}
+                                        type="submit"
                                         disabled={!selectedId || submitting}
-                                        className="w-full py-2.5 rounded-2xl text-[12.5px] font-bold text-white flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
-                                        style={{
-                                            background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
-                                            boxShadow: "0 4px 14px rgba(99,102,241,0.3)",
-                                        }}
-                                        type="button"
+                                        whileTap={{ scale: 0.97 }}
+                                        className="flex items-center justify-center rounded-full bg-blue-600 py-3 text-sm font-bold text-white transition-colors hover:bg-blue-500 disabled:opacity-50"
                                     >
-                                        {submitting ? <Loader size={15} className="animate-spin" /> : "افزودن عضو"}
+                                        {submitting ? (
+                                            <Loader size={18} className="animate-spin" />
+                                        ) : (
+                                            "افزودن عضو"
+                                        )}
                                     </motion.button>
                                 )}
                             </AnimatePresence>
-                        </div>
+                        </form>
                     </motion.div>
                 </motion.div>
             )}

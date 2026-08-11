@@ -2,8 +2,6 @@ import {
   Home,
   Users,
   BarChart3,
-  Settings,
-  ShieldCheck,
   ClipboardList,
   FileText,
   Building2,
@@ -20,8 +18,8 @@ export const adminMenuItems: MenuItem[] = [
   { icon: Home, label: "داشبورد", href: "/admin/dashboard" },
   { icon: Users, label: "کاربران", href: "/admin/users" },
   { icon: Building2, label: "دپارتمان‌ها", href: "/admin/departments" },
-  { icon: BarChart3, label: "پروژه کاری", href: "/admin/tasks" },
-  { icon: ShieldCheck, label: "مشتری", href: "/admin/customer" },
+  { icon: ClipboardList, label: "وظایف", href: "/admin/tasks" },
+  { icon: Users, label: "مشتری", href: "/admin/customer" },
 ];
 
 export const userMenuItems: MenuItem[] = [
