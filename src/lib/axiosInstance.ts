@@ -4,12 +4,18 @@ const BASE_URL = "https://api.radcosys.ir";
 
 const axiosInstance = axios.create({
   baseURL: BASE_URL,
-  headers: { "Content-Type": "application/json" },
 });
 
 axiosInstance.interceptors.request.use((config) => {
   const access = localStorage.getItem("crm-access");
   if (access) config.headers.Authorization = `Bearer ${access}`;
+
+  if (config.data instanceof FormData) {
+    delete config.headers["Content-Type"];
+  } else {
+    config.headers["Content-Type"] = "application/json";
+  }
+
   return config;
 });
 

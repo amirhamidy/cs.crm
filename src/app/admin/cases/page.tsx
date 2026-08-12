@@ -1,207 +1,248 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { FolderKanban, Inbox, Loader2, Plus, Search } from "lucide-react";
-import axiosInstance from "@/lib/axiosInstance";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { apiRoutes } from "@/lib/apiRoutes";
-import { Case, CaseStatus } from "@/types/case";
-import { Customer } from "@/types/customer";
-import { Department } from "@/types/department";
-import CaseCard from "@/components/customcomponents/cases/CaseCard";
-import CreateCaseModal from "@/components/customcomponents/cases/CreateCaseModal";
-import EditCaseModal from "@/components/customcomponents/cases/EditCaseModal";
-import { caseStatusLabels } from "@/components/customcomponents/shared/constants";
 
-const getListData = <T,>(data: T[] | { results?: T[] }) => {
-    return Array.isArray(data) ? data : data.results ?? [];
+import {
+    BriefcaseBusiness,
+    Loader2,
+    Plus,
+    RefreshCw,
+    Trash2,
+} from "lucide-react";
+import axiosInstance from "@/lib/axiosInstance";
+import { Customer, Case, Department, Employee } from "./types";
+import {
+    GlassModal,
+    FloatingInput,
+    FloatingTextarea,
+    PrimaryButton,
+} from "@/components/customcomponents/shared/FloatingInput";
+import CaseCard from "@/components/customcomponents/cases/CaseCard";
+
+type CreateCaseState = {
+    title: string;
+    description: string;
+    customer: string;
 };
+
+type ListResponse<T> = T[] | { results?: T[]; data?: T[] };
+
+function extractList<T>(data: ListResponse<T>): T[] {
+    if (Array.isArray(data)) return data;
+    if (data && typeof data === "object") {
+        if (Array.isArray(data.results)) return data.results;
+        if (Array.isArray(data.data)) return data.data;
+    }
+    return [];
+}
 
 export default function AdminCasesPage() {
     const [cases, setCases] = useState<Case[]>([]);
     const [customers, setCustomers] = useState<Customer[]>([]);
     const [departments, setDepartments] = useState<Department[]>([]);
+    const [employees, setEmployees] = useState<Employee[]>([]);
     const [loading, setLoading] = useState(true);
-    const [statusFilter, setStatusFilter] = useState<CaseStatus | "ALL">("ALL");
-    const [search, setSearch] = useState("");
-    const [showCreate, setShowCreate] = useState(false);
-    const [editingCase, setEditingCase] = useState<Case | null>(null);
 
-    const fetchAll = useCallback(async () => {
-        setLoading(true);
+    const [caseModalOpen, setCaseModalOpen] = useState(false);
+    const [caseSubmitting, setCaseSubmitting] = useState(false);
+    const [deletingId, setDeletingId] = useState<number | null>(null);
 
+    const [createCase, setCreateCase] = useState<CreateCaseState>({
+        title: "",
+        description: "",
+        customer: "",
+    });
+
+    const fetchData = useCallback(async () => {
         try {
-            const [
-                casesResponse,
-                customersResponse,
-                departmentsResponse,
-            ] = await Promise.all([
-                axiosInstance.get(apiRoutes.cases),
-                axiosInstance.get(apiRoutes.customers),
-                axiosInstance.get(apiRoutes.departments),
+            setLoading(true);
+            const [casesRes, customersRes, departmentsRes, employeesRes] = await Promise.all([
+                axiosInstance.get<ListResponse<Case>>(apiRoutes.cases),
+                axiosInstance.get<ListResponse<Customer>>(apiRoutes.customers),
+                axiosInstance.get<ListResponse<Department>>(apiRoutes.departments),
+                axiosInstance.get<ListResponse<Employee>>(apiRoutes.departmentEmployees),
             ]);
 
-            setCases(getListData<Case>(casesResponse.data));
-            setCustomers(getListData<Customer>(customersResponse.data));
-            setDepartments(getListData<Department>(departmentsResponse.data));
+            setCases(extractList(casesRes.data));
+            setCustomers(extractList(customersRes.data));
+            setDepartments(extractList(departmentsRes.data));
+            setEmployees(extractList(employeesRes.data));
         } catch (error) {
-            console.error("خطا در دریافت اطلاعات پرونده‌ها:", error);
+            console.error(error);
         } finally {
             setLoading(false);
         }
     }, []);
 
     useEffect(() => {
-        fetchAll();
-    }, [fetchAll]);
+        fetchData();
+    }, [fetchData]);
 
-    const filteredCases = useMemo(() => {
-        const query = search.trim().toLowerCase();
+    const handleCreateCase = async () => {
+        if (!createCase.title.trim() || !createCase.customer) return;
 
-        return cases.filter((caseItem) => {
-            const title = caseItem.title?.toLowerCase() ?? "";
-            const description = caseItem.description?.toLowerCase() ?? "";
-
-            const matchesStatus =
-                statusFilter === "ALL" || caseItem.status === statusFilter;
-
-            const matchesSearch =
-                !query ||
-                title.includes(query) ||
-                description.includes(query);
-
-            return matchesStatus && matchesSearch;
-        });
-    }, [cases, search, statusFilter]);
-
-    const handleDelete = async (caseId: number) => {
         try {
-            await axiosInstance.delete(apiRoutes.deleteCase(caseId));
-            await fetchAll();
+            setCaseSubmitting(true);
+            await axiosInstance.post("/tasks/api/v1/cases/create/", {
+                title: createCase.title.trim(),
+                description: createCase.description.trim(),
+                customer: Number(createCase.customer),
+            });
+            setCreateCase({ title: "", description: "", customer: "" });
+            setCaseModalOpen(false);
+            await fetchData();
         } catch (error) {
-            console.error("خطا در حذف پرونده:", error);
+            console.error(error);
+        } finally {
+            setCaseSubmitting(false);
         }
     };
 
+    const handleDeleteCase = useCallback(
+        async (item: Case) => {
+            const id = Number(item.id);
+            try {
+                setDeletingId(id);
+                await axiosInstance.delete(`/tasks/api/v1/cases/${id}/delete/`);
+                setCases((prev) => prev.filter((c) => c.id !== id));
+            } catch (error) {
+                console.error(error);
+                await fetchData();
+            } finally {
+                setDeletingId(null);
+            }
+        },
+        [fetchData]
+    );
+
     return (
-        <div className="min-h-screen bg-[#0b1220] p-4 text-white sm:p-6">
-            <div className="mx-auto max-w-6xl space-y-6">
-                <div className="flex flex-wrap items-center justify-between gap-4">
-                    <div className="flex items-center gap-3">
-                        <div className="flex h-12 w-12 items-center justify-center rounded-4xl bg-blue-500/15 text-blue-400">
-                            <FolderKanban className="h-6 w-6" />
-                        </div>
-
-                        <div>
-                            <h1 className="text-2xl font-bold sm:text-3xl">
-                                مدیریت پرونده‌ها
-                            </h1>
-
-                            <p className="mt-1 text-sm text-slate-400">
-                                {cases.length} پرونده ثبت شده
-                            </p>
-                        </div>
+        <div className="flex flex-col gap-6 p-4 md:p-6" dir="rtl">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-start gap-3">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-indigo-50 dark:bg-indigo-500/10">
+                        <BriefcaseBusiness size={16} className="text-indigo-500 dark:text-indigo-400" />
                     </div>
-
-                    <button
-                        type="button"
-                        onClick={() => setShowCreate(true)}
-                        className="flex items-center gap-2 rounded-4xl bg-blue-600 px-5 py-3 text-sm font-medium transition-colors hover:bg-blue-500"
-                    >
-                        <Plus className="h-4 w-4" />
-                        پرونده جدید
-                    </button>
-                </div>
-
-                <div className="flex flex-col gap-3 sm:flex-row">
-                    <div className="relative flex-1">
-                        <Search className="absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
-
-                        <input
-                            value={search}
-                            onChange={(event) => setSearch(event.target.value)}
-                            placeholder="جستجوی عنوان یا توضیحات پرونده..."
-                            className="w-full rounded-4xl border border-slate-700 bg-slate-900 py-3 pl-4 pr-11 text-sm text-white outline-none transition-colors placeholder:text-slate-500 focus:border-blue-500"
-                        />
-                    </div>
-
-                    <select
-                        value={statusFilter}
-                        onChange={(event) =>
-                            setStatusFilter(
-                                event.target.value as CaseStatus | "ALL"
-                            )
-                        }
-                        className="rounded-4xl border border-slate-700 bg-slate-900 px-4 py-3 text-sm text-white outline-none transition-colors focus:border-blue-500"
-                    >
-                        <option value="ALL">همه وضعیت‌ها</option>
-
-                        {(Object.keys(caseStatusLabels) as CaseStatus[]).map(
-                            (status) => (
-                                <option key={status} value={status}>
-                                    {caseStatusLabels[status]}
-                                </option>
-                            )
-                        )}
-                    </select>
-                </div>
-
-                {loading ? (
-                    <div className="flex h-64 items-center justify-center">
-                        <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
-                    </div>
-                ) : filteredCases.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center gap-3 rounded-4xl border border-dashed border-slate-700 py-16 text-slate-500">
-                        <Inbox className="h-10 w-10" />
-                        <p className="text-sm">
-                            پرونده‌ای با این مشخصات پیدا نشد
+                    <div className="min-w-0">
+                        <h1 className="text-[14px] font-extrabold text-gray-900 dark:text-white">
+                            پرونده‌ها
+                        </h1>
+                        <p className="mt-0.5 text-[11.5px] text-gray-400 dark:text-gray-500">
+                            {loading ? "در حال بارگذاری..." : `${cases.length} پرونده فعال در سیستم`}
                         </p>
                     </div>
-                ) : (
-                    <div className="grid gap-4 md:grid-cols-2">
-                        {filteredCases.map((caseItem) => (
-                            <CaseCard
-                                key={caseItem.id}
-                                caseItem={caseItem}
-                                customer={customers.find(
-                                    (customer) =>
-                                        customer.id === caseItem.customer
-                                )}
-                                department={departments.find(
-                                    (department) =>
-                                        department.id === caseItem.department
-                                )}
-                                onEdit={() => setEditingCase(caseItem)}
-                                onDelete={() =>
-                                    handleDelete(caseItem.id)
-                                }
-                            />
-                        ))}
-                    </div>
-                )}
+                </div>
+
+                <div className="flex items-center gap-2 sm:justify-end">
+                    <button
+                        onClick={fetchData}
+                        disabled={loading}
+                        className="flex h-9 w-9 items-center justify-center rounded-xl text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 disabled:opacity-40 dark:text-gray-500 dark:hover:bg-white/5 dark:hover:text-gray-300"
+                        title="بارگذاری مجدد"
+                        type="button"
+                    >
+                        <RefreshCw size={13} className={loading ? "animate-spin" : ""} />
+                    </button>
+
+                    <button
+                        onClick={() => setCaseModalOpen(true)}
+                        className="flex h-9 flex-1 items-center justify-center gap-2 rounded-xl bg-blue-600 px-3.5 py-2 text-[12.5px] font-bold text-white transition-all duration-200 hover:bg-blue-100 hover:text-blue-600 dark:bg-blue-500 dark:hover:bg-blue-500/15 dark:hover:text-blue-300 sm:flex-none"
+                        type="button"
+                    >
+                        <Plus size={13} strokeWidth={2.5} />
+                        <span className="whitespace-nowrap">پرونده جدید</span>
+                    </button>
+                </div>
             </div>
 
-            <CreateCaseModal
-                isOpen={showCreate}
-                customers={customers}
-                onClose={() => setShowCreate(false)}
-                onSuccess={async () => {
-                    setShowCreate(false);
-                    await fetchAll();
-                }}
-            />
-
-            {editingCase && (
-                <EditCaseModal
-                    caseItem={editingCase}
-                    customers={customers}
-                    departments={departments}
-                    onClose={() => setEditingCase(null)}
-                    onSuccess={async () => {
-                        setEditingCase(null);
-                        await fetchAll();
-                    }}
-                />
+            {loading ? (
+                <div className="flex flex-col items-center justify-center gap-5 py-20 text-gray-600 dark:text-gray-400">
+                    <Loader2 size={18} className="animate-spin text-indigo-500 dark:text-indigo-400" />
+                    <span className="text-[13px]">در حال بارگذاری پرونده‌ها</span>
+                </div>
+            ) : cases.length === 0 ? (
+                <div className="flex flex-col items-center justify-center gap-3 py-20">
+                    <p className="text-[13px] text-gray-400 dark:text-gray-500">
+                        پرونده‌ای ثبت نشده است
+                    </p>
+                </div>
+            ) : (
+                <motion.div
+                    layout
+                    className="grid grid-cols-1 gap-3 lg:grid-cols-2 xl:grid-cols-3"
+                >
+                    <AnimatePresence mode="popLayout">
+                        {cases.map((item, i) => (
+                            <CaseCard
+                                key={item.id}
+                                item={item}
+                                index={i}
+                                customers={customers}
+                                departments={departments}
+                                users={employees}
+                                isDeleting={deletingId === item.id}
+                                onDelete={() => handleDeleteCase(item)}
+                            />
+                        ))}
+                    </AnimatePresence>
+                </motion.div>
             )}
+
+            <GlassModal
+                isOpen={caseModalOpen}
+                onClose={() => setCaseModalOpen(false)}
+                title="ایجاد پرونده جدید"
+                maxWidth="max-w-2xl"
+            >
+                <div className="space-y-4">
+                    <FloatingInput
+                        id="case-title"
+                        label="عنوان پرونده"
+                        value={createCase.title}
+                        onChange={(e) => setCreateCase((prev) => ({ ...prev, title: e.target.value }))}
+                    />
+                    <FloatingTextarea
+                        id="case-description"
+                        label="توضیحات"
+                        value={createCase.description}
+                        onChange={(e) => setCreateCase((prev) => ({ ...prev, description: e.target.value }))}
+                    />
+
+                    <div className="relative">
+                        <div className="pointer-events-none absolute right-4 top-1/2 z-10 -translate-y-1/2 text-slate-400">
+                            <BriefcaseBusiness size={16} />
+                        </div>
+                        <select
+                            value={createCase.customer}
+                            onChange={(e) => setCreateCase((prev) => ({ ...prev, customer: e.target.value }))}
+                            className="h-14 w-full appearance-none rounded-2xl border border-slate-200 bg-white/70 px-12 pr-12 text-slate-900 outline-none transition focus:border-sky-500/50 focus:bg-white dark:border-white/10 dark:bg-white/5 dark:text-white"
+                        >
+                            <option value="" className="text-black dark:text-black">
+                                انتخاب مشتری
+                            </option>
+                            {customers.map((customer) => (
+                                <option key={customer.id} value={customer.id} className="text-black dark:text-black">
+                                    {customer.name}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+
+                    <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:justify-end">
+                        <PrimaryButton variant="secondary" onClick={() => setCaseModalOpen(false)}>
+                            انصراف
+                        </PrimaryButton>
+                        <PrimaryButton
+                            onClick={handleCreateCase}
+                            loading={caseSubmitting}
+                            disabled={!createCase.title.trim() || !createCase.customer}
+                        >
+                            ثبت پرونده
+                        </PrimaryButton>
+                    </div>
+                </div>
+            </GlassModal>
         </div>
     );
 }

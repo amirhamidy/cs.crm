@@ -1,20 +1,42 @@
 export const apiRoutes = {
-  // لیست‌ها (GET)
-  tasks: "/tasks/api/v1/tasks/",
-  cases: "/tasks/api/v1/cases/",
   customers: "/customers/api/v1/customers/",
+  customer: (id: number) => `/customers/api/v1/customers/${id}/`,
+  createCustomer: "/customers/api/v1/customers/create/",
+  updateCustomer: (id: number) => `/customers/api/v1/customers/${id}/update/`,
+  deleteCustomer: (id: number) => `/customers/api/v1/customers/${id}/delete/`,
+
   departments: "/department/api/v1/department/list/",
-  employees: "/accounts/api/v1/employee/list/",
+  department: (id: number) => `/department/api/v1/department/${id}/`,
+  createDepartment: "/department/api/v1/department/create/",
+  updateDepartment: (id: number) => `/department/api/v1/department/${id}/update/`,
+  deleteDepartment: (id: number) => `/department/api/v1/department/${id}/delete/`,
 
-  // ساخت (POST)
-  createTask: "/tasks/api/v1/tasks/create/",
+  departmentEmployees: "/department/api/v1/department_employee/list/",
+  createDepartmentEmployee: "/department/api/v1/department_employee/create/",
+  updateDepartmentEmployee: (id: number) => `/department/api/v1/department_employee/${id}/update/`,
+  deleteDepartmentEmployee: (id: number) => `/department/api/v1/department_employee/${id}/delete/`,
+
+  departmentSteps: "/department/api/v1/department_step/",
+  departmentStep: (id: number) => `/department/api/v1/department_step/${id}/`,
+  createDepartmentStep: "/department/api/v1/department_step/create/",
+  updateDepartmentStep: (id: number) => `/department/api/v1/department_step/${id}/update/`,
+  deleteDepartmentStep: (id: number) => `/department/api/v1/department_step/${id}/delete/`,
+
+  employees: "/department/api/v1/department_employee/list/",
+
+  cases: "/tasks/api/v1/cases/",
+  case: (id: number) => `/tasks/api/v1/cases/${id}/`,
   createCase: "/tasks/api/v1/cases/create/",
+  updateCase: (id: number) => `/tasks/api/v1/cases/${id}/update/`,
+  deleteCase: (id: number) => `/tasks/api/v1/cases/${id}/delete/`,
 
-  // ویرایش (PATCH/PUT)
-  updateTask: (id: number | string) => `/tasks/api/v1/tasks/${id}/update/`,
-  updateCase: (id: number | string) => `/tasks/api/v1/cases/${id}/update/`,
-
-  // حذف (DELETE)
-  deleteTask: (id: number | string) => `/tasks/api/v1/tasks/${id}/delete/`,
-  deleteCase: (id: number | string) => `/tasks/api/v1/cases/${id}/delete/`,
+  tasks: "/tasks/api/v1/tasks/",
+  task: (id: number) => `/tasks/api/v1/tasks/${id}/`,
+  createTask: "/tasks/api/v1/tasks/create/",
+  updateTask: (id: number) => `/tasks/api/v1/tasks/${id}/update/`,
+  deleteTask: (id: number) => `/tasks/api/v1/tasks/${id}/delete/`,
+  advanceTask: (id: number) => `/tasks/api/v1/tasks/${id}/advance/`,
+  revertTask: (id: number) => `/tasks/api/v1/tasks/${id}/revert/`,
+  taskAttachments: (id: number) => `/tasks/api/v1/tasks/${id}/attachments/`,
+  taskLogs: (id: number) => `/tasks/api/v1/tasks/${id}/logs/`,
 };

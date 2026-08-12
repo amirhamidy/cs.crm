@@ -5,6 +5,7 @@ import {
   ClipboardList,
   FileText,
   Building2,
+  File,
 } from "lucide-react";
 import { LucideIcon } from "lucide-react";
 
@@ -18,6 +19,7 @@ export const adminMenuItems: MenuItem[] = [
   { icon: Home, label: "داشبورد", href: "/admin/dashboard" },
   { icon: Users, label: "کاربران", href: "/admin/users" },
   { icon: Building2, label: "دپارتمان‌ها", href: "/admin/departments" },
+  { icon: File, label: "پرونده ها", href: "/admin/cases" },
   { icon: ClipboardList, label: "وظایف", href: "/admin/tasks" },
   { icon: Users, label: "مشتری", href: "/admin/customer" },
 ];
