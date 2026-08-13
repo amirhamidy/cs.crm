@@ -507,13 +507,6 @@ export default function CustomerEditModal({
                                         />
                                     </div>
 
-                                    <FloatingTextarea
-                                        label="توضیحات تکمیلی"
-                                        id="edit_description"
-                                        value={form.description}
-                                        onChange={setField("description")}
-                                    />
-
                                     <NiceSelect
                                         label="وضعیت مشتری"
                                         options={STATUS_OPTIONS}

@@ -29,7 +29,6 @@ interface Customer {
 interface Case {
     id: number;
     title: string;
-    description: string;
     customer: number;
 }
 
@@ -121,38 +120,7 @@ function FloatingInput({
     );
 }
 
-function FloatingTextarea({
-    label,
-    id,
-    value,
-    onChange,
-    rows = 3,
-}: {
-    label: string;
-    id: string;
-    value: string;
-    onChange: (v: string) => void;
-    rows?: number;
-}) {
-    return (
-        <div className="relative">
-            <textarea
-                id={id}
-                rows={rows}
-                placeholder=" "
-                value={value}
-                onChange={(e) => onChange(e.target.value)}
-                className="peer w-full resize-none rounded-2xl bg-gray-50 dark:bg-white/[0.03] border border-gray-100 dark:border-white/[0.06] px-4 pt-6 pb-3 text-[12.5px] font-bold leading-6 text-gray-900 dark:text-white outline-none transition-colors focus:border-blue-500 dark:focus:border-blue-500/50"
-            />
-            <label
-                htmlFor={id}
-                className="pointer-events-none absolute right-4 top-4 text-[12px] font-semibold text-gray-400 transition-all duration-200 peer-focus:top-2 peer-focus:text-[10px] peer-focus:text-blue-500 peer-[:not(:placeholder-shown)]:top-2 peer-[:not(:placeholder-shown)]:text-[10px]"
-            >
-                {label}
-            </label>
-        </div>
-    );
-}
+
 
 function NiceSelect({
     label,
@@ -424,7 +392,6 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess }: Props) {
     const [selectedEmployees, setSelectedEmployees] = useState<number[]>([]);
 
     const [title, setTitle] = useState("");
-    const [description, setDescription] = useState("");
     const [files, setFiles] = useState<File[]>([]);
 
     const [loadingCustomers, setLoadingCustomers] = useState(false);
@@ -496,7 +463,6 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess }: Props) {
 
     const canSubmit =
         title.trim().length > 0 &&
-        description.trim().length > 0 &&
         selectedCase !== null &&
         selectedDepartment !== null &&
         selectedEmployees.length > 0 &&
@@ -509,7 +475,6 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess }: Props) {
         setSelectedDepartment(null);
         setSelectedEmployees([]);
         setTitle("");
-        setDescription("");
         setFiles([]);
         setSubmitError("");
         setCustomerQuery("");
@@ -541,7 +506,6 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess }: Props) {
         try {
             const formData = new FormData();
             formData.append("title", title);
-            formData.append("description", description);
             formData.append("case", String(selectedCase));
             formData.append("department", String(selectedDepartment));
             selectedEmployees.forEach((id) => {
@@ -719,7 +683,6 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess }: Props) {
                                                 index={i}
                                                 seed={c.id + 3}
                                                 title={c.title}
-                                                subtitle={c.description}
                                                 active={selectedCase === c.id}
                                                 onClick={() => setSelectedCase(c.id)}
                                             />
@@ -766,17 +729,6 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess }: Props) {
                                         value={title}
                                         onChange={(v) => {
                                             setTitle(v);
-                                            setSubmitError("");
-                                        }}
-                                    />
-
-                                    <FloatingTextarea
-                                        id="task_description"
-                                        label="توضیحات"
-                                        rows={3}
-                                        value={description}
-                                        onChange={(v) => {
-                                            setDescription(v);
                                             setSubmitError("");
                                         }}
                                     />

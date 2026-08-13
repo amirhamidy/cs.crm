@@ -59,3 +59,42 @@ export interface DepartmentEmployeeAPIItem {
   created_at: string;
   updated_at: string;
 }
+
+export interface Task {
+    id: string | number;
+    title?: string;
+    name?: string;
+    description?: string;
+    status?: string;
+    priority?: string;
+    department?: string | number | { id: string | number };
+    current_step?: string | number | { id: string | number };
+    due_date?: string;
+    created_at?: string;
+    [key: string]: unknown;
+}
+
+export interface Stage {
+    id: string | number;
+    name: string;
+    description?: string;
+    order?: number;
+    color?: string;
+}
+
+export interface Employee {
+    id: string | number;
+    name: string;
+    role?: string;
+    email?: string;
+    avatar?: string;
+}
+
+export interface Department {
+    id: string | number;
+    name: string;
+    accent?: string;
+    createdAt?: string;
+    stages: Stage[];
+    employees: Employee[];
+}

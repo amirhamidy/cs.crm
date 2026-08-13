@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Building2, ClipboardList, ClipboardListIcon, Loader, Plus, RefreshCw, Search } from "lucide-react";
+import { ClipboardList, Loader, Plus, RefreshCw, Search } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
 import { apiRoutes } from "@/lib/apiRoutes";
 import { Task, TaskStatus } from "@/types/task";
@@ -90,8 +90,10 @@ export default function AdminTasksPage() {
             try {
                 await axiosInstance.delete(apiRoutes.deleteTask(taskId));
                 setTasks((prev) => prev.filter((t) => t.id !== taskId));
+                return true;
             } catch {
                 await fetchAll();
+                throw new Error("delete failed");
             }
         },
         [fetchAll]
@@ -112,33 +114,35 @@ export default function AdminTasksPage() {
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-start gap-3">
                     <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-indigo-50 dark:bg-indigo-500/10">
-                        <ClipboardListIcon size={16} className="text-indigo-500 dark:text-indigo-400" />
+                        <ClipboardList size={16} className="text-indigo-500 dark:text-indigo-400" />
                     </div>
                     <div className="min-w-0">
                         <h1 className="text-[14px] font-extrabold text-gray-900 dark:text-white">
                             وظایف
                         </h1>
                         <p className="mt-0.5 text-[11.5px] text-gray-400 dark:text-gray-500">
-                            {loading ? "در حال بارگذاری..." : `${departments.length} دپارتمان فعال در سیستم`}
+                            {loading
+                                ? "در حال بارگذاری..."
+                                : `${departments.length} دپارتمان فعال در سیستم`}
                         </p>
                     </div>
                 </div>
 
                 <div className="flex items-center gap-2 sm:justify-end">
                     <button
+                        type="button"
                         onClick={fetchAll}
                         disabled={loading}
                         className="flex h-9 w-9 items-center justify-center rounded-xl text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 disabled:opacity-40 dark:text-gray-500 dark:hover:bg-white/5 dark:hover:text-gray-300"
                         title="بارگذاری مجدد"
-                        type="button"
                     >
                         <RefreshCw size={13} className={loading ? "animate-spin" : ""} />
                     </button>
 
                     <button
+                        type="button"
                         onClick={() => setShowCreate(true)}
                         className="flex h-9 flex-1 items-center justify-center gap-2 rounded-xl bg-blue-600 px-3.5 py-2 text-[12.5px] font-bold text-white transition-all duration-200 hover:bg-blue-100 hover:text-blue-600 dark:bg-blue-500 dark:hover:bg-blue-500/15 dark:hover:text-blue-300 sm:flex-none"
-                        type="button"
                     >
                         <Plus size={13} strokeWidth={2.5} />
                         <span className="whitespace-nowrap">افزودن وظیفه</span>
@@ -148,9 +152,9 @@ export default function AdminTasksPage() {
 
             {loading ? (
                 <div className="flex flex-col items-center justify-center gap-3 py-16">
-                    <Loader size={22} className="text-indigo-500 animate-spin" />
-                    <p className="text-[12.5px] !text-gray-400 dark:!text-gray-500">
-                        در حال دریافت لیست  وظایف...
+                    <Loader size={22} className="animate-spin text-indigo-500" />
+                    <p className="text-[12.5px] text-gray-400 dark:text-gray-500">
+                        در حال دریافت لیست وظایف...
                     </p>
                 </div>
             ) : filteredTasks.length === 0 ? (
@@ -160,18 +164,16 @@ export default function AdminTasksPage() {
                     </p>
                 </div>
             ) : (
-                <motion.div
-                    layout
-                    className="grid grid-cols-1 gap-3 lg:grid-cols-2 xl:grid-cols-3"
-                >
+                <motion.div layout className="grid grid-cols-1 gap-3 lg:grid-cols-2 xl:grid-cols-3">
                     <AnimatePresence mode="popLayout">
                         {filteredTasks.map((task, i) => (
                             <TaskCard
                                 key={task.id}
                                 task={task}
                                 index={i}
-                                onEdit={() => setEditingTask(task)}
-                                onDelete={() => handleDelete(task.id)}
+                                employees={employees}
+                                onEdit={(t) => setEditingTask(t)}
+                                onDelete={handleDelete}
                             />
                         ))}
                     </AnimatePresence>

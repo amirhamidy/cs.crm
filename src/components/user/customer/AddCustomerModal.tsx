@@ -450,13 +450,6 @@ export default function AddCustomerModal({
                                 />
                             </div>
 
-                            <FloatingTextarea
-                                label="توضیحات تکمیلی"
-                                id="description"
-                                value={form.description}
-                                onChange={handleFieldChange("description")}
-                            />
-
                             <NiceSelect
                                 label="وضعیت مشتری"
                                 options={STATUS_OPTIONS}

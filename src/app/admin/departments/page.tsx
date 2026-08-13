@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, forwardRef, InputHTMLAttributes } from "react";
+import { useEffect, useMemo, useRef, useState, forwardRef, InputHTMLAttributes, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
     Plus,
@@ -19,8 +19,9 @@ import { Pagination } from "swiper/modules";
 import type { Swiper as SwiperType } from "swiper";
 import "swiper/css";
 import "swiper/css/pagination";
+import axiosInstance from "@/lib/axiosInstance";
 import { useDepartmentStore } from "@/components/admin/departments/departmentStore";
-import { Department, Stage, Employee } from "@/components/admin/departments/types";
+import { Department, Stage, Employee, Task } from "@/components/admin/departments/types";
 import DepartmentCard from "@/components/admin/departments/DepartmentCard";
 import StagesPanel from "@/components/admin/departments/StagesPanel";
 import EmployeesPanel from "@/components/admin/departments/EmployeesPanel";
@@ -61,6 +62,19 @@ const FloatingInput = forwardRef<HTMLInputElement, FloatingInputProps>(
 );
 FloatingInput.displayName = "FloatingInput";
 
+const getRelationId = (
+    value: string | number | { id: string | number } | null | undefined
+) => {
+    if (value === null || value === undefined) return null;
+    if (typeof value === "object") {
+        return value.id === null || value.id === undefined ? null : String(value.id);
+    }
+    return String(value);
+};
+
+
+const TASKS_API = "/tasks/api/v1/tasks/";
+
 export default function DepartmentsPage() {
     const {
         departments,
@@ -85,6 +99,10 @@ export default function DepartmentsPage() {
     const [addStageOpen, setAddStageOpen] = useState(false);
     const [addEmployeeOpen, setAddEmployeeOpen] = useState(false);
 
+    const [tasks, setTasks] = useState<Task[]>([]);
+    const [tasksLoading, setTasksLoading] = useState(false);
+    const [tasksError, setTasksError] = useState<string | null>(null);
+
     const [editDept, setEditDept] = useState<Department | null>(null);
     const [editName, setEditName] = useState("");
     const [editLoading, setEditLoading] = useState(false);
@@ -93,6 +111,27 @@ export default function DepartmentsPage() {
 
     const [isDark, setIsDark] = useState(false);
     const [mobileSwiper, setMobileSwiper] = useState<SwiperType | null>(null);
+
+    const fetchTasks = useCallback(async () => {
+        setTasksLoading(true);
+        setTasksError(null);
+
+        try {
+            const res = await axiosInstance.get(TASKS_API);
+            const data = res.data;
+            const normalized = Array.isArray(data)
+                ? data
+                : Array.isArray(data?.results)
+                    ? data.results
+                    : [];
+            setTasks(normalized);
+        } catch (err: any) {
+            setTasksError(err?.response?.data?.detail || err?.message || "خطا در دریافت وظایف");
+            setTasks([]);
+        } finally {
+            setTasksLoading(false);
+        }
+    }, []);
 
     useEffect(() => {
         const mq = window.matchMedia("(prefers-color-scheme: dark)");
@@ -104,7 +143,8 @@ export default function DepartmentsPage() {
 
     useEffect(() => {
         fetchAll();
-    }, [fetchAll]);
+        fetchTasks();
+    }, [fetchAll, fetchTasks]);
 
     useEffect(() => {
         if (!selectedId && departments.length > 0) setSelectedId(departments[0].id);
@@ -130,6 +170,19 @@ export default function DepartmentsPage() {
         () => departments.find((d) => d.id === selectedId) ?? null,
         [departments, selectedId]
     );
+
+    const departmentTasks = useMemo(() => {
+        if (!selectedDept) return [];
+
+        const stageIds = new Set(
+            selectedDept.stages.map((stage) => String(stage.id))
+        );
+
+        return tasks.filter((task) => {
+            const currentStepId = getRelationId(task.current_step);
+            return currentStepId !== null && stageIds.has(currentStepId);
+        });
+    }, [tasks, selectedDept]);
 
     const handleAddDepartment = async (data: { name: string }) => {
         const newDept = await addDepartment(data.name);
@@ -450,8 +503,11 @@ export default function DepartmentsPage() {
 
                     <div className="flex items-center gap-2 sm:justify-end">
                         <button
-                            onClick={fetchAll}
-                            disabled={loading}
+                            onClick={() => {
+                                fetchAll();
+                                fetchTasks();
+                            }}
+                            disabled={loading || tasksLoading}
                             className="flex h-9 w-9 items-center justify-center rounded-xl text-gray-400 transition-colors hover:text-gray-600 disabled:opacity-40 dark:hover:text-gray-300"
                             style={{
                                 background: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.04)",
@@ -459,7 +515,7 @@ export default function DepartmentsPage() {
                             title="بارگذاری مجدد"
                             type="button"
                         >
-                            <RefreshCw size={13} className={loading ? "animate-spin" : ""} />
+                            <RefreshCw size={13} className={loading || tasksLoading ? "animate-spin" : ""} />
                         </button>
 
                         <button
@@ -473,7 +529,7 @@ export default function DepartmentsPage() {
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+                <div className="grid grid-cols-1 gap-6 lg:grid-cols-4">
                     <div className="lg:col-span-1">
                         {departments.length === 0 ? (
                             <div className="flex flex-col items-center justify-center py-16 sm:py-20 gap-3 rounded-2xl border border-dashed border-gray-200 dark:border-white/[0.06] bg-white/50 dark:bg-white/[0.02]">
@@ -551,7 +607,7 @@ export default function DepartmentsPage() {
                         )}
                     </div>
 
-                    <div className="space-y-5 lg:col-span-2">
+                    <div className="space-y-5 lg:col-span-3">
                         {!selectedDept ? (
                             <div className="flex flex-col items-center justify-center py-16 sm:py-20 gap-3 rounded-2xl border border-dashed border-gray-200 dark:border-white/[0.06] bg-white/50 dark:bg-white/[0.02]">
                                 <Building2 size={32} className="text-gray-300 dark:text-gray-600" />
@@ -605,6 +661,8 @@ export default function DepartmentsPage() {
 
                                 <StagesPanel
                                     department={selectedDept}
+                                    tasks={departmentTasks}
+                                    tasksLoading={tasksLoading}
                                     onAddStage={() => setAddStageOpen(true)}
                                     onEditStage={handleEditStage}
                                     onDeleteStage={(stage) =>
@@ -616,6 +674,7 @@ export default function DepartmentsPage() {
                                     }
                                     onReorder={handleReorderStages}
                                 />
+
 
                                 <EmployeesPanel
                                     department={selectedDept}

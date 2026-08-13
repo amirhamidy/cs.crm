@@ -2,172 +2,162 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Plus, Trash2, GitBranch, Pencil } from "lucide-react";
-import { Stage, Department } from "./types";
+import { Plus, Trash2, GripVertical, Loader, Pencil } from "lucide-react";
+import { Swiper, SwiperSlide } from "swiper/react";
+import { FreeMode } from "swiper/modules";
+import "swiper/css";
+import "swiper/css/free-mode";
+import type { Department, Stage, Task } from "@/components/admin/departments/types";
+import TaskCard from "@/components/admin/departments/TaskCard";
 import EditStageModal from "./EditStageModal";
 
-interface Props {
+interface StagesPanelProps {
     department: Department;
-    onAddStage: () => void;
-    onDeleteStage: (stage: Stage) => void;
-    onReorder: (stages: Stage[]) => void;
-    onEditStage?: (stage: Stage, values: { name: string; number: number }) => void;
+    tasks: Task[];
+    tasksLoading?: boolean;
+    onAddStage?: () => void;
+    onEditStage?: (stage: Stage, values: { name: string; description?: string; order: number }) => void;
+    onDeleteStage?: (stage: Stage) => void;
 }
 
-const getStageNumber = (stage: Stage, index: number) => {
-    const n = (stage as Stage & { number?: number }).number;
-    return typeof n === "number" ? n : index + 1;
+const getRelationId = (value: string | number | { id: string | number } | null | undefined) => {
+    if (value === null || value === undefined) return null;
+    if (typeof value === "object") {
+        return value.id === null || value.id === undefined ? null : String(value.id);
+    }
+    return String(value);
 };
 
 export default function StagesPanel({
     department,
+    tasks,
+    tasksLoading = false,
     onAddStage,
-    onDeleteStage,
-    onReorder,
     onEditStage,
-}: Props) {
-    const accent = department.accent;
+    onDeleteStage,
+}: StagesPanelProps) {
     const [editingStage, setEditingStage] = useState<Stage | null>(null);
 
     return (
-        <div
-            className="rounded-2xl border p-5 bg-white/50 dark:bg-white/[0.02]"
-            style={{
-                borderColor: `${accent}22`,
-                boxShadow: `0 0 0 1px ${accent}11`,
-            }}
-        >
-            <div className="flex items-center justify-between mb-4">
+        <div className="flex flex-col gap-4 overflow-hidden">
+            <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                    <GitBranch size={16} style={{ color: accent }} />
-                    <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
-                        مراحل
+                    <h3 className="text-[13.5px] font-extrabold text-gray-900 dark:text-white">
+                        مراحل دپارتمان
                     </h3>
-                    <span
-                        className="text-[10px] font-medium px-2 py-0.5 rounded-full"
-                        style={{
-                            backgroundColor: `${accent}18`,
-                            color: accent,
-                            border: `1px solid ${accent}35`,
-                        }}
-                    >
+                    <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[10.5px] font-bold text-gray-500 dark:bg-white/[0.06] dark:text-gray-400">
                         {department.stages.length}
                     </span>
                 </div>
 
-                <button
-                    onClick={onAddStage}
-                    className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-xl font-medium active:scale-95 transition-transform"
-                    style={{
-                        backgroundColor: `${accent}18`,
-                        color: accent,
-                        border: `1px solid ${accent}30`,
-                    }}
-                >
-                    <Plus size={13} />
-                    افزودن مرحله
-                </button>
+                {onAddStage && (
+                    <button
+                        type="button"
+                        onClick={onAddStage}
+                        className="flex items-center gap-1.5 rounded-xl bg-indigo-50 px-3 py-1.5 text-[11.5px] font-bold text-indigo-600 transition hover:bg-indigo-100 dark:bg-indigo-500/10 dark:text-indigo-400 dark:hover:bg-indigo-500/20"
+                    >
+                        <Plus size={13} />
+                        افزودن مرحله
+                    </button>
+                )}
             </div>
 
             {department.stages.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-8 text-gray-400">
-                    <GitBranch size={32} className="mb-2 opacity-30" />
-                    <p className="text-sm">هنوز مرحله‌ای تعریف نشده</p>
+                <div className="flex flex-col items-center justify-center gap-2 rounded-[1.5rem] border border-dashed border-gray-200 py-10 dark:border-white/[0.07]">
+                    <p className="text-[12px] text-gray-400">مرحله‌ای تعریف نشده است</p>
                 </div>
             ) : (
-                <div className="flex flex-wrap gap-2">
-                    {department.stages.map((stage, index) => (
-                        <motion.div key={stage.id ?? `stage-${index}`}
-                            layout
-                            initial={{ opacity: 0, scale: 0.92 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.92 }}
-                            transition={{ duration: 0.2, ease: [0.23, 1, 0.32, 1] }}
-                            className="group relative h-[92px] w-[calc(50%-0.25rem)] xl:w-[calc(33.333%-0.334rem)] overflow-hidden rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50/50 dark:bg-white/[0.02] select-none"
-                        >
-                            <svg
-                                className="absolute inset-0 w-full h-full pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-500"
-                                style={{ borderRadius: "0.75rem" }}
-                            >
-                                <defs>
-                                    <linearGradient
-                                        id={`stage-border-${stage.id}`}
-                                        x1="100%"
-                                        y1="100%"
-                                        x2="0%"
-                                        y2="0%"
-                                    >
-                                        <stop offset="0%" stopColor={accent} />
-                                        <stop offset="100%" stopColor={accent} stopOpacity="0.4" />
-                                    </linearGradient>
-                                </defs>
-                                <rect
-                                    x="1"
-                                    y="1"
-                                    width="calc(100% - 2px)"
-                                    height="calc(100% - 2px)"
-                                    rx="11"
-                                    ry="11"
-                                    fill="none"
-                                    stroke={`url(#stage-border-${stage.id})`}
-                                    strokeWidth="1.5"
-                                />
-                            </svg>
+                <Swiper modules={[FreeMode]} freeMode slidesPerView="auto" spaceBetween={12} className="!overflow-visible w-full">
+                    {department.stages.map((stage, index) => {
+                        const stageTasks = tasks.filter(
+                            (task) => getRelationId(task.current_step) === String(stage.id)
+                        );
 
-                            <div className="relative z-10 flex items-center gap-2 px-3 pt-3 pb-8">
-                                <div
-                                    className="w-6 h-6 rounded-md flex items-center justify-center text-[10px] font-bold text-white shrink-0"
-                                    style={{ backgroundColor: stage.color }}
+                        return (
+                            <SwiperSlide key={stage.id} className="!w-[300px] shrink-0">
+                                <motion.div
+                                    initial={{ opacity: 0, y: 8 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    className="flex flex-col rounded-[1.7rem] border border-gray-200/60 bg-white/60 dark:border-white/[0.06] dark:bg-white/[0.02]"
                                 >
-                                    {getStageNumber(stage, index)}
-                                </div>
+                                    <div className="flex items-center justify-between gap-2 px-4 pt-4 pb-3">
+                                        <div className="flex min-w-0 items-center gap-2">
+                                            <GripVertical size={15} className="shrink-0 text-gray-300 dark:text-gray-600" />
+                                            <span
+                                                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-[11px] font-extrabold"
+                                                style={{
+                                                    backgroundColor: `${stage.color || "#6366f1"}1a`,
+                                                    color: stage.color || "#6366f1",
+                                                }}
+                                            >
+                                                {index + 1}
+                                            </span>
+                                            <h4 className="truncate text-[12.5px] font-bold text-gray-800 dark:text-gray-100">
+                                                {stage.name}
+                                            </h4>
+                                        </div>
 
-                                <p className="flex-1 min-w-0 text-sm font-medium text-gray-800 dark:text-white truncate">
-                                    {stage.name}
-                                </p>
+                                        <div className="flex shrink-0 items-center gap-1">
+                                            {onEditStage && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setEditingStage(stage)}
+                                                    className="p-1.5 rounded-lg text-gray-400 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 transition"
+                                                >
+                                                    <Pencil size={13} />
+                                                </button>
+                                            )}
+                                            {onDeleteStage && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => onDeleteStage(stage)}
+                                                    className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition"
+                                                >
+                                                    <Trash2 size={13} />
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
 
-                                <div
-                                    className="w-2 h-2 rounded-full shrink-0"
-                                    style={{ backgroundColor: stage.color }}
-                                />
-                            </div>
-
-                            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1.5 opacity-0 translate-y-1.5 pointer-events-none group-hover:opacity-100 group-hover:translate-y-0 group-hover:pointer-events-auto transition duration-150">
-                                <button
-                                    onClick={() => setEditingStage(stage)}
-                                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-bold active:scale-95 transition-transform"
-                                    style={{
-                                        backgroundColor: `${accent}18`,
-                                        color: accent,
-                                        border: `1px solid ${accent}30`,
-                                    }}
-                                >
-                                    ویرایش
-                                    <Pencil size={11} />
-                                </button>
-
-                                <button
-                                    onClick={() => onDeleteStage(stage)}
-                                    className="w-7 h-7 rounded-xl flex items-center justify-center text-red-400 bg-red-500/10 active:scale-95 transition-transform"
-                                >
-                                    <Trash2 size={12} />
-                                </button>
-                            </div>
-                        </motion.div>
-                    ))}
-                </div>
+                                    <div className="h-px bg-gray-100 dark:bg-white/[0.05]" />
+                                    <StageTaskList tasks={stageTasks} loading={tasksLoading} />
+                                </motion.div>
+                            </SwiperSlide>
+                        );
+                    })}
+                </Swiper>
             )}
 
             <EditStageModal
                 open={!!editingStage}
                 stage={editingStage}
-                accent={accent}
+                accent={department.accent}
                 onClose={() => setEditingStage(null)}
                 onSubmit={(values) => {
-                    if (editingStage) onEditStage?.(editingStage, values);
+                    if (editingStage && onEditStage) {
+                        onEditStage(editingStage, {
+                            name: values.name,
+                            description: values.description,
+                            order: values.order || 0
+                        });
+                    }
                     setEditingStage(null);
                 }}
             />
+        </div>
+    );
+}
+
+function StageTaskList({ tasks, loading }: { tasks: Task[]; loading: boolean }) {
+    if (loading) {
+        return <div className="flex h-40 items-center justify-center"><Loader size={18} className="animate-spin text-indigo-500" /></div>;
+    }
+    if (tasks.length === 0) {
+        return <div className="flex h-40 items-center justify-center"><p className="text-[11.5px] text-gray-400">وظیفه‌ای وجود ندارد</p></div>;
+    }
+    return (
+        <div className="flex flex-col gap-2.5 overflow-y-auto p-3 max-h-[420px] scrollbar-thin">
+            {tasks.map((task) => <TaskCard key={task.id} task={task} />)}
         </div>
     );
 }

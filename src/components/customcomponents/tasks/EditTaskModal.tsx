@@ -371,7 +371,6 @@ export default function EditTaskModal({
     onSuccess,
 }: EditTaskModalProps) {
     const [title, setTitle] = useState("");
-    const [description, setDescription] = useState("");
     const [selectedCase, setSelectedCase] = useState<number | null>(null);
     const [selectedDepartment, setSelectedDepartment] = useState<number | null>(null);
     const [selectedEmployees, setSelectedEmployees] = useState<number[]>([]);
@@ -513,7 +512,6 @@ export default function EditTaskModal({
         setIsInitializing(true);
 
         setTitle(task.title ?? "");
-        setDescription(task.description ?? "");
 
         const caseId = task.case && typeof task.case === "object"
             ? task.case.id
@@ -608,7 +606,6 @@ export default function EditTaskModal({
 
     const canSubmit =
         title.trim().length > 0 &&
-        description.trim().length > 0 &&
         selectedCase !== null &&
         selectedDepartment !== null &&
         selectedEmployees.length > 0 &&
@@ -640,7 +637,6 @@ export default function EditTaskModal({
         try {
             const payload: any = {
                 title: title.trim(),
-                description: description.trim(),
                 case: selectedCase,
                 department: selectedDepartment,
                 assigned_employee: selectedEmployees,
@@ -794,17 +790,6 @@ export default function EditTaskModal({
                                 value={title}
                                 onChange={(v) => {
                                     setTitle(v);
-                                    setSubmitError("");
-                                }}
-                            />
-
-                            <FloatingTextarea
-                                id="edit_task_description"
-                                label="توضیحات"
-                                rows={3}
-                                value={description}
-                                onChange={(v) => {
-                                    setDescription(v);
                                     setSubmitError("");
                                 }}
                             />

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
     Building2,
@@ -14,11 +14,13 @@ import {
     X,
 } from "lucide-react";
 import { useTheme } from "next-themes";
-import type { TaskItem, TaskStatus } from "@/types/task";
+import type { Task, TaskStatus } from "@/types/task";
+import type { Employee } from "@/types/employee";
 import {
     taskStatusColors,
     taskStatusLabels,
 } from "@/components/customcomponents/shared/constants";
+import { useEmployeeInfo } from "@/hooks/useEmployeeInfo";
 
 const AVATAR_GRADIENTS = [
     ["#6366f1", "#8b5cf6"],
@@ -33,44 +35,28 @@ const AVATAR_GRADIENTS = [
     ["#ef4444", "#f59e0b"],
 ];
 
+type EmployeeLike = {
+    id: number;
+    full_name?: string | null;
+    username?: string | null;
+    position?: string | null;
+};
+
 interface TaskCardProps {
-    task: TaskItem;
+    task: Task;
     index?: number;
-    onEdit?: (task: TaskItem) => void;
-    onDelete?: (taskId: number) => void;
-    deleting?: boolean;
+    employees?: Employee[];
+    onEdit?: (task: Task) => void;
+    onDelete?: (taskId: number) => Promise<void> | void;
 }
 
-const getEmployeeInfo = (task: TaskItem) => {
-    const employees = task.assigned_employee;
-    if (!employees) return [];
-
-    const employeeArray = Array.isArray(employees) ? employees : [employees];
-
-    return employeeArray
-        .map((emp) => {
-            if (typeof emp === "object" && emp !== null) {
-                return {
-                    id: emp.id,
-                    name: emp.full_name || emp.username || null,
-                    position: emp.position || null,
-                };
-            }
-            return null;
-        })
-        .filter(
-            (emp): emp is { id: number; name: string; position: string | null } =>
-                emp !== null && emp.name !== null
-        );
-};
-
-const getDepartmentName = (task: TaskItem) => {
-    const d = task.department;
-    if (d && typeof d === "object") return d.name || null;
+function getDepartmentName(task: Task) {
+    const department = task.department;
+    if (department && typeof department === "object") return department.name || null;
     return null;
-};
+}
 
-const formatDate = (date?: string) => {
+function formatDate(date?: string) {
     if (!date) return null;
     try {
         return new Date(date).toLocaleDateString("fa-IR", {
@@ -81,31 +67,139 @@ const formatDate = (date?: string) => {
     } catch {
         return null;
     }
-};
+}
 
-const getEmployeeGradient = (id: number) => {
+function getEmployeeGradient(id: number) {
     return AVATAR_GRADIENTS[Math.abs(id) % AVATAR_GRADIENTS.length];
-};
+}
+
+function getLocalEmployee(taskEmployee: unknown, employees: Employee[] = []) {
+    if (typeof taskEmployee !== "number") return null;
+    return employees.find((emp) => emp.id === taskEmployee) ?? null;
+}
+
+function normalizeEmployee(emp: unknown): EmployeeLike | null {
+    if (!emp) return null;
+
+    if (typeof emp === "object" && emp !== null) {
+        const e = emp as EmployeeLike;
+        if (typeof e.id === "number") {
+            return {
+                id: e.id,
+                full_name: e.full_name ?? null,
+                username: e.username ?? null,
+                position: e.position ?? null,
+            };
+        }
+    }
+
+    return null;
+}
+
+function Chip({
+    isDark,
+    children,
+}: {
+    isDark: boolean;
+    children: React.ReactNode;
+}) {
+    return (
+        <div
+            className="flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10.5px] font-bold"
+            style={{
+                border: isDark ? "1px solid rgba(255,255,255,0.06)" : "1px solid rgba(0,0,0,0.06)",
+                background: isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)",
+                color: isDark ? "#94a3b8" : "#64748b",
+            }}
+        >
+            {children}
+        </div>
+    );
+}
 
 export default function TaskCard({
     task,
     index = 0,
+    employees = [],
     onEdit,
     onDelete,
-    deleting,
 }: TaskCardProps) {
     const { resolvedTheme } = useTheme();
     const isDark = resolvedTheme === "dark";
+
     const [hovered, setHovered] = useState(false);
     const [showConfirm, setShowConfirm] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
     const [deleteError, setDeleteError] = useState<string | null>(null);
 
+    const assigned = task.assigned_employee;
+
+    const firstAssignedId =
+        typeof assigned === "number"
+            ? assigned
+            : Array.isArray(assigned)
+                ? typeof assigned[0] === "number"
+                    ? assigned[0]
+                    : null
+                : null;
+
+    const localEmployee = useMemo(() => {
+        if (typeof assigned === "number") {
+            return getLocalEmployee(assigned, employees);
+        }
+        if (Array.isArray(assigned)) {
+            const first = assigned[0];
+            if (typeof first === "number") {
+                return getLocalEmployee(first, employees);
+            }
+            return normalizeEmployee(first);
+        }
+        return normalizeEmployee(assigned);
+    }, [assigned, employees]);
+
+    const shouldFetchRemote = typeof firstAssignedId === "number" && !localEmployee;
+    const { data: remoteEmployee } = useEmployeeInfo(shouldFetchRemote ? firstAssignedId : null);
+
+    const employeeInfo = useMemo(() => {
+        const candidates: EmployeeLike[] = [];
+
+        if (localEmployee) candidates.push(localEmployee);
+        if (remoteEmployee) candidates.push(remoteEmployee);
+
+        if (Array.isArray(assigned)) {
+            assigned.forEach((item) => {
+                const normalized = normalizeEmployee(item);
+                if (normalized) candidates.push(normalized);
+                if (typeof item === "number") {
+                    const found = employees.find((emp) => emp.id === item);
+                    if (found) candidates.push(found);
+                }
+            });
+        }
+
+        if (typeof assigned === "object" && assigned !== null && !Array.isArray(assigned)) {
+            const normalized = normalizeEmployee(assigned);
+            if (normalized) candidates.push(normalized);
+        }
+
+        const unique = new Map<number, EmployeeLike>();
+        candidates.forEach((emp) => {
+            if (!emp || typeof emp.id !== "number") return;
+            if (!unique.has(emp.id)) unique.set(emp.id, emp);
+        });
+
+        return Array.from(unique.values()).map((emp) => ({
+            id: emp.id,
+            name: emp.full_name || emp.username || `کارمند ${emp.id}`,
+            position: emp.position || undefined,
+        }));
+    }, [assigned, employees, localEmployee, remoteEmployee]);
+
     const status = (task.status ?? "pending") as TaskStatus;
     const statusLabel = taskStatusLabels[status] ?? task.status ?? "نامشخص";
     const statusClass =
         taskStatusColors[status] ?? "border-slate-500/20 bg-slate-500/10 text-slate-400";
-    const employeeInfo = getEmployeeInfo(task);
+
     const departmentName = getDepartmentName(task);
     const caseTitle = task.case && typeof task.case === "object" ? task.case.title : null;
     const fileCount = task.files?.length ?? 0;
@@ -115,6 +209,7 @@ export default function TaskCard({
         if (!onDelete) return;
         setIsDeleting(true);
         setDeleteError(null);
+
         try {
             await onDelete(task.id);
             setShowConfirm(false);
@@ -143,20 +238,16 @@ export default function TaskCard({
                 onHoverEnd={() => setHovered(false)}
                 className="relative flex flex-col gap-3 overflow-hidden rounded-2xl p-4"
                 style={{
-                    border: isDark
-                        ? "1px solid rgba(255,255,255,0.06)"
-                        : "1px solid rgba(0,0,0,0.06)",
+                    border: isDark ? "1px solid rgba(255,255,255,0.06)" : "1px solid rgba(0,0,0,0.06)",
                     background: isDark ? "rgba(255,255,255,0.02)" : "#fafafa",
                     minHeight: "130px",
-                    pointerEvents: deleting ? "none" : undefined,
-                    opacity: deleting ? 0.45 : 1,
-                    boxShadow: isDark
-                        ? "0 2px 24px rgba(0,0,0,0.2)"
-                        : "0 2px 16px rgba(0,0,0,0.04)",
+                    opacity: isDeleting ? 0.45 : 1,
+                    pointerEvents: isDeleting ? "none" : undefined,
+                    boxShadow: isDark ? "0 2px 24px rgba(0,0,0,0.2)" : "0 2px 16px rgba(0,0,0,0.04)",
                 }}
             >
                 <svg
-                    className="absolute inset-0 w-full h-full pointer-events-none"
+                    className="pointer-events-none absolute inset-0 h-full w-full"
                     style={{ borderRadius: "1rem" }}
                 >
                     <defs>
@@ -183,11 +274,7 @@ export default function TaskCard({
                         strokeWidth="1.5"
                         pathLength="1"
                         initial={{ pathLength: 0, opacity: 0 }}
-                        animate={
-                            hovered
-                                ? { pathLength: 1, opacity: 1 }
-                                : { pathLength: 0, opacity: 0 }
-                        }
+                        animate={hovered ? { pathLength: 1, opacity: 1 } : { pathLength: 0, opacity: 0 }}
                         transition={{ duration: 0.55, ease: "easeInOut" }}
                     />
                 </svg>
@@ -210,9 +297,7 @@ export default function TaskCard({
                                 onClick={() => onEdit(task)}
                                 className="flex h-7 w-7 items-center justify-center rounded-xl transition-colors"
                                 style={{
-                                    background: isDark
-                                        ? "rgba(99,102,241,0.1)"
-                                        : "rgba(99,102,241,0.07)",
+                                    background: isDark ? "rgba(99,102,241,0.1)" : "rgba(99,102,241,0.07)",
                                     color: isDark ? "#a5b4fc" : "#6366f1",
                                 }}
                                 title="ویرایش تسک"
@@ -224,21 +309,15 @@ export default function TaskCard({
                             <button
                                 type="button"
                                 onClick={() => setShowConfirm(true)}
-                                disabled={deleting}
+                                disabled={isDeleting}
                                 className="flex h-7 w-7 items-center justify-center rounded-xl transition-colors disabled:opacity-40"
                                 style={{
-                                    background: isDark
-                                        ? "rgba(239,68,68,0.1)"
-                                        : "rgba(239,68,68,0.07)",
+                                    background: isDark ? "rgba(239,68,68,0.1)" : "rgba(239,68,68,0.07)",
                                     color: "#ef4444",
                                 }}
                                 title="حذف تسک"
                             >
-                                {deleting ? (
-                                    <Loader2 size={11} className="animate-spin" />
-                                ) : (
-                                    <Trash2 size={11} />
-                                )}
+                                {isDeleting ? <Loader2 size={11} className="animate-spin" /> : <Trash2 size={11} />}
                             </button>
                         )}
                     </div>
@@ -279,9 +358,7 @@ export default function TaskCard({
                                             border: isDark
                                                 ? "1px solid rgba(255,255,255,0.06)"
                                                 : "1px solid rgba(0,0,0,0.06)",
-                                            background: isDark
-                                                ? "rgba(255,255,255,0.04)"
-                                                : "rgba(0,0,0,0.03)",
+                                            background: isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)",
                                         }}
                                     >
                                         <span
@@ -304,9 +381,7 @@ export default function TaskCard({
                                                     ({emp.position})
                                                 </span>
                                             )}
-                                            {idx < employeeInfo.length - 1 && (
-                                                <span className="mx-0.5 text-gray-400">،</span>
-                                            )}
+                                            {idx < employeeInfo.length - 1 && <span className="mx-0.5 text-gray-400">،</span>}
                                         </span>
                                     </div>
                                 );
@@ -373,9 +448,7 @@ export default function TaskCard({
                             className="w-full max-w-[360px] overflow-hidden rounded-[2rem] border p-5"
                             style={{
                                 background: isDark ? "#0f172a" : "#ffffff",
-                                borderColor: isDark
-                                    ? "rgba(255,255,255,0.07)"
-                                    : "rgba(0,0,0,0.07)",
+                                borderColor: isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.07)",
                                 boxShadow: "0 24px 64px rgba(0,0,0,0.35)",
                             }}
                             onClick={(e) => e.stopPropagation()}
@@ -384,18 +457,14 @@ export default function TaskCard({
                             <div
                                 className="flex items-center justify-between border-b px-2 py-2"
                                 style={{
-                                    borderColor: isDark
-                                        ? "rgba(255,255,255,0.06)"
-                                        : "rgba(0,0,0,0.06)",
+                                    borderColor: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.06)",
                                 }}
                             >
                                 <div className="flex items-center gap-2.5">
                                     <div
                                         className="flex h-8 w-8 items-center justify-center rounded-xl"
                                         style={{
-                                            background: isDark
-                                                ? "rgba(239,68,68,0.12)"
-                                                : "rgba(239,68,68,0.08)",
+                                            background: isDark ? "rgba(239,68,68,0.12)" : "rgba(239,68,68,0.08)",
                                         }}
                                     >
                                         <Trash2 size={14} className="text-red-500" />
@@ -408,16 +477,14 @@ export default function TaskCard({
                                     </h3>
                                 </div>
                                 <button
+                                    type="button"
                                     onClick={handleClose}
                                     disabled={isDeleting}
                                     className="flex h-7 w-7 items-center justify-center rounded-xl transition-colors disabled:opacity-40"
                                     style={{
-                                        background: isDark
-                                            ? "rgba(255,255,255,0.05)"
-                                            : "rgba(0,0,0,0.04)",
+                                        background: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.04)",
                                         color: isDark ? "#94a3b8" : "#64748b",
                                     }}
-                                    type="button"
                                 >
                                     <X size={13} />
                                 </button>
@@ -446,20 +513,19 @@ export default function TaskCard({
 
                                 <div className="flex gap-2">
                                     <button
+                                        type="button"
                                         onClick={handleClose}
                                         disabled={isDeleting}
                                         className="flex-1 rounded-2xl py-2.5 text-[12.5px] font-bold transition-colors disabled:opacity-40"
                                         style={{
-                                            background: isDark
-                                                ? "rgba(255,255,255,0.05)"
-                                                : "rgba(0,0,0,0.04)",
+                                            background: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.04)",
                                             color: isDark ? "#94a3b8" : "#64748b",
                                         }}
-                                        type="button"
                                     >
                                         انصراف
                                     </button>
                                     <button
+                                        type="button"
                                         onClick={handleDelete}
                                         disabled={isDeleting}
                                         className="flex flex-1 items-center justify-center rounded-2xl py-2.5 text-[12.5px] font-bold text-white transition-opacity disabled:cursor-not-allowed disabled:opacity-60"
@@ -467,7 +533,6 @@ export default function TaskCard({
                                             background: "linear-gradient(135deg, #ef4444, #dc2626)",
                                             boxShadow: "0 4px 14px rgba(239,68,68,0.3)",
                                         }}
-                                        type="button"
                                     >
                                         {isDeleting ? (
                                             <Loader2 size={15} className="animate-spin" />
@@ -485,28 +550,5 @@ export default function TaskCard({
                 )}
             </AnimatePresence>
         </>
-    );
-}
-
-function Chip({
-    isDark,
-    children,
-}: {
-    isDark: boolean;
-    children: React.ReactNode;
-}) {
-    return (
-        <div
-            className="flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10.5px] font-bold"
-            style={{
-                border: isDark
-                    ? "1px solid rgba(255,255,255,0.06)"
-                    : "1px solid rgba(0,0,0,0.06)",
-                background: isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)",
-                color: isDark ? "#94a3b8" : "#64748b",
-            }}
-        >
-            {children}
-        </div>
     );
 }
