@@ -6,6 +6,8 @@ import { apiRoutes } from "@/lib/apiRoutes";
 
 import {
     BriefcaseBusiness,
+    ClipboardList,
+    Loader,
     Loader2,
     Plus,
     RefreshCw,
@@ -122,7 +124,7 @@ export default function AdminCasesPage() {
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-start gap-3">
                     <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-indigo-50 dark:bg-indigo-500/10">
-                        <BriefcaseBusiness size={16} className="text-indigo-500 dark:text-indigo-400" />
+                        <ClipboardList size={16} className="text-indigo-500 dark:text-indigo-400" />
                     </div>
                     <div className="min-w-0">
                         <h1 className="text-[14px] font-extrabold text-gray-900 dark:text-white">
@@ -157,9 +159,11 @@ export default function AdminCasesPage() {
             </div>
 
             {loading ? (
-                <div className="flex flex-col items-center justify-center gap-5 py-20 text-gray-600 dark:text-gray-400">
-                    <Loader2 size={18} className="animate-spin text-indigo-500 dark:text-indigo-400" />
-                    <span className="text-[13px]">در حال بارگذاری پرونده‌ها</span>
+                <div className="flex flex-col items-center justify-center gap-3 py-16">
+                    <Loader size={22} className="text-indigo-500 animate-spin" />
+                    <p className="text-[12.5px] !text-gray-400 dark:!text-gray-500">
+                        در حال دریافت لیست پرونده ها...
+                    </p>
                 </div>
             ) : cases.length === 0 ? (
                 <div className="flex flex-col items-center justify-center gap-3 py-20">

@@ -102,9 +102,9 @@ export default function CustomersPage() {
 
             {loading ? (
                 <div className="flex flex-col items-center justify-center gap-3 py-16">
-                    <Loader size={22} className="animate-spin text-blue-500" />
-                    <p className="text-[12.5px] text-gray-400 dark:text-gray-500">
-                        در حال دریافت لیست مشتریان...
+                    <Loader size={22} className="text-indigo-500 animate-spin" />
+                    <p className="text-[12.5px] !text-gray-400 dark:!text-gray-500">
+                        در حال دریافت لیست  مشتریان...
                     </p>
                 </div>
             ) : (

@@ -29,50 +29,9 @@ function formatDate(iso: string) {
     });
 }
 
-function AnimatedBorder({ active, isDark }: { active: boolean; isDark: boolean }) {
-    const angleRef = useRef(0);
-    const divRef = useRef<HTMLDivElement>(null);
-
-    useAnimationFrame((_, delta) => {
-        if (!divRef.current) return;
-
-        if (active) {
-            angleRef.current = (angleRef.current + delta * 0.18) % 360;
-        }
-
-        const angle = angleRef.current;
-
-        divRef.current.style.background = active
-            ? `conic-gradient(
-                from ${angle}deg,
-                transparent 0deg,
-                transparent 50deg,
-                #a5b4fc 100deg,
-                #6366f1 160deg,
-                #818cf8 200deg,
-                #a5b4fc 250deg,
-                transparent 300deg,
-                transparent 360deg
-            )`
-            : isDark
-                ? "rgba(255,255,255,0.07)"
-                : "rgba(0,0,0,0.07)";
-    });
-
-    return (
-        <div
-            ref={divRef}
-            className="absolute inset-0 rounded-2xl"
-            style={{ padding: "2.5px" }}
-            aria-hidden
-        />
-    );
-}
-
 export default function CustomerCard({ customer, onDeleted, onEdited }: Props) {
     const { resolvedTheme } = useTheme();
     const isDark = resolvedTheme === "dark";
-
     const [hovered, setHovered] = useState(false);
     const [showConfirm, setShowConfirm] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
@@ -92,56 +51,123 @@ export default function CustomerCard({ customer, onDeleted, onEdited }: Props) {
     return (
         <>
             <motion.div
-                className="relative rounded-2xl"
-                onHoverStart={() => setHovered(true)}
-                onHoverEnd={() => setHovered(false)}
-                layout
-                initial={{ opacity: 0, y: 16 }}
+                initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95 }}
-                transition={{ duration: 0.25 }}
+                transition={{ duration: 0.2, delay: 0.05 }}
+                onHoverStart={() => setHovered(true)}
+                onHoverEnd={() => setHovered(false)}
+                className="relative rounded-2xl p-4 flex flex-col gap-3 overflow-hidden"
                 style={{
-                    padding: "2.5px",
-                    background: hovered
-                        ? undefined
-                        : isDark
-                            ? "rgba(255,255,255,0.07)"
-                            : "rgba(0,0,0,0.07)",
+                    border: isDark
+                        ? "1px solid rgba(255,255,255,0.06)"
+                        : "1px solid rgba(0,0,0,0.06)",
+                    minHeight: "130px",
+                    background: isDark ? "rgba(255,255,255,0.02)" : "#fafafa",
                 }}
             >
-                <AnimatedBorder active={hovered} isDark={isDark} />
+                <svg
+                    className="absolute inset-0 w-full h-full pointer-events-none"
+                    style={{ borderRadius: "1rem" }}
+                >
+                    <defs>
+                        <linearGradient
+                            id={`borderGrad-${customer.id}`}
+                            x1="100%"
+                            y1="100%"
+                            x2="0%"
+                            y2="0%"
+                        >
+                            <stop offset="0%" stopColor="#6366f1" />
+                            <stop offset="100%" stopColor="#8b5cf6" />
+                        </linearGradient>
+                    </defs>
+                    <motion.rect
+                        x="1"
+                        y="1"
+                        width="calc(100% - 2px)"
+                        height="calc(100% - 2px)"
+                        rx="15"
+                        ry="15"
+                        fill="none"
+                        stroke={`url(#borderGrad-${customer.id})`}
+                        strokeWidth="1.5"
+                        pathLength="1"
+                        initial={{ pathLength: 0, opacity: 0 }}
+                        animate={
+                            hovered
+                                ? { pathLength: 1, opacity: 1 }
+                                : { pathLength: 0, opacity: 0 }
+                        }
+                        transition={{ duration: 0.55, ease: "easeInOut" }}
+                    />
+                </svg>
+
+                <div className="absolute top-3 left-3 flex items-center gap-1.5 z-10">
+                    <button
+                        onClick={() => setShowEdit(true)}
+                        className="w-7 h-7 rounded-xl flex items-center justify-center transition-colors"
+                        style={{
+                            background: isDark
+                                ? "rgba(99,102,241,0.1)"
+                                : "rgba(99,102,241,0.07)",
+                            color: isDark ? "#a5b4fc" : "#6366f1",
+                        }}
+                        title="ویرایش"
+                        type="button"
+                    >
+                        <SquarePen size={11} />
+                    </button>
+                    <button
+                        onClick={() => setShowConfirm(true)}
+                        className="w-7 h-7 rounded-xl flex items-center justify-center transition-colors"
+                        style={{
+                            background: isDark
+                                ? "rgba(239,68,68,0.1)"
+                                : "rgba(239,68,68,0.07)",
+                            color: "#ef4444",
+                        }}
+                        title="حذف"
+                        type="button"
+                    >
+                        <Trash2 size={11} />
+                    </button>
+                </div>
+
+                <div className="flex items-center gap-3 pt-1">
+                    <div
+                        className="w-11 h-11 rounded-2xl flex items-center justify-center text-white text-[15px] font-extrabold flex-shrink-0"
+                        style={{
+                            background: `linear-gradient(135deg, #6366f1, #8b5cf6)`,
+                        }}
+                    >
+                        {customer.full_name?.charAt(0) ?? "?"}
+                    </div>
+                    <div className="flex flex-col gap-1 min-w-0">
+                        <p className="text-[13.5px] font-extrabold text-gray-800 dark:text-gray-100 leading-tight truncate">
+                            {customer.full_name}
+                        </p>
+                        <p className="text-[11.5px] text-gray-400 dark:text-gray-500 truncate">
+                            #{customer.id}
+                        </p>
+                    </div>
+                </div>
 
                 <div
-                    className={`relative z-10 rounded-[calc(1rem-2px)] p-4 flex flex-col gap-3 ${isDark ? "bg-[#0f1117]" : "bg-white"
-                        }`}
+                    className="pt-2.5 border-t flex flex-col gap-1.5"
+                    style={{
+                        borderColor: isDark
+                            ? "rgba(255,255,255,0.05)"
+                            : "rgba(0,0,0,0.05)",
+                    }}
                 >
-                    <div className="flex items-start justify-between gap-2">
-                        <div className="flex items-center gap-3">
-                            <div
-                                className={`w-10 h-10 rounded-xl flex items-center justify-center text-sm font-bold flex-shrink-0 ${isDark
-                                        ? "bg-indigo-500/15 text-indigo-400"
-                                        : "bg-indigo-100 text-indigo-600"
-                                    }`}
-                            >
-                                {customer.full_name?.charAt(0) ?? "?"}
-                            </div>
-                            <div>
-                                <p
-                                    className={`text-sm font-bold leading-tight ${isDark ? "text-white" : "text-gray-900"
-                                        }`}
-                                >
-                                    {customer.full_name}
-                                </p>
-                                <p
-                                    className={`text-xs mt-0.5 ${isDark ? "text-white/40" : "text-gray-400"
-                                        }`}
-                                >
-                                    #{customer.id}
-                                </p>
-                            </div>
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 text-[11.5px] text-gray-400 dark:text-gray-500">
+                            <Phone className="w-3.5 h-3.5" />
+                            <span dir="ltr">{customer.phone_number}</span>
                         </div>
                         <span
-                            className={`text-[11px] font-semibold px-2.5 py-1 rounded-full flex-shrink-0 ${statusStyle[customer.status] ??
+                            className={`text-[11px] font-bold px-2 py-0.5 rounded-lg ${statusStyle[customer.status] ??
                                 "bg-gray-500/15 text-gray-400"
                                 }`}
                         >
@@ -149,62 +175,22 @@ export default function CustomerCard({ customer, onDeleted, onEdited }: Props) {
                         </span>
                     </div>
 
-                    <div className="flex flex-col gap-1.5">
-                        <div
-                            className={`flex items-center gap-2 text-xs ${isDark ? "text-white/50" : "text-gray-500"
-                                }`}
-                        >
-                            <Phone className="w-3.5 h-3.5 flex-shrink-0" />
-                            <span dir="ltr">{customer.phone_number}</span>
+                    {customer.company_name && (
+                        <div className="flex items-center gap-2 text-[11.5px] text-gray-400 dark:text-gray-500">
+                            <Building2 className="w-3.5 h-3.5" />
+                            <span>{customer.company_name}</span>
                         </div>
-                        {customer.company_name && (
-                            <div
-                                className={`flex items-center gap-2 text-xs ${isDark ? "text-white/50" : "text-gray-500"
-                                    }`}
-                            >
-                                <Building2 className="w-3.5 h-3.5 flex-shrink-0" />
-                                <span>{customer.company_name}</span>
-                            </div>
-                        )}
-                        <div
-                            className={`flex items-center gap-2 text-xs ${isDark ? "text-white/50" : "text-gray-500"
-                                }`}
-                        >
-                            <User className="w-3.5 h-3.5 flex-shrink-0" />
+                    )}
+
+                    <div className="flex items-center justify-between text-[11.5px] text-gray-400 dark:text-gray-500">
+                        <div className="flex items-center gap-2">
+                            <User className="w-3.5 h-3.5" />
                             <span>ثبت‌کننده: {customer.created_by_username}</span>
                         </div>
-                        <div
-                            className={`flex items-center gap-2 text-xs ${isDark ? "text-white/50" : "text-gray-500"
-                                }`}
-                        >
-                            <CalendarDays className="w-3.5 h-3.5 flex-shrink-0" />
+                        <div className="flex items-center gap-2">
+                            <CalendarDays className="w-3.5 h-3.5" />
                             <span>{formatDate(customer.created_at)}</span>
                         </div>
-                    </div>
-
-                    <div className="flex gap-2 pt-1">
-                        <motion.button
-                            whileTap={{ scale: 0.94 }}
-                            onClick={() => setShowEdit(true)}
-                            className={`flex-1 flex items-center justify-center gap-1.5 text-xs font-semibold py-2 rounded-xl transition-colors ${isDark
-                                    ? "bg-white/5 hover:bg-indigo-500/20 text-white/60 hover:text-indigo-400"
-                                    : "bg-gray-100 hover:bg-indigo-100 text-gray-500 hover:text-indigo-600"
-                                }`}
-                        >
-                            <SquarePen className="w-3.5 h-3.5" />
-                            ویرایش
-                        </motion.button>
-                        <motion.button
-                            whileTap={{ scale: 0.94 }}
-                            onClick={() => setShowConfirm(true)}
-                            className={`flex-1 flex items-center justify-center gap-1.5 text-xs font-semibold py-2 rounded-xl transition-colors ${isDark
-                                    ? "bg-white/5 hover:bg-red-500/20 text-white/60 hover:text-red-400"
-                                    : "bg-gray-100 hover:bg-red-100 text-gray-500 hover:text-red-500"
-                                }`}
-                        >
-                            <Trash2 className="w-3.5 h-3.5" />
-                            حذف
-                        </motion.button>
                     </div>
                 </div>
             </motion.div>
@@ -226,4 +212,3 @@ export default function CustomerCard({ customer, onDeleted, onEdited }: Props) {
         </>
     );
 }
-

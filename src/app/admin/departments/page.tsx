@@ -232,10 +232,10 @@ export default function DepartmentsPage() {
 
     if (loading && departments.length === 0) {
         return (
-            <div className="flex flex-col items-center justify-center gap-3 py-16 px-4" dir="rtl">
+            <div className="flex flex-col items-center justify-center gap-3 py-16">
                 <Loader size={22} className="text-indigo-500 animate-spin" />
-                <p className="text-[12.5px] text-gray-400 dark:text-gray-500 text-center">
-                    در حال دریافت لیست دپارتمان‌ها...
+                <p className="text-[12.5px] !text-gray-400 dark:!text-gray-500">
+                    در حال دریافت لیست دپارتمان ها...
                 </p>
             </div>
         );

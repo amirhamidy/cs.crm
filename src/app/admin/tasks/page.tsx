@@ -147,9 +147,11 @@ export default function AdminTasksPage() {
             </div>
 
             {loading ? (
-                <div className="flex flex-col items-center justify-center gap-5 py-20 text-gray-600 dark:text-gray-400">
-                    <Loader size={18} className="animate-spin text-indigo-500 dark:text-indigo-400" />
-                    <span className="text-[13px]">در حال یافتن وظایف</span>
+                <div className="flex flex-col items-center justify-center gap-3 py-16">
+                    <Loader size={22} className="text-indigo-500 animate-spin" />
+                    <p className="text-[12.5px] !text-gray-400 dark:!text-gray-500">
+                        در حال دریافت لیست  وظایف...
+                    </p>
                 </div>
             ) : filteredTasks.length === 0 ? (
                 <div className="flex flex-col items-center justify-center gap-3 py-20">
