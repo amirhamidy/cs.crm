@@ -1,7 +1,6 @@
 "use client";
 
-import { AnimatePresence, motion } from "framer-motion";
-import { Loader2, X } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import React from "react";
 
 type FloatingInputProps = React.InputHTMLAttributes<HTMLInputElement> & {
@@ -22,15 +21,12 @@ type PrimaryButtonProps = {
     className?: string;
 };
 
-type GlassModalProps = {
-    isOpen: boolean;
-    onClose: () => void;
-    title: string;
-    maxWidth?: string;
-    children: React.ReactNode;
-};
-
-export function FloatingInput({ label, id, className = "", ...props }: FloatingInputProps) {
+export default function FloatingInput({
+    label,
+    id,
+    className = "",
+    ...props
+}: FloatingInputProps) {
     return (
         <div className="relative mb-5 w-full">
             <input
@@ -49,7 +45,12 @@ export function FloatingInput({ label, id, className = "", ...props }: FloatingI
     );
 }
 
-export function FloatingTextarea({ label, id, className = "", ...props }: FloatingTextareaProps) {
+export function FloatingTextarea({
+    label,
+    id,
+    className = "",
+    ...props
+}: FloatingTextareaProps) {
     return (
         <div className="relative mb-5 w-full">
             <textarea
@@ -94,43 +95,5 @@ export function PrimaryButton({
         >
             {loading ? <Loader2 className="animate-spin" size={18} /> : children}
         </button>
-    );
-}
-
-export function GlassModal({ isOpen, onClose, title, maxWidth = "max-w-lg", children }: GlassModalProps) {
-    return (
-        <AnimatePresence>
-            {isOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        onClick={onClose}
-                        className="absolute inset-0 bg-black/70 backdrop-blur-sm"
-                    />
-                    <motion.div
-                        initial={{ opacity: 0, y: 24, scale: 0.97 }}
-                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                        exit={{ opacity: 0, y: 24, scale: 0.97 }}
-                        transition={{ duration: 0.2 }}
-                        onClick={(e) => e.stopPropagation()}
-                        className={`relative w-full ${maxWidth} rounded-[2rem] border border-white/10 bg-[#0b0d14] p-6 shadow-2xl backdrop-blur-xl`}
-                    >
-                        <div className="mb-6 flex items-center justify-between">
-                            <h2 className="text-xl font-bold text-white">{title}</h2>
-                            <button
-                                type="button"
-                                onClick={onClose}
-                                className="grid h-10 w-10 place-items-center rounded-full border border-white/10 bg-white/5 text-white/50 transition hover:bg-white/10 hover:text-white"
-                            >
-                                <X size={18} />
-                            </button>
-                        </div>
-                        {children}
-                    </motion.div>
-                </div>
-            )}
-        </AnimatePresence>
     );
 }

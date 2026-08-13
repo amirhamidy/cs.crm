@@ -16,6 +16,7 @@ import {
     Search,
     Paperclip,
     AlertCircle,
+    UserPlus,
 } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
 
@@ -161,19 +162,23 @@ function NiceSelect({
     placeholder,
     disabled,
     emptyText,
+    multiple = false,
 }: {
     label: string;
     options: Option[];
-    value: number | null;
-    onChange: (id: number) => void;
+    value: number | number[] | null;
+    onChange: (id: number | number[]) => void;
     placeholder: string;
     disabled?: boolean;
     emptyText: string;
+    multiple?: boolean;
 }) {
     const [open, setOpen] = useState(false);
     const [query, setQuery] = useState("");
     const ref = useRef<HTMLDivElement>(null);
-    const selected = options.find((o) => o.id === value) ?? null;
+
+    const selectedValues = Array.isArray(value) ? value : value !== null ? [value] : [];
+    const selectedOptions = options.filter((o) => selectedValues.includes(o.id));
 
     useEffect(() => {
         function handler(e: MouseEvent) {
@@ -197,6 +202,27 @@ function NiceSelect({
         return options.filter((o) => o.label.toLowerCase().includes(q));
     }, [options, query]);
 
+    const handleSelect = (id: number) => {
+        if (!multiple) {
+            onChange(id);
+            setOpen(false);
+            return;
+        }
+
+        const current = Array.isArray(value) ? value : [];
+        if (current.includes(id)) {
+            onChange(current.filter((v) => v !== id));
+        } else {
+            onChange([...current, id]);
+        }
+    };
+
+    const displayText = multiple
+        ? selectedOptions.length > 0
+            ? `${selectedOptions.length} کارمند انتخاب شد`
+            : placeholder
+        : selectedOptions[0]?.label || placeholder;
+
     return (
         <div ref={ref} className="relative">
             <label className="mb-2 block text-[11.5px] font-bold text-gray-400">{label}</label>
@@ -210,30 +236,30 @@ function NiceSelect({
                         : "border-gray-100 bg-gray-50 hover:border-gray-200 dark:border-white/[0.06] dark:bg-white/[0.03] dark:hover:border-white/[0.12]"
                     } ${disabled ? "cursor-not-allowed opacity-40" : "cursor-pointer"}`}
             >
-                {selected ? (
+                {selectedOptions.length > 0 && !multiple ? (
                     <span
                         className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br text-[12px] font-extrabold text-white ${gradientOf(
-                            selected.id
+                            selectedOptions[0].id
                         )}`}
                     >
-                        {initialOf(selected.label)}
+                        {initialOf(selectedOptions[0].label)}
                     </span>
                 ) : (
                     <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gray-100 dark:bg-white/[0.06]">
-                        <ChevronDown size={13} className="text-gray-400" />
+                        {multiple ? <UserPlus size={13} className="text-gray-400" /> : <ChevronDown size={13} className="text-gray-400" />}
                     </span>
                 )}
 
                 <span className="min-w-0 flex-1">
                     <span
-                        className={`block truncate text-[12.5px] font-bold ${selected ? "text-gray-900 dark:text-white" : "text-gray-400"
+                        className={`block truncate text-[12.5px] font-bold ${selectedOptions.length > 0 ? "text-gray-900 dark:text-white" : "text-gray-400"
                             }`}
                     >
-                        {selected ? selected.label : placeholder}
+                        {displayText}
                     </span>
-                    {selected?.sub && (
+                    {multiple && selectedOptions.length > 0 && (
                         <span className="mt-0.5 block truncate text-[10.5px] text-gray-400">
-                            {selected.sub}
+                            {selectedOptions.map((o) => o.label).join("، ")}
                         </span>
                     )}
                 </span>
@@ -272,7 +298,7 @@ function NiceSelect({
                                 <p className="py-6 text-center text-[12px] text-gray-400">{emptyText}</p>
                             ) : (
                                 visible.map((o, i) => {
-                                    const active = value === o.id;
+                                    const active = selectedValues.includes(o.id);
                                     return (
                                         <motion.button
                                             key={o.id}
@@ -280,10 +306,7 @@ function NiceSelect({
                                             initial={{ opacity: 0, x: 6 }}
                                             animate={{ opacity: 1, x: 0 }}
                                             transition={{ delay: i * 0.02 }}
-                                            onClick={() => {
-                                                onChange(o.id);
-                                                setOpen(false);
-                                            }}
+                                            onClick={() => handleSelect(o.id)}
                                             className={`flex w-full items-center gap-2.5 rounded-2xl px-2.5 py-2 text-right transition-colors ${active
                                                     ? "bg-blue-50 dark:bg-blue-500/10"
                                                     : "hover:bg-gray-50 dark:hover:bg-white/[0.04]"
@@ -398,7 +421,7 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess }: Props) {
     const [selectedCustomer, setSelectedCustomer] = useState<number | null>(null);
     const [selectedCase, setSelectedCase] = useState<number | null>(null);
     const [selectedDepartment, setSelectedDepartment] = useState<number | null>(null);
-    const [selectedEmployee, setSelectedEmployee] = useState<number | null>(null);
+    const [selectedEmployees, setSelectedEmployees] = useState<number[]>([]);
 
     const [title, setTitle] = useState("");
     const [description, setDescription] = useState("");
@@ -436,10 +459,17 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess }: Props) {
         setSelectedCase(null);
         axiosInstance
             .get(`/tasks/api/v1/cases/?customer=${selectedCustomer}`)
-            .then((r) => setCases(r.data.results ?? r.data))
+            .then((r) => {
+                const data = r.data.results ?? r.data;
+                setCases(data);
+            })
             .catch(() => setCases([]))
             .finally(() => setLoadingCases(false));
     }, [selectedCustomer]);
+
+    useEffect(() => {
+        setSelectedEmployees([]);
+    }, [selectedDepartment]);
 
     const filteredCustomers = useMemo(() => {
         const q = customerQuery.trim().toLowerCase();
@@ -469,7 +499,7 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess }: Props) {
         description.trim().length > 0 &&
         selectedCase !== null &&
         selectedDepartment !== null &&
-        selectedEmployee !== null &&
+        selectedEmployees.length > 0 &&
         !submitting;
 
     function resetAll() {
@@ -477,7 +507,7 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess }: Props) {
         setSelectedCustomer(null);
         setSelectedCase(null);
         setSelectedDepartment(null);
-        setSelectedEmployee(null);
+        setSelectedEmployees([]);
         setTitle("");
         setDescription("");
         setFiles([]);
@@ -514,7 +544,9 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess }: Props) {
             formData.append("description", description);
             formData.append("case", String(selectedCase));
             formData.append("department", String(selectedDepartment));
-            formData.append("assigned_employee", String(selectedEmployee));
+            selectedEmployees.forEach((id) => {
+                formData.append("assigned_employee", String(id));
+            });
             files.forEach((f) => formData.append("files", f));
             await axiosInstance.post("/tasks/api/v1/tasks/create/", formData);
             onSuccess();
@@ -756,25 +788,26 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess }: Props) {
                                         options={departments.map((d) => ({ id: d.id, label: d.name }))}
                                         value={selectedDepartment}
                                         onChange={(id) => {
-                                            setSelectedDepartment(id);
-                                            setSelectedEmployee(null);
+                                            setSelectedDepartment(id as number);
+                                            setSelectedEmployees([]);
                                             setSubmitError("");
                                         }}
                                     />
 
                                     <NiceSelect
-                                        label="کارمند مسئول"
+                                        label="کارمندان مسئول"
                                         placeholder={selectedDepartment ? "انتخاب کارمند" : "ابتدا دپارتمان را انتخاب کنید"}
                                         emptyText="کارمندی در این دپارتمان نیست"
                                         disabled={!selectedDepartment}
+                                        multiple={true}
                                         options={filteredEmployees.map((e) => ({
                                             id: e.employee,
                                             label: e.employee_name,
                                             sub: e.department_name,
                                         }))}
-                                        value={selectedEmployee}
-                                        onChange={(id) => {
-                                            setSelectedEmployee(id);
+                                        value={selectedEmployees}
+                                        onChange={(ids) => {
+                                            setSelectedEmployees(ids as number[]);
                                             setSubmitError("");
                                         }}
                                     />
