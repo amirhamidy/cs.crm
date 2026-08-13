@@ -28,8 +28,8 @@ interface Customer {
 
 interface Case {
     id: number;
-    case_title: string;
-    case_description: string;
+    title: string;
+    description: string;
     customer: number;
 }
 
@@ -232,8 +232,8 @@ function NiceSelect({
                 disabled={disabled}
                 onClick={() => setOpen((v) => !v)}
                 className={`flex h-[52px] w-full items-center gap-2.5 rounded-2xl border px-3 text-right transition-all duration-200 ${open
-                        ? "border-blue-500 bg-blue-50/50 dark:border-blue-500/50 dark:bg-blue-500/[0.06]"
-                        : "border-gray-100 bg-gray-50 hover:border-gray-200 dark:border-white/[0.06] dark:bg-white/[0.03] dark:hover:border-white/[0.12]"
+                    ? "border-blue-500 bg-blue-50/50 dark:border-blue-500/50 dark:bg-blue-500/[0.06]"
+                    : "border-gray-100 bg-gray-50 hover:border-gray-200 dark:border-white/[0.06] dark:bg-white/[0.03] dark:hover:border-white/[0.12]"
                     } ${disabled ? "cursor-not-allowed opacity-40" : "cursor-pointer"}`}
             >
                 {selectedOptions.length > 0 && !multiple ? (
@@ -308,8 +308,8 @@ function NiceSelect({
                                             transition={{ delay: i * 0.02 }}
                                             onClick={() => handleSelect(o.id)}
                                             className={`flex w-full items-center gap-2.5 rounded-2xl px-2.5 py-2 text-right transition-colors ${active
-                                                    ? "bg-blue-50 dark:bg-blue-500/10"
-                                                    : "hover:bg-gray-50 dark:hover:bg-white/[0.04]"
+                                                ? "bg-blue-50 dark:bg-blue-500/10"
+                                                : "hover:bg-gray-50 dark:hover:bg-white/[0.04]"
                                                 }`}
                                         >
                                             <span
@@ -322,8 +322,8 @@ function NiceSelect({
                                             <span className="min-w-0 flex-1">
                                                 <span
                                                     className={`block truncate text-[12.5px] font-bold ${active
-                                                            ? "text-blue-600 dark:text-blue-400"
-                                                            : "text-gray-900 dark:text-white"
+                                                        ? "text-blue-600 dark:text-blue-400"
+                                                        : "text-gray-900 dark:text-white"
                                                         }`}
                                                 >
                                                     {o.label}
@@ -375,8 +375,8 @@ function PickCard({
             whileTap={{ scale: 0.985 }}
             onClick={onClick}
             className={`flex w-full items-center gap-3 rounded-[1.25rem] border px-3.5 py-3 text-right transition-all duration-200 ${active
-                    ? "border-blue-500 bg-blue-50/60 dark:border-blue-500/50 dark:bg-blue-500/[0.08]"
-                    : "border-gray-100 bg-gray-50/60 hover:border-gray-200 hover:bg-gray-50 dark:border-white/[0.06] dark:bg-white/[0.02] dark:hover:border-white/[0.12] dark:hover:bg-white/[0.04]"
+                ? "border-blue-500 bg-blue-50/60 dark:border-blue-500/50 dark:bg-blue-500/[0.08]"
+                : "border-gray-100 bg-gray-50/60 hover:border-gray-200 hover:bg-gray-50 dark:border-white/[0.06] dark:bg-white/[0.02] dark:hover:border-white/[0.12] dark:hover:bg-white/[0.04]"
                 }`}
         >
             <span
@@ -637,7 +637,7 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess }: Props) {
                                             <ChevronLeft size={11} className="text-gray-300 dark:text-white/20" />
                                             <span className="flex items-center gap-1.5 rounded-xl bg-gray-100 px-2.5 py-1 text-[11px] font-bold text-gray-500 dark:bg-white/[0.06] dark:text-gray-400">
                                                 <FolderOpen size={11} />
-                                                {selectedCaseObj.case_title}
+                                                {selectedCaseObj.title} 
                                             </span>
                                         </>
                                     )}
@@ -718,8 +718,8 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess }: Props) {
                                                 key={c.id}
                                                 index={i}
                                                 seed={c.id + 3}
-                                                title={c.case_title}
-                                                subtitle={c.case_description}
+                                                title={c.title}
+                                                subtitle={c.description}
                                                 active={selectedCase === c.id}
                                                 onClick={() => setSelectedCase(c.id)}
                                             />

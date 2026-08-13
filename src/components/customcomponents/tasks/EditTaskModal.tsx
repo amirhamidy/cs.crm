@@ -1,82 +1,331 @@
-"use client"
+"use client";
 
-import { useEffect, useMemo, useRef, useState } from "react"
-import { motion, AnimatePresence } from "framer-motion"
+import { useEffect, useMemo, useRef, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
     Check,
-    CheckCircle2,
     ChevronDown,
-    ExternalLink,
-    FileUp,
-    Loader2,
-    Paperclip,
-    Pencil,
+    ChevronLeft,
+    ChevronRight,
+    ClipboardList,
+    Loader,
     Search,
     X,
-} from "lucide-react"
-import axiosInstance from "@/lib/axiosInstance"
-import { apiRoutes } from "@/lib/apiRoutes"
-import type { CaseItem } from "@/types/case"
-import type { Customer } from "@/types/customer"
-import type { Department } from "@/types/department"
-import type { Employee } from "@/types/employee"
-import type { TaskItem, TaskStatus } from "@/types/task"
-import { taskStatusLabels } from "@/components/customcomponents/shared/constants"
+    Upload,
+    Paperclip,
+    AlertCircle,
+    UserPlus,
+    FolderOpen,
+    Users,
+} from "lucide-react";
+import axiosInstance from "@/lib/axiosInstance";
+import { apiRoutes } from "@/lib/apiRoutes";
+import type { CaseItem } from "@/types/case";
+import type { Customer } from "@/types/customer";
+import type { Department } from "@/types/department";
+import type { Employee } from "@/types/employee";
+import type { TaskItem, TaskStatus } from "@/types/task";
+import { taskStatusLabels } from "@/components/customcomponents/shared/constants";
 
 interface EditTaskModalProps {
-    task: TaskItem | null
-    customers: Customer[]
-    departments: Department[]
-    employees: Employee[]
-    onClose: () => void
-    onSuccess: () => void
+    task: TaskItem | null;
+    customers: Customer[];
+    departments: Department[];
+    employees: Employee[];
+    onClose: () => void;
+    onSuccess: () => void;
 }
 
-interface TaskFormState {
-    title: string
-    description: string
-    case: string
-    department: string
-    assigned_employee: string
-    status: TaskStatus
+interface Option {
+    id: number;
+    label: string;
+    sub?: string;
 }
 
-interface SelectOption {
-    value: string
-    label: string
-    hint?: string
+const GRADIENTS = [
+    "from-blue-500 to-indigo-500",
+    "from-violet-500 to-fuchsia-500",
+    "from-emerald-500 to-teal-500",
+    "from-amber-500 to-orange-500",
+    "from-rose-500 to-pink-500",
+    "from-cyan-500 to-sky-500",
+];
+
+function gradientOf(seed: number) {
+    return GRADIENTS[Math.abs(seed) % GRADIENTS.length];
 }
 
-interface FloatingInputProps {
-    label: string
-    id: string
-    value: string
-    onChange: (e: React.ChangeEvent<HTMLInputElement>) => void
+function initialOf(text: string) {
+    const clean = (text || "").trim();
+    return clean ? clean.charAt(0) : "؟";
 }
 
-interface FloatingTextareaProps {
-    label: string
-    id: string
-    value: string
-    onChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void
+function FloatingInput({
+    label,
+    id,
+    value,
+    onChange,
+    type = "text",
+    dir,
+    className = "",
+}: {
+    label: string;
+    id: string;
+    value: string;
+    onChange: (v: string) => void;
+    type?: string;
+    dir?: "rtl" | "ltr";
+    className?: string;
+}) {
+    return (
+        <div className="relative">
+            <input
+                id={id}
+                type={type}
+                dir={dir}
+                placeholder=" "
+                value={value}
+                onChange={(e) => onChange(e.target.value)}
+                className={`peer w-full h-[52px] rounded-2xl bg-gray-50 dark:bg-white/[0.03] border border-gray-100 dark:border-white/[0.06] px-4 pt-4 text-[12.5px] font-bold text-gray-900 dark:text-white outline-none transition-colors focus:border-blue-500 dark:focus:border-blue-500/50 ${className}`}
+            />
+            <label
+                htmlFor={id}
+                className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[12px] font-semibold text-gray-400 transition-all duration-200 peer-focus:top-[15px] peer-focus:text-[10px] peer-focus:text-blue-500 peer-[:not(:placeholder-shown)]:top-[15px] peer-[:not(:placeholder-shown)]:text-[10px]"
+            >
+                {label}
+            </label>
+        </div>
+    );
 }
 
-interface NiceSelectProps {
-    label: string
-    value: string
-    options: SelectOption[]
-    onChange: (value: string) => void
-    placeholder?: string
-    disabled?: boolean
-    loading?: boolean
-    searchable?: boolean
-    withAvatar?: boolean
-    emptyText?: string
+function FloatingTextarea({
+    label,
+    id,
+    value,
+    onChange,
+    rows = 3,
+}: {
+    label: string;
+    id: string;
+    value: string;
+    onChange: (v: string) => void;
+    rows?: number;
+}) {
+    return (
+        <div className="relative">
+            <textarea
+                id={id}
+                rows={rows}
+                placeholder=" "
+                value={value}
+                onChange={(e) => onChange(e.target.value)}
+                className="peer w-full resize-none rounded-2xl bg-gray-50 dark:bg-white/[0.03] border border-gray-100 dark:border-white/[0.06] px-4 pt-6 pb-3 text-[12.5px] font-bold leading-6 text-gray-900 dark:text-white outline-none transition-colors focus:border-blue-500 dark:focus:border-blue-500/50"
+            />
+            <label
+                htmlFor={id}
+                className="pointer-events-none absolute right-4 top-4 text-[12px] font-semibold text-gray-400 transition-all duration-200 peer-focus:top-2 peer-focus:text-[10px] peer-focus:text-blue-500 peer-[:not(:placeholder-shown)]:top-2 peer-[:not(:placeholder-shown)]:text-[10px]"
+            >
+                {label}
+            </label>
+        </div>
+    );
 }
 
-interface FileUploaderProps {
-    files: File[]
-    onChange: (files: File[]) => void
+function NiceSelect({
+    label,
+    options,
+    value,
+    onChange,
+    placeholder,
+    disabled,
+    emptyText,
+    multiple = false,
+}: {
+    label: string;
+    options: Option[];
+    value: number | number[] | null;
+    onChange: (id: number | number[]) => void;
+    placeholder: string;
+    disabled?: boolean;
+    emptyText: string;
+    multiple?: boolean;
+}) {
+    const [open, setOpen] = useState(false);
+    const [query, setQuery] = useState("");
+    const ref = useRef<HTMLDivElement>(null);
+
+    const selectedValues = Array.isArray(value) ? value : value !== null ? [value] : [];
+    const selectedOptions = options.filter((o) => selectedValues.includes(o.id));
+
+    useEffect(() => {
+        function handler(e: MouseEvent) {
+            if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+        }
+        document.addEventListener("mousedown", handler);
+        return () => document.removeEventListener("mousedown", handler);
+    }, []);
+
+    useEffect(() => {
+        if (!open) setQuery("");
+    }, [open]);
+
+    useEffect(() => {
+        if (disabled) setOpen(false);
+    }, [disabled]);
+
+    const visible = useMemo(() => {
+        const q = query.trim().toLowerCase();
+        if (!q) return options;
+        return options.filter((o) => o.label.toLowerCase().includes(q));
+    }, [options, query]);
+
+    const handleSelect = (id: number) => {
+        if (!multiple) {
+            onChange(id);
+            setOpen(false);
+            return;
+        }
+
+        const current = Array.isArray(value) ? value : [];
+        if (current.includes(id)) {
+            onChange(current.filter((v) => v !== id));
+        } else {
+            onChange([...current, id]);
+        }
+    };
+
+    const displayText = multiple
+        ? selectedOptions.length > 0
+            ? `${selectedOptions.length} کارمند انتخاب شد`
+            : placeholder
+        : selectedOptions[0]?.label || placeholder;
+
+    return (
+        <div ref={ref} className="relative">
+            <label className="mb-2 block text-[11.5px] font-bold text-gray-400">{label}</label>
+
+            <button
+                type="button"
+                disabled={disabled}
+                onClick={() => setOpen((v) => !v)}
+                className={`flex h-[52px] w-full items-center gap-2.5 rounded-2xl border px-3 text-right transition-all duration-200 ${open
+                    ? "border-blue-500 bg-blue-50/50 dark:border-blue-500/50 dark:bg-blue-500/[0.06]"
+                    : "border-gray-100 bg-gray-50 hover:border-gray-200 dark:border-white/[0.06] dark:bg-white/[0.03] dark:hover:border-white/[0.12]"
+                    } ${disabled ? "cursor-not-allowed opacity-40" : "cursor-pointer"}`}
+            >
+                {selectedOptions.length > 0 && !multiple ? (
+                    <span
+                        className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br text-[12px] font-extrabold text-white ${gradientOf(
+                            selectedOptions[0].id
+                        )}`}
+                    >
+                        {initialOf(selectedOptions[0].label)}
+                    </span>
+                ) : (
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gray-100 dark:bg-white/[0.06]">
+                        {multiple ? <UserPlus size={13} className="text-gray-400" /> : <ChevronDown size={13} className="text-gray-400" />}
+                    </span>
+                )}
+
+                <span className="min-w-0 flex-1">
+                    <span
+                        className={`block truncate text-[12.5px] font-bold ${selectedOptions.length > 0 ? "text-gray-900 dark:text-white" : "text-gray-400"
+                            }`}
+                    >
+                        {displayText}
+                    </span>
+                    {multiple && selectedOptions.length > 0 && (
+                        <span className="mt-0.5 block truncate text-[10.5px] text-gray-400">
+                            {selectedOptions.map((o) => o.label).join("، ")}
+                        </span>
+                    )}
+                </span>
+
+                <motion.span animate={{ rotate: open ? 180 : 0 }} transition={{ duration: 0.2 }}>
+                    <ChevronDown size={14} className="shrink-0 text-gray-400" />
+                </motion.span>
+            </button>
+
+            <AnimatePresence>
+                {open && (
+                    <motion.div
+                        initial={{ opacity: 0, y: -6, scale: 0.97 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: -4, scale: 0.97 }}
+                        transition={{ type: "spring", damping: 24, stiffness: 340 }}
+                        className="absolute z-50 mt-2 w-full origin-top overflow-hidden rounded-[1.5rem] border border-gray-100 bg-white shadow-xl shadow-black/5 dark:border-white/[0.08] dark:bg-[#0f172a] dark:shadow-black/40"
+                    >
+                        {options.length > 5 && (
+                            <div className="border-b border-gray-100 px-3 py-2.5 dark:border-white/[0.06]">
+                                <div className="flex items-center gap-2 rounded-xl bg-gray-50 px-3 py-2 dark:bg-white/[0.04]">
+                                    <Search size={13} className="shrink-0 text-gray-400" />
+                                    <input
+                                        autoFocus
+                                        value={query}
+                                        onChange={(e) => setQuery(e.target.value)}
+                                        placeholder="جستجو..."
+                                        className="w-full bg-transparent text-[12px] font-semibold text-gray-900 outline-none placeholder:text-gray-400 dark:text-white"
+                                    />
+                                </div>
+                            </div>
+                        )}
+
+                        <div className="max-h-56 overflow-y-auto p-1.5">
+                            {visible.length === 0 ? (
+                                <p className="py-6 text-center text-[12px] text-gray-400">{emptyText}</p>
+                            ) : (
+                                visible.map((o, i) => {
+                                    const active = selectedValues.includes(o.id);
+                                    return (
+                                        <motion.button
+                                            key={o.id}
+                                            type="button"
+                                            initial={{ opacity: 0, x: 6 }}
+                                            animate={{ opacity: 1, x: 0 }}
+                                            transition={{ delay: i * 0.02 }}
+                                            onClick={() => handleSelect(o.id)}
+                                            className={`flex w-full items-center gap-2.5 rounded-2xl px-2.5 py-2 text-right transition-colors ${active
+                                                ? "bg-blue-50 dark:bg-blue-500/10"
+                                                : "hover:bg-gray-50 dark:hover:bg-white/[0.04]"
+                                                }`}
+                                        >
+                                            <span
+                                                className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br text-[12px] font-extrabold text-white ${gradientOf(
+                                                    o.id
+                                                )}`}
+                                            >
+                                                {initialOf(o.label)}
+                                            </span>
+                                            <span className="min-w-0 flex-1">
+                                                <span
+                                                    className={`block truncate text-[12.5px] font-bold ${active
+                                                        ? "text-blue-600 dark:text-blue-400"
+                                                        : "text-gray-900 dark:text-white"
+                                                        }`}
+                                                >
+                                                    {o.label}
+                                                </span>
+                                                {o.sub && (
+                                                    <span className="mt-0.5 block truncate text-[10.5px] text-gray-400">
+                                                        {o.sub}
+                                                    </span>
+                                                )}
+                                            </span>
+                                            {active && (
+                                                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-600">
+                                                    <Check size={11} className="text-white" strokeWidth={3} />
+                                                </span>
+                                            )}
+                                        </motion.button>
+                                    );
+                                })
+                            )}
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+        </div>
+    );
 }
 
 const statusTone: Record<string, string> = {
@@ -87,304 +336,31 @@ const statusTone: Record<string, string> = {
     canceled: "bg-rose-500",
     cancelled: "bg-rose-500",
     rejected: "bg-rose-500",
-}
+};
 
-const getListData = <T,>(data: T[] | { results?: T[] }): T[] =>
-    Array.isArray(data) ? data : data?.results ?? []
-
-const getEmployeeName = (employee: Employee) => {
-    const detail = employee.user_detail
+function getEmployeeName(employee: Employee) {
+    const detail = employee.user_detail;
     const fullName =
         employee.full_name ||
         detail?.full_name ||
         [employee.first_name, employee.last_name, detail?.first_name, detail?.last_name]
             .filter(Boolean)
-            .join(" ")
-    return fullName || `کارمند ${employee.id}`
+            .join(" ");
+    return fullName || `کارمند ${employee.id}`;
 }
 
-const getEmployeeId = (employee: Employee) => employee.employee ?? employee.id
-
-const getFileSize = (size: number) => {
-    if (size < 1024) return `${size} B`
-    if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`
-    return `${(size / (1024 * 1024)).toFixed(1)} MB`
+function getEmployeeId(employee: Employee) {
+    return employee.id;
 }
 
-const getInitial = (text: string) => text.trim().charAt(0) || "؟"
-
-const FloatingInput = ({ label, id, value, onChange }: FloatingInputProps) => (
-    <div className="relative">
-        <input
-            id={id}
-            placeholder=" "
-            value={value}
-            onChange={onChange}
-            className="peer w-full rounded-4xl border border-slate-200 bg-white px-5 py-3 text-sm text-slate-900 outline-none transition-colors focus:border-blue-500 dark:border-slate-700/70 dark:bg-slate-900 dark:text-white"
-        />
-        <label
-            htmlFor={id}
-            className="pointer-events-none absolute right-5 top-1/2 -translate-y-1/2 rounded bg-white px-1.5 text-sm text-slate-400 transition-all duration-200 peer-focus:top-0 peer-focus:text-xs peer-focus:text-blue-500 peer-[:not(:placeholder-shown)]:top-0 peer-[:not(:placeholder-shown)]:text-xs peer-[:not(:placeholder-shown)]:text-blue-500 dark:bg-[#0f172a] dark:text-slate-500 dark:peer-focus:text-blue-400 dark:peer-[:not(:placeholder-shown)]:text-blue-400"
-        >
-            {label}
-        </label>
-    </div>
-)
-
-const FloatingTextarea = ({ label, id, value, onChange }: FloatingTextareaProps) => (
-    <div className="relative">
-        <textarea
-            id={id}
-            placeholder=" "
-            rows={3}
-            value={value}
-            onChange={onChange}
-            className="peer w-full resize-none rounded-3xl border border-slate-200 bg-white px-5 py-3 text-sm text-slate-900 outline-none transition-colors focus:border-blue-500 dark:border-slate-700/70 dark:bg-slate-900 dark:text-white"
-        />
-        <label
-            htmlFor={id}
-            className="pointer-events-none absolute right-5 top-4 rounded bg-white px-1.5 text-sm text-slate-400 transition-all duration-200 peer-focus:top-0 peer-focus:text-xs peer-focus:text-blue-500 peer-[:not(:placeholder-shown)]:top-0 peer-[:not(:placeholder-shown)]:text-xs peer-[:not(:placeholder-shown)]:text-blue-500 dark:bg-[#0f172a] dark:text-slate-500 dark:peer-focus:text-blue-400 dark:peer-[:not(:placeholder-shown)]:text-blue-400"
-        >
-            {label}
-        </label>
-    </div>
-)
-
-const NiceSelect = ({
-    label,
-    value,
-    options,
-    onChange,
-    placeholder = "انتخاب کنید",
-    disabled,
-    loading,
-    searchable,
-    withAvatar,
-    emptyText = "موردی پیدا نشد",
-}: NiceSelectProps) => {
-    const [open, setOpen] = useState(false)
-    const [query, setQuery] = useState("")
-    const boxRef = useRef<HTMLDivElement>(null)
-
-    const selected = options.find((option) => option.value === value) || null
-
-    const filtered = useMemo(() => {
-        const term = query.trim().toLowerCase()
-        if (!term) return options
-        return options.filter((option) =>
-            `${option.label} ${option.hint ?? ""}`.toLowerCase().includes(term)
-        )
-    }, [options, query])
-
-    useEffect(() => {
-        if (!open) return
-
-        const handleClick = (event: MouseEvent) => {
-            if (boxRef.current && !boxRef.current.contains(event.target as Node)) {
-                setOpen(false)
-            }
-        }
-
-        const handleKey = (event: KeyboardEvent) => {
-            if (event.key === "Escape") setOpen(false)
-        }
-
-        document.addEventListener("mousedown", handleClick)
-        document.addEventListener("keydown", handleKey)
-
-        return () => {
-            document.removeEventListener("mousedown", handleClick)
-            document.removeEventListener("keydown", handleKey)
-        }
-    }, [open])
-
-    return (
-        <div className="relative" ref={boxRef}>
-            <div
-                onClick={() => !disabled && setOpen(!open)}
-                className={`group flex min-h-[46px] w-full cursor-pointer items-center justify-between rounded-4xl border bg-white px-5 py-2.5 transition-all duration-200 dark:bg-slate-900 ${open
-                    ? "border-blue-500 ring-4 ring-blue-500/5"
-                    : "border-slate-200 dark:border-slate-700/70"
-                    } ${disabled
-                        ? "cursor-not-allowed opacity-50"
-                        : "hover:border-slate-300 dark:hover:border-slate-600"
-                    }`}
-            >
-                <div className="flex min-w-0 items-center gap-2.5">
-                    {withAvatar && selected && (
-                        <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 text-[10px] font-bold text-white shadow-sm shadow-blue-500/20">
-                            {getInitial(selected.label)}
-                        </div>
-                    )}
-                    <span
-                        className={`truncate text-[13px] ${selected ? "font-medium text-slate-900 dark:text-white" : "text-slate-400"
-                            }`}
-                    >
-                        {selected ? selected.label : placeholder}
-                    </span>
-                </div>
-                {loading ? (
-                    <Loader2 size={15} className="shrink-0 animate-spin text-slate-400" />
-                ) : (
-                    <ChevronDown
-                        size={16}
-                        className={`shrink-0 text-slate-400 transition-transform duration-200 ${open ? "rotate-180" : ""
-                            }`}
-                    />
-                )}
-            </div>
-
-            <label className="pointer-events-none absolute -top-2 right-5 rounded bg-white px-1.5 text-[10px] font-bold text-slate-400 dark:bg-[#0f172a] dark:text-slate-500">
-                {label}
-            </label>
-
-            <AnimatePresence>
-                {open && (
-                    <motion.div
-                        initial={{ opacity: 0, y: 8, scale: 0.98 }}
-                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                        exit={{ opacity: 0, y: 8, scale: 0.98 }}
-                        transition={{ duration: 0.18 }}
-                        className="absolute z-[60] mt-2 w-full overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-xl shadow-slate-200/50 dark:border-slate-700/80 dark:bg-slate-900 dark:shadow-none"
-                    >
-                        {searchable && (
-                            <div className="border-b border-slate-100 p-2.5 dark:border-slate-800">
-                                <div className="relative">
-                                    <Search
-                                        size={14}
-                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
-                                    />
-                                    <input
-                                        autoFocus
-                                        value={query}
-                                        onChange={(event) => setQuery(event.target.value)}
-                                        placeholder="جستجو..."
-                                        className="h-9 w-full rounded-2xl bg-slate-50 pl-4 pr-9 text-xs text-slate-900 outline-none focus:bg-slate-100 dark:bg-slate-800 dark:text-white dark:focus:bg-slate-800/80"
-                                    />
-                                </div>
-                            </div>
-                        )}
-
-                        <div className="max-h-52 overflow-y-auto p-1.5">
-                            {filtered.length > 0 ? (
-                                filtered.map((option) => (
-                                    <div
-                                        key={option.value}
-                                        onClick={() => {
-                                            onChange(option.value)
-                                            setOpen(false)
-                                            setQuery("")
-                                        }}
-                                        className={`group flex cursor-pointer items-center justify-between rounded-2xl px-3.5 py-2.5 transition-colors ${value === option.value
-                                            ? "bg-blue-500/10 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400"
-                                            : "hover:bg-slate-50 dark:hover:bg-slate-800"
-                                            }`}
-                                    >
-                                        <div className="flex min-w-0 items-center gap-2.5">
-                                            {withAvatar && (
-                                                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-slate-100 to-slate-200 text-[11px] font-bold text-slate-600 group-hover:from-blue-500 group-hover:to-indigo-600 group-hover:text-white dark:from-slate-800 dark:to-slate-700 dark:text-slate-400">
-                                                    {getInitial(option.label)}
-                                                </div>
-                                            )}
-                                            <div className="flex min-w-0 flex-col">
-                                                <span className="truncate text-[12.5px] font-medium">
-                                                    {option.label}
-                                                </span>
-                                                {option.hint && (
-                                                    <span className="truncate text-[10px] text-slate-400">
-                                                        {option.hint}
-                                                    </span>
-                                                )}
-                                            </div>
-                                        </div>
-                                        {value === option.value && (
-                                            <Check size={14} className="shrink-0" />
-                                        )}
-                                    </div>
-                                ))
-                            ) : (
-                                <div className="py-8 text-center text-xs text-slate-400">
-                                    {emptyText}
-                                </div>
-                            )}
-                        </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-        </div>
-    )
+function getFileSize(size: number) {
+    if (size < 1024) return `${size} B`;
+    if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`;
+    return `${(size / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-const FileUploader = ({ files, onChange }: FileUploaderProps) => {
-    const [dragging, setDragging] = useState(false)
-
-    const handleFiles = (list: FileList | null) => {
-        if (!list) return
-        onChange([...files, ...Array.from(list)])
-    }
-
-    return (
-        <div>
-            <input
-                id="edit-task-files"
-                type="file"
-                multiple
-                className="hidden"
-                onChange={(event) => handleFiles(event.target.files)}
-            />
-            <label
-                htmlFor="edit-task-files"
-                onDragOver={(event) => {
-                    event.preventDefault()
-                    setDragging(true)
-                }}
-                onDragLeave={() => setDragging(false)}
-                onDrop={(event) => {
-                    event.preventDefault()
-                    setDragging(false)
-                    handleFiles(event.dataTransfer.files)
-                }}
-                className={`flex cursor-pointer flex-col items-center justify-center gap-2 rounded-3xl border border-dashed px-5 py-6 transition-all duration-200 ${dragging
-                    ? "border-blue-500 bg-blue-500/5"
-                    : "border-slate-200 bg-slate-50/50 hover:border-slate-300 dark:border-slate-700/70 dark:bg-slate-900/50 dark:hover:border-slate-600"
-                    }`}
-            >
-                <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-white text-slate-400 shadow-sm dark:bg-slate-800">
-                    <FileUp size={18} />
-                </div>
-                <span className="text-[11.5px] font-medium text-slate-500">
-                    فایل جدید را بکشید یا کلیک کنید
-                </span>
-            </label>
-
-            {files.length > 0 && (
-                <div className="mt-3 flex flex-col gap-2">
-                    {files.map((file, index) => (
-                        <div
-                            key={index}
-                            className="flex items-center gap-2.5 rounded-2xl border border-slate-200 bg-white px-3.5 py-2.5 dark:border-slate-700/60 dark:bg-slate-800/60"
-                        >
-                            <Paperclip size={13} className="shrink-0 text-slate-400" />
-                            <span className="min-w-0 flex-1 truncate text-[11.5px] font-bold text-slate-700 dark:text-slate-300">
-                                {file.name}
-                            </span>
-                            <span className="shrink-0 text-[10.5px] text-slate-400">
-                                {getFileSize(file.size)}
-                            </span>
-                            <button
-                                type="button"
-                                onClick={() => onChange(files.filter((_, i) => i !== index))}
-                                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-xl text-slate-400 transition-colors hover:bg-rose-50 hover:text-rose-500 dark:hover:bg-rose-500/10 dark:hover:text-rose-400"
-                            >
-                                <X size={13} />
-                            </button>
-                        </div>
-                    ))}
-                </div>
-            )}
-        </div>
-    )
-}
+const getListData = <T,>(data: T[] | { results?: T[] }): T[] =>
+    Array.isArray(data) ? data : data?.results ?? [];
 
 export default function EditTaskModal({
     task,
@@ -394,86 +370,106 @@ export default function EditTaskModal({
     onClose,
     onSuccess,
 }: EditTaskModalProps) {
-    const [form, setForm] = useState<TaskFormState>({
-        title: "",
-        description: "",
-        case: "",
-        department: "",
-        assigned_employee: "",
-        status: "pending",
-    })
-    const [files, setFiles] = useState<File[]>([])
-    const [cases, setCases] = useState<CaseItem[]>([])
-    const [casesLoading, setCasesLoading] = useState(false)
-    const [loading, setLoading] = useState(false)
-    const [success, setSuccess] = useState(false)
-    const [error, setError] = useState<string | null>(null)
+    const [title, setTitle] = useState("");
+    const [description, setDescription] = useState("");
+    const [selectedCase, setSelectedCase] = useState<number | null>(null);
+    const [selectedDepartment, setSelectedDepartment] = useState<number | null>(null);
+    const [selectedEmployees, setSelectedEmployees] = useState<number[]>([]);
+    const [status, setStatus] = useState<TaskStatus>("pending");
+    const [files, setFiles] = useState<File[]>([]);
+    const [cases, setCases] = useState<CaseItem[]>([]);
+    const [casesLoading, setCasesLoading] = useState(false);
+    const [submitting, setSubmitting] = useState(false);
+    const [submitError, setSubmitError] = useState("");
+    const [success, setSuccess] = useState(false);
+    const [existingFiles, setExistingFiles] = useState<Array<{ id?: number; file: string; name?: string }>>([]);
+    const [isInitializing, setIsInitializing] = useState(false);
+    const [selectedEmployeesData, setSelectedEmployeesData] = useState<Employee[]>([]);
+    const [empInitialized, setEmpInitialized] = useState(false);
+
+
+    const filteredEmployees = useMemo(
+        () =>
+            selectedDepartment
+                ? employees.filter((e) => {
+                    const dept = e.department;
+                    if (dept && typeof dept === "object") {
+                        return Number(dept.id) === selectedDepartment;
+                    }
+                    return Number(dept) === selectedDepartment;
+                })
+                : employees,
+        [employees, selectedDepartment]
+    );
+
+    const allEmployees = useMemo(() => {
+        const merged = [...filteredEmployees];
+        selectedEmployeesData.forEach(emp => {
+            if (!merged.some(e => getEmployeeId(e) === getEmployeeId(emp))) {
+                merged.push(emp);
+            }
+        });
+        return merged;
+    }, [filteredEmployees, selectedEmployeesData]);
+
+   const filteredEmpOptions = useMemo(
+    () =>
+        allEmployees
+            .filter((employee) => {
+                return !!(
+                    employee.first_name ||
+                    employee.last_name ||
+                    employee.user_detail?.first_name ||
+                    employee.user_detail?.last_name ||
+                    employee.full_name
+                );
+            })
+            .map((employee) => ({
+                id: Number(getEmployeeId(employee)),
+                label: getEmployeeName(employee),
+                sub: employee.position || employee.user_detail?.username || undefined,
+            })),
+    [allEmployees]
+);
+
 
     const empOptions = useMemo(
         () =>
             employees.map((employee) => ({
-                value: String(getEmployeeId(employee)),
+                id: Number(getEmployeeId(employee)),
                 label: getEmployeeName(employee),
-                hint: employee.position || employee.user_detail?.username || undefined,
+                sub: employee.position || employee.user_detail?.username || undefined,
             })),
         [employees]
-    )
+    );
+
+    async function fetchSelectedEmployees() {
+        const fetchedEmployees: Employee[] = [];
+        for (const id of employeeIds) {
+            try {
+                const response = await axiosInstance.get(`/accounts/api/v1/employee/${id}/`);
+                if (response.data) fetchedEmployees.push(response.data);
+            } catch { }
+        }
+        setSelectedEmployeesData(fetchedEmployees);
+        setSelectedEmployees(fetchedEmployees.map(emp => Number(getEmployeeId(emp))));
+        setEmpInitialized(true); // ← اینجا
+    }
 
     useEffect(() => {
-        if (!task) return
+        if (!empInitialized) return;
+        if (selectedDepartment !== null) {
+            setSelectedEmployees(prev =>
+                prev.filter(id =>
+                    allEmployees.some(e => Number(getEmployeeId(e)) === id)
+                )
+            );
+        }
+    }, [selectedDepartment, allEmployees, empInitialized]);
 
-        const rawEmployee = task.assigned_employee
-        const rawEmployeeId =
-            rawEmployee && typeof rawEmployee === "object" ? rawEmployee.id : rawEmployee
 
-        const matchedEmployee = employees.find(
-            (employee) =>
-                Number(employee.id) === Number(rawEmployeeId) ||
-                Number(getEmployeeId(employee)) === Number(rawEmployeeId)
-        )
 
-        setForm({
-            title: task.title ?? "",
-            description: task.description ?? "",
-            case:
-                task.case && typeof task.case === "object"
-                    ? String(task.case.id)
-                    : task.case
-                        ? String(task.case)
-                        : "",
-            department:
-                task.department && typeof task.department === "object"
-                    ? String(task.department.id)
-                    : task.department
-                        ? String(task.department)
-                        : "",
-            assigned_employee: matchedEmployee
-                ? String(getEmployeeId(matchedEmployee))
-                : rawEmployeeId
-                    ? String(rawEmployeeId)
-                    : "",
-            status: (task.status as TaskStatus) ?? "pending",
-        })
 
-        setFiles([])
-        setError(null)
-        setSuccess(false)
-        setCasesLoading(true)
-
-        axiosInstance
-            .get(apiRoutes.cases)
-            .then((res) => setCases(getListData<CaseItem>(res.data)))
-            .catch(() => { })
-            .finally(() => setCasesLoading(false))
-    }, [task, employees])
-
-    const handleClose = () => {
-        if (!loading && !success) onClose()
-    }
-
-    const updateField = (key: keyof TaskFormState, val: string) => {
-        setForm((prev) => ({ ...prev, [key]: val }))
-    }
 
     const caseOptions = useMemo(
         () =>
@@ -481,268 +477,523 @@ export default function EditTaskModal({
                 const customerId =
                     item.customer && typeof item.customer === "object"
                         ? item.customer.id
-                        : item.customer
-                const customer = customers.find((c) => Number(c.id) === Number(customerId))
+                        : item.customer;
+                const customer = customers.find((c) => Number(c.id) === Number(customerId));
                 return {
-                    value: String(item.id),
+                    id: Number(item.id),
                     label: item.title,
-                    hint: customer ? `مشتری: ${customer.full_name}` : undefined,
-                }
+                    sub: customer ? `مشتری: ${customer.full_name}` : undefined,
+                };
             }),
         [cases, customers]
-    )
+    );
 
     const deptOptions = useMemo(
         () =>
             departments.map((department) => ({
-                value: String(department.id),
+                id: Number(department.id),
                 label: department.name,
             })),
         [departments]
-    )
+    );
 
     const statusOptions = useMemo(
         () =>
-            (Object.keys(taskStatusLabels) as TaskStatus[]).map((status) => ({
-                value: status,
-                label: taskStatusLabels[status],
+            (Object.keys(taskStatusLabels) as TaskStatus[]).map((statusKey) => ({
+                id: statusKey.charCodeAt(0),
+                label: taskStatusLabels[statusKey],
+                sub: statusKey,
             })),
         []
-    )
+    );
 
-    const handleSubmit = async (event: React.FormEvent) => {
-        event.preventDefault()
-        if (!task || loading) return
+    useEffect(() => {
+        if (!task) return;
 
-        if (!form.title.trim()) {
-            setError("عنوان تسک اجباری است")
-            return
+        setIsInitializing(true);
+
+        setTitle(task.title ?? "");
+        setDescription(task.description ?? "");
+
+        const caseId = task.case && typeof task.case === "object"
+            ? task.case.id
+            : task.case
+                ? Number(task.case)
+                : null;
+        setSelectedCase(caseId);
+
+        const deptId = task.department && typeof task.department === "object"
+            ? task.department.id
+            : task.department
+                ? Number(task.department)
+                : null;
+        setSelectedDepartment(deptId);
+
+        setStatus((task.status as TaskStatus) ?? "pending");
+
+        // دریافت لیست employee IDs از task
+        const rawEmployee = task.assigned_employee;
+        let employeeIds: number[] = [];
+
+        if (Array.isArray(rawEmployee)) {
+            employeeIds = rawEmployee.map((emp) => {
+                if (typeof emp === "object" && emp !== null) {
+                    return Number(emp.id);
+                }
+                return Number(emp);
+            }).filter((id) => !isNaN(id) && id > 0);
+        } else if (typeof rawEmployee === "number") {
+            employeeIds = [rawEmployee];
         }
 
-        setLoading(true)
-        setError(null)
+        // دریافت اطلاعات کامل کارمندان از API
+        async function fetchSelectedEmployees() {
+            const fetchedEmployees: Employee[] = [];
+            for (const id of employeeIds) {
+                try {
+                    const response = await axiosInstance.get(`/accounts/api/v1/employee/${id}/`);
+                    if (response.data) {
+                        fetchedEmployees.push(response.data);
+                    }
+                } catch (error) {
+                    console.error(`Failed to fetch employee ${id}:`, error);
+                }
+            }
+            setSelectedEmployeesData(fetchedEmployees);
+            setSelectedEmployees(fetchedEmployees.map(emp => getEmployeeId(emp)));
+        }
+
+        fetchSelectedEmployees();
+
+        setFiles([]);
+        setSubmitError("");
+        setSuccess(false);
+
+        const taskFiles = task.files || [];
+        if (Array.isArray(taskFiles)) {
+            const mappedFiles = taskFiles.map((f: any) => {
+                if (typeof f === "string") {
+                    return { file: f };
+                }
+                return { id: f?.id, file: f?.file || f?.url || f?.attachment, name: f?.name };
+            }).filter((f) => f.file);
+            setExistingFiles(mappedFiles);
+        } else {
+            setExistingFiles([]);
+        }
+
+        setCasesLoading(true);
+        axiosInstance
+            .get(apiRoutes.cases)
+            .then((res) => setCases(getListData<CaseItem>(res.data)))
+            .catch(() => { })
+            .finally(() => {
+                setCasesLoading(false);
+                setIsInitializing(false);
+            });
+    }, [task]);
+
+    useEffect(() => {
+        if (isInitializing) return;
+        if (selectedDepartment !== null) {
+            const currentEmployeeIds = selectedEmployees;
+            const validEmployeesInDepartment = allEmployees
+                .filter((e) => currentEmployeeIds.includes(Number(getEmployeeId(e))))
+                .map((e) => Number(getEmployeeId(e)));
+            setSelectedEmployees(validEmployeesInDepartment);
+        } else {
+            setSelectedEmployees([]);
+        }
+    }, [selectedDepartment, allEmployees, isInitializing]);
+
+    const canSubmit =
+        title.trim().length > 0 &&
+        description.trim().length > 0 &&
+        selectedCase !== null &&
+        selectedDepartment !== null &&
+        selectedEmployees.length > 0 &&
+        !submitting;
+
+    function handleClose() {
+        if (submitting || success) return;
+        onClose();
+    }
+
+    function parseBackendError(data: unknown): string {
+        if (!data) return "خطایی رخ داد. دوباره تلاش کنید.";
+        if (typeof data === "string") return data;
+        if (Array.isArray(data)) return String(data[0]);
+        if (typeof data === "object") {
+            const values = Object.values(data as Record<string, unknown>);
+            const first = values[0];
+            if (Array.isArray(first)) return String(first[0]);
+            if (typeof first === "string") return first;
+        }
+        return "خطایی رخ داد. دوباره تلاش کنید.";
+    }
+
+    async function handleSubmit() {
+        if (!canSubmit) return;
+        setSubmitError("");
+        setSubmitting(true);
 
         try {
-            await axiosInstance.patch(apiRoutes.updateTask(task.id), {
-                title: form.title.trim(),
-                description: form.description.trim() || null,
-                case: form.case ? Number(form.case) : null,
-                department: form.department ? Number(form.department) : null,
-                assigned_employee: form.assigned_employee
-                    ? Number(form.assigned_employee)
-                    : null,
-                status: form.status,
-            })
+            const payload: any = {
+                title: title.trim(),
+                description: description.trim(),
+                case: selectedCase,
+                department: selectedDepartment,
+                assigned_employee: selectedEmployees,
+                status: status,
+            };
+
+            await axiosInstance.patch(apiRoutes.updateTask(task!.id), payload);
 
             if (files.length > 0) {
                 await Promise.allSettled(
                     files.map((file) => {
-                        const formData = new FormData()
-                        formData.append("file", file)
-                        return axiosInstance.post(apiRoutes.taskAttachments(task.id), formData, {
+                        const formData = new FormData();
+                        formData.append("file", file);
+                        return axiosInstance.post(apiRoutes.taskAttachments(task!.id), formData, {
                             headers: { "Content-Type": "multipart/form-data" },
-                        })
+                        });
                     })
-                )
+                );
             }
 
-            setSuccess(true)
+            setSuccess(true);
             setTimeout(() => {
-                onClose()
-                onSuccess()
-            }, 1400)
-        } catch {
-            setError("خطا در ویرایش تسک. دوباره امتحان کنید.")
+                onClose();
+                onSuccess();
+            }, 1400);
+        } catch (err) {
+            const e = err as { response?: { data?: unknown } };
+            setSubmitError(parseBackendError(e.response?.data));
         } finally {
-            setLoading(false)
+            setSubmitting(false);
         }
     }
 
-    const existingFiles = task?.files ?? []
+    const selectedCaseObj = cases.find((c) => Number(c.id) === selectedCase) ?? null;
+    const selectedDeptObj = departments.find((d) => Number(d.id) === selectedDepartment) ?? null;
+
+    if (!task) return null;
 
     return (
-        <AnimatePresence mode="wait">
-            {task && (
+        <AnimatePresence>
+            <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 z-50 flex items-center justify-center px-4"
+                style={{ background: "rgba(0,0,0,0.45)", backdropFilter: "blur(3px)" }}
+                onClick={handleClose}
+            >
                 <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-slate-900/40 px-4 backdrop-blur-sm dark:bg-black/45"
-                    onClick={handleClose}
+                    initial={{ opacity: 0, y: 16 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 16 }}
+                    transition={{ duration: 0.35, ease: "easeOut" }}
+                    onClick={(e) => e.stopPropagation()}
+                    dir="rtl"
+                    className="flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-sm dark:border-white/[0.06] dark:bg-[#0f172a]"
                 >
-                    <motion.div
-                        initial={{ opacity: 0, y: 20, scale: 0.95 }}
-                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                        exit={{ opacity: 0, y: 20, scale: 0.95 }}
-                        transition={{ type: "spring", damping: 25, stiffness: 300 }}
-                        className="my-8 w-full max-w-xl overflow-hidden rounded-[2.5rem] border border-slate-200 bg-white shadow-2xl dark:border-slate-700/60 dark:bg-[#0f172a] dark:shadow-none"
-                        onClick={(event) => event.stopPropagation()}
-                        dir="rtl"
-                    >
-                        <div className="flex items-center justify-between px-8 pb-6 pt-8">
-                            <div className="flex min-w-0 items-center gap-3">
-                                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400">
-                                    <Pencil size={18} />
-                                </div>
-                                <div className="min-w-0">
-                                    <h3 className="text-sm font-extrabold text-slate-900 dark:text-white">
-                                        ویرایش تسک
-                                    </h3>
-                                    <p className="mt-0.5 max-w-[250px] truncate text-[11px] font-medium text-slate-400 dark:text-slate-500">
-                                        {task.title}
-                                    </p>
-                                </div>
+                    <div className="flex shrink-0 items-center justify-between px-8 pb-6 pt-8">
+                        <div className="flex items-center gap-2.5">
+                            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-50 dark:bg-blue-500/10">
+                                <ClipboardList size={15} className="text-blue-500" />
                             </div>
-                            <button
-                                type="button"
-                                onClick={handleClose}
-                                disabled={loading || success}
-                                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-slate-50 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600 disabled:opacity-40 dark:bg-slate-800 dark:text-slate-400 dark:hover:text-slate-200"
-                            >
-                                <X size={18} />
-                            </button>
+                            <div>
+                                <h3 className="text-[14px] font-extrabold text-gray-900 dark:text-white">
+                                    ویرایش وظیفه
+                                </h3>
+                                <p className="mt-0.5 text-[11px] text-gray-400">
+                                    {task.title}
+                                </p>
+                            </div>
                         </div>
+                        <button
+                            type="button"
+                            onClick={handleClose}
+                            disabled={submitting || success}
+                            className="flex h-8 w-8 items-center justify-center rounded-xl bg-gray-100 text-gray-400 transition-colors hover:text-gray-600 disabled:opacity-40 dark:bg-white/[0.05] dark:hover:text-gray-300"
+                        >
+                            <X size={15} />
+                        </button>
+                    </div>
 
-                        <form onSubmit={handleSubmit} className="flex flex-col gap-5 px-8 pb-9">
+                    <div className="shrink-0 px-8 pb-4">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                            {selectedCaseObj && (
+                                <span className="flex items-center gap-1.5 rounded-xl bg-blue-50 px-2.5 py-1 text-[11px] font-bold text-blue-600 dark:bg-blue-500/10 dark:text-blue-400">
+                                    <FolderOpen size={11} />
+                                    {selectedCaseObj.title}
+                                </span>
+                            )}
+                            {selectedDeptObj && (
+                                <>
+                                    <ChevronLeft size={11} className="text-gray-300 dark:text-white/20" />
+                                    <span className="flex items-center gap-1.5 rounded-xl bg-gray-100 px-2.5 py-1 text-[11px] font-bold text-gray-500 dark:bg-white/[0.06] dark:text-gray-400">
+                                        <Users size={11} />
+                                        {selectedDeptObj.name}
+                                    </span>
+                                </>
+                            )}
+                            {selectedEmployees.length > 0 && (
+                                <>
+                                    <ChevronLeft size={11} className="text-gray-300 dark:text-white/20" />
+                                    <span className="flex items-center gap-1.5 rounded-xl bg-gray-100 px-2.5 py-1 text-[11px] font-bold text-gray-500 dark:bg-white/[0.06] dark:text-gray-400">
+                                        <UserPlus size={11} />
+                                        {selectedEmployees.length} کارمند
+                                    </span>
+                                </>
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="flex-1 overflow-y-auto px-8 pb-2">
+                        <div className="flex flex-col gap-4">
+                            <AnimatePresence>
+                                {submitError && (
+                                    <motion.div
+                                        initial={{ opacity: 0, y: 6 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        exit={{ opacity: 0, y: 4 }}
+                                        className="flex items-start gap-2.5 rounded-2xl bg-red-50 px-3.5 py-3 dark:bg-red-500/10"
+                                    >
+                                        <AlertCircle size={14} className="mt-0.5 shrink-0 text-red-500" />
+                                        <p className="flex-1 text-[11.5px] font-semibold leading-5 text-red-500 dark:text-red-400">
+                                            {submitError}
+                                        </p>
+                                        <button
+                                            type="button"
+                                            onClick={() => setSubmitError("")}
+                                            className="shrink-0 text-red-400 transition-colors hover:text-red-600"
+                                        >
+                                            <X size={13} />
+                                        </button>
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+
+                            {success && (
+                                <motion.div
+                                    initial={{ opacity: 0, scale: 0.95 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    exit={{ opacity: 0, scale: 0.95 }}
+                                    className="flex h-[48px] items-center justify-center gap-2 rounded-full bg-emerald-50 text-sm font-bold text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400"
+                                >
+                                    <Check size={15} />
+                                    تغییرات با موفقیت ذخیره شد
+                                </motion.div>
+                            )}
+
                             <FloatingInput
-                                label="عنوان تسک *"
-                                id="edit-task-title"
-                                value={form.title}
-                                onChange={(event) => updateField("title", event.target.value)}
+                                id="edit_task_title"
+                                label="عنوان وظیفه"
+                                value={title}
+                                onChange={(v) => {
+                                    setTitle(v);
+                                    setSubmitError("");
+                                }}
                             />
 
                             <FloatingTextarea
+                                id="edit_task_description"
                                 label="توضیحات"
-                                id="edit-task-description"
-                                value={form.description}
-                                onChange={(event) => updateField("description", event.target.value)}
+                                rows={3}
+                                value={description}
+                                onChange={(v) => {
+                                    setDescription(v);
+                                    setSubmitError("");
+                                }}
                             />
 
-                            <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
-                                <NiceSelect
-                                    label="پرونده"
-                                    value={form.case}
-                                    options={caseOptions}
-                                    onChange={(value) => updateField("case", value)}
-                                    loading={casesLoading}
-                                    searchable
-                                    placeholder="انتخاب پرونده"
-                                />
-                                <NiceSelect
-                                    label="دپارتمان"
-                                    value={form.department}
-                                    options={deptOptions}
-                                    onChange={(value) => updateField("department", value)}
-                                    placeholder="انتخاب دپارتمان"
-                                />
-                            </div>
+                            <NiceSelect
+                                label="پرونده"
+                                placeholder="انتخاب پرونده"
+                                emptyText="پرونده‌ای یافت نشد"
+                                options={caseOptions}
+                                value={selectedCase}
+                                onChange={(id) => {
+                                    setSelectedCase(id as number);
+                                    setSubmitError("");
+                                }}
+                                disabled={casesLoading}
+                            />
 
-                            <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
-                                <NiceSelect
-                                    label="مسئول"
-                                    value={form.assigned_employee}
-                                    options={empOptions}
-                                    onChange={(value) => updateField("assigned_employee", value)}
-                                    placeholder="انتخاب کارمند"
-                                    searchable
-                                    withAvatar
-                                    emptyText="کارمندی پیدا نشد"
-                                />
-                                <div className="relative">
-                                    <NiceSelect
-                                        label="وضعیت"
-                                        value={form.status}
-                                        options={statusOptions}
-                                        onChange={(value) =>
-                                            updateField("status", value as TaskStatus)
-                                        }
-                                        placeholder="انتخاب وضعیت"
-                                    />
-                                    <div
-                                        className={`pointer-events-none absolute left-12 top-1/2 h-1.5 w-1.5 -translate-y-1/2 rounded-full ${statusTone[form.status] ?? "bg-slate-400"
-                                            }`}
-                                    />
-                                </div>
-                            </div>
+                            <NiceSelect
+                                label="دپارتمان"
+                                placeholder="انتخاب دپارتمان"
+                                emptyText="دپارتمانی یافت نشد"
+                                options={deptOptions}
+                                value={selectedDepartment}
+                                onChange={(id) => {
+                                    setSelectedDepartment(id as number);
+                                    setSubmitError("");
+                                }}
+                            />
+
+                            <NiceSelect
+                                label="کارمندان مسئول"
+                                placeholder={selectedDepartment ? "انتخاب کارمند" : "ابتدا دپارتمان را انتخاب کنید"}
+                                emptyText="کارمندی در این دپارتمان نیست"
+                                disabled={!selectedDepartment}
+                                multiple={true}
+                                options={filteredEmpOptions}
+                                value={selectedEmployees}
+                                onChange={(ids) => {
+                                    setSelectedEmployees(ids as number[]);
+                                    setSubmitError("");
+                                }}
+                            />
+
+                            <NiceSelect
+                                label="وضعیت"
+                                placeholder="انتخاب وضعیت"
+                                emptyText="وضعیتی یافت نشد"
+                                options={statusOptions.map((s) => ({
+                                    id: s.id,
+                                    label: s.label,
+                                    sub: s.sub,
+                                }))}
+                                value={statusOptions.find((s) => s.sub === status)?.id || null}
+                                onChange={(id) => {
+                                    const found = statusOptions.find((s) => s.id === id);
+                                    if (found) {
+                                        setStatus(found.sub as TaskStatus);
+                                        setSubmitError("");
+                                    }
+                                }}
+                            />
 
                             {existingFiles.length > 0 && (
-                                <div className="flex flex-col gap-2">
-                                    <span className="text-[10.5px] font-bold text-slate-400 dark:text-slate-500">
-                                        ضمیمه‌های فعلی
-                                    </span>
-                                    <div className="flex flex-wrap gap-2">
+                                <div>
+                                    <label className="mb-2 block text-[11.5px] font-bold text-gray-400">
+                                        فایل‌های موجود
+                                    </label>
+                                    <div className="flex flex-col gap-1.5">
                                         {existingFiles.map((file, index) => (
-                                            <a
+                                            <div
                                                 key={index}
-                                                href={typeof file === "string" ? file : file.file}
-                                                target="_blank"
-                                                rel="noreferrer"
-                                                className="group flex items-center gap-2 rounded-2xl border border-slate-100 bg-slate-50/50 px-3 py-2 transition-all hover:border-blue-200 hover:bg-blue-50 dark:border-slate-700/60 dark:bg-slate-800/60 dark:hover:border-blue-500/40 dark:hover:bg-blue-500/5"
+                                                className="flex items-center gap-2 rounded-xl bg-gray-50 px-3 py-2 dark:bg-white/[0.03]"
                                             >
-                                                <Paperclip
-                                                    size={12}
-                                                    className="text-slate-400 group-hover:text-blue-500"
-                                                />
-                                                <span className="text-[11px] font-bold text-slate-600 dark:text-slate-300">
-                                                    مشاهده فایل {index + 1}
+                                                <Paperclip size={12} className="shrink-0 text-gray-400" />
+                                                <span className="min-w-0 flex-1 truncate text-[11.5px] font-semibold text-gray-600 dark:text-gray-300">
+                                                    {file.name || `فایل ${index + 1}`}
                                                 </span>
-                                                <ExternalLink
-                                                    size={10}
-                                                    className="text-slate-400 group-hover:text-blue-500"
-                                                />
-                                            </a>
+                                                <a
+                                                    href={file.file}
+                                                    target="_blank"
+                                                    rel="noreferrer"
+                                                    className="shrink-0 rounded-lg bg-blue-50 px-2.5 py-1 text-[10.5px] font-bold text-blue-600 transition-colors hover:bg-blue-100 dark:bg-blue-500/10 dark:text-blue-400 dark:hover:bg-blue-500/20"
+                                                >
+                                                    مشاهده
+                                                </a>
+                                            </div>
                                         ))}
                                     </div>
                                 </div>
                             )}
 
-                            <FileUploader files={files} onChange={setFiles} />
+                            <div>
+                                <label className="mb-2 block text-[11.5px] font-bold text-gray-400">
+                                    فایل‌های جدید (اختیاری)
+                                </label>
+                                <label className="flex cursor-pointer items-center gap-2.5 rounded-2xl border border-dashed border-gray-200 bg-gray-50/60 px-3.5 py-3 transition-colors hover:border-blue-400 hover:bg-blue-50/40 dark:border-white/[0.1] dark:bg-white/[0.02] dark:hover:border-blue-500/40 dark:hover:bg-blue-500/[0.05]">
+                                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-white text-gray-400 shadow-sm dark:bg-white/[0.06]">
+                                        <Upload size={14} />
+                                    </span>
+                                    <span className="text-[12px] font-bold text-gray-500 dark:text-gray-400">
+                                        {files.length > 0 ? `${files.length} فایل انتخاب شد` : "افزودن فایل"}
+                                    </span>
+                                    <input
+                                        type="file"
+                                        multiple
+                                        className="hidden"
+                                        onChange={(e) =>
+                                            setFiles((prev) => [...prev, ...Array.from(e.target.files ?? [])])
+                                        }
+                                    />
+                                </label>
 
-                            <div className="mt-2 min-h-[50px]">
-                                <AnimatePresence mode="wait">
-                                    {error && (
-                                        <motion.p
-                                            initial={{ opacity: 0, y: -4 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            exit={{ opacity: 0, y: -4 }}
-                                            className="mb-4 text-center text-[11.5px] font-bold text-rose-500"
-                                        >
-                                            {error}
-                                        </motion.p>
-                                    )}
-
-                                    {success ? (
+                                <AnimatePresence>
+                                    {files.length > 0 && (
                                         <motion.div
-                                            key="success"
-                                            initial={{ opacity: 0, scale: 0.95 }}
-                                            animate={{ opacity: 1, scale: 1 }}
-                                            exit={{ opacity: 0, scale: 0.95 }}
-                                            className="flex h-[48px] items-center justify-center gap-2 rounded-full bg-emerald-50 text-sm font-bold text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400"
+                                            initial={{ opacity: 0, height: 0 }}
+                                            animate={{ opacity: 1, height: "auto" }}
+                                            exit={{ opacity: 0, height: 0 }}
+                                            className="mt-2 flex flex-col gap-1.5 overflow-hidden"
                                         >
-                                            <CheckCircle2 size={18} />
-                                            تغییرات با موفقیت ذخیره شد
+                                            {files.map((f, i) => (
+                                                <motion.div
+                                                    key={`${f.name}-${i}`}
+                                                    initial={{ opacity: 0, x: 8 }}
+                                                    animate={{ opacity: 1, x: 0 }}
+                                                    exit={{ opacity: 0, x: 8 }}
+                                                    transition={{ delay: i * 0.03 }}
+                                                    className="flex items-center gap-2 rounded-xl bg-gray-50 px-3 py-2 dark:bg-white/[0.03]"
+                                                >
+                                                    <Paperclip size={12} className="shrink-0 text-gray-400" />
+                                                    <span className="min-w-0 flex-1 truncate text-[11.5px] font-semibold text-gray-600 dark:text-gray-300">
+                                                        {f.name}
+                                                    </span>
+                                                    <span className="shrink-0 text-[10.5px] text-gray-400">
+                                                        {getFileSize(f.size)}
+                                                    </span>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() =>
+                                                            setFiles((prev) => prev.filter((_, j) => j !== i))
+                                                        }
+                                                        className="shrink-0 text-gray-400 transition-colors hover:text-red-500"
+                                                    >
+                                                        <X size={12} />
+                                                    </button>
+                                                </motion.div>
+                                            ))}
                                         </motion.div>
-                                    ) : (
-                                        <motion.button
-                                            key="submit"
-                                            type="submit"
-                                            disabled={loading}
-                                            whileTap={{ scale: 0.98 }}
-                                            className="relative flex h-[48px] w-full items-center justify-center overflow-hidden rounded-full bg-blue-600 text-sm font-bold text-white transition-all hover:bg-blue-500 hover:shadow-lg hover:shadow-blue-500/25 disabled:opacity-50"
-                                        >
-                                            {loading ? (
-                                                <Loader2 size={20} className="animate-spin" />
-                                            ) : (
-                                                "ذخیره تغییرات"
-                                            )}
-                                        </motion.button>
                                     )}
                                 </AnimatePresence>
                             </div>
-                        </form>
-                    </motion.div>
+                        </div>
+                    </div>
+
+                    <div className="flex shrink-0 items-center gap-2 px-8 pb-8 pt-5">
+                        <button
+                            type="button"
+                            onClick={handleClose}
+                            disabled={submitting || success}
+                            className="flex h-11 items-center justify-center gap-1.5 rounded-full px-4 text-[12.5px] font-bold text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 disabled:pointer-events-none disabled:opacity-40 dark:hover:bg-white/[0.05] dark:hover:text-gray-300"
+                        >
+                            <ChevronRight size={14} />
+                            انصراف
+                        </button>
+
+                        <motion.button
+                            type="button"
+                            whileTap={{ scale: 0.97 }}
+                            onClick={handleSubmit}
+                            disabled={!canSubmit || success}
+                            className="flex h-11 flex-1 items-center justify-center gap-2 rounded-full bg-blue-600 text-[13px] font-bold text-white transition-colors hover:bg-blue-500 disabled:opacity-40"
+                        >
+                            {submitting ? (
+                                <Loader size={15} className="animate-spin" />
+                            ) : success ? (
+                                <>
+                                    <Check size={14} strokeWidth={3} />
+                                    ذخیره شد
+                                </>
+                            ) : (
+                                <>
+                                    <Check size={14} strokeWidth={3} />
+                                    ذخیره تغییرات
+                                </>
+                            )}
+                        </motion.button>
+                    </div>
                 </motion.div>
-            )}
+            </motion.div>
         </AnimatePresence>
-    )
+    );
 }

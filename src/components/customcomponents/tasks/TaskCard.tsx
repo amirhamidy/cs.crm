@@ -26,6 +26,11 @@ const AVATAR_GRADIENTS = [
     ["#8b5cf6", "#ec4899"],
     ["#06b6d4", "#6366f1"],
     ["#f59e0b", "#ef4444"],
+    ["#10b981", "#3b82f6"],
+    ["#f472b6", "#ec4899"],
+    ["#8b5cf6", "#f59e0b"],
+    ["#3b82f6", "#06b6d4"],
+    ["#ef4444", "#f59e0b"],
 ];
 
 interface TaskCardProps {
@@ -36,10 +41,27 @@ interface TaskCardProps {
     deleting?: boolean;
 }
 
-const getEmployeeName = (task: TaskItem) => {
-    const e = task.assigned_employee;
-    if (e && typeof e === "object") return e.full_name || e.username || null;
-    return null;
+const getEmployeeInfo = (task: TaskItem) => {
+    const employees = task.assigned_employee;
+    if (!employees) return [];
+
+    const employeeArray = Array.isArray(employees) ? employees : [employees];
+
+    return employeeArray
+        .map((emp) => {
+            if (typeof emp === "object" && emp !== null) {
+                return {
+                    id: emp.id,
+                    name: emp.full_name || emp.username || null,
+                    position: emp.position || null,
+                };
+            }
+            return null;
+        })
+        .filter(
+            (emp): emp is { id: number; name: string; position: string | null } =>
+                emp !== null && emp.name !== null
+        );
 };
 
 const getDepartmentName = (task: TaskItem) => {
@@ -61,7 +83,17 @@ const formatDate = (date?: string) => {
     }
 };
 
-export default function TaskCard({ task, index = 0, onEdit, onDelete, deleting }: TaskCardProps) {
+const getEmployeeGradient = (id: number) => {
+    return AVATAR_GRADIENTS[Math.abs(id) % AVATAR_GRADIENTS.length];
+};
+
+export default function TaskCard({
+    task,
+    index = 0,
+    onEdit,
+    onDelete,
+    deleting,
+}: TaskCardProps) {
     const { resolvedTheme } = useTheme();
     const isDark = resolvedTheme === "dark";
     const [hovered, setHovered] = useState(false);
@@ -73,12 +105,11 @@ export default function TaskCard({ task, index = 0, onEdit, onDelete, deleting }
     const statusLabel = taskStatusLabels[status] ?? task.status ?? "نامشخص";
     const statusClass =
         taskStatusColors[status] ?? "border-slate-500/20 bg-slate-500/10 text-slate-400";
-    const employeeName = getEmployeeName(task);
+    const employeeInfo = getEmployeeInfo(task);
     const departmentName = getDepartmentName(task);
     const caseTitle = task.case && typeof task.case === "object" ? task.case.title : null;
     const fileCount = task.files?.length ?? 0;
     const date = formatDate(task.created_at);
-    const gradient = AVATAR_GRADIENTS[task.id % AVATAR_GRADIENTS.length];
 
     const handleDelete = async () => {
         if (!onDelete) return;
@@ -166,7 +197,8 @@ export default function TaskCard({ task, index = 0, onEdit, onDelete, deleting }
                         className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[10.5px] font-bold ${statusClass}`}
                     >
                         <span
-                            className={`h-1.5 w-1.5 rounded-full bg-current ${status === "in_progress" ? "animate-pulse" : ""}`}
+                            className={`h-1.5 w-1.5 rounded-full bg-current ${status === "in_progress" ? "animate-pulse" : ""
+                                }`}
                         />
                         {statusLabel}
                     </span>
@@ -235,30 +267,50 @@ export default function TaskCard({ task, index = 0, onEdit, onDelete, deleting }
                         borderColor: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)",
                     }}
                 >
-                    {employeeName ? (
-                        <div
-                            className="flex items-center gap-2 rounded-full py-1 pl-3 pr-1"
-                            style={{
-                                border: isDark
-                                    ? "1px solid rgba(255,255,255,0.06)"
-                                    : "1px solid rgba(0,0,0,0.06)",
-                                background: isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)",
-                            }}
-                        >
-                            <span
-                                className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full text-[9px] font-extrabold text-white"
-                                style={{
-                                    background: `linear-gradient(135deg, ${gradient[0]}, ${gradient[1]})`,
-                                }}
-                            >
-                                {employeeName.charAt(0)}
-                            </span>
-                            <span
-                                className="text-[10.5px] font-bold"
-                                style={{ color: isDark ? "#cbd5e1" : "#475569" }}
-                            >
-                                {employeeName}
-                            </span>
+                    {employeeInfo.length > 0 ? (
+                        <div className="flex flex-wrap items-center gap-1.5">
+                            {employeeInfo.map((emp, idx) => {
+                                const gradient = getEmployeeGradient(emp.id);
+                                return (
+                                    <div
+                                        key={emp.id}
+                                        className="flex items-center gap-1.5 rounded-full py-0.5 pl-2 pr-0.5"
+                                        style={{
+                                            border: isDark
+                                                ? "1px solid rgba(255,255,255,0.06)"
+                                                : "1px solid rgba(0,0,0,0.06)",
+                                            background: isDark
+                                                ? "rgba(255,255,255,0.04)"
+                                                : "rgba(0,0,0,0.03)",
+                                        }}
+                                    >
+                                        <span
+                                            className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full text-[9px] font-extrabold text-white"
+                                            style={{
+                                                background: `linear-gradient(135deg, ${gradient[0]}, ${gradient[1]})`,
+                                            }}
+                                        >
+                                            {emp.name.charAt(0)}
+                                        </span>
+                                        <span
+                                            className="text-[10.5px] font-bold"
+                                            style={{
+                                                color: isDark ? "#cbd5e1" : "#475569",
+                                            }}
+                                        >
+                                            {emp.name}
+                                            {emp.position && (
+                                                <span className="mr-0.5 text-[9px] font-normal text-gray-400">
+                                                    ({emp.position})
+                                                </span>
+                                            )}
+                                            {idx < employeeInfo.length - 1 && (
+                                                <span className="mx-0.5 text-gray-400">،</span>
+                                            )}
+                                        </span>
+                                    </div>
+                                );
+                            })}
                         </div>
                     ) : task.assigned_employee ? (
                         <Chip isDark={isDark}>

@@ -8,6 +8,9 @@ import { apiRoutes } from "@/lib/apiRoutes";
 import { Case, Customer, Department, Employee } from "./types";
 import CaseCard from "@/components/customcomponents/cases/CaseCard";
 import CreateCaseModal from "@/components/customcomponents/cases/CreateCaseModal";
+import TaskCard from "@/components/customcomponents/tasks/TaskCard";
+import type { TaskItem } from "@/types/task";
+import EditTaskModal from "@/components/customcomponents/tasks/EditTaskModal";
 
 type ListResponse<T> = T[] | { results?: T[]; data?: T[] };
 
@@ -25,26 +28,32 @@ export default function AdminCasesPage() {
     const [customers, setCustomers] = useState<Customer[]>([]);
     const [departments, setDepartments] = useState<Department[]>([]);
     const [employees, setEmployees] = useState<Employee[]>([]);
+    const [tasks, setTasks] = useState<TaskItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
     const [query, setQuery] = useState("");
     const [caseModalOpen, setCaseModalOpen] = useState(false);
     const [deletingId, setDeletingId] = useState<number | null>(null);
+    const [editingTask, setEditingTask] = useState<TaskItem | null>(null);
+    const [editModalOpen, setEditModalOpen] = useState(false);
+    const [deletingTaskId, setDeletingTaskId] = useState<number | null>(null);
 
     const fetchData = useCallback(async () => {
         try {
             setLoading(true);
             setError("");
-            const [casesRes, customersRes, departmentsRes, employeesRes] = await Promise.all([
+            const [casesRes, customersRes, departmentsRes, employeesRes, tasksRes] = await Promise.all([
                 axiosInstance.get<ListResponse<Case>>(apiRoutes.cases),
                 axiosInstance.get<ListResponse<Customer>>(apiRoutes.customers),
                 axiosInstance.get<ListResponse<Department>>(apiRoutes.departments),
                 axiosInstance.get<ListResponse<Employee>>(apiRoutes.departmentEmployees),
+                axiosInstance.get<ListResponse<TaskItem>>(apiRoutes.tasks),
             ]);
             setCases(extractList(casesRes.data));
             setCustomers(extractList(customersRes.data));
             setDepartments(extractList(departmentsRes.data));
             setEmployees(extractList(employeesRes.data));
+            setTasks(extractList(tasksRes.data));
         } catch (err) {
             console.error(err);
             setError("دریافت اطلاعات با خطا مواجه شد");
@@ -75,6 +84,34 @@ export default function AdminCasesPage() {
         [fetchData]
     );
 
+    const handleDeleteTask = useCallback(
+        async (taskId: number) => {
+            try {
+                setDeletingTaskId(taskId);
+                await axiosInstance.delete(`/tasks/api/v1/tasks/${taskId}/delete/`);
+                setTasks((prev) => prev.filter((t) => t.id !== taskId));
+                return Promise.resolve();
+            } catch (err) {
+                console.error(err);
+                throw err;
+            } finally {
+                setDeletingTaskId(null);
+            }
+        },
+        []
+    );
+
+    const handleEditTask = useCallback((task: TaskItem) => {
+        setEditingTask(task);
+        setEditModalOpen(true);
+    }, []);
+
+    const handleTaskUpdate = useCallback(() => {
+        fetchData();
+        setEditModalOpen(false);
+        setEditingTask(null);
+    }, [fetchData]);
+
     const filteredCases = useMemo(() => {
         const q = query.trim().toLowerCase();
         if (!q) return cases;
@@ -99,6 +136,19 @@ export default function AdminCasesPage() {
         });
     }, [cases, customers, query]);
 
+    const tasksByCase = useMemo(() => {
+        const map = new Map<number, TaskItem[]>();
+        tasks.forEach((task) => {
+            const caseId = task.case && typeof task.case === "object" ? task.case.id : task.case;
+            if (caseId) {
+                const id = Number(caseId);
+                if (!map.has(id)) map.set(id, []);
+                map.get(id)!.push(task);
+            }
+        });
+        return map;
+    }, [tasks]);
+
     return (
         <div className="flex flex-col gap-6 p-4 md:p-6" dir="rtl">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -113,7 +163,7 @@ export default function AdminCasesPage() {
                         <p className="mt-0.5 text-[11.5px] text-gray-400 dark:text-gray-500">
                             {loading
                                 ? "در حال بارگذاری..."
-                                : `${cases.length} پرونده فعال در سیستم`}
+                                : `${cases.length} پرونده و ${tasks.length} وظیفه در سیستم`}
                         </p>
                     </div>
                 </div>
@@ -138,28 +188,6 @@ export default function AdminCasesPage() {
                         <span className="whitespace-nowrap">پرونده جدید</span>
                     </button>
                 </div>
-            </div>
-
-            <div className="relative">
-                <Search
-                    size={14}
-                    className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500"
-                />
-                <input
-                    value={query}
-                    onChange={(e) => setQuery(e.target.value)}
-                    placeholder="جستجو در عنوان، توضیحات یا نام مشتری..."
-                    className="h-11 w-full rounded-2xl border border-gray-200 bg-white pr-10 pl-10 text-[12.5px] text-gray-800 outline-none transition-colors placeholder:text-gray-400 focus:border-indigo-400 dark:border-white/10 dark:bg-white/5 dark:text-gray-100 dark:placeholder:text-gray-500 dark:focus:border-indigo-400/60"
-                />
-                {query && (
-                    <button
-                        onClick={() => setQuery("")}
-                        type="button"
-                        className="absolute left-3 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-white/10 dark:hover:text-gray-200"
-                    >
-                        <X size={13} />
-                    </button>
-                )}
             </div>
 
             {error && !loading && (
@@ -217,18 +245,36 @@ export default function AdminCasesPage() {
                     className="grid grid-cols-1 gap-3 lg:grid-cols-2 xl:grid-cols-3"
                 >
                     <AnimatePresence mode="popLayout">
-                        {filteredCases.map((item, i) => (
-                            <CaseCard
-                                key={item.id}
-                                item={item}
-                                index={i}
-                                customers={customers}
-                                departments={departments}
-                                users={employees}
-                                isDeleting={deletingId === Number(item.id)}
-                                onDelete={() => handleDeleteCase(item)}
-                            />
-                        ))}
+                        {filteredCases.map((item, i) => {
+                            const caseTasks = tasksByCase.get(Number(item.id)) || [];
+                            return (
+                                <div key={item.id} className="flex flex-col gap-2">
+                                    <CaseCard
+                                        item={item}
+                                        index={i}
+                                        customers={customers}
+                                        departments={departments}
+                                        users={employees}
+                                        isDeleting={deletingId === Number(item.id)}
+                                        onDelete={() => handleDeleteCase(item)}
+                                    />
+                                    {caseTasks.length > 0 && (
+                                        <div className="pr-4 space-y-2">
+                                            {caseTasks.map((task, taskIndex) => (
+                                                <TaskCard
+                                                    key={task.id}
+                                                    task={task}
+                                                    index={taskIndex}
+                                                    onEdit={handleEditTask}
+                                                    onDelete={handleDeleteTask}
+                                                    deleting={deletingTaskId === task.id}
+                                                />
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })}
                     </AnimatePresence>
                 </motion.div>
             )}
@@ -239,6 +285,20 @@ export default function AdminCasesPage() {
                 onCreated={fetchData}
                 customers={customers}
             />
+
+            {editModalOpen && editingTask && (
+                <EditTaskModal
+                    task={editingTask}
+                    customers={customers}
+                    departments={departments}
+                    employees={employees}
+                    onClose={() => {
+                        setEditModalOpen(false);
+                        setEditingTask(null);
+                    }}
+                    onSuccess={handleTaskUpdate}
+                />
+            )}
         </div>
     );
 }
