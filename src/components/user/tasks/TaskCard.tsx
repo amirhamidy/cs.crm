@@ -2,7 +2,14 @@
 
 import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { ArrowLeftCircle, ArrowRightCircle, Clock3, CheckCircle2, Layers3, BadgeInfo } from "lucide-react";
+import {
+    ArrowLeftCircle,
+    ArrowRightCircle,
+    Clock3,
+    Layers3,
+    BadgeInfo,
+    ShoppingBag,
+} from "lucide-react";
 import { useTheme } from "next-themes";
 import axiosInstance from "@/lib/axiosInstance";
 import TaskActionModal from "./TaskActionModal";
@@ -16,12 +23,12 @@ export interface ApiTask {
     department_name?: string;
     current_step: number;
     current_step_name?: string;
-    assigned_employee: number;
-    assigned_employee_name?: string;
-    status: "in_progress" | "completed" | string;
+    assigned_employee: number[];
+    status: "in_progress" | "completed" | "sold" | string;
     created_at?: string;
     completed_at?: string;
     updated_at?: string;
+    attachments?: unknown[];
 }
 
 interface TaskCardProps {
@@ -29,10 +36,6 @@ interface TaskCardProps {
     index: number;
     onUpdated: (task: ApiTask) => void;
     onRemoved?: (id: number) => void;
-    canGoPrev?: boolean;
-    canGoNext?: boolean;
-    prevEndpoint?: string;   // مثلا: "backward" یا "revert"
-    nextEndpoint?: string;   // پیش‌فرض: advance
 }
 
 function formatFaDate(date?: string) {
@@ -45,72 +48,41 @@ function formatFaDate(date?: string) {
 }
 
 function getStatusMeta(status: string) {
-    if (status === "completed") {
-        return {
-            label: "تکمیل شده",
-            color: "bg-emerald-500/10 text-emerald-500",
-            dot: "bg-emerald-500",
-        };
-    }
-
-    return {
-        label: "در حال انجام",
-        color: "bg-indigo-500/10 text-indigo-500",
-        dot: "bg-indigo-500",
-    };
+    if (status === "completed")
+        return { label: "تکمیل شده", color: "bg-emerald-500/10 text-emerald-500", dot: "bg-emerald-500" };
+    if (status === "sold")
+        return { label: "فروش رفته", color: "bg-amber-500/10 text-amber-500", dot: "bg-amber-500" };
+    return { label: "در حال انجام", color: "bg-indigo-500/10 text-indigo-500", dot: "bg-indigo-500" };
 }
 
-export default function TaskCard({
-    task,
-    index,
-    onUpdated,
-    canGoPrev = true,
-    canGoNext = true,
-    prevEndpoint = "backward",
-    nextEndpoint = "advance",
-}: TaskCardProps) {
+export default function TaskCard({ task, index, onUpdated }: TaskCardProps) {
     const { resolvedTheme } = useTheme();
     const isDark = resolvedTheme === "dark";
 
     const [hovered, setHovered] = useState(false);
-    const [openModal, setOpenModal] = useState<null | "next" | "prev">(null);
+    const [openModal, setOpenModal] = useState<null | "next" | "prev" | "sold">(null);
     const [submitting, setSubmitting] = useState(false);
 
     const meta = useMemo(() => getStatusMeta(task.status), [task.status]);
 
-    const subtitle = [
-        task.department_name ? `دپارتمان: ${task.department_name}` : null,
-        task.current_step_name ? `مرحله: ${task.current_step_name}` : null,
-        task.assigned_employee_name ? `کارمند: ${task.assigned_employee_name}` : null,
-    ]
-        .filter(Boolean)
-        .join(" • ");
+    const isFinished = task.status === "completed" || task.status === "sold";
 
-    async function submitAction(direction: "next" | "prev", data: { note: string; files: File[] }) {
+    async function submitAction(
+        direction: "next" | "prev" | "sold",
+        data: { note: string; files: File[] }
+    ) {
         setSubmitting(true);
-
         try {
+            const endpointMap = { next: "advance", prev: "revert", sold: "mark-as-sold" };
             const formData = new FormData();
+            if (data.note.trim()) formData.append("note", data.note.trim());
+            data.files.forEach((f) => formData.append("files", f));
 
-            if (data.note.trim()) {
-                formData.append("note", data.note.trim());
-            }
-
-            data.files.forEach((file) => {
-                formData.append("files", file);
-            });
-
-            const endpoint =
-                direction === "next"
-                    ? `/tasks/api/v1/tasks/${task.id}/${nextEndpoint}/`
-                    : `/tasks/api/v1/tasks/${task.id}/${prevEndpoint}/`;
-
-            const res = await axiosInstance.post<ApiTask>(endpoint, formData, {
-                headers: {
-                    "Content-Type": "multipart/form-data",
-                },
-            });
-
+            const res = await axiosInstance.post<ApiTask>(
+                `/tasks/api/v1/tasks/${task.id}/${endpointMap[direction]}/`,
+                formData,
+                { headers: { "Content-Type": "multipart/form-data" } }
+            );
             onUpdated(res.data);
             setOpenModal(null);
         } finally {
@@ -129,38 +101,24 @@ export default function TaskCard({
                 onHoverEnd={() => setHovered(false)}
                 className="relative rounded-3xl p-4 flex flex-col gap-4 overflow-hidden"
                 style={{
-                    border: isDark
-                        ? "1px solid rgba(255,255,255,0.06)"
-                        : "1px solid rgba(0,0,0,0.06)",
+                    border: isDark ? "1px solid rgba(255,255,255,0.06)" : "1px solid rgba(0,0,0,0.06)",
                     background: isDark ? "rgba(255,255,255,0.02)" : "#fafafa",
                     minHeight: 160,
                 }}
             >
                 <svg className="absolute inset-0 w-full h-full pointer-events-none">
                     <defs>
-                        <linearGradient
-                            id={`taskBorder-${task.id}`}
-                            x1="100%"
-                            y1="100%"
-                            x2="0%"
-                            y2="0%"
-                        >
+                        <linearGradient id={`taskBorder-${task.id}`} x1="100%" y1="100%" x2="0%" y2="0%">
                             <stop offset="0%" stopColor="#6366f1" />
                             <stop offset="100%" stopColor="#8b5cf6" />
                         </linearGradient>
                     </defs>
-
                     <motion.rect
-                        x="1"
-                        y="1"
-                        width="calc(100% - 2px)"
-                        height="calc(100% - 2px)"
-                        rx="20"
-                        ry="20"
-                        fill="none"
+                        x="1" y="1"
+                        width="calc(100% - 2px)" height="calc(100% - 2px)"
+                        rx="20" ry="20" fill="none"
                         stroke={`url(#taskBorder-${task.id})`}
-                        strokeWidth="1.4"
-                        pathLength="1"
+                        strokeWidth="1.4" pathLength="1"
                         initial={{ pathLength: 0, opacity: 0 }}
                         animate={hovered ? { pathLength: 1, opacity: 1 } : { pathLength: 0, opacity: 0 }}
                         transition={{ duration: 0.55, ease: "easeInOut" }}
@@ -170,35 +128,27 @@ export default function TaskCard({
                 <div className="flex items-start justify-between gap-3 z-10">
                     <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2 mb-2">
-                            <span
-                                className={`text-[11px] font-bold px-2.5 py-1 rounded-lg ${meta.color}`}
-                            >
+                            <span className={`text-[11px] font-bold px-2.5 py-1 rounded-lg ${meta.color}`}>
                                 <span className={`inline-block w-1.5 h-1.5 rounded-full ${meta.dot} ml-1`} />
                                 {meta.label}
                             </span>
-
                             <span className="text-[11px] font-bold px-2.5 py-1 rounded-lg bg-gray-100 text-gray-500 dark:bg-white/5 dark:text-gray-400">
                                 #{task.id}
                             </span>
                         </div>
-
                         <h3 className="text-[14px] font-extrabold text-gray-900 dark:text-white leading-tight truncate">
                             {task.title}
                         </h3>
-
-                        <p className="text-[11.5px] text-gray-400 dark:text-gray-500 mt-1 line-clamp-2">
-                            {subtitle || "بدون اطلاعات تکمیلی"}
+                        <p className="text-[11.5px] text-gray-400 dark:text-gray-500 mt-1">
+                            {task.department_name ?? "بدون دپارتمان"}
                         </p>
                     </div>
-
                     <div className="w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0 bg-indigo-500/10 dark:bg-indigo-500/15">
                         <Layers3 size={18} className="text-indigo-500" />
                     </div>
                 </div>
 
-                <div
-                    className="grid grid-cols-2 gap-2 pt-1"
-                >
+                <div className="grid grid-cols-2 gap-2 pt-1">
                     <div
                         className="rounded-2xl p-3 border"
                         style={{
@@ -214,7 +164,6 @@ export default function TaskCard({
                             {task.department_name || "نامشخص"}
                         </p>
                     </div>
-
                     <div
                         className="rounded-2xl p-3 border"
                         style={{
@@ -234,34 +183,46 @@ export default function TaskCard({
 
                 <div
                     className="pt-3 border-t flex items-center justify-between gap-2"
-                    style={{
-                        borderColor: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)",
-                    }}
+                    style={{ borderColor: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)" }}
                 >
                     <p className="text-[11.5px] text-gray-400 dark:text-gray-500">
-                        ایجاد شده: {formatFaDate(task.created_at)}
+                        {formatFaDate(task.created_at)}
                     </p>
 
-                    <div className="flex items-center gap-2">
-                        {canGoPrev && (
+                    {isFinished ? (
+                        <span className={`text-[11px] font-bold px-3 py-1.5 rounded-xl ${meta.color}`}>
+                            {meta.label}
+                        </span>
+                    ) : (
+                        <div className="flex items-center gap-2">
                             <button
                                 type="button"
                                 onClick={() => setOpenModal("prev")}
                                 disabled={submitting}
                                 className="h-9 px-3 rounded-xl flex items-center gap-2 text-[12px] font-bold transition-colors disabled:opacity-40"
                                 style={{
-                                    background: isDark
-                                        ? "rgba(236,72,153,0.10)"
-                                        : "rgba(236,72,153,0.07)",
+                                    background: isDark ? "rgba(236,72,153,0.10)" : "rgba(236,72,153,0.07)",
                                     color: isDark ? "#f9a8d4" : "#db2777",
                                 }}
                             >
                                 <ArrowRightCircle size={14} />
-                                مرحله قبل
+                                قبل
                             </button>
-                        )}
 
-                        {canGoNext && (
+                            <button
+                                type="button"
+                                onClick={() => setOpenModal("sold")}
+                                disabled={submitting}
+                                className="h-9 px-3 rounded-xl flex items-center gap-2 text-[12px] font-bold transition-colors disabled:opacity-40"
+                                style={{
+                                    background: isDark ? "rgba(245,158,11,0.10)" : "rgba(245,158,11,0.07)",
+                                    color: isDark ? "#fcd34d" : "#d97706",
+                                }}
+                            >
+                                <ShoppingBag size={14} />
+                                فروش
+                            </button>
+
                             <button
                                 type="button"
                                 onClick={() => setOpenModal("next")}
@@ -273,10 +234,10 @@ export default function TaskCard({
                                 }}
                             >
                                 <ArrowLeftCircle size={14} />
-                                مرحله بعد
+                                بعد
                             </button>
-                        )}
-                    </div>
+                        </div>
+                    )}
                 </div>
 
                 <div className="absolute top-3 left-3 w-2 h-2 rounded-full bg-indigo-500/60" />
@@ -287,17 +248,24 @@ export default function TaskCard({
                 onClose={() => setOpenModal(null)}
                 direction="next"
                 title="ارسال به مرحله بعد"
-                description="یادداشت و فایل‌ها را ثبت کن و تسک را جلو ببر"
+                description="تسک را به مرحله بعدی منتقل کن"
                 onSubmit={(data) => submitAction("next", data)}
             />
-
             <TaskActionModal
                 isOpen={openModal === "prev"}
                 onClose={() => setOpenModal(null)}
                 direction="prev"
                 title="برگرداندن به مرحله قبل"
-                description="یادداشت و فایل‌ها را ثبت کن و تسک را عقب ببر"
+                description="تسک را به مرحله قبلی برگردان"
                 onSubmit={(data) => submitAction("prev", data)}
+            />
+            <TaskActionModal
+                isOpen={openModal === "sold"}
+                onClose={() => setOpenModal(null)}
+                direction="sold"
+                title="ثبت فروش"
+                description="این تسک را به عنوان فروش رفته ثبت کن"
+                onSubmit={(data) => submitAction("sold", data)}
             />
         </>
     );

@@ -1,85 +1,9 @@
-"use client";
+import UserTasksKanban from "@/components/user/tasks/UserTasksKanban";
 
-import TaskCard, { ApiTask } from "@/components/user/tasks/TaskCard";
-import axiosInstance from "@/lib/axiosInstance";
-import { useEffect, useState } from "react";
-
-export default function TaskList({
-  initialTasks = [],
-}: {
-  initialTasks?: ApiTask[];
-}) {
-  const [tasks, setTasks] = useState<ApiTask[]>(initialTasks);
-  const [loading, setLoading] = useState(initialTasks.length === 0);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    // اگه initialTasks داشتیم نیازی به fetch نیست
-    if (initialTasks.length > 0) return;
-
-    const fetchTasks = async () => {
-      try {
-        setLoading(true);
-        const res = await axiosInstance.get("/tasks/api/v1/tasks/");
-        // بسته به ساختار response — اگه paginated باشه res.data.results میشه
-        const data: ApiTask[] = Array.isArray(res.data)
-          ? res.data
-          : res.data.results ?? [];
-        setTasks(data);
-      } catch (err) {
-        console.error("fetch tasks failed:", err);
-        setError("دریافت تسک‌ها با خطا مواجه شد");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchTasks();
-  }, []);
-
-  if (loading) {
-    return (
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-        {Array.from({ length: 6 }).map((_, i) => (
-          <div
-            key={i}
-            className="h-48 rounded-2xl bg-muted animate-pulse"
-          />
-        ))}
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="text-center text-destructive py-12">{error}</div>
-    );
-  }
-
-  if (tasks.length === 0) {
-    return (
-      <div className="text-center text-muted-foreground py-12">
-        تسکی وجود ندارد
-      </div>
-    );
-  }
-
+export default function TasksPage() {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-      {tasks.map((task, index) => (
-        <TaskCard
-          key={task.id}
-          task={task}
-          index={index}
-          onUpdated={(updated) => {
-            setTasks((prev) =>
-              prev.map((t) => (t.id === updated.id ? updated : t))
-            );
-          }}
-          prevEndpoint="backward"
-          nextEndpoint="advance"
-        />
-      ))}
+    <div className="p-6">
+      <UserTasksKanban />
     </div>
   );
 }
