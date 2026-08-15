@@ -42,6 +42,15 @@ export function useCancelledTasksByDept() {
     fetchTasks();
   }, []);
 
+  const allDepartments = useMemo(() => {
+    const depts = new Set(
+      tasks
+        .map((t) => t.department_name || "نامشخص")
+        .filter(Boolean)
+    );
+    return Array.from(depts);
+  }, [tasks]);
+
   const getIssuesByRange = (range: TimeRange): DeptIssues[] => {
     const now = new Date();
 
@@ -66,9 +75,10 @@ export function useCancelledTasksByDept() {
       deptCounts[dept] = (deptCounts[dept] || 0) + 1;
     });
 
-    return Object.entries(deptCounts)
-      .map(([stage, issues]) => ({ stage, issues }))
-      .sort((a, b) => b.issues - a.issues);
+    return allDepartments.map((dept) => ({
+      stage: dept,
+      issues: deptCounts[dept] ?? 0,
+    }));
   };
 
   const chartData = useMemo(
@@ -77,8 +87,8 @@ export function useCancelledTasksByDept() {
       monthly: getIssuesByRange("monthly"),
       yearly: getIssuesByRange("yearly"),
     }),
-    [tasks],
+    [tasks, allDepartments],
   );
 
-  return { chartData, loading, error };
+  return { chartData, loading, error, allDepartments };
 }

@@ -1,44 +1,55 @@
-// src/components/admin/performance/TimeRangeSelector.tsx
 "use client";
-import { motion } from "framer-motion";
+
+import { useTheme } from "next-themes";
 import type { TimeRange } from "@/hooks/useAnalytics";
 
-const OPTIONS: { label: string; value: TimeRange }[] = [
-    { label: "هفتگی", value: "weekly" },
-    { label: "ماهانه", value: "monthly" },
-    { label: "سالانه", value: "yearly" },
+const OPTIONS: { value: TimeRange; label: string }[] = [
+    { value: "weekly", label: "هفتگی" },
+    { value: "monthly", label: "ماهانه" },
+    { value: "yearly", label: "سالانه" },
 ];
 
-export default function TimeRangeSelector({
-    value,
-    onChange,
-}: {
+interface Props {
     value: TimeRange;
-    onChange: (v: TimeRange) => void;
-}) {
+    onChange: (value: TimeRange) => void;
+    loading?: boolean;
+}
+
+export default function TimeRangeSelector({ value, onChange, loading = false }: Props) {
+    const { resolvedTheme } = useTheme();
+    const isDark = resolvedTheme === "dark";
+
     return (
-        <div className="inline-flex rounded-xl bg-white/5 p-1 gap-1" dir="rtl">
-            {OPTIONS.map((opt) => (
-                <button
-                    key={opt.value}
-                    onClick={() => onChange(opt.value)}
-                    className="relative px-4 py-1.5 text-sm font-medium rounded-lg transition-colors"
-                >
-                    {value === opt.value && (
-                        <motion.span
-                            layoutId="range-pill"
-                            className="absolute inset-0 rounded-lg bg-indigo-500/20 border border-indigo-500/40"
-                            transition={{ type: "spring", stiffness: 400, damping: 30 }}
-                        />
-                    )}
-                    <span
-                        className={`relative z-10 ${value === opt.value ? "text-indigo-300" : "text-zinc-400"
-                            }`}
+        <div
+            className="flex items-center gap-1 rounded-2xl p-1"
+            style={{
+                background: isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)",
+            }}
+        >
+            {OPTIONS.map((opt) => {
+                const active = value === opt.value;
+                return (
+                    <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() => onChange(opt.value)}
+                        disabled={loading}
+                        className="rounded-xl px-3.5 py-1.5 text-[12px] font-bold transition-colors disabled:opacity-40"
+                        style={
+                            active
+                                ? {
+                                    background: isDark
+                                        ? "rgba(99,102,241,0.18)"
+                                        : "rgba(99,102,241,0.1)",
+                                    color: isDark ? "#c7d2fe" : "#6366f1",
+                                }
+                                : { color: isDark ? "#94a3b8" : "#64748b" }
+                        }
                     >
                         {opt.label}
-                    </span>
-                </button>
-            ))}
+                    </button>
+                );
+            })}
         </div>
     );
 }

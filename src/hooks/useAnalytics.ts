@@ -1,176 +1,199 @@
-// hooks/useAnalytics.ts
 import { useEffect, useMemo, useState } from "react";
+import { apiRoutes } from "@/lib/apiRoutes";
 import axiosInstance from "@/lib/axiosInstance";
-import { getEmployeeInfo } from "@/hooks/useEmployeeInfo";
 
 export type TimeRange = "weekly" | "monthly" | "yearly";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
-
-interface RawCustomer {
-  id: number;
+export interface EmployeeStat {
+  key: string;
   full_name: string;
-  status: number;
-  created_by_username: string;
+  total: number;
+  sold: number;
+  completed: number;
+  in_progress: number;
+  cancelled: number;
+}
+
+export interface StageStat {
+  key: string;
+  name: string;
+  total: number;
+  sold: number;
+  completed: number;
+  in_progress: number;
+  cancelled: number;
+}
+
+export interface DepartmentStat {
+  key: string;
+  department_name: string;
+  total: number;
+  sold: number;
+  completed: number;
+  in_progress: number;
+  cancelled: number;
+  conversion: number;
+  churnRate: number;
+  stages: StageStat[];
+  best: EmployeeStat | null;
+}
+
+export interface BringerStat {
+  key: string;
+  full_name: string;
+  count: number;
+  actual: number;
+  potential: number;
+}
+
+export interface Summary {
+  totalTasks: number;
+  sold: number;
+  cancelled: number;
+  completed: number;
+  in_progress: number;
+  totalCustomers: number;
+  actualCustomers: number;
+  potentialCustomers: number;
+  departmentsCount: number;
 }
 
 interface RawTask {
+  id: string | number;
+  status?: string;
+  department?: string | number | { id: string | number } | null;
+  department_name?: string;
+  current_step?: string | number | { id: string | number } | null;
+  current_step_name?: string;
+  assigned_employee?: unknown;
+  assigned_employee_username?: unknown;
+  assigned_employee_name?: unknown;
+  created_at?: string;
+  [key: string]: unknown;
+}
+
+interface RawCustomer {
   id: number;
-  title: string;
-  department: number;
-  department_name: string;
-  status: "in_progress" | "completed" | "cancelled" | "sold";
-  created_at: string;
+  status?: number;
+  customer_status?: number;
+  created_by?: string | number;
+  created_by_username?: string;
+  creator_name?: string;
+  created_at?: string;
+  [key: string]: unknown;
 }
 
-export interface EmployeeRankItem {
-  username: string;
-  full_name: string;
-  actual: number;
-  potential: number;
-  total: number;
+interface RawEmployee {
+  id: number | string;
+  username?: string;
+  full_name?: string;
+  name?: string;
+  [key: string]: unknown;
 }
 
-export interface DepartmentStatItem {
-  department_name: string;
-  sold: number;
-  cancelled: number;
-  completed: number;
-  in_progress: number;
-  total: number;
+interface RawDepartment {
+  id: number | string;
+  name?: string;
+  title?: string;
+  accent?: string;
+  [key: string]: unknown;
 }
 
-export interface TaskStatusOverview {
-  in_progress: number;
-  completed: number;
-  cancelled: number;
-  sold: number;
+interface PaginatedResponse<T> {
+  results?: T[];
+  next?: string | null;
 }
 
-export interface SoldTrendPoint {
-  label: string;
-  sold: number;
-}
+const norm = (value: unknown) =>
+  value === null || value === undefined
+    ? ""
+    : String(value).trim().toLowerCase();
 
-export interface DepartmentConversionItem {
-  department_name: string;
-  conversion: number;
-  sold: number;
-  total: number;
-}
+const toNum = (value: unknown) => {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : 0;
+};
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+const firstDefined = (...values: unknown[]) => {
+  for (const value of values) {
+    if (typeof value === "string" && value.trim()) return value.trim();
+  }
+  return "";
+};
 
-async function fetchAllPages<T>(baseUrl: string): Promise<T[]> {
+const relationKey = (value: unknown): string | null => {
+  if (value === null || value === undefined) return null;
+  if (typeof value === "object") {
+    const item = value as { id?: unknown; apiId?: unknown };
+    const id = item.id ?? item.apiId;
+    if (id === null || id === undefined) return null;
+    return String(id);
+  }
+  return String(value);
+};
+
+const statusOf = (task: RawTask) => norm(task.status);
+
+async function fetchAllPages<T>(url: string): Promise<T[]> {
   const results: T[] = [];
-  let url: string | null = baseUrl;
+  let nextUrl: string | null = url;
 
-  while (url) {
-    const res = await axiosInstance.get(url);
-    const data = res.data;
-    const items: T[] = Array.isArray(data) ? data : (data.results ?? []);
+  while (nextUrl) {
+    const res = await axiosInstance.get(nextUrl);
+    const data = res.data as T[] | PaginatedResponse<T>;
+    const items = Array.isArray(data) ? data : (data.results ?? []);
     results.push(...items);
 
     if (!Array.isArray(data) && data.next) {
       const parsed = new URL(data.next);
-      url = parsed.pathname + parsed.search;
+      nextUrl = parsed.pathname + parsed.search;
     } else {
-      url = null;
+      nextUrl = null;
     }
   }
 
   return results;
 }
 
-function getTimeCutoff(range: TimeRange): number {
+function getTimeCutoff(range: TimeRange) {
   const now = Date.now();
   if (range === "weekly") return now - 7 * 24 * 60 * 60 * 1000;
   if (range === "monthly") return now - 30 * 24 * 60 * 60 * 1000;
   return now - 365 * 24 * 60 * 60 * 1000;
 }
 
-function filterByRange<T extends { created_at: string }>(
+function filterByRange<T extends { created_at?: string }>(
   items: T[],
   range: TimeRange,
-): T[] {
+) {
   const cutoff = getTimeCutoff(range);
   return items.filter((item) => {
+    if (!item.created_at) return false;
     const t = new Date(item.created_at).getTime();
     return !Number.isNaN(t) && t >= cutoff;
   });
 }
 
-const WEEKLY_LABELS = [
-  "شنبه",
-  "یکشنبه",
-  "دوشنبه",
-  "سه‌شنبه",
-  "چهارشنبه",
-  "پنج‌شنبه",
-  "جمعه",
-];
-const MONTHLY_LABELS = [
-  "بازه ۱",
-  "بازه ۲",
-  "بازه ۳",
-  "بازه ۴",
-  "بازه ۵",
-  "بازه ۶",
-];
-const YEARLY_LABELS = [
-  "فروردین",
-  "اردیبهشت",
-  "خرداد",
-  "تیر",
-  "مرداد",
-  "شهریور",
-  "مهر",
-  "آبان",
-  "آذر",
-  "دی",
-  "بهمن",
-  "اسفند",
-];
+const bump = (
+  s: {
+    sold: number;
+    completed: number;
+    in_progress: number;
+    cancelled: number;
+  },
+  status: string,
+) => {
+  if (status === "sold") s.sold++;
+  else if (status === "completed") s.completed++;
+  else if (status === "in_progress") s.in_progress++;
+  else if (status === "cancelled") s.cancelled++;
+};
 
-function bucketSoldTrend(tasks: RawTask[], range: TimeRange): SoldTrendPoint[] {
-  const sold = tasks.filter((t) => t.status === "sold");
-  const now = Date.now();
-
-  if (range === "weekly") {
-    const counts = Array(7).fill(0);
-    sold.forEach((t) => {
-      const diff = Math.floor(
-        (now - new Date(t.created_at).getTime()) / (24 * 60 * 60 * 1000),
-      );
-      const idx = 6 - diff;
-      if (idx >= 0 && idx < 7) counts[idx]++;
-    });
-    return WEEKLY_LABELS.map((label, i) => ({ label, sold: counts[i] }));
-  }
-
-  if (range === "monthly") {
-    const counts = Array(6).fill(0);
-    const interval = (30 * 24 * 60 * 60 * 1000) / 6;
-    sold.forEach((t) => {
-      const diff = now - new Date(t.created_at).getTime();
-      const idx = Math.floor((30 * 24 * 60 * 60 * 1000 - diff) / interval);
-      if (idx >= 0 && idx < 6) counts[idx]++;
-    });
-    return MONTHLY_LABELS.map((label, i) => ({ label, sold: counts[i] }));
-  }
-
-  const counts = Array(12).fill(0);
-  sold.forEach((t) => {
-    const month = new Date(t.created_at).getMonth();
-    counts[month]++;
-  });
-  return YEARLY_LABELS.map((label, i) => ({ label, sold: counts[i] }));
-}
-
-// ─── Hook 1: Employee Ranking ─────────────────────────────────────────────────
-
-export function useEmployeeRanking(range: TimeRange = "monthly") {
-  const [data, setData] = useState<EmployeeRankItem[]>([]);
+export function useAnalytics(range: TimeRange = "monthly") {
+  const [tasks, setTasks] = useState<RawTask[]>([]);
+  const [customers, setCustomers] = useState<RawCustomer[]>([]);
+  const [employees, setEmployees] = useState<RawEmployee[]>([]);
+  const [departments, setDepartments] = useState<RawDepartment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -182,273 +205,333 @@ export function useEmployeeRanking(range: TimeRange = "monthly") {
         setLoading(true);
         setError(null);
 
-        const customers = await fetchAllPages<RawCustomer>(
-          "/customers/api/v1/customers/",
-        );
-        const filtered = filterByRange(customers, range);
+        const [tasksRes, customersRes, employeesRes, departmentsRes] =
+          await Promise.all([
+            fetchAllPages<RawTask>(apiRoutes.tasks),
+            fetchAllPages<RawCustomer>(apiRoutes.customers),
+            fetchAllPages<RawEmployee>(apiRoutes.employees),
+            fetchAllPages<RawDepartment>(apiRoutes.departments),
+          ]);
 
-        const map: Record<string, { actual: number; potential: number }> = {};
+        if (cancelled) return;
 
-        filtered.forEach((c) => {
-          const key = c.created_by_username;
-          if (!key) return;
-          if (!map[key]) map[key] = { actual: 0, potential: 0 };
-          if (c.status === 2) map[key].actual++;
-          else if (c.status === 1) map[key].potential++;
-        });
-
-        const usernameList = Object.keys(map);
-        const employeeInfos = await Promise.allSettled(
-          usernameList.map(async (username) => {
-            const allEmployees = await fetchAllPages<{
-              id: number;
-              full_name: string;
-              username: string;
-            }>("/accounts/api/v1/employee/list/");
-            return allEmployees.find((e) => e.username === username);
-          }),
-        );
-
-        const allEmployees = await fetchAllPages<{
-          id: number;
-          full_name: string;
-          username: string;
-        }>("/accounts/api/v1/employee/list/");
-
-        const employeeMap: Record<string, string> = {};
-        allEmployees.forEach((e) => {
-          employeeMap[e.username] = e.full_name;
-        });
-
-        const ranked: EmployeeRankItem[] = usernameList
-          .map((username) => ({
-            username,
-            full_name: employeeMap[username] ?? username,
-            actual: map[username].actual,
-            potential: map[username].potential,
-            total: map[username].actual + map[username].potential,
-          }))
-          .sort((a, b) => b.actual - a.actual || b.total - a.total);
-
-        if (!cancelled) setData(ranked);
-      } catch {
-        if (!cancelled) setError("خطا در بارگذاری رنکینگ کارمندها");
+        setTasks(tasksRes);
+        setCustomers(customersRes);
+        setEmployees(employeesRes);
+        setDepartments(departmentsRes);
+      } catch (e: any) {
+        if (!cancelled) {
+          setError(
+            e?.response?.data?.detail || e?.message || "خطا در دریافت داده‌ها",
+          );
+        }
       } finally {
         if (!cancelled) setLoading(false);
       }
     }
 
     load();
+
     return () => {
       cancelled = true;
     };
-  }, [range]);
+  }, []);
 
-  return { data, loading, error };
-}
+  const filteredTasks = useMemo(
+    () => filterByRange(tasks, range),
+    [tasks, range],
+  );
+  const filteredCustomers = useMemo(
+    () => filterByRange(customers, range),
+    [customers, range],
+  );
 
-// ─── Hook 2: Department Stats ─────────────────────────────────────────────────
+  const employeeMap = useMemo(() => {
+    const m = new Map<string, RawEmployee>();
+    employees.forEach((emp) => {
+      [emp.id, emp.username, emp.full_name, emp.name].forEach((k) => {
+        const key = norm(k);
+        if (key && !m.has(key)) m.set(key, emp);
+      });
+    });
+    return m;
+  }, [employees]);
 
-export function useDepartmentStats(range: TimeRange = "monthly") {
-  const [data, setData] = useState<DepartmentStatItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const departmentMap = useMemo(() => {
+    const m = new Map<string, RawDepartment>();
+    departments.forEach((dep) => {
+      [dep.id, dep.name, dep.title].forEach((k) => {
+        const key = norm(k);
+        if (key && !m.has(key)) m.set(key, dep);
+      });
+    });
+    return m;
+  }, [departments]);
 
-  useEffect(() => {
-    let cancelled = false;
+  const result = useMemo(() => {
+    const departmentAcc = new Map<string, DepartmentStat>();
+    const employeeAcc = new Map<string, EmployeeStat>();
+    const deptEmployeeAcc = new Map<string, Map<string, EmployeeStat>>();
 
-    async function load() {
-      try {
-        setLoading(true);
-        setError(null);
-
-        const tasks = await fetchAllPages<RawTask>("/tasks/api/v1/tasks/");
-        const filtered = filterByRange(tasks, range);
-
-        const map: Record<string, DepartmentStatItem> = {};
-
-        filtered.forEach((t) => {
-          const key = t.department_name;
-          if (!key) return;
-          if (!map[key]) {
-            map[key] = {
-              department_name: key,
-              sold: 0,
-              cancelled: 0,
-              completed: 0,
-              in_progress: 0,
-              total: 0,
-            };
-          }
-          map[key][t.status]++;
-          map[key].total++;
-        });
-
-        const sorted = Object.values(map).sort((a, b) => b.sold - a.sold);
-
-        if (!cancelled) setData(sorted);
-      } catch {
-        if (!cancelled) setError("خطا در بارگذاری آمار دپارتمان‌ها");
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }
-
-    load();
-    return () => {
-      cancelled = true;
-    };
-  }, [range]);
-
-  return { data, loading, error };
-}
-
-// ─── Hook 3: Task Status Overview (Donut) ─────────────────────────────────────
-
-export function useTaskStatusOverview(range: TimeRange = "monthly") {
-  const [data, setData] = useState<TaskStatusOverview>({
-    in_progress: 0,
-    completed: 0,
-    cancelled: 0,
-    sold: 0,
-  });
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function load() {
-      try {
-        setLoading(true);
-        setError(null);
-
-        const tasks = await fetchAllPages<RawTask>("/tasks/api/v1/tasks/");
-        const filtered = filterByRange(tasks, range);
-
-        const overview: TaskStatusOverview = {
-          in_progress: 0,
-          completed: 0,
-          cancelled: 0,
+    const ensureDept = (key: string, name: string) => {
+      if (!departmentAcc.has(key)) {
+        departmentAcc.set(key, {
+          key,
+          department_name: name,
+          total: 0,
           sold: 0,
+          completed: 0,
+          in_progress: 0,
+          cancelled: 0,
+          conversion: 0,
+          churnRate: 0,
+          stages: [],
+          best: null,
+        });
+      }
+      return departmentAcc.get(key)!;
+    };
+
+    const ensureEmp = (key: string, fullName: string) => {
+      if (!employeeAcc.has(key)) {
+        employeeAcc.set(key, {
+          key,
+          full_name: fullName,
+          total: 0,
+          sold: 0,
+          completed: 0,
+          in_progress: 0,
+          cancelled: 0,
+        });
+      }
+      return employeeAcc.get(key)!;
+    };
+
+    const ensureDeptEmp = (
+      deptKey: string,
+      empKey: string,
+      fullName: string,
+    ) => {
+      if (!deptEmployeeAcc.has(deptKey))
+        deptEmployeeAcc.set(deptKey, new Map());
+      const m = deptEmployeeAcc.get(deptKey)!;
+      if (!m.has(empKey)) {
+        m.set(empKey, {
+          key: empKey,
+          full_name: fullName,
+          total: 0,
+          sold: 0,
+          completed: 0,
+          in_progress: 0,
+          cancelled: 0,
+        });
+      }
+      return m.get(empKey)!;
+    };
+
+    const getAssigneeKeys = (task: RawTask): string[] => {
+      const keys = new Set<string>();
+      const ae = task.assigned_employee;
+      const arr = Array.isArray(ae)
+        ? ae
+        : ae !== null && ae !== undefined
+          ? [ae]
+          : [];
+      arr.forEach((v) => {
+        const k = relationKey(v);
+        if (k) keys.add(k);
+      });
+
+      const uname = task.assigned_employee_username;
+      const unameArr = Array.isArray(uname) ? uname : uname ? [uname] : [];
+      unameArr.forEach((v) => {
+        const k = norm(v);
+        if (k) keys.add(k);
+      });
+
+      const name = task.assigned_employee_name;
+      const nameArr = Array.isArray(name) ? name : name ? [name] : [];
+      nameArr.forEach((v) => {
+        const k = norm(v);
+        if (k) keys.add(k);
+      });
+
+      return Array.from(keys);
+    };
+
+    const resolveEmployeeName = (task: RawTask, key: string): string => {
+      const emp = employeeMap.get(norm(key));
+      if (emp) return firstDefined(emp.full_name, emp.name, key);
+      const name = task.assigned_employee_name;
+      if (Array.isArray(name)) return firstDefined(name[0], key);
+      return firstDefined(name, key);
+    };
+
+    filteredTasks.forEach((task) => {
+      const status = statusOf(task);
+      const deptKey = relationKey(task.department) ?? "unknown";
+      const deptName = firstDefined(
+        task.department_name,
+        departmentMap.get(norm(deptKey))?.name,
+        "دپارتمان نامشخص",
+      );
+      const stageKey = relationKey(task.current_step) ?? "unknown";
+      const stageName = firstDefined(task.current_step_name, "مرحله نامشخص");
+      const dep = ensureDept(deptKey, deptName);
+
+      dep.total++;
+      bump(dep, status);
+
+      let stage = dep.stages.find((s) => s.key === stageKey);
+      if (!stage) {
+        stage = {
+          key: stageKey,
+          name: stageName,
+          total: 0,
+          sold: 0,
+          completed: 0,
+          in_progress: 0,
+          cancelled: 0,
         };
+        dep.stages.push(stage);
+      }
+      stage.total++;
+      bump(stage, status);
 
-        filtered.forEach((t) => {
-          if (t.status in overview) overview[t.status]++;
+      getAssigneeKeys(task).forEach((empKey) => {
+        const fullName = resolveEmployeeName(task, empKey);
+
+        const emp = ensureEmp(empKey, fullName);
+        emp.total++;
+        bump(emp, status);
+
+        const deptEmp = ensureDeptEmp(deptKey, empKey, fullName);
+        deptEmp.total++;
+        bump(deptEmp, status);
+      });
+    });
+
+    const departmentsList = Array.from(departmentAcc.values())
+      .map((dep) => {
+        dep.stages.sort(
+          (a, b) =>
+            b.cancelled - a.cancelled ||
+            b.sold - a.sold ||
+            b.total - a.total ||
+            a.key.localeCompare(b.key),
+        );
+
+        const emps = Array.from(deptEmployeeAcc.get(dep.key)?.values() ?? []);
+        emps.sort(
+          (a, b) =>
+            b.sold - a.sold ||
+            b.completed - a.completed ||
+            b.total - a.total ||
+            a.cancelled - b.cancelled,
+        );
+        dep.best = emps[0] ?? null;
+        dep.conversion = dep.total
+          ? Math.round((dep.sold / dep.total) * 100)
+          : 0;
+        dep.churnRate = dep.total
+          ? Math.round((dep.cancelled / dep.total) * 100)
+          : 0;
+        return dep;
+      })
+      .sort(
+        (a, b) =>
+          b.cancelled - a.cancelled || b.sold - a.sold || b.total - a.total,
+      );
+
+    const bestEmployees = departmentsList
+      .map((dep) => {
+        if (!dep.best) return null;
+        return {
+          key: dep.best.key,
+          full_name: dep.best.full_name,
+          sold: dep.best.sold,
+          completed: dep.best.completed,
+          cancelled: dep.best.cancelled,
+          total: dep.best.total,
+          department_key: dep.key,
+          department_name: dep.department_name,
+        };
+      })
+      .filter((item): item is NonNullable<typeof item> => item !== null)
+      .sort((a, b) => b.sold - a.sold || b.total - a.total);
+
+    const weakestEmployees = Array.from(employeeAcc.values())
+      .filter((e) => e.total > 0)
+      .sort((a, b) => b.cancelled - a.cancelled || b.total - a.total)
+      .slice(0, 10);
+
+    const bringerAcc = new Map<string, BringerStat>();
+
+    filteredCustomers.forEach((cust) => {
+      const key =
+        norm(cust.created_by_username) || norm(cust.created_by) || "unknown";
+      if (!bringerAcc.has(key)) {
+        bringerAcc.set(key, {
+          key,
+          full_name: firstDefined(
+            cust.creator_name,
+            cust.created_by_username,
+            typeof cust.created_by === "string" ? cust.created_by : "",
+            "نامشخص",
+          ),
+          count: 0,
+          actual: 0,
+          potential: 0,
         });
-
-        if (!cancelled) setData(overview);
-      } catch {
-        if (!cancelled) setError("خطا در بارگذاری وضعیت تسک‌ها");
-      } finally {
-        if (!cancelled) setLoading(false);
       }
-    }
+      const row = bringerAcc.get(key)!;
+      row.count++;
+      if (toNum(cust.status ?? cust.customer_status) === 2) row.actual++;
+      else row.potential++;
+    });
 
-    load();
-    return () => {
-      cancelled = true;
+    const topBringers = Array.from(bringerAcc.values()).sort(
+      (a, b) => b.actual - a.actual || b.count - a.count,
+    );
+
+    const summary: Summary = {
+      totalTasks: filteredTasks.length,
+      sold: filteredTasks.filter((t) => statusOf(t) === "sold").length,
+      cancelled: filteredTasks.filter((t) => statusOf(t) === "cancelled")
+        .length,
+      completed: filteredTasks.filter((t) => statusOf(t) === "completed")
+        .length,
+      in_progress: filteredTasks.filter((t) => statusOf(t) === "in_progress")
+        .length,
+      totalCustomers: filteredCustomers.length,
+      actualCustomers: filteredCustomers.filter(
+        (c) => toNum(c.status ?? c.customer_status) === 2,
+      ).length,
+      potentialCustomers: filteredCustomers.filter(
+        (c) => toNum(c.status ?? c.customer_status) !== 2,
+      ).length,
+      departmentsCount: departmentsList.length,
     };
-  }, [range]);
 
-  return { data, loading, error };
-}
-
-// ─── Hook 4: Sold Trend Over Time ─────────────────────────────────────────────
-
-export function useSoldTrend(range: TimeRange = "monthly") {
-  const [data, setData] = useState<SoldTrendPoint[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function load() {
-      try {
-        setLoading(true);
-        setError(null);
-
-        const tasks = await fetchAllPages<RawTask>("/tasks/api/v1/tasks/");
-        const filtered = filterByRange(tasks, range);
-        const trend = bucketSoldTrend(filtered, range);
-
-        if (!cancelled) setData(trend);
-      } catch {
-        if (!cancelled) setError("خطا در بارگذاری روند فروش");
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }
-
-    load();
-    return () => {
-      cancelled = true;
+    return {
+      departmentsList,
+      bestEmployees,
+      weakestEmployees,
+      topBringers,
+      summary,
     };
-  }, [range]);
+  }, [employeeMap, departmentMap, filteredCustomers, filteredTasks]);
 
-  return { data, loading, error };
-}
-
-// ─── Hook 5: Department Conversion Rate ───────────────────────────────────────
-
-export function useDepartmentConversion(range: TimeRange = "monthly") {
-  const [data, setData] = useState<DepartmentConversionItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function load() {
-      try {
-        setLoading(true);
-        setError(null);
-
-        const tasks = await fetchAllPages<RawTask>("/tasks/api/v1/tasks/");
-        const filtered = filterByRange(tasks, range);
-
-        const map: Record<
-          string,
-          { sold: number; cancelled: number; completed: number }
-        > = {};
-
-        filtered.forEach((t) => {
-          const key = t.department_name;
-          if (!key) return;
-          if (!map[key]) map[key] = { sold: 0, cancelled: 0, completed: 0 };
-          if (t.status === "sold") map[key].sold++;
-          else if (t.status === "cancelled") map[key].cancelled++;
-          else if (t.status === "completed") map[key].completed++;
-        });
-
-        const result: DepartmentConversionItem[] = Object.entries(map)
-          .map(([dept, counts]) => {
-            const total = counts.sold + counts.cancelled + counts.completed;
-            const conversion =
-              total > 0 ? Math.round((counts.sold / total) * 100) : 0;
-            return {
-              department_name: dept,
-              conversion,
-              sold: counts.sold,
-              total,
-            };
-          })
-          .sort((a, b) => b.conversion - a.conversion);
-
-        if (!cancelled) setData(result);
-      } catch {
-        if (!cancelled) setError("خطا در بارگذاری نرخ تبدیل");
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }
-
-    load();
-    return () => {
-      cancelled = true;
-    };
-  }, [range]);
-
-  return { data, loading, error };
+  return {
+    loading,
+    error,
+    tasks: filteredTasks,
+    customers: filteredCustomers,
+    employees,
+    departments: result.departmentsList,
+    bestEmployees: result.bestEmployees,
+    weakestEmployees: result.weakestEmployees,
+    topBringers: result.topBringers,
+    summary: result.summary,
+  };
 }
