@@ -195,7 +195,7 @@ export default function TaskCard({
         }));
     }, [assigned, employees, localEmployee, remoteEmployee]);
 
-    const status = (task.status ?? "pending") as TaskStatus;
+    const status = (task.status ?? "cancelled") as TaskStatus;
     const statusLabel = taskStatusLabels[status] ?? task.status ?? "نامشخص";
     const statusClass =
         taskStatusColors[status] ?? "border-slate-500/20 bg-slate-500/10 text-slate-400";

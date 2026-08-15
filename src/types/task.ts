@@ -3,7 +3,7 @@ import type { Customer } from "./customer";
 import type { Department } from "./department";
 import type { Employee } from "./employee";
 
-export type TaskStatus = "pending" | "in_progress" | "completed" | "blocked";
+export type TaskStatus = "cancelled" | "in_progress" | "completed" | "sold";
 
 export interface TaskEmployeeRef {
   id: number;

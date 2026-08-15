@@ -14,8 +14,12 @@ const statusMap: Record<string, { label: string; cls: string }> = {
         label: "انجام نشده",
         cls: "bg-gray-100 text-gray-500 dark:bg-white/[0.06] dark:text-gray-400",
     },
-    done: {
+    completed: {
         label: "انجام شده",
+        cls: "bg-green-50 text-green-600 dark:bg-green-500/10 dark:text-green-400",
+    },
+    sold: {
+        label: "فروخته شده",
         cls: "bg-green-50 text-green-600 dark:bg-green-500/10 dark:text-green-400",
     },
 };

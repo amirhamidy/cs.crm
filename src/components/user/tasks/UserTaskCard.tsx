@@ -81,26 +81,23 @@ export default function UserTaskCard({ task, accent = "#6366f1", onUpdated, isDr
             let updated: UserTask;
 
             if (direction === "sold" || direction === "unsold") {
-                const res = await axiosInstance.patch<UserTask>(
+                const res = await axiosInstance.patch<{ status: string }>(
                     `/tasks/api/v1/tasks/${task.id}/mark-as-sold/`
                 );
-                updated = {
-                    ...task,
-                    ...res.data,
-                    status: direction === "sold" ? "sold" : "in_progress",
-                };
+                updated = { ...task, status: res.data.status as UserTask["status"] };
             } else if (direction === "uncancel" || direction === "uncomplete") {
-                const res = await axiosInstance.patch<UserTask>(
+                const res = await axiosInstance.put<UserTask>(
                     `/tasks/api/v1/tasks/${task.id}/update/`,
-                    { status: "in_progress" }
+                    {
+                        title: task.title,
+                        description: task.description,
+                        status: "in_progress",
+                        assigned_employee: task.assigned_employee,
+                    }
                 );
-                updated = { ...task, ...res.data, status: "in_progress" };
+                updated = { ...task, ...res.data };
             } else {
-                const endpointMap = {
-                    next: "advance",
-                    prev: "revert",
-                    cancel: "cancel",
-                } as const;
+                const endpointMap = { next: "advance", prev: "revert", cancel: "cancel" } as const;
                 const formData = new FormData();
                 if (data.note.trim()) formData.append("note", data.note.trim());
                 data.files.forEach((f) => formData.append("files", f));
@@ -118,7 +115,6 @@ export default function UserTaskCard({ task, accent = "#6366f1", onUpdated, isDr
             setSubmitting(false);
         }
     }
-
     function handleBlockedClick() {
         const msg = blockedMessage[task.status];
         if (msg) {
