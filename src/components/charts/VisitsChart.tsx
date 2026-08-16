@@ -239,7 +239,6 @@ export default function SalesIssuesChart() {
     [activeBar]
   );
 
-  // maxValue برای ارتفاع بارهای خالی
   const maxValue = useMemo(
     () => Math.max(...data.map((d) => d.issues), 1),
     [data]

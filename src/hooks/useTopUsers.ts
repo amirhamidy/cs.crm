@@ -9,7 +9,7 @@ export interface User {
   name: string;
   role: string;
   avatar: string;
-  count: number; // تعداد مشتریان
+  count: number;
   trend: Trend;
   trendPct: number;
 }
@@ -56,7 +56,7 @@ function processRangeData(customers: CustomerListItem[], range: TimeRange): User
   const previousCounts: Record<string, number> = {};
 
   customers.forEach((c) => {
-    if (c.status !== 2) return; // فقط مشتریان بالفعل
+    if (c.status !== 2) return; 
     const createdAt = new Date(c.created_at).getTime();
     if (Number.isNaN(createdAt) || createdAt < cutoff) return;
 

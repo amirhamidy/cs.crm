@@ -2,7 +2,6 @@
 
 import React, { createContext, useContext } from "react";
 
-// ─── Types ───────────────────────────────────────────────────────────────────
 
 export type ChartConfig = {
   [key: string]: {
@@ -11,7 +10,6 @@ export type ChartConfig = {
   };
 };
 
-// ─── Context ─────────────────────────────────────────────────────────────────
 
 const ChartContext = createContext<{ config: ChartConfig } | null>(null);
 
@@ -21,7 +19,6 @@ function useChart() {
   return ctx;
 }
 
-// ─── ChartContainer ──────────────────────────────────────────────────────────
 
 interface ChartContainerProps {
   config: ChartConfig;
@@ -51,11 +48,9 @@ export function ChartContainer({
   );
 }
 
-// ─── ChartTooltip ────────────────────────────────────────────────────────────
 
 export { Tooltip as ChartTooltip } from "recharts";
 
-// ─── ChartTooltipContent ─────────────────────────────────────────────────────
 
 interface TooltipPayloadItem {
   name: string;
@@ -148,11 +143,9 @@ export function ChartTooltipContent({
   );
 }
 
-// ─── ChartLegend ─────────────────────────────────────────────────────────────
 
 export { Legend as ChartLegend } from "recharts";
 
-// ─── ChartLegendContent ──────────────────────────────────────────────────────
 
 interface ChartLegendContentProps {
   payload?: Array<{

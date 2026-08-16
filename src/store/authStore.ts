@@ -37,7 +37,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     localStorage.setItem("crm-access", access);
     localStorage.setItem("crm-refresh", refresh);
     localStorage.setItem("crm-type", String(userType));
-    localStorage.setItem("crm-username", username); // این خط اضافه بشه
+    localStorage.setItem("crm-username", username);
     syncCookies(access, userType);
     set({
       accessToken: access,

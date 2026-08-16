@@ -452,7 +452,7 @@ export default function EditTaskModal({
         }
         setSelectedEmployeesData(fetchedEmployees);
         setSelectedEmployees(fetchedEmployees.map(emp => Number(getEmployeeId(emp))));
-        setEmpInitialized(true); // ← اینجا
+        setEmpInitialized(true);
     }
 
     useEffect(() => {
@@ -529,7 +529,6 @@ export default function EditTaskModal({
 
         setStatus((task.status as TaskStatus) ?? "pending");
 
-        // دریافت لیست employee IDs از task
         const rawEmployee = task.assigned_employee;
         let employeeIds: number[] = [];
 
@@ -544,7 +543,6 @@ export default function EditTaskModal({
             employeeIds = [rawEmployee];
         }
 
-        // دریافت اطلاعات کامل کارمندان از API
         async function fetchSelectedEmployees() {
             const fetchedEmployees: Employee[] = [];
             for (const id of employeeIds) {
