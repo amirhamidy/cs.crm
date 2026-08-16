@@ -23,6 +23,7 @@ export const adminMenuItems: MenuItem[] = [
   { icon: ClipboardList, label: "وظایف", href: "/admin/tasks" },
   { icon: Users, label: "مشتری", href: "/admin/customer" },
   { icon: Users, label: "آمار و عملکرد", href: "/admin/performance" },
+  { icon: Users, label: "تقویم", href: "/admin/calendar" },
 ];
 
 export const userMenuItems: MenuItem[] = [

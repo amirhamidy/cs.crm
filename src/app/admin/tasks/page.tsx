@@ -108,6 +108,9 @@ export default function AdminTasksPage() {
         setEditingTask(null);
         fetchAll();
     }, [fetchAll]);
+    const handleTaskUpdated = useCallback((updated: Task) => {
+        setTasks((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
+    }, []);
 
     return (
         <div className="flex flex-col gap-6 p-4 md:p-6" dir="rtl">
@@ -174,6 +177,7 @@ export default function AdminTasksPage() {
                                 employees={employees}
                                 onEdit={(t) => setEditingTask(t)}
                                 onDelete={handleDelete}
+                                onUpdated={handleTaskUpdated}
                             />
                         ))}
                     </AnimatePresence>

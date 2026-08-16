@@ -1,11 +1,14 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
     Building2,
     CalendarDays,
+    ClipboardX,
+    Clock,
     FolderKanban,
+    Loader,
     Loader2,
     Paperclip,
     Pencil,
@@ -14,8 +17,10 @@ import {
     X,
 } from "lucide-react";
 import { useTheme } from "next-themes";
-import type { Task, TaskStatus } from "@/types/task";
-import type { Employee } from "@/types/employee";
+import type { Task, TaskStatus, TaskEmployeeRef } from "@/types/task";
+import { toJalali, toPersianDigits, JALALI_MONTHS, pad2 } from "@/lib/jalali";
+import TimeRangeModal from "./TimeRangeModal";
+import api from "@/lib/axiosInstance";
 import { useEmployeeInfo } from "@/hooks/useEmployeeInfo";
 
 const AVATAR_GRADIENTS = [
@@ -31,82 +36,60 @@ const AVATAR_GRADIENTS = [
     ["#ef4444", "#f59e0b"],
 ];
 
-const STATUS_CONFIG: Record<string, { label: string; className: string }> = {
-    sold: {
-        label: "فروش",
-        className: "border-emerald-500/20 bg-emerald-500/10 text-emerald-400",
-    },
-    completed: {
-        label: "انجام شده",
-        className: "border-blue-500/20 bg-blue-500/10 text-blue-400",
-    },
-    in_progress: {
-        label: "در حال انجام",
-        className: "border-amber-500/20 bg-amber-500/10 text-amber-400",
-    },
-    cancelled: {
-        label: "لغو",
-        className: "border-red-500/20 bg-red-500/10 text-red-400",
-    },
+const STATUS_CONFIG: Record<TaskStatus, { label: string; className: string }> = {
+    sold: { label: "فروش", className: "border-emerald-500/20 bg-emerald-500/10 text-emerald-400" },
+    completed: { label: "انجام شده", className: "border-blue-500/20 bg-blue-500/10 text-blue-400" },
+    in_progress: { label: "در حال انجام", className: "border-amber-500/20 bg-amber-500/10 text-amber-400" },
+    cancelled: { label: "لغو", className: "border-red-500/20 bg-red-500/10 text-red-400" },
 };
 
-type EmployeeLike = {
-    id: number;
-    full_name?: string | null;
-    username?: string | null;
-    position?: string | null;
-};
-
-interface TaskCardProps {
-    task: Task;
-    index?: number;
-    employees?: Employee[];
-    onEdit?: (task: Task) => void;
-    onDelete?: (taskId: number) => Promise<void> | void;
+interface TaskWithStep extends Task {
+    current_step?: number | { id: number } | string | null;
+    assigned_employee?: TaskEmployeeRef | TaskEmployeeRef[] | number | number[] | null;
 }
 
-function getDepartmentName(task: Task) {
-    const department = task.department;
-    if (department && typeof department === "object") return department.name || null;
-    return null;
+interface StepDeadline {
+    started_at: string | null;
+    deadline: string | null;
 }
 
-function formatDate(date?: string) {
-    if (!date) return null;
-    try {
-        return new Date(date).toLocaleDateString("fa-IR", {
-            year: "numeric",
-            month: "short",
-            day: "numeric",
-        });
-    } catch {
-        return null;
-    }
+function formatJalaliDate(iso?: string | null) {
+    if (!iso) return null;
+    const d = new Date(iso);
+    const [jy, jm, jd] = toJalali(d.getFullYear(), d.getMonth() + 1, d.getDate());
+    return `${toPersianDigits(jd)} ${JALALI_MONTHS[jm - 1]} ${toPersianDigits(jy)} ساعت ${toPersianDigits(
+        pad2(d.getHours())
+    )}:${toPersianDigits(pad2(d.getMinutes()))}`;
 }
 
-function getEmployeeGradient(id: number) {
+function getGradient(id: number) {
     return AVATAR_GRADIENTS[Math.abs(id) % AVATAR_GRADIENTS.length];
 }
 
-function getLocalEmployee(taskEmployee: unknown, employees: Employee[] = []) {
-    if (typeof taskEmployee !== "number") return null;
-    return employees.find((emp) => emp.id === taskEmployee) ?? null;
-}
-
-function normalizeEmployee(emp: unknown): EmployeeLike | null {
-    if (!emp) return null;
-    if (typeof emp === "object" && emp !== null) {
-        const e = emp as EmployeeLike;
-        if (typeof e.id === "number") {
-            return {
-                id: e.id,
-                full_name: e.full_name ?? null,
-                username: e.username ?? null,
-                position: e.position ?? null,
-            };
-        }
+function extractId(value: unknown): number | null {
+    if (value === null || value === undefined) return null;
+    if (typeof value === "number") return value;
+    if (typeof value === "string") {
+        const n = Number(value);
+        return Number.isFinite(n) ? n : null;
+    }
+    if (typeof value === "object" && !Array.isArray(value) && "id" in (value as Record<string, unknown>)) {
+        const id = (value as { id?: unknown }).id;
+        return typeof id === "number" ? id : Number.isFinite(Number(id)) ? Number(id) : null;
     }
     return null;
+}
+
+function extractEmployeeIds(value: TaskWithStep["assigned_employee"]): number[] {
+    if (value === null || value === undefined) return [];
+    const arr = Array.isArray(value) ? value : [value];
+    return arr.map((item) => extractId(item)).filter((id): id is number => id !== null);
+}
+
+function extractDepartmentName(value: unknown): string | null {
+    if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+    const dep = value as { name?: string };
+    return dep.name ?? null;
 }
 
 function Chip({ isDark, children }: { isDark: boolean; children: React.ReactNode }) {
@@ -124,95 +107,105 @@ function Chip({ isDark, children }: { isDark: boolean; children: React.ReactNode
     );
 }
 
+function EmployeeChip({ id, isDark }: { id: number; isDark: boolean }) {
+    const { data, loading } = useEmployeeInfo(id);
+    const gradient = getGradient(id);
+    const name = loading ? "..." : (data?.full_name ?? data?.username ?? `کارمند ${id}`);
+
+    return (
+        <div
+            className="flex items-center gap-1.5 rounded-full py-0.5 pl-2 pr-0.5"
+            style={{
+                border: isDark ? "1px solid rgba(255,255,255,0.06)" : "1px solid rgba(0,0,0,0.06)",
+                background: isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)",
+            }}
+        >
+            <span
+                className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full text-[9px] font-extrabold text-white"
+                style={{ background: `linear-gradient(135deg, ${gradient[0]}, ${gradient[1]})` }}
+            >
+                <UserRound size={11} />
+            </span>
+            <span className="text-[10.5px] font-bold" style={{ color: isDark ? "#cbd5e1" : "#475569" }}>
+                {name}
+            </span>
+        </div>
+    );
+}
+
+interface TaskCardProps {
+    task: TaskWithStep;
+    index?: number;
+    onEdit: (task: Task) => void;
+    onDelete: (taskId: number) => Promise<void> | void;
+    onUpdated?: (task: Task) => void;
+}
+
 export default function TaskCard({
     task,
     index = 0,
-    employees = [],
     onEdit,
     onDelete,
+    onUpdated,
 }: TaskCardProps) {
     const { resolvedTheme } = useTheme();
     const isDark = resolvedTheme === "dark";
 
     const [hovered, setHovered] = useState(false);
+    const [timeModalOpen, setTimeModalOpen] = useState(false);
     const [showConfirm, setShowConfirm] = useState(false);
-    const [isDeleting, setIsDeleting] = useState(false);
+    const [deleting, setDeleting] = useState(false);
     const [deleteError, setDeleteError] = useState<string | null>(null);
+    const [savingTime, setSavingTime] = useState(false);
+    const [timeError, setTimeError] = useState<string | null>(null);
+    const [stepDeadline, setStepDeadline] = useState<StepDeadline | null>(null);
+    const [loadingDeadline, setLoadingDeadline] = useState(false);
 
-    const assigned = task.assigned_employee;
+    const employeeIds = extractEmployeeIds(task.assigned_employee);
 
-    const firstAssignedId =
-        typeof assigned === "number"
-            ? assigned
-            : Array.isArray(assigned)
-                ? typeof assigned[0] === "number"
-                    ? assigned[0]
-                    : null
-                : null;
+    const departmentName = extractDepartmentName(task.department);
+    const caseTitle =
+        task.case && typeof task.case === "object" && "title" in task.case
+            ? (task.case as { title?: string }).title
+            : null;
 
-    const localEmployee = useMemo(() => {
-        if (typeof assigned === "number") return getLocalEmployee(assigned, employees);
-        if (Array.isArray(assigned)) {
-            const first = assigned[0];
-            if (typeof first === "number") return getLocalEmployee(first, employees);
-            return normalizeEmployee(first);
-        }
-        return normalizeEmployee(assigned);
-    }, [assigned, employees]);
+    const stepId = extractId(task.current_step);
 
-    const shouldFetchRemote = typeof firstAssignedId === "number" && !localEmployee;
-    const { data: remoteEmployee } = useEmployeeInfo(shouldFetchRemote ? firstAssignedId : null);
-
-    const employeeInfo = useMemo(() => {
-        const candidates: EmployeeLike[] = [];
-
-        if (localEmployee) candidates.push(localEmployee);
-        if (remoteEmployee) candidates.push(remoteEmployee);
-
-        if (Array.isArray(assigned)) {
-            assigned.forEach((item) => {
-                const normalized = normalizeEmployee(item);
-                if (normalized) candidates.push(normalized);
-                if (typeof item === "number") {
-                    const found = employees.find((emp) => emp.id === item);
-                    if (found) candidates.push(found);
-                }
-            });
-        }
-
-        if (typeof assigned === "object" && assigned !== null && !Array.isArray(assigned)) {
-            const normalized = normalizeEmployee(assigned);
-            if (normalized) candidates.push(normalized);
-        }
-
-        const unique = new Map<number, EmployeeLike>();
-        candidates.forEach((emp) => {
-            if (!emp || typeof emp.id !== "number") return;
-            if (!unique.has(emp.id)) unique.set(emp.id, emp);
-        });
-
-        return Array.from(unique.values()).map((emp) => ({
-            id: emp.id,
-            name: emp.full_name || emp.username || `کارمند ${emp.id}`,
-            position: emp.position || undefined,
-        }));
-    }, [assigned, employees, localEmployee, remoteEmployee]);
-
-    const rawStatus = (task.status ?? "cancelled") as TaskStatus;
-    const statusKey = String(rawStatus);
-    const statusConfig = STATUS_CONFIG[statusKey] ?? {
-        label: statusKey,
+    const status = (task.status ?? "cancelled") as TaskStatus;
+    const statusConfig = STATUS_CONFIG[status] ?? {
+        label: "نامشخص",
         className: "border-slate-500/20 bg-slate-500/10 text-slate-400",
     };
 
-    const departmentName = getDepartmentName(task);
-    const caseTitle = task.case && typeof task.case === "object" ? task.case.title : null;
-    const fileCount = task.files?.length ?? 0;
-    const date = formatDate(task.created_at);
+    useEffect(() => {
+        if (!stepId) return;
+        let cancelled = false;
+        setLoadingDeadline(true);
+        api
+            .get(`/tasks/api/v1/tasks/${task.id}/steps/${stepId}/deadline/`)
+            .then((res) => {
+                if (cancelled) return;
+                setStepDeadline({
+                    started_at: res.data?.started_at ?? null,
+                    deadline: res.data?.deadline ?? null,
+                });
+            })
+            .catch(() => {
+                if (!cancelled) setStepDeadline(null);
+            })
+            .finally(() => {
+                if (!cancelled) setLoadingDeadline(false);
+            });
+        return () => {
+            cancelled = true;
+        };
+    }, [task.id, stepId]);
 
-    const handleDelete = async () => {
-        if (!onDelete) return;
-        setIsDeleting(true);
+    const startedAtLabel = formatJalaliDate(stepDeadline?.started_at);
+    const deadlineLabel = formatJalaliDate(stepDeadline?.deadline);
+
+    async function handleDelete() {
+        setDeleting(true);
         setDeleteError(null);
         try {
             await onDelete(task.id);
@@ -220,15 +213,43 @@ export default function TaskCard({
         } catch {
             setDeleteError("خطا در حذف تسک. دوباره تلاش کن.");
         } finally {
-            setIsDeleting(false);
+            setDeleting(false);
         }
-    };
+    }
 
-    const handleClose = () => {
-        if (isDeleting) return;
+    async function handleTimeSubmit(startedAt: string, deadline: string) {
+        if (!stepId) {
+            setTimeError("مرحله فعلی این تسک مشخص نیست");
+            return;
+        }
+        setSavingTime(true);
+        setTimeError(null);
+        try {
+            const { data } = await api.patch(
+                `/tasks/api/v1/tasks/${task.id}/steps/${stepId}/deadline/patch/`,
+                {
+                    started_at: startedAt,
+                    deadline: deadline,
+                }
+            );
+            setStepDeadline({
+                started_at: data?.started_at ?? startedAt,
+                deadline: data?.deadline ?? deadline,
+            });
+            onUpdated?.(data);
+            setTimeModalOpen(false);
+        } catch {
+            setTimeError("خطا در ثبت بازه زمانی");
+        } finally {
+            setSavingTime(false);
+        }
+    }
+
+    function handleCloseConfirm() {
+        if (deleting) return;
         setShowConfirm(false);
         setDeleteError(null);
-    };
+    }
 
     return (
         <>
@@ -245,38 +266,23 @@ export default function TaskCard({
                     border: isDark ? "1px solid rgba(255,255,255,0.06)" : "1px solid rgba(0,0,0,0.06)",
                     background: isDark ? "rgba(255,255,255,0.02)" : "#fafafa",
                     minHeight: "130px",
-                    opacity: isDeleting ? 0.45 : 1,
-                    pointerEvents: isDeleting ? "none" : undefined,
+                    opacity: deleting ? 0.45 : 1,
+                    pointerEvents: deleting ? "none" : undefined,
                     boxShadow: isDark ? "0 2px 24px rgba(0,0,0,0.2)" : "0 2px 16px rgba(0,0,0,0.04)",
                 }}
             >
-                <svg
-                    className="pointer-events-none absolute inset-0 h-full w-full"
-                    style={{ borderRadius: "1rem" }}
-                >
+                <svg className="pointer-events-none absolute inset-0 h-full w-full" style={{ borderRadius: "1rem" }}>
                     <defs>
-                        <linearGradient
-                            id={`borderGrad-${task.id}`}
-                            x1="100%"
-                            y1="100%"
-                            x2="0%"
-                            y2="0%"
-                        >
+                        <linearGradient id={`borderGrad-${task.id}`} x1="100%" y1="100%" x2="0%" y2="0%">
                             <stop offset="0%" stopColor="#6366f1" />
                             <stop offset="100%" stopColor="#8b5cf6" />
                         </linearGradient>
                     </defs>
                     <motion.rect
-                        x="1"
-                        y="1"
-                        width="calc(100% - 2px)"
-                        height="calc(100% - 2px)"
-                        rx="15"
-                        ry="15"
-                        fill="none"
+                        x="1" y="1" width="calc(100% - 2px)" height="calc(100% - 2px)"
+                        rx="15" ry="15" fill="none"
                         stroke={`url(#borderGrad-${task.id})`}
-                        strokeWidth="1.5"
-                        pathLength="1"
+                        strokeWidth="1.5" pathLength="1"
                         initial={{ pathLength: 0, opacity: 0 }}
                         animate={hovered ? { pathLength: 1, opacity: 1 } : { pathLength: 0, opacity: 0 }}
                         transition={{ duration: 0.55, ease: "easeInOut" }}
@@ -284,60 +290,58 @@ export default function TaskCard({
                 </svg>
 
                 <div className="flex items-start justify-between gap-3">
-                    <span
-                        className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[10.5px] font-bold ${statusConfig.className}`}
-                    >
-                        <span
-                            className={`h-1.5 w-1.5 rounded-full bg-current ${statusKey === "in_progress" ? "animate-pulse" : ""}`}
-                        />
+                    <span className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[10.5px] font-bold ${statusConfig.className}`}>
+                        <span className={`h-1.5 w-1.5 rounded-full bg-current ${status === "in_progress" ? "animate-pulse" : ""}`} />
                         {statusConfig.label}
                     </span>
 
                     <div className="flex items-center gap-1.5">
-                        {onEdit && (
-                            <button
-                                type="button"
-                                onClick={() => onEdit(task)}
-                                className="flex h-7 w-7 items-center justify-center rounded-xl transition-colors"
-                                style={{
-                                    background: isDark ? "rgba(99,102,241,0.1)" : "rgba(99,102,241,0.07)",
-                                    color: isDark ? "#a5b4fc" : "#6366f1",
-                                }}
-                                title="ویرایش تسک"
-                            >
-                                <Pencil size={11} />
-                            </button>
-                        )}
-                        {onDelete && (
-                            <button
-                                type="button"
-                                onClick={() => setShowConfirm(true)}
-                                disabled={isDeleting}
-                                className="flex h-7 w-7 items-center justify-center rounded-xl transition-colors disabled:opacity-40"
-                                style={{
-                                    background: isDark ? "rgba(239,68,68,0.1)" : "rgba(239,68,68,0.07)",
-                                    color: "#ef4444",
-                                }}
-                                title="حذف تسک"
-                            >
-                                {isDeleting ? <Loader2 size={11} className="animate-spin" /> : <Trash2 size={11} />}
-                            </button>
-                        )}
+                        <button
+                            type="button"
+                            onClick={() => setTimeModalOpen(true)}
+                            className="flex h-7 w-7 items-center justify-center rounded-xl transition-colors"
+                            style={{
+                                background: isDark ? "rgba(99,102,241,0.1)" : "rgba(99,102,241,0.07)",
+                                color: isDark ? "#a5b4fc" : "#6366f1",
+                            }}
+                            title="تعیین بازه زمانی"
+                        >
+                            <Clock size={11} />
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => onEdit(task)}
+                            className="flex h-7 w-7 items-center justify-center rounded-xl transition-colors"
+                            style={{
+                                background: isDark ? "rgba(99,102,241,0.1)" : "rgba(99,102,241,0.07)",
+                                color: isDark ? "#a5b4fc" : "#6366f1",
+                            }}
+                            title="ویرایش تسک"
+                        >
+                            <Pencil size={11} />
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setShowConfirm(true)}
+                            disabled={deleting}
+                            className="flex h-7 w-7 items-center justify-center rounded-xl transition-colors disabled:opacity-40"
+                            style={{
+                                background: isDark ? "rgba(239,68,68,0.1)" : "rgba(239,68,68,0.07)",
+                                color: "#ef4444",
+                            }}
+                            title="حذف تسک"
+                        >
+                            {deleting ? <Loader2 size={11} className="animate-spin" /> : <Trash2 size={11} />}
+                        </button>
                     </div>
                 </div>
 
                 <div className="flex flex-col gap-1">
-                    <h3
-                        className="text-[13.5px] font-extrabold leading-tight"
-                        style={{ color: isDark ? "#f1f5f9" : "#1e293b" }}
-                    >
+                    <h3 className="text-[13.5px] font-extrabold leading-tight" style={{ color: isDark ? "#f1f5f9" : "#1e293b" }}>
                         {task.title}
                     </h3>
                     {task.description ? (
-                        <p
-                            className="line-clamp-2 text-[12px] leading-6"
-                            style={{ color: isDark ? "#94a3b8" : "#64748b" }}
-                        >
+                        <p className="line-clamp-2 text-[12px] leading-6" style={{ color: isDark ? "#94a3b8" : "#64748b" }}>
                             {task.description}
                         </p>
                     ) : null}
@@ -345,57 +349,31 @@ export default function TaskCard({
 
                 <div
                     className="mt-auto flex flex-wrap items-center gap-2 border-t pt-2.5"
-                    style={{
-                        borderColor: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)",
-                    }}
+                    style={{ borderColor: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)" }}
                 >
-                    {employeeInfo.length > 0 ? (
-                        <div className="flex flex-wrap items-center gap-1.5">
-                            {employeeInfo.map((emp, idx) => {
-                                const gradient = getEmployeeGradient(emp.id);
-                                return (
-                                    <div
-                                        key={emp.id}
-                                        className="flex items-center gap-1.5 rounded-full py-0.5 pl-2 pr-0.5"
-                                        style={{
-                                            border: isDark
-                                                ? "1px solid rgba(255,255,255,0.06)"
-                                                : "1px solid rgba(0,0,0,0.06)",
-                                            background: isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)",
-                                        }}
-                                    >
-                                        <span
-                                            className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full text-[9px] font-extrabold text-white"
-                                            style={{
-                                                background: `linear-gradient(135deg, ${gradient[0]}, ${gradient[1]})`,
-                                            }}
-                                        >
-                                            {emp.name.charAt(0)}
-                                        </span>
-                                        <span
-                                            className="text-[10.5px] font-bold"
-                                            style={{ color: isDark ? "#cbd5e1" : "#475569" }}
-                                        >
-                                            {emp.name}
-                                            {emp.position && (
-                                                <span className="mr-0.5 text-[9px] font-normal text-gray-400">
-                                                    ({emp.position})
-                                                </span>
-                                            )}
-                                            {idx < employeeInfo.length - 1 && (
-                                                <span className="mx-0.5 text-gray-400">،</span>
-                                            )}
-                                        </span>
-                                    </div>
-                                );
-                            })}
+                    {employeeIds.length > 0 ? (
+                        employeeIds.map((id) => (
+                            <EmployeeChip key={id} id={id} isDark={isDark} />
+                        ))
+                    ) : (
+                        <div
+                            className="flex items-center gap-1.5 rounded-full py-0.5 pl-2 pr-0.5"
+                            style={{
+                                border: isDark ? "1px solid rgba(255,255,255,0.06)" : "1px solid rgba(0,0,0,0.06)",
+                                background: isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)",
+                            }}
+                        >
+                            <span
+                                className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full text-[9px] font-extrabold text-white"
+                                style={{ background: `linear-gradient(135deg, #6366f1, #8b5cf6)` }}
+                            >
+                                <UserRound size={11} />
+                            </span>
+                            <span className="text-[10.5px] font-bold" style={{ color: isDark ? "#cbd5e1" : "#475569" }}>
+                                بدون مسئول
+                            </span>
                         </div>
-                    ) : task.assigned_employee ? (
-                        <Chip isDark={isDark}>
-                            <UserRound size={11} />
-                            بدون مسئول
-                        </Chip>
-                    ) : null}
+                    )}
 
                     {departmentName ? (
                         <Chip isDark={isDark}>
@@ -411,22 +389,47 @@ export default function TaskCard({
                         </Chip>
                     ) : null}
 
-                    {fileCount > 0 ? (
+                    {task.files && task.files.length > 0 ? (
                         <Chip isDark={isDark}>
                             <Paperclip size={11} />
-                            {fileCount}
+                            {task.files.length}
                         </Chip>
                     ) : null}
+                </div>
 
-                    {date ? (
-                        <div
-                            className="mr-auto flex items-center gap-1.5 text-[10.5px] font-medium"
-                            style={{ color: isDark ? "#64748b" : "#94a3b8" }}
-                        >
-                            <CalendarDays size={11} />
-                            {date}
+                <div
+                    className="flex flex-col gap-1.5 rounded-2xl px-3 py-2.5"
+                    style={{
+                        background: isDark ? "rgba(99,102,241,0.06)" : "rgba(99,102,241,0.05)",
+                        border: isDark ? "1px solid rgba(99,102,241,0.12)" : "1px solid rgba(99,102,241,0.1)",
+                    }}
+                >
+                    {loadingDeadline ? (
+                        <div className="flex items-center gap-2 text-[10.5px] font-semibold" style={{ color: isDark ? "#94a3b8" : "#64748b" }}>
+                            <Loader2 size={12} className="animate-spin" />
+                            در حال دریافت زمان‌بندی...
                         </div>
-                    ) : null}
+                    ) : startedAtLabel || deadlineLabel ? (
+                        <>
+                            {startedAtLabel && (
+                                <div className="flex items-center gap-2 text-[11px] font-bold" style={{ color: isDark ? "#a5b4fc" : "#6366f1" }}>
+                                    <CalendarDays size={13} />
+                                    <span>شروع: {startedAtLabel}</span>
+                                </div>
+                            )}
+                            {deadlineLabel && (
+                                <div className="flex items-center gap-2 text-[11px] font-bold" style={{ color: "#ef4444" }}>
+                                    <Clock size={13} />
+                                    <span>مهلت: {deadlineLabel}</span>
+                                </div>
+                            )}
+                        </>
+                    ) : (
+                        <div className="flex items-center gap-2 text-[10.5px] font-semibold" style={{ color: isDark ? "#64748b" : "#94a3b8" }}>
+                            <Clock size={12} />
+                            زمان‌بندی تعیین نشده
+                        </div>
+                    )}
                 </div>
             </motion.div>
 
@@ -437,118 +440,101 @@ export default function TaskCard({
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         className="fixed inset-0 z-50 flex items-center justify-center px-4"
-                        style={{ background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)" }}
-                        onClick={handleClose}
+                        style={{ background: "rgba(0,0,0,0.45)", backdropFilter: "blur(3px)" }}
+                        onClick={handleCloseConfirm}
                     >
                         <motion.div
-                            initial={{ scale: 0.95, y: 16, opacity: 0 }}
-                            animate={{ scale: 1, y: 0, opacity: 1 }}
-                            exit={{ scale: 0.95, y: 16, opacity: 0 }}
-                            transition={{ duration: 0.2, ease: "easeOut" }}
-                            className="w-full max-w-[360px] overflow-hidden rounded-[2rem] border p-5"
-                            style={{
-                                background: isDark ? "#0f172a" : "#ffffff",
-                                borderColor: isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.07)",
-                                boxShadow: "0 24px 64px rgba(0,0,0,0.35)",
-                            }}
+                            initial={{ opacity: 0, y: 16 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: 16 }}
+                            transition={{ duration: 0.35, ease: "easeOut" }}
                             onClick={(e) => e.stopPropagation()}
                             dir="rtl"
+                            className="flex w-full max-w-md flex-col overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-sm dark:border-white/[0.06] dark:bg-[#0f172a]"
                         >
-                            <div
-                                className="flex items-center justify-between border-b px-2 py-2"
-                                style={{
-                                    borderColor: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.06)",
-                                }}
-                            >
+                            <div className="flex shrink-0 items-center justify-between px-8 pb-6 pt-8">
                                 <div className="flex items-center gap-2.5">
-                                    <div
-                                        className="flex h-8 w-8 items-center justify-center rounded-xl"
-                                        style={{
-                                            background: isDark ? "rgba(239,68,68,0.12)" : "rgba(239,68,68,0.08)",
-                                        }}
-                                    >
-                                        <Trash2 size={14} className="text-red-500" />
+                                    <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-red-50 dark:bg-red-500/10">
+                                        <Trash2 size={15} className="text-red-500" />
                                     </div>
-                                    <h3
-                                        className="text-[13.5px] font-extrabold"
-                                        style={{ color: isDark ? "#ffffff" : "#0f172a" }}
-                                    >
-                                        حذف تسک
-                                    </h3>
+                                    <div>
+                                        <h3 className="text-[14px] font-extrabold text-gray-900 dark:text-white">حذف وظیفه</h3>
+                                        <p className="mt-0.5 text-[11px] text-gray-400">این عملیات قابل بازگشت نیست</p>
+                                    </div>
                                 </div>
                                 <button
                                     type="button"
-                                    onClick={handleClose}
-                                    disabled={isDeleting}
-                                    className="flex h-7 w-7 items-center justify-center rounded-xl transition-colors disabled:opacity-40"
-                                    style={{
-                                        background: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.04)",
-                                        color: isDark ? "#94a3b8" : "#64748b",
-                                    }}
+                                    onClick={handleCloseConfirm}
+                                    disabled={deleting}
+                                    className="flex h-8 w-8 items-center justify-center rounded-xl bg-gray-100 text-gray-400 transition-colors hover:text-gray-600 disabled:opacity-40 dark:bg-white/[0.05] dark:hover:text-gray-300"
                                 >
-                                    <X size={13} />
+                                    <X size={15} />
                                 </button>
                             </div>
 
-                            <div className="flex flex-col gap-4 px-2 py-4">
-                                <p
-                                    className="text-[12.5px] leading-relaxed"
-                                    style={{ color: isDark ? "#94a3b8" : "#64748b" }}
-                                >
+                            <div className="flex-1 px-8 pb-2">
+                                <p className="text-[12.5px] font-semibold leading-6 text-gray-500 dark:text-gray-400">
                                     تسک{" "}
-                                    <span
-                                        className="font-extrabold"
-                                        style={{ color: isDark ? "#e2e8f0" : "#1e293b" }}
-                                    >
-                                        {task.title}
-                                    </span>{" "}
-                                    حذف خواهد شد. این عملیات قابل بازگشت نیست.
+                                    <span className="font-extrabold text-gray-900 dark:text-white">{task.title}</span>{" "}
+                                    برای همیشه حذف خواهد شد.
                                 </p>
 
-                                {deleteError && (
-                                    <p className="text-center text-[11.5px] font-semibold text-red-500">
-                                        {deleteError}
-                                    </p>
-                                )}
+                                <AnimatePresence>
+                                    {deleteError && (
+                                        <motion.div
+                                            initial={{ opacity: 0, y: 6 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            exit={{ opacity: 0, y: 4 }}
+                                            className="mt-4 flex items-start gap-2.5 rounded-2xl bg-red-50 px-3.5 py-3 dark:bg-red-500/10"
+                                        >
+                                            <ClipboardX size={14} className="mt-0.5 shrink-0 text-red-500" />
+                                            <p className="flex-1 text-[11.5px] font-semibold leading-5 text-red-500 dark:text-red-400">
+                                                {deleteError}
+                                            </p>
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
+                            </div>
 
-                                <div className="flex gap-2">
-                                    <button
-                                        type="button"
-                                        onClick={handleClose}
-                                        disabled={isDeleting}
-                                        className="flex-1 rounded-2xl py-2.5 text-[12.5px] font-bold transition-colors disabled:opacity-40"
-                                        style={{
-                                            background: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.04)",
-                                            color: isDark ? "#94a3b8" : "#64748b",
-                                        }}
-                                    >
-                                        انصراف
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={handleDelete}
-                                        disabled={isDeleting}
-                                        className="flex flex-1 items-center justify-center rounded-2xl py-2.5 text-[12.5px] font-bold text-white transition-opacity disabled:cursor-not-allowed disabled:opacity-60"
-                                        style={{
-                                            background: "linear-gradient(135deg, #ef4444, #dc2626)",
-                                            boxShadow: "0 4px 14px rgba(239,68,68,0.3)",
-                                        }}
-                                    >
-                                        {isDeleting ? (
-                                            <Loader2 size={15} className="animate-spin" />
-                                        ) : (
-                                            <>
-                                                <Trash2 size={13} className="ml-1.5" />
-                                                حذف کن
-                                            </>
-                                        )}
-                                    </button>
-                                </div>
+                            <div className="flex shrink-0 items-center gap-2 px-8 pb-8 pt-5">
+                                <button
+                                    type="button"
+                                    onClick={handleCloseConfirm}
+                                    disabled={deleting}
+                                    className="flex h-11 flex-1 items-center justify-center rounded-full bg-gray-100 text-[13px] font-bold text-gray-600 transition-colors hover:bg-gray-200 disabled:opacity-40 dark:bg-white/[0.05] dark:text-gray-300 dark:hover:bg-white/[0.08]"
+                                >
+                                    انصراف
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={handleDelete}
+                                    disabled={deleting}
+                                    className="flex h-11 flex-1 items-center justify-center gap-2 rounded-full bg-red-600 text-[13px] font-bold text-white transition-colors hover:bg-red-500 disabled:opacity-40"
+                                >
+                                    {deleting ? (
+                                        <Loader size={14} className="animate-spin" />
+                                    ) : (
+                                        <>
+                                            <Trash2 size={13} strokeWidth={2.5} />
+                                            حذف کن
+                                        </>
+                                    )}
+                                </button>
                             </div>
                         </motion.div>
                     </motion.div>
                 )}
             </AnimatePresence>
+
+            <TimeRangeModal
+                open={timeModalOpen}
+                initialStartedAt={stepDeadline?.started_at}
+                initialDeadline={stepDeadline?.deadline}
+                loading={savingTime}
+                errorMessage={timeError}
+                onClose={() => setTimeModalOpen(false)}
+                onSubmit={handleTimeSubmit}
+            />
         </>
     );
 }
