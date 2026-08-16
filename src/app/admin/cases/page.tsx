@@ -248,7 +248,7 @@ export default function AdminCasesPage() {
                         {filteredCases.map((item, i) => {
                             const caseTasks = tasksByCase.get(Number(item.id)) || [];
                             return (
-                                <div key={item.id} className="flex flex-col gap-2">
+                                <div key={item.id} className="flex flex-col gap-2 border-2 border-[#eeeeee] p-3 rounded-4xl">
                                     <CaseCard
                                         item={item}
                                         index={i}

@@ -17,6 +17,7 @@ export interface EmployeeStat {
 export interface StageStat {
   key: string;
   name: string;
+  order: number;
   total: number;
   sold: number;
   completed: number;
@@ -27,6 +28,7 @@ export interface StageStat {
 export interface DepartmentStat {
   key: string;
   department_name: string;
+  order: number;
   total: number;
   sold: number;
   completed: number;
@@ -36,6 +38,7 @@ export interface DepartmentStat {
   churnRate: number;
   stages: StageStat[];
   best: EmployeeStat | null;
+  worst: EmployeeStat | null;
 }
 
 export interface BringerStat {
@@ -91,11 +94,27 @@ interface RawEmployee {
   [key: string]: unknown;
 }
 
+interface RawUser {
+  id: number | string;
+  username?: string;
+  type?: number;
+  is_active?: boolean;
+  [key: string]: unknown;
+}
+
 interface RawDepartment {
   id: number | string;
   name?: string;
   title?: string;
-  accent?: string;
+  order?: number;
+  [key: string]: unknown;
+}
+
+interface RawDepartmentStep {
+  id: number | string;
+  department?: number | string | { id: number | string } | null;
+  name?: string;
+  order?: number;
   [key: string]: unknown;
 }
 
@@ -193,7 +212,11 @@ export function useAnalytics(range: TimeRange = "monthly") {
   const [tasks, setTasks] = useState<RawTask[]>([]);
   const [customers, setCustomers] = useState<RawCustomer[]>([]);
   const [employees, setEmployees] = useState<RawEmployee[]>([]);
+  const [users, setUsers] = useState<RawUser[]>([]);
   const [departments, setDepartments] = useState<RawDepartment[]>([]);
+  const [departmentSteps, setDepartmentSteps] = useState<RawDepartmentStep[]>(
+    [],
+  );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -205,20 +228,30 @@ export function useAnalytics(range: TimeRange = "monthly") {
         setLoading(true);
         setError(null);
 
-        const [tasksRes, customersRes, employeesRes, departmentsRes] =
-          await Promise.all([
-            fetchAllPages<RawTask>(apiRoutes.tasks),
-            fetchAllPages<RawCustomer>(apiRoutes.customers),
-            fetchAllPages<RawEmployee>(apiRoutes.employees),
-            fetchAllPages<RawDepartment>(apiRoutes.departments),
-          ]);
+        const [
+          tasksRes,
+          customersRes,
+          employeesRes,
+          usersRes,
+          departmentsRes,
+          stepsRes,
+        ] = await Promise.all([
+          fetchAllPages<RawTask>(apiRoutes.tasks),
+          fetchAllPages<RawCustomer>(apiRoutes.customers),
+          fetchAllPages<RawEmployee>(apiRoutes.employees),
+          fetchAllPages<RawUser>(apiRoutes.users),
+          fetchAllPages<RawDepartment>(apiRoutes.departments),
+          fetchAllPages<RawDepartmentStep>(apiRoutes.departmentSteps),
+        ]);
 
         if (cancelled) return;
 
         setTasks(tasksRes);
         setCustomers(customersRes);
         setEmployees(employeesRes);
+        setUsers(usersRes);
         setDepartments(departmentsRes);
+        setDepartmentSteps(stepsRes);
       } catch (e: any) {
         if (!cancelled) {
           setError(
@@ -246,38 +279,93 @@ export function useAnalytics(range: TimeRange = "monthly") {
     [customers, range],
   );
 
-  const employeeMap = useMemo(() => {
+  const employeeById = useMemo(() => {
+    const m = new Map<string, RawEmployee>();
+    employees.forEach((emp) => m.set(String(emp.id), emp));
+    return m;
+  }, [employees]);
+
+  const employeeByUsername = useMemo(() => {
     const m = new Map<string, RawEmployee>();
     employees.forEach((emp) => {
-      [emp.id, emp.username, emp.full_name, emp.name].forEach((k) => {
-        const key = norm(k);
-        if (key && !m.has(key)) m.set(key, emp);
-      });
+      if (emp.username) m.set(norm(emp.username), emp);
     });
     return m;
   }, [employees]);
 
-  const departmentMap = useMemo(() => {
+  const userById = useMemo(() => {
+    const m = new Map<string, RawUser>();
+    users.forEach((u) => m.set(String(u.id), u));
+    return m;
+  }, [users]);
+
+  const departmentById = useMemo(() => {
     const m = new Map<string, RawDepartment>();
-    departments.forEach((dep) => {
-      [dep.id, dep.name, dep.title].forEach((k) => {
-        const key = norm(k);
-        if (key && !m.has(key)) m.set(key, dep);
-      });
-    });
+    departments.forEach((d) => m.set(String(d.id), d));
     return m;
   }, [departments]);
+
+  const stepsByDepartment = useMemo(() => {
+    const m = new Map<string, RawDepartmentStep[]>();
+    departmentSteps.forEach((s) => {
+      const depKey = relationKey(s.department);
+      if (!depKey) return;
+      if (!m.has(depKey)) m.set(depKey, []);
+      m.get(depKey)!.push(s);
+    });
+    m.forEach((list) => list.sort((a, b) => toNum(a.order) - toNum(b.order)));
+    return m;
+  }, [departmentSteps]);
+
+  const resolveEmployee = useMemo(() => {
+    return (
+      rawId: unknown,
+      rawUsername?: unknown,
+      rawName?: unknown,
+    ): RawEmployee | null => {
+      const idKey = relationKey(rawId);
+
+      if (idKey) {
+        const direct = employeeById.get(idKey);
+        if (direct) return direct;
+
+        const viaUser = userById.get(idKey);
+        if (viaUser?.username) {
+          const emp = employeeByUsername.get(norm(viaUser.username));
+          if (emp) return emp;
+        }
+
+        const viaUsernameKey = employeeByUsername.get(norm(idKey));
+        if (viaUsernameKey) return viaUsernameKey;
+      }
+
+      const usernameStr = typeof rawUsername === "string" ? rawUsername : "";
+      if (usernameStr) {
+        const emp = employeeByUsername.get(norm(usernameStr));
+        if (emp) return emp;
+      }
+
+      const nameStr = typeof rawName === "string" ? rawName : "";
+      if (nameStr) {
+        const emp = employeeByUsername.get(norm(nameStr));
+        if (emp) return emp;
+      }
+
+      return null;
+    };
+  }, [employeeById, employeeByUsername, userById]);
 
   const result = useMemo(() => {
     const departmentAcc = new Map<string, DepartmentStat>();
     const employeeAcc = new Map<string, EmployeeStat>();
     const deptEmployeeAcc = new Map<string, Map<string, EmployeeStat>>();
 
-    const ensureDept = (key: string, name: string) => {
+    const ensureDept = (key: string, name: string, order: number) => {
       if (!departmentAcc.has(key)) {
         departmentAcc.set(key, {
           key,
           department_name: name,
+          order,
           total: 0,
           sold: 0,
           completed: 0,
@@ -287,9 +375,33 @@ export function useAnalytics(range: TimeRange = "monthly") {
           churnRate: 0,
           stages: [],
           best: null,
+          worst: null,
         });
       }
       return departmentAcc.get(key)!;
+    };
+
+    const ensureStage = (
+      dep: DepartmentStat,
+      key: string,
+      name: string,
+      order: number,
+    ) => {
+      let stage = dep.stages.find((s) => s.key === key);
+      if (!stage) {
+        stage = {
+          key,
+          name,
+          order,
+          total: 0,
+          sold: 0,
+          completed: 0,
+          in_progress: 0,
+          cancelled: 0,
+        };
+        dep.stages.push(stage);
+      }
+      return stage;
     };
 
     const ensureEmp = (key: string, fullName: string) => {
@@ -329,81 +441,120 @@ export function useAnalytics(range: TimeRange = "monthly") {
       return m.get(empKey)!;
     };
 
-    const getAssigneeKeys = (task: RawTask): string[] => {
-      const keys = new Set<string>();
-      const ae = task.assigned_employee;
-      const arr = Array.isArray(ae)
-        ? ae
-        : ae !== null && ae !== undefined
-          ? [ae]
+    departments.forEach((dep) => {
+      const key = String(dep.id);
+      const stat = ensureDept(
+        key,
+        firstDefined(dep.name, dep.title, "دپارتمان نامشخص"),
+        toNum(dep.order),
+      );
+      const steps = stepsByDepartment.get(key) ?? [];
+      steps.forEach((st) => {
+        ensureStage(
+          stat,
+          String(st.id),
+          firstDefined(st.name, "مرحله نامشخص"),
+          toNum(st.order),
+        );
+      });
+    });
+
+    const getAssignees = (task: RawTask): RawEmployee[] => {
+      const rawRaw = task.assigned_employee;
+      const rawArr = Array.isArray(rawRaw)
+        ? rawRaw
+        : rawRaw !== null && rawRaw !== undefined
+          ? [rawRaw]
           : [];
-      arr.forEach((v) => {
-        const k = relationKey(v);
-        if (k) keys.add(k);
-      });
 
-      const uname = task.assigned_employee_username;
-      const unameArr = Array.isArray(uname) ? uname : uname ? [uname] : [];
-      unameArr.forEach((v) => {
-        const k = norm(v);
-        if (k) keys.add(k);
-      });
+      const unameRaw = task.assigned_employee_username;
+      const unameArr = Array.isArray(unameRaw)
+        ? unameRaw
+        : unameRaw !== null && unameRaw !== undefined
+          ? [unameRaw]
+          : [];
 
-      const name = task.assigned_employee_name;
-      const nameArr = Array.isArray(name) ? name : name ? [name] : [];
-      nameArr.forEach((v) => {
-        const k = norm(v);
-        if (k) keys.add(k);
-      });
+      const nameRaw = task.assigned_employee_name;
+      const nameArr = Array.isArray(nameRaw)
+        ? nameRaw
+        : nameRaw !== null && nameRaw !== undefined
+          ? [nameRaw]
+          : [];
 
-      return Array.from(keys);
-    };
+      const length = Math.max(rawArr.length, unameArr.length, nameArr.length);
+      const out = new Map<string, RawEmployee>();
 
-    const resolveEmployeeName = (task: RawTask, key: string): string => {
-      const emp = employeeMap.get(norm(key));
-      if (emp) return firstDefined(emp.full_name, emp.name, key);
-      const name = task.assigned_employee_name;
-      if (Array.isArray(name)) return firstDefined(name[0], key);
-      return firstDefined(name, key);
+      for (let i = 0; i < length; i++) {
+        const emp = resolveEmployee(rawArr[i], unameArr[i], nameArr[i]);
+        if (emp) {
+          out.set(`e:${norm(String(emp.id))}`, emp);
+          continue;
+        }
+        const fallbackUsername = norm(unameArr[i]);
+        const fallbackId = relationKey(rawArr[i]) ?? "";
+        const fallbackName = firstDefined(
+          typeof nameArr[i] === "string" ? (nameArr[i] as string) : "",
+          fallbackUsername,
+          fallbackId,
+        );
+        const fallbackKey = fallbackUsername || fallbackId;
+        if (fallbackKey) {
+          out.set(`u:${norm(fallbackKey)}`, {
+            id: fallbackKey,
+            username: fallbackUsername || fallbackKey,
+            full_name: fallbackName || fallbackKey,
+          });
+        }
+      }
+
+      return Array.from(out.values());
     };
 
     filteredTasks.forEach((task) => {
       const status = statusOf(task);
-      const deptKey = relationKey(task.department) ?? "unknown";
-      const deptName = firstDefined(
-        task.department_name,
-        departmentMap.get(norm(deptKey))?.name,
-        "دپارتمان نامشخص",
+
+      const rawDeptKey = relationKey(task.department);
+      const deptKey =
+        rawDeptKey && departmentById.has(rawDeptKey)
+          ? rawDeptKey
+          : (rawDeptKey ?? "unknown");
+      const deptName = departmentById.has(deptKey)
+        ? firstDefined(departmentById.get(deptKey)?.name, "دپارتمان نامشخص")
+        : firstDefined(task.department_name, "دپارتمان نامشخص");
+      const dep = ensureDept(
+        deptKey,
+        deptName,
+        departmentById.has(deptKey)
+          ? toNum(departmentById.get(deptKey)?.order)
+          : 9999,
       );
-      const stageKey = relationKey(task.current_step) ?? "unknown";
-      const stageName = firstDefined(task.current_step_name, "مرحله نامشخص");
-      const dep = ensureDept(deptKey, deptName);
 
       dep.total++;
       bump(dep, status);
 
-      let stage = dep.stages.find((s) => s.key === stageKey);
-      if (!stage) {
-        stage = {
-          key: stageKey,
-          name: stageName,
-          total: 0,
-          sold: 0,
-          completed: 0,
-          in_progress: 0,
-          cancelled: 0,
-        };
-        dep.stages.push(stage);
-      }
+      const rawStepKey = relationKey(task.current_step);
+      const stepInfo = rawStepKey
+        ? stepsByDepartment
+            .get(deptKey)
+            ?.find((s) => String(s.id) === rawStepKey)
+        : undefined;
+      const stageKey = rawStepKey ?? "unknown";
+      const stageName = stepInfo
+        ? firstDefined(stepInfo.name, "مرحله نامشخص")
+        : firstDefined(task.current_step_name, "مرحله نامشخص");
+      const stageOrder = stepInfo ? toNum(stepInfo.order) : 9999;
+      const stage = ensureStage(dep, stageKey, stageName, stageOrder);
+
       stage.total++;
       bump(stage, status);
 
-      getAssigneeKeys(task).forEach((empKey) => {
-        const fullName = resolveEmployeeName(task, empKey);
+      getAssignees(task).forEach((emp) => {
+        const empKey = norm(String(emp.id));
+        const fullName = firstDefined(emp.full_name, emp.username, empKey);
 
-        const emp = ensureEmp(empKey, fullName);
-        emp.total++;
-        bump(emp, status);
+        const empStat = ensureEmp(empKey, fullName);
+        empStat.total++;
+        bump(empStat, status);
 
         const deptEmp = ensureDeptEmp(deptKey, empKey, fullName);
         deptEmp.total++;
@@ -414,22 +565,21 @@ export function useAnalytics(range: TimeRange = "monthly") {
     const departmentsList = Array.from(departmentAcc.values())
       .map((dep) => {
         dep.stages.sort(
-          (a, b) =>
-            b.cancelled - a.cancelled ||
-            b.sold - a.sold ||
-            b.total - a.total ||
-            a.key.localeCompare(b.key),
+          (a, b) => a.order - b.order || a.key.localeCompare(b.key),
         );
 
         const emps = Array.from(deptEmployeeAcc.get(dep.key)?.values() ?? []);
-        emps.sort(
-          (a, b) =>
-            b.sold - a.sold ||
-            b.completed - a.completed ||
-            b.total - a.total ||
-            a.cancelled - b.cancelled,
+
+        
+
+        const worstSorted = [...emps].sort(
+          (a, b) => b.cancelled - a.cancelled || b.total - a.total,
         );
-        dep.best = emps[0] ?? null;
+        dep.worst =
+          worstSorted[0] && worstSorted[0].cancelled > 0
+            ? worstSorted[0]
+            : null;
+
         dep.conversion = dep.total
           ? Math.round((dep.sold / dep.total) * 100)
           : 0;
@@ -440,7 +590,8 @@ export function useAnalytics(range: TimeRange = "monthly") {
       })
       .sort(
         (a, b) =>
-          b.cancelled - a.cancelled || b.sold - a.sold || b.total - a.total,
+          a.order - b.order ||
+          a.department_name.localeCompare(b.department_name),
       );
 
     const bestEmployees = departmentsList
@@ -468,17 +619,26 @@ export function useAnalytics(range: TimeRange = "monthly") {
     const bringerAcc = new Map<string, BringerStat>();
 
     filteredCustomers.forEach((cust) => {
-      const key =
-        norm(cust.created_by_username) || norm(cust.created_by) || "unknown";
+      const emp = resolveEmployee(
+        cust.created_by,
+        cust.created_by_username,
+        cust.creator_name,
+      );
+      const key = emp
+        ? norm(String(emp.id))
+        : norm(cust.created_by_username) || norm(cust.created_by) || "unknown";
+
       if (!bringerAcc.has(key)) {
         bringerAcc.set(key, {
           key,
-          full_name: firstDefined(
-            cust.creator_name,
-            cust.created_by_username,
-            typeof cust.created_by === "string" ? cust.created_by : "",
-            "نامشخص",
-          ),
+          full_name: emp
+            ? firstDefined(emp.full_name, emp.username, key)
+            : firstDefined(
+                cust.creator_name,
+                cust.created_by_username,
+                typeof cust.created_by === "string" ? cust.created_by : "",
+                "نامشخص",
+              ),
           count: 0,
           actual: 0,
           potential: 0,
@@ -520,7 +680,14 @@ export function useAnalytics(range: TimeRange = "monthly") {
       topBringers,
       summary,
     };
-  }, [employeeMap, departmentMap, filteredCustomers, filteredTasks]);
+  }, [
+    departmentById,
+    stepsByDepartment,
+    departments,
+    resolveEmployee,
+    filteredCustomers,
+    filteredTasks,
+  ]);
 
   return {
     loading,

@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useRef } from "react";
-import { motion, useAnimationFrame } from "framer-motion";
+import { useState } from "react";
+import { motion } from "framer-motion";
 import { useTheme } from "next-themes";
 import { Phone, Building2, Trash2, SquarePen, User, CalendarDays } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
 import type { Customer } from "@/types/customer";
+import { useEmployeeDirectory } from "@/hooks/useEmployeeDirectory";
 import CustomerDeleteModal from "./DeleteModal";
 import CustomerEditModal from "./CustomerEditModal";
 
@@ -36,6 +37,9 @@ export default function CustomerCard({ customer, onDeleted, onEdited }: Props) {
     const [showConfirm, setShowConfirm] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
     const [showEdit, setShowEdit] = useState(false);
+    const { resolveName } = useEmployeeDirectory();
+
+    const creatorName = resolveName(customer.created_by_username, customer.created_by_username);
 
     const handleDelete = async () => {
         setIsDeleting(true);
@@ -185,7 +189,7 @@ export default function CustomerCard({ customer, onDeleted, onEdited }: Props) {
                     <div className="flex items-center justify-between text-[11.5px] text-gray-400 dark:text-gray-500">
                         <div className="flex items-center gap-2">
                             <User className="w-3.5 h-3.5" />
-                            <span>ثبت‌کننده: {customer.created_by_username}</span>
+                            <span>ثبت‌کننده: {creatorName}</span>
                         </div>
                         <div className="flex items-center gap-2">
                             <CalendarDays className="w-3.5 h-3.5" />

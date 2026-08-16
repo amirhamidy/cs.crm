@@ -10,8 +10,8 @@ const statusMap: Record<string, { label: string; cls: string }> = {
         label: "در حال انجام",
         cls: "bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400",
     },
-    todo: {
-        label: "انجام نشده",
+    cancelled: {
+        label: "لغو شده",
         cls: "bg-gray-100 text-gray-500 dark:bg-white/[0.06] dark:text-gray-400",
     },
     completed: {

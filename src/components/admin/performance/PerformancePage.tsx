@@ -8,7 +8,7 @@ import TimeRangeSelector from "./TimeRangeSelector";
 import BestEmployeesChart from "./BestEmployeesChart";
 import WeakestEmployeesChart from "./WeakestEmployeesChart";
 import TopBringersChart from "./TopBringersChart";
-import DepartmentChurnChart from "./DepartmentChurnChart";
+import DepartmentChurn from "./DepartmentChurn";
 
 export default function PerformancePage() {
     const { resolvedTheme } = useTheme();
@@ -71,7 +71,7 @@ export default function PerformancePage() {
                 <TopBringersChart items={topBringers} loading={loading} />
             </div>
 
-            <DepartmentChurnChart items={departments} loading={loading} />
+            <DepartmentChurn departments={departments} loading={loading} />
         </div>
     );
 }

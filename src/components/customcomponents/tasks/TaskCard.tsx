@@ -16,10 +16,6 @@ import {
 import { useTheme } from "next-themes";
 import type { Task, TaskStatus } from "@/types/task";
 import type { Employee } from "@/types/employee";
-import {
-    taskStatusColors,
-    taskStatusLabels,
-} from "@/components/customcomponents/shared/constants";
 import { useEmployeeInfo } from "@/hooks/useEmployeeInfo";
 
 const AVATAR_GRADIENTS = [
@@ -34,6 +30,25 @@ const AVATAR_GRADIENTS = [
     ["#3b82f6", "#06b6d4"],
     ["#ef4444", "#f59e0b"],
 ];
+
+const STATUS_CONFIG: Record<string, { label: string; className: string }> = {
+    sold: {
+        label: "فروش",
+        className: "border-emerald-500/20 bg-emerald-500/10 text-emerald-400",
+    },
+    completed: {
+        label: "انجام شده",
+        className: "border-blue-500/20 bg-blue-500/10 text-blue-400",
+    },
+    in_progress: {
+        label: "در حال انجام",
+        className: "border-amber-500/20 bg-amber-500/10 text-amber-400",
+    },
+    cancelled: {
+        label: "لغو",
+        className: "border-red-500/20 bg-red-500/10 text-red-400",
+    },
+};
 
 type EmployeeLike = {
     id: number;
@@ -80,7 +95,6 @@ function getLocalEmployee(taskEmployee: unknown, employees: Employee[] = []) {
 
 function normalizeEmployee(emp: unknown): EmployeeLike | null {
     if (!emp) return null;
-
     if (typeof emp === "object" && emp !== null) {
         const e = emp as EmployeeLike;
         if (typeof e.id === "number") {
@@ -92,17 +106,10 @@ function normalizeEmployee(emp: unknown): EmployeeLike | null {
             };
         }
     }
-
     return null;
 }
 
-function Chip({
-    isDark,
-    children,
-}: {
-    isDark: boolean;
-    children: React.ReactNode;
-}) {
+function Chip({ isDark, children }: { isDark: boolean; children: React.ReactNode }) {
     return (
         <div
             className="flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10.5px] font-bold"
@@ -144,14 +151,10 @@ export default function TaskCard({
                 : null;
 
     const localEmployee = useMemo(() => {
-        if (typeof assigned === "number") {
-            return getLocalEmployee(assigned, employees);
-        }
+        if (typeof assigned === "number") return getLocalEmployee(assigned, employees);
         if (Array.isArray(assigned)) {
             const first = assigned[0];
-            if (typeof first === "number") {
-                return getLocalEmployee(first, employees);
-            }
+            if (typeof first === "number") return getLocalEmployee(first, employees);
             return normalizeEmployee(first);
         }
         return normalizeEmployee(assigned);
@@ -195,10 +198,12 @@ export default function TaskCard({
         }));
     }, [assigned, employees, localEmployee, remoteEmployee]);
 
-    const status = (task.status ?? "cancelled") as TaskStatus;
-    const statusLabel = taskStatusLabels[status] ?? task.status ?? "نامشخص";
-    const statusClass =
-        taskStatusColors[status] ?? "border-slate-500/20 bg-slate-500/10 text-slate-400";
+    const rawStatus = (task.status ?? "cancelled") as TaskStatus;
+    const statusKey = String(rawStatus);
+    const statusConfig = STATUS_CONFIG[statusKey] ?? {
+        label: statusKey,
+        className: "border-slate-500/20 bg-slate-500/10 text-slate-400",
+    };
 
     const departmentName = getDepartmentName(task);
     const caseTitle = task.case && typeof task.case === "object" ? task.case.title : null;
@@ -209,7 +214,6 @@ export default function TaskCard({
         if (!onDelete) return;
         setIsDeleting(true);
         setDeleteError(null);
-
         try {
             await onDelete(task.id);
             setShowConfirm(false);
@@ -281,13 +285,12 @@ export default function TaskCard({
 
                 <div className="flex items-start justify-between gap-3">
                     <span
-                        className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[10.5px] font-bold ${statusClass}`}
+                        className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[10.5px] font-bold ${statusConfig.className}`}
                     >
                         <span
-                            className={`h-1.5 w-1.5 rounded-full bg-current ${status === "in_progress" ? "animate-pulse" : ""
-                                }`}
+                            className={`h-1.5 w-1.5 rounded-full bg-current ${statusKey === "in_progress" ? "animate-pulse" : ""}`}
                         />
-                        {statusLabel}
+                        {statusConfig.label}
                     </span>
 
                     <div className="flex items-center gap-1.5">
@@ -371,9 +374,7 @@ export default function TaskCard({
                                         </span>
                                         <span
                                             className="text-[10.5px] font-bold"
-                                            style={{
-                                                color: isDark ? "#cbd5e1" : "#475569",
-                                            }}
+                                            style={{ color: isDark ? "#cbd5e1" : "#475569" }}
                                         >
                                             {emp.name}
                                             {emp.position && (
@@ -381,7 +382,9 @@ export default function TaskCard({
                                                     ({emp.position})
                                                 </span>
                                             )}
-                                            {idx < employeeInfo.length - 1 && <span className="mx-0.5 text-gray-400">،</span>}
+                                            {idx < employeeInfo.length - 1 && (
+                                                <span className="mx-0.5 text-gray-400">،</span>
+                                            )}
                                         </span>
                                     </div>
                                 );
@@ -434,10 +437,7 @@ export default function TaskCard({
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         className="fixed inset-0 z-50 flex items-center justify-center px-4"
-                        style={{
-                            background: "rgba(0,0,0,0.5)",
-                            backdropFilter: "blur(4px)",
-                        }}
+                        style={{ background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)" }}
                         onClick={handleClose}
                     >
                         <motion.div

@@ -11,11 +11,10 @@ import {
     Pencil,
     Trash2,
     User,
-    UserCog,
     X,
 } from "lucide-react";
 
-export type CaseStatus = "open" | "in_progress" | "closed" | "cancelled";
+export type CaseStatus = "sold" | "in_progress" | "completed" | "cancelled";
 
 export type PersonLike =
     | {
@@ -66,12 +65,9 @@ interface CaseCardProps {
     onClick?: (item: CaseItem) => void;
 }
 
-const STATUS_MAP: Record<
-    CaseStatus,
-    { label: string; light: string; dark: string }
-> = {
-    open: {
-        label: "باز",
+const STATUS_MAP: Record<CaseStatus, { label: string; light: string; dark: string }> = {
+    sold: {
+        label: "فروش",
         light: "bg-emerald-50 text-emerald-700 border-emerald-200",
         dark: "bg-emerald-500/10 text-emerald-300 border-emerald-500/20",
     },
@@ -80,8 +76,8 @@ const STATUS_MAP: Record<
         light: "bg-amber-50 text-amber-700 border-amber-200",
         dark: "bg-amber-500/10 text-amber-300 border-amber-500/20",
     },
-    closed: {
-        label: "بسته شده",
+    completed: {
+        label: "انجام شده",
         light: "bg-sky-50 text-sky-700 border-sky-200",
         dark: "bg-sky-500/10 text-sky-300 border-sky-500/20",
     },
@@ -100,8 +96,8 @@ const AVATAR_GRADIENTS = [
     ["#f59e0b", "#ef4444"],
 ];
 
-const isFilled = (value?: string | null) =>
-    typeof value === "string" && value.trim().length > 0;
+const isFilled = (v?: string | null): v is string =>
+    typeof v === "string" && v.trim().length > 0;
 
 const nameFromObject = (value: PersonLike): string => {
     if (!value || typeof value !== "object") return "";
@@ -119,43 +115,33 @@ const resolveName = (
     pool?: PersonLike[]
 ): string => {
     if (isFilled(directName)) return directName!.trim();
+    const fromObj = nameFromObject(value);
+    if (isFilled(fromObj)) return fromObj;
+    if (typeof value === "string" && !/^\d+$/.test(value.trim())) return value.trim();
 
-    const fromObject = nameFromObject(value);
-    if (isFilled(fromObject)) return fromObject;
-
-    if (typeof value === "string" && !/^\d+$/.test(value.trim())) {
-        return value.trim();
-    }
-
-    const identifier =
+    const id =
         typeof value === "number" || typeof value === "string"
             ? String(value)
             : value && typeof value === "object" && value.id !== undefined
                 ? String(value.id)
                 : "";
 
-    if (!identifier || !pool?.length) return "";
-
+    if (!id || !pool?.length) return "";
     const found = pool.find(
-        (person) =>
-            person &&
-            typeof person === "object" &&
-            person.id !== undefined &&
-            String(person.id) === identifier
+        (p) => p && typeof p === "object" && p.id !== undefined && String(p.id) === id
     );
-
     return nameFromObject(found);
 };
 
 const formatDate = (value?: string | null) => {
     if (!isFilled(value)) return "";
-    const date = new Date(value!);
-    if (Number.isNaN(date.getTime())) return "";
+    const d = new Date(value!);
+    if (Number.isNaN(d.getTime())) return "";
     return new Intl.DateTimeFormat("fa-IR", {
         year: "numeric",
         month: "short",
         day: "numeric",
-    }).format(date);
+    }).format(d);
 };
 
 export default function CaseCard({
@@ -180,11 +166,8 @@ export default function CaseCard({
 
     const customerName = useMemo(
         () =>
-            resolveName(
-                item.customer,
-                item.customerName ?? item.customer_name,
-                customers
-            ) || "بدون مشتری",
+            resolveName(item.customer, item.customerName ?? item.customer_name, customers) ||
+            "بدون مشتری",
         [item.customer, item.customerName, item.customer_name, customers]
     );
 
@@ -238,6 +221,11 @@ export default function CaseCard({
         setDeleteError(null);
     };
 
+    const chipStyle = {
+        border: isDark ? "1px solid rgba(255,255,255,0.06)" : "1px solid rgba(0,0,0,0.06)",
+        background: isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)",
+    };
+
     return (
         <>
             <motion.article
@@ -274,7 +262,13 @@ export default function CaseCard({
                     style={{ borderRadius: "1rem" }}
                 >
                     <defs>
-                        <linearGradient id={`caseBorder-${item.id}`} x1="100%" y1="100%" x2="0%" y2="0%">
+                        <linearGradient
+                            id={`caseBorder-${item.id}`}
+                            x1="100%"
+                            y1="100%"
+                            x2="0%"
+                            y2="0%"
+                        >
                             <stop offset="0%" stopColor="#6366f1" />
                             <stop offset="100%" stopColor="#8b5cf6" />
                         </linearGradient>
@@ -291,11 +285,7 @@ export default function CaseCard({
                         strokeWidth="1.5"
                         pathLength="1"
                         initial={{ pathLength: 0, opacity: 0 }}
-                        animate={
-                            hovered
-                                ? { pathLength: 1, opacity: 1 }
-                                : { pathLength: 0, opacity: 0 }
-                        }
+                        animate={hovered ? { pathLength: 1, opacity: 1 } : { pathLength: 0, opacity: 0 }}
                         transition={{ duration: 0.55, ease: "easeInOut" }}
                     />
                 </svg>
@@ -331,7 +321,6 @@ export default function CaseCard({
                             >
                                 {item.title}
                             </h3>
-
                             {isFilled(item.description) && (
                                 <p
                                     className="mt-1 line-clamp-1 text-[12px] leading-6"
@@ -343,79 +332,27 @@ export default function CaseCard({
                         </div>
                     </div>
 
-                    <div
-                        className={`flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10.5px] font-bold backdrop-blur-sm ${isDark ? status.dark : status.light
-                            }`}
-                    >
-                        <span
-                            className={`h-1.5 w-1.5 rounded-full bg-current ${item.status === "in_progress" ? "animate-pulse" : ""
-                                }`}
-                        />
-                        {status.label}
-                    </div>
+                    
                 </div>
 
-                <div className="relative mt-4 flex flex-wrap items-center gap-2 border-t pt-3.5"
+                <div
+                    className="relative mt-4 flex flex-wrap items-center gap-2 border-t pt-3.5"
                     style={{
                         borderColor: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)",
                     }}
                 >
-                    <div className="flex items-center gap-2 rounded-full px-2.5 py-1"
-                        style={{
-                            border: isDark
-                                ? "1px solid rgba(255,255,255,0.06)"
-                                : "1px solid rgba(0,0,0,0.06)",
-                            background: isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)",
-                        }}
+                    <div
+                        className="flex items-center gap-2 rounded-full px-2.5 py-1"
+
+                        style={chipStyle}
                     >
                         <User size={11} className={isDark ? "text-slate-500" : "text-slate-400"} />
                         <span
-                            className="text-[10.5px] font-bold"
+                            className="text-[10.5px] font-bold flex gap-2"
                             style={{ color: isDark ? "#94a3b8" : "#64748b" }}
                         >
+                            نام مشتری : 
                             {customerName}
-                        </span>
-                    </div>
-
-                    <div className="flex items-center gap-2 rounded-full px-2.5 py-1"
-                        style={{
-                            border: isDark
-                                ? "1px solid rgba(255,255,255,0.06)"
-                                : "1px solid rgba(0,0,0,0.06)",
-                            background: isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)",
-                        }}
-                    >
-                        <Building2 size={11} className={isDark ? "text-slate-500" : "text-slate-400"} />
-                        <span
-                            className="text-[10.5px] font-bold"
-                            style={{ color: isDark ? "#94a3b8" : "#64748b" }}
-                        >
-                            {departmentName}
-                        </span>
-                    </div>
-
-                    <div
-                        className="flex items-center gap-2 rounded-full py-1 pl-3 pr-1"
-                        style={{
-                            border: isDark
-                                ? "1px solid rgba(255,255,255,0.06)"
-                                : "1px solid rgba(0,0,0,0.06)",
-                            background: isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)",
-                        }}
-                    >
-                        <span
-                            className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full text-[9px] font-extrabold text-white"
-                            style={{
-                                background: `linear-gradient(135deg, ${gradient[0]}, ${gradient[1]})`,
-                            }}
-                        >
-                            {assigneeName.charAt(0)}
-                        </span>
-                        <span
-                            className="text-[10.5px] font-bold"
-                            style={{ color: isDark ? "#cbd5e1" : "#475569" }}
-                        >
-                            {assigneeName}
                         </span>
                     </div>
 
@@ -433,6 +370,7 @@ export default function CaseCard({
                 <div className="relative mt-3 flex items-center justify-end gap-1.5">
                     {onEdit && (
                         <button
+                            type="button"
                             onClick={(e) => {
                                 e.stopPropagation();
                                 onEdit(item);
@@ -448,9 +386,9 @@ export default function CaseCard({
                             <Pencil size={11} />
                         </button>
                     )}
-
                     {onDelete && (
                         <button
+                            type="button"
                             onClick={(e) => {
                                 e.stopPropagation();
                                 setShowConfirm(true);
@@ -481,10 +419,7 @@ export default function CaseCard({
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         className="fixed inset-0 z-50 flex items-center justify-center px-4"
-                        style={{
-                            background: "rgba(0,0,0,0.5)",
-                            backdropFilter: "blur(4px)",
-                        }}
+                        style={{ background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)" }}
                         onClick={handleClose}
                     >
                         <motion.div
@@ -530,6 +465,7 @@ export default function CaseCard({
                                     </h3>
                                 </div>
                                 <button
+                                    type="button"
                                     onClick={handleClose}
                                     disabled={deleteLoading}
                                     className="flex h-7 w-7 items-center justify-center rounded-xl transition-colors disabled:opacity-40"
@@ -539,7 +475,6 @@ export default function CaseCard({
                                             : "rgba(0,0,0,0.04)",
                                         color: isDark ? "#94a3b8" : "#64748b",
                                     }}
-                                    type="button"
                                 >
                                     <X size={13} />
                                 </button>
@@ -568,6 +503,7 @@ export default function CaseCard({
 
                                 <div className="flex gap-2">
                                     <button
+                                        type="button"
                                         onClick={handleClose}
                                         disabled={deleteLoading}
                                         className="flex-1 rounded-2xl py-2.5 text-[12.5px] font-bold transition-colors disabled:opacity-40"
@@ -577,11 +513,11 @@ export default function CaseCard({
                                                 : "rgba(0,0,0,0.04)",
                                             color: isDark ? "#94a3b8" : "#64748b",
                                         }}
-                                        type="button"
                                     >
                                         انصراف
                                     </button>
                                     <button
+                                        type="button"
                                         onClick={handleDelete}
                                         disabled={deleteLoading}
                                         className="flex flex-1 items-center justify-center rounded-2xl py-2.5 text-[12.5px] font-bold text-white transition-opacity disabled:cursor-not-allowed disabled:opacity-60"
@@ -589,7 +525,6 @@ export default function CaseCard({
                                             background: "linear-gradient(135deg, #ef4444, #dc2626)",
                                             boxShadow: "0 4px 14px rgba(239,68,68,0.3)",
                                         }}
-                                        type="button"
                                     >
                                         {deleteLoading ? (
                                             <Loader2 size={15} className="animate-spin" />

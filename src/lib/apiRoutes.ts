@@ -8,21 +8,28 @@ export const apiRoutes = {
   departments: "/department/api/v1/department/list/",
   department: (id: number) => `/department/api/v1/department/${id}/`,
   createDepartment: "/department/api/v1/department/create/",
-  updateDepartment: (id: number) => `/department/api/v1/department/${id}/update/`,
-  deleteDepartment: (id: number) => `/department/api/v1/department/${id}/delete/`,
+  updateDepartment: (id: number) =>
+    `/department/api/v1/department/${id}/update/`,
+  deleteDepartment: (id: number) =>
+    `/department/api/v1/department/${id}/delete/`,
 
   departmentEmployees: "/department/api/v1/department_employee/list/",
   createDepartmentEmployee: "/department/api/v1/department_employee/create/",
-  updateDepartmentEmployee: (id: number) => `/department/api/v1/department_employee/${id}/update/`,
-  deleteDepartmentEmployee: (id: number) => `/department/api/v1/department_employee/${id}/delete/`,
+  updateDepartmentEmployee: (id: number) =>
+    `/department/api/v1/department_employee/${id}/update/`,
+  deleteDepartmentEmployee: (id: number) =>
+    `/department/api/v1/department_employee/${id}/delete/`,
 
   departmentSteps: "/department/api/v1/department_step/",
   departmentStep: (id: number) => `/department/api/v1/department_step/${id}/`,
   createDepartmentStep: "/department/api/v1/department_step/create/",
-  updateDepartmentStep: (id: number) => `/department/api/v1/department_step/${id}/update/`,
-  deleteDepartmentStep: (id: number) => `/department/api/v1/department_step/${id}/delete/`,
+  updateDepartmentStep: (id: number) =>
+    `/department/api/v1/department_step/${id}/update/`,
+  deleteDepartmentStep: (id: number) =>
+    `/department/api/v1/department_step/${id}/delete/`,
 
-  employees: "/department/api/v1/department_employee/list/",
+  employees: "/accounts/api/v1/employee/list/",
+  users: "/accounts/api/v1/user/list/",
 
   cases: "/tasks/api/v1/cases/",
   case: (id: number) => `/tasks/api/v1/cases/${id}/`,
