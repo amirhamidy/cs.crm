@@ -1,4 +1,4 @@
 /node_modules
 /.next
-src/lib/apiRoutes.ts
-src/lib/axiosInstance.ts
+# src/lib/apiRoutes.ts
+# src/lib/axiosInstance.ts
