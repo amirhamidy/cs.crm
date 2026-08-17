@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
+    AlertTriangle,
     Building2,
     CalendarDays,
     ClipboardX,
@@ -12,6 +13,7 @@ import {
     Loader2,
     Paperclip,
     Pencil,
+    TimerReset,
     Trash2,
     UserRound,
     X,
@@ -19,6 +21,8 @@ import {
 import { useTheme } from "next-themes";
 import type { Task, TaskStatus, TaskEmployeeRef } from "@/types/task";
 import { toJalali, toPersianDigits, JALALI_MONTHS, pad2 } from "@/lib/jalali";
+import { MessageSquareText } from "lucide-react";
+import AdminTaskNotesModal from "./AdminTaskNotesModal";
 import TimeRangeModal from "./TimeRangeModal";
 import api from "@/lib/axiosInstance";
 import { useEmployeeInfo } from "@/hooks/useEmployeeInfo";
@@ -181,6 +185,7 @@ export default function TaskCard({
     const [deleting, setDeleting] = useState(false);
     const [deleteError, setDeleteError] = useState<string | null>(null);
     const [savingTime, setSavingTime] = useState(false);
+    const [notesModalOpen, setNotesModalOpen] = useState(false);
     const [timeError, setTimeError] = useState<string | null>(null);
     const [stepDeadline, setStepDeadline] = useState<StepDeadline | null>(null);
     const [loadingDeadline, setLoadingDeadline] = useState(false);
@@ -369,6 +374,15 @@ export default function TaskCard({
                     <div className="flex items-center gap-1.5">
                         <button
                             type="button"
+                            onClick={() => setNotesModalOpen(true)}
+                            className="flex h-8 w-8 items-center justify-center rounded-xl transition-colors"
+                            style={{ background: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.04)" }}
+                            title="یادداشت‌ها"
+                        >
+                            <MessageSquareText size={14} className="text-indigo-400" />
+                        </button>
+                        <button
+                            type="button"
                             onClick={() => setTimeModalOpen(true)}
                             className="flex h-7 w-7 items-center justify-center rounded-xl transition-colors"
                             style={{
@@ -513,6 +527,7 @@ export default function TaskCard({
                         </div>
                     )}
                 </div>
+
             </motion.div>
 
             <AnimatePresence>
@@ -616,6 +631,12 @@ export default function TaskCard({
                 errorMessage={timeError}
                 onClose={() => setTimeModalOpen(false)}
                 onSubmit={handleTimeSubmit}
+            />
+            <AdminTaskNotesModal
+                isOpen={notesModalOpen}
+                onClose={() => setNotesModalOpen(false)}
+                taskId={task.id}
+                taskTitle={task.title}
             />
         </>
     );
