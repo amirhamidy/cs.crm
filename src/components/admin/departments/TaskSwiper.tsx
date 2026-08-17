@@ -35,7 +35,7 @@ export default function TaskSwiper({ tasks, loading = false }: TaskSwiperProps) 
     if (tasks.length === 0) {
         return (
             <div className="flex h-24 items-center justify-center rounded-[1.4rem] border border-dashed border-gray-200 dark:border-white/[0.07]">
-                <p className="text-[11.5px] text-gray-400">وظیفه‌ای برای این مرحله وجود ندارد</p>
+                <p className="text-[11.5px] text-gray-400">وظیفه‌ای برای این فرآیند وجود ندارد</p>
             </div>
         );
     }

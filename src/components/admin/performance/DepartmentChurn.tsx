@@ -288,7 +288,7 @@ export default function DepartmentChurn({ departments, loading }: Props) {
                     <div className="flex flex-col">
                         <div className="flex items-center gap-1.5">
                             <h3 className="text-[13px] font-extrabold text-gray-900 dark:text-white">
-                                مسیر تسک‌ها در مراحل دپارتمان
+                                مسیر تسک‌ها در فرآیند های دپارتمان
                             </h3>
                             <button
                                 type="button"

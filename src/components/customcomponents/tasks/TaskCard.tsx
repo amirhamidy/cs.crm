@@ -43,6 +43,30 @@ const STATUS_CONFIG: Record<TaskStatus, { label: string; className: string }> = 
     cancelled: { label: "لغو", className: "border-red-500/20 bg-red-500/10 text-red-400" },
 };
 
+type DeadlineUrgency = "overdue" | "critical" | "soon" | "normal" | null;
+
+function getDeadlineUrgency(deadline: string | null | undefined): DeadlineUrgency {
+    if (!deadline) return null;
+    const diff = new Date(deadline).getTime() - Date.now();
+    const hours = diff / (1000 * 60 * 60);
+    if (diff < 0) return "overdue";
+    if (hours <= 6) return "critical";
+    if (hours <= 24) return "soon";
+    return "normal";
+}
+
+const URGENCY_ACCENT: Record<Exclude<DeadlineUrgency, null | "normal">, string> = {
+    overdue: "#ef4444",
+    critical: "#f97316",
+    soon: "#eab308",
+};
+
+const URGENCY_LABEL: Record<Exclude<DeadlineUrgency, null | "normal">, string> = {
+    overdue: "منقضی شده",
+    critical: "فوری",
+    soon: "امروز",
+};
+
 interface TaskWithStep extends Task {
     current_step?: number | { id: number } | string | null;
     assigned_employee?: TaskEmployeeRef | TaskEmployeeRef[] | number | number[] | null;
@@ -160,6 +184,7 @@ export default function TaskCard({
     const [timeError, setTimeError] = useState<string | null>(null);
     const [stepDeadline, setStepDeadline] = useState<StepDeadline | null>(null);
     const [loadingDeadline, setLoadingDeadline] = useState(false);
+    const [, forceTick] = useState(0);
 
     const employeeIds = extractEmployeeIds(task.assigned_employee);
 
@@ -176,6 +201,10 @@ export default function TaskCard({
         label: "نامشخص",
         className: "border-slate-500/20 bg-slate-500/10 text-slate-400",
     };
+
+    const isActiveTask = status !== "completed" && status !== "cancelled" && status !== "sold";
+    const urgency = isActiveTask ? getDeadlineUrgency(stepDeadline?.deadline) : null;
+    const accent = urgency && urgency !== "normal" ? URGENCY_ACCENT[urgency] : null;
 
     useEffect(() => {
         if (!stepId) return;
@@ -200,6 +229,12 @@ export default function TaskCard({
             cancelled = true;
         };
     }, [task.id, stepId]);
+
+    useEffect(() => {
+        if (!stepDeadline?.deadline || !isActiveTask) return;
+        const interval = setInterval(() => forceTick((t) => t + 1), 60000);
+        return () => clearInterval(interval);
+    }, [stepDeadline?.deadline, isActiveTask]);
 
     const startedAtLabel = formatJalaliDate(stepDeadline?.started_at);
     const deadlineLabel = formatJalaliDate(stepDeadline?.deadline);
@@ -263,14 +298,30 @@ export default function TaskCard({
                 onHoverEnd={() => setHovered(false)}
                 className="relative flex flex-col gap-3 overflow-hidden rounded-2xl p-4"
                 style={{
-                    border: isDark ? "1px solid rgba(255,255,255,0.06)" : "1px solid rgba(0,0,0,0.06)",
-                    background: isDark ? "rgba(255,255,255,0.02)" : "#fafafa",
+                    border: accent
+                        ? `1px solid color-mix(in srgb, ${accent} 40%, transparent)`
+                        : isDark ? "1px solid rgba(255,255,255,0.06)" : "1px solid rgba(0,0,0,0.06)",
+                    background: accent
+                        ? `color-mix(in srgb, ${accent} ${urgency === "overdue" ? 7 : urgency === "critical" ? 5 : 4}%, ${isDark ? "#0f172a" : "#fafafa"})`
+                        : isDark ? "rgba(255,255,255,0.02)" : "#fafafa",
                     minHeight: "130px",
                     opacity: deleting ? 0.45 : 1,
                     pointerEvents: deleting ? "none" : undefined,
-                    boxShadow: isDark ? "0 2px 24px rgba(0,0,0,0.2)" : "0 2px 16px rgba(0,0,0,0.04)",
+                    boxShadow: accent
+                        ? `0 0 0 1px color-mix(in srgb, ${accent} 15%, transparent), 0 4px 24px color-mix(in srgb, ${accent} 12%, transparent)`
+                        : isDark ? "0 2px 24px rgba(0,0,0,0.2)" : "0 2px 16px rgba(0,0,0,0.04)",
+                    transition: "border-color 0.4s ease, background 0.4s ease, box-shadow 0.4s ease",
                 }}
             >
+                {urgency === "overdue" && (
+                    <motion.div
+                        className="pointer-events-none absolute inset-x-0 top-0 h-[2px]"
+                        style={{ background: `linear-gradient(90deg, transparent, ${accent}, transparent)` }}
+                        animate={{ opacity: [0.4, 1, 0.4] }}
+                        transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }}
+                    />
+                )}
+
                 <svg className="pointer-events-none absolute inset-0 h-full w-full" style={{ borderRadius: "1rem" }}>
                     <defs>
                         <linearGradient id={`borderGrad-${task.id}`} x1="100%" y1="100%" x2="0%" y2="0%">
@@ -290,10 +341,30 @@ export default function TaskCard({
                 </svg>
 
                 <div className="flex items-start justify-between gap-3">
-                    <span className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[10.5px] font-bold ${statusConfig.className}`}>
-                        <span className={`h-1.5 w-1.5 rounded-full bg-current ${status === "in_progress" ? "animate-pulse" : ""}`} />
-                        {statusConfig.label}
-                    </span>
+                    <div className="flex items-center gap-2">
+                        <span className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[10.5px] font-bold ${statusConfig.className}`}>
+                            <span className={`h-1.5 w-1.5 rounded-full bg-current ${status === "in_progress" ? "animate-pulse" : ""}`} />
+                            {statusConfig.label}
+                        </span>
+                        {accent && (
+                            <span
+                                className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold"
+                                style={{
+                                    color: accent,
+                                    background: `color-mix(in srgb, ${accent} 12%, transparent)`,
+                                    border: `1px solid color-mix(in srgb, ${accent} 30%, transparent)`,
+                                }}
+                            >
+                                <motion.span
+                                    className="h-1.5 w-1.5 rounded-full"
+                                    style={{ background: accent }}
+                                    animate={urgency !== "soon" ? { opacity: [1, 0.3, 1] } : undefined}
+                                    transition={{ duration: 1.6, repeat: Infinity, ease: "easeInOut" }}
+                                />
+                                {URGENCY_LABEL[urgency as Exclude<DeadlineUrgency, null | "normal">]}
+                            </span>
+                        )}
+                    </div>
 
                     <div className="flex items-center gap-1.5">
                         <button
@@ -400,8 +471,13 @@ export default function TaskCard({
                 <div
                     className="flex flex-col gap-1.5 rounded-2xl px-3 py-2.5"
                     style={{
-                        background: isDark ? "rgba(99,102,241,0.06)" : "rgba(99,102,241,0.05)",
-                        border: isDark ? "1px solid rgba(99,102,241,0.12)" : "1px solid rgba(99,102,241,0.1)",
+                        background: accent
+                            ? `color-mix(in srgb, ${accent} 8%, transparent)`
+                            : isDark ? "rgba(99,102,241,0.06)" : "rgba(99,102,241,0.05)",
+                        border: accent
+                            ? `1px solid color-mix(in srgb, ${accent} 25%, transparent)`
+                            : isDark ? "1px solid rgba(99,102,241,0.12)" : "1px solid rgba(99,102,241,0.1)",
+                        transition: "background 0.4s ease, border-color 0.4s ease",
                     }}
                 >
                     {loadingDeadline ? (
@@ -412,13 +488,19 @@ export default function TaskCard({
                     ) : startedAtLabel || deadlineLabel ? (
                         <>
                             {startedAtLabel && (
-                                <div className="flex items-center gap-2 text-[11px] font-bold" style={{ color: isDark ? "#a5b4fc" : "#6366f1" }}>
+                                <div
+                                    className="flex items-center gap-2 text-[11px] font-bold"
+                                    style={{ color: accent ?? (isDark ? "#a5b4fc" : "#6366f1") }}
+                                >
                                     <CalendarDays size={13} />
                                     <span>شروع: {startedAtLabel}</span>
                                 </div>
                             )}
                             {deadlineLabel && (
-                                <div className="flex items-center gap-2 text-[11px] font-bold" style={{ color: "#ef4444" }}>
+                                <div
+                                    className="flex items-center gap-2 text-[11px] font-bold"
+                                    style={{ color: accent ?? "#ef4444" }}
+                                >
                                     <Clock size={13} />
                                     <span>مهلت: {deadlineLabel}</span>
                                 </div>

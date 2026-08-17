@@ -34,7 +34,7 @@ export default function PerformancePage() {
                     </div>
                     <div className="min-w-0">
                         <h1 className="text-[14px] font-extrabold text-gray-900 dark:text-white">آنالیز عملکرد دپارتمان‌ها</h1>
-                        <p className="mt-0.5 text-[11.5px] text-gray-400 dark:text-gray-500">برترین‌ها، ریزش مراحل و منابع ورودی مشتری</p>
+                        <p className="mt-0.5 text-[11.5px] text-gray-400 dark:text-gray-500">برترین‌ها، ریزش فرآیند ها و منابع ورودی مشتری</p>
                     </div>
                 </div>
 

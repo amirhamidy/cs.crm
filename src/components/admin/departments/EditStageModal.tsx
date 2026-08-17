@@ -145,10 +145,10 @@ export default function EditStageModal({ open, stage, onClose, onSubmit }: Props
                                 </div>
                                 <div>
                                     <h3 className="text-[14px] font-extrabold text-gray-900 dark:text-white">
-                                        ویرایش مرحله
+                                        ویرایش فرآیند
                                     </h3>
                                     <p className="text-[11px] text-gray-400 mt-0.5">
-                                        مشخصات مرحله را ویرایش کنید
+                                        مشخصات فرآیند را ویرایش کنید
                                     </p>
                                 </div>
                             </div>
@@ -164,7 +164,7 @@ export default function EditStageModal({ open, stage, onClose, onSubmit }: Props
 
                         <form onSubmit={handleSubmit} className="px-8 pb-8 flex flex-col gap-4">
                             <FloatingInput
-                                label="نام مرحله"
+                                label="نام فرآیند"
                                 id="edit_stage_name"
                                 value={name}
                                 onChange={(e) => setName(e.target.value)}
@@ -183,7 +183,7 @@ export default function EditStageModal({ open, stage, onClose, onSubmit }: Props
                             />
 
                             <FloatingInput
-                                label="ترتیب مرحله"
+                                label="ترتیب فرآیند"
                                 id="edit_stage_order"
                                 type="number"
                                 min={1}

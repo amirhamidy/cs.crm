@@ -77,7 +77,7 @@ export default function UserTasksKanban() {
                     .sort((a, b) => a.order - b.order);
                 setStages(mapped);
             })
-            .catch(() => setError("دریافت مراحل با خطا مواجه شد"))
+            .catch(() => setError("دریافت فرآیند ها با خطا مواجه شد"))
             .finally(() => setStagesLoading(false));
     }, []);
 

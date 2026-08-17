@@ -1,18 +1,31 @@
 "use client";
 
-import { useEffect, useState, forwardRef, InputHTMLAttributes } from "react";
+import { useEffect, useState, forwardRef, InputHTMLAttributes, TextareaHTMLAttributes } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, GitBranch, CheckCircle2, Loader } from "lucide-react";
 import { Department } from "./types";
 
+interface StagePayload {
+    department: number;
+    name: string;
+    description: string;
+    order: number;
+}
+
 interface Props {
     open: boolean;
     department: Department | null;
+    defaultOrder?: number;
     onClose: () => void;
-    onSubmit: (data: { name: string }) => Promise<void>;
+    onSubmit: (data: StagePayload) => Promise<void>;
 }
 
 interface FloatingInputProps extends InputHTMLAttributes<HTMLInputElement> {
+    label: string;
+    id: string;
+}
+
+interface FloatingTextareaProps extends TextareaHTMLAttributes<HTMLTextAreaElement> {
     label: string;
     id: string;
 }
@@ -38,10 +51,38 @@ const FloatingInput = forwardRef<HTMLInputElement, FloatingInputProps>(
 );
 FloatingInput.displayName = "FloatingInput";
 
-export default function AddStageModal({ open, department, onClose, onSubmit }: Props) {
+const FloatingTextarea = forwardRef<HTMLTextAreaElement, FloatingTextareaProps>(
+    ({ label, id, className = "", ...props }, ref) => (
+        <div className="relative">
+            <textarea
+                ref={ref}
+                id={id}
+                placeholder=" "
+                rows={3}
+                className={`peer w-full border border-gray-200 rounded-3xl px-5 py-3 text-sm text-black outline-none transition-all duration-200 resize-none focus:border-gray-400 dark:bg-white/[0.04] dark:border-white/[0.08] dark:text-white dark:focus:border-blue-500 ${className}`}
+                {...props}
+            />
+            <label
+                htmlFor={id}
+                className="absolute right-5 top-4 text-sm text-gray-400 pointer-events-none transition-all duration-200 bg-white dark:bg-[#0f172a] px-1.5 rounded peer-focus:-top-2.5 peer-focus:text-xs peer-focus:text-gray-500 peer-[:not(:placeholder-shown)]:-top-2.5 peer-[:not(:placeholder-shown)]:text-xs peer-[:not(:placeholder-shown)]:text-gray-500"
+            >
+                {label}
+            </label>
+        </div>
+    )
+);
+FloatingTextarea.displayName = "FloatingTextarea";
+
+export default function AddStageModal({ open, department, defaultOrder = 0, onClose, onSubmit }: Props) {
     const [name, setName] = useState("");
+    const [description, setDescription] = useState("");
+    const [order, setOrder] = useState(defaultOrder);
     const [loading, setLoading] = useState(false);
     const [success, setSuccess] = useState(false);
+
+    useEffect(() => {
+        if (open) setOrder(defaultOrder);
+    }, [open, defaultOrder]);
 
     useEffect(() => {
         if (!open) return;
@@ -50,20 +91,31 @@ export default function AddStageModal({ open, department, onClose, onSubmit }: P
         return () => window.removeEventListener("keydown", onKey);
     }, [open, loading, success]);
 
+    const resetForm = () => {
+        setName("");
+        setDescription("");
+        setOrder(defaultOrder);
+    };
+
     const handleClose = () => {
         if (loading || success) return;
-        setName("");
+        resetForm();
         onClose();
     };
 
     const handleSubmit = async (e?: React.FormEvent) => {
         e?.preventDefault();
-        if (!name.trim() || loading) return;
+        if (!name.trim() || !department || loading) return;
         setLoading(true);
         try {
-            await onSubmit({ name: name.trim() });
+            await onSubmit({
+                department: department.id,
+                name: name.trim(),
+                description: description.trim(),
+                order,
+            });
             setSuccess(true);
-            setTimeout(() => { setSuccess(false); setName(""); onClose(); }, 1400);
+            setTimeout(() => { setSuccess(false); resetForm(); onClose(); }, 1400);
         } finally {
             setLoading(false);
         }
@@ -96,7 +148,7 @@ export default function AddStageModal({ open, department, onClose, onSubmit }: P
                                 </div>
                                 <div>
                                     <h3 className="text-[14px] font-extrabold text-gray-900 dark:text-white">
-                                        مرحله جدید
+                                        فرآیند جدید
                                     </h3>
                                     <p className="text-[11px] text-gray-400 mt-0.5">
                                         {department?.name ?? ""}
@@ -115,12 +167,32 @@ export default function AddStageModal({ open, department, onClose, onSubmit }: P
 
                         <form onSubmit={handleSubmit} className="px-8 pb-8 flex flex-col gap-4">
                             <FloatingInput
-                                label="نام مرحله"
+                                label="نام فرآیند"
                                 id="stage_name"
                                 value={name}
                                 onChange={(e) => setName(e.target.value)}
                                 disabled={loading || success}
                                 dir="rtl"
+                            />
+
+                            <FloatingTextarea
+                                label="توضیحات"
+                                id="stage_description"
+                                value={description}
+                                onChange={(e) => setDescription(e.target.value)}
+                                disabled={loading || success}
+                                dir="rtl"
+                            />
+
+                            <FloatingInput
+                                label="ترتیب"
+                                id="stage_order"
+                                type="number"
+                                value={order}
+                                onChange={(e) => setOrder(Number(e.target.value))}
+                                disabled={loading || success}
+                                dir="ltr"
+                                className="text-left"
                             />
 
                             <AnimatePresence mode="wait">
@@ -133,7 +205,7 @@ export default function AddStageModal({ open, department, onClose, onSubmit }: P
                                         className="flex items-center justify-center gap-2 py-3 rounded-2xl bg-green-50 dark:bg-green-500/10 text-green-600 dark:text-green-400 text-sm font-medium"
                                     >
                                         <CheckCircle2 size={16} />
-                                        مرحله با موفقیت اضافه شد
+                                        فرآیند با موفقیت اضافه شد
                                     </motion.div>
                                 ) : (
                                     <motion.button
@@ -146,7 +218,7 @@ export default function AddStageModal({ open, department, onClose, onSubmit }: P
                                         {loading ? (
                                             <Loader size={18} className="animate-spin" />
                                         ) : (
-                                            "افزودن مرحله"
+                                            "افزودن فرآیند"
                                         )}
                                     </motion.button>
                                 )}
@@ -158,4 +230,3 @@ export default function AddStageModal({ open, department, onClose, onSubmit }: P
         </AnimatePresence>
     );
 }
-

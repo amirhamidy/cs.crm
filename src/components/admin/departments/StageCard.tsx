@@ -112,7 +112,7 @@ export default function StageCard({
             {tasks.length === 0 ? (
                 <div className="relative z-10 flex h-[148px] flex-col items-center justify-center rounded-xl border border-dashed border-gray-200 text-gray-400 dark:border-white/10">
                     <Workflow size={24} className="mb-2 opacity-30" />
-                    <p className="text-[11px]">وظیفه‌ای در این مرحله نیست</p>
+                    <p className="text-[11px]">وظیفه‌ای در این فرآیند نیست</p>
                 </div>
             ) : (
                 <Swiper

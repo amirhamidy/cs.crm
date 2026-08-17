@@ -43,7 +43,7 @@ export default function StagesPanel({
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                     <h3 className="text-[13.5px] font-extrabold text-gray-900 dark:text-white">
-                        مراحل دپارتمان
+                        فرآیند های دپارتمان
                     </h3>
                     <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[10.5px] font-bold text-gray-500 dark:bg-white/[0.06] dark:text-gray-400">
                         {department.stages.length}
@@ -57,14 +57,14 @@ export default function StagesPanel({
                         className="flex items-center gap-1.5 rounded-xl bg-indigo-50 px-3 py-1.5 text-[11.5px] font-bold text-indigo-600 transition hover:bg-indigo-100 dark:bg-indigo-500/10 dark:text-indigo-400 dark:hover:bg-indigo-500/20"
                     >
                         <Plus size={13} />
-                        افزودن مرحله
+                        افزودن فرآیند
                     </button>
                 )}
             </div>
 
             {department.stages.length === 0 ? (
                 <div className="flex flex-col items-center justify-center gap-2 rounded-[1.5rem] border border-dashed border-gray-200 py-10 dark:border-white/[0.07]">
-                    <p className="text-[12px] text-gray-400">مرحله‌ای تعریف نشده است</p>
+                    <p className="text-[12px] text-gray-400">فرآیند‌ای تعریف نشده است</p>
                 </div>
             ) : (
                 <Swiper modules={[FreeMode]} freeMode slidesPerView="auto" spaceBetween={12} className="!overflow-visible w-full">
