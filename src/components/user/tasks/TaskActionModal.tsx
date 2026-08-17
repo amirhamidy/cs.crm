@@ -17,10 +17,7 @@ interface TaskActionModalProps {
     submitting?: boolean;
 }
 
-const directionStyle: Record<
-    ActionDirection,
-    { gradient: string; shadow: string; iconColor: string; iconBg: string }
-> = {
+const directionStyle: Record<ActionDirection, { gradient: string; shadow: string; iconColor: string; iconBg: string }> = {
     next: {
         gradient: "linear-gradient(135deg, #6366f1, #8b5cf6)",
         shadow: "0 4px 14px rgba(99,102,241,0.3)",
@@ -65,7 +62,13 @@ const directionStyle: Record<
     },
 };
 
-const SIMPLE_DIRECTIONS: ActionDirection[] = ["sold", "unsold", "cancel", "uncancel", "uncomplete"];
+const SIMPLE_DIRECTIONS: ActionDirection[] = ["sold", "unsold", "uncancel", "uncomplete"];
+
+const NOTE_COPY: Partial<Record<ActionDirection, { label: string; placeholder: string }>> = {
+    next: { label: "یادداشت انتقال", placeholder: "توضیحی درباره این مرحله بنویس..." },
+    prev: { label: "دلیل بازگشت", placeholder: "چرا این تسک باید به مرحله قبل برگردد؟" },
+    cancel: { label: "دلیل لغو", placeholder: "دلیل لغو این تسک را بنویس..." },
+};
 
 export default function TaskActionModal({
     isOpen,
@@ -85,6 +88,7 @@ export default function TaskActionModal({
 
     const style = directionStyle[direction];
     const isSimple = SIMPLE_DIRECTIONS.includes(direction);
+    const noteCopy = NOTE_COPY[direction] ?? { label: "یادداشت", placeholder: "یادداشت اختیاری..." };
 
     useEffect(() => {
         if (isOpen) {
@@ -180,13 +184,13 @@ export default function TaskActionModal({
                             <>
                                 <div className="space-y-2">
                                     <label className="text-[12px] font-bold text-gray-500 dark:text-gray-400">
-                                        یادداشت
+                                        {noteCopy.label}
                                     </label>
                                     <textarea
                                         value={note}
                                         onChange={(e) => setNote(e.target.value)}
                                         rows={4}
-                                        placeholder="یادداشت اختیاری..."
+                                        placeholder={noteCopy.placeholder}
                                         className="w-full resize-none rounded-2xl border bg-white px-4 py-3 text-sm text-black outline-none transition-all duration-200 focus:border-indigo-500 dark:bg-white/[0.04] dark:border-white/[0.08] dark:text-white dark:focus:border-violet-500"
                                     />
                                 </div>

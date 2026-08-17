@@ -6,6 +6,7 @@ interface AuthState {
   username: string | null;
   userType: 1 | 2 | null;
   isAuthenticated: boolean;
+  hasHydrated: boolean;
   setAuth: (params: {
     access: string;
     refresh: string;
@@ -32,6 +33,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   username: null,
   userType: null,
   isAuthenticated: false,
+  hasHydrated: false,
 
   setAuth: ({ access, refresh, username, userType }) => {
     localStorage.setItem("crm-access", access);
@@ -52,6 +54,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     localStorage.removeItem("crm-access");
     localStorage.removeItem("crm-refresh");
     localStorage.removeItem("crm-type");
+    localStorage.removeItem("crm-username");
     clearCookies();
     set({
       accessToken: null,
@@ -68,6 +71,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     const raw = localStorage.getItem("crm-type");
     const username = localStorage.getItem("crm-username");
     const userType = raw === "1" ? 1 : raw === "2" ? 2 : null;
+
     if (access && refresh && userType) {
       set({
         accessToken: access,
@@ -75,7 +79,10 @@ export const useAuthStore = create<AuthState>((set) => ({
         username,
         userType,
         isAuthenticated: true,
+        hasHydrated: true,
       });
+    } else {
+      set({ hasHydrated: true });
     }
   },
 }));

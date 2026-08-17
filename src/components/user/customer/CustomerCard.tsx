@@ -193,7 +193,7 @@ export default function CustomerCard({ customer, onDeleted, onEdited }: Props) {
                         </div>
                         <div className="flex items-center gap-2">
                             <CalendarDays className="w-3.5 h-3.5" />
-                            <span>{formatDate(customer.created_at)}</span>
+                            <span>تاریخ ثبت : {formatDate(customer.created_at)}</span>
                         </div>
                     </div>
                 </div>

@@ -332,7 +332,7 @@ export default function CaseCard({
                         </div>
                     </div>
 
-                    
+
                 </div>
 
                 <div
@@ -351,7 +351,7 @@ export default function CaseCard({
                             className="text-[10.5px] font-bold flex gap-2"
                             style={{ color: isDark ? "#94a3b8" : "#64748b" }}
                         >
-                            نام مشتری : 
+                            نام مشتری :
                             {customerName}
                         </span>
                     </div>
@@ -362,7 +362,7 @@ export default function CaseCard({
                             style={{ color: isDark ? "#64748b" : "#94a3b8" }}
                         >
                             <CalendarDays size={11} />
-                            {createdAt}
+                            تاریخ ثبت : {createdAt}
                         </div>
                     )}
                 </div>
