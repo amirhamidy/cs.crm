@@ -15,7 +15,6 @@ interface SelectedDay {
     day: number;
 }
 
-    {
 export default function EmployeeDashboardPage() {
     const [selectedDay, setSelectedDay] = useState<SelectedDay | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
