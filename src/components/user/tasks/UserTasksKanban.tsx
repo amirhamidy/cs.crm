@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Kanban, Loader, GripVertical, LayoutGrid, AlertCircle } from "lucide-react";
+import { Kanban, Loader, GripVertical, LayoutGrid, AlertCircle, Building2 } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
 import UserTaskCard from "./UserTaskCard";
 import TaskActionModal from "./TaskActionModal";
@@ -20,6 +20,35 @@ import {
     useDroppable,
     useDraggable,
 } from "@dnd-kit/core";
+
+interface DepartmentGroup {
+    id: number;
+    name: string;
+    stages: UserStage[];
+    tasks: UserTask[];
+}
+
+function extractDeptId(task: UserTask): number {
+    const raw = (task as any).department;
+    if (raw && typeof raw === "object" && "id" in raw) return Number(raw.id);
+    if (raw !== undefined && raw !== null && raw !== "") return Number(raw);
+    return -1;
+}
+
+function extractDeptName(task: UserTask): string {
+    const direct = (task as any).department_name;
+    if (typeof direct === "string" && direct.trim()) return direct.trim();
+    const raw = (task as any).department;
+    if (raw && typeof raw === "object" && "name" in raw) return String(raw.name);
+    return "بدون دپارتمان";
+}
+
+function extractStageDeptId(stage: UserStage): number {
+    const raw = (stage as any).department;
+    if (raw && typeof raw === "object" && "id" in raw) return Number(raw.id);
+    if (raw !== undefined && raw !== null && raw !== "") return Number(raw);
+    return -1;
+}
 
 function groupTasksByStep(tasks: UserTask[]): Record<number, UserTask[]> {
     return tasks.reduce<Record<number, UserTask[]>>((acc, task) => {
@@ -52,6 +81,7 @@ export default function UserTasksKanban() {
     const [overId, setOverId] = useState<number | null>(null);
     const [pendingDrop, setPendingDrop] = useState<PendingDrop | null>(null);
     const [limitToast, setLimitToast] = useState(false);
+    const [activeDeptId, setActiveDeptId] = useState<number | null>(null);
     const pendingRef = useRef<Set<number>>(new Set());
     const limitToastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -73,6 +103,8 @@ export default function UserTasksKanban() {
                         id: s.id,
                         name: s.name ?? s.title ?? `مرحله ${s.id}`,
                         order: s.order ?? s.id,
+                        department: s.department ?? null,
+                        department_name: s.department_name ?? s.department?.name ?? null,
                     }))
                     .sort((a, b) => a.order - b.order);
                 setStages(mapped);
@@ -94,7 +126,44 @@ export default function UserTasksKanban() {
             .finally(() => setLoading(false));
     }, []);
 
-    const grouped = useMemo(() => groupTasksByStep(tasks), [tasks]);
+    const departmentGroups = useMemo<DepartmentGroup[]>(() => {
+        const map = new Map<number, DepartmentGroup>();
+
+        tasks.forEach((task) => {
+            const deptId = extractDeptId(task);
+            const deptName = extractDeptName(task);
+            if (!map.has(deptId)) {
+                map.set(deptId, { id: deptId, name: deptName, stages: [], tasks: [] });
+            }
+            map.get(deptId)!.tasks.push(task);
+        });
+
+        stages.forEach((stage) => {
+            const deptId = extractStageDeptId(stage);
+            const group = map.get(deptId);
+            if (group) group.stages.push(stage);
+        });
+
+        map.forEach((group) => {
+            group.stages.sort((a, b) => a.order - b.order);
+        });
+
+        return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name, "fa"));
+    }, [tasks, stages]);
+
+    useEffect(() => {
+        if (departmentGroups.length === 0) {
+            setActiveDeptId(null);
+            return;
+        }
+        if (activeDeptId === null || !departmentGroups.some((g) => g.id === activeDeptId)) {
+            setActiveDeptId(departmentGroups[0].id);
+        }
+    }, [departmentGroups, activeDeptId]);
+
+    const activeGroup = departmentGroups.find((g) => g.id === activeDeptId) ?? null;
+
+    const grouped = useMemo(() => groupTasksByStep(activeGroup?.tasks ?? []), [activeGroup]);
 
     function handleUpdated(updated: UserTask) {
         setTasks((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
@@ -122,6 +191,7 @@ export default function UserTasksKanban() {
         setOverId(null);
 
         if (!over) return;
+        if (!activeGroup) return;
 
         const task = tasks.find((t) => t.id === active.id);
         if (!task) return;
@@ -130,7 +200,7 @@ export default function UserTasksKanban() {
         if (task.current_step === targetStepId) return;
         if (pendingRef.current.has(task.id)) return;
 
-        const stageList = stages.map((s) => s.id);
+        const stageList = activeGroup.stages.map((s) => s.id);
         const currentIdx = stageList.indexOf(task.current_step);
         const targetIdx = stageList.indexOf(targetStepId);
         if (targetIdx === -1) return;
@@ -147,10 +217,10 @@ export default function UserTasksKanban() {
     }
 
     async function handleModalSubmit({ note, files }: { note: string; files: File[] }) {
-        if (!pendingDrop) return;
+        if (!pendingDrop || !activeGroup) return;
 
         const { task, targetStepId, direction } = pendingDrop;
-        const targetStage = stages.find((s) => s.id === targetStepId);
+        const targetStage = activeGroup.stages.find((s) => s.id === targetStepId);
 
         setTasks((prev) =>
             prev.map((t) =>
@@ -219,8 +289,9 @@ export default function UserTasksKanban() {
         );
     }
 
+    const activeStages = activeGroup?.stages ?? [];
     const activeStageIndex = activeTask
-        ? stages.findIndex((s) => s.id === activeTask.current_step)
+        ? activeStages.findIndex((s) => s.id === activeTask.current_step)
         : -1;
     const activeColor =
         activeStageIndex >= 0
@@ -229,93 +300,121 @@ export default function UserTasksKanban() {
 
     const modalDirection = pendingDrop?.direction === "forward" ? "next" : "prev";
     const targetStageName =
-        stages.find((s) => s.id === pendingDrop?.targetStepId)?.name ?? "";
+        activeGroup?.stages.find((s) => s.id === pendingDrop?.targetStepId)?.name ?? "";
 
     return (
         <>
-            <DndContext
-                sensors={sensors}
-                collisionDetection={closestCenter}
-                onDragStart={handleDragStart}
-                onDragOver={handleDragOver}
-                onDragEnd={handleDragEnd}
-            >
-                <div className="flex flex-col gap-5" dir="rtl">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2.5">
-                            <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-indigo-500/10">
-                                <Kanban size={17} className="text-indigo-500" />
-                            </div>
-                            <div>
-                                <h3 className="text-[14px] font-extrabold text-gray-900 dark:text-white">
-                                    تسک‌های من
-                                </h3>
-                                <p className="text-[11px] text-gray-400 dark:text-gray-600">
-                                    {stages.length} مرحله
-                                </p>
-                            </div>
+            <div className="flex flex-col gap-5" dir="rtl">
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2.5">
+                        <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-indigo-500/10">
+                            <Kanban size={17} className="text-indigo-500" />
                         </div>
-                        <span className="rounded-2xl bg-gray-100 dark:bg-white/[0.06] px-3 py-1.5 text-[11px] font-bold text-gray-600 dark:text-gray-400">
-                            {tasks.length} تسک
-                        </span>
+                        <div>
+                            <h3 className="text-[14px] font-extrabold text-gray-900 dark:text-white">
+                                تسک‌های من
+                            </h3>
+                            <p className="text-[11px] text-gray-400 dark:text-gray-600">
+                                {departmentGroups.length} دپارتمان
+                            </p>
+                        </div>
                     </div>
-
-                    <div className="flex gap-3 overflow-x-auto pb-3 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-gray-200 dark:scrollbar-thumb-white/10">
-                        {stages.map((stage, index) => {
-                            const stageTasks = grouped[stage.id] ?? [];
-                            const color = stageColors[index % stageColors.length];
-                            const isOver =
-                                overId === stage.id &&
-                                activeTask?.current_step !== stage.id;
-
-                            const activeIdx = activeTask
-                                ? stages.findIndex((s) => s.id === activeTask.current_step)
-                                : -1;
-                            const thisIdx = index;
-                            const isAdjacent =
-                                activeTask !== null &&
-                                Math.abs(thisIdx - activeIdx) === 1;
-                            const isDisabled =
-                                activeTask !== null &&
-                                activeTask.current_step !== stage.id &&
-                                !isAdjacent;
-
-                            return (
-                                <motion.div
-                                    key={stage.id}
-                                    initial={{ opacity: 0, y: 12 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    transition={{ duration: 0.25, delay: index * 0.04 }}
-                                    className="w-[300px] shrink-0"
-                                >
-                                    <StageColumn
-                                        stage={stage}
-                                        tasks={stageTasks}
-                                        accent={color}
-                                        index={index}
-                                        isOver={isOver && isAdjacent}
-                                        isDisabled={isDisabled}
-                                        onUpdated={handleUpdated}
-                                    />
-                                </motion.div>
-                            );
-                        })}
-                    </div>
+                    <span className="rounded-2xl bg-gray-100 dark:bg-white/[0.06] px-3 py-1.5 text-[11px] font-bold text-gray-600 dark:text-gray-400">
+                        {tasks.length} تسک
+                    </span>
                 </div>
 
-                <DragOverlay dropAnimation={{ duration: 200, easing: "ease" }}>
-                    {activeTask && (
-                        <div className="rotate-[1.5deg] scale-[1.04]">
-                            <UserTaskCard
-                                task={activeTask}
-                                accent={activeColor}
-                                onUpdated={() => { }}
-                                isDragging
-                            />
+                <div className="flex gap-2 overflow-x-auto pb-1">
+                    {departmentGroups.map((group) => {
+                        const isActive = group.id === activeDeptId;
+                        return (
+                            <button
+                                key={group.id}
+                                type="button"
+                                onClick={() => setActiveDeptId(group.id)}
+                                className={`flex shrink-0 items-center gap-2 rounded-2xl px-3.5 py-2 text-[11.5px] font-bold transition-colors ${isActive
+                                    ? "bg-indigo-600 text-white"
+                                    : "bg-gray-100 text-gray-500 hover:bg-gray-200 dark:bg-white/[0.05] dark:text-gray-400 dark:hover:bg-white/[0.08]"
+                                    }`}
+                            >
+                                <Building2 size={12} />
+                                {group.name}
+                                <span
+                                    className={`rounded-full px-1.5 py-0.5 text-[10px] font-extrabold ${isActive ? "bg-white/20" : "bg-black/5 dark:bg-white/10"
+                                        }`}
+                                >
+                                    {group.tasks.length}
+                                </span>
+                            </button>
+                        );
+                    })}
+                </div>
+
+                {activeGroup && (
+                    <DndContext
+                        sensors={sensors}
+                        collisionDetection={closestCenter}
+                        onDragStart={handleDragStart}
+                        onDragOver={handleDragOver}
+                        onDragEnd={handleDragEnd}
+                    >
+                        <div className="flex gap-3 overflow-x-auto pb-3">
+                            {activeGroup.stages.map((stage, index) => {
+                                const stageTasks = grouped[stage.id] ?? [];
+                                const color = stageColors[index % stageColors.length];
+                                const isOver =
+                                    overId === stage.id &&
+                                    activeTask?.current_step !== stage.id;
+
+                                const activeIdx = activeTask
+                                    ? activeGroup.stages.findIndex((s) => s.id === activeTask.current_step)
+                                    : -1;
+                                const thisIdx = index;
+                                const isAdjacent =
+                                    activeTask !== null &&
+                                    Math.abs(thisIdx - activeIdx) === 1;
+                                const isDisabled =
+                                    activeTask !== null &&
+                                    activeTask.current_step !== stage.id &&
+                                    !isAdjacent;
+
+                                return (
+                                    <motion.div
+                                        key={stage.id}
+                                        initial={{ opacity: 0, y: 12 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        transition={{ duration: 0.25, delay: index * 0.04 }}
+                                        className="w-[300px] shrink-0"
+                                    >
+                                        <StageColumn
+                                            stage={stage}
+                                            tasks={stageTasks}
+                                            accent={color}
+                                            index={index}
+                                            isOver={isOver && isAdjacent}
+                                            isDisabled={isDisabled}
+                                            onUpdated={handleUpdated}
+                                        />
+                                    </motion.div>
+                                );
+                            })}
                         </div>
-                    )}
-                </DragOverlay>
-            </DndContext>
+
+                        <DragOverlay dropAnimation={{ duration: 200, easing: "ease" }}>
+                            {activeTask && (
+                                <div className="rotate-[1.5deg] scale-[1.04]">
+                                    <UserTaskCard
+                                        task={activeTask}
+                                        accent={activeColor}
+                                        onUpdated={() => { }}
+                                        isDragging
+                                    />
+                                </div>
+                            )}
+                        </DragOverlay>
+                    </DndContext>
+                )}
+            </div>
 
             <TaskActionModal
                 isOpen={pendingDrop !== null}
