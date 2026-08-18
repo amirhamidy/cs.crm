@@ -30,4 +30,6 @@ export const userMenuItems: MenuItem[] = [
   { icon: Home, label: "داشبورد", href: "/user/dashboard" },
   { icon: ClipboardList, label: "وظایف", href: "/user/processes" },
   { icon: FileText, label: "مشتری", href: "/user/customer" },
+  { icon: FileText, label: "پرونده ها", href: "/user/cases" },
+  { icon: FileText, label: "ایجاد وظایف", href: "/user/tasks" },
 ];

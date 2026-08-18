@@ -3,30 +3,29 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-    X,
-    ChevronDown,
-    Upload,
-    Check,
-    Loader,
-    ClipboardList,
-    Search,
-    Paperclip,
-    AlertCircle,
-    UserPlus,
+    X, ChevronDown, Upload, Check, Loader, ClipboardList,
+    Search, Paperclip, AlertCircle, UserPlus,
 } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
 
 interface Case { id: number; title: string; customer: number }
 interface Department { id: number; name: string }
 interface DepartmentEmployee {
-    id: number; employee: number; employee_name: string;
-    department: number; department_name: string;
+    id: number;
+    employee: number;
+    employee_name: string;
+    department: number;
+    department_name: string;
+    created_at?: string;
+    updated_at?: string;
 }
 
 interface Props {
     isOpen: boolean;
     onClose: () => void;
     onSuccess: () => void;
+    departments?: Department[];
+    employees?: DepartmentEmployee[];
 }
 
 interface Option { id: number; label: string; sub?: string }
@@ -187,13 +186,19 @@ function NiceSelect({ label, options, value, onChange, placeholder, disabled, em
     );
 }
 
-export default function CreateTaskModal({ isOpen, onClose, onSuccess }: Props) {
+export default function CreateTaskModal({
+    isOpen,
+    onClose,
+    onSuccess,
+    departments: initialDepartments = [],
+    employees: initialEmployees = []
+}: Props) {
     const [submitting, setSubmitting] = useState(false);
     const [submitError, setSubmitError] = useState("");
 
     const [cases, setCases] = useState<Case[]>([]);
-    const [departments, setDepartments] = useState<Department[]>([]);
-    const [employees, setEmployees] = useState<DepartmentEmployee[]>([]);
+    const [departmentList, setDepartmentList] = useState<Department[]>(initialDepartments);
+    const [employeeList, setEmployeeList] = useState<DepartmentEmployee[]>(initialEmployees);
 
     const [selectedCase, setSelectedCase] = useState<number | null>(null);
     const [selectedDepartment, setSelectedDepartment] = useState<number | null>(null);
@@ -203,17 +208,30 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess }: Props) {
 
     useEffect(() => {
         if (!isOpen) return;
-        axiosInstance.get("/tasks/api/v1/cases/").then((r) => setCases(r.data.results ?? r.data)).catch(() => setCases([]));
-        axiosInstance.get("/department/api/v1/department/list/").then((r) => setDepartments(r.data.results ?? r.data)).catch(() => setDepartments([]));
-        axiosInstance.get("/department/api/v1/department_employee/list/").then((r) => setEmployees(r.data.results ?? r.data)).catch(() => setEmployees([]));
-    }, [isOpen]);
 
-    useEffect(() => { setSelectedEmployees([]); }, [selectedDepartment]);
+        axiosInstance.get("/tasks/api/v1/cases/")
+            .then((r) => setCases(r.data.results ?? r.data))
+            .catch(() => setCases([]));
 
-    const filteredEmployees = useMemo(
-        () => selectedDepartment ? employees.filter((e) => e.department === selectedDepartment) : employees,
-        [employees, selectedDepartment]
-    );
+        if (initialDepartments.length === 0) {
+            axiosInstance.get("/department/api/v1/departments/")
+                .then((r) => setDepartmentList(r.data.results ?? r.data))
+                .catch(() => setDepartmentList([]));
+        }
+
+        axiosInstance.get("/department/api/v1/department_employee/list/")
+            .then((r) => setEmployeeList(r.data.results ?? r.data))
+            .catch(() => setEmployeeList([]));
+    }, [isOpen, initialDepartments.length]);
+
+    useEffect(() => {
+        setSelectedEmployees([]);
+    }, [selectedDepartment]);
+
+    const filteredEmployees = useMemo(() => {
+        if (!selectedDepartment) return [];
+        return employeeList.filter((e) => Number(e.department) === Number(selectedDepartment));
+    }, [employeeList, selectedDepartment]);
 
     const canSubmit = title.trim().length > 0 && selectedCase !== null && selectedDepartment !== null && selectedEmployees.length > 0 && !submitting;
 
@@ -319,7 +337,7 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess }: Props) {
 
                             <NiceSelect
                                 label="دپارتمان" placeholder="انتخاب دپارتمان" emptyText="دپارتمانی یافت نشد"
-                                options={departments.map((d) => ({ id: d.id, label: d.name }))}
+                                options={departmentList.map((d) => ({ id: d.id, label: d.name }))}
                                 value={selectedDepartment}
                                 onChange={(id) => { setSelectedDepartment(id as number); setSubmitError(""); }}
                             />

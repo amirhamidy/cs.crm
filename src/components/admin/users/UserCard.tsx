@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Trash2, Pencil, X, Loader } from "lucide-react";
+import { Trash2, Pencil, X, Loader, Star } from "lucide-react";
 import { useTheme } from "next-themes";
 import axiosInstance from "@/lib/axiosInstance";
 import type { AxiosError } from "axios";
@@ -67,6 +67,37 @@ export default function UserCard({ employee, index, onDelete }: UserCardProps) {
     const [deleteError, setDeleteError] = useState("");
     const [showEditModal, setShowEditModal] = useState(false);
     const [localEmployee, setLocalEmployee] = useState(employee);
+    const [score, setScore] = useState<number | null>(null);
+    const [scoreLoading, setScoreLoading] = useState(true);
+
+    useEffect(() => {
+        if (!localEmployee?.id) return;
+        let alive = true;
+        setScoreLoading(true);
+
+        axiosInstance
+            .get(`/score/api/v1/employees/${localEmployee.id}/`)
+            .then(({ data }) => {
+                if (!alive) return;
+                const value =
+                    typeof data?.score === "number"
+                        ? data.score
+                        : typeof data?.total_score === "number"
+                            ? data.total_score
+                            : null;
+                setScore(value);
+            })
+            .catch(() => {
+                if (alive) setScore(null);
+            })
+            .finally(() => {
+                if (alive) setScoreLoading(false);
+            });
+
+        return () => {
+            alive = false;
+        };
+    }, [localEmployee?.id]);
 
     if (
         !localEmployee ||
@@ -224,6 +255,21 @@ export default function UserCard({ employee, index, onDelete }: UserCardProps) {
                 </svg>
 
                 <div className="absolute top-3 left-3 flex items-center gap-1.5 z-10">
+                    {!scoreLoading && score !== null && (
+                        <div
+                            className="h-7 px-2 rounded-xl flex items-center gap-1 flex-shrink-0"
+                            style={{
+                                background: isDark
+                                    ? "rgba(234,179,8,0.12)"
+                                    : "rgba(234,179,8,0.08)",
+                                color: isDark ? "#fde047" : "#ca8a04",
+                            }}
+                            title="امتیاز عملکرد"
+                        >
+                            <Star size={11} fill="currentColor" strokeWidth={0} />
+                            <span className="text-[11px] font-extrabold">{score}</span>
+                        </div>
+                    )}
                     <button
                         onClick={() => setShowEditModal(true)}
                         className="w-7 h-7 rounded-xl flex items-center justify-center transition-colors"

@@ -194,15 +194,15 @@ export default function UserTasksPage() {
             ) : (
                 <motion.div layout className="grid grid-cols-1 gap-3 lg:grid-cols-2 xl:grid-cols-3">
                     <AnimatePresence mode="popLayout">
-                        {filteredTasks.map((task, i) => (
+                        {filteredTasks.map((task) => (
                             <TaskCard
                                 key={task.id}
                                 task={task}
-                                index={i}
-                                onEdit={(t) => setEditingTask(t)}
+                                employees={employees}
+                                onEdit={() => setEditingTask(task)}
                                 onDelete={handleDelete}
-                                onUpdated={handleTaskUpdated}
                             />
+
                         ))}
                     </AnimatePresence>
                 </motion.div>
@@ -214,6 +214,8 @@ export default function UserTasksPage() {
                         isOpen={showCreate}
                         onClose={() => setShowCreate(false)}
                         onSuccess={handleCreateSuccess}
+                        departments={departments}
+                        employees={employees}
                     />
                 )}
             </AnimatePresence>
@@ -226,7 +228,10 @@ export default function UserTasksPage() {
                         departments={departments}
                         employees={employees}
                         onClose={() => setEditingTask(null)}
-                        onSuccess={handleEditSuccess}
+                        onSuccess={() => {
+                            setEditingTask(null);
+                            refetchTasks();
+                        }}
                     />
                 )}
             </AnimatePresence>

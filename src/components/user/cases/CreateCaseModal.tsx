@@ -51,6 +51,17 @@ function customerPhone(c: CustomerLike) {
     return c.phone || c.phone_number || "";
 }
 
+function getUserId(): number | null {
+    try {
+        const raw = localStorage.getItem("crm-user-id");
+        if (!raw) return null;
+        const parsed = parseInt(raw, 10);
+        return isNaN(parsed) ? null : parsed;
+    } catch {
+        return null;
+    }
+}
+
 const FloatingInput = forwardRef<HTMLInputElement, any>(
     ({ label, id, className = "", value, ...props }, ref) => {
         const hasValue = value !== undefined && value !== null && value !== "";
@@ -196,6 +207,13 @@ export default function CreateCaseModal({
 
     const handleSubmit = useCallback(async () => {
         if (!canSubmit) return;
+
+        const userId = getUserId();
+        if (!userId) {
+            setSubmitError("شناسه کاربر یافت نشد، لطفاً دوباره وارد شوید");
+            return;
+        }
+
         try {
             setSubmitting(true);
             setSubmitError("");
@@ -203,10 +221,14 @@ export default function CreateCaseModal({
                 customer: selectedCustomer,
                 title: title.trim(),
                 description: description.trim(),
+                created_by: userId,
             });
             await onCreated();
             onClose();
-        } catch {
+        } catch (err: unknown) {
+            const e = err as { response?: { data?: unknown; status?: number } };
+            console.log("Status:", e.response?.status);
+            console.log("Error detail:", JSON.stringify(e.response?.data, null, 2));
             setSubmitError("ثبت پرونده انجام نشد، دوباره تلاش کن");
         } finally {
             setSubmitting(false);

@@ -43,10 +43,27 @@ export default function UserCasesPage() {
                 axiosInstance.get<ListResponse<CaseItem>>(apiRoutes.cases),
                 axiosInstance.get<ListResponse<Customer>>(apiRoutes.customers),
                 axiosInstance.get<ListResponse<Department>>(apiRoutes.departments),
-                axiosInstance.get<ListResponse<Employee>>(apiRoutes.departmentEmployees),
+                axiosInstance.get<ListResponse<Employee>>("/accounts/api/v1/employee/list/"),
                 axiosInstance.get<ListResponse<TaskItem>>(apiRoutes.tasks),
             ]);
-            setCases(extractList(casesRes.data));
+
+            const caseList = extractList<CaseItem>(casesRes.data);
+
+            const detailedCases = await Promise.all(
+                caseList.map(async (item) => {
+                    try {
+                        const detailRes = await axiosInstance.get<CaseItem>(
+                            `/tasks/api/v1/cases/${item.id}/`
+                        );
+                        return { ...item, ...detailRes.data };
+                    } catch (err) {
+                        console.error(`خطا در دریافت جزئیات پرونده ${item.id}`, err);
+                        return item;
+                    }
+                })
+            );
+
+            setCases(detailedCases);
             setCustomers(extractList(customersRes.data));
             setDepartments(extractList(departmentsRes.data));
             setEmployees(extractList(employeesRes.data));

@@ -471,24 +471,13 @@ export default function EditTaskModal({
             employeeIds = [rawEmployee];
         }
 
-        async function fetchSelectedEmployees() {
-            const fetchedEmployees: Employee[] = [];
-            for (const id of employeeIds) {
-                try {
-                    const response = await axiosInstance.get(`/accounts/api/v1/employee/${id}/`);
-                    if (response.data) {
-                        fetchedEmployees.push(response.data);
-                    }
-                } catch (error) {
-                    console.error(`Failed to fetch employee ${id}:`, error);
-                }
-            }
-            setSelectedEmployeesData(fetchedEmployees);
-            setSelectedEmployees(fetchedEmployees.map(emp => getEmployeeId(emp)));
-            setEmpInitialized(true);
-        }
+        const matchedEmployees = employees.filter((emp) =>
+            employeeIds.includes(Number(getEmployeeId(emp)))
+        );
 
-        fetchSelectedEmployees();
+        setSelectedEmployeesData(matchedEmployees);
+        setSelectedEmployees(matchedEmployees.map((emp) => Number(getEmployeeId(emp))));
+        setEmpInitialized(true);
 
         setFiles([]);
         setSubmitError("");
@@ -516,7 +505,7 @@ export default function EditTaskModal({
                 setCasesLoading(false);
                 setIsInitializing(false);
             });
-    }, [task]);
+    }, [task, employees]);
 
     useEffect(() => {
         if (isInitializing) return;

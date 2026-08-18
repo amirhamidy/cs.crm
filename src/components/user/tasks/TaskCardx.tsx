@@ -20,7 +20,6 @@ import { useTheme } from "next-themes";
 import type { Task, TaskStatus, TaskEmployeeRef } from "@/types/task";
 import { toJalali, toPersianDigits, JALALI_MONTHS, pad2 } from "@/lib/jalali";
 import api from "@/lib/axiosInstance";
-import { useEmployeeInfo } from "@/hooks/useEmployeeInfo";
 
 const AVATAR_GRADIENTS = [
     ["#6366f1", "#8b5cf6"],
@@ -74,6 +73,12 @@ interface TaskWithStep extends Task {
 interface StepDeadline {
     started_at: string | null;
     deadline: string | null;
+}
+
+interface EmployeeOption {
+    id: number;
+    full_name?: string;
+    username?: string;
 }
 
 function formatJalaliDate(iso?: string | null) {
@@ -130,10 +135,9 @@ function Chip({ isDark, children }: { isDark: boolean; children: React.ReactNode
     );
 }
 
-function EmployeeChip({ id, isDark }: { id: number; isDark: boolean }) {
-    const { data, loading } = useEmployeeInfo(id);
+function EmployeeChip({ id, employee, isDark }: { id: number; employee?: EmployeeOption; isDark: boolean }) {
     const gradient = getGradient(id);
-    const name = loading ? "..." : (data?.full_name ?? data?.username ?? `کارمند ${id}`);
+    const name = employee?.full_name ?? employee?.username ?? `کارمند ${id}`;
 
     return (
         <div
@@ -159,6 +163,7 @@ function EmployeeChip({ id, isDark }: { id: number; isDark: boolean }) {
 interface TaskCardProps {
     task: TaskWithStep;
     index?: number;
+    employees: EmployeeOption[];
     onEdit: (task: Task) => void;
     onDelete: (taskId: number) => Promise<void> | void;
     onUpdated?: (task: Task) => void;
@@ -167,6 +172,7 @@ interface TaskCardProps {
 export default function TaskCard({
     task,
     index = 0,
+    employees,
     onEdit,
     onDelete,
     onUpdated,
@@ -380,7 +386,12 @@ export default function TaskCard({
                 >
                     {employeeIds.length > 0 ? (
                         employeeIds.map((id) => (
-                            <EmployeeChip key={id} id={id} isDark={isDark} />
+                            <EmployeeChip
+                                key={id}
+                                id={id}
+                                employee={employees.find((e) => e.id === id)}
+                                isDark={isDark}
+                            />
                         ))
                     ) : (
                         <div
