@@ -6,7 +6,7 @@ import { X, Loader, UserPlus, Shield, Eye, EyeOff, Check, ChevronLeft, ChevronRi
 import axiosInstance from "@/lib/axiosInstance";
 import type { AxiosError } from "axios";
 
-type Step1Form = { username: string; password: string; type: 1 | 2 };
+type Step1Form = { username: string; phone_number: string; password: string; type: 1 | 2 };
 type Step2Form = { full_name: string };
 type Step1Errors = Partial<Record<keyof Step1Form, string>>;
 type Step2Errors = Partial<Record<keyof Step2Form, string>>;
@@ -47,7 +47,7 @@ FloatingInput.displayName = "FloatingInput";
 function getApiErrorMessage(err: unknown, fallback: string) {
     const data = (err as AxiosError<Record<string, unknown>>).response?.data;
     if (!data) return fallback;
-    for (const key of ["detail", "username", "password", "full_name", "non_field_errors", "message", "error"]) {
+    for (const key of ["detail", "username", "phone_number", "password", "full_name", "non_field_errors", "message", "error"]) {
         const val = data[key];
         if (typeof val === "string") return val;
         if (Array.isArray(val) && typeof val[0] === "string") return val[0];
@@ -55,7 +55,9 @@ function getApiErrorMessage(err: unknown, fallback: string) {
     return fallback;
 }
 
-const INITIAL_STEP1: Step1Form = { username: "", password: "", type: 2 };
+const PHONE_REGEX = /^09\d{9}$/;
+
+const INITIAL_STEP1: Step1Form = { username: "", phone_number: "", password: "", type: 2 };
 const INITIAL_STEP2: Step2Form = { full_name: "" };
 
 export default function AddUserModal({ isOpen, onClose, onSuccess }: Props) {
@@ -88,6 +90,8 @@ export default function AddUserModal({ isOpen, onClose, onSuccess }: Props) {
     function validateStep1(): boolean {
         const e: Step1Errors = {};
         if (!step1.username.trim()) e.username = "نام کاربری الزامی است";
+        if (!step1.phone_number.trim()) e.phone_number = "شماره موبایل الزامی است";
+        else if (!PHONE_REGEX.test(step1.phone_number.trim())) e.phone_number = "شماره موبایل معتبر نیست";
         if (!step1.password.trim()) e.password = "رمز عبور الزامی است";
         else if (step1.password.length < 3) e.password = "رمز عبور باید حداقل ۳ کاراکتر باشد";
         setErrors1(e);
@@ -141,6 +145,7 @@ export default function AddUserModal({ isOpen, onClose, onSuccess }: Props) {
         try {
             const { data: createData } = await axiosInstance.post("/accounts/api/v1/user/create/", {
                 username,
+                phone_number: step1.phone_number.trim(),
                 password: step1.password,
                 type: step1.type,
             });
@@ -266,6 +271,25 @@ export default function AddUserModal({ isOpen, onClose, onSuccess }: Props) {
                                         dir="ltr"
                                     />
                                     {errors1.username && <p className="text-[11px] text-red-500 mt-1 font-semibold">{errors1.username}</p>}
+                                </div>
+
+                                <div>
+                                    <FloatingInput
+                                        label="شماره موبایل"
+                                        id="add_phone_number"
+                                        type="tel"
+                                        inputMode="numeric"
+                                        maxLength={11}
+                                        value={step1.phone_number}
+                                        onChange={(e) => {
+                                            const digits = e.target.value.replace(/\D/g, "");
+                                            setStep1((p) => ({ ...p, phone_number: digits }));
+                                            setErrors1((p) => ({ ...p, phone_number: undefined }));
+                                            setApiError("");
+                                        }}
+                                        dir="ltr"
+                                    />
+                                    {errors1.phone_number && <p className="text-[11px] text-red-500 mt-1 font-semibold">{errors1.phone_number}</p>}
                                 </div>
 
                                 <div>

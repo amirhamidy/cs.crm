@@ -1,110 +1,108 @@
 "use client";
 
-import { useState, useEffect, InputHTMLAttributes, forwardRef } from "react";
+import { useState } from "react";
+import { X, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Loader, User } from "lucide-react";
-import axiosInstance from "@/lib/axiosInstance";
-import type { AxiosError } from "axios";
-import type { ApiEmployee } from "@/types/users";
+import api from "@/lib/axiosInstance";
+import { ApiEmployee } from "@/types/users";
 
 interface EditUserModalProps {
-    isOpen: boolean;
-    onClose: () => void;
     employee: ApiEmployee;
-    onUpdated: (updatedEmployee: ApiEmployee) => void;
+    onClose: () => void;
+    onUpdated: (updated: ApiEmployee) => void;
 }
 
-interface FloatingInputProps extends InputHTMLAttributes<HTMLInputElement> {
+interface FormErrors {
+    full_name?: string;
+    username?: string;
+    password?: string;
+}
+
+const USERNAME_REGEX = /^[a-zA-Z0-9_]{3,20}$/;
+
+function getApiErrorMessage(error: any): FormErrors {
+    const data = error?.response?.data;
+    const errors: FormErrors = {};
+
+    if (!data) return errors;
+
+    if (data.full_name) errors.full_name = Array.isArray(data.full_name) ? data.full_name[0] : data.full_name;
+    if (data.username) errors.username = Array.isArray(data.username) ? data.username[0] : data.username;
+    if (data.password) errors.password = Array.isArray(data.password) ? data.password[0] : data.password;
+
+    return errors;
+}
+
+function FloatingInput({
+    label,
+    value,
+    onChange,
+    type = "text",
+    error,
+}: {
     label: string;
-    id: string;
-}
-
-const FloatingInput = forwardRef<HTMLInputElement, FloatingInputProps>(
-    ({ label, id, className = "", ...props }, ref) => (
+    value: string;
+    onChange: (v: string) => void;
+    type?: string;
+    error?: string;
+}) {
+    return (
         <div className="relative">
             <input
-                ref={ref}
-                id={id}
+                type={type}
+                value={value}
+                onChange={(e) => onChange(e.target.value)}
                 placeholder=" "
-                autoComplete="new-password"
-                className={`
-                    peer w-full border border-gray-200 rounded-4xl
-                    px-5 py-3 text-sm text-black outline-none
-                    transition-all duration-200
-                    focus:border-gray-400
-                    dark:bg-white/[0.04] dark:border-white/[0.08] dark:text-white
-                    dark:focus:border-blue-500
-                    ${className}
-                `}
-                {...props}
+                className={`peer w-full rounded-2xl border bg-transparent px-4 pt-5 pb-2 text-sm outline-none transition-colors dark:text-white ${error
+                        ? "border-red-500 focus:border-red-500"
+                        : "border-neutral-300 focus:border-blue-500 dark:border-neutral-700 dark:focus:border-blue-400"
+                    }`}
             />
-            <label
-                htmlFor={id}
-                className="
-                    absolute right-5 top-1/2 -translate-y-1/2
-                    text-sm text-gray-400 pointer-events-none
-                    transition-all duration-200
-                    bg-white dark:bg-[#0f172a] px-1.5 rounded
-                    peer-focus:top-0 peer-focus:text-xs peer-focus:text-gray-500
-                    peer-[:not(:placeholder-shown)]:top-0
-                    peer-[:not(:placeholder-shown)]:text-xs
-                    peer-[:not(:placeholder-shown)]:text-gray-500
-                "
-            >
+            <label className="pointer-events-none absolute right-4 top-3.5 origin-right text-sm text-neutral-500 transition-all duration-150 peer-focus:-translate-y-2.5 peer-focus:scale-75 peer-focus:text-blue-500 peer-[:not(:placeholder-shown)]:-translate-y-2.5 peer-[:not(:placeholder-shown)]:scale-75 dark:text-neutral-400">
                 {label}
             </label>
+            {error && <p className="mt-1 text-xs text-red-500">{error}</p>}
         </div>
-    )
-);
-FloatingInput.displayName = "FloatingInput";
-
-function getErrorMessage(err: unknown, fallback: string) {
-    const error = err as AxiosError<Record<string, unknown>>;
-    const data = error.response?.data;
-    if (!data) return fallback;
-    const keys = ["detail", "full_name", "user", "message", "error", "non_field_errors"];
-    for (const key of keys) {
-        const val = data[key];
-        if (typeof val === "string") return val;
-        if (Array.isArray(val) && typeof val[0] === "string") return val[0];
-    }
-    return fallback;
+    );
 }
 
-export default function EditUserModal({
-    isOpen,
-    onClose,
-    employee,
-    onUpdated,
-}: EditUserModalProps) {
-    const [fullName, setFullName] = useState("");
+export default function EditUserModal({ employee, onClose, onUpdated }: EditUserModalProps) {
+    const [fullName, setFullName] = useState(employee.full_name);
+    const [username, setUsername] = useState(employee.username);
+    const [password, setPassword] = useState("");
+    const [errors, setErrors] = useState<FormErrors>({});
     const [loading, setLoading] = useState(false);
-    const [error, setError] = useState("");
 
-    useEffect(() => {
-        if (isOpen) {
-            setFullName(employee.full_name || "");
-            setError("");
-        }
-    }, [isOpen, employee]);
+    function validate(): boolean {
+        const newErrors: FormErrors = {};
 
-    async function handleSubmit(e: React.FormEvent) {
-        e.preventDefault();
-        if (!fullName.trim()) {
-            setError("نام و نام خانوادگی الزامی است");
-            return;
-        }
+        if (!fullName.trim()) newErrors.full_name = "نام و نام خانوادگی الزامی است";
+        if (!username.trim()) newErrors.username = "نام کاربری الزامی است";
+        else if (!USERNAME_REGEX.test(username)) newErrors.username = "نام کاربری باید بین ۳ تا ۲۰ کاراکتر و شامل حروف، عدد و آندرلاین باشد";
+        if (password && password.length < 6) newErrors.password = "رمز عبور باید حداقل ۶ کاراکتر باشد";
+
+        setErrors(newErrors);
+        return Object.keys(newErrors).length === 0;
+    }
+
+    async function handleSubmit() {
+        if (!validate()) return;
+
         setLoading(true);
-        setError("");
+
+        const payload: Record<string, any> = {
+            full_name: fullName,
+            username,
+        };
+
+        if (password) payload.password = password;
+
         try {
-            const res = await axiosInstance.put<{ full_name?: string }>(
-                `/accounts/api/v1/employee/${employee.id}/update/`,
-                { full_name: fullName.trim(), user: employee.user }
-            );
-            onUpdated({ ...employee, full_name: res.data?.full_name || fullName.trim() });
+            const res = await api.put(`/accounts/api/v1/user/${employee.id}/update/`, payload);
+            onUpdated(res.data);
             onClose();
         } catch (err) {
-            setError(getErrorMessage(err, "خطا در ویرایش اطلاعات"));
+            setErrors(getApiErrorMessage(err));
         } finally {
             setLoading(false);
         }
@@ -112,83 +110,45 @@ export default function EditUserModal({
 
     return (
         <AnimatePresence>
-            {isOpen && (
+            <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+                onClick={onClose}
+            >
                 <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    className="fixed inset-0 z-50 flex items-center justify-center px-4"
-                    style={{ background: "rgba(0,0,0,0.45)", backdropFilter: "blur(3px)" }}
-                    onClick={onClose}
+                    initial={{ scale: 0.95, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    exit={{ scale: 0.95, opacity: 0 }}
+                    onClick={(e) => e.stopPropagation()}
+                    className="w-full max-w-md rounded-4xl bg-white p-6 shadow-2xl dark:bg-neutral-900"
                 >
-                    <motion.div
-                        initial={{ opacity: 0, y: 16 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: 16 }}
-                        transition={{ duration: 0.35, ease: "easeOut" }}
-                        className="w-full max-w-sm rounded-[2rem] border border-gray-100 bg-white p-8 shadow-sm dark:border-white/[0.06] dark:bg-[#0f172a]"
-                        onClick={(e) => e.stopPropagation()}
-                        dir="rtl"
+                    <div className="mb-6 flex items-center justify-between">
+                        <h2 className="text-lg font-bold dark:text-white">ویرایش کاربر</h2>
+                        <button
+                            onClick={onClose}
+                            className="rounded-full p-2 text-neutral-500 transition-colors hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                        >
+                            <X size={20} />
+                        </button>
+                    </div>
+
+                    <div className="space-y-4">
+                        <FloatingInput label="نام و نام خانوادگی" value={fullName} onChange={setFullName} error={errors.full_name} />
+                        <FloatingInput label="نام کاربری" value={username} onChange={setUsername} error={errors.username} />
+                        <FloatingInput label="رمز عبور جدید (اختیاری)" value={password} onChange={setPassword} type="password" error={errors.password} />
+                    </div>
+
+                    <button
+                        onClick={handleSubmit}
+                        disabled={loading}
+                        className="mt-6 flex w-full items-center justify-center rounded-2xl bg-blue-600 py-3 text-sm font-medium text-white transition-colors hover:bg-blue-700 disabled:opacity-60"
                     >
-                        <div className="mb-6 flex items-center justify-between">
-                            <div className="flex items-center gap-2.5">
-                                <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-50 dark:bg-blue-500/10">
-                                    <User size={15} className="text-blue-500" />
-                                </div>
-                                <div>
-                                    <h3 className="text-[14px] font-extrabold text-gray-900 dark:text-white">
-                                        ویرایش کارمند
-                                    </h3>
-                                    <p className="mt-0.5 text-[11px] text-gray-400">
-                                        ویرایش نام و نام خانوادگی
-                                    </p>
-                                </div>
-                            </div>
-                            <button
-                                type="button"
-                                onClick={onClose}
-                                disabled={loading}
-                                className="flex h-8 w-8 items-center justify-center rounded-xl bg-gray-100 text-gray-400 transition-colors hover:text-gray-600 disabled:opacity-40 dark:bg-white/[0.05] dark:hover:text-gray-300"
-                            >
-                                <X size={15} />
-                            </button>
-                        </div>
-
-                        <form onSubmit={handleSubmit} autoComplete="off" className="flex flex-col gap-6">
-                            <FloatingInput
-                                label="نام و نام خانوادگی"
-                                id="edit_full_name"
-                                type="text"
-                                value={fullName}
-                                onChange={(e) => {
-                                    setFullName(e.target.value);
-                                    setError("");
-                                }}
-                                dir="rtl"
-                            />
-
-                            {error && (
-                                <p className="text-center text-[11.5px] font-semibold text-red-500 -mt-2">
-                                    {error}
-                                </p>
-                            )}
-
-                            <motion.button
-                                type="submit"
-                                disabled={loading}
-                                whileTap={{ scale: 0.97 }}
-                                className="flex items-center justify-center rounded-full bg-blue-600 py-3 text-sm font-bold text-white transition-colors hover:bg-blue-500 disabled:opacity-50"
-                            >
-                                {loading ? (
-                                    <Loader size={18} className="animate-spin" />
-                                ) : (
-                                    "ذخیره تغییرات"
-                                )}
-                            </motion.button>
-                        </form>
-                    </motion.div>
+                        {loading ? <Loader2 size={18} className="animate-spin" /> : "ذخیره تغییرات"}
+                    </button>
                 </motion.div>
-            )}
+            </motion.div>
         </AnimatePresence>
     );
 }

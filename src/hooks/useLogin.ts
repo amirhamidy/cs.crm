@@ -1,3 +1,4 @@
+// hooks/useLogin.ts
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { authService } from "@/services/authService";
@@ -6,7 +7,6 @@ import { useAuthStore } from "@/store/authStore";
 export const useLogin = () => {
   const router = useRouter();
   const setAuth = useAuthStore((s) => s.setAuth);
-
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -20,8 +20,11 @@ export const useLogin = () => {
         refresh: data.refresh,
         username: data.user.username,
         userType: data.user.type,
+        userId: data.user.id,
       });
-      router.push(data.user.type === 1 ? "/admin/dashboard" : "/user/dashboard");
+      router.push(
+        data.user.type === 1 ? "/admin/dashboard" : "/user/dashboard",
+      );
     } catch {
       setError("نام کاربری یا رمز عبور اشتباه است");
     } finally {
