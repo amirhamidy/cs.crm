@@ -51,7 +51,12 @@ function customerPhone(c: CustomerLike) {
     return c.phone || c.phone_number || "";
 }
 
-const FloatingInput = forwardRef<HTMLInputElement, any>(
+type FloatingInputProps = React.InputHTMLAttributes<HTMLInputElement> & {
+    label: string;
+    id: string;
+};
+
+const FloatingInput = forwardRef<HTMLInputElement, FloatingInputProps>(
     ({ label, id, className = "", value, ...props }, ref) => {
         const hasValue = value !== undefined && value !== null && value !== "";
 
@@ -80,7 +85,12 @@ const FloatingInput = forwardRef<HTMLInputElement, any>(
 );
 FloatingInput.displayName = "FloatingInput";
 
-const FloatingTextarea = forwardRef<HTMLTextAreaElement, any>(
+type FloatingTextareaProps = React.TextareaHTMLAttributes<HTMLTextAreaElement> & {
+    label: string;
+    id: string;
+};
+
+const FloatingTextarea = forwardRef<HTMLTextAreaElement, FloatingTextareaProps>(
     ({ label, id, className = "", value, rows = 3, ...props }, ref) => {
         const hasValue = value !== undefined && value !== null && value !== "";
 

@@ -12,9 +12,9 @@ type Step1Errors = Partial<Record<keyof Step1Form, string>>;
 type Step2Errors = Partial<Record<keyof Step2Form, string>>;
 
 interface Props {
-    isOpen: boolean;
     onClose: () => void;
     onSuccess: () => void;
+    isOpen?: boolean;
 }
 
 interface FloatingInputProps extends InputHTMLAttributes<HTMLInputElement> {

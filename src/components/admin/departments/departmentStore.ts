@@ -146,7 +146,9 @@ export const useDepartmentStore = create<DepartmentStore>((set, get) => ({
   addDepartment: async (name: string) => {
     const { departments } = get();
     const maxOrder =
-      departments.length > 0 ? Math.max(...departments.map((d) => d.order)) : 0;
+      departments.length > 0
+        ? Math.max(...departments.map((d) => d.order ?? 0))
+        : 0;
     const created = await departmentApi.createDepartment({
       name,
       order: maxOrder + 1,

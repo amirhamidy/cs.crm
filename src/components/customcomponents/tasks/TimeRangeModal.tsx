@@ -15,7 +15,8 @@ interface TimeRangeModalProps {
     initialDeadline?: string | null;
     loading?: boolean;
     onClose: () => void;
-    onSubmit: (startedAt: string, deadline: string) => void;
+    onSubmit: (startedAt: string, deadline: string) => Promise<void>;
+    error?: string | null;
 }
 
 function parseIsoToField(iso?: string | null): FieldState {

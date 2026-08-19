@@ -1,3 +1,5 @@
+import { TaskEmployeeRef } from "@/types/task";
+
 export interface Stage {
   id: string;
   apiId: number;
@@ -6,6 +8,8 @@ export interface Stage {
   order: number;
   description?: string;
 }
+
+
 
 export interface StageAPIItem {
   id: number;
@@ -72,29 +76,30 @@ export interface Task {
     due_date?: string;
     created_at?: string;
     [key: string]: unknown;
+    assigned_employee?: number | TaskEmployeeRef | null;
 }
 
-export interface Stage {
-    id: string | number;
-    name: string;
-    description?: string;
-    order?: number;
-    color?: string;
-}
+// export interface Stage {
+//     id: string | number;
+//     name: string;
+//     description?: string;
+//     order?: number;
+//     color?: string;
+// }
 
-export interface Employee {
-    id: string | number;
-    name: string;
-    role?: string;
-    email?: string;
-    avatar?: string;
-}
+// export interface Employee {
+//     id: string | number;
+//     name: string;
+//     role?: string;
+//     email?: string;
+//     avatar?: string;
+// }
 
-export interface Department {
-    id: string | number;
-    name: string;
-    accent?: string;
-    createdAt?: string;
-    stages: Stage[];
-    employees: Employee[];
-}
+// export interface Department {
+//     id: string | number;
+//     name: string;
+//     accent?: string;
+//     createdAt?: string;
+//     stages: Stage[];
+//     employees: Employee[];
+// }

@@ -45,15 +45,15 @@ export default function CaseList({
                 </div>
             ) : (
                 <div className="grid gap-3">
-                    {cases.map((caseItem: CaseItem) => (
+                    {cases.map((caseItem: CaseItem, index: number) => (
                         <CaseCard
                             key={caseItem.id}
-                            caseItem={caseItem}
-                            isSelected={selectedCaseId === caseItem.id}
-                            onSelect={onSelect}
+                            item={caseItem}
+                            index={index}
+                            isDeleting={deletingCaseId === caseItem.id}
+                            onClick={onSelect}
                             onEdit={onEdit}
                             onDelete={onDelete}
-                            deleting={deletingCaseId === caseItem.id}
                         />
                     ))}
                 </div>

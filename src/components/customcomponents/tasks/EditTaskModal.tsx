@@ -374,7 +374,7 @@ export default function EditTaskModal({
     const [selectedCase, setSelectedCase] = useState<number | null>(null);
     const [selectedDepartment, setSelectedDepartment] = useState<number | null>(null);
     const [selectedEmployees, setSelectedEmployees] = useState<number[]>([]);
-    const [status, setStatus] = useState<TaskStatus>("pending");
+    const [status, setStatus] = useState<TaskStatus>("in_progress");
     const [files, setFiles] = useState<File[]>([]);
     const [cases, setCases] = useState<CaseItem[]>([]);
     const [casesLoading, setCasesLoading] = useState(false);
@@ -384,8 +384,6 @@ export default function EditTaskModal({
     const [existingFiles, setExistingFiles] = useState<Array<{ id?: number; file: string; name?: string }>>([]);
     const [isInitializing, setIsInitializing] = useState(false);
     const [selectedEmployeesData, setSelectedEmployeesData] = useState<Employee[]>([]);
-    const [empInitialized, setEmpInitialized] = useState(false);
-
 
     const filteredEmployees = useMemo(
         () =>
@@ -403,72 +401,33 @@ export default function EditTaskModal({
 
     const allEmployees = useMemo(() => {
         const merged = [...filteredEmployees];
-        selectedEmployeesData.forEach(emp => {
-            if (!merged.some(e => getEmployeeId(e) === getEmployeeId(emp))) {
+        selectedEmployeesData.forEach((emp) => {
+            if (!merged.some((e) => getEmployeeId(e) === getEmployeeId(emp))) {
                 merged.push(emp);
             }
         });
         return merged;
     }, [filteredEmployees, selectedEmployeesData]);
 
-   const filteredEmpOptions = useMemo(
-    () =>
-        allEmployees
-            .filter((employee) => {
-                return !!(
-                    employee.first_name ||
-                    employee.last_name ||
-                    employee.user_detail?.first_name ||
-                    employee.user_detail?.last_name ||
-                    employee.full_name
-                );
-            })
-            .map((employee) => ({
-                id: Number(getEmployeeId(employee)),
-                label: getEmployeeName(employee),
-                sub: employee.position || employee.user_detail?.username || undefined,
-            })),
-    [allEmployees]
-);
-
-
-    const empOptions = useMemo(
+    const filteredEmpOptions = useMemo(
         () =>
-            employees.map((employee) => ({
-                id: Number(getEmployeeId(employee)),
-                label: getEmployeeName(employee),
-                sub: employee.position || employee.user_detail?.username || undefined,
-            })),
-        [employees]
+            allEmployees
+                .filter((employee) => {
+                    return !!(
+                        employee.first_name ||
+                        employee.last_name ||
+                        employee.user_detail?.first_name ||
+                        employee.user_detail?.last_name ||
+                        employee.full_name
+                    );
+                })
+                .map((employee) => ({
+                    id: Number(getEmployeeId(employee)),
+                    label: getEmployeeName(employee),
+                    sub: employee.position || employee.user_detail?.username || undefined,
+                })),
+        [allEmployees]
     );
-
-    async function fetchSelectedEmployees() {
-        const fetchedEmployees: Employee[] = [];
-        for (const id of employeeIds) {
-            try {
-                const response = await axiosInstance.get(`/accounts/api/v1/employee/${id}/`);
-                if (response.data) fetchedEmployees.push(response.data);
-            } catch { }
-        }
-        setSelectedEmployeesData(fetchedEmployees);
-        setSelectedEmployees(fetchedEmployees.map(emp => Number(getEmployeeId(emp))));
-        setEmpInitialized(true);
-    }
-
-    useEffect(() => {
-        if (!empInitialized) return;
-        if (selectedDepartment !== null) {
-            setSelectedEmployees(prev =>
-                prev.filter(id =>
-                    allEmployees.some(e => Number(getEmployeeId(e)) === id)
-                )
-            );
-        }
-    }, [selectedDepartment, allEmployees, empInitialized]);
-
-
-
-
 
     const caseOptions = useMemo(
         () =>
@@ -513,50 +472,48 @@ export default function EditTaskModal({
 
         setTitle(task.title ?? "");
 
-        const caseId = task.case && typeof task.case === "object"
-            ? task.case.id
-            : task.case
-                ? Number(task.case)
-                : null;
+        const caseId =
+            task.case && typeof task.case === "object"
+                ? task.case.id
+                : task.case
+                    ? Number(task.case)
+                    : null;
         setSelectedCase(caseId);
 
-        const deptId = task.department && typeof task.department === "object"
-            ? task.department.id
-            : task.department
-                ? Number(task.department)
-                : null;
+        const deptId =
+            task.department && typeof task.department === "object"
+                ? task.department.id
+                : task.department
+                    ? Number(task.department)
+                    : null;
         setSelectedDepartment(deptId);
 
         setStatus((task.status as TaskStatus) ?? "pending");
 
         const rawEmployee = task.assigned_employee;
-        let employeeIds: number[] = [];
+        const employeeIds: number[] = [];
 
         if (Array.isArray(rawEmployee)) {
-            employeeIds = rawEmployee.map((emp) => {
-                if (typeof emp === "object" && emp !== null) {
-                    return Number(emp.id);
-                }
-                return Number(emp);
-            }).filter((id) => !isNaN(id) && id > 0);
+            rawEmployee.forEach((emp) => {
+                const id =
+                    typeof emp === "object" && emp !== null ? Number(emp.id) : Number(emp);
+                if (!isNaN(id) && id > 0) employeeIds.push(id);
+            });
         } else if (typeof rawEmployee === "number") {
-            employeeIds = [rawEmployee];
+            employeeIds.push(rawEmployee);
         }
 
         async function fetchSelectedEmployees() {
-            const fetchedEmployees: Employee[] = [];
+            const fetched: Employee[] = [];
             for (const id of employeeIds) {
                 try {
-                    const response = await axiosInstance.get(`/accounts/api/v1/employee/${id}/`);
-                    if (response.data) {
-                        fetchedEmployees.push(response.data);
-                    }
-                } catch (error) {
-                    console.error(`Failed to fetch employee ${id}:`, error);
+                    const res = await axiosInstance.get(`/accounts/api/v1/employee/${id}/`);
+                    if (res.data) fetched.push(res.data);
+                } catch {
                 }
             }
-            setSelectedEmployeesData(fetchedEmployees);
-            setSelectedEmployees(fetchedEmployees.map(emp => getEmployeeId(emp)));
+            setSelectedEmployeesData(fetched);
+            setSelectedEmployees(fetched.map((emp) => Number(getEmployeeId(emp))));
         }
 
         fetchSelectedEmployees();
@@ -567,12 +524,12 @@ export default function EditTaskModal({
 
         const taskFiles = task.files || [];
         if (Array.isArray(taskFiles)) {
-            const mappedFiles = taskFiles.map((f: any) => {
-                if (typeof f === "string") {
-                    return { file: f };
-                }
-                return { id: f?.id, file: f?.file || f?.url || f?.attachment, name: f?.name };
-            }).filter((f) => f.file);
+            const mappedFiles = taskFiles
+                .map((f: any) => {
+                    if (typeof f === "string") return { file: f };
+                    return { id: f?.id, file: f?.file || f?.url || f?.attachment, name: f?.name };
+                })
+                .filter((f) => f.file);
             setExistingFiles(mappedFiles);
         } else {
             setExistingFiles([]);
@@ -592,11 +549,11 @@ export default function EditTaskModal({
     useEffect(() => {
         if (isInitializing) return;
         if (selectedDepartment !== null) {
-            const currentEmployeeIds = selectedEmployees;
-            const validEmployeesInDepartment = allEmployees
-                .filter((e) => currentEmployeeIds.includes(Number(getEmployeeId(e))))
-                .map((e) => Number(getEmployeeId(e)));
-            setSelectedEmployees(validEmployeesInDepartment);
+            setSelectedEmployees((prev) =>
+                prev.filter((id) =>
+                    allEmployees.some((e) => Number(getEmployeeId(e)) === id)
+                )
+            );
         } else {
             setSelectedEmployees([]);
         }
@@ -648,9 +605,11 @@ export default function EditTaskModal({
                     files.map((file) => {
                         const formData = new FormData();
                         formData.append("file", file);
-                        return axiosInstance.post(apiRoutes.taskAttachments(task!.id), formData, {
-                            headers: { "Content-Type": "multipart/form-data" },
-                        });
+                        return axiosInstance.post(
+                            apiRoutes.taskAttachments(task!.id),
+                            formData,
+                            { headers: { "Content-Type": "multipart/form-data" } }
+                        );
                     })
                 );
             }
@@ -701,9 +660,7 @@ export default function EditTaskModal({
                                 <h3 className="text-[14px] font-extrabold text-gray-900 dark:text-white">
                                     ویرایش وظیفه
                                 </h3>
-                                <p className="mt-0.5 text-[11px] text-gray-400">
-                                    {task.title}
-                                </p>
+                                <p className="mt-0.5 text-[11px] text-gray-400">{task.title}</p>
                             </div>
                         </div>
                         <button
@@ -819,7 +776,11 @@ export default function EditTaskModal({
 
                             <NiceSelect
                                 label="کارمندان مسئول"
-                                placeholder={selectedDepartment ? "انتخاب کارمند" : "ابتدا دپارتمان را انتخاب کنید"}
+                                placeholder={
+                                    selectedDepartment
+                                        ? "انتخاب کارمند"
+                                        : "ابتدا دپارتمان را انتخاب کنید"
+                                }
                                 emptyText="کارمندی در این دپارتمان نیست"
                                 disabled={!selectedDepartment}
                                 multiple={true}
@@ -888,14 +849,19 @@ export default function EditTaskModal({
                                         <Upload size={14} />
                                     </span>
                                     <span className="text-[12px] font-bold text-gray-500 dark:text-gray-400">
-                                        {files.length > 0 ? `${files.length} فایل انتخاب شد` : "افزودن فایل"}
+                                        {files.length > 0
+                                            ? `${files.length} فایل انتخاب شد`
+                                            : "افزودن فایل"}
                                     </span>
                                     <input
                                         type="file"
                                         multiple
                                         className="hidden"
                                         onChange={(e) =>
-                                            setFiles((prev) => [...prev, ...Array.from(e.target.files ?? [])])
+                                            setFiles((prev) => [
+                                                ...prev,
+                                                ...Array.from(e.target.files ?? []),
+                                            ])
                                         }
                                     />
                                 </label>
@@ -927,7 +893,9 @@ export default function EditTaskModal({
                                                     <button
                                                         type="button"
                                                         onClick={() =>
-                                                            setFiles((prev) => prev.filter((_, j) => j !== i))
+                                                            setFiles((prev) =>
+                                                                prev.filter((_, j) => j !== i)
+                                                            )
                                                         }
                                                         className="shrink-0 text-gray-400 transition-colors hover:text-red-500"
                                                     >

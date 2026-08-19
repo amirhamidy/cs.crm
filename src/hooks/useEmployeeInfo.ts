@@ -16,11 +16,10 @@ export function useEmployeeInfo(id: number | null | undefined) {
     if (typeof id === "number" && employeeCache[id]) {
       return employeeCache[id];
     }
-
     return null;
   });
 
-  const [loading, setLoading] = useState(() => {
+  const [loading, setLoading] = useState<boolean>(() => {
     return typeof id === "number" && !employeeCache[id];
   });
 

@@ -90,7 +90,6 @@ export default function UserTasksPage() {
             try {
                 await axiosInstance.delete(apiRoutes.deleteTask(taskId));
                 setTasks((prev) => prev.filter((t) => t.id !== taskId));
-                return true;
             } catch {
                 await fetchAll();
                 throw new Error("delete failed");
@@ -108,10 +107,6 @@ export default function UserTasksPage() {
         setEditingTask(null);
         fetchAll();
     }, [fetchAll]);
-
-    const handleTaskUpdated = useCallback((updated: Task) => {
-        setTasks((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
-    }, []);
 
     return (
         <div className="flex flex-col gap-6 p-4 md:p-6" dir="rtl">
@@ -202,7 +197,6 @@ export default function UserTasksPage() {
                                 onEdit={() => setEditingTask(task)}
                                 onDelete={handleDelete}
                             />
-
                         ))}
                     </AnimatePresence>
                 </motion.div>
@@ -215,7 +209,6 @@ export default function UserTasksPage() {
                         onClose={() => setShowCreate(false)}
                         onSuccess={handleCreateSuccess}
                         departments={departments}
-                        employees={employees}
                     />
                 )}
             </AnimatePresence>
@@ -228,10 +221,7 @@ export default function UserTasksPage() {
                         departments={departments}
                         employees={employees}
                         onClose={() => setEditingTask(null)}
-                        onSuccess={() => {
-                            setEditingTask(null);
-                            refetchTasks();
-                        }}
+                        onSuccess={handleEditSuccess}
                     />
                 )}
             </AnimatePresence>

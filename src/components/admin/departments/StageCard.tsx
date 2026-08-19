@@ -20,10 +20,6 @@ interface Props {
 }
 
 const getStageNumber = (stage: Stage, index: number) => {
-    if (typeof stage.number === "number") {
-        return stage.number;
-    }
-
     if (typeof stage.order === "number") {
         return stage.order;
     }

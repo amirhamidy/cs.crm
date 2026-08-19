@@ -15,6 +15,8 @@ interface StagesPanelProps {
     department: Department;
     tasks: Task[];
     tasksLoading?: boolean;
+    stageColors?: string[];
+    onReorder: (stages: Stage[]) => void;
     onAddStage?: () => void;
     onEditStage?: (
         stage: Stage,
@@ -22,6 +24,7 @@ interface StagesPanelProps {
     ) => Promise<void> | void;
     onDeleteStage?: (stage: Stage) => void;
 }
+
 
 const getRelationId = (
     value: string | number | { id: string | number } | null | undefined

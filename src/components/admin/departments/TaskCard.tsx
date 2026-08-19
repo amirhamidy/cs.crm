@@ -33,6 +33,8 @@ export default function TaskCard({
 }) {
     const status = statusMap[task.status ?? ""] ?? statusMap.todo;
 
+    const currentStepLabel = String(task.current_step_name ?? "") || "—";
+
     return (
         <motion.div
             whileHover={{ y: -2 }}
@@ -61,11 +63,13 @@ export default function TaskCard({
                 <div className="flex items-center gap-1.5">
                     <CalendarDays size={12} className="text-gray-300 dark:text-gray-600" />
                     <span className="text-[10.5px] text-gray-400">
-                        {task.current_step_name || "—"}
+                        {currentStepLabel}
                     </span>
                 </div>
 
-                <TaskAssignees ids={task.assigned_employee} />
+                <TaskAssignees
+                    ids={Array.isArray(task.assigned_employee) ? task.assigned_employee : []}
+                />
             </div>
         </motion.div>
     );

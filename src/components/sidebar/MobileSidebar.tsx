@@ -2,21 +2,21 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, type Variants } from "framer-motion";
 import { LogOut, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSidebar } from "@/hooks/useSidebar";
 import { useMenuItems } from "@/hooks/useMenuItems";
 import { useLogout } from "@/hooks/useLogout";
 
-const containerVariants = {
+const containerVariants: Variants = {
   hidden: {},
   visible: {
     transition: { staggerChildren: 0.04, delayChildren: 0.1 },
   },
 };
 
-const itemVariants = {
+const itemVariants: Variants = {
   hidden: { opacity: 0, x: 16 },
   visible: {
     opacity: 1,
@@ -24,6 +24,7 @@ const itemVariants = {
     transition: { duration: 0.22, ease: [0.25, 0.46, 0.45, 0.94] },
   },
 };
+
 
 export default function MobileSidebar() {
   const pathname = usePathname();

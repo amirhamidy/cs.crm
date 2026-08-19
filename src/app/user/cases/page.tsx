@@ -9,8 +9,9 @@ import type { Customer } from "@/types/customer";
 import type { Department } from "@/types/department";
 import type { Employee } from "@/types/employee";
 import type { TaskItem } from "@/types/task";
-import CaseCard, { type CaseItem } from "@/components/user/cases/CaseCard";
+import type { CaseStatus, CaseItem } from "@/types/case";
 import CreateCaseModal from "@/components/user/cases/CreateCaseModal";
+import CaseCard from "@/components/customcomponents/cases/CaseCard";
 
 type ListResponse<T> = T[] | { results?: T[]; data?: T[] };
 

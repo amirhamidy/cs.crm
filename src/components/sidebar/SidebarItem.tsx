@@ -1,9 +1,9 @@
-"use client";
+// SidebarItem.tsx — fix anchorRef type: use MutableRefObject instead of RefObject
 
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronDown } from "lucide-react";
 import Link from "next/link";
-import { useState, useRef } from "react";
+import { useState, useRef, MutableRefObject } from "react";
 import { createPortal } from "react-dom";
 import { LucideIcon } from "lucide-react";
 
@@ -32,7 +32,7 @@ function TooltipPortal({
 }: {
   label: string;
   subItems?: SubItem[];
-  anchorRef: React.RefObject<HTMLDivElement>;
+  anchorRef: MutableRefObject<HTMLDivElement | null>;
 }) {
   const rect = anchorRef.current?.getBoundingClientRect();
   if (!rect) return null;

@@ -97,11 +97,17 @@ export default function EditUserModal({
         setLoading(true);
         setError("");
         try {
-            const res = await axiosInstance.put<{ full_name?: string }>(
+            const payload: Record<string, unknown> = {
+                full_name: fullName.trim(),
+            };
+            if ("user" in employee && employee.user !== undefined) {
+                payload.user = employee.user;
+            }
+            const res = await axiosInstance.put<ApiEmployee>(
                 `/accounts/api/v1/employee/${employee.id}/update/`,
-                { full_name: fullName.trim(), user: employee.user }
+                payload
             );
-            onUpdated({ ...employee, full_name: res.data?.full_name || fullName.trim() });
+            onUpdated({ ...employee, ...res.data, full_name: res.data?.full_name ?? fullName.trim() });
             onClose();
         } catch (err) {
             setError(getErrorMessage(err, "خطا در ویرایش اطلاعات"));

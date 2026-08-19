@@ -148,6 +148,11 @@ export default function UsersPage() {
                                 onDelete={(id) =>
                                     setEmployees((prev) => prev.filter((e) => e.id !== id))
                                 }
+                                onUpdated={(updated) =>
+                                    setEmployees((prev) =>
+                                        prev.map((e) => (e.id === updated.id ? updated : e))
+                                    )
+                                }
                             />
                         ))}
                     </AnimatePresence>

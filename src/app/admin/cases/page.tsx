@@ -5,7 +5,11 @@ import { AnimatePresence, motion } from "framer-motion";
 import { ClipboardList, Loader, Plus, RefreshCw, Search, X } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
 import { apiRoutes } from "@/lib/apiRoutes";
-import { Case, Customer, Department, Employee } from "./types";
+import { Case, Department } from "@/types/case";
+import type { CaseItem } from '@/types/case';
+import type { Customer } from '@/types/customer';
+import type { Employee } from '@/types/employee';
+
 import CaseCard from "@/components/customcomponents/cases/CaseCard";
 import CreateCaseModal from "@/components/customcomponents/cases/CreateCaseModal";
 import TaskCard from "@/components/customcomponents/tasks/TaskCard";
@@ -118,8 +122,8 @@ export default function AdminCasesPage() {
         return cases.filter((item) => {
             const customer = customers.find((c) => Number(c.id) === Number(item.customer));
             const customerName = [
-                customer?.first_name,
-                customer?.last_name,
+                (customer as unknown as { first_name?: string })?.first_name,
+                (customer as unknown as { last_name?: string })?.last_name,
                 (customer as unknown as { full_name?: string })?.full_name,
                 (customer as unknown as { company_name?: string })?.company_name,
             ]
@@ -250,7 +254,7 @@ export default function AdminCasesPage() {
                             return (
                                 <div key={item.id} className="flex flex-col gap-2 border-2 border-[#eeeeee] p-3 rounded-4xl">
                                     <CaseCard
-                                        item={item}
+                                        item={item as unknown as CaseItem}
                                         index={i}
                                         customers={customers}
                                         departments={departments}

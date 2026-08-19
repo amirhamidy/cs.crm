@@ -109,7 +109,7 @@ export default function AddStageModal({ open, department, defaultOrder = 0, onCl
         setLoading(true);
         try {
             await onSubmit({
-                department: department.id,
+                department: Number(department.id),
                 name: name.trim(),
                 description: description.trim(),
                 order,

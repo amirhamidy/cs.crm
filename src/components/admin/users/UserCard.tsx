@@ -10,9 +10,10 @@ import type { ApiEmployee, ApiUser } from "@/types/users";
 import EditUserModal from "./EditUserModal";
 
 interface UserCardProps {
-    employee?: ApiEmployee;
+    employee: ApiEmployee;
     index: number;
     onDelete: (id: number) => void;
+    onUpdated: (updatedEmployee: ApiEmployee) => void;
 }
 
 const AVATAR_GRADIENTS = [

@@ -50,10 +50,15 @@ function getEmployeeName(employee: Employee) {
 }
 
 function getEmployeeRole(employee: Employee) {
+    const departmentName =
+        typeof employee.department === "object" && employee.department
+            ? employee.department.name
+            : undefined
+
     return (
         employee.role ||
         employee.position ||
-        employee.department_name ||
+        departmentName ||
         "کارمند سیستم"
     )
 }

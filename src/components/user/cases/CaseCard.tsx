@@ -49,8 +49,29 @@ export interface CaseItem {
     responsible?: PersonLike;
 }
 
+export interface CaseListProps {
+    cases: CaseItem[]
+    selectedCaseId?: number | string | null
+    onSelect: (caseItem: CaseItem) => void
+    onCreate: () => void
+    onEdit: (caseItem: CaseItem) => void
+    onDelete: (caseId: number) => void
+    loading?: boolean
+    deletingCaseId?: number | string | null
+}
+
+// export interface CaseCardProps {
+//     caseItem: CaseItem
+//     isSelected: boolean
+//     onSelect: (caseItem: CaseItem) => void
+//     onEdit: (caseItem: CaseItem) => void
+//     onDelete: (caseId: number) => void
+//     deleting?: boolean
+// }
+
 interface CaseCardProps {
     item: CaseItem;
+    deleting?: boolean
     index?: number;
     users?: PersonLike[];
     customers?: PersonLike[];
@@ -59,6 +80,7 @@ interface CaseCardProps {
     onEdit?: (item: CaseItem) => void;
     onDelete?: (item: CaseItem) => void;
     onClick?: (item: CaseItem) => void;
+    onSelect: (caseItem: CaseItem) => void
 }
 
 const STATUS_MAP: Record<CaseStatus, { label: string; light: string; dark: string }> = {

@@ -3,9 +3,9 @@
 import { useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useTheme } from "next-themes";
+
 import {
     Briefcase,
-    Building2,
     CalendarDays,
     Loader2,
     Pencil,
@@ -14,7 +14,12 @@ import {
     X,
 } from "lucide-react";
 
-export type CaseStatus = "sold" | "in_progress" | "completed" | "cancelled";
+// این تایپ‌ها مستقیم از منبع اصلی ایمپورت می‌شن، نه یه کپی دستی.
+// این‌جوری هیچ‌وقت دو تا تعریف "CaseItem" جدا از هم دریفت نمی‌کنن
+// و این کلاس ارورهای type-mismatch دیگه تکرار نمی‌شه.
+import type { CaseItem, CaseStatus } from "@/types/case";
+
+export type { CaseItem, CaseStatus };
 
 export type PersonLike =
     | {
@@ -30,28 +35,6 @@ export type PersonLike =
     | string
     | null
     | undefined;
-
-export interface CaseItem {
-    id: number | string;
-    title: string;
-    description?: string | null;
-    status: CaseStatus;
-    created_at?: string | null;
-
-    customer?: PersonLike;
-    customer_name?: string | null;
-    customerName?: string | null;
-
-    department?: PersonLike;
-    department_name?: string | null;
-    departmentName?: string | null;
-
-    assigned_to?: PersonLike;
-    assigned_to_name?: string | null;
-    assignedToName?: string | null;
-    assignee?: PersonLike;
-    responsible?: PersonLike;
-}
 
 interface CaseCardProps {
     item: CaseItem;
@@ -87,14 +70,6 @@ const STATUS_MAP: Record<CaseStatus, { label: string; light: string; dark: strin
         dark: "bg-rose-500/10 text-rose-300 border-rose-500/20",
     },
 };
-
-const AVATAR_GRADIENTS = [
-    ["#6366f1", "#8b5cf6"],
-    ["#3b82f6", "#6366f1"],
-    ["#8b5cf6", "#ec4899"],
-    ["#06b6d4", "#6366f1"],
-    ["#f59e0b", "#ef4444"],
-];
 
 const isFilled = (v?: string | null): v is string =>
     typeof v === "string" && v.trim().length > 0;
@@ -157,12 +132,13 @@ export default function CaseCard({
 }: CaseCardProps) {
     const { resolvedTheme } = useTheme();
     const isDark = resolvedTheme === "dark";
-    const [hovered, setHovered] = useState(false);
-    const [showConfirm, setShowConfirm] = useState(false);
-    const [deleteLoading, setDeleteLoading] = useState(false);
+
+    const [hovered, setHovered] = useState<boolean>(false);
+    const [showConfirm, setShowConfirm] = useState<boolean>(false);
+    const [deleteLoading, setDeleteLoading] = useState<boolean>(false);
     const [deleteError, setDeleteError] = useState<string | null>(null);
 
-    const status = STATUS_MAP[item.status] ?? STATUS_MAP.open;
+    const status = STATUS_MAP[(item.status as CaseStatus) ?? "in_progress"] ?? STATUS_MAP.in_progress;
 
     const customerName = useMemo(
         () =>
@@ -199,7 +175,6 @@ export default function CaseCard({
     );
 
     const createdAt = formatDate(item.created_at);
-    const gradient = AVATAR_GRADIENTS[Number(item.id) % AVATAR_GRADIENTS.length];
 
     const handleDelete = async () => {
         if (!onDelete) return;
@@ -331,8 +306,6 @@ export default function CaseCard({
                             )}
                         </div>
                     </div>
-
-
                 </div>
 
                 <div
@@ -341,11 +314,7 @@ export default function CaseCard({
                         borderColor: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)",
                     }}
                 >
-                    <div
-                        className="flex items-center gap-2 rounded-full px-2.5 py-1"
-
-                        style={chipStyle}
-                    >
+                    <div className="flex items-center gap-2 rounded-full px-2.5 py-1" style={chipStyle}>
                         <User size={11} className={isDark ? "text-slate-500" : "text-slate-400"} />
                         <span
                             className="text-[10.5px] font-bold flex gap-2"

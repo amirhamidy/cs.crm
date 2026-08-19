@@ -10,7 +10,6 @@ import {
   Shield,
   UserRound,
 } from "lucide-react";
-import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 import { useSidebar } from "@/hooks/useSidebar";
 import { ThemeToggle } from "../ThemeToggle";
@@ -27,19 +26,21 @@ const adminMenuItems = [
   { id: 3, title: "سطح دسترسی", description: "مدیریت نقش‌ها", icon: Shield },
 ];
 
-const dropdownVariants = {
+import { motion, AnimatePresence, type Variants } from "framer-motion";
+
+const dropdownVariants: Variants = {
   hidden: { opacity: 0, y: 8, filter: "blur(8px)", scale: 0.98 },
   visible: { opacity: 1, y: 0, filter: "blur(0px)", scale: 1 },
   exit: { opacity: 0, y: 6, filter: "blur(6px)", scale: 0.98 },
 };
 
-const itemVariants = {
+const itemVariants: Variants = {
   hidden: { opacity: 0, y: 6, filter: "blur(4px)" },
   visible: (i: number) => ({
     opacity: 1,
     y: 0,
     filter: "blur(0px)",
-    transition: { duration: 0.16, delay: i * 0.04, ease: [0.25, 0.46, 0.45, 0.94] },
+    transition: { duration: 0.16, delay: i * 0.04, ease: [0.25, 0.46, 0.45, 0.94] as [number, number, number, number] },
   }),
 };
 

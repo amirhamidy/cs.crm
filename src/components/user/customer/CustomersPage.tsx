@@ -35,23 +35,18 @@ export default function CustomersPage() {
         fetchCustomers();
     }, [fetchCustomers]);
 
-    const handleDelete = async (id: number) => {
-        await axiosInstance.delete(`/customers/api/v1/customers/${id}/delete/`);
+    const handleDeleted = useCallback((id: number) => {
         setCustomers((prev) => prev.filter((c) => c.id !== id));
-    };
+    }, []);
 
-    const handleAdded = (c: Customer) => {
+    const handleAdded = useCallback((c: Customer) => {
         setCustomers((prev) => [c, ...prev]);
-    };
+    }, []);
 
     const handleEdited = useCallback((updated: Customer) => {
         setCustomers((prev) => prev.map((c) => (c.id === updated.id ? updated : c)));
         setEditingCustomer(null);
     }, []);
-
-    const handleOpenEdit = (customer: Customer) => {
-        setEditingCustomer(customer);
-    };
 
     return (
         <div className="flex flex-col gap-5 p-3 sm:p-4 md:p-6" dir="rtl">
@@ -91,7 +86,7 @@ export default function CustomersPage() {
 
                     <button
                         onClick={() => setShowAdd(true)}
-                        className="flex h-9 flex-1 items-center justify-center gap-2 rounded-xl px-3.5 py-2 bg-blue-600 hover:bg-blue-100 hover:text-blue-500 transition-all duration-200 text-[12.5px] font-bold text-white  hover:opacity-90 sm:flex-none"
+                        className="flex h-9 flex-1 items-center justify-center gap-2 rounded-xl px-3.5 py-2 bg-blue-600 hover:bg-blue-100 hover:text-blue-500 transition-all duration-200 text-[12.5px] font-bold text-white hover:opacity-90 sm:flex-none"
                         type="button"
                     >
                         <Plus size={13} />
@@ -103,8 +98,8 @@ export default function CustomersPage() {
             {loading ? (
                 <div className="flex flex-col items-center justify-center gap-3 py-16">
                     <Loader size={22} className="text-indigo-500 animate-spin" />
-                    <p className="text-[12.5px] !text-gray-400 dark:!text-gray-500">
-                        در حال دریافت لیست  مشتریان...
+                    <p className="text-[12.5px] text-gray-400 dark:text-gray-500">
+                        در حال دریافت لیست مشتریان...
                     </p>
                 </div>
             ) : (
@@ -134,9 +129,8 @@ export default function CustomersPage() {
                                         key={customer.id}
                                         customer={customer}
                                         index={i}
-                                        onDelete={() => handleDelete(customer.id)}
+                                        onDeleted={handleDeleted}
                                         onEdited={handleEdited}
-                                        onEdit={() => handleOpenEdit(customer)}
                                     />
                                 ))}
                             </AnimatePresence>

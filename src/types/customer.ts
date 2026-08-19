@@ -6,10 +6,14 @@ export interface Customer {
   company_name?: string;
   address?: string;
   source?: string;
+  created_at: string; 
+  status_display: string; 
+  first_name: string;
+  last_name: string;
   description?: string;
   status: number;
-  created_at?: string;
   updated_at?: string;
+  created_by_username: string;
 }
 
 export interface CustomerFormData {
@@ -21,4 +25,12 @@ export interface CustomerFormData {
   source: string;
   description: string;
   status: number;
+}
+
+export interface CustomerSelectProps {
+  customers: Customer[];
+  value: number | null;
+  onChange: (value: number | null) => void;
+  loading?: boolean;
+  disabled?: boolean;
 }

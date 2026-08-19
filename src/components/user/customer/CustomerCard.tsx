@@ -12,6 +12,7 @@ import CustomerEditModal from "./CustomerEditModal";
 
 interface Props {
     customer: Customer;
+    index: number;
     onDeleted: (id: number) => void;
     onEdited: (updated: Customer) => void;
 }
@@ -30,7 +31,7 @@ function formatDate(iso: string) {
     });
 }
 
-export default function CustomerCard({ customer, onDeleted, onEdited }: Props) {
+export default function CustomerCard({ customer, index, onDeleted, onEdited }: Props) {
     const { resolvedTheme } = useTheme();
     const isDark = resolvedTheme === "dark";
     const [hovered, setHovered] = useState(false);
@@ -58,7 +59,7 @@ export default function CustomerCard({ customer, onDeleted, onEdited }: Props) {
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95 }}
-                transition={{ duration: 0.2, delay: 0.05 }}
+                transition={{ duration: 0.2, delay: index * 0.05 }}
                 onHoverStart={() => setHovered(true)}
                 onHoverEnd={() => setHovered(false)}
                 className="relative rounded-2xl p-4 flex flex-col gap-3 overflow-hidden"
@@ -171,8 +172,7 @@ export default function CustomerCard({ customer, onDeleted, onEdited }: Props) {
                             <span dir="ltr">{customer.phone_number}</span>
                         </div>
                         <span
-                            className={`text-[11px] font-bold px-2 py-0.5 rounded-lg ${statusStyle[customer.status] ??
-                                "bg-gray-500/15 text-gray-400"
+                            className={`text-[11px] font-bold px-2 py-0.5 rounded-lg ${statusStyle[customer.status] ?? "bg-gray-500/15 text-gray-400"
                                 }`}
                         >
                             {customer.status_display}

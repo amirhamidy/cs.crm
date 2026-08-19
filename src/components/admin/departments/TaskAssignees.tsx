@@ -4,7 +4,7 @@ import { Loader } from "lucide-react";
 import { useEmployeeInfo } from "@/hooks/useEmployeeInfo";
 
 interface TaskAssigneesProps {
-    ids?: (number | string | { id: number | string } | null | undefined)[];
+    ids: unknown[]
     size?: "sm" | "md";
     limit?: number;
     className?: string;
@@ -65,8 +65,8 @@ export default function TaskAssignees({
     className = "",
 }: TaskAssigneesProps) {
     const list = ids
-        .map(normalizeId)
-        .filter((v): v is number => v !== null);
+    .map((v) => normalizeId(v as number | string | { id: number | string } | null | undefined))
+    .filter((v): v is number => v !== null);
 
     if (list.length === 0) return null;
 

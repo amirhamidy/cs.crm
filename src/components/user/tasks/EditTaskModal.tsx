@@ -331,7 +331,7 @@ export default function EditTaskModal({
     const [selectedCase, setSelectedCase] = useState<number | null>(null);
     const [selectedDepartment, setSelectedDepartment] = useState<number | null>(null);
     const [selectedEmployees, setSelectedEmployees] = useState<number[]>([]);
-    const [status, setStatus] = useState<TaskStatus>("pending");
+    const [status, setStatus] = useState<TaskStatus>("in_progress");
     const [files, setFiles] = useState<File[]>([]);
     const [cases, setCases] = useState<CaseItem[]>([]);
     const [casesLoading, setCasesLoading] = useState(false);

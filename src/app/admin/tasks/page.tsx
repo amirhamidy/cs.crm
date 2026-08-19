@@ -6,21 +6,23 @@ import { ClipboardList, Loader, Plus, RefreshCw, Search } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
 import { apiRoutes } from "@/lib/apiRoutes";
 import { Task, TaskStatus } from "@/types/task";
-import { Customer } from "@/types/customer";
 import { Department } from "@/types/department";
-import { Employee } from "@/types/employee";
 import TaskCard from "@/components/customcomponents/tasks/TaskCard";
 import CreateTaskModal from "@/components/customcomponents/tasks/CreateTaskModal";
 import EditTaskModal from "@/components/customcomponents/tasks/EditTaskModal";
 import { taskStatusLabels } from "@/components/customcomponents/shared/constants";
+import type { Customer } from '@/types/customer';
+import type { Employee } from '@/types/employee';
 
 type ListResponse<T> = T[] | { results?: T[]; data?: T[] };
 
 function extractList<T>(data: ListResponse<T>): T[] {
     if (Array.isArray(data)) return data;
     if (data && typeof data === "object") {
-        if (Array.isArray(data.results)) return data.results;
-        if (Array.isArray(data.data)) return data.data;
+        if (Array.isArray((data as { results?: T[] }).results))
+            return (data as { results: T[] }).results;
+        if (Array.isArray((data as { data?: T[] }).data))
+            return (data as { data: T[] }).data;
     }
     return [];
 }
@@ -39,12 +41,13 @@ export default function AdminTasksPage() {
     const fetchAll = useCallback(async () => {
         try {
             setLoading(true);
-            const [tasksRes, customersRes, departmentsRes, employeesRes] = await Promise.all([
-                axiosInstance.get<ListResponse<Task>>(apiRoutes.tasks),
-                axiosInstance.get<ListResponse<Customer>>(apiRoutes.customers),
-                axiosInstance.get<ListResponse<Department>>(apiRoutes.departments),
-                axiosInstance.get<ListResponse<Employee>>(apiRoutes.employees),
-            ]);
+            const [tasksRes, customersRes, departmentsRes, employeesRes] =
+                await Promise.all([
+                    axiosInstance.get<ListResponse<Task>>(apiRoutes.tasks),
+                    axiosInstance.get<ListResponse<Customer>>(apiRoutes.customers),
+                    axiosInstance.get<ListResponse<Department>>(apiRoutes.departments),
+                    axiosInstance.get<ListResponse<Employee>>(apiRoutes.employees),
+                ]);
             setTasks(extractList(tasksRes.data));
             setCustomers(extractList(customersRes.data));
             setDepartments(extractList(departmentsRes.data));
@@ -76,7 +79,8 @@ export default function AdminTasksPage() {
     const filteredTasks = useMemo(() => {
         const query = search.trim().toLowerCase();
         return tasks.filter((task) => {
-            const matchesStatus = statusFilter === "ALL" || task.status === statusFilter;
+            const matchesStatus =
+                statusFilter === "ALL" || task.status === statusFilter;
             const matchesSearch =
                 !query ||
                 task.title?.toLowerCase().includes(query) ||
@@ -86,7 +90,7 @@ export default function AdminTasksPage() {
     }, [tasks, search, statusFilter]);
 
     const handleDelete = useCallback(
-        async (taskId: number) => {
+        async (taskId: number): Promise<boolean> => {
             try {
                 await axiosInstance.delete(apiRoutes.deleteTask(taskId));
                 setTasks((prev) => prev.filter((t) => t.id !== taskId));
@@ -108,6 +112,7 @@ export default function AdminTasksPage() {
         setEditingTask(null);
         fetchAll();
     }, [fetchAll]);
+
     const handleTaskUpdated = useCallback((updated: Task) => {
         setTasks((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
     }, []);
@@ -117,7 +122,10 @@ export default function AdminTasksPage() {
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-start gap-3">
                     <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-indigo-50 dark:bg-indigo-500/10">
-                        <ClipboardList size={16} className="text-indigo-500 dark:text-indigo-400" />
+                        <ClipboardList
+                            size={16}
+                            className="text-indigo-500 dark:text-indigo-400"
+                        />
                     </div>
                     <div className="min-w-0">
                         <h1 className="text-[14px] font-extrabold text-gray-900 dark:text-white">
@@ -153,6 +161,38 @@ export default function AdminTasksPage() {
                 </div>
             </div>
 
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                <div className="relative flex-1">
+                    <Search
+                        size={13}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500"
+                    />
+                    <input
+                        type="text"
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                        placeholder="جستجو در وظایف..."
+                        className="h-9 w-full rounded-xl border border-gray-200 bg-white pr-8 pl-3 text-[12.5px] text-gray-800 placeholder:text-gray-400 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100 dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder:text-gray-600 dark:focus:border-blue-500 dark:focus:ring-blue-500/10"
+                    />
+                </div>
+
+                <div className="flex gap-1.5 flex-wrap">
+                    {statusOptions.map((opt) => (
+                        <button
+                            key={opt.value}
+                            type="button"
+                            onClick={() => setStatusFilter(opt.value)}
+                            className={`h-8 rounded-lg px-3 text-[11.5px] font-semibold transition-colors ${statusFilter === opt.value
+                                ? "bg-blue-600 text-white dark:bg-blue-500"
+                                : "bg-gray-100 text-gray-500 hover:bg-gray-200 dark:bg-white/5 dark:text-gray-400 dark:hover:bg-white/10"
+                                }`}
+                        >
+                            {opt.label}
+                        </button>
+                    ))}
+                </div>
+            </div>
+
             {loading ? (
                 <div className="flex flex-col items-center justify-center gap-3 py-16">
                     <Loader size={22} className="animate-spin text-indigo-500" />
@@ -167,7 +207,10 @@ export default function AdminTasksPage() {
                     </p>
                 </div>
             ) : (
-                <motion.div layout className="grid grid-cols-1 gap-3 lg:grid-cols-2 xl:grid-cols-3">
+                <motion.div
+                    layout
+                    className="grid grid-cols-1 gap-3 lg:grid-cols-2 xl:grid-cols-3"
+                >
                     <AnimatePresence mode="popLayout">
                         {filteredTasks.map((task, i) => (
                             <TaskCard

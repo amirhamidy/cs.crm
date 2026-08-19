@@ -24,7 +24,13 @@ export interface TaskItem {
   description?: string;
   case?: CaseItem | number | null;
   department?: TaskDepartmentRef | number | null;
-  assigned_employee?: TaskEmployeeRef | number | null;
+  assigned_employee?:
+    | TaskEmployeeRef
+    | TaskEmployeeRef[]
+    | number
+    | number[]
+    | null;
+
   files?: string[];
   created_at?: string;
   updated_at?: string;
@@ -51,7 +57,7 @@ export interface CreateTaskPayload {
   status?: TaskStatus;
 }
 
-export interface UpdateTaskPayload extends Partial<CreateTaskPayload> {}
+export type UpdateTaskPayload = Partial<CreateTaskPayload>;
 
 export interface CreateTaskModalProps {
   isOpen: boolean;
@@ -70,15 +76,19 @@ export interface EditTaskModalProps {
 
 export interface TaskCardProps {
   task: TaskItem;
-  onEdit?: (task: TaskItem) => void;
-  onDelete?: (taskId: number) => void;
+  onEdit: (task: TaskItem) => void;
+  onDelete: (taskId: number) => Promise<boolean> | Promise<void> | void;
   deleting?: boolean;
+  index?: number;
+  onUpdated?: (task: TaskItem) => void;
+  employees?: Employee[];
+  onReorder?: (dragIndex: number, hoverIndex: number) => void;
 }
 
 export interface TaskListProps {
   tasks: TaskItem[];
-  onEdit?: (task: TaskItem) => void;
-  onDelete?: (taskId: number) => void;
+  onEdit: (task: TaskItem) => void;
+  onDelete: (taskId: number) => Promise<boolean> | Promise<void> | void;
   loading?: boolean;
   deletingTaskId?: number | null;
 }

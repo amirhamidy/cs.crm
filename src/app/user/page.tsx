@@ -2,7 +2,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 
-export default function userPage() {
+export default function UserPage() {
     const router = useRouter();
 
     useEffect(() => {

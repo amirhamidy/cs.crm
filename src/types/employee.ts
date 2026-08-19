@@ -1,3 +1,5 @@
+// @/types/employee.ts
+
 export interface EmployeeUserDetail {
   id?: number;
   full_name?: string;
@@ -6,14 +8,22 @@ export interface EmployeeUserDetail {
   username?: string;
 }
 
+export interface EmployeeDepartment {
+  id: number;
+  name?: string;
+}
+
 export interface Employee {
   id: number;
   employee?: number;
-  department?: number;
+  name: string;
+  department?: number | EmployeeDepartment | null;
   full_name?: string;
   first_name?: string;
   last_name?: string;
   username?: string;
+  position?: string;
+  role?: string;
   user_detail?: EmployeeUserDetail;
 }
 

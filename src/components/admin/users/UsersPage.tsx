@@ -128,7 +128,7 @@ export default function UsersPage() {
                                 employee={emp}
                                 index={i}
                                 onDelete={handleDelete}
-                                onUpdate={handleUpdate}
+                                onUpdated={handleUpdate}
                             />
                         ))}
                     </AnimatePresence>
