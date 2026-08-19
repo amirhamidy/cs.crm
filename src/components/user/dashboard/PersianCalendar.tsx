@@ -1,8 +1,16 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { motion } from "framer-motion";
-import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+    ChevronLeft,
+    ChevronRight,
+    CalendarDays,
+    MessageSquareText,
+    Layers3,
+    Clock,
+    Tag,
+} from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
 import CalendarNoteModal, { CalendarNote } from "./CalendarNoteModal";
 
@@ -15,110 +23,186 @@ interface CalendarEvent {
 }
 
 const persianMonths = [
-    "فروردین",
-    "اردیبهشت",
-    "خرداد",
-    "تیر",
-    "مرداد",
-    "شهریور",
-    "مهر",
-    "آبان",
-    "آذر",
-    "دی",
-    "بهمن",
-    "اسفند",
+    "فروردین", "اردیبهشت", "خرداد", "تیر", "مرداد", "شهریور",
+    "مهر", "آبان", "آذر", "دی", "بهمن", "اسفند",
 ];
 
 const weekDays = ["ش", "ی", "د", "س", "چ", "پ", "ج"];
 
-const pad = (value: number) => String(value).padStart(2, "0");
-
-const toDateKey = (date: Date) => {
-    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
-};
+const pad = (v: number) => String(v).padStart(2, "0");
+const toDateKey = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 
 const extractNoteInfo = (description: string, rawCreatedAt?: string) => {
     const match = description.match(/^\[DATE:(\d{4}-\d{2}-\d{2})\]\s*([\s\S]*)$/);
-    if (match) {
-        return {
-            cleanDescription: match[2],
-            targetDate: match[1],
-        };
-    }
-    const fallback = rawCreatedAt ? rawCreatedAt.split("T")[0] : "";
-    return {
-        cleanDescription: description,
-        targetDate: fallback,
-    };
+    if (match) return { cleanDescription: match[2], targetDate: match[1] };
+    return { cleanDescription: description, targetDate: rawCreatedAt ? rawCreatedAt.split("T")[0] : "" };
 };
 
-const isToday = (date: Date) => {
-    const today = new Date();
-    return (
-        today.getFullYear() === date.getFullYear() &&
-        today.getMonth() === date.getMonth() &&
-        today.getDate() === date.getDate()
-    );
+const isToday = (d: Date) => {
+    const t = new Date();
+    return t.getFullYear() === d.getFullYear() && t.getMonth() === d.getMonth() && t.getDate() === d.getDate();
 };
 
-const getMonthRange = (baseDate: Date) => {
-    const start = new Date(baseDate.getFullYear(), baseDate.getMonth(), 1);
-    const end = new Date(baseDate.getFullYear(), baseDate.getMonth() + 1, 0);
-    return { start, end };
-};
+const getMonthRange = (base: Date) => ({
+    start: new Date(base.getFullYear(), base.getMonth(), 1),
+    end: new Date(base.getFullYear(), base.getMonth() + 1, 0),
+});
 
-const getDaysInMonth = (date: Date) => {
+const getDaysInMonth = (date: Date): (Date | null)[] => {
     const year = date.getFullYear();
     const month = date.getMonth();
-
-    const firstDay = new Date(year, month, 1);
-    const lastDay = new Date(year, month + 1, 0);
-
-    const firstWeekDay = (firstDay.getDay() + 1) % 7;
-    const daysCount = lastDay.getDate();
-
-    const cells: (Date | null)[] = [];
-
-    for (let i = 0; i < firstWeekDay; i++) {
-        cells.push(null);
-    }
-
-    for (let day = 1; day <= daysCount; day++) {
-        cells.push(new Date(year, month, day));
-    }
-
-    while (cells.length % 7 !== 0) {
-        cells.push(null);
-    }
-
+    const firstWeekDay = (new Date(year, month, 1).getDay() + 1) % 7;
+    const daysCount = new Date(year, month + 1, 0).getDate();
+    const cells: (Date | null)[] = Array(firstWeekDay).fill(null);
+    for (let d = 1; d <= daysCount; d++) cells.push(new Date(year, month, d));
+    while (cells.length % 7 !== 0) cells.push(null);
     return cells;
 };
 
 const getPersianMonthLabel = (date: Date) => {
-    const parts = new Intl.DateTimeFormat("fa-IR-u-ca-persian", {
-        year: "numeric",
-        month: "numeric",
-    }).formatToParts(date);
-
-    const yearPart = parts.find((item) => item.type === "year")?.value || "";
-    const monthPart = parts.find((item) => item.type === "month")?.value || "1";
-    const monthIndex = Number(monthPart) - 1;
-
-    return `${persianMonths[monthIndex]} ${yearPart}`;
+    const parts = new Intl.DateTimeFormat("fa-IR-u-ca-persian", { year: "numeric", month: "numeric" }).formatToParts(date);
+    const year = parts.find((p) => p.type === "year")?.value ?? "";
+    const monthIdx = Number(parts.find((p) => p.type === "month")?.value ?? "1") - 1;
+    return `${persianMonths[monthIdx]} ${year}`;
 };
 
-const getPersianDayNumber = (date: Date) => {
-    return new Intl.DateTimeFormat("fa-IR-u-ca-persian", {
-        day: "numeric",
-    }).format(date);
+const getPersianDayNumber = (d: Date) =>
+    new Intl.DateTimeFormat("fa-IR-u-ca-persian", { day: "numeric" }).format(d);
+
+const EVENT_TYPE_LABEL: Record<string, string> = {
+    meeting: "جلسه",
+    task: "وظیفه",
+    reminder: "یادآور",
+    deadline: "مهلت",
+    note: "یادداشت",
 };
+
+const EVENT_TYPE_COLOR: Record<string, { bg: string; text: string; dot: string }> = {
+    meeting: { bg: "bg-violet-500/10", text: "text-violet-400", dot: "bg-violet-400" },
+    task: { bg: "bg-amber-500/10", text: "text-amber-400", dot: "bg-amber-400" },
+    reminder: { bg: "bg-sky-500/10", text: "text-sky-400", dot: "bg-sky-400" },
+    deadline: { bg: "bg-rose-500/10", text: "text-rose-400", dot: "bg-rose-400" },
+    note: { bg: "bg-emerald-500/10", text: "text-emerald-400", dot: "bg-emerald-400" },
+    default: { bg: "bg-gray-500/10", text: "text-gray-400", dot: "bg-gray-400" },
+};
+
+function getTypeStyle(type: string) {
+    return EVENT_TYPE_COLOR[type] ?? EVENT_TYPE_COLOR.default;
+}
+
+function DayEventDots({ events }: { events: CalendarEvent[] }) {
+    const grouped = useMemo(() => {
+        const map = new Map<string, number>();
+        events.forEach((e) => map.set(e.type, (map.get(e.type) || 0) + 1));
+        return Array.from(map.entries()).slice(0, 4);
+    }, [events]);
+
+    return (
+        <div className="flex flex-wrap gap-1 mt-auto">
+            {grouped.map(([type, count]) => {
+                const s = getTypeStyle(type);
+                return (
+                    <span key={type} className={`flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[9px] font-bold ${s.bg} ${s.text}`}>
+                        <span className={`h-1.5 w-1.5 rounded-full ${s.dot}`} />
+                        {count}
+                    </span>
+                );
+            })}
+        </div>
+    );
+}
+
+interface DayDetailPanelProps {
+    date: Date;
+    events: CalendarEvent[];
+    notes: CalendarNote[];
+    onOpenModal: () => void;
+}
+
+function DayDetailPanel({ date, events, notes, onOpenModal }: DayDetailPanelProps) {
+    const dateKey = toDateKey(date);
+    const dayEvents = events.filter((e) => e.start?.split("T")[0] === dateKey);
+    const dayNotes = notes.filter((n) => {
+        const { targetDate } = extractNoteInfo(n.description, n.created_at);
+        return targetDate === dateKey;
+    });
+
+    return (
+        <motion.div
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 4 }}
+            transition={{ duration: 0.18 }}
+            className="border-t border-gray-100 dark:border-white/[0.06] bg-gray-50/50 dark:bg-white/[0.015] px-5 py-4"
+        >
+            <div className="mb-3 flex items-center justify-between">
+                <p className="text-[11.5px] font-bold text-gray-500 dark:text-gray-400">
+                    {getPersianDayNumber(date)}&nbsp;{persianMonths[
+                        Number(
+                            new Intl.DateTimeFormat("fa-IR-u-ca-persian", { month: "numeric" }).format(date)
+                        ) - 1
+                    ]}
+                </p>
+                <button
+                    type="button"
+                    onClick={onOpenModal}
+                    className="rounded-lg bg-blue-500/10 px-2.5 py-1 text-[10px] font-bold text-blue-500 transition-colors hover:bg-blue-500/20"
+                >
+                    + یادداشت
+                </button>
+            </div>
+
+            {dayEvents.length === 0 && dayNotes.length === 0 && (
+                <p className="text-center text-[11px] text-gray-400 py-3">رویدادی برای این روز ثبت نشده</p>
+            )}
+
+            <div className="flex flex-col gap-2">
+                {dayEvents.map((ev) => {
+                    const s = getTypeStyle(ev.type);
+                    const label = EVENT_TYPE_LABEL[ev.type] ?? ev.type;
+                    const timeStart = ev.start?.includes("T") ? ev.start.split("T")[1]?.slice(0, 5) : null;
+                    const timeEnd = ev.end?.includes("T") ? ev.end.split("T")[1]?.slice(0, 5) : null;
+                    return (
+                        <div key={ev.id} className={`flex items-start gap-2.5 rounded-xl ${s.bg} px-3 py-2.5`}>
+                            <span className={`mt-0.5 h-2 w-2 flex-shrink-0 rounded-full ${s.dot}`} />
+                            <div className="flex-1 min-w-0">
+                                <p className={`truncate text-[11.5px] font-semibold ${s.text}`}>{ev.title}</p>
+                                <div className="mt-0.5 flex items-center gap-2">
+                                    <span className="flex items-center gap-1 text-[10px] text-gray-400">
+                                        <Tag size={9} />
+                                        {label}
+                                    </span>
+                                    {timeStart && (
+                                        <span className="flex items-center gap-1 text-[10px] text-gray-400">
+                                            <Clock size={9} />
+                                            {timeStart}{timeEnd ? ` — ${timeEnd}` : ""}
+                                        </span>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    );
+                })}
+
+                {dayNotes.map((n) => {
+                    const { cleanDescription } = extractNoteInfo(n.description, n.created_at);
+                    return (
+                        <div key={n.id} className="flex items-start gap-2.5 rounded-xl bg-emerald-500/10 px-3 py-2.5">
+                            <span className="mt-0.5 h-2 w-2 flex-shrink-0 rounded-full bg-emerald-400" />
+                            <p className="truncate text-[11.5px] font-semibold text-emerald-400">{cleanDescription}</p>
+                        </div>
+                    );
+                })}
+            </div>
+        </motion.div>
+    );
+}
 
 export default function PersianCalendar() {
     const [currentMonth, setCurrentMonth] = useState(new Date());
     const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
     const [notes, setNotes] = useState<CalendarNote[]>([]);
     const [loading, setLoading] = useState(true);
-
     const [selectedDate, setSelectedDate] = useState<Date | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -128,19 +212,13 @@ export default function PersianCalendar() {
         setLoading(true);
         try {
             const { start, end } = getMonthRange(currentMonth);
-
-            const startParam = toDateKey(start);
-            const endParam = toDateKey(end);
-
             const [calendarRes, notesRes] = await Promise.all([
-                axiosInstance.get(`/appraisal/api/v1/calendar/?start=${startParam}&end=${endParam}`),
+                axiosInstance.get(`/appraisal/api/v1/calendar/?start=${toDateKey(start)}&end=${toDateKey(end)}`),
                 axiosInstance.get("/note/api/v1/"),
             ]);
-
             setCalendarEvents(Array.isArray(calendarRes.data?.events) ? calendarRes.data.events : []);
             setNotes(Array.isArray(notesRes.data) ? notesRes.data : []);
-        } catch (error) {
-            console.error(error);
+        } catch {
             setCalendarEvents([]);
             setNotes([]);
         } finally {
@@ -148,147 +226,163 @@ export default function PersianCalendar() {
         }
     };
 
-    useEffect(() => {
-        fetchMonthData();
-    }, [currentMonth]);
+    useEffect(() => { fetchMonthData(); }, [currentMonth]);
 
-    const noteCountByDay = useMemo(() => {
-        const map = new Map<string, number>();
-
-        notes.forEach((note) => {
-            const { targetDate } = extractNoteInfo(note.description, note.created_at);
-            if (!targetDate) return;
-            map.set(targetDate, (map.get(targetDate) || 0) + 1);
+    const eventsByDay = useMemo(() => {
+        const map = new Map<string, CalendarEvent[]>();
+        calendarEvents.forEach((ev) => {
+            if (!ev.start) return;
+            const key = ev.start.split("T")[0];
+            if (!map.has(key)) map.set(key, []);
+            map.get(key)!.push(ev);
         });
-
-        return map;
-    }, [notes]);
-
-    const eventCountByDay = useMemo(() => {
-        const map = new Map<string, number>();
-
-        calendarEvents.forEach((event) => {
-            if (!event.start) return;
-            const key = event.start.split("T")[0];
-            map.set(key, (map.get(key) || 0) + 1);
-        });
-
         return map;
     }, [calendarEvents]);
 
-    const handlePrevMonth = () => {
-        setCurrentMonth((prev) => new Date(prev.getFullYear(), prev.getMonth() - 1, 1));
-    };
+    const noteCountByDay = useMemo(() => {
+        const map = new Map<string, number>();
+        notes.forEach((n) => {
+            const { targetDate } = extractNoteInfo(n.description, n.created_at);
+            if (!targetDate) return;
+            map.set(targetDate, (map.get(targetDate) || 0) + 1);
+        });
+        return map;
+    }, [notes]);
 
-    const handleNextMonth = () => {
-        setCurrentMonth((prev) => new Date(prev.getFullYear(), prev.getMonth() + 1, 1));
-    };
+    const totalEventCount = calendarEvents.length;
+    const totalNoteCount = notes.length;
 
     const handleSelectDate = (date: Date) => {
-        setSelectedDate(date);
-        setIsModalOpen(true);
-    };
-
-    const handleCreatedNote = (note: CalendarNote) => {
-        setNotes((prev) => [note, ...prev]);
-    };
-
-    const handleDeletedNote = (id: number) => {
-        setNotes((prev) => prev.filter((item) => item.id !== id));
+        setSelectedDate((prev) => (prev && toDateKey(prev) === toDateKey(date) ? null : date));
     };
 
     return (
         <>
-            <div className="w-full max-w-5xl mx-auto rounded-[2rem] border border-zinc-200/70 dark:border-zinc-800 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl shadow-[0_20px_60px_-25px_rgba(0,0,0,0.15)] overflow-hidden">
-                <div className="flex items-center justify-between border-b border-zinc-200/70 dark:border-zinc-800 px-4 py-4 sm:px-6">
-                    <button
-                        onClick={handleNextMonth}
-                        className="flex h-11 w-11 items-center justify-center rounded-full transition-all hover:bg-zinc-100 dark:hover:bg-zinc-800"
-                    >
-                        <ChevronRight size={18} className="text-zinc-600 dark:text-zinc-300" />
+            <div dir="rtl" className="w-full max-w-5xl mx-auto rounded-[2rem] border border-gray-100 dark:border-white/[0.06] bg-white dark:bg-[#0f172a] shadow-sm overflow-hidden">
+
+                {/* Header */}
+                <div className="flex items-center justify-between border-b border-gray-100 dark:border-white/[0.06] px-6 py-4">
+                    <button type="button" onClick={() => setCurrentMonth((p) => new Date(p.getFullYear(), p.getMonth() + 1, 1))}
+                        className="flex h-8 w-8 items-center justify-center rounded-xl bg-gray-100 dark:bg-white/[0.05] text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors">
+                        <ChevronRight size={14} />
                     </button>
 
-                    <h2 className="text-sm sm:text-base font-medium text-zinc-900 dark:text-white">
-                        {getPersianMonthLabel(currentMonth)}
-                    </h2>
+                    <div className="flex items-center gap-3">
+                        <div className="flex h-7 w-7 items-center justify-center rounded-xl bg-blue-50 dark:bg-blue-500/10">
+                            <CalendarDays size={13} className="text-blue-500" />
+                        </div>
+                        <h2 className="text-[13.5px] font-extrabold text-gray-900 dark:text-white tracking-tight">
+                            {getPersianMonthLabel(currentMonth)}
+                        </h2>
+                    </div>
 
-                    <button
-                        onClick={handlePrevMonth}
-                        className="flex h-11 w-11 items-center justify-center rounded-full transition-all hover:bg-zinc-100 dark:hover:bg-zinc-800"
-                    >
-                        <ChevronLeft size={18} className="text-zinc-600 dark:text-zinc-300" />
+                    <button type="button" onClick={() => setCurrentMonth((p) => new Date(p.getFullYear(), p.getMonth() - 1, 1))}
+                        className="flex h-8 w-8 items-center justify-center rounded-xl bg-gray-100 dark:bg-white/[0.05] text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors">
+                        <ChevronLeft size={14} />
                     </button>
                 </div>
 
-                <div className="grid grid-cols-7 gap-px bg-zinc-200/70 dark:border-zinc-800/70">
-                    {weekDays.map((day) => (
-                        <div
-                            key={day}
-                            className="bg-zinc-50 dark:bg-zinc-950/60 py-3 text-center text-xs text-zinc-400"
-                        >
-                            {day}
+                {/* Stats bar */}
+                {!loading && (
+                    <div className="flex items-center gap-4 border-b border-gray-100 dark:border-white/[0.06] px-6 py-2.5">
+                        <span className="flex items-center gap-1.5 text-[10.5px] font-semibold text-amber-500">
+                            <Layers3 size={11} />
+                            {totalEventCount} رویداد
+                        </span>
+                        <span className="h-3 w-px bg-gray-200 dark:bg-white/10" />
+                        <span className="flex items-center gap-1.5 text-[10.5px] font-semibold text-emerald-500">
+                            <MessageSquareText size={11} />
+                            {totalNoteCount} یادداشت
+                        </span>
+                        <span className="mr-auto flex flex-wrap gap-2">
+                            {Object.entries(EVENT_TYPE_COLOR)
+                                .filter(([k]) => k !== "default")
+                                .map(([type, s]) => (
+                                    <span key={type} className={`flex items-center gap-1 text-[9.5px] font-bold ${s.text}`}>
+                                        <span className={`h-1.5 w-1.5 rounded-full ${s.dot}`} />
+                                        {EVENT_TYPE_LABEL[type] ?? type}
+                                    </span>
+                                ))}
+                        </span>
+                    </div>
+                )}
+
+                {/* Week days */}
+                <div className="grid grid-cols-7 gap-px bg-gray-100 dark:bg-white/[0.04]">
+                    {weekDays.map((d) => (
+                        <div key={d} className="bg-gray-50 dark:bg-[#0f172a] py-2.5 text-center text-[10px] font-bold text-gray-400 tracking-wide">
+                            {d}
                         </div>
                     ))}
 
                     {loading ? (
-                        <div className="col-span-7 flex justify-center bg-white dark:bg-zinc-900 py-20">
-                            <Loader2 size={24} className="animate-spin text-zinc-400" />
+                        <div className="col-span-7 flex flex-col items-center justify-center gap-2.5 bg-white dark:bg-[#0f172a] py-20">
+                            <motion.div
+                                animate={{ rotate: 360 }}
+                                transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                                className="h-5 w-5 rounded-full border-2 border-blue-500/20 border-t-blue-500"
+                            />
+                            <p className="text-[11px] font-semibold text-gray-400">در حال دریافت تقویم...</p>
                         </div>
                     ) : (
                         monthDays.map((date, index) => {
-                            if (!date) {
-                                return (
-                                    <div
-                                        key={`empty-${index}`}
-                                        className="min-h-[110px] bg-white dark:bg-zinc-900"
-                                    />
-                                );
-                            }
+                            if (!date) return (
+                                <div key={`empty-${index}`} className="min-h-[96px] bg-gray-50/40 dark:bg-white/[0.008]" />
+                            );
 
                             const key = toDateKey(date);
-                            const noteCount = noteCountByDay.get(key) || 0;
-                            const eventCount = eventCountByDay.get(key) || 0;
+                            const dayEvents = eventsByDay.get(key) ?? [];
+                            const noteCount = noteCountByDay.get(key) ?? 0;
                             const isSelected = selectedDate ? toDateKey(selectedDate) === key : false;
+                            const today = isToday(date);
 
                             return (
                                 <motion.button
                                     key={key}
-                                    whileTap={{ scale: 0.98 }}
+                                    type="button"
+                                    whileTap={{ scale: 0.97 }}
                                     onClick={() => handleSelectDate(date)}
-                                    className={`relative min-h-[110px] bg-white dark:bg-zinc-900 p-3 text-right transition-all ${isSelected
-                                            ? "ring-2 ring-blue-500/70"
-                                            : "hover:bg-zinc-50 dark:hover:bg-zinc-950/70"
+                                    className={`relative flex min-h-[96px] flex-col gap-1.5 p-2.5 text-right transition-colors ${isSelected
+                                            ? "bg-blue-50/60 dark:bg-blue-500/[0.07] ring-2 ring-inset ring-blue-400/40"
+                                            : "bg-white dark:bg-[#0f172a] hover:bg-gray-50 dark:hover:bg-white/[0.03]"
                                         }`}
                                 >
-                                    <div className="flex items-start justify-between gap-2">
-                                        <div
-                                            className={`flex h-9 w-9 items-center justify-center rounded-full text-sm ${isToday(date)
-                                                    ? "bg-blue-600 text-white"
-                                                    : "text-zinc-700 dark:text-zinc-200"
-                                                }`}
-                                        >
+                                    <div className="flex items-start justify-between gap-1">
+                                        <span className={`flex h-6 w-6 items-center justify-center rounded-lg text-[11px] font-extrabold flex-shrink-0 ${today
+                                                ? "bg-gradient-to-br from-blue-500 to-indigo-500 text-white shadow-sm shadow-blue-500/30"
+                                                : "bg-gray-50 dark:bg-white/[0.04] text-gray-600 dark:text-gray-300"
+                                            }`}>
                                             {getPersianDayNumber(date)}
-                                        </div>
+                                        </span>
 
-                                        <div className="flex flex-col items-end gap-1">
-                                            {eventCount > 0 && (
-                                                <span className="rounded-full bg-amber-100 dark:bg-amber-900/30 px-2 py-1 text-[10px] text-amber-700 dark:text-amber-300">
-                                                    {eventCount} رویداد
-                                                </span>
-                                            )}
-
+                                        <div className="flex flex-col items-end gap-0.5">
                                             {noteCount > 0 && (
-                                                <span className="rounded-full bg-blue-100 dark:bg-blue-900/30 px-2 py-1 text-[10px] text-blue-700 dark:text-blue-300">
-                                                    {noteCount} یادداشت
+                                                <span className="flex items-center gap-0.5 text-[8.5px] font-bold text-emerald-500">
+                                                    <MessageSquareText size={8} />
+                                                    {noteCount}
                                                 </span>
                                             )}
                                         </div>
                                     </div>
+
+                                    {dayEvents.length > 0 && <DayEventDots events={dayEvents} />}
                                 </motion.button>
                             );
                         })
                     )}
                 </div>
+
+                {/* Day detail panel */}
+                <AnimatePresence>
+                    {selectedDate && !loading && (
+                        <DayDetailPanel
+                            date={selectedDate}
+                            events={calendarEvents}
+                            notes={notes}
+                            onOpenModal={() => setIsModalOpen(true)}
+                        />
+                    )}
+                </AnimatePresence>
             </div>
 
             <CalendarNoteModal
@@ -296,8 +390,8 @@ export default function PersianCalendar() {
                 onClose={() => setIsModalOpen(false)}
                 selectedDate={selectedDate}
                 notes={notes}
-                onCreated={handleCreatedNote}
-                onDeleted={handleDeletedNote}
+                onCreated={(note) => setNotes((prev) => [note, ...prev])}
+                onDeleted={(id) => setNotes((prev) => prev.filter((n) => n.id !== id))}
             />
         </>
     );
