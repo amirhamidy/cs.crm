@@ -13,10 +13,6 @@ import {
     User,
     X,
 } from "lucide-react";
-
-// این تایپ‌ها مستقیم از منبع اصلی ایمپورت می‌شن، نه یه کپی دستی.
-// این‌جوری هیچ‌وقت دو تا تعریف "CaseItem" جدا از هم دریفت نمی‌کنن
-// و این کلاس ارورهای type-mismatch دیگه تکرار نمی‌شه.
 import type { CaseItem, CaseStatus } from "@/types/case";
 
 export type { CaseItem, CaseStatus };

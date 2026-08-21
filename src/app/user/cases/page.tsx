@@ -12,6 +12,8 @@ import type { TaskItem } from "@/types/task";
 import type { CaseStatus, CaseItem } from "@/types/case";
 import CreateCaseModal from "@/components/user/cases/CreateCaseModal";
 import CaseCard from "@/components/customcomponents/cases/CaseCard";
+import TaskCard from "@/components/customcomponents/tasks/TaskCard";
+import EditTaskModal from "@/components/customcomponents/tasks/EditTaskModal";
 
 type ListResponse<T> = T[] | { results?: T[]; data?: T[] };
 
@@ -22,6 +24,24 @@ function extractList<T>(data: ListResponse<T> | undefined | null): T[] {
         if (Array.isArray(data.data)) return data.data;
     }
     return [];
+}
+
+// هر شکلی که فیلد case توی تسک داشته باشه رو استخراج می‌کنه
+function extractCaseId(task: TaskItem): string | null {
+    const raw =
+        (task as any).case ??
+        (task as any).case_id ??
+        (task as any).caseId ??
+        null;
+
+    if (raw === null || raw === undefined) return null;
+
+    if (typeof raw === "object") {
+        const id = raw.id ?? raw.pk ?? null;
+        return id !== null && id !== undefined ? String(id) : null;
+    }
+
+    return String(raw);
 }
 
 export default function UserCasesPage() {
@@ -35,6 +55,9 @@ export default function UserCasesPage() {
     const [query, setQuery] = useState("");
     const [caseModalOpen, setCaseModalOpen] = useState(false);
     const [deletingId, setDeletingId] = useState<number | null>(null);
+    const [editingTask, setEditingTask] = useState<TaskItem | null>(null);
+    const [editModalOpen, setEditModalOpen] = useState(false);
+    const [deletingTaskId, setDeletingTaskId] = useState<number | null>(null);
 
     const fetchData = useCallback(async () => {
         try {
@@ -64,11 +87,21 @@ export default function UserCasesPage() {
                 })
             );
 
+            const taskList = extractList(tasksRes.data);
+
+            // --- لاگ موقت برای دیباگ، بعد از رفع مشکل حذفش کن ---
+            console.log("DEBUG cases ids:", detailedCases.map((c) => c.id));
+            console.log(
+                "DEBUG tasks case ids:",
+                taskList.map((t) => ({ taskId: t.id, extractedCaseId: extractCaseId(t), rawCase: (t as any).case }))
+            );
+            // -----------------------------------------------------
+
             setCases(detailedCases);
             setCustomers(extractList(customersRes.data));
             setDepartments(extractList(departmentsRes.data));
             setEmployees(extractList(employeesRes.data));
-            setTasks(extractList(tasksRes.data));
+            setTasks(taskList);
         } catch (err) {
             console.error(err);
             setError("دریافت اطلاعات با خطا مواجه شد");
@@ -100,6 +133,34 @@ export default function UserCasesPage() {
         [fetchData]
     );
 
+    const handleDeleteTask = useCallback(
+        async (taskId: number) => {
+            try {
+                setDeletingTaskId(taskId);
+                await axiosInstance.delete(`/tasks/api/v1/tasks/${taskId}/delete/`);
+                setTasks((prev) => prev.filter((t) => t.id !== taskId));
+                return Promise.resolve();
+            } catch (err) {
+                console.error(err);
+                throw err;
+            } finally {
+                setDeletingTaskId(null);
+            }
+        },
+        []
+    );
+
+    const handleEditTask = useCallback((task: TaskItem) => {
+        setEditingTask(task);
+        setEditModalOpen(true);
+    }, []);
+
+    const handleTaskUpdate = useCallback(() => {
+        fetchData();
+        setEditModalOpen(false);
+        setEditingTask(null);
+    }, [fetchData]);
+
     const filteredCases = useMemo(() => {
         const q = query.trim().toLowerCase();
         if (!q) return cases;
@@ -124,14 +185,14 @@ export default function UserCasesPage() {
         });
     }, [cases, customers, query]);
 
+    // مچینگ الان بر اساس String انجام میشه، نه Number
     const tasksByCase = useMemo(() => {
-        const map = new Map<number, TaskItem[]>();
+        const map = new Map<string, TaskItem[]>();
         tasks.forEach((task) => {
-            const caseId = task.case && typeof task.case === "object" ? task.case.id : task.case;
+            const caseId = extractCaseId(task);
             if (caseId) {
-                const id = Number(caseId);
-                if (!map.has(id)) map.set(id, []);
-                map.get(id)!.push(task);
+                if (!map.has(caseId)) map.set(caseId, []);
+                map.get(caseId)!.push(task);
             }
         });
         return map;
@@ -242,7 +303,7 @@ export default function UserCasesPage() {
                 <motion.div layout className="grid grid-cols-1 gap-3 lg:grid-cols-2 xl:grid-cols-3">
                     <AnimatePresence mode="popLayout">
                         {filteredCases.map((item, i) => {
-                            const caseTasks = tasksByCase.get(Number(item.id)) || [];
+                            const caseTasks = tasksByCase.get(String(item.id)) || [];
                             return (
                                 <div key={item.id} className="flex flex-col gap-2 border-2 border-[#eeeeee] p-3 rounded-4xl dark:border-white/[0.06]">
                                     <CaseCard
@@ -255,10 +316,17 @@ export default function UserCasesPage() {
                                         onDelete={handleDeleteCase}
                                     />
                                     {caseTasks.length > 0 && (
-                                        <div className="pr-4">
-                                            <p className="text-[11px] font-bold text-gray-400">
-                                                {caseTasks.length} وظیفه مرتبط
-                                            </p>
+                                        <div className="pr-4 space-y-2">
+                                            {caseTasks.map((task, taskIndex) => (
+                                                <TaskCard
+                                                    key={task.id}
+                                                    task={task}
+                                                    index={taskIndex}
+                                                    onEdit={handleEditTask}
+                                                    onDelete={handleDeleteTask}
+                                                    deleting={deletingTaskId === task.id}
+                                                />
+                                            ))}
                                         </div>
                                     )}
                                 </div>
@@ -274,6 +342,20 @@ export default function UserCasesPage() {
                 onCreated={fetchData}
                 customers={customers}
             />
+
+            {editModalOpen && editingTask && (
+                <EditTaskModal
+                    task={editingTask}
+                    customers={customers}
+                    departments={departments}
+                    employees={employees}
+                    onClose={() => {
+                        setEditModalOpen(false);
+                        setEditingTask(null);
+                    }}
+                    onSuccess={handleTaskUpdate}
+                />
+            )}
         </div>
     );
 }
