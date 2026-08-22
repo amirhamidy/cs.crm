@@ -82,7 +82,6 @@ const LOG_ACTION_META: Record<string, { label: string; color: string; bg: string
 
 function formatFaDate(date?: string) {
     if (!date) return "نامشخص";
-
     return new Date(date).toLocaleDateString("fa-IR", {
         year: "numeric",
         month: "long",
@@ -92,10 +91,8 @@ function formatFaDate(date?: string) {
 
 function formatJalaliShort(iso?: string | null) {
     if (!iso) return "";
-
     const d = new Date(iso);
     const [jy, jm, jd] = toJalali(d.getFullYear(), d.getMonth() + 1, d.getDate());
-
     return `${toPersianDigits(jd)} ${JALALI_MONTHS[jm - 1]} ${toPersianDigits(jy)} - ${toPersianDigits(
         pad2(d.getHours())
     )}:${toPersianDigits(pad2(d.getMinutes()))}`;
@@ -111,7 +108,6 @@ function getStatusMeta(status: string) {
                 dot: "bg-emerald-500",
                 icon: CheckCircle2,
             };
-
         case "sold":
             return {
                 label: "فروش رفته",
@@ -120,7 +116,6 @@ function getStatusMeta(status: string) {
                 dot: "bg-amber-500",
                 icon: ShoppingBag,
             };
-
         case "cancelled":
             return {
                 label: "لغو شده",
@@ -129,7 +124,6 @@ function getStatusMeta(status: string) {
                 dot: "bg-red-500",
                 icon: Ban,
             };
-
         default:
             return {
                 label: "در حال انجام",
@@ -142,43 +136,38 @@ function getStatusMeta(status: string) {
 }
 
 function logMetaOf(action: string) {
-    return LOG_ACTION_META[action] ?? {
-        label: action || "ثبت رویداد",
-        color: "#94a3b8",
-        bg: "rgba(148,163,184,0.14)",
-        icon: History,
-    };
+    return (
+        LOG_ACTION_META[action] ?? {
+            label: action || "ثبت رویداد",
+            color: "#94a3b8",
+            bg: "rgba(148,163,184,0.14)",
+            icon: History,
+        }
+    );
 }
 
 function LatestLogAuthor({ employeeId }: { employeeId?: number }) {
     const { data, loading } = useEmployeeInfo(employeeId ?? 0);
-
-    if (!employeeId) {
-        return <span className="font-bold">نامشخص</span>;
-    }
-
-    if (loading) {
-        return <span className="font-bold">در حال دریافت...</span>;
-    }
-
-    return <span className="font-bold">{data?.full_name ?? data?.username ?? `کارمند ${toPersianDigits(employeeId)}`}</span>;
+    if (!employeeId) return <span className="font-bold">نامشخص</span>;
+    if (loading) return <span className="font-bold">در حال دریافت...</span>;
+    return (
+        <span className="font-bold">
+            {data?.full_name ?? data?.username ?? `کارمند ${toPersianDigits(employeeId)}`}
+        </span>
+    );
 }
 
 function parseBackendError(err: unknown): string {
     const e = err as { response?: { data?: unknown } };
     const data = e?.response?.data;
-
     if (!data) return "خطا در ثبت تغییرات";
     if (typeof data === "string") return data;
     if (Array.isArray(data)) return String(data[0]);
-
     if (typeof data === "object") {
         const first = Object.values(data as Record<string, unknown>)[0];
-
         if (Array.isArray(first)) return String(first[0]);
         if (typeof first === "string") return first;
     }
-
     return "خطا در ثبت تغییرات";
 }
 
@@ -200,7 +189,6 @@ export default function UserTaskCard({ task, accent = "#6366f1", onUpdated, isDr
 
     const fetchLatestLog = useCallback(() => {
         setLogsLoading(true);
-
         axiosInstance
             .get<LatestLog[]>(`/tasks/api/v1/tasks/${task.id}/logs/`)
             .then((res) => setLatestLog(res.data?.[0] ?? null))
@@ -214,19 +202,14 @@ export default function UserTaskCard({ task, accent = "#6366f1", onUpdated, isDr
 
     async function submitAction(direction: ModalType, data: { note: string; files: File[] }) {
         setSubmitting(true);
-
         try {
             let updated: UserTask;
-
             if (direction === "sold") {
-                const res = await axiosInstance.patch<{ status: string }>(`/tasks/api/v1/tasks/${task.id}/mark-as-sold/`, {
-                    status: "sold",
-                });
-
-                updated = {
-                    ...task,
-                    status: res.data.status as UserTask["status"],
-                };
+                const res = await axiosInstance.patch<{ status: string }>(
+                    `/tasks/api/v1/tasks/${task.id}/mark-as-sold/`,
+                    { status: "sold" }
+                );
+                updated = { ...task, status: res.data.status as UserTask["status"] };
             } else if (direction === "unsold" || direction === "uncancel" || direction === "uncomplete") {
                 const res = await axiosInstance.put<UserTask>(`/tasks/api/v1/tasks/${task.id}/update/`, {
                     title: task.title,
@@ -234,44 +217,19 @@ export default function UserTaskCard({ task, accent = "#6366f1", onUpdated, isDr
                     status: "in_progress",
                     assigned_employee: task.assigned_employee,
                 });
-
-                updated = {
-                    ...task,
-                    ...res.data,
-                };
+                updated = { ...task, ...res.data };
             } else {
-                const endpointMap = {
-                    next: "advance",
-                    prev: "revert",
-                    cancel: "cancel",
-                } as const;
-
+                const endpointMap = { next: "advance", prev: "revert", cancel: "cancel" } as const;
                 const formData = new FormData();
-
-                if (data.note.trim()) {
-                    formData.append("note", data.note.trim());
-                }
-
-                data.files.forEach((file) => {
-                    formData.append("files", file);
-                });
-
+                if (data.note.trim()) formData.append("note", data.note.trim());
+                data.files.forEach((file) => formData.append("files", file));
                 const res = await axiosInstance.post<UserTask>(
                     `/tasks/api/v1/tasks/${task.id}/${endpointMap[direction]}/`,
                     formData,
-                    {
-                        headers: {
-                            "Content-Type": "multipart/form-data",
-                        },
-                    }
+                    { headers: { "Content-Type": "multipart/form-data" } }
                 );
-
-                updated = {
-                    ...task,
-                    ...res.data,
-                };
+                updated = { ...task, ...res.data };
             }
-
             onUpdated(updated);
             fetchLatestLog();
             setOpenModal(null);
@@ -284,9 +242,7 @@ export default function UserTaskCard({ task, accent = "#6366f1", onUpdated, isDr
 
     function handleBlockedClick() {
         const message = blockedMessage[task.status];
-
         if (!message) return;
-
         setBlockMsg(message);
         setTimeout(() => setBlockMsg(null), 3000);
     }
@@ -313,8 +269,14 @@ export default function UserTaskCard({ task, accent = "#6366f1", onUpdated, isDr
                 <div className="flex flex-col gap-3.5 p-4">
                     <div className="flex items-start justify-between gap-3">
                         <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-2 flex-wrap">
-                                <span className={`inline-flex items-center gap-1.5 text-[10.5px] font-bold px-2.5 py-1 rounded-lg ${meta.bg} ${meta.color}`}>
+                            <h3 className="text-[14px] font-extrabold text-gray-900 dark:text-white leading-snug line-clamp-2 mb-2">
+                                {task.title}
+                            </h3>
+
+                            <div className="flex items-center gap-2 flex-wrap">
+                                <span
+                                    className={`inline-flex items-center gap-1.5 text-[10.5px] font-bold px-2.5 py-1 rounded-lg ${meta.bg} ${meta.color}`}
+                                >
                                     <span className={`w-1.5 h-1.5 rounded-full ${meta.dot}`} />
                                     {meta.label}
                                 </span>
@@ -333,10 +295,6 @@ export default function UserTaskCard({ task, accent = "#6366f1", onUpdated, isDr
                                     تاریخچه
                                 </button>
                             </div>
-
-                            <h3 className="text-[13.5px] font-extrabold text-gray-900 dark:text-white leading-snug line-clamp-2">
-                                {task.title}
-                            </h3>
                         </div>
 
                         <div
@@ -373,15 +331,11 @@ export default function UserTaskCard({ task, accent = "#6366f1", onUpdated, isDr
                             <div className="flex items-center justify-between gap-2">
                                 <span
                                     className="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-bold"
-                                    style={{
-                                        background: latestMeta.bg,
-                                        color: latestMeta.color,
-                                    }}
+                                    style={{ background: latestMeta.bg, color: latestMeta.color }}
                                 >
                                     <LatestIcon size={11} />
                                     {latestMeta.label}
                                 </span>
-
                                 <span className="text-[10px] font-semibold text-slate-500">
                                     {formatJalaliShort(latestLog.created_at)}
                                 </span>
@@ -389,8 +343,14 @@ export default function UserTaskCard({ task, accent = "#6366f1", onUpdated, isDr
 
                             {latestLog.note && (
                                 <div className="flex items-start gap-1.5">
-                                    <MessageSquareText size={12} className="mt-0.5 shrink-0" style={{ color: latestMeta.color }} />
-                                    <p className="text-[11px] font-semibold leading-5 text-gray-300 dark:text-gray-300">{latestLog.note}</p>
+                                    <MessageSquareText
+                                        size={12}
+                                        className="mt-0.5 shrink-0"
+                                        style={{ color: latestMeta.color }}
+                                    />
+                                    <p className="text-[11px] font-semibold leading-5 text-gray-300 dark:text-gray-300">
+                                        {latestLog.note}
+                                    </p>
                                 </div>
                             )}
 
@@ -398,12 +358,7 @@ export default function UserTaskCard({ task, accent = "#6366f1", onUpdated, isDr
                                 ثبت‌کننده: <LatestLogAuthor employeeId={latestLog.employee?.[0]} />
                             </p>
                         </div>
-                    ) : (
-                        <div className="flex items-center gap-2 rounded-2xl px-3 py-2.5 text-[10.5px] font-semibold text-gray-500 bg-white/[0.02] border border-white/[0.05]">
-                            <ClipboardList size={12} />
-                            هنوز یادداشتی برای این تسک ثبت نشده
-                        </div>
-                    )}
+                    ) : null}
 
                     {blockMsg && (
                         <motion.div
@@ -442,16 +397,7 @@ export default function UserTaskCard({ task, accent = "#6366f1", onUpdated, isDr
                                 full
                             />
                         ) : isSold ? (
-                            <div className="grid grid-cols-2 gap-1.5">
-                                <button
-                                    type="button"
-                                    onClick={handleBlockedClick}
-                                    className="h-8 rounded-xl flex items-center justify-center gap-1.5 text-[11px] font-bold text-pink-500/40 bg-pink-500/5 cursor-not-allowed"
-                                >
-                                    <ArrowRightCircle size={13} />
-                                    قبل
-                                </button>
-
+                            <div className="flex flex-col gap-1.5">
                                 <ActionBtn
                                     rippleKey={`unsold-${task.id}`}
                                     active={false}
@@ -461,57 +407,62 @@ export default function UserTaskCard({ task, accent = "#6366f1", onUpdated, isDr
                                     label="لغو فروش"
                                     full
                                 />
-
-                                <button
-                                    type="button"
-                                    onClick={handleBlockedClick}
-                                    className="h-8 col-span-2 rounded-xl flex items-center justify-center gap-1.5 text-[11px] font-bold text-indigo-500/40 bg-indigo-500/5 cursor-not-allowed"
-                                >
-                                    <ArrowLeftCircle size={13} />
-                                    انتقال به مرحله بعد
-                                </button>
+                                <div className="grid grid-cols-2 gap-1.5 opacity-40 pointer-events-none">
+                                    <button
+                                        type="button"
+                                        className="h-8 rounded-xl flex items-center justify-center gap-1.5 text-[11px] font-bold text-pink-400 bg-pink-500/5 cursor-not-allowed"
+                                    >
+                                        <ArrowRightCircle size={13} />
+                                        مرحله قبل
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className="h-8 rounded-xl flex items-center justify-center gap-1.5 text-[11px] font-bold text-indigo-400 bg-indigo-500/5 cursor-not-allowed"
+                                    >
+                                        <ArrowLeftCircle size={13} />
+                                        مرحله بعد
+                                    </button>
+                                </div>
                             </div>
                         ) : isActive ? (
                             <>
-                                <div className="grid grid-cols-2 gap-1.5">
+                                <ActionBtn
+                                    rippleKey={`next-${task.id}`}
+                                    active={false}
+                                    onClick={() => setOpenModal("next")}
+                                    color="accent"
+                                    accentColor={accent}
+                                    icon={<ArrowLeftCircle size={13} />}
+                                    label="انتقال به مرحله بعد"
+                                    full
+                                />
+
+                                <div className="grid grid-cols-3 gap-1.5">
                                     <ActionBtn
                                         rippleKey={`prev-${task.id}`}
                                         active={false}
                                         onClick={() => setOpenModal("prev")}
                                         color="pink"
                                         icon={<ArrowRightCircle size={13} />}
-                                        label="مرحله قبل"
+                                        label="قبل"
                                         full
                                     />
-
-                                    <ActionBtn
-                                        rippleKey={`cancel-${task.id}`}
-                                        active={false}
-                                        onClick={() => setOpenModal("cancel")}
-                                        color="red"
-                                        icon={<XCircle size={13} />}
-                                        label="لغو تسک"
-                                        full
-                                    />
-
                                     <ActionBtn
                                         rippleKey={`sold-${task.id}`}
                                         active={false}
                                         onClick={() => setOpenModal("sold")}
                                         color="amber"
                                         icon={<ShoppingBag size={13} />}
-                                        label="ثبت فروش"
+                                        label="فروش"
                                         full
                                     />
-
                                     <ActionBtn
-                                        rippleKey={`next-${task.id}`}
+                                        rippleKey={`cancel-${task.id}`}
                                         active={false}
-                                        onClick={() => setOpenModal("next")}
-                                        color="accent"
-                                        accentColor={accent}
-                                        icon={<ArrowLeftCircle size={13} />}
-                                        label="مرحله بعد"
+                                        onClick={() => setOpenModal("cancel")}
+                                        color="red"
+                                        icon={<XCircle size={13} />}
+                                        label="لغو"
                                         full
                                     />
                                 </div>
@@ -519,7 +470,7 @@ export default function UserTaskCard({ task, accent = "#6366f1", onUpdated, isDr
                                 <button
                                     type="button"
                                     onClick={() => setNotesOpen(true)}
-                                    className="p-4 w-full rounded-xl flex items-center justify-center gap-1.5 text-[11px] font-bold bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 hover:text-indigo-300 transition-colors"
+                                    className="w-full rounded-xl flex items-center justify-center gap-1.5 p-3 text-[11px] font-bold bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 hover:text-indigo-300 transition-colors"
                                 >
                                     <MessageSquareText size={13} />
                                     مشاهده همه یادداشت‌ها، فایل‌ها و ثبت‌کنندگان
@@ -544,7 +495,6 @@ export default function UserTaskCard({ task, accent = "#6366f1", onUpdated, isDr
             ))}
 
             <TaskLogsModal isOpen={logsOpen} onClose={() => setLogsOpen(false)} taskId={task.id} taskTitle={task.title} />
-
             <TaskNotesModal isOpen={notesOpen} onClose={() => setNotesOpen(false)} taskId={task.id} taskTitle={task.title} />
         </>
     );

@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { Building2, Users, ArrowRight, Loader, AlertCircle, Plus, Layers } from "lucide-react";
+import { Building2, Users, ArrowRight, Loader, AlertCircle, Plus, ListChecks } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
 import { useDepartmentStore } from "@/components/admin/departments/departmentStore";
 import { Stage, Employee, Task } from "@/components/admin/departments/types";
@@ -144,120 +144,100 @@ export default function DepartmentDetailPage() {
                 onSubmit={async (employeeId) => { await assignEmployee(id, employeeId); }}
             />
 
-            <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2.5">
-                    <button
-                        type="button"
-                        onClick={() => router.push("/admin/departments")}
-                        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl text-gray-400 transition-colors hover:text-gray-600 dark:hover:text-gray-300"
-                    >
-                        <ArrowRight size={16} />
-                    </button>
-                    <div
-                        className="flex h-9 w-9 items-center justify-center rounded-2xl"
-                        style={{ backgroundColor: `${accent}18`, border: `1px solid ${accent}30` }}
-                    >
-                        <Building2 size={17} style={{ color: accent }} />
-                    </div>
-                    <div>
-                        <h3 className="text-[14px] font-extrabold text-gray-900 dark:text-white">
-                            {department.name}
-                        </h3>
-                        <p className="flex items-center gap-1 text-[11px] text-gray-400 dark:text-gray-600">
+            <div className="flex items-center gap-2.5">
+                <button
+                    type="button"
+                    onClick={() => router.push("/admin/departments")}
+                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl text-gray-400 transition-colors hover:text-gray-600 dark:hover:text-gray-300"
+                >
+                    <ArrowRight size={16} />
+                </button>
+                <div
+                    className="flex h-9 w-9 items-center justify-center rounded-2xl"
+                    style={{ backgroundColor: `${accent}18`, border: `1px solid ${accent}30` }}
+                >
+                    <Building2 size={17} style={{ color: accent }} />
+                </div>
+                <div>
+                    <h3 className="text-[14px] font-extrabold text-gray-900 dark:text-white">{department.name}</h3>
+                    <div className="mt-0.5 flex items-center gap-3 text-[11px] text-gray-400 dark:text-gray-600">
+                        <span className="flex items-center gap-1">
                             <Users size={10} />
-                            {department.employees.length} عضو · {department.stages.length} مرحله
-                        </p>
+                            {department.employees.length} عضو
+                        </span>
+                        <span className="flex items-center gap-1">
+                            <ListChecks size={10} />
+                            {departmentTasks.length} تسک فعال
+                        </span>
                     </div>
                 </div>
-                <span className="rounded-2xl bg-gray-100 dark:bg-white/[0.06] px-3 py-1.5 text-[11px] font-bold text-gray-600 dark:text-gray-400">
-                    {departmentTasks.length} تسک
-                </span>
             </div>
 
             <motion.div
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.25 }}
-                className="flex flex-col rounded-[1.6rem] overflow-hidden"
+                className="flex flex-col gap-3 rounded-[1.6rem] border border-gray-200/60 bg-white/40 p-4 dark:border-white/[0.06] dark:bg-white/[0.015]"
             >
-                <div
-                    className="h-[2px]"
-                />
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                    <p className="text-[11.5px] font-extrabold text-gray-500 dark:text-gray-400">اعضای تیم</p>
+                    <button
+                        type="button"
+                        onClick={() => setAddEmployeeOpen(true)}
+                        className="flex h-8 items-center justify-center gap-1.5 rounded-xl px-3 text-[11.5px] font-bold transition-all active:scale-95"
+                        style={{ background: `${accent}18`, border: `1px solid ${accent}35`, color: accent }}
+                    >
+                        <Plus size={12} strokeWidth={2.5} />
+                        افزودن عضو
+                    </button>
+                </div>
 
-                <div className="flex flex-wrap items-center justify-between gap-3 px-4 pt-4 pb-3">
-                    <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
-                        {department.employees.length === 0 ? (
-                            <span className="text-[11px] italic text-gray-400 dark:text-gray-600">هنوز عضوی اضافه نشده</span>
-                        ) : (
-                            department.employees.map((emp) => (
-                                <button
-                                    key={emp.id}
-                                    type="button"
-                                    onClick={() => setDeleteTarget({ type: "employee", employee: emp })}
-                                    className="flex items-center gap-1.5 rounded-xl px-2.5 py-1 text-[11px] font-bold transition-all hover:opacity-75 active:scale-95"
-                                    style={{ background: `${accent}15`, border: `1px solid ${accent}30`, color: accent }}
-                                    title={`حذف ${emp.name}`}
+                <div className="flex flex-wrap items-center gap-2">
+                    {department.employees.length === 0 ? (
+                        <span className="text-[11px] italic text-gray-400 dark:text-gray-600">هنوز عضوی اضافه نشده</span>
+                    ) : (
+                        department.employees.map((emp) => (
+                            <button
+                                key={emp.id}
+                                type="button"
+                                onClick={() => setDeleteTarget({ type: "employee", employee: emp })}
+                                className="flex items-center gap-1.5 rounded-xl px-2.5 py-1 text-[11px] font-bold transition-all hover:opacity-75 active:scale-95"
+                                style={{ background: `${accent}15`, border: `1px solid ${accent}30`, color: accent }}
+                                title={`حذف ${emp.name}`}
+                            >
+                                <span
+                                    className="flex h-4 w-4 shrink-0 items-center justify-center rounded-md text-[9px] font-bold"
+                                    style={{ background: `${accent}30` }}
                                 >
-                                    <span
-                                        className="flex h-4 w-4 shrink-0 items-center justify-center rounded-md text-[9px] font-bold"
-                                        style={{ background: `${accent}30` }}
-                                    >
-                                        {emp.name.charAt(0)}
-                                    </span>
-                                    {emp.name}
-                                </button>
-                            ))
-                        )}
-                    </div>
-                    <div className="flex shrink-0 items-center gap-2">
-                        <button
-                            type="button"
-                            onClick={() => setAddEmployeeOpen(true)}
-                            className="flex h-9 items-center justify-center gap-2 rounded-2xl px-3.5 text-[12px] font-bold transition-all active:scale-95"
-                            style={{ background: `${accent}18`, border: `1px solid ${accent}35`, color: accent }}
-                        >
-                            <Plus size={13} strokeWidth={2.5} />
-                            <span className="whitespace-nowrap">افزودن عضو</span>
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => setAddStageOpen(true)}
-                            className="flex h-9 items-center justify-center gap-2 rounded-2xl px-3.5 text-[12px] font-bold text-white transition-all active:scale-95"
-                            style={{ background: accent }}
-                        >
-                            <Plus size={13} strokeWidth={2.5} />
-                            <span className="whitespace-nowrap">افزودن فرآیند</span>
-                        </button>
-                    </div>
+                                    {emp.name.charAt(0)}
+                                </span>
+                                {emp.name}
+                            </button>
+                        ))
+                    )}
                 </div>
+            </motion.div>
 
-                <div className="p-4">
-                    <div className="mb-3 flex items-center gap-2">
-                        <div
-                            className="flex h-7 w-7 items-center justify-center rounded-xl"
-                            style={{ backgroundColor: `${accent}18`, color: accent }}
-                        >
-                            <Layers size={13} />
-                        </div>
-                        <p className="text-[12px] font-extrabold text-gray-700 dark:text-gray-200">مراحل فرآیند</p>
-                        {tasksLoading && <Loader size={12} className="animate-spin text-gray-400" />}
-                    </div>
-
-                    <StagesPanel
-                        department={department}
-                        tasks={departmentTasks}
-                        tasksLoading={tasksLoading}
-                        stageColors={stageColors}
-                        onAddStage={() => setAddStageOpen(true)}
-                        onEditStage={async (stage, values) => { await updateStage(id, stage.id, values); }}
-                        onDeleteStage={(stage) => setDeleteTarget({ type: "stage", stage })}
-                        onReorder={(stages) =>
-                            useDepartmentStore.setState((state) => ({
-                                departments: state.departments.map((d) => d.id === id ? { ...d, stages } : d),
-                            }))
-                        }
-                    />
-                </div>
+            <motion.div
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.25, delay: 0.05 }}
+                className="flex flex-col rounded-[1.6rem] border border-gray-200/60 bg-white/40 p-4 dark:border-white/[0.06] dark:bg-white/[0.015]"
+            >
+                <StagesPanel
+                    department={department}
+                    tasks={departmentTasks}
+                    tasksLoading={tasksLoading}
+                    stageColors={stageColors}
+                    onAddStage={() => setAddStageOpen(true)}
+                    onEditStage={async (stage, values) => { await updateStage(id, stage.id, values); }}
+                    onDeleteStage={(stage) => setDeleteTarget({ type: "stage", stage })}
+                    onReorder={(stages) =>
+                        useDepartmentStore.setState((state) => ({
+                            departments: state.departments.map((d) => d.id === id ? { ...d, stages } : d),
+                        }))
+                    }
+                />
             </motion.div>
         </div>
     );

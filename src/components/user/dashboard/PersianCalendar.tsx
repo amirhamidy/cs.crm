@@ -1,15 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import {
     ChevronLeft,
     ChevronRight,
     CalendarDays,
     MessageSquareText,
     Layers3,
-    Clock,
-    Tag,
 } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
 import CalendarNoteModal, { CalendarNote } from "./CalendarNoteModal";
@@ -112,92 +110,6 @@ function DayEventDots({ events }: { events: CalendarEvent[] }) {
     );
 }
 
-interface DayDetailPanelProps {
-    date: Date;
-    events: CalendarEvent[];
-    notes: CalendarNote[];
-    onOpenModal: () => void;
-}
-
-function DayDetailPanel({ date, events, notes, onOpenModal }: DayDetailPanelProps) {
-    const dateKey = toDateKey(date);
-    const dayEvents = events.filter((e) => e.start?.split("T")[0] === dateKey);
-    const dayNotes = notes.filter((n) => {
-        const { targetDate } = extractNoteInfo(n.description, n.created_at);
-        return targetDate === dateKey;
-    });
-
-    return (
-        <motion.div
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 4 }}
-            transition={{ duration: 0.18 }}
-            className="border-t border-gray-100 dark:border-white/[0.06] bg-gray-50/50 dark:bg-white/[0.015] px-5 py-4"
-        >
-            <div className="mb-3 flex items-center justify-between">
-                <p className="text-[11.5px] font-bold text-gray-500 dark:text-gray-400">
-                    {getPersianDayNumber(date)}&nbsp;{persianMonths[
-                        Number(
-                            new Intl.DateTimeFormat("fa-IR-u-ca-persian", { month: "numeric" }).format(date)
-                        ) - 1
-                    ]}
-                </p>
-                <button
-                    type="button"
-                    onClick={onOpenModal}
-                    className="rounded-lg bg-blue-500/10 px-2.5 py-1 text-[10px] font-bold text-blue-500 transition-colors hover:bg-blue-500/20"
-                >
-                    + یادداشت
-                </button>
-            </div>
-
-            {dayEvents.length === 0 && dayNotes.length === 0 && (
-                <p className="text-center text-[11px] text-gray-400 py-3">رویدادی برای این روز ثبت نشده</p>
-            )}
-
-            <div className="flex flex-col gap-2">
-                {dayEvents.map((ev) => {
-                    const s = getTypeStyle(ev.type);
-                    const label = EVENT_TYPE_LABEL[ev.type] ?? ev.type;
-                    const timeStart = ev.start?.includes("T") ? ev.start.split("T")[1]?.slice(0, 5) : null;
-                    const timeEnd = ev.end?.includes("T") ? ev.end.split("T")[1]?.slice(0, 5) : null;
-                    return (
-                        <div key={ev.id} className={`flex items-start gap-2.5 rounded-xl ${s.bg} px-3 py-2.5`}>
-                            <span className={`mt-0.5 h-2 w-2 flex-shrink-0 rounded-full ${s.dot}`} />
-                            <div className="flex-1 min-w-0">
-                                <p className={`truncate text-[11.5px] font-semibold ${s.text}`}>{ev.title}</p>
-                                <div className="mt-0.5 flex items-center gap-2">
-                                    <span className="flex items-center gap-1 text-[10px] text-gray-400">
-                                        <Tag size={9} />
-                                        {label}
-                                    </span>
-                                    {timeStart && (
-                                        <span className="flex items-center gap-1 text-[10px] text-gray-400">
-                                            <Clock size={9} />
-                                            {timeStart}{timeEnd ? ` — ${timeEnd}` : ""}
-                                        </span>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
-                    );
-                })}
-
-                {dayNotes.map((n) => {
-                    const { cleanDescription } = extractNoteInfo(n.description, n.created_at);
-                    return (
-                        <div key={n.id} className="flex items-start gap-2.5 rounded-xl bg-emerald-500/10 px-3 py-2.5">
-                            <span className="mt-0.5 h-2 w-2 flex-shrink-0 rounded-full bg-emerald-400" />
-                            <p className="truncate text-[11.5px] font-semibold text-emerald-400">{cleanDescription}</p>
-                        </div>
-                    );
-                })}
-            </div>
-        </motion.div>
-    );
-}
-
 export default function PersianCalendar() {
     const [currentMonth, setCurrentMonth] = useState(new Date());
     const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
@@ -253,14 +165,14 @@ export default function PersianCalendar() {
     const totalNoteCount = notes.length;
 
     const handleSelectDate = (date: Date) => {
-        setSelectedDate((prev) => (prev && toDateKey(prev) === toDateKey(date) ? null : date));
+        setSelectedDate(date);
+        setIsModalOpen(true);
     };
 
     return (
         <>
             <div dir="rtl" className="w-full max-w-5xl mx-auto rounded-[2rem] border border-gray-100 dark:border-white/[0.06] bg-white dark:bg-[#0f172a] shadow-sm overflow-hidden">
 
-                {/* Header */}
                 <div className="flex items-center justify-between border-b border-gray-100 dark:border-white/[0.06] px-6 py-4">
                     <button type="button" onClick={() => setCurrentMonth((p) => new Date(p.getFullYear(), p.getMonth() + 1, 1))}
                         className="flex h-8 w-8 items-center justify-center rounded-xl bg-gray-100 dark:bg-white/[0.05] text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors">
@@ -282,7 +194,6 @@ export default function PersianCalendar() {
                     </button>
                 </div>
 
-                {/* Stats bar */}
                 {!loading && (
                     <div className="flex items-center gap-4 border-b border-gray-100 dark:border-white/[0.06] px-6 py-2.5">
                         <span className="flex items-center gap-1.5 text-[10.5px] font-semibold text-amber-500">
@@ -307,7 +218,6 @@ export default function PersianCalendar() {
                     </div>
                 )}
 
-                {/* Week days */}
                 <div className="grid grid-cols-7 gap-px bg-gray-100 dark:bg-white/[0.04]">
                     {weekDays.map((d) => (
                         <div key={d} className="bg-gray-50 dark:bg-[#0f172a] py-2.5 text-center text-[10px] font-bold text-gray-400 tracking-wide">
@@ -333,7 +243,6 @@ export default function PersianCalendar() {
                             const key = toDateKey(date);
                             const dayEvents = eventsByDay.get(key) ?? [];
                             const noteCount = noteCountByDay.get(key) ?? 0;
-                            const isSelected = selectedDate ? toDateKey(selectedDate) === key : false;
                             const today = isToday(date);
 
                             return (
@@ -342,15 +251,12 @@ export default function PersianCalendar() {
                                     type="button"
                                     whileTap={{ scale: 0.97 }}
                                     onClick={() => handleSelectDate(date)}
-                                    className={`relative flex min-h-[96px] flex-col gap-1.5 p-2.5 text-right transition-colors ${isSelected
-                                            ? "bg-blue-50/60 dark:bg-blue-500/[0.07] ring-2 ring-inset ring-blue-400/40"
-                                            : "bg-white dark:bg-[#0f172a] hover:bg-gray-50 dark:hover:bg-white/[0.03]"
-                                        }`}
+                                    className="relative flex min-h-[96px] flex-col gap-1.5 p-2.5 text-right bg-white dark:bg-[#0f172a] hover:bg-gray-50 dark:hover:bg-white/[0.03] transition-colors"
                                 >
                                     <div className="flex items-start justify-between gap-1">
                                         <span className={`flex h-6 w-6 items-center justify-center rounded-lg text-[11px] font-extrabold flex-shrink-0 ${today
-                                                ? "bg-gradient-to-br from-blue-500 to-indigo-500 text-white shadow-sm shadow-blue-500/30"
-                                                : "bg-gray-50 dark:bg-white/[0.04] text-gray-600 dark:text-gray-300"
+                                            ? "bg-gradient-to-br from-blue-500 to-indigo-500 text-white shadow-sm shadow-blue-500/30"
+                                            : "bg-gray-50 dark:bg-white/[0.04] text-gray-600 dark:text-gray-300"
                                             }`}>
                                             {getPersianDayNumber(date)}
                                         </span>
@@ -371,18 +277,6 @@ export default function PersianCalendar() {
                         })
                     )}
                 </div>
-
-                {/* Day detail panel */}
-                <AnimatePresence>
-                    {selectedDate && !loading && (
-                        <DayDetailPanel
-                            date={selectedDate}
-                            events={calendarEvents}
-                            notes={notes}
-                            onOpenModal={() => setIsModalOpen(true)}
-                        />
-                    )}
-                </AnimatePresence>
             </div>
 
             <CalendarNoteModal
@@ -390,6 +284,7 @@ export default function PersianCalendar() {
                 onClose={() => setIsModalOpen(false)}
                 selectedDate={selectedDate}
                 notes={notes}
+                events={calendarEvents}
                 onCreated={(note) => setNotes((prev) => [note, ...prev])}
                 onDeleted={(id) => setNotes((prev) => prev.filter((n) => n.id !== id))}
             />

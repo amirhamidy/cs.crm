@@ -1,3 +1,5 @@
+import { TaskEmployeeRef } from "@/types/task";
+
 export interface UserTask {
   id: number;
   title: string;
@@ -7,7 +9,12 @@ export interface UserTask {
   department_name?: string;
   current_step: number;
   current_step_name?: string;
-  assigned_employee: number[];
+  assigned_employee?:
+    | number
+    | number[]
+    | TaskEmployeeRef
+    | TaskEmployeeRef[]
+    | null;
   status: "in_progress" | "completed" | "sold" | "cancelled" | string;
   created_at?: string;
   completed_at?: string;

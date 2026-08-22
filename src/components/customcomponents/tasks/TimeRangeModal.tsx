@@ -33,7 +33,15 @@ function fieldToIso(f: FieldState) {
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
 const MINUTES = Array.from({ length: 12 }, (_, i) => i * 5);
 
-export default function TimeRangeModal({ open, initialStartedAt, initialDeadline, loading, onClose, onSubmit }: TimeRangeModalProps) {
+export default function TimeRangeModal({
+    open,
+    initialStartedAt,
+    initialDeadline,
+    loading,
+    onClose,
+    onSubmit,
+    error: externalError,
+}: TimeRangeModalProps)  {
     const [start, setStart] = useState<FieldState>(() => parseIsoToField(initialStartedAt));
     const [deadline, setDeadline] = useState<FieldState>(() => parseIsoToField(initialDeadline));
     const [activeField, setActiveField] = useState<"start" | "deadline">("start");

@@ -1,131 +1,160 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Pencil, Plus, Trash2, Workflow } from "lucide-react";
-import { Swiper, SwiperSlide } from "swiper/react";
-import { Mousewheel } from "swiper/modules";
-import "swiper/css";
-
-import { Stage, Task } from "./types";
+import { ChevronLeft, Loader, Pencil, Plus, Trash2 } from "lucide-react";
+import type { Stage, Task } from "./types";
 import TaskCard from "./TaskCard";
 
-interface Props {
+interface StageCardProps {
     stage: Stage;
     index: number;
+    isLast: boolean;
     tasks: Task[];
-    accent: string;
-    onDeleteStage: (stage: Stage) => void;
-    onEditStage: (stage: Stage) => void;
+    tasksLoading?: boolean;
+    showHeader?: boolean;
+    showConnector?: boolean;
+    onEditStage?: (stage: Stage) => void;
+    onDeleteStage?: (stage: Stage) => void;
     onAddTask?: (stage: Stage) => void;
 }
-
-const getStageNumber = (stage: Stage, index: number) => {
-    if (typeof stage.order === "number") {
-        return stage.order;
-    }
-
-    return index + 1;
-};
 
 export default function StageCard({
     stage,
     index,
+    isLast,
     tasks,
-    accent,
-    onDeleteStage,
+    tasksLoading = false,
+    showHeader = true,
+    showConnector = true,
     onEditStage,
+    onDeleteStage,
     onAddTask,
-}: Props) {
-    const stageColor = stage.color || accent;
+}: StageCardProps) {
+    const stageColor = stage.color || "#6366f1";
 
     return (
         <motion.div
             layout
-            initial={{ opacity: 0, scale: 0.96 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.2, ease: [0.23, 1, 0.32, 1] }}
-            className="group relative min-h-[250px] w-full overflow-hidden rounded-2xl border border-gray-200 bg-gray-50/50 p-4 dark:border-white/10 dark:bg-white/[0.02]"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.96 }}
+            transition={{
+                layout: {
+                    type: "spring",
+                    stiffness: 300,
+                    damping: 30,
+                },
+                opacity: {
+                    duration: 0.2,
+                },
+            }}
+            className="relative flex min-w-0 flex-col overflow-hidden rounded-[1.7rem] border border-gray-200/60 bg-white/70 dark:border-white/[0.06] dark:bg-white/[0.02]"
         >
-            <div
-                className="pointer-events-none absolute -right-10 -top-10 h-28 w-28 rounded-full opacity-10 blur-2xl"
-                style={{ backgroundColor: stageColor }}
-            />
+            {showConnector && !isLast && (
+                <div
+                    className="pointer-events-none absolute top-9 z-10 flex h-6 w-6 items-center justify-center rounded-full border bg-white shadow-sm dark:bg-[#0f172a]"
+                    style={{
+                        insetInlineEnd: "-13px",
+                        borderColor: `${stageColor}40`,
+                        color: stageColor,
+                    }}
+                >
+                    <ChevronLeft size={12} strokeWidth={2.5} />
+                </div>
+            )}
 
-            <div className="relative z-10 mb-4 flex items-start justify-between gap-3">
-                <div className="flex min-w-0 items-center gap-2">
-                    <div
-                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-xs font-bold text-white"
-                        style={{ backgroundColor: stageColor }}
-                    >
-                        {getStageNumber(stage, index)}
-                    </div>
+            {showHeader && (
+                <>
+                    <div className="flex items-start justify-between gap-2 px-3.5 pb-3 pt-3.5 sm:px-4 sm:pb-3 sm:pt-4">
+                        <div className="flex min-w-0 items-center gap-2">
+                            <span
+                                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-xl text-[11px] font-extrabold text-white sm:h-8 sm:w-8 sm:text-[12px]"
+                                style={{ backgroundColor: stageColor }}
+                            >
+                                {index + 1}
+                            </span>
 
-                    <div className="min-w-0">
-                        <p className="truncate text-sm font-semibold text-gray-900 dark:text-white">
-                            {stage.name}
-                        </p>
+                            <div className="min-w-0">
+                                <h4 className="truncate text-[12px] font-extrabold text-gray-800 dark:text-gray-100 sm:text-[13px]">
+                                    {stage.name}
+                                </h4>
 
-                        <div className="mt-1 flex items-center gap-1.5 text-[10px] text-gray-400">
-                            <Workflow size={12} />
-                            <span>{tasks.length} وظیفه</span>
+                                <p className="text-[10px] font-bold text-gray-400 dark:text-gray-500 sm:text-[10.5px]">
+                                    {tasks.length} وظیفه
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="flex shrink-0 items-center gap-0.5 sm:gap-1">
+                            {onAddTask && (
+                                <button
+                                    type="button"
+                                    onClick={() => onAddTask(stage)}
+                                    className="rounded-lg p-1.5 text-gray-400 transition hover:bg-black/5 hover:text-gray-700 dark:hover:bg-white/10 dark:hover:text-white"
+                                >
+                                    <Plus size={13} />
+                                </button>
+                            )}
+
+                            {onEditStage && (
+                                <button
+                                    type="button"
+                                    onClick={() => onEditStage(stage)}
+                                    className="rounded-lg p-1.5 transition"
+                                    style={{
+                                        color: stageColor,
+                                        backgroundColor: `${stageColor}14`,
+                                    }}
+                                >
+                                    <Pencil size={13} />
+                                </button>
+                            )}
+
+                            {onDeleteStage && (
+                                <button
+                                    type="button"
+                                    onClick={() => onDeleteStage(stage)}
+                                    className="rounded-lg bg-red-500/10 p-1.5 text-red-400 transition hover:bg-red-500/20"
+                                >
+                                    <Trash2 size={13} />
+                                </button>
+                            )}
                         </div>
                     </div>
+
+                    <div className="h-px bg-gray-100 dark:bg-white/[0.05]" />
+                </>
+            )}
+
+            {tasksLoading ? (
+                <div className="flex h-32 items-center justify-center sm:h-40">
+                    <Loader
+                        size={18}
+                        className="animate-spin text-indigo-500"
+                    />
                 </div>
-
-                <div className="flex shrink-0 items-center gap-1 opacity-0 transition-all duration-150 group-hover:opacity-100">
-                    {onAddTask && (
-                        <button
-                            type="button"
-                            onClick={() => onAddTask(stage)}
-                            className="flex h-7 w-7 items-center justify-center rounded-lg text-gray-400 transition hover:bg-black/5 hover:text-gray-700 dark:hover:bg-white/10 dark:hover:text-white"
-                        >
-                            <Plus size={14} />
-                        </button>
-                    )}
-
-                    <button
-                        type="button"
-                        onClick={() => onEditStage(stage)}
-                        className="flex h-7 w-7 items-center justify-center rounded-lg transition"
-                        style={{
-                            color: accent,
-                            backgroundColor: `${accent}12`,
-                        }}
-                    >
-                        <Pencil size={13} />
-                    </button>
-
-                    <button
-                        type="button"
-                        onClick={() => onDeleteStage(stage)}
-                        className="flex h-7 w-7 items-center justify-center rounded-lg bg-red-500/10 text-red-400 transition hover:bg-red-500/20"
-                    >
-                        <Trash2 size={13} />
-                    </button>
-                </div>
-            </div>
-
-            {tasks.length === 0 ? (
-                <div className="relative z-10 flex h-[148px] flex-col items-center justify-center rounded-xl border border-dashed border-gray-200 text-gray-400 dark:border-white/10">
-                    <Workflow size={24} className="mb-2 opacity-30" />
-                    <p className="text-[11px]">وظیفه‌ای در این فرآیند نیست</p>
+            ) : tasks.length === 0 ? (
+                <div className="flex h-32 flex-col items-center justify-center gap-1.5 px-4 text-center sm:h-40">
+                    <p className="text-[11px] text-gray-400">
+                        وظیفه‌ای در این مرحله نیست
+                    </p>
                 </div>
             ) : (
-                <Swiper
-                    modules={[Mousewheel]}
-                    slidesPerView="auto"
-                    spaceBetween={10}
-                    mousewheel={{
-                        forceToAxis: true,
-                    }}
-                    className="!overflow-visible"
-                >
-                    {tasks.map((task) => (
-                        <SwiperSlide key={task.id} className="!w-[260px]">
+                <div className="scrollbar-thin flex max-h-[420px] flex-col gap-2 overflow-y-auto p-2.5 sm:gap-2.5 sm:p-3">
+                    {tasks.map((task, taskIndex) => (
+                        <motion.div
+                            key={task.id}
+                            initial={{ opacity: 0, y: 6 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{
+                                delay: Math.min(taskIndex, 6) * 0.03,
+                                duration: 0.2,
+                            }}
+                        >
                             <TaskCard task={task} accent={stageColor} />
-                        </SwiperSlide>
+                        </motion.div>
                     ))}
-                </Swiper>
+                </div>
             )}
         </motion.div>
     );

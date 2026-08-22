@@ -2,7 +2,14 @@
 
 import { useEffect, useMemo, useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Kanban, Loader, GripVertical, LayoutGrid, AlertCircle, Building2 } from "lucide-react";
+import {
+    Kanban,
+    Loader,
+    GripVertical,
+    LayoutGrid,
+    AlertCircle,
+    Building2,
+} from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
 import UserTaskCard from "./UserTaskCard";
 import TaskActionModal from "./TaskActionModal";
@@ -28,47 +35,100 @@ interface DepartmentGroup {
     tasks: UserTask[];
 }
 
+interface PendingDrop {
+    task: UserTask;
+    targetStepId: number;
+    direction: "forward" | "backward";
+}
+
+const stageColors = [
+    "#6366f1",
+    "#8b5cf6",
+    "#ec4899",
+    "#f59e0b",
+    "#10b981",
+    "#3b82f6",
+    "#ef4444",
+    "#14b8a6",
+];
+
+function useMediaQuery(query: string) {
+    const [matches, setMatches] = useState(false);
+
+    useEffect(() => {
+        const media = window.matchMedia(query);
+
+        const updateMatches = () => {
+            setMatches(media.matches);
+        };
+
+        updateMatches();
+        media.addEventListener("change", updateMatches);
+
+        return () => {
+            media.removeEventListener("change", updateMatches);
+        };
+    }, [query]);
+
+    return matches;
+}
+
 function extractDeptId(task: UserTask): number {
     const raw = (task as any).department;
-    if (raw && typeof raw === "object" && "id" in raw) return Number(raw.id);
-    if (raw !== undefined && raw !== null && raw !== "") return Number(raw);
+
+    if (raw && typeof raw === "object" && "id" in raw) {
+        return Number(raw.id);
+    }
+
+    if (raw !== undefined && raw !== null && raw !== "") {
+        return Number(raw);
+    }
+
     return -1;
 }
 
 function extractDeptName(task: UserTask): string {
     const direct = (task as any).department_name;
-    if (typeof direct === "string" && direct.trim()) return direct.trim();
+
+    if (typeof direct === "string" && direct.trim()) {
+        return direct.trim();
+    }
+
     const raw = (task as any).department;
-    if (raw && typeof raw === "object" && "name" in raw) return String(raw.name);
+
+    if (raw && typeof raw === "object" && "name" in raw) {
+        return String(raw.name);
+    }
+
     return "بدون دپارتمان";
 }
 
 function extractStageDeptId(stage: UserStage): number {
     const raw = (stage as any).department;
-    if (raw && typeof raw === "object" && "id" in raw) return Number(raw.id);
-    if (raw !== undefined && raw !== null && raw !== "") return Number(raw);
+
+    if (raw && typeof raw === "object" && "id" in raw) {
+        return Number(raw.id);
+    }
+
+    if (raw !== undefined && raw !== null && raw !== "") {
+        return Number(raw);
+    }
+
     return -1;
 }
 
 function groupTasksByStep(tasks: UserTask[]): Record<number, UserTask[]> {
     return tasks.reduce<Record<number, UserTask[]>>((acc, task) => {
         const key = task.current_step;
-        if (!acc[key]) acc[key] = [];
+
+        if (!acc[key]) {
+            acc[key] = [];
+        }
+
         acc[key].push(task);
+
         return acc;
     }, {});
-}
-
-const stageColors = [
-    "#6366f1", "#8b5cf6", "#ec4899",
-    "#f59e0b", "#10b981", "#3b82f6",
-    "#ef4444", "#14b8a6",
-];
-
-interface PendingDrop {
-    task: UserTask;
-    targetStepId: number;
-    direction: "forward" | "backward";
 }
 
 export default function UserTasksKanban() {
@@ -82,11 +142,17 @@ export default function UserTasksKanban() {
     const [pendingDrop, setPendingDrop] = useState<PendingDrop | null>(null);
     const [limitToast, setLimitToast] = useState(false);
     const [activeDeptId, setActiveDeptId] = useState<number | null>(null);
+    const [activeMobileStageId, setActiveMobileStageId] = useState<number | null>(null);
+
     const pendingRef = useRef<Set<number>>(new Set());
     const limitToastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+    const isMobile = useMediaQuery("(max-width: 767px)");
+
     const sensors = useSensors(
-        useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
+        useSensor(PointerSensor, {
+            activationConstraint: { distance: 8 },
+        })
     );
 
     useEffect(() => {
@@ -98,15 +164,18 @@ export default function UserTasksKanban() {
                 const raw = Array.isArray(res.data)
                     ? res.data
                     : (res.data as { results: UserStage[] }).results ?? [];
+
                 const mapped: UserStage[] = (raw as any[])
                     .map((s) => ({
                         id: s.id,
                         name: s.name ?? s.title ?? `مرحله ${s.id}`,
                         order: s.order ?? s.id,
                         department: s.department ?? null,
-                        department_name: s.department_name ?? s.department?.name ?? null,
+                        department_name:
+                            s.department_name ?? s.department?.name ?? null,
                     }))
                     .sort((a, b) => a.order - b.order);
+
                 setStages(mapped);
             })
             .catch(() => setError("دریافت فرآیند ها با خطا مواجه شد"))
@@ -120,6 +189,7 @@ export default function UserTasksKanban() {
                 const data = Array.isArray(res.data)
                     ? res.data
                     : res.data.results ?? [];
+
                 setTasks(data);
             })
             .catch(() => setError("دریافت تسک‌ها با خطا مواجه شد"))
@@ -132,23 +202,35 @@ export default function UserTasksKanban() {
         tasks.forEach((task) => {
             const deptId = extractDeptId(task);
             const deptName = extractDeptName(task);
+
             if (!map.has(deptId)) {
-                map.set(deptId, { id: deptId, name: deptName, stages: [], tasks: [] });
+                map.set(deptId, {
+                    id: deptId,
+                    name: deptName,
+                    stages: [],
+                    tasks: [],
+                });
             }
+
             map.get(deptId)!.tasks.push(task);
         });
 
         stages.forEach((stage) => {
             const deptId = extractStageDeptId(stage);
             const group = map.get(deptId);
-            if (group) group.stages.push(stage);
+
+            if (group) {
+                group.stages.push(stage);
+            }
         });
 
         map.forEach((group) => {
             group.stages.sort((a, b) => a.order - b.order);
         });
 
-        return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name, "fa"));
+        return Array.from(map.values()).sort((a, b) =>
+            a.name.localeCompare(b.name, "fa")
+        );
     }, [tasks, stages]);
 
     useEffect(() => {
@@ -156,54 +238,106 @@ export default function UserTasksKanban() {
             setActiveDeptId(null);
             return;
         }
-        if (activeDeptId === null || !departmentGroups.some((g) => g.id === activeDeptId)) {
+
+        if (
+            activeDeptId === null ||
+            !departmentGroups.some((group) => group.id === activeDeptId)
+        ) {
             setActiveDeptId(departmentGroups[0].id);
         }
     }, [departmentGroups, activeDeptId]);
 
-    const activeGroup = departmentGroups.find((g) => g.id === activeDeptId) ?? null;
+    const activeGroup =
+        departmentGroups.find((group) => group.id === activeDeptId) ?? null;
 
-    const grouped = useMemo(() => groupTasksByStep(activeGroup?.tasks ?? []), [activeGroup]);
+    const grouped = useMemo(
+        () => groupTasksByStep(activeGroup?.tasks ?? []),
+        [activeGroup]
+    );
+
+    useEffect(() => {
+        const availableStages = activeGroup?.stages ?? [];
+
+        if (availableStages.length === 0) {
+            setActiveMobileStageId(null);
+            return;
+        }
+
+        if (
+            activeMobileStageId === null ||
+            !availableStages.some((stage) => stage.id === activeMobileStageId)
+        ) {
+            setActiveMobileStageId(availableStages[0].id);
+        }
+    }, [activeGroup, activeMobileStageId]);
 
     function handleUpdated(updated: UserTask) {
-        setTasks((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
+        setTasks((prev) =>
+            prev.map((task) => (task.id === updated.id ? updated : task))
+        );
     }
 
     function handleDragStart(event: DragStartEvent) {
-        const task = tasks.find((t) => t.id === event.active.id);
-        if (task) setActiveTask(task);
+        const task = tasks.find((item) => item.id === event.active.id);
+
+        if (task) {
+            setActiveTask(task);
+        }
     }
 
     function handleDragOver(event: DragOverEvent) {
         const id = event.over?.id;
-        if (id !== undefined) setOverId(Number(id));
+
+        if (id !== undefined) {
+            setOverId(Number(id));
+        }
     }
 
     function showLimitToast() {
         setLimitToast(true);
-        if (limitToastTimer.current) clearTimeout(limitToastTimer.current);
-        limitToastTimer.current = setTimeout(() => setLimitToast(false), 3500);
+
+        if (limitToastTimer.current) {
+            clearTimeout(limitToastTimer.current);
+        }
+
+        limitToastTimer.current = setTimeout(() => {
+            setLimitToast(false);
+        }, 3500);
     }
 
     function handleDragEnd(event: DragEndEvent) {
         const { active, over } = event;
+
         setActiveTask(null);
         setOverId(null);
 
-        if (!over) return;
-        if (!activeGroup) return;
+        if (!over || !activeGroup) {
+            return;
+        }
 
-        const task = tasks.find((t) => t.id === active.id);
-        if (!task) return;
+        const task = tasks.find((item) => item.id === active.id);
+
+        if (!task) {
+            return;
+        }
 
         const targetStepId = Number(over.id);
-        if (task.current_step === targetStepId) return;
-        if (pendingRef.current.has(task.id)) return;
 
-        const stageList = activeGroup.stages.map((s) => s.id);
+        if (task.current_step === targetStepId) {
+            return;
+        }
+
+        if (pendingRef.current.has(task.id)) {
+            return;
+        }
+
+        const stageList = activeGroup.stages.map((stage) => stage.id);
         const currentIdx = stageList.indexOf(task.current_step);
         const targetIdx = stageList.indexOf(targetStepId);
-        if (targetIdx === -1) return;
+
+        if (targetIdx === -1) {
+            return;
+        }
 
         const steps = Math.abs(targetIdx - currentIdx);
 
@@ -213,24 +347,40 @@ export default function UserTasksKanban() {
         }
 
         const direction = targetIdx > currentIdx ? "forward" : "backward";
-        setPendingDrop({ task, targetStepId, direction });
+
+        setPendingDrop({
+            task,
+            targetStepId,
+            direction,
+        });
     }
 
-    async function handleModalSubmit({ note, files }: { note: string; files: File[] }) {
-        if (!pendingDrop || !activeGroup) return;
+    async function handleModalSubmit({
+        note,
+        files,
+    }: {
+        note: string;
+        files: File[];
+    }) {
+        if (!pendingDrop || !activeGroup) {
+            return;
+        }
 
         const { task, targetStepId, direction } = pendingDrop;
-        const targetStage = activeGroup.stages.find((s) => s.id === targetStepId);
+        const targetStage = activeGroup.stages.find(
+            (stage) => stage.id === targetStepId
+        );
 
         setTasks((prev) =>
-            prev.map((t) =>
-                t.id === task.id
+            prev.map((item) =>
+                item.id === task.id
                     ? {
-                        ...t,
+                        ...item,
                         current_step: targetStepId,
-                        current_step_name: targetStage?.name ?? t.current_step_name,
+                        current_step_name:
+                            targetStage?.name ?? item.current_step_name,
                     }
-                    : t
+                    : item
             )
         );
 
@@ -244,16 +394,27 @@ export default function UserTasksKanban() {
                     : `/tasks/api/v1/tasks/${task.id}/revert/`;
 
             const formData = new FormData();
-            if (note.trim()) formData.append("note", note.trim());
-            files.forEach((f) => formData.append("files", f));
+
+            if (note.trim()) {
+                formData.append("note", note.trim());
+            }
+
+            files.forEach((file) => {
+                formData.append("files", file);
+            });
 
             const res = await axiosInstance.post<UserTask>(endpoint, formData, {
-                headers: { "Content-Type": "multipart/form-data" },
+                headers: {
+                    "Content-Type": "multipart/form-data",
+                },
             });
 
             handleUpdated(res.data);
         } catch {
-            setTasks((prev) => prev.map((t) => (t.id === task.id ? task : t)));
+            setTasks((prev) =>
+                prev.map((item) => (item.id === task.id ? task : item))
+            );
+
             throw new Error("خطا در ثبت");
         } finally {
             pendingRef.current.delete(task.id);
@@ -283,7 +444,10 @@ export default function UserTasksKanban() {
     if (tasks.length === 0) {
         return (
             <div className="flex h-64 flex-col items-center justify-center gap-3 rounded-3xl border border-dashed border-gray-200 dark:border-white/[0.07]">
-                <LayoutGrid size={28} className="text-gray-300 dark:text-gray-700" />
+                <LayoutGrid
+                    size={28}
+                    className="text-gray-300 dark:text-gray-700"
+                />
                 <p className="text-[12px] text-gray-400">تسکی وجود ندارد</p>
             </div>
         );
@@ -291,16 +455,34 @@ export default function UserTasksKanban() {
 
     const activeStages = activeGroup?.stages ?? [];
     const activeStageIndex = activeTask
-        ? activeStages.findIndex((s) => s.id === activeTask.current_step)
+        ? activeStages.findIndex((stage) => stage.id === activeTask.current_step)
         : -1;
+
     const activeColor =
         activeStageIndex >= 0
             ? stageColors[activeStageIndex % stageColors.length]
             : "#6366f1";
 
     const modalDirection = pendingDrop?.direction === "forward" ? "next" : "prev";
+
     const targetStageName =
-        activeGroup?.stages.find((s) => s.id === pendingDrop?.targetStepId)?.name ?? "";
+        activeGroup?.stages.find(
+            (stage) => stage.id === pendingDrop?.targetStepId
+        )?.name ?? "";
+
+    const mobileStage =
+        activeGroup?.stages.find(
+            (stage) => stage.id === activeMobileStageId
+        ) ?? activeGroup?.stages[0];
+
+    const mobileStageIndex = mobileStage
+        ? activeGroup?.stages.findIndex((stage) => stage.id === mobileStage.id) ?? 0
+        : 0;
+
+    const mobileStageTasks = mobileStage ? grouped[mobileStage.id] ?? [] : [];
+
+    const mobileStageColor =
+        stageColors[mobileStageIndex % stageColors.length] ?? "#6366f1";
 
     return (
         <>
@@ -310,16 +492,19 @@ export default function UserTasksKanban() {
                         <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-indigo-500/10">
                             <Kanban size={17} className="text-indigo-500" />
                         </div>
+
                         <div>
                             <h3 className="text-[14px] font-extrabold text-gray-900 dark:text-white">
                                 تسک‌های من
                             </h3>
+
                             <p className="text-[11px] text-gray-400 dark:text-gray-600">
                                 {departmentGroups.length} دپارتمان
                             </p>
                         </div>
                     </div>
-                    <span className="rounded-2xl bg-gray-100 dark:bg-white/[0.06] px-3 py-1.5 text-[11px] font-bold text-gray-600 dark:text-gray-400">
+
+                    <span className="rounded-2xl bg-gray-100 px-3 py-1.5 text-[11px] font-bold text-gray-600 dark:bg-white/[0.06] dark:text-gray-400">
                         {tasks.length} تسک
                     </span>
                 </div>
@@ -327,20 +512,25 @@ export default function UserTasksKanban() {
                 <div className="flex gap-2 overflow-x-auto pb-1">
                     {departmentGroups.map((group) => {
                         const isActive = group.id === activeDeptId;
+
                         return (
                             <button
                                 key={group.id}
                                 type="button"
                                 onClick={() => setActiveDeptId(group.id)}
                                 className={`flex shrink-0 items-center gap-2 rounded-2xl px-3.5 py-2 text-[11.5px] font-bold transition-colors ${isActive
-                                    ? "bg-indigo-600 text-white"
-                                    : "bg-gray-100 text-gray-500 hover:bg-gray-200 dark:bg-white/[0.05] dark:text-gray-400 dark:hover:bg-white/[0.08]"
+                                        ? "bg-indigo-600 text-white"
+                                        : "bg-gray-100 text-gray-500 hover:bg-gray-200 dark:bg-white/[0.05] dark:text-gray-400 dark:hover:bg-white/[0.08]"
                                     }`}
                             >
                                 <Building2 size={12} />
+
                                 {group.name}
+
                                 <span
-                                    className={`rounded-full px-1.5 py-0.5 text-[10px] font-extrabold ${isActive ? "bg-white/20" : "bg-black/5 dark:bg-white/10"
+                                    className={`rounded-full px-1.5 py-0.5 text-[10px] font-extrabold ${isActive
+                                            ? "bg-white/20"
+                                            : "bg-black/5 dark:bg-white/10"
                                         }`}
                                 >
                                     {group.tasks.length}
@@ -350,70 +540,169 @@ export default function UserTasksKanban() {
                     })}
                 </div>
 
-                {activeGroup && (
-                    <DndContext
-                        sensors={sensors}
-                        collisionDetection={closestCenter}
-                        onDragStart={handleDragStart}
-                        onDragOver={handleDragOver}
-                        onDragEnd={handleDragEnd}
-                    >
-                        <div className="flex gap-3 overflow-x-auto pb-3">
-                            {activeGroup.stages.map((stage, index) => {
-                                const stageTasks = grouped[stage.id] ?? [];
-                                const color = stageColors[index % stageColors.length];
-                                const isOver =
-                                    overId === stage.id &&
-                                    activeTask?.current_step !== stage.id;
+                {activeGroup &&
+                    (isMobile ? (
+                        <div className="flex flex-col gap-3">
+                            <div className="flex gap-2 overflow-x-auto pb-1">
+                                {activeGroup.stages.map((stage, index) => {
+                                    const isActive = stage.id === mobileStage?.id;
+                                    const color =
+                                        stageColors[index % stageColors.length];
+                                    const count = grouped[stage.id]?.length ?? 0;
 
-                                const activeIdx = activeTask
-                                    ? activeGroup.stages.findIndex((s) => s.id === activeTask.current_step)
-                                    : -1;
-                                const thisIdx = index;
-                                const isAdjacent =
-                                    activeTask !== null &&
-                                    Math.abs(thisIdx - activeIdx) === 1;
-                                const isDisabled =
-                                    activeTask !== null &&
-                                    activeTask.current_step !== stage.id &&
-                                    !isAdjacent;
+                                    return (
+                                        <button
+                                            key={stage.id}
+                                            type="button"
+                                            onClick={() =>
+                                                setActiveMobileStageId(stage.id)
+                                            }
+                                            className="flex shrink-0 items-center gap-2 rounded-2xl border px-3 py-2 text-[11px] font-bold transition-all"
+                                            style={{
+                                                color: isActive ? color : undefined,
+                                                backgroundColor: isActive
+                                                    ? `${color}14`
+                                                    : undefined,
+                                                borderColor: isActive
+                                                    ? `${color}45`
+                                                    : "rgba(255,255,255,0.07)",
+                                            }}
+                                        >
+                                            <span
+                                                className="flex h-5 w-5 items-center justify-center rounded-lg text-[9px] font-extrabold"
+                                                style={{
+                                                    backgroundColor: `${color}20`,
+                                                    color,
+                                                }}
+                                            >
+                                                {index + 1}
+                                            </span>
 
-                                return (
+                                            <span
+                                                className={
+                                                    isActive
+                                                        ? ""
+                                                        : "text-gray-500 dark:text-gray-400"
+                                                }
+                                            >
+                                                {stage.name}
+                                            </span>
+
+                                            <span
+                                                className="rounded-full px-1.5 py-0.5 text-[9px] font-extrabold"
+                                                style={{
+                                                    backgroundColor: `${color}18`,
+                                                    color,
+                                                }}
+                                            >
+                                                {count}
+                                            </span>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+
+                            {mobileStage && (
+                                <AnimatePresence mode="wait">
                                     <motion.div
-                                        key={stage.id}
-                                        initial={{ opacity: 0, y: 12 }}
+                                        key={mobileStage.id}
+                                        initial={{ opacity: 0, y: 10 }}
                                         animate={{ opacity: 1, y: 0 }}
-                                        transition={{ duration: 0.25, delay: index * 0.04 }}
-                                        className="w-[300px] shrink-0"
+                                        exit={{ opacity: 0, y: -8 }}
+                                        transition={{ duration: 0.2 }}
                                     >
-                                        <StageColumn
-                                            stage={stage}
-                                            tasks={stageTasks}
-                                            accent={color}
-                                            index={index}
-                                            isOver={isOver && isAdjacent}
-                                            isDisabled={isDisabled}
+                                        <MobileStageColumn
+                                            stage={mobileStage}
+                                            tasks={mobileStageTasks}
+                                            accent={mobileStageColor}
+                                            index={mobileStageIndex}
                                             onUpdated={handleUpdated}
                                         />
                                     </motion.div>
-                                );
-                            })}
-                        </div>
-
-                        <DragOverlay dropAnimation={{ duration: 200, easing: "ease" }}>
-                            {activeTask && (
-                                <div className="rotate-[1.5deg] scale-[1.04]">
-                                    <UserTaskCard
-                                        task={activeTask}
-                                        accent={activeColor}
-                                        onUpdated={() => { }}
-                                        isDragging
-                                    />
-                                </div>
+                                </AnimatePresence>
                             )}
-                        </DragOverlay>
-                    </DndContext>
-                )}
+                        </div>
+                    ) : (
+                        <DndContext
+                            sensors={sensors}
+                            collisionDetection={closestCenter}
+                            onDragStart={handleDragStart}
+                            onDragOver={handleDragOver}
+                            onDragEnd={handleDragEnd}
+                        >
+                            <div className="flex gap-3 overflow-x-auto pb-3">
+                                {activeGroup.stages.map((stage, index) => {
+                                    const stageTasks = grouped[stage.id] ?? [];
+                                    const color =
+                                        stageColors[index % stageColors.length];
+
+                                    const isOver =
+                                        overId === stage.id &&
+                                        activeTask?.current_step !== stage.id;
+
+                                    const activeIdx = activeTask
+                                        ? activeGroup.stages.findIndex(
+                                            (item) =>
+                                                item.id ===
+                                                activeTask.current_step
+                                        )
+                                        : -1;
+
+                                    const thisIdx = index;
+
+                                    const isAdjacent =
+                                        activeTask !== null &&
+                                        Math.abs(thisIdx - activeIdx) === 1;
+
+                                    const isDisabled =
+                                        activeTask !== null &&
+                                        activeTask.current_step !== stage.id &&
+                                        !isAdjacent;
+
+                                    return (
+                                        <motion.div
+                                            key={stage.id}
+                                            initial={{ opacity: 0, y: 12 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            transition={{
+                                                duration: 0.25,
+                                                delay: index * 0.04,
+                                            }}
+                                            className="w-[300px] shrink-0"
+                                        >
+                                            <StageColumn
+                                                stage={stage}
+                                                tasks={stageTasks}
+                                                accent={color}
+                                                index={index}
+                                                isOver={isOver && isAdjacent}
+                                                isDisabled={isDisabled}
+                                                onUpdated={handleUpdated}
+                                            />
+                                        </motion.div>
+                                    );
+                                })}
+                            </div>
+
+                            <DragOverlay
+                                dropAnimation={{
+                                    duration: 200,
+                                    easing: "ease",
+                                }}
+                            >
+                                {activeTask && (
+                                    <div className="rotate-[1.5deg] scale-[1.04]">
+                                        <UserTaskCard
+                                            task={activeTask}
+                                            accent={activeColor}
+                                            onUpdated={() => { }}
+                                            isDragging
+                                        />
+                                    </div>
+                                )}
+                            </DragOverlay>
+                        </DndContext>
+                    ))}
             </div>
 
             <TaskActionModal
@@ -451,10 +740,12 @@ export default function UserTasksKanban() {
                             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-red-500/15">
                                 <AlertCircle size={15} className="text-red-400" />
                             </div>
+
                             <div>
                                 <p className="text-[13px] font-bold text-white">
                                     جابجایی مستقیم مجاز نیست
                                 </p>
+
                                 <p className="mt-0.5 text-[11px] text-gray-400">
                                     تنها می‌توانید کارت را یک گام به جلو یا عقب منتقل کنید.
                                 </p>
@@ -482,14 +773,14 @@ function StageColumn({
     index: number;
     isOver: boolean;
     isDisabled: boolean;
-    onUpdated: (t: UserTask) => void;
+    onUpdated: (task: UserTask) => void;
 }) {
     const { setNodeRef } = useDroppable({ id: stage.id });
 
     return (
         <div
             ref={setNodeRef}
-            className="flex flex-col rounded-[1.6rem] overflow-hidden transition-all duration-200"
+            className="flex flex-col overflow-hidden rounded-[1.6rem] transition-all duration-200"
             style={{
                 background: isOver
                     ? `linear-gradient(145deg, ${accent}10, ${accent}05)`
@@ -505,23 +796,31 @@ function StageColumn({
             }}
         >
             <div
-                className="px-4 pt-4 pb-3 flex items-center justify-between gap-2"
+                className="flex items-center justify-between gap-2 px-4 pb-3 pt-4"
                 style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}
             >
-                <div className="flex items-center gap-2.5 min-w-0">
+                <div className="flex min-w-0 items-center gap-2.5">
                     <div
                         className="flex h-7 w-7 shrink-0 items-center justify-center rounded-xl text-[11px] font-extrabold"
-                        style={{ backgroundColor: `${accent}20`, color: accent }}
+                        style={{
+                            backgroundColor: `${accent}20`,
+                            color: accent,
+                        }}
                     >
                         {index + 1}
                     </div>
+
                     <h4 className="truncate text-[12.5px] font-bold text-gray-800 dark:text-gray-100">
                         {stage.name}
                     </h4>
                 </div>
+
                 <div
                     className="shrink-0 rounded-full px-2.5 py-0.5 text-[10px] font-extrabold tabular-nums"
-                    style={{ backgroundColor: `${accent}18`, color: accent }}
+                    style={{
+                        backgroundColor: `${accent}18`,
+                        color: accent,
+                    }}
                 >
                     {tasks.length}
                 </div>
@@ -534,7 +833,7 @@ function StageColumn({
                 }}
             />
 
-            <div className="flex flex-col gap-2.5 p-3 max-h-[520px] overflow-y-auto scrollbar-thin scrollbar-track-transparent scrollbar-thumb-white/10">
+            <div className="scrollbar-thin scrollbar-track-transparent scrollbar-thumb-white/10 flex max-h-[520px] flex-col gap-2.5 overflow-y-auto p-3">
                 {tasks.length === 0 ? (
                     <EmptySlot accent={accent} isOver={isOver} />
                 ) : (
@@ -547,15 +846,98 @@ function StageColumn({
                         />
                     ))
                 )}
-                {tasks.length > 0 && isOver && (
-                    <DropIndicator accent={accent} />
+
+                {tasks.length > 0 && isOver && <DropIndicator accent={accent} />}
+            </div>
+        </div>
+    );
+}
+
+function MobileStageColumn({
+    stage,
+    tasks,
+    accent,
+    index,
+    onUpdated,
+}: {
+    stage: UserStage;
+    tasks: UserTask[];
+    accent: string;
+    index: number;
+    onUpdated: (task: UserTask) => void;
+}) {
+    return (
+        <div
+            className="flex flex-col overflow-hidden rounded-[1.6rem]"
+            style={{
+                background: "rgba(255,255,255,0.02)",
+                border: "1.5px solid rgba(255,255,255,0.07)",
+                boxShadow: "0 2px 12px rgba(0,0,0,0.06)",
+            }}
+        >
+            <div
+                className="flex items-center justify-between gap-2 px-4 pb-3 pt-4"
+                style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}
+            >
+                <div className="flex min-w-0 items-center gap-2.5">
+                    <div
+                        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-xl text-[11px] font-extrabold"
+                        style={{
+                            backgroundColor: `${accent}20`,
+                            color: accent,
+                        }}
+                    >
+                        {index + 1}
+                    </div>
+
+                    <h4 className="truncate text-[12.5px] font-bold text-gray-800 dark:text-gray-100">
+                        {stage.name}
+                    </h4>
+                </div>
+
+                <div
+                    className="shrink-0 rounded-full px-2.5 py-0.5 text-[10px] font-extrabold tabular-nums"
+                    style={{
+                        backgroundColor: `${accent}18`,
+                        color: accent,
+                    }}
+                >
+                    {tasks.length}
+                </div>
+            </div>
+
+            <div
+                className="h-[2px]"
+                style={{
+                    background: `linear-gradient(90deg, ${accent}60, transparent)`,
+                }}
+            />
+
+            <div className="flex flex-col gap-2.5 p-3">
+                {tasks.length === 0 ? (
+                    <EmptySlot accent={accent} isOver={false} />
+                ) : (
+                    tasks.map((task) => (
+                        <UserTaskCard
+                            key={task.id}
+                            task={task}
+                            accent={accent}
+                            onUpdated={onUpdated}
+                        />
+                    ))
                 )}
             </div>
         </div>
     );
 }
 
-function EmptySlot({ accent, isOver }: { accent: string; isOver: boolean }) {
+function EmptySlot({
+    accent,
+    isOver,
+}: {
+    accent: string;
+    isOver: boolean;
+}) {
     return (
         <motion.div
             animate={{
@@ -564,6 +946,7 @@ function EmptySlot({ accent, isOver }: { accent: string; isOver: boolean }) {
             className="flex h-36 flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed transition-colors"
         >
             <GripVertical size={18} className="text-gray-300 dark:text-gray-700" />
+
             <p className="text-[11px] text-gray-400 dark:text-gray-600">
                 {isOver ? "اینجا رها کن" : "خالی"}
             </p>
@@ -577,8 +960,11 @@ function DropIndicator({ accent }: { accent: string }) {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 48 }}
             exit={{ opacity: 0, height: 0 }}
-            className="rounded-2xl border-2 border-dashed flex items-center justify-center"
-            style={{ borderColor: `${accent}50`, background: `${accent}08` }}
+            className="flex items-center justify-center rounded-2xl border-2 border-dashed"
+            style={{
+                borderColor: `${accent}50`,
+                background: `${accent}08`,
+            }}
         >
             <p className="text-[11px] font-semibold" style={{ color: accent }}>
                 اینجا رها کن
@@ -594,14 +980,19 @@ function DraggableCard({
 }: {
     task: UserTask;
     accent: string;
-    onUpdated: (t: UserTask) => void;
+    onUpdated: (task: UserTask) => void;
 }) {
     const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
         id: task.id,
     });
 
     return (
-        <div ref={setNodeRef} {...attributes} {...listeners} className="touch-none">
+        <div
+            ref={setNodeRef}
+            {...attributes}
+            {...listeners}
+            className="touch-none"
+        >
             <UserTaskCard
                 task={task}
                 accent={accent}

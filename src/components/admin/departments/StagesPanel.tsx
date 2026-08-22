@@ -1,14 +1,18 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Trash2, GripVertical, Loader, Pencil } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { AnimatePresence } from "framer-motion";
+import { ChevronLeft, Pencil, Plus, Trash2 } from "lucide-react";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { FreeMode } from "swiper/modules";
 import "swiper/css";
 import "swiper/css/free-mode";
-import type { Department, Stage, Task } from "@/components/admin/departments/types";
-import TaskCard from "@/components/admin/departments/TaskCard";
+import type {
+    Department,
+    Stage,
+    Task,
+} from "@/components/admin/departments/types";
+import StageCard from "@/components/admin/departments/StageCard";
 import EditStageModal from "./EditStageModal";
 
 interface StagesPanelProps {
@@ -20,82 +24,263 @@ interface StagesPanelProps {
     onAddStage?: () => void;
     onEditStage?: (
         stage: Stage,
-        values: { name: string; description?: string; order: number }
+        values: {
+            name: string;
+            description?: string;
+            order: number;
+        }
     ) => Promise<void> | void;
     onDeleteStage?: (stage: Stage) => void;
 }
 
-
 const getRelationId = (
     value: string | number | { id: string | number } | null | undefined
 ) => {
-    if (value === null || value === undefined) return null;
-    if (typeof value === "object")
-        return value.id === null || value.id === undefined ? null : String(value.id);
+    if (value === null || value === undefined) {
+        return null;
+    }
+
+    if (typeof value === "object") {
+        return value.id === null || value.id === undefined
+            ? null
+            : String(value.id);
+    }
+
     return String(value);
 };
 
+interface StageHeaderProps {
+    stage: Stage;
+    index: number;
+    tasksCount: number;
+    isLast: boolean;
+    onEdit?: () => void;
+    onDelete?: () => void;
+}
+
+function StageHeader({
+    stage,
+    index,
+    tasksCount,
+    isLast,
+    onEdit,
+    onDelete,
+}: StageHeaderProps) {
+    const stageColor = stage.color || "#6366f1";
+
+    return (
+        <div className="relative">
+            {!isLast && (
+                <div
+                    className="pointer-events-none absolute top-[19px] z-10 flex h-6 w-6 items-center justify-center rounded-full border bg-white shadow-sm dark:bg-[#0f172a]"
+                    style={{
+                        insetInlineEnd: "-13px",
+                        borderColor: `${stageColor}40`,
+                        color: stageColor,
+                    }}
+                >
+                    <ChevronLeft size={12} strokeWidth={2.5} />
+                </div>
+            )}
+
+            <div
+                className="flex h-[66px] items-center justify-between gap-2 rounded-[1.35rem] border bg-white/75 px-3.5 dark:bg-white/[0.03]"
+                style={{
+                    borderColor: `${stageColor}35`,
+                }}
+            >
+                <div className="flex min-w-0 items-center gap-2.5">
+                    <span
+                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-[11px] font-extrabold text-white"
+                        style={{
+                            backgroundColor: stageColor,
+                        }}
+                    >
+                        {index + 1}
+                    </span>
+
+                    <div className="min-w-0">
+                        <h4 className="truncate text-[12px] font-extrabold text-gray-800 dark:text-gray-100">
+                            {stage.name}
+                        </h4>
+
+                        <p className="mt-0.5 text-[10px] font-bold text-gray-400 dark:text-gray-500">
+                            {tasksCount} وظیفه
+                        </p>
+                    </div>
+                </div>
+
+                <div className="flex shrink-0 items-center gap-1">
+                    {onEdit && (
+                        <button
+                            type="button"
+                            onClick={onEdit}
+                            className="rounded-lg p-1.5 transition"
+                            style={{
+                                color: stageColor,
+                                backgroundColor: `${stageColor}14`,
+                            }}
+                        >
+                            <Pencil size={13} />
+                        </button>
+                    )}
+
+                    {onDelete && (
+                        <button
+                            type="button"
+                            onClick={onDelete}
+                            className="rounded-lg bg-red-500/10 p-1.5 text-red-400 transition hover:bg-red-500/20"
+                        >
+                            <Trash2 size={13} />
+                        </button>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+}
+
 export default function StagesPanel({
     department,
-    tasks,
+    tasks = [],
     tasksLoading = false,
     onAddStage,
     onEditStage,
     onDeleteStage,
 }: StagesPanelProps) {
     const [editingStage, setEditingStage] = useState<Stage | null>(null);
+    const [activeStageKey, setActiveStageKey] = useState<string | null>(null);
 
     const [localStages, setLocalStages] = useState<Stage[]>(() =>
         [...department.stages].sort((a, b) => a.order - b.order)
     );
 
-    const rollbackRef = useRef<Stage[]>(localStages);
-
     const prevServerStagesRef = useRef<Stage[]>(department.stages);
+    const keyMapRef = useRef(new WeakMap<Stage, string>());
+    const keyCounterRef = useRef(0);
 
     useEffect(() => {
-        const prevIds = prevServerStagesRef.current.map((s) => s.id).sort().join(",");
-        const nextIds = department.stages.map((s) => s.id).sort().join(",");
+        const prevIds = prevServerStagesRef.current
+            .map((stage) => stage.id)
+            .sort()
+            .join(",");
+
+        const nextIds = department.stages
+            .map((stage) => stage.id)
+            .sort()
+            .join(",");
 
         if (prevIds !== nextIds) {
-            const sorted = [...department.stages].sort((a, b) => a.order - b.order);
-            setLocalStages(sorted);
-            rollbackRef.current = sorted;
+            setLocalStages(
+                [...department.stages].sort((a, b) => a.order - b.order)
+            );
         }
 
         prevServerStagesRef.current = department.stages;
     }, [department.stages]);
 
-    const handleReorder = useCallback(
+    const getStageKey = useCallback((stage: Stage) => {
+        if (stage.id !== undefined && stage.id !== null) {
+            return String(stage.id);
+        }
+
+        let key = keyMapRef.current.get(stage);
+
+        if (!key) {
+            key = `temp-${keyCounterRef.current++}`;
+            keyMapRef.current.set(stage, key);
+        }
+
+        return key;
+    }, []);
+
+    const uniqueLocalStages = useMemo(() => {
+        const seen = new Set<string>();
+        const result: { stage: Stage; key: string }[] = [];
+
+        for (const stage of localStages) {
+            const key = getStageKey(stage);
+
+            if (seen.has(key)) {
+                continue;
+            }
+
+            seen.add(key);
+            result.push({ stage, key });
+        }
+
+        return result;
+    }, [getStageKey, localStages]);
+
+    useEffect(() => {
+        if (uniqueLocalStages.length === 0) {
+            setActiveStageKey(null);
+            return;
+        }
+
+        const activeStageExists = uniqueLocalStages.some(
+            ({ key }) => key === activeStageKey
+        );
+
+        if (!activeStageExists) {
+            setActiveStageKey(uniqueLocalStages[0].key);
+        }
+    }, [activeStageKey, uniqueLocalStages]);
+
+    const handleEditStage = useCallback(
         async (
             targetStage: Stage,
-            values: { name: string; description?: string; order: number }
+            values: {
+                name: string;
+                description?: string;
+                order: number;
+            }
         ) => {
-            if (!onEditStage) return;
+            if (!onEditStage) {
+                return;
+            }
 
-            const newOrder = values.order;
             const oldOrder = targetStage.order;
+            const newOrder = values.order;
 
-            if (newOrder === oldOrder) {
+            if (oldOrder === newOrder) {
                 await onEditStage(targetStage, values);
                 return;
             }
 
             const conflictingStage = localStages.find(
-                (s) => s.id !== targetStage.id && s.order === newOrder
+                (stage) =>
+                    stage.id !== targetStage.id && stage.order === newOrder
             );
 
             const snapshot = [...localStages];
-            rollbackRef.current = snapshot;
 
-            setLocalStages((prev) => {
-                const updated = prev.map((s) => {
-                    if (s.id === targetStage.id) return { ...s, order: newOrder };
-                    if (conflictingStage && s.id === conflictingStage.id)
-                        return { ...s, order: oldOrder };
-                    return s;
+            setLocalStages((previousStages) => {
+                const updatedStages = previousStages.map((stage) => {
+                    if (stage.id === targetStage.id) {
+                        return {
+                            ...stage,
+                            order: newOrder,
+                        };
+                    }
+
+                    if (
+                        conflictingStage &&
+                        stage.id === conflictingStage.id
+                    ) {
+                        return {
+                            ...stage,
+                            order: oldOrder,
+                        };
+                    }
+
+                    return stage;
                 });
-                return [...updated].sort((a, b) => a.order - b.order);
+
+                return [...updatedStages].sort(
+                    (firstStage, secondStage) =>
+                        firstStage.order - secondStage.order
+                );
             });
 
             try {
@@ -106,120 +291,248 @@ export default function StagesPanel({
                         order: oldOrder,
                     });
                 }
+
                 await onEditStage(targetStage, values);
-            } catch (err) {
+            } catch (error) {
                 setLocalStages(snapshot);
-                rollbackRef.current = snapshot;
-                throw err;
+                throw error;
             }
         },
         [localStages, onEditStage]
     );
 
+    const getStageTasks = useCallback(
+        (stage: Stage) =>
+            tasks.filter(
+                (task) =>
+                    getRelationId(task.current_step) === String(stage.id)
+            ),
+        [tasks]
+    );
+
+    const renderStageCard = (
+        stage: Stage,
+        key: string,
+        index: number,
+        options?: {
+            isMobile?: boolean;
+            showHeader?: boolean;
+            showConnector?: boolean;
+        }
+    ) => {
+        const stageTasks = getStageTasks(stage);
+
+        return (
+            <StageCard
+                key={key}
+                stage={stage}
+                index={index}
+                isLast={
+                    options?.isMobile
+                        ? true
+                        : index === uniqueLocalStages.length - 1
+                }
+                tasks={stageTasks}
+                tasksLoading={tasksLoading}
+                showHeader={options?.showHeader}
+                showConnector={options?.showConnector}
+                onEditStage={
+                    onEditStage
+                        ? () => setEditingStage(stage)
+                        : undefined
+                }
+                onDeleteStage={onDeleteStage}
+            />
+        );
+    };
+
+    const activeStage =
+        uniqueLocalStages.find(({ key }) => key === activeStageKey) ??
+        uniqueLocalStages[0];
+
+    const activeStageIndex = activeStage
+        ? uniqueLocalStages.findIndex(
+            ({ key }) => key === activeStage.key
+        )
+        : -1;
+
     return (
         <div className="flex flex-col gap-4 overflow-hidden">
-            <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                    <h3 className="text-[13.5px] font-extrabold text-gray-900 dark:text-white">
-                        فرآیند های دپارتمان
+            <div className="flex items-center justify-between gap-3">
+                <div className="flex min-w-0 items-center gap-2">
+                    <h3 className="truncate text-[13.5px] font-extrabold text-gray-900 dark:text-white">
+                        فرآیندهای دپارتمان
                     </h3>
+
                     <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[10.5px] font-bold text-gray-500 dark:bg-white/[0.06] dark:text-gray-400">
-                        {localStages.length}
+                        {uniqueLocalStages.length}
                     </span>
                 </div>
+
                 {onAddStage && (
                     <button
                         type="button"
                         onClick={onAddStage}
-                        className="flex items-center gap-1.5 rounded-xl bg-indigo-50 px-3 py-1.5 text-[11.5px] font-bold text-indigo-600 transition hover:bg-indigo-100 dark:bg-indigo-500/10 dark:text-indigo-400 dark:hover:bg-indigo-500/20"
+                        className="flex shrink-0 items-center gap-1.5 rounded-xl bg-indigo-50 px-3 py-1.5 text-[11.5px] font-bold text-indigo-600 transition hover:bg-indigo-100 dark:bg-indigo-500/10 dark:text-indigo-400 dark:hover:bg-indigo-500/20"
                     >
                         <Plus size={13} />
-                        افزودن فرآیند
+
+                        <span className="sm:hidden">افزودن</span>
+
+                        <span className="hidden sm:inline">
+                            افزودن فرآیند
+                        </span>
                     </button>
                 )}
             </div>
 
-            {localStages.length === 0 ? (
+            {uniqueLocalStages.length === 0 ? (
                 <div className="flex flex-col items-center justify-center gap-2 rounded-[1.5rem] border border-dashed border-gray-200 py-10 dark:border-white/[0.07]">
-                    <p className="text-[12px] text-gray-400">فرآیندی تعریف نشده است</p>
+                    <p className="text-[12px] text-gray-400">
+                        فرآیندی تعریف نشده است
+                    </p>
                 </div>
             ) : (
-                <Swiper
-                    modules={[FreeMode]}
-                    freeMode
-                    slidesPerView="auto"
-                    spaceBetween={12}
-                    className="!overflow-visible w-full"
-                >
-                    <AnimatePresence initial={false}>
-                        {localStages.map((stage, index) => {
-                            const stageTasks = tasks.filter(
-                                (task) =>
-                                    getRelationId(task.current_step) === String(stage.id)
-                            );
+                <>
+                    <div className="md:hidden">
+                        <div className="scrollbar-none flex w-full gap-2 overflow-x-auto pb-1">
+                            {uniqueLocalStages.map(
+                                ({ stage, key }, index) => {
+                                    const isActive = key === activeStageKey;
+                                    const stageColor =
+                                        stage.color || "#6366f1";
 
-                            return (
-                                <SwiperSlide key={stage.id} className="!w-[300px] shrink-0">
-                                    <motion.div
-                                        layout
-                                        layoutId={`stage-${stage.id}`}
-                                        initial={{ opacity: 0, y: 8 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        exit={{ opacity: 0, scale: 0.96 }}
-                                        transition={{
-                                            layout: { type: "spring", stiffness: 300, damping: 30 },
-                                            opacity: { duration: 0.2 },
-                                        }}
-                                        className="flex flex-col rounded-[1.7rem] border border-gray-200/60 bg-white/60 dark:border-white/[0.06] dark:bg-white/[0.02]"
+                                    return (
+                                        <button
+                                            key={key}
+                                            type="button"
+                                            onClick={() =>
+                                                setActiveStageKey(key)
+                                            }
+                                            className={`flex min-w-[118px] shrink-0 items-center gap-2 rounded-2xl border px-3 py-2 text-right transition ${isActive
+                                                    ? "border-transparent shadow-sm"
+                                                    : "border-gray-200/70 bg-white/60 dark:border-white/[0.07] dark:bg-white/[0.03]"
+                                                }`}
+                                            style={
+                                                isActive
+                                                    ? {
+                                                        borderColor: `${stageColor}45`,
+                                                        backgroundColor: `${stageColor}12`,
+                                                    }
+                                                    : undefined
+                                            }
+                                        >
+                                            <span
+                                                className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-[10px] font-extrabold text-white"
+                                                style={{
+                                                    backgroundColor:
+                                                        stageColor,
+                                                }}
+                                            >
+                                                {index + 1}
+                                            </span>
+
+                                            <span
+                                                className={`min-w-0 truncate text-[11px] font-extrabold ${isActive
+                                                        ? "text-gray-800 dark:text-gray-100"
+                                                        : "text-gray-500 dark:text-gray-400"
+                                                    }`}
+                                            >
+                                                {stage.name}
+                                            </span>
+                                        </button>
+                                    );
+                                }
+                            )}
+                        </div>
+
+                        <div className="mt-2">
+                            <AnimatePresence mode="wait" initial={false}>
+                                {activeStage && activeStageIndex >= 0 && (
+                                    <div key={activeStage.key}>
+                                        {renderStageCard(
+                                            activeStage.stage,
+                                            activeStage.key,
+                                            activeStageIndex,
+                                            {
+                                                isMobile: true,
+                                                showHeader: true,
+                                                showConnector: false,
+                                            }
+                                        )}
+                                    </div>
+                                )}
+                            </AnimatePresence>
+                        </div>
+                    </div>
+
+                    <div className="hidden md:flex md:flex-col md:gap-3">
+                        <Swiper
+                            modules={[FreeMode]}
+                            freeMode
+                            slidesPerView="auto"
+                            spaceBetween={26}
+                            className="!w-full !overflow-visible !px-1"
+                        >
+                            {uniqueLocalStages.map(
+                                ({ stage, key }, index) => (
+                                    <SwiperSlide
+                                        key={key}
+                                        className="!w-[290px] shrink-0 !overflow-visible"
                                     >
-                                        <div className="flex items-center justify-between gap-2 px-4 pt-4 pb-3">
-                                            <div className="flex min-w-0 items-center gap-2">
-                                                <GripVertical
-                                                    size={15}
-                                                    className="shrink-0 text-gray-300 dark:text-gray-600"
-                                                />
-                                                <span
-                                                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-[11px] font-extrabold"
-                                                    style={{
-                                                        backgroundColor: `${stage.color || "#6366f1"}1a`,
-                                                        color: stage.color || "#6366f1",
-                                                    }}
-                                                >
-                                                    {index + 1}
-                                                </span>
-                                                <h4 className="truncate text-[12.5px] font-bold text-gray-800 dark:text-gray-100">
-                                                    {stage.name}
-                                                </h4>
-                                            </div>
-                                            <div className="flex shrink-0 items-center gap-1">
-                                                {onEditStage && (
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => setEditingStage(stage)}
-                                                        className="rounded-lg p-1.5 text-gray-400 transition hover:bg-indigo-50 hover:text-indigo-500 dark:hover:bg-indigo-500/10"
-                                                    >
-                                                        <Pencil size={13} />
-                                                    </button>
-                                                )}
-                                                {onDeleteStage && (
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => onDeleteStage(stage)}
-                                                        className="rounded-lg p-1.5 text-gray-400 transition hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-500/10"
-                                                    >
-                                                        <Trash2 size={13} />
-                                                    </button>
-                                                )}
-                                            </div>
-                                        </div>
-                                        <div className="h-px bg-gray-100 dark:bg-white/[0.05]" />
-                                        <StageTaskList tasks={stageTasks} loading={tasksLoading} />
-                                    </motion.div>
-                                </SwiperSlide>
-                            );
-                        })}
-                    </AnimatePresence>
-                </Swiper>
+                                        <StageHeader
+                                            stage={stage}
+                                            index={index}
+                                            tasksCount={
+                                                getStageTasks(stage).length
+                                            }
+                                            isLast={
+                                                index ===
+                                                uniqueLocalStages.length - 1
+                                            }
+                                            onEdit={
+                                                onEditStage
+                                                    ? () =>
+                                                        setEditingStage(
+                                                            stage
+                                                        )
+                                                    : undefined
+                                            }
+                                            onDelete={
+                                                onDeleteStage
+                                                    ? () =>
+                                                        onDeleteStage(stage)
+                                                    : undefined
+                                            }
+                                        />
+                                    </SwiperSlide>
+                                )
+                            )}
+                        </Swiper>
+
+                        <Swiper
+                            modules={[FreeMode]}
+                            freeMode
+                            slidesPerView="auto"
+                            spaceBetween={26}
+                            className="!w-full !overflow-visible !px-1"
+                        >
+                            {uniqueLocalStages.map(
+                                ({ stage, key }, index) => (
+                                    <SwiperSlide
+                                        key={key}
+                                        className="!w-[290px] shrink-0 !overflow-visible"
+                                    >
+                                        {renderStageCard(stage, key, index, {
+                                            showHeader: false,
+                                            showConnector: false,
+                                        })}
+                                    </SwiperSlide>
+                                )
+                            )}
+                        </Swiper>
+                    </div>
+                </>
             )}
 
             <EditStageModal
@@ -228,35 +541,14 @@ export default function StagesPanel({
                 accent={department.accent}
                 onClose={() => setEditingStage(null)}
                 onSubmit={async (values) => {
-                    if (!editingStage) return;
-                    await handleReorder(editingStage, values);
+                    if (!editingStage) {
+                        return;
+                    }
+
+                    await handleEditStage(editingStage, values);
                     setEditingStage(null);
                 }}
             />
-        </div>
-    );
-}
-
-function StageTaskList({ tasks, loading }: { tasks: Task[]; loading: boolean }) {
-    if (loading) {
-        return (
-            <div className="flex h-40 items-center justify-center">
-                <Loader size={18} className="animate-spin text-indigo-500" />
-            </div>
-        );
-    }
-    if (tasks.length === 0) {
-        return (
-            <div className="flex h-40 items-center justify-center">
-                <p className="text-[11.5px] text-gray-400">وظیفه‌ای وجود ندارد</p>
-            </div>
-        );
-    }
-    return (
-        <div className="scrollbar-thin flex max-h-[420px] flex-col gap-2.5 overflow-y-auto p-3">
-            {tasks.map((task) => (
-                <TaskCard key={task.id} task={task} />
-            ))}
         </div>
     );
 }
