@@ -1,4 +1,3 @@
-// SidebarItem.tsx — fix anchorRef type: use MutableRefObject instead of RefObject
 
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronDown } from "lucide-react";

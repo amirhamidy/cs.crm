@@ -79,27 +79,3 @@ export interface Task {
     assigned_employee?: number | TaskEmployeeRef | null;
 }
 
-// export interface Stage {
-//     id: string | number;
-//     name: string;
-//     description?: string;
-//     order?: number;
-//     color?: string;
-// }
-
-// export interface Employee {
-//     id: string | number;
-//     name: string;
-//     role?: string;
-//     email?: string;
-//     avatar?: string;
-// }
-
-// export interface Department {
-//     id: string | number;
-//     name: string;
-//     accent?: string;
-//     createdAt?: string;
-//     stages: Stage[];
-//     employees: Employee[];
-// }

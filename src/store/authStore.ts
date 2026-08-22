@@ -1,4 +1,3 @@
-// store/authStore.ts
 import { create } from "zustand";
 
 interface AuthState {

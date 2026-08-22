@@ -60,14 +60,6 @@ export interface CaseListProps {
     deletingCaseId?: number | string | null
 }
 
-// export interface CaseCardProps {
-//     caseItem: CaseItem
-//     isSelected: boolean
-//     onSelect: (caseItem: CaseItem) => void
-//     onEdit: (caseItem: CaseItem) => void
-//     onDelete: (caseId: number) => void
-//     deleting?: boolean
-// }
 
 interface CaseCardProps {
     item: CaseItem;

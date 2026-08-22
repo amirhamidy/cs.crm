@@ -26,7 +26,6 @@ function extractList<T>(data: ListResponse<T> | undefined | null): T[] {
     return [];
 }
 
-// هر شکلی که فیلد case توی تسک داشته باشه رو استخراج می‌کنه
 function extractCaseId(task: TaskItem): string | null {
     const raw =
         (task as any).case ??
@@ -89,13 +88,11 @@ export default function UserCasesPage() {
 
             const taskList = extractList(tasksRes.data);
 
-            // --- لاگ موقت برای دیباگ، بعد از رفع مشکل حذفش کن ---
             console.log("DEBUG cases ids:", detailedCases.map((c) => c.id));
             console.log(
                 "DEBUG tasks case ids:",
                 taskList.map((t) => ({ taskId: t.id, extractedCaseId: extractCaseId(t), rawCase: (t as any).case }))
             );
-            // -----------------------------------------------------
 
             setCases(detailedCases);
             setCustomers(extractList(customersRes.data));
@@ -185,7 +182,6 @@ export default function UserCasesPage() {
         });
     }, [cases, customers, query]);
 
-    // مچینگ الان بر اساس String انجام میشه، نه Number
     const tasksByCase = useMemo(() => {
         const map = new Map<string, TaskItem[]>();
         tasks.forEach((task) => {

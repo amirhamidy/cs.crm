@@ -45,23 +45,18 @@ export default function StagesPanel({
 }: StagesPanelProps) {
     const [editingStage, setEditingStage] = useState<Stage | null>(null);
 
-    // این state منبع حقیقت UI ماست - مستقل از server
     const [localStages, setLocalStages] = useState<Stage[]>(() =>
         [...department.stages].sort((a, b) => a.order - b.order)
     );
 
-    // برای rollback اگه API خطا داد
     const rollbackRef = useRef<Stage[]>(localStages);
 
-    // فقط اگه API جدید چیز واقعاً متفاوتی برگردوند sync می‌کنیم
-    // (از جمله بعد از delete یا add)
     const prevServerStagesRef = useRef<Stage[]>(department.stages);
 
     useEffect(() => {
         const prevIds = prevServerStagesRef.current.map((s) => s.id).sort().join(",");
         const nextIds = department.stages.map((s) => s.id).sort().join(",");
 
-        // اگه list تغییر کرد (add/delete) - sync کن
         if (prevIds !== nextIds) {
             const sorted = [...department.stages].sort((a, b) => a.order - b.order);
             setLocalStages(sorted);
@@ -90,11 +85,9 @@ export default function StagesPanel({
                 (s) => s.id !== targetStage.id && s.order === newOrder
             );
 
-            // snapshot برای rollback
             const snapshot = [...localStages];
             rollbackRef.current = snapshot;
 
-            // **optimistic update - فوری**
             setLocalStages((prev) => {
                 const updated = prev.map((s) => {
                     if (s.id === targetStage.id) return { ...s, order: newOrder };
@@ -115,7 +108,6 @@ export default function StagesPanel({
                 }
                 await onEditStage(targetStage, values);
             } catch (err) {
-                // rollback اگه خطا داد
                 setLocalStages(snapshot);
                 rollbackRef.current = snapshot;
                 throw err;

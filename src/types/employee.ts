@@ -1,4 +1,3 @@
-// @/types/employee.ts
 
 export interface EmployeeUserDetail {
   id?: number;
