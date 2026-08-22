@@ -239,16 +239,6 @@ export default function UserCasesPage() {
                 </div>
             </div>
 
-            <div className="relative">
-                <Search size={14} className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
-                <input
-                    type="text"
-                    value={query}
-                    onChange={(e) => setQuery(e.target.value)}
-                    placeholder="جستجوی پرونده یا مشتری..."
-                    className="h-10 w-full rounded-xl border border-gray-100 bg-gray-50 pr-10 pl-4 text-[12.5px] font-semibold text-gray-900 outline-none transition-colors focus:border-blue-400 dark:border-white/[0.06] dark:bg-white/[0.03] dark:text-white"
-                />
-            </div>
 
             {error && !loading && (
                 <div className="flex flex-col items-start gap-3 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-[12.5px] text-rose-600 dark:border-rose-500/20 dark:bg-rose-500/10 dark:text-rose-300 sm:flex-row sm:items-center sm:justify-between">

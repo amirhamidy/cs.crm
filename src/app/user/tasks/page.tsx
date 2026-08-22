@@ -149,30 +149,6 @@ export default function UserTasksPage() {
                 </div>
             </div>
 
-            <div className="flex flex-wrap items-center gap-1.5">
-                {statusOptions.map((opt) => (
-                    <button
-                        key={opt.value}
-                        type="button"
-                        onClick={() => setStatusFilter(opt.value)}
-                        className={`rounded-xl px-3 py-1.5 text-[11.5px] font-bold transition-colors ${statusFilter === opt.value
-                            ? "bg-blue-600 text-white"
-                            : "bg-gray-100 text-gray-500 hover:bg-gray-200 dark:bg-white/[0.05] dark:text-gray-400 dark:hover:bg-white/[0.08]"
-                            }`}
-                    >
-                        {opt.label}
-                    </button>
-                ))}
-            </div>
-
-            <input
-                type="text"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="جستجوی وظیفه..."
-                className="h-10 w-full rounded-xl border border-gray-100 bg-gray-50 px-4 text-[12.5px] font-semibold text-gray-900 outline-none transition-colors focus:border-blue-400 dark:border-white/[0.06] dark:bg-white/[0.03] dark:text-white"
-            />
-
             {loading ? (
                 <div className="flex flex-col items-center justify-center gap-3 py-16">
                     <Loader size={22} className="animate-spin text-indigo-500" />

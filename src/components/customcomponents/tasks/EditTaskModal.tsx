@@ -6,7 +6,6 @@ import {
     Check,
     ChevronDown,
     ChevronLeft,
-    ChevronRight,
     ClipboardList,
     Loader,
     Search,
@@ -23,23 +22,28 @@ import { apiRoutes } from "@/lib/apiRoutes";
 import type { CaseItem } from "@/types/case";
 import type { Customer } from "@/types/customer";
 import type { Department } from "@/types/department";
-import type { Employee } from "@/types/employee";
-import type { TaskItem, TaskStatus } from "@/types/task";
-import { taskStatusLabels } from "@/components/customcomponents/shared/constants";
+import type { TaskItem } from "@/types/task";
 
-interface EditTaskModalProps {
-    task: TaskItem | null;
-    customers: Customer[];
-    departments: Department[];
-    employees: Employee[];
-    onClose: () => void;
-    onSuccess: () => void;
+interface DepartmentEmployee {
+    id: number;
+    employee: number;
+    employee_name: string;
+    department: number;
+    department_name: string;
 }
 
 interface Option {
     id: number;
     label: string;
     sub?: string;
+}
+
+interface EditTaskModalProps {
+    task: TaskItem | null;
+    customers: Customer[];
+    departments: Department[];
+    onClose: () => void;
+    onSuccess: () => void;
 }
 
 const GRADIENTS = [
@@ -58,6 +62,36 @@ function gradientOf(seed: number) {
 function initialOf(text: string) {
     const clean = (text || "").trim();
     return clean ? clean.charAt(0) : "؟";
+}
+
+function extractEmployeeName(data: any, id: number): string {
+    const detail = data?.user_detail;
+    const fullName =
+        data?.full_name ||
+        detail?.full_name ||
+        [data?.first_name, data?.last_name, detail?.first_name, detail?.last_name]
+            .filter(Boolean)
+            .join(" ");
+    return fullName || data?.username || detail?.username || `کارمند ${id}`;
+}
+
+function parseRawEmployeeIds(raw: unknown): number[] {
+    const ids: number[] = [];
+    if (Array.isArray(raw)) {
+        raw.forEach((emp) => {
+            const id =
+                typeof emp === "object" && emp !== null
+                    ? Number((emp as any).id)
+                    : Number(emp);
+            if (!isNaN(id) && id > 0) ids.push(id);
+        });
+    } else if (typeof raw === "number" && raw > 0) {
+        ids.push(raw);
+    } else if (typeof raw === "string") {
+        const n = Number(raw);
+        if (!isNaN(n) && n > 0) ids.push(n);
+    }
+    return ids;
 }
 
 function FloatingInput({
@@ -86,44 +120,11 @@ function FloatingInput({
                 placeholder=" "
                 value={value}
                 onChange={(e) => onChange(e.target.value)}
-                className={`peer w-full h-[52px] rounded-2xl bg-gray-50 dark:bg-white/[0.03] border border-gray-100 dark:border-white/[0.06] px-4 pt-4 text-[12.5px] font-bold text-gray-900 dark:text-white outline-none transition-colors focus:border-blue-500 dark:focus:border-blue-500/50 ${className}`}
+                className={`peer h-[52px] w-full rounded-2xl border border-gray-100 bg-gray-50 px-4 pt-4 text-[12.5px] font-bold text-gray-900 outline-none transition-colors focus:border-blue-500 dark:border-white/[0.06] dark:bg-white/[0.03] dark:text-white dark:focus:border-blue-500/50 ${className}`}
             />
             <label
                 htmlFor={id}
                 className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[12px] font-semibold text-gray-400 transition-all duration-200 peer-focus:top-[15px] peer-focus:text-[10px] peer-focus:text-blue-500 peer-[:not(:placeholder-shown)]:top-[15px] peer-[:not(:placeholder-shown)]:text-[10px]"
-            >
-                {label}
-            </label>
-        </div>
-    );
-}
-
-function FloatingTextarea({
-    label,
-    id,
-    value,
-    onChange,
-    rows = 3,
-}: {
-    label: string;
-    id: string;
-    value: string;
-    onChange: (v: string) => void;
-    rows?: number;
-}) {
-    return (
-        <div className="relative">
-            <textarea
-                id={id}
-                rows={rows}
-                placeholder=" "
-                value={value}
-                onChange={(e) => onChange(e.target.value)}
-                className="peer w-full resize-none rounded-2xl bg-gray-50 dark:bg-white/[0.03] border border-gray-100 dark:border-white/[0.06] px-4 pt-6 pb-3 text-[12.5px] font-bold leading-6 text-gray-900 dark:text-white outline-none transition-colors focus:border-blue-500 dark:focus:border-blue-500/50"
-            />
-            <label
-                htmlFor={id}
-                className="pointer-events-none absolute right-4 top-4 text-[12px] font-semibold text-gray-400 transition-all duration-200 peer-focus:top-2 peer-focus:text-[10px] peer-focus:text-blue-500 peer-[:not(:placeholder-shown)]:top-2 peer-[:not(:placeholder-shown)]:text-[10px]"
             >
                 {label}
             </label>
@@ -154,12 +155,27 @@ function NiceSelect({
     const [query, setQuery] = useState("");
     const ref = useRef<HTMLDivElement>(null);
 
-    const selectedValues = Array.isArray(value) ? value : value !== null ? [value] : [];
-    const selectedOptions = options.filter((o) => selectedValues.includes(o.id));
+    const selectedSet = useMemo(() => {
+        const arr = Array.isArray(value)
+            ? value
+            : value !== null && value !== undefined
+                ? [value]
+                : [];
+        return new Set(arr.map(Number));
+    }, [value]);
+
+    const selectedValues = useMemo(() => Array.from(selectedSet), [selectedSet]);
+
+    const selectedOptions = useMemo(
+        () => options.filter((o) => selectedSet.has(o.id)),
+        [options, selectedSet]
+    );
 
     useEffect(() => {
         function handler(e: MouseEvent) {
-            if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+            if (ref.current && !ref.current.contains(e.target as Node)) {
+                setOpen(false);
+            }
         }
         document.addEventListener("mousedown", handler);
         return () => document.removeEventListener("mousedown", handler);
@@ -185,9 +201,8 @@ function NiceSelect({
             setOpen(false);
             return;
         }
-
-        const current = Array.isArray(value) ? value : [];
-        if (current.includes(id)) {
+        const current = Array.isArray(value) ? [...value] : [];
+        if (selectedSet.has(id)) {
             onChange(current.filter((v) => v !== id));
         } else {
             onChange([...current, id]);
@@ -202,18 +217,26 @@ function NiceSelect({
 
     return (
         <div ref={ref} className="relative">
-            <label className="mb-2 block text-[11.5px] font-bold text-gray-400">{label}</label>
+            <label className="mb-2 block text-[11.5px] font-bold text-gray-400">
+                {label}
+            </label>
 
             <button
                 type="button"
                 disabled={disabled}
-                onClick={() => setOpen((v) => !v)}
+                onClick={() => {
+                    if (disabled) return;
+                    setOpen((v) => !v);
+                }}
                 className={`flex h-[52px] w-full items-center gap-2.5 rounded-2xl border px-3 text-right transition-all duration-200 ${open
-                    ? "border-blue-500 bg-blue-50/50 dark:border-blue-500/50 dark:bg-blue-500/[0.06]"
-                    : "border-gray-100 bg-gray-50 hover:border-gray-200 dark:border-white/[0.06] dark:bg-white/[0.03] dark:hover:border-white/[0.12]"
-                    } ${disabled ? "cursor-not-allowed opacity-40" : "cursor-pointer"}`}
+                        ? "border-blue-500 bg-blue-50/50 dark:border-blue-500/50 dark:bg-blue-500/[0.06]"
+                        : "border-gray-100 bg-gray-50 hover:border-gray-200 dark:border-white/[0.06] dark:bg-white/[0.03] dark:hover:border-white/[0.12]"
+                    } ${disabled
+                        ? "pointer-events-none cursor-not-allowed opacity-40"
+                        : "cursor-pointer"
+                    }`}
             >
-                {selectedOptions.length > 0 && !multiple ? (
+                {selectedOptions.length > 0 && selectedOptions[0] ? (
                     <span
                         className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br text-[12px] font-extrabold text-white ${gradientOf(
                             selectedOptions[0].id
@@ -223,17 +246,24 @@ function NiceSelect({
                     </span>
                 ) : (
                     <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gray-100 dark:bg-white/[0.06]">
-                        {multiple ? <UserPlus size={13} className="text-gray-400" /> : <ChevronDown size={13} className="text-gray-400" />}
+                        {multiple ? (
+                            <UserPlus size={13} className="text-gray-400" />
+                        ) : (
+                            <ChevronDown size={13} className="text-gray-400" />
+                        )}
                     </span>
                 )}
 
                 <span className="min-w-0 flex-1">
                     <span
-                        className={`block truncate text-[12.5px] font-bold ${selectedOptions.length > 0 ? "text-gray-900 dark:text-white" : "text-gray-400"
+                        className={`block truncate text-[12.5px] font-bold ${selectedOptions.length > 0
+                                ? "text-gray-900 dark:text-white"
+                                : "text-gray-400"
                             }`}
                     >
                         {displayText}
                     </span>
+
                     {multiple && selectedOptions.length > 0 && (
                         <span className="mt-0.5 block truncate text-[10.5px] text-gray-400">
                             {selectedOptions.map((o) => o.label).join("، ")}
@@ -241,13 +271,18 @@ function NiceSelect({
                     )}
                 </span>
 
-                <motion.span animate={{ rotate: open ? 180 : 0 }} transition={{ duration: 0.2 }}>
-                    <ChevronDown size={14} className="shrink-0 text-gray-400" />
-                </motion.span>
+                {!disabled && (
+                    <motion.span
+                        animate={{ rotate: open ? 180 : 0 }}
+                        transition={{ duration: 0.2 }}
+                    >
+                        <ChevronDown size={14} className="shrink-0 text-gray-400" />
+                    </motion.span>
+                )}
             </button>
 
             <AnimatePresence>
-                {open && (
+                {open && !disabled && (
                     <motion.div
                         initial={{ opacity: 0, y: -6, scale: 0.97 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -272,10 +307,12 @@ function NiceSelect({
 
                         <div className="max-h-56 overflow-y-auto p-1.5">
                             {visible.length === 0 ? (
-                                <p className="py-6 text-center text-[12px] text-gray-400">{emptyText}</p>
+                                <p className="py-6 text-center text-[12px] text-gray-400">
+                                    {emptyText}
+                                </p>
                             ) : (
                                 visible.map((o, i) => {
-                                    const active = selectedValues.includes(o.id);
+                                    const active = selectedSet.has(o.id);
                                     return (
                                         <motion.button
                                             key={o.id}
@@ -285,8 +322,8 @@ function NiceSelect({
                                             transition={{ delay: i * 0.02 }}
                                             onClick={() => handleSelect(o.id)}
                                             className={`flex w-full items-center gap-2.5 rounded-2xl px-2.5 py-2 text-right transition-colors ${active
-                                                ? "bg-blue-50 dark:bg-blue-500/10"
-                                                : "hover:bg-gray-50 dark:hover:bg-white/[0.04]"
+                                                    ? "bg-blue-50 dark:bg-blue-500/10"
+                                                    : "hover:bg-gray-50 dark:hover:bg-white/[0.04]"
                                                 }`}
                                         >
                                             <span
@@ -296,24 +333,31 @@ function NiceSelect({
                                             >
                                                 {initialOf(o.label)}
                                             </span>
+
                                             <span className="min-w-0 flex-1">
                                                 <span
                                                     className={`block truncate text-[12.5px] font-bold ${active
-                                                        ? "text-blue-600 dark:text-blue-400"
-                                                        : "text-gray-900 dark:text-white"
+                                                            ? "text-blue-600 dark:text-blue-400"
+                                                            : "text-gray-900 dark:text-white"
                                                         }`}
                                                 >
                                                     {o.label}
                                                 </span>
+
                                                 {o.sub && (
                                                     <span className="mt-0.5 block truncate text-[10.5px] text-gray-400">
                                                         {o.sub}
                                                     </span>
                                                 )}
                                             </span>
+
                                             {active && (
                                                 <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-600">
-                                                    <Check size={11} className="text-white" strokeWidth={3} />
+                                                    <Check
+                                                        size={11}
+                                                        className="text-white"
+                                                        strokeWidth={3}
+                                                    />
                                                 </span>
                                             )}
                                         </motion.button>
@@ -326,31 +370,6 @@ function NiceSelect({
             </AnimatePresence>
         </div>
     );
-}
-
-const statusTone: Record<string, string> = {
-    pending: "bg-amber-500",
-    in_progress: "bg-blue-500",
-    done: "bg-emerald-500",
-    completed: "bg-emerald-500",
-    canceled: "bg-rose-500",
-    cancelled: "bg-rose-500",
-    rejected: "bg-rose-500",
-};
-
-function getEmployeeName(employee: Employee) {
-    const detail = employee.user_detail;
-    const fullName =
-        employee.full_name ||
-        detail?.full_name ||
-        [employee.first_name, employee.last_name, detail?.first_name, detail?.last_name]
-            .filter(Boolean)
-            .join(" ");
-    return fullName || `کارمند ${employee.id}`;
-}
-
-function getEmployeeId(employee: Employee) {
-    return employee.id;
 }
 
 function getFileSize(size: number) {
@@ -366,7 +385,6 @@ export default function EditTaskModal({
     task,
     customers,
     departments,
-    employees,
     onClose,
     onSuccess,
 }: EditTaskModalProps) {
@@ -374,69 +392,217 @@ export default function EditTaskModal({
     const [selectedCase, setSelectedCase] = useState<number | null>(null);
     const [selectedDepartment, setSelectedDepartment] = useState<number | null>(null);
     const [selectedEmployees, setSelectedEmployees] = useState<number[]>([]);
-    const [status, setStatus] = useState<TaskStatus>("in_progress");
     const [files, setFiles] = useState<File[]>([]);
     const [cases, setCases] = useState<CaseItem[]>([]);
-    const [casesLoading, setCasesLoading] = useState(false);
+    const [allDeptEmployees, setAllDeptEmployees] = useState<DepartmentEmployee[]>([]);
+    const [deptEmployeesLoaded, setDeptEmployeesLoaded] = useState(false);
+    const [resolvedNames, setResolvedNames] = useState<Record<number, string>>({});
     const [submitting, setSubmitting] = useState(false);
     const [submitError, setSubmitError] = useState("");
     const [success, setSuccess] = useState(false);
-    const [existingFiles, setExistingFiles] = useState<Array<{ id?: number; file: string; name?: string }>>([]);
-    const [isInitializing, setIsInitializing] = useState(false);
-    const [selectedEmployeesData, setSelectedEmployeesData] = useState<Employee[]>([]);
+    const [existingFiles, setExistingFiles] = useState<
+        Array<{ id?: number; file: string; name?: string }>
+    >([]);
 
-    const filteredEmployees = useMemo(
-        () =>
-            selectedDepartment
-                ? employees.filter((e) => {
-                    const dept = e.department;
-                    if (dept && typeof dept === "object") {
-                        return Number(dept.id) === selectedDepartment;
-                    }
-                    return Number(dept) === selectedDepartment;
+    const initialEmployeeIds = useRef<number[]>([]);
+
+    useEffect(() => {
+        if (!task) return;
+
+        setTitle(task.title ?? "");
+        setFiles([]);
+        setSubmitError("");
+        setSuccess(false);
+        setDeptEmployeesLoaded(false);
+        setResolvedNames({});
+        setAllDeptEmployees([]);
+
+        const caseId =
+            task.case && typeof task.case === "object"
+                ? (task.case as any).id
+                : task.case
+                    ? Number(task.case)
+                    : null;
+        setSelectedCase(caseId);
+
+        const deptId =
+            task.department && typeof task.department === "object"
+                ? (task.department as any).id
+                : task.department
+                    ? Number(task.department)
+                    : null;
+        setSelectedDepartment(deptId);
+
+        const employeeIds = parseRawEmployeeIds(task.assigned_employee);
+        initialEmployeeIds.current = employeeIds;
+        setSelectedEmployees(employeeIds);
+        console.log(
+            "[EditTaskModal] task.assigned_employee raw:",
+            task.assigned_employee,
+            "| parsed employeeIds:",
+            employeeIds
+        );
+
+        const taskFiles = task.files || [];
+        if (Array.isArray(taskFiles)) {
+            const mappedFiles = (taskFiles as any[])
+                .map((f) => {
+                    if (typeof f === "string") return { file: f };
+                    return {
+                        id: f?.id,
+                        file: f?.file || f?.url || f?.attachment,
+                        name: f?.name,
+                    };
                 })
-                : employees,
-        [employees, selectedDepartment]
-    );
+                .filter((f) => f.file);
+            setExistingFiles(mappedFiles);
+        } else {
+            setExistingFiles([]);
+        }
 
-    const allEmployees = useMemo(() => {
-        const merged = [...filteredEmployees];
-        selectedEmployeesData.forEach((emp) => {
-            if (!merged.some((e) => getEmployeeId(e) === getEmployeeId(emp))) {
-                merged.push(emp);
+        axiosInstance
+            .get(apiRoutes.cases)
+            .then((res) => setCases(getListData<CaseItem>(res.data)))
+            .catch(() => { });
+
+        axiosInstance
+            .get("/department/api/v1/department_employee/list/")
+            .then((res) => {
+                const list = getListData<DepartmentEmployee>(res.data);
+                console.log(
+                    "[EditTaskModal] dept employee list loaded, count:",
+                    list.length
+                );
+
+                const pending = initialEmployeeIds.current;
+                console.log(
+                    "[EditTaskModal] checking pending selectedEmployees:",
+                    pending
+                );
+
+                const listEmployeeIds = list.map((e) => e.employee);
+                console.log(
+                    "[EditTaskModal] employee ids in dept list:",
+                    listEmployeeIds
+                );
+
+                const missingIds = pending.filter(
+                    (id) => !list.some((e) => e.employee === id)
+                );
+                console.log(
+                    "[EditTaskModal] missingIds (not in dept list):",
+                    missingIds
+                );
+
+                setAllDeptEmployees(list);
+                setDeptEmployeesLoaded(true);
+
+                if (missingIds.length === 0) return;
+
+                Promise.allSettled(
+                    missingIds.map((id) =>
+                        axiosInstance.get(`/accounts/api/v1/employee/${id}/`)
+                    )
+                ).then((results) => {
+                    setResolvedNames((prev) => {
+                        const next = { ...prev };
+                        results.forEach((r, idx) => {
+                            if (r.status === "fulfilled") {
+                                const name = extractEmployeeName(
+                                    r.value.data,
+                                    missingIds[idx]
+                                );
+                                console.log(
+                                    `[EditTaskModal] resolved missing employee id=${missingIds[idx]} name="${name}"`
+                                );
+                                next[missingIds[idx]] = name;
+                            } else {
+                                console.warn(
+                                    `[EditTaskModal] failed to resolve employee id=${missingIds[idx]}`
+                                );
+                            }
+                        });
+                        return next;
+                    });
+                });
+            })
+            .catch(() => {
+                setAllDeptEmployees([]);
+                setDeptEmployeesLoaded(true);
+            });
+    }, [task]);
+
+    const filteredEmpOptions = useMemo((): Option[] => {
+        if (!deptEmployeesLoaded) return [];
+
+        const deptFiltered = selectedDepartment
+            ? allDeptEmployees.filter((e) => e.department === selectedDepartment)
+            : allDeptEmployees;
+
+        const inDeptIds = new Set(deptFiltered.map((e) => e.employee));
+
+        const extraSelected = selectedEmployees
+            .filter((id) => !inDeptIds.has(id))
+            .map((id) => {
+                const foundInAll = allDeptEmployees.find((e) => e.employee === id);
+                if (foundInAll) {
+                    return {
+                        id: foundInAll.employee,
+                        label: foundInAll.employee_name,
+                        sub: foundInAll.department_name || undefined,
+                    } as Option;
+                }
+                return {
+                    id,
+                    label: resolvedNames[id] || `کارمند ${id}`,
+                    sub: undefined,
+                } as Option;
+            });
+
+        const deptOptions: Option[] = deptFiltered.map((e) => ({
+            id: e.employee,
+            label: e.employee_name,
+            sub: e.department_name || undefined,
+        }));
+
+        const seen = new Set<number>();
+        const merged: Option[] = [];
+
+        for (const o of [...deptOptions, ...extraSelected]) {
+            if (!seen.has(o.id)) {
+                seen.add(o.id);
+                merged.push(o);
             }
-        });
-        return merged;
-    }, [filteredEmployees, selectedEmployeesData]);
+        }
 
-    const filteredEmpOptions = useMemo(
-        () =>
-            allEmployees
-                .filter((employee) => {
-                    return !!(
-                        employee.first_name ||
-                        employee.last_name ||
-                        employee.user_detail?.first_name ||
-                        employee.user_detail?.last_name ||
-                        employee.full_name
-                    );
-                })
-                .map((employee) => ({
-                    id: Number(getEmployeeId(employee)),
-                    label: getEmployeeName(employee),
-                    sub: employee.position || employee.user_detail?.username || undefined,
-                })),
-        [allEmployees]
-    );
+        console.log(
+            "[EditTaskModal] filteredEmpOptions count:",
+            merged.length,
+            "| selectedEmployees:",
+            selectedEmployees,
+            "| ids in options:",
+            merged.map((o) => o.id)
+        );
+
+        return merged;
+    }, [
+        allDeptEmployees,
+        deptEmployeesLoaded,
+        selectedDepartment,
+        selectedEmployees,
+        resolvedNames,
+    ]);
 
     const caseOptions = useMemo(
         () =>
             cases.map((item) => {
                 const customerId =
                     item.customer && typeof item.customer === "object"
-                        ? item.customer.id
+                        ? (item.customer as any).id
                         : item.customer;
-                const customer = customers.find((c) => Number(c.id) === Number(customerId));
+                const customer = customers.find(
+                    (c) => Number(c.id) === Number(customerId)
+                );
                 return {
                     id: Number(item.id),
                     label: item.title,
@@ -448,116 +614,12 @@ export default function EditTaskModal({
 
     const deptOptions = useMemo(
         () =>
-            departments.map((department) => ({
-                id: Number(department.id),
-                label: department.name,
+            departments.map((d) => ({
+                id: Number(d.id),
+                label: d.name,
             })),
         [departments]
     );
-
-    const statusOptions = useMemo(
-        () =>
-            (Object.keys(taskStatusLabels) as TaskStatus[]).map((statusKey) => ({
-                id: statusKey.charCodeAt(0),
-                label: taskStatusLabels[statusKey],
-                sub: statusKey,
-            })),
-        []
-    );
-
-    useEffect(() => {
-        if (!task) return;
-
-        setIsInitializing(true);
-
-        setTitle(task.title ?? "");
-
-        const caseId =
-            task.case && typeof task.case === "object"
-                ? task.case.id
-                : task.case
-                    ? Number(task.case)
-                    : null;
-        setSelectedCase(caseId);
-
-        const deptId =
-            task.department && typeof task.department === "object"
-                ? task.department.id
-                : task.department
-                    ? Number(task.department)
-                    : null;
-        setSelectedDepartment(deptId);
-
-        setStatus((task.status as TaskStatus) ?? "pending");
-
-        const rawEmployee = task.assigned_employee;
-        const employeeIds: number[] = [];
-
-        if (Array.isArray(rawEmployee)) {
-            rawEmployee.forEach((emp) => {
-                const id =
-                    typeof emp === "object" && emp !== null ? Number(emp.id) : Number(emp);
-                if (!isNaN(id) && id > 0) employeeIds.push(id);
-            });
-        } else if (typeof rawEmployee === "number") {
-            employeeIds.push(rawEmployee);
-        }
-
-        async function fetchSelectedEmployees() {
-            const fetched: Employee[] = [];
-            for (const id of employeeIds) {
-                try {
-                    const res = await axiosInstance.get(`/accounts/api/v1/employee/${id}/`);
-                    if (res.data) fetched.push(res.data);
-                } catch {
-                }
-            }
-            setSelectedEmployeesData(fetched);
-            setSelectedEmployees(fetched.map((emp) => Number(getEmployeeId(emp))));
-        }
-
-        fetchSelectedEmployees();
-
-        setFiles([]);
-        setSubmitError("");
-        setSuccess(false);
-
-        const taskFiles = task.files || [];
-        if (Array.isArray(taskFiles)) {
-            const mappedFiles = taskFiles
-                .map((f: any) => {
-                    if (typeof f === "string") return { file: f };
-                    return { id: f?.id, file: f?.file || f?.url || f?.attachment, name: f?.name };
-                })
-                .filter((f) => f.file);
-            setExistingFiles(mappedFiles);
-        } else {
-            setExistingFiles([]);
-        }
-
-        setCasesLoading(true);
-        axiosInstance
-            .get(apiRoutes.cases)
-            .then((res) => setCases(getListData<CaseItem>(res.data)))
-            .catch(() => { })
-            .finally(() => {
-                setCasesLoading(false);
-                setIsInitializing(false);
-            });
-    }, [task]);
-
-    useEffect(() => {
-        if (isInitializing) return;
-        if (selectedDepartment !== null) {
-            setSelectedEmployees((prev) =>
-                prev.filter((id) =>
-                    allEmployees.some((e) => Number(getEmployeeId(e)) === id)
-                )
-            );
-        } else {
-            setSelectedEmployees([]);
-        }
-    }, [selectedDepartment, allEmployees, isInitializing]);
 
     const canSubmit =
         title.trim().length > 0 &&
@@ -586,16 +648,16 @@ export default function EditTaskModal({
 
     async function handleSubmit() {
         if (!canSubmit) return;
+
         setSubmitError("");
         setSubmitting(true);
 
         try {
-            const payload: any = {
+            const payload = {
                 title: title.trim(),
                 case: selectedCase,
                 department: selectedDepartment,
                 assigned_employee: selectedEmployees,
-                status: status,
             };
 
             await axiosInstance.patch(apiRoutes.updateTask(task!.id), payload);
@@ -628,7 +690,8 @@ export default function EditTaskModal({
     }
 
     const selectedCaseObj = cases.find((c) => Number(c.id) === selectedCase) ?? null;
-    const selectedDeptObj = departments.find((d) => Number(d.id) === selectedDepartment) ?? null;
+    const selectedDeptObj =
+        departments.find((d) => Number(d.id) === selectedDepartment) ?? null;
 
     if (!task) return null;
 
@@ -652,17 +715,20 @@ export default function EditTaskModal({
                     className="flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-sm dark:border-white/[0.06] dark:bg-[#0f172a]"
                 >
                     <div className="flex shrink-0 items-center justify-between px-8 pb-6 pt-8">
-                        <div className="flex items-center gap-2.5">
-                            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-50 dark:bg-blue-500/10">
+                        <div className="flex items-center gap-3">
+                            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50 dark:bg-blue-500/10">
                                 <ClipboardList size={15} className="text-blue-500" />
                             </div>
                             <div>
                                 <h3 className="text-[14px] font-extrabold text-gray-900 dark:text-white">
                                     ویرایش وظیفه
                                 </h3>
-                                <p className="mt-0.5 text-[11px] text-gray-400">{task.title}</p>
+                                <p className="mt-0.5 text-[11px] text-gray-400">
+                                    {task.title}
+                                </p>
                             </div>
                         </div>
+
                         <button
                             type="button"
                             onClick={handleClose}
@@ -683,7 +749,10 @@ export default function EditTaskModal({
                             )}
                             {selectedDeptObj && (
                                 <>
-                                    <ChevronLeft size={11} className="text-gray-300 dark:text-white/20" />
+                                    <ChevronLeft
+                                        size={11}
+                                        className="text-gray-300 dark:text-white/20"
+                                    />
                                     <span className="flex items-center gap-1.5 rounded-xl bg-gray-100 px-2.5 py-1 text-[11px] font-bold text-gray-500 dark:bg-white/[0.06] dark:text-gray-400">
                                         <Users size={11} />
                                         {selectedDeptObj.name}
@@ -692,7 +761,10 @@ export default function EditTaskModal({
                             )}
                             {selectedEmployees.length > 0 && (
                                 <>
-                                    <ChevronLeft size={11} className="text-gray-300 dark:text-white/20" />
+                                    <ChevronLeft
+                                        size={11}
+                                        className="text-gray-300 dark:text-white/20"
+                                    />
                                     <span className="flex items-center gap-1.5 rounded-xl bg-gray-100 px-2.5 py-1 text-[11px] font-bold text-gray-500 dark:bg-white/[0.06] dark:text-gray-400">
                                         <UserPlus size={11} />
                                         {selectedEmployees.length} کارمند
@@ -712,7 +784,10 @@ export default function EditTaskModal({
                                         exit={{ opacity: 0, y: 4 }}
                                         className="flex items-start gap-2.5 rounded-2xl bg-red-50 px-3.5 py-3 dark:bg-red-500/10"
                                     >
-                                        <AlertCircle size={14} className="mt-0.5 shrink-0 text-red-500" />
+                                        <AlertCircle
+                                            size={14}
+                                            className="mt-0.5 shrink-0 text-red-500"
+                                        />
                                         <p className="flex-1 text-[11.5px] font-semibold leading-5 text-red-500 dark:text-red-400">
                                             {submitError}
                                         </p>
@@ -755,11 +830,8 @@ export default function EditTaskModal({
                                 emptyText="پرونده‌ای یافت نشد"
                                 options={caseOptions}
                                 value={selectedCase}
-                                onChange={(id) => {
-                                    setSelectedCase(id as number);
-                                    setSubmitError("");
-                                }}
-                                disabled={casesLoading}
+                                onChange={() => { }}
+                                disabled={true}
                             />
 
                             <NiceSelect
@@ -768,10 +840,8 @@ export default function EditTaskModal({
                                 emptyText="دپارتمانی یافت نشد"
                                 options={deptOptions}
                                 value={selectedDepartment}
-                                onChange={(id) => {
-                                    setSelectedDepartment(id as number);
-                                    setSubmitError("");
-                                }}
+                                onChange={() => { }}
+                                disabled={true}
                             />
 
                             <NiceSelect
@@ -782,32 +852,13 @@ export default function EditTaskModal({
                                         : "ابتدا دپارتمان را انتخاب کنید"
                                 }
                                 emptyText="کارمندی در این دپارتمان نیست"
-                                disabled={!selectedDepartment}
+                                disabled={!selectedDepartment || !deptEmployeesLoaded}
                                 multiple={true}
                                 options={filteredEmpOptions}
                                 value={selectedEmployees}
                                 onChange={(ids) => {
                                     setSelectedEmployees(ids as number[]);
                                     setSubmitError("");
-                                }}
-                            />
-
-                            <NiceSelect
-                                label="وضعیت"
-                                placeholder="انتخاب وضعیت"
-                                emptyText="وضعیتی یافت نشد"
-                                options={statusOptions.map((s) => ({
-                                    id: s.id,
-                                    label: s.label,
-                                    sub: s.sub,
-                                }))}
-                                value={statusOptions.find((s) => s.sub === status)?.id || null}
-                                onChange={(id) => {
-                                    const found = statusOptions.find((s) => s.id === id);
-                                    if (found) {
-                                        setStatus(found.sub as TaskStatus);
-                                        setSubmitError("");
-                                    }
                                 }}
                             />
 
@@ -822,7 +873,10 @@ export default function EditTaskModal({
                                                 key={index}
                                                 className="flex items-center gap-2 rounded-xl bg-gray-50 px-3 py-2 dark:bg-white/[0.03]"
                                             >
-                                                <Paperclip size={12} className="shrink-0 text-gray-400" />
+                                                <Paperclip
+                                                    size={12}
+                                                    className="shrink-0 text-gray-400"
+                                                />
                                                 <span className="min-w-0 flex-1 truncate text-[11.5px] font-semibold text-gray-600 dark:text-gray-300">
                                                     {file.name || `فایل ${index + 1}`}
                                                 </span>
@@ -883,21 +937,24 @@ export default function EditTaskModal({
                                                     transition={{ delay: i * 0.03 }}
                                                     className="flex items-center gap-2 rounded-xl bg-gray-50 px-3 py-2 dark:bg-white/[0.03]"
                                                 >
-                                                    <Paperclip size={12} className="shrink-0 text-gray-400" />
+                                                    <Paperclip
+                                                        size={12}
+                                                        className="shrink-0 text-gray-400"
+                                                    />
                                                     <span className="min-w-0 flex-1 truncate text-[11.5px] font-semibold text-gray-600 dark:text-gray-300">
                                                         {f.name}
                                                     </span>
-                                                    <span className="shrink-0 text-[10.5px] text-gray-400">
+                                                    <span className="shrink-0 text-[10.5px] font-bold text-gray-400">
                                                         {getFileSize(f.size)}
                                                     </span>
                                                     <button
                                                         type="button"
                                                         onClick={() =>
                                                             setFiles((prev) =>
-                                                                prev.filter((_, j) => j !== i)
+                                                                prev.filter((_, idx) => idx !== i)
                                                             )
                                                         }
-                                                        className="shrink-0 text-gray-400 transition-colors hover:text-red-500"
+                                                        className="shrink-0 rounded-lg p-1 text-red-400 hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-500/10"
                                                     >
                                                         <X size={12} />
                                                     </button>
@@ -910,38 +967,28 @@ export default function EditTaskModal({
                         </div>
                     </div>
 
-                    <div className="flex shrink-0 items-center gap-2 px-8 pb-8 pt-5">
+                    <div className="flex shrink-0 items-center justify-between border-t border-gray-100 px-8 py-6 dark:border-white/[0.06]">
                         <button
                             type="button"
                             onClick={handleClose}
                             disabled={submitting || success}
-                            className="flex h-11 items-center justify-center gap-1.5 rounded-full px-4 text-[12.5px] font-bold text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 disabled:pointer-events-none disabled:opacity-40 dark:hover:bg-white/[0.05] dark:hover:text-gray-300"
+                            className="h-[48px] rounded-2xl px-6 text-[12.5px] font-bold text-gray-400 transition-colors hover:bg-gray-50 hover:text-gray-500 disabled:opacity-40 dark:hover:bg-white/[0.03]"
                         >
-                            <ChevronRight size={14} />
                             انصراف
                         </button>
 
-                        <motion.button
+                        <button
                             type="button"
-                            whileTap={{ scale: 0.97 }}
                             onClick={handleSubmit}
-                            disabled={!canSubmit || success}
-                            className="flex h-11 flex-1 items-center justify-center gap-2 rounded-full bg-blue-600 text-[13px] font-bold text-white transition-colors hover:bg-blue-500 disabled:opacity-40"
+                            disabled={!canSubmit}
+                            className="flex h-[48px] min-w-[140px] items-center justify-center gap-2 rounded-2xl bg-blue-600 px-6 text-[12.5px] font-bold text-white transition-all hover:bg-blue-700 disabled:opacity-40"
                         >
                             {submitting ? (
-                                <Loader size={15} className="animate-spin" />
-                            ) : success ? (
-                                <>
-                                    <Check size={14} strokeWidth={3} />
-                                    ذخیره شد
-                                </>
+                                <Loader className="animate-spin" size={15} />
                             ) : (
-                                <>
-                                    <Check size={14} strokeWidth={3} />
-                                    ذخیره تغییرات
-                                </>
+                                "ذخیره تغییرات"
                             )}
-                        </motion.button>
+                        </button>
                     </div>
                 </motion.div>
             </motion.div>

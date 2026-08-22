@@ -53,23 +53,7 @@ export default function AdminCasesPage() {
                 axiosInstance.get<ListResponse<Employee>>(apiRoutes.departmentEmployees),
                 axiosInstance.get<ListResponse<TaskItem>>(apiRoutes.tasks),
             ]);
-
-            const caseList = extractList(casesRes.data);
-            const detailedCases = await Promise.all(
-                caseList.map(async (item) => {
-                    try {
-                        const detailRes = await axiosInstance.get<Case>(
-                            `/tasks/api/v1/cases/${item.id}/`
-                        );
-                        return { ...item, ...detailRes.data };
-                    } catch (err) {
-                        console.error(`خطا در دریافت جزئیات پرونده ${item.id}`, err);
-                        return item;
-                    }
-                })
-            );
-
-            setCases(detailedCases);
+            setCases(extractList(casesRes.data));
             setCustomers(extractList(customersRes.data));
             setDepartments(extractList(departmentsRes.data));
             setEmployees(extractList(employeesRes.data));
@@ -210,7 +194,6 @@ export default function AdminCasesPage() {
                 </div>
             </div>
 
-
             {error && !loading && (
                 <div className="flex flex-col items-start gap-3 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-[12.5px] text-rose-600 dark:border-rose-500/20 dark:bg-rose-500/10 dark:text-rose-300 sm:flex-row sm:items-center sm:justify-between">
                     <span>{error}</span>
@@ -269,7 +252,7 @@ export default function AdminCasesPage() {
                         {filteredCases.map((item, i) => {
                             const caseTasks = tasksByCase.get(Number(item.id)) || [];
                             return (
-                                <div key={item.id} className="flex flex-col gap-2 border-2 border-[#eeeeee] p-3 rounded-4xl dark:border-white/[0.06]">
+                                <div key={item.id} className="flex flex-col gap-2 border-2 border-[#eeeeee] p-3 rounded-4xl">
                                     <CaseCard
                                         item={item as unknown as CaseItem}
                                         index={i}

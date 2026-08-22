@@ -193,6 +193,7 @@ interface TaskCardProps {
     onDelete: (taskId: number) => Promise<boolean> | void | Promise<void>;
     employees?: Employee[];
     onReorder?: (dragIndex: number, hoverIndex: number) => void;
+    canManageDeadline?: boolean;
 }
 
 export default function TaskCard({
@@ -201,6 +202,7 @@ export default function TaskCard({
     onEdit,
     onDelete,
     onUpdated,
+    canManageDeadline = true,
 }: TaskCardProps) {
     const { resolvedTheme } = useTheme();
     const isDark = resolvedTheme === "dark";

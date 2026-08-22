@@ -161,38 +161,6 @@ export default function AdminTasksPage() {
                 </div>
             </div>
 
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                <div className="relative flex-1">
-                    <Search
-                        size={13}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500"
-                    />
-                    <input
-                        type="text"
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                        placeholder="جستجو در وظایف..."
-                        className="h-9 w-full rounded-xl border border-gray-200 bg-white pr-8 pl-3 text-[12.5px] text-gray-800 placeholder:text-gray-400 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100 dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder:text-gray-600 dark:focus:border-blue-500 dark:focus:ring-blue-500/10"
-                    />
-                </div>
-
-                <div className="flex gap-1.5 flex-wrap">
-                    {statusOptions.map((opt) => (
-                        <button
-                            key={opt.value}
-                            type="button"
-                            onClick={() => setStatusFilter(opt.value)}
-                            className={`h-8 rounded-lg px-3 text-[11.5px] font-semibold transition-colors ${statusFilter === opt.value
-                                ? "bg-blue-600 text-white dark:bg-blue-500"
-                                : "bg-gray-100 text-gray-500 hover:bg-gray-200 dark:bg-white/5 dark:text-gray-400 dark:hover:bg-white/10"
-                                }`}
-                        >
-                            {opt.label}
-                        </button>
-                    ))}
-                </div>
-            </div>
-
             {loading ? (
                 <div className="flex flex-col items-center justify-center gap-3 py-16">
                     <Loader size={22} className="animate-spin text-indigo-500" />
@@ -243,7 +211,6 @@ export default function AdminTasksPage() {
                         task={editingTask}
                         customers={customers}
                         departments={departments}
-                        employees={employees}
                         onClose={() => setEditingTask(null)}
                         onSuccess={handleEditSuccess}
                     />
