@@ -14,6 +14,7 @@ import {
     Building2,
 } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
+import { useCurrentEmployee } from "@/hooks/usecurrentemployee";
 
 type TaskStatus = "sold" | "in_progress" | "completed" | "cancelled";
 
@@ -23,6 +24,7 @@ interface Task {
     current_step_name?: string;
     department_name?: string;
     status: TaskStatus;
+    assigned_employee: number[];
 }
 
 const statusConfig: Record<TaskStatus, { label: string; icon: React.ReactNode; color: string; bar: string }> = {
@@ -116,6 +118,8 @@ function TruncatedText({ text, onExpand }: { text: string; onExpand: () => void 
 }
 
 export default function TasksWidget() {
+    const { employee, loading: employeeLoading } = useCurrentEmployee();
+
     const [tasks, setTasks] = useState<Task[]>([]);
     const [loading, setLoading] = useState(true);
     const [index, setIndex] = useState(0);
@@ -123,12 +127,43 @@ export default function TasksWidget() {
     const [modalOpen, setModalOpen] = useState(false);
 
     useEffect(() => {
+        if (employeeLoading) return;
+
+        if (!employee) {
+            setTasks([]);
+            setLoading(false);
+            return;
+        }
+
+        let cancelled = false;
+        setLoading(true);
+
         axiosInstance
             .get<Task[]>("/tasks/api/v1/tasks/")
-            .then((res) => setTasks(res.data.slice(0, 5)))
-            .catch(() => setTasks([]))
-            .finally(() => setLoading(false));
-    }, []);
+            .then((res) => {
+                if (cancelled) return;
+
+                const allTasks = Array.isArray(res.data)
+                    ? res.data
+                    : (res.data as any).results ?? [];
+
+                const myTasks = allTasks.filter((task: Task) =>
+                    task.assigned_employee.includes(employee.id),
+                );
+
+                setTasks(myTasks.slice(0, 5));
+            })
+            .catch(() => {
+                if (!cancelled) setTasks([]);
+            })
+            .finally(() => {
+                if (!cancelled) setLoading(false);
+            });
+
+        return () => {
+            cancelled = true;
+        };
+    }, [employeeLoading, employee]);
 
     const task = tasks[index] ?? null;
     const total = tasks.length;
@@ -164,7 +199,6 @@ export default function TasksWidget() {
                 transition={{ duration: 0.35, ease: "easeOut" }}
                 className="rounded-2xl border dark:border-white/[0.07] border-gray-100 dark:bg-[#111118] bg-white overflow-hidden flex flex-col"
             >
-                {/* Header */}
                 <div className="flex items-center justify-between px-5 pt-4 pb-3 shrink-0">
                     <div className="flex items-center gap-2.5">
                         <div className="p-1.5 rounded-lg dark:bg-violet-500/10 bg-violet-50">
@@ -190,7 +224,6 @@ export default function TasksWidget() {
                     )}
                 </div>
 
-                {/* Body */}
                 <div className="flex-1 px-5 pb-4 min-h-[160px]">
                     <AnimatePresence mode="wait" custom={direction}>
                         {loading ? (
@@ -210,7 +243,6 @@ export default function TasksWidget() {
                                 transition={{ duration: 0.22, ease: "easeInOut" }}
                                 className="flex flex-col gap-3"
                             >
-                                {/* Status bar + badge */}
                                 <div className="flex items-center justify-between gap-3 pt-1">
                                     <div className={`h-1 flex-1 rounded-full ${s!.bar} opacity-80`} />
                                     <span className={`flex items-center gap-1.5 text-xs font-bold shrink-0 ${s!.color}`}>
@@ -219,19 +251,16 @@ export default function TasksWidget() {
                                     </span>
                                 </div>
 
-                                {/* Title */}
                                 <p className="text-sm font-bold leading-relaxed dark:text-white text-gray-900 line-clamp-2">
                                     {task.title}
                                 </p>
 
-                                {/* Step name */}
                                 {task.current_step_name ? (
                                     <TruncatedText text={task.current_step_name} onExpand={() => setModalOpen(true)} />
                                 ) : (
                                     <p className="text-sm dark:text-gray-600 text-gray-300 italic">توضیحاتی ثبت نشده</p>
                                 )}
 
-                                {/* Department */}
                                 {task.department_name && (
                                     <div className="flex items-center gap-1.5 mt-1">
                                         <Building2 className="w-3.5 h-3.5 dark:text-gray-600 text-gray-400 shrink-0" />
@@ -245,7 +274,6 @@ export default function TasksWidget() {
                     </AnimatePresence>
                 </div>
 
-                {/* Dots */}
                 {total > 1 && (
                     <div className="flex items-center justify-center gap-1 pb-3 shrink-0">
                         {tasks.map((_, i) => (

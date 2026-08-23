@@ -9,6 +9,10 @@ import {
     LayoutGrid,
     AlertCircle,
     Building2,
+    Layers3,
+    CheckCircle2,
+    ShoppingBag,
+    Ban,
 } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
 import UserTaskCard from "./UserTaskCard";
@@ -27,11 +31,12 @@ import {
     useDroppable,
     useDraggable,
 } from "@dnd-kit/core";
+import { useCurrentEmployee } from "@/hooks/usecurrentemployee";
 
 interface DepartmentGroup {
     id: number;
     name: string;
-    stages: UserStage[];
+    stages: KanbanStage[];
     tasks: UserTask[];
 }
 
@@ -40,6 +45,21 @@ interface PendingDrop {
     targetStepId: number;
     direction: "forward" | "backward";
 }
+
+type TaskStatusFilter =
+    | "all"
+    | "in_progress"
+    | "completed"
+    | "sold"
+    | "cancelled";
+
+
+type KanbanStage = UserStage & {
+    title?: string;
+    department?: number | string | { id: number; name?: string } | null;
+    department_name?: string | null;
+};
+
 
 const stageColors = [
     "#6366f1",
@@ -51,6 +71,56 @@ const stageColors = [
     "#ef4444",
     "#14b8a6",
 ];
+
+const statusFilters: {
+    id: TaskStatusFilter;
+    label: string;
+    icon: typeof Layers3;
+    color: string;
+    activeBg: string;
+    activeBorder: string;
+}[] = [
+        {
+            id: "all",
+            label: "همه",
+            icon: Layers3,
+            color: "#818cf8",
+            activeBg: "rgba(99,102,241,0.16)",
+            activeBorder: "rgba(99,102,241,0.4)",
+        },
+        {
+            id: "in_progress",
+            label: "در حال انجام",
+            icon: Layers3,
+            color: "#818cf8",
+            activeBg: "rgba(99,102,241,0.16)",
+            activeBorder: "rgba(99,102,241,0.4)",
+        },
+        {
+            id: "completed",
+            label: "تکمیل شده",
+            icon: CheckCircle2,
+            color: "#34d399",
+            activeBg: "rgba(16,185,129,0.14)",
+            activeBorder: "rgba(16,185,129,0.4)",
+        },
+        {
+            id: "sold",
+            label: "فروش رفته",
+            icon: ShoppingBag,
+            color: "#fbbf24",
+            activeBg: "rgba(245,158,11,0.14)",
+            activeBorder: "rgba(245,158,11,0.4)",
+        },
+        {
+            id: "cancelled",
+            label: "لغو شده",
+            icon: Ban,
+            color: "#fb7185",
+            activeBg: "rgba(239,68,68,0.14)",
+            activeBorder: "rgba(239,68,68,0.4)",
+        },
+    ];
 
 function useMediaQuery(query: string) {
     const [matches, setMatches] = useState(false);
@@ -103,8 +173,8 @@ function extractDeptName(task: UserTask): string {
     return "بدون دپارتمان";
 }
 
-function extractStageDeptId(stage: UserStage): number {
-    const raw = (stage as any).department;
+function extractStageDeptId(stage: KanbanStage): number {
+    const raw = stage.department;
 
     if (raw && typeof raw === "object" && "id" in raw) {
         return Number(raw.id);
@@ -115,6 +185,17 @@ function extractStageDeptId(stage: UserStage): number {
     }
 
     return -1;
+}
+
+
+function extractAssignedEmployeeIds(task: UserTask): number[] {
+    const raw = (task as any).assigned_employee;
+
+    if (Array.isArray(raw)) {
+        return raw.map((value) => Number(value));
+    }
+
+    return [];
 }
 
 function groupTasksByStep(tasks: UserTask[]): Record<number, UserTask[]> {
@@ -132,8 +213,10 @@ function groupTasksByStep(tasks: UserTask[]): Record<number, UserTask[]> {
 }
 
 export default function UserTasksKanban() {
+    const { employee, loading: employeeLoading } = useCurrentEmployee();
+
     const [tasks, setTasks] = useState<UserTask[]>([]);
-    const [stages, setStages] = useState<UserStage[]>([]);
+    const [stages, setStages] = useState<KanbanStage[]>([]);
     const [loading, setLoading] = useState(true);
     const [stagesLoading, setStagesLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -143,6 +226,7 @@ export default function UserTasksKanban() {
     const [limitToast, setLimitToast] = useState(false);
     const [activeDeptId, setActiveDeptId] = useState<number | null>(null);
     const [activeMobileStageId, setActiveMobileStageId] = useState<number | null>(null);
+    const [statusFilter, setStatusFilter] = useState<TaskStatusFilter>("all");
 
     const pendingRef = useRef<Set<number>>(new Set());
     const limitToastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -157,47 +241,108 @@ export default function UserTasksKanban() {
 
     useEffect(() => {
         axiosInstance
-            .get<{ results: UserStage[] } | UserStage[]>(
+            .get<{ results: KanbanStage[] } | KanbanStage[]>(
                 "/department/api/v1/department_step/"
             )
             .then((res) => {
                 const raw = Array.isArray(res.data)
                     ? res.data
-                    : (res.data as { results: UserStage[] }).results ?? [];
+                    : (res.data as { results: KanbanStage[] }).results ?? [];
 
-                const mapped: UserStage[] = (raw as any[])
-                    .map((s) => ({
-                        id: s.id,
-                        name: s.name ?? s.title ?? `مرحله ${s.id}`,
-                        order: s.order ?? s.id,
-                        department: s.department ?? null,
+                const mapped: KanbanStage[] = raw
+                    .map((stage) => ({
+                        ...stage,
+                        id: stage.id,
+                        name: stage.name ?? stage.title ?? `مرحله ${stage.id}`,
+                        order: stage.order ?? stage.id,
+                        department: stage.department ?? null,
                         department_name:
-                            s.department_name ?? s.department?.name ?? null,
+                            stage.department_name ??
+                            (typeof stage.department === "object" &&
+                                stage.department
+                                ? stage.department.name ?? null
+                                : null),
                     }))
                     .sort((a, b) => a.order - b.order);
 
                 setStages(mapped);
             })
+
             .catch(() => setError("دریافت فرآیند ها با خطا مواجه شد"))
             .finally(() => setStagesLoading(false));
     }, []);
 
     useEffect(() => {
+        if (employeeLoading) {
+            return;
+        }
+
+        if (!employee) {
+            setTasks([]);
+            setLoading(false);
+            return;
+        }
+
+        let cancelled = false;
+
+        setLoading(true);
+
         axiosInstance
             .get<UserTask[] | { results: UserTask[] }>("/tasks/api/v1/tasks/")
             .then((res) => {
+                if (cancelled) {
+                    return;
+                }
+
                 const data = Array.isArray(res.data)
                     ? res.data
                     : res.data.results ?? [];
 
-                setTasks(data);
+                const myTasks = data.filter((task) =>
+                    extractAssignedEmployeeIds(task).includes(employee.id)
+                );
+
+                setTasks(myTasks);
             })
-            .catch(() => setError("دریافت تسک‌ها با خطا مواجه شد"))
-            .finally(() => setLoading(false));
-    }, []);
+            .catch(() => {
+                if (!cancelled) {
+                    setError("دریافت تسک‌ها با خطا مواجه شد");
+                }
+            })
+            .finally(() => {
+                if (!cancelled) {
+                    setLoading(false);
+                }
+            });
+
+        return () => {
+            cancelled = true;
+        };
+    }, [employeeLoading, employee]);
 
     const departmentGroups = useMemo<DepartmentGroup[]>(() => {
         const map = new Map<number, DepartmentGroup>();
+
+        stages.forEach((stage) => {
+            const deptId = extractStageDeptId(stage);
+            const deptName =
+                stage.department_name ||
+                (typeof stage.department === "object" && stage.department
+                    ? String((stage.department as { name?: string }).name ?? "")
+                    : "") ||
+                "بدون دپارتمان";
+
+            if (!map.has(deptId)) {
+                map.set(deptId, {
+                    id: deptId,
+                    name: deptName,
+                    stages: [],
+                    tasks: [],
+                });
+            }
+
+            map.get(deptId)!.stages.push(stage);
+        });
 
         tasks.forEach((task) => {
             const deptId = extractDeptId(task);
@@ -213,15 +358,6 @@ export default function UserTasksKanban() {
             }
 
             map.get(deptId)!.tasks.push(task);
-        });
-
-        stages.forEach((stage) => {
-            const deptId = extractStageDeptId(stage);
-            const group = map.get(deptId);
-
-            if (group) {
-                group.stages.push(stage);
-            }
         });
 
         map.forEach((group) => {
@@ -250,10 +386,30 @@ export default function UserTasksKanban() {
     const activeGroup =
         departmentGroups.find((group) => group.id === activeDeptId) ?? null;
 
+    const filteredActiveTasks = useMemo(() => {
+        const activeTasks = activeGroup?.tasks ?? [];
+
+        if (statusFilter === "all") {
+            return activeTasks;
+        }
+
+        return activeTasks.filter((task) => task.status === statusFilter);
+    }, [activeGroup, statusFilter]);
+
     const grouped = useMemo(
-        () => groupTasksByStep(activeGroup?.tasks ?? []),
-        [activeGroup]
+        () => groupTasksByStep(filteredActiveTasks),
+        [filteredActiveTasks]
     );
+
+    const getStatusCount = (status: TaskStatusFilter) => {
+        const activeTasks = activeGroup?.tasks ?? [];
+
+        if (status === "all") {
+            return activeTasks.length;
+        }
+
+        return activeTasks.filter((task) => task.status === status).length;
+    };
 
     useEffect(() => {
         const availableStages = activeGroup?.stages ?? [];
@@ -425,7 +581,7 @@ export default function UserTasksKanban() {
         setPendingDrop(null);
     }
 
-    if (loading || stagesLoading) {
+    if (loading || stagesLoading || employeeLoading) {
         return (
             <div className="flex h-64 items-center justify-center">
                 <Loader size={22} className="animate-spin text-indigo-500" />
@@ -454,6 +610,7 @@ export default function UserTasksKanban() {
     }
 
     const activeStages = activeGroup?.stages ?? [];
+
     const activeStageIndex = activeTask
         ? activeStages.findIndex((stage) => stage.id === activeTask.current_step)
         : -1;
@@ -505,7 +662,7 @@ export default function UserTasksKanban() {
                     </div>
 
                     <span className="rounded-2xl bg-gray-100 px-3 py-1.5 text-[11px] font-bold text-gray-600 dark:bg-white/[0.06] dark:text-gray-400">
-                        {tasks.length} تسک
+                        {filteredActiveTasks.length} تسک
                     </span>
                 </div>
 
@@ -519,8 +676,8 @@ export default function UserTasksKanban() {
                                 type="button"
                                 onClick={() => setActiveDeptId(group.id)}
                                 className={`flex shrink-0 items-center gap-2 rounded-2xl px-3.5 py-2 text-[11.5px] font-bold transition-colors ${isActive
-                                        ? "bg-indigo-600 text-white"
-                                        : "bg-gray-100 text-gray-500 hover:bg-gray-200 dark:bg-white/[0.05] dark:text-gray-400 dark:hover:bg-white/[0.08]"
+                                    ? "bg-indigo-600 text-white"
+                                    : "bg-gray-100 text-gray-500 hover:bg-gray-200 dark:bg-white/[0.05] dark:text-gray-400 dark:hover:bg-white/[0.08]"
                                     }`}
                             >
                                 <Building2 size={12} />
@@ -529,11 +686,69 @@ export default function UserTasksKanban() {
 
                                 <span
                                     className={`rounded-full px-1.5 py-0.5 text-[10px] font-extrabold ${isActive
-                                            ? "bg-white/20"
-                                            : "bg-black/5 dark:bg-white/10"
+                                        ? "bg-white/20"
+                                        : "bg-black/5 dark:bg-white/10"
                                         }`}
                                 >
                                     {group.tasks.length}
+                                </span>
+                            </button>
+                        );
+                    })}
+                </div>
+
+                <div className="flex gap-2 overflow-x-auto pb-1">
+                    {statusFilters.map((filter) => {
+                        const isActive = statusFilter === filter.id;
+                        const Icon = filter.icon;
+                        const count = getStatusCount(filter.id);
+
+                        return (
+                            <button
+                                key={filter.id}
+                                type="button"
+                                onClick={() => setStatusFilter(filter.id)}
+                                className="flex shrink-0 items-center gap-2 rounded-2xl border px-3.5 py-2 text-[11px] font-bold transition-all duration-200"
+                                style={{
+                                    color: isActive ? filter.color : undefined,
+                                    backgroundColor: isActive
+                                        ? filter.activeBg
+                                        : "rgba(255,255,255,0.025)",
+                                    borderColor: isActive
+                                        ? filter.activeBorder
+                                        : "rgba(255,255,255,0.07)",
+                                    boxShadow: isActive
+                                        ? `0 5px 18px ${filter.color}14`
+                                        : "none",
+                                }}
+                            >
+                                <Icon
+                                    size={13}
+                                    style={{
+                                        color: isActive
+                                            ? filter.color
+                                            : "rgb(148 163 184)",
+                                    }}
+                                />
+
+                                <span
+                                    className={
+                                        isActive
+                                            ? ""
+                                            : "text-gray-500 dark:text-gray-400"
+                                    }
+                                >
+                                    {filter.label}
+                                </span>
+
+                                <span
+                                    className="rounded-full px-1.5 py-0.5 text-[9.5px] font-extrabold tabular-nums"
+                                    style={{
+                                        color: filter.color,
+                                        backgroundColor: `${filter.color}18`,
+                                    }}
+                                >
+                                    {count}
                                 </span>
                             </button>
                         );
@@ -605,7 +820,7 @@ export default function UserTasksKanban() {
                             {mobileStage && (
                                 <AnimatePresence mode="wait">
                                     <motion.div
-                                        key={mobileStage.id}
+                                        key={`${mobileStage.id}-${statusFilter}`}
                                         initial={{ opacity: 0, y: 10 }}
                                         animate={{ opacity: 1, y: 0 }}
                                         exit={{ opacity: 0, y: -8 }}
@@ -648,11 +863,9 @@ export default function UserTasksKanban() {
                                         )
                                         : -1;
 
-                                    const thisIdx = index;
-
                                     const isAdjacent =
                                         activeTask !== null &&
-                                        Math.abs(thisIdx - activeIdx) === 1;
+                                        Math.abs(index - activeIdx) === 1;
 
                                     const isDisabled =
                                         activeTask !== null &&
