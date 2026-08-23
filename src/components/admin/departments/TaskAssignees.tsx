@@ -1,90 +1,114 @@
 "use client";
 
-import { Loader } from "lucide-react";
+import { UserRound, Loader } from "lucide-react";
 import { useEmployeeInfo } from "@/hooks/useEmployeeInfo";
+import type { TaskAssignee, TaskRelation, TaskRelationObject } from "./types";
 
 interface TaskAssigneesProps {
-    ids: unknown[]
+    ids: TaskAssignee | null | undefined;
     size?: "sm" | "md";
     limit?: number;
     className?: string;
 }
 
-const normalizeId = (
-    value: number | string | { id: number | string } | null | undefined
-): number | null => {
+const isRelationObject = (
+    value: unknown
+): value is TaskRelationObject => {
+    return (
+        typeof value === "object" &&
+        value !== null &&
+        "id" in (value as Record<string, unknown>)
+    );
+};
+
+const normalizeId = (value: unknown): number | null => {
     if (value === null || value === undefined) return null;
-    let id: number | string;
-    if (typeof value === "object") id = value.id;
-    else id = value;
-    if (id === null || id === undefined) return null;
-    const n = Number(id);
+
+    let raw: unknown;
+
+    if (isRelationObject(value)) {
+        raw = (value as TaskRelationObject).id;
+    } else {
+        raw = value;
+    }
+
+    if (raw === null || raw === undefined) return null;
+
+    const n = typeof raw === "number" ? raw : Number(raw);
     return Number.isFinite(n) ? n : null;
 };
 
-const getInitials = (name: string) => {
-    const parts = name.trim().split(/\s+/).filter(Boolean);
-    if (parts.length === 0) return "؟";
-    const first = parts[0].charAt(0);
-    const last = parts.length > 1 ? parts[parts.length - 1].charAt(0) : "";
-    return (first + last).trim() || "؟";
+const flattenAssignee = (value: TaskAssignee | null | undefined): unknown[] => {
+    if (value === null || value === undefined) return [];
+    if (Array.isArray(value)) return value;
+    return [value];
 };
 
-function AssigneeAvatar({ id, size }: { id: number; size: "sm" | "md" }) {
-    const { data, loading } = useEmployeeInfo(id);
+const gradients: [string, string][] = [
+    ["#6366f1", "#8b5cf6"],
+    ["#ec4899", "#f43f5e"],
+    ["#0ea5e9", "#22d3ee"],
+    ["#10b981", "#22c55e"],
+    ["#f59e0b", "#f97316"],
+];
 
-    const sizeCls =
-        size === "md"
-            ? "h-8 w-8 text-[10px]"
-            : "h-6 w-6 text-[9px]";
+const gradientForId = (id: number): [string, string] => {
+    const safeId = Number.isFinite(id) ? Math.abs(Math.trunc(id)) : 0;
+    const gradientIndex = safeId % gradients.length;
+    return gradients[gradientIndex];
+};
+
+function AssigneePill({ id, size }: { id: number; size: "sm" | "md" }) {
+    const { data, loading } = useEmployeeInfo(id);
+    const gradient = gradientForId(id);
+
+    const iconCls = size === "md" ? "h-6 w-6" : "h-5 w-5";
+    const textCls = size === "md" ? "text-[11.5px]" : "text-[10.5px]";
 
     return (
-        <div
-            title={data?.full_name}
-            className={`${sizeCls} flex shrink-0 items-center justify-center rounded-full font-bold text-white ring-2 ring-white transition-colors dark:ring-[#0f172a]`}
-            style={{
-                background:
-                    loading || !data
-                        ? "rgba(99,102,241,0.45)"
-                        : "linear-gradient(135deg, #6366f1, #8b5cf6)",
-            }}
-        >
-            {loading || !data ? (
-                <Loader size={9} className="animate-spin" />
-            ) : (
-                getInitials(data.full_name)
-            )}
+        <div className="flex items-center gap-1.5 rounded-full border border-black/[0.06] bg-black/[0.03] py-0.5 pl-2.5 pr-0.5 dark:border-white/[0.06] dark:bg-white/[0.04]">
+            <span
+                className={`flex ${iconCls} shrink-0 items-center justify-center rounded-full text-white`}
+                style={{ background: `linear-gradient(135deg, ${gradient[0]}, ${gradient[1]})` }}
+            >
+                {loading || !data ? (
+                    <Loader size={9} className="animate-spin" />
+                ) : (
+                    <UserRound size={11} />
+                )}
+            </span>
+            <span className={`${textCls} whitespace-nowrap font-bold text-gray-600 dark:text-gray-300`}>
+                {loading || !data ? "..." : data.full_name}
+            </span>
         </div>
     );
 }
 
 export default function TaskAssignees({
-    ids = [],
+    ids,
     size = "sm",
     limit = 3,
     className = "",
 }: TaskAssigneesProps) {
-    const list = ids
-    .map((v) => normalizeId(v as number | string | { id: number | string } | null | undefined))
-    .filter((v): v is number => v !== null);
+    const list = flattenAssignee(ids)
+        .map((v) => normalizeId(v))
+        .filter((v): v is number => v !== null);
 
     if (list.length === 0) return null;
 
     const visible = list.slice(0, limit);
-    const extra = list.length - visible.length;
+    const extraCount = list.length - visible.length;
 
     return (
-        <div className={`flex items-center ${className}`}>
-            <div className="flex -space-x-2 rtl:space-x-reverse">
-                {visible.map((id) => (
-                    <AssigneeAvatar key={id} id={id} size={size} />
-                ))}
-                {extra > 0 && (
-                    <div className="flex h-6 w-6 items-center justify-center rounded-full bg-indigo-100 text-[9px] font-bold text-indigo-600 ring-2 ring-white dark:bg-indigo-500/20 dark:text-indigo-400 dark:ring-[#0f172a]">
-                        +{extra}
-                    </div>
-                )}
-            </div>
+        <div className={`flex flex-wrap items-center gap-1.5 ${className}`}>
+            {visible.map((id) => (
+                <AssigneePill key={id} id={id} size={size} />
+            ))}
+            {extraCount > 0 && (
+                <div className="flex h-5 items-center justify-center rounded-full bg-indigo-100 px-2 text-[9px] font-bold text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-400">
+                    +{extraCount}
+                </div>
+            )}
         </div>
     );
 }
