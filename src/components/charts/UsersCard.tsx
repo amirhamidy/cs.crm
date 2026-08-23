@@ -2,8 +2,15 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 import { Crown, TrendingDown, TrendingUp } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTopUsers, type TimeRange } from "@/hooks/useTopUsers";
+import axiosInstance from "@/lib/axiosInstance";
+
+interface EmployeeInfo {
+  id: number;
+  full_name: string;
+  username: string;
+}
 
 const RANK_META = [
   { bg: "rgba(250,204,21,0.15)", border: "rgba(250,204,21,0.4)", text: "#facc15", glow: "rgba(250,204,21,0.55)" },
@@ -27,6 +34,25 @@ export default function TopUsersCard() {
   const { data: rangeData, loading, error } = useTopUsers();
   const [range, setRange] = useState<TimeRange>("monthly");
   const [hoveredId, setHoveredId] = useState<number | null>(null);
+  const [employees, setEmployees] = useState<EmployeeInfo[]>([]);
+
+  useEffect(() => {
+    axiosInstance
+      .get<EmployeeInfo[] | { results: EmployeeInfo[] }>("/accounts/api/v1/employee/list/")
+      .then((res) => {
+        const list = Array.isArray(res.data)
+          ? res.data
+          : (res.data as { results: EmployeeInfo[] }).results ?? [];
+        setEmployees(list);
+      })
+      .catch(() => { });
+  }, []);
+
+  const resolveFullName = (username: string): string => {
+    if (username === "admin") return "مدیر سیستم";
+    const match = employees.find((e) => e.username === username);
+    return match?.full_name ?? username;
+  };
 
   if (loading) return <div className="h-[300px] animate-pulse rounded-2xl bg-gray-100 dark:bg-slate-900" />;
   if (error) return <div className="p-4 text-center text-red-500">{error}</div>;
@@ -62,7 +88,6 @@ export default function TopUsersCard() {
         <AnimatePresence mode="wait">
           {users.map((user, index) => {
             const rankMeta = index < 3 ? RANK_META[index] : null;
-            const isHovered = hoveredId === user.id;
 
             return (
               <motion.div
@@ -91,7 +116,9 @@ export default function TopUsersCard() {
                 </div>
 
                 <div className="flex-1 min-w-0">
-                  <p className="truncate text-[13px] font-semibold text-gray-900 dark:text-white">{user.name}</p>
+                  <p className="truncate text-[13px] font-semibold text-gray-900 dark:text-white">
+                    {resolveFullName(user.username)}
+                  </p>
                   <p className="text-[11px] text-gray-500">{user.role}</p>
                 </div>
 

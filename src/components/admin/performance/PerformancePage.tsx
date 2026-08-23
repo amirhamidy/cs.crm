@@ -97,7 +97,7 @@ export default function PerformancePage() {
                 </motion.div>
             )}
 
-            <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
                 <BestEmployeesChart items={bestEmployees} loading={loading} />
                 <WeakestEmployeesChart items={weakestEmployees} loading={loading} />
                 <TopBringersChart items={topBringers} loading={loading} />
