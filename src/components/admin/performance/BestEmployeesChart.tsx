@@ -3,7 +3,7 @@
 import { useCallback, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useTheme } from "next-themes";
-import { Award } from "lucide-react";
+import { Trophy } from "lucide-react";
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis } from "recharts";
 
 export interface BestEmployeeItem {
@@ -21,12 +21,12 @@ interface Props {
 type ActiveBar = { name: string; department: string; sold: number; color: string; glow: string; index: number };
 
 const BAR_COLORS = [
-    { color: "#10b981", glow: "rgba(16,185,129,0.5)" },
-    { color: "#22c55e", glow: "rgba(34,197,94,0.5)" },
-    { color: "#0ea5e9", glow: "rgba(14,165,233,0.5)" },
-    { color: "#6366f1", glow: "rgba(99,102,241,0.5)" },
-    { color: "#a855f7", glow: "rgba(168,85,247,0.5)" },
-    { color: "#f59e0b", glow: "rgba(245,158,11,0.5)" },
+    { color: "#38bdf8", glow: "rgba(56,189,248,0.5)" },
+    { color: "#818cf8", glow: "rgba(129,140,248,0.5)" },
+    { color: "#22d3ee", glow: "rgba(34,211,238,0.5)" },
+    { color: "#a78bfa", glow: "rgba(167,139,250,0.5)" },
+    { color: "#60a5fa", glow: "rgba(96,165,250,0.5)" },
+    { color: "#2dd4bf", glow: "rgba(45,212,191,0.5)" },
 ];
 
 function CustomHBarShape({
@@ -142,15 +142,21 @@ export default function BestEmployeesChart({ items, loading }: Props) {
             initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, ease: [0.25, 0.46, 0.45, 0.94] }}
-            className="relative rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-white/8 dark:bg-slate-950"
+            className="relative overflow-hidden rounded-2xl border p-4 shadow-sm"
+            style={{
+                borderColor: isDark ? "rgba(56,189,248,0.1)" : "rgba(56,189,248,0.12)",
+                background: isDark
+                    ? "linear-gradient(160deg, rgba(56,189,248,0.05), rgba(15,23,42,0))"
+                    : "linear-gradient(160deg, rgba(56,189,248,0.05), #ffffff)",
+            }}
         >
             <div className="mb-3 flex items-start justify-between gap-3" dir="rtl">
                 <div className="flex items-center gap-2.5">
                     <div
                         className="flex h-8 w-8 items-center justify-center rounded-xl"
-                        style={{ background: isDark ? "rgba(16,185,129,0.12)" : "rgba(16,185,129,0.08)" }}
+                        style={{ background: "linear-gradient(135deg, rgba(56,189,248,0.18), rgba(129,140,248,0.18))" }}
                     >
-                        <Award size={15} className="text-emerald-500" />
+                        <Trophy size={15} className="text-sky-400" />
                     </div>
                     <div>
                         <h3 className="text-[14px] font-semibold text-gray-900 dark:text-white">برترین کارمندان هر دپارتمان</h3>

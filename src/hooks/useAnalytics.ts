@@ -49,6 +49,15 @@ export interface BringerStat {
   potential: number;
 }
 
+export interface StageRankItem {
+  key: string;
+  stage_name: string;
+  department_name: string;
+  total: number;
+  sold: number;
+  cancelled: number;
+}
+
 export interface Summary {
   totalTasks: number;
   sold: number;
@@ -570,7 +579,11 @@ export function useAnalytics(range: TimeRange = "monthly") {
 
         const emps = Array.from(deptEmployeeAcc.get(dep.key)?.values() ?? []);
 
-        
+        const bestSorted = [...emps].sort(
+          (a, b) => b.sold - a.sold || b.total - a.total,
+        );
+        dep.best =
+          bestSorted[0] && bestSorted[0].sold > 0 ? bestSorted[0] : null;
 
         const worstSorted = [...emps].sort(
           (a, b) => b.cancelled - a.cancelled || b.total - a.total,
@@ -613,6 +626,27 @@ export function useAnalytics(range: TimeRange = "monthly") {
 
     const weakestEmployees = Array.from(employeeAcc.values())
       .filter((e) => e.total > 0)
+      .sort((a, b) => b.cancelled - a.cancelled || b.total - a.total)
+      .slice(0, 10);
+
+    const allStageRanks: StageRankItem[] = departmentsList.flatMap((dep) =>
+      dep.stages.map((stage) => ({
+        key: `${dep.key}:${stage.key}`,
+        stage_name: stage.name,
+        department_name: dep.department_name,
+        total: stage.total,
+        sold: stage.sold,
+        cancelled: stage.cancelled,
+      })),
+    );
+
+    const topSoldStages = [...allStageRanks]
+      .filter((s) => s.sold > 0)
+      .sort((a, b) => b.sold - a.sold || b.total - a.total)
+      .slice(0, 10);
+
+    const topCancelledStages = [...allStageRanks]
+      .filter((s) => s.cancelled > 0)
       .sort((a, b) => b.cancelled - a.cancelled || b.total - a.total)
       .slice(0, 10);
 
@@ -677,6 +711,8 @@ export function useAnalytics(range: TimeRange = "monthly") {
       departmentsList,
       bestEmployees,
       weakestEmployees,
+      topSoldStages,
+      topCancelledStages,
       topBringers,
       summary,
     };
@@ -698,6 +734,8 @@ export function useAnalytics(range: TimeRange = "monthly") {
     departments: result.departmentsList,
     bestEmployees: result.bestEmployees,
     weakestEmployees: result.weakestEmployees,
+    topSoldStages: result.topSoldStages,
+    topCancelledStages: result.topCancelledStages,
     topBringers: result.topBringers,
     summary: result.summary,
   };

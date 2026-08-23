@@ -20,13 +20,13 @@ interface Props {
 
 type ActiveRing = { name: string; cancelled: number; total: number; color: string; glow: string; index: number };
 
-const ROSE_SCALE = [
-    { color: "#dc2626", glow: "rgba(220,38,38,0.5)" },
-    { color: "#ef4444", glow: "rgba(239,68,68,0.5)" },
-    { color: "#f87171", glow: "rgba(248,113,113,0.5)" },
-    { color: "#fb923c", glow: "rgba(251,146,60,0.5)" },
-    { color: "#fbbf24", glow: "rgba(251,191,36,0.5)" },
-    { color: "#facc15", glow: "rgba(250,204,21,0.5)" },
+const MAUVE_SCALE = [
+    { color: "#fb7185", glow: "rgba(251,113,133,0.5)" },
+    { color: "#f472b6", glow: "rgba(244,114,182,0.5)" },
+    { color: "#e879f9", glow: "rgba(232,121,249,0.5)" },
+    { color: "#c084fc", glow: "rgba(192,132,252,0.5)" },
+    { color: "#fda4af", glow: "rgba(253,164,175,0.5)" },
+    { color: "#f0abfc", glow: "rgba(240,171,252,0.5)" },
 ];
 
 function WeakestEmployeesChartSkeleton() {
@@ -54,7 +54,7 @@ export default function WeakestEmployeesChart({ items, loading }: Props) {
                 name: item.full_name,
                 cancelled: item.cancelled,
                 total: item.total,
-                fill: ROSE_SCALE[i % ROSE_SCALE.length].color,
+                fill: MAUVE_SCALE[i % MAUVE_SCALE.length].color,
             })),
         [items],
     );
@@ -63,7 +63,7 @@ export default function WeakestEmployeesChart({ items, loading }: Props) {
         (_: unknown, index: number) => {
             const item = data[index];
             if (!item) return;
-            const meta = ROSE_SCALE[index % ROSE_SCALE.length];
+            const meta = MAUVE_SCALE[index % MAUVE_SCALE.length];
             setActiveRing({ name: item.name, cancelled: item.cancelled, total: item.total, color: meta.color, glow: meta.glow, index });
         },
         [data],
@@ -78,19 +78,25 @@ export default function WeakestEmployeesChart({ items, loading }: Props) {
             initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, ease: [0.25, 0.46, 0.45, 0.94] }}
-            className="relative rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-white/8 dark:bg-slate-950"
+            className="relative overflow-hidden rounded-2xl border p-4 shadow-sm"
+            style={{
+                borderColor: isDark ? "rgba(251,113,133,0.1)" : "rgba(251,113,133,0.12)",
+                background: isDark
+                    ? "linear-gradient(160deg, rgba(244,114,182,0.05), rgba(15,23,42,0))"
+                    : "linear-gradient(160deg, rgba(244,114,182,0.05), #ffffff)",
+            }}
         >
             <div className="mb-3 flex items-start justify-between gap-3" dir="rtl">
                 <div className="flex items-center gap-2.5">
                     <div
                         className="flex h-8 w-8 items-center justify-center rounded-xl"
-                        style={{ background: isDark ? "rgba(239,68,68,0.12)" : "rgba(239,68,68,0.08)" }}
+                        style={{ background: "linear-gradient(135deg, rgba(251,113,133,0.18), rgba(192,132,252,0.18))" }}
                     >
-                        <TrendingDown size={15} className="text-rose-500" />
+                        <TrendingDown size={15} className="text-rose-400" />
                     </div>
                     <div>
                         <h3 className="text-[14px] font-semibold text-gray-900 dark:text-white">بیشترین تسک لغو شده</h3>
-                        <p className="mt-0.5 text-[12px] text-gray-500 dark:text-gray-400">ضعیف‌ترین کارمندان</p>
+                        <p className="mt-0.5 text-[12px] text-gray-500 dark:text-gray-400">نیاز به پیگیری و بهبود</p>
                     </div>
                 </div>
             </div>
@@ -140,7 +146,7 @@ export default function WeakestEmployeesChart({ items, loading }: Props) {
 
             {data.length > 0 && (
                 <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1.5 px-1" dir="rtl">
-                    {data.map((item, i) => (
+                    {data.map((item) => (
                         <div key={item.name} className="flex items-center gap-1.5">
                             <span className="h-2 w-2 rounded-full" style={{ backgroundColor: item.fill }} />
                             <span className="text-[10.5px] text-gray-500 dark:text-gray-400">{item.name}</span>

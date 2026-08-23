@@ -29,6 +29,12 @@ import { toJalali, toPersianDigits, JALALI_MONTHS, pad2 } from "@/lib/jalali";
 import { useEmployeeInfo } from "@/hooks/useEmployeeInfo";
 import type { UserTask } from "./types";
 
+interface TaskWithSchedule extends UserTask {
+    started_at?: string | null;
+    deadline?: string | null;
+    due_date?: string | null;
+}
+
 interface TaskCardProps {
     task: UserTask;
     accent?: string;
@@ -39,6 +45,10 @@ interface TaskCardProps {
 interface DeadlineResponse {
     started_at: string | null;
     deadline: string | null;
+}
+
+interface CaseResponse {
+    customer: number;
 }
 
 interface LatestLog {
@@ -353,6 +363,8 @@ export default function UserTaskCard({
     onUpdated,
     isDragging,
 }: TaskCardProps) {
+    const taskExt = task as TaskWithSchedule;
+
     const [openModal, setOpenModal] = useState<ModalType | null>(null);
     const [logsOpen, setLogsOpen] = useState(false);
     const [notesOpen, setNotesOpen] = useState(false);
@@ -362,12 +374,8 @@ export default function UserTaskCard({
     const [logsLoading, setLogsLoading] = useState(true);
 
     const [schedule, setSchedule] = useState<DeadlineResponse>({
-        started_at: (task as UserTask & { started_at?: string | null }).started_at ?? null,
-        deadline:
-            (task as UserTask & { deadline?: string | null; due_date?: string | null })
-                .deadline ??
-            (task as UserTask & { due_date?: string | null }).due_date ??
-            null,
+        started_at: taskExt.started_at ?? null,
+        deadline: taskExt.deadline ?? taskExt.due_date ?? null,
     });
 
     const meta = useMemo(() => getStatusMeta(task.status), [task.status]);
@@ -424,76 +432,112 @@ export default function UserTaskCard({
             .catch(() => undefined);
     }, [task.id, task.current_step]);
 
+    async function syncCustomerToActive() {
+        const caseId = taskExt.case;
+
+        if (!caseId) return;
+
+        try {
+            const { data: caseData } = await axiosInstance.get<CaseResponse>(
+                `/tasks/api/v1/cases/${caseId}/`
+            );
+
+            if (!caseData.customer) return;
+
+            await axiosInstance.patch(
+                `/customers/api/v1/customers/${caseData.customer}/update/`,
+                { status: 2 }
+            );
+        } catch {
+            setBlockMsg("مشتری آپدیت نشد، بعدا دستی چک کن");
+        }
+    }
+
+    async function markAsSold(): Promise<UserTask> {
+        const { data } = await axiosInstance.patch<{ status: string }>(
+            `/tasks/api/v1/tasks/${task.id}/mark-as-sold/`,
+            { status: "sold" }
+        );
+
+        await syncCustomerToActive();
+
+        return {
+            ...task,
+            status: data.status as UserTask["status"],
+        };
+    }
+
+    async function resetToInProgress(): Promise<UserTask> {
+        const { data } = await axiosInstance.put<UserTask>(
+            `/tasks/api/v1/tasks/${task.id}/update/`,
+            {
+                title: task.title,
+                description: task.description,
+                status: "in_progress",
+                assigned_employee: task.assigned_employee,
+            }
+        );
+
+        return { ...task, ...data };
+    }
+
+    async function advanceRevertOrCancel(
+        direction: "next" | "prev" | "cancel",
+        data: { note: string; files: File[] }
+    ): Promise<UserTask> {
+        const endpoint =
+            direction === "next"
+                ? "advance"
+                : direction === "prev"
+                    ? "revert"
+                    : "cancel";
+
+        const formData = new FormData();
+
+        if (data.note.trim()) {
+            formData.append("note", data.note.trim());
+        }
+
+        data.files.forEach((file) => {
+            formData.append("files", file);
+        });
+
+        const { data: responseData } = await axiosInstance.post<UserTask>(
+            `/tasks/api/v1/tasks/${task.id}/${endpoint}/`,
+            formData,
+            {
+                headers: {
+                    "Content-Type": "multipart/form-data",
+                },
+            }
+        );
+
+        return { ...task, ...responseData };
+    }
+
     async function submitAction(
         direction: ModalType,
         data: { note: string; files: File[] }
     ) {
         setSubmitting(true);
+        setBlockMsg(null);
 
         try {
             let updated: UserTask;
 
-            if (direction === "sold") {
-                const response = await axiosInstance.patch<{ status: string }>(
-                    `/tasks/api/v1/tasks/${task.id}/mark-as-sold/`,
-                    { status: "sold" }
-                );
+            switch (direction) {
+                case "sold":
+                    updated = await markAsSold();
+                    break;
 
-                updated = {
-                    ...task,
-                    status: response.data.status as UserTask["status"],
-                };
-            } else if (
-                direction === "unsold" ||
-                direction === "uncancel" ||
-                direction === "uncomplete"
-            ) {
-                const response = await axiosInstance.put<UserTask>(
-                    `/tasks/api/v1/tasks/${task.id}/update/`,
-                    {
-                        title: task.title,
-                        description: task.description,
-                        status: "in_progress",
-                        assigned_employee: task.assigned_employee,
-                    }
-                );
+                case "unsold":
+                case "uncancel":
+                case "uncomplete":
+                    updated = await resetToInProgress();
+                    break;
 
-                updated = {
-                    ...task,
-                    ...response.data,
-                };
-            } else {
-                const endpoint =
-                    direction === "next"
-                        ? "advance"
-                        : direction === "prev"
-                          ? "revert"
-                          : "cancel";
-
-                const formData = new FormData();
-
-                if (data.note.trim()) {
-                    formData.append("note", data.note.trim());
-                }
-
-                data.files.forEach((file) => {
-                    formData.append("files", file);
-                });
-
-                const response = await axiosInstance.post<UserTask>(
-                    `/tasks/api/v1/tasks/${task.id}/${endpoint}/`,
-                    formData,
-                    {
-                        headers: {
-                            "Content-Type": "multipart/form-data",
-                        },
-                    }
-                );
-
-                updated = {
-                    ...task,
-                    ...response.data,
-                };
+                default:
+                    updated = await advanceRevertOrCancel(direction, data);
             }
 
             onUpdated(updated);

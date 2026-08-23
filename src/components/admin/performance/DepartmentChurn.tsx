@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useTheme } from "next-themes";
 import {
@@ -20,18 +20,18 @@ interface Props {
 }
 
 const SEGMENTS = [
-    { key: "sold", label: "فروش", color: "#10b981" },
-    { key: "completed", label: "تکمیل", color: "#3b82f6" },
-    { key: "in_progress", label: "در جریان", color: "#cbd5e1" },
-    { key: "cancelled", label: "لغو", color: "#ef4444" },
+    { key: "sold", label: "فروش", color: "#2dd4bf" },
+    { key: "completed", label: "تکمیل", color: "#60a5fa" },
+    { key: "in_progress", label: "در جریان", color: "#c7d2fe" },
+    { key: "cancelled", label: "لغو", color: "#fb7185" },
 ] as const;
 
 function SegmentTooltip({ stage, isDark }: { stage: StageStat; isDark: boolean }) {
     const rows = [
-        { label: "فروش", value: stage.sold, color: "#10b981" },
-        { label: "تکمیل", value: stage.completed, color: "#3b82f6" },
-        { label: "در جریان", value: stage.in_progress, color: "#94a3b8" },
-        { label: "لغو", value: stage.cancelled, color: "#ef4444" },
+        { label: "فروش", value: stage.sold, color: "#2dd4bf" },
+        { label: "تکمیل", value: stage.completed, color: "#60a5fa" },
+        { label: "در جریان", value: stage.in_progress, color: "#a5b4fc" },
+        { label: "لغو", value: stage.cancelled, color: "#fb7185" },
     ];
 
     return (
@@ -61,7 +61,7 @@ function SegmentTooltip({ stage, isDark }: { stage: StageStat; isDark: boolean }
                 ))}
                 <div className="mt-1 flex items-center justify-between border-t border-dashed pt-1.5" style={{ borderColor: isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.07)" }}>
                     <span className="text-[10.5px] text-gray-400 dark:text-gray-500">مجموع</span>
-                    <span className="text-[11px] font-extrabold text-indigo-500">{stage.total}</span>
+                    <span className="text-[11px] font-extrabold text-indigo-400">{stage.total}</span>
                 </div>
             </div>
             <div
@@ -98,7 +98,7 @@ function SegmentedBar({ stages, isDark }: { stages: StageStat[]; isDark: boolean
                                 className="flex h-full w-full cursor-pointer overflow-hidden rounded-xl"
                                 style={{
                                     background: isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.035)",
-                                    boxShadow: isRisk ? "0 0 0 1.5px rgba(244,63,94,0.5) inset" : "none",
+                                    boxShadow: isRisk ? "0 0 0 1.5px rgba(251,113,133,0.5) inset" : "none",
                                 }}
                             >
                                 {SEGMENTS.map((seg) => {
@@ -150,17 +150,15 @@ function EmployeePanel({
     const border = isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.07)";
 
     const accentBg = isBest
-        ? isDark ? "rgba(99,102,241,0.15)" : "rgba(99,102,241,0.1)"
-        : isDark ? "rgba(244,63,94,0.12)" : "rgba(244,63,94,0.08)";
-    const accentText = isBest
-        ? isDark ? "#a5b4fc" : "#6366f1"
-        : isDark ? "#fda4af" : "#f43f5e";
+        ? "linear-gradient(135deg, rgba(56,189,248,0.16), rgba(129,140,248,0.16))"
+        : "linear-gradient(135deg, rgba(251,113,133,0.14), rgba(192,132,252,0.14))";
+    const accentText = isBest ? "#60a5fa" : "#fb7185";
 
     return (
         <div className="flex h-full flex-col rounded-2xl p-4" style={{ border: `1px dashed ${border}` }}>
             <div className="mb-3 flex items-center gap-1.5">
                 {isBest ? (
-                    <Crown size={13} className="text-amber-500" />
+                    <Crown size={13} className="text-sky-400" />
                 ) : (
                     <TrendingDown size={13} className="text-rose-400" />
                 )}
@@ -196,9 +194,9 @@ function EmployeePanel({
 
                     <div className="flex flex-col gap-2.5">
                         {[
-                            { label: "فروش رفته", value: person.sold, color: "#10b981" },
-                            { label: "تکمیل‌شده", value: person.completed, color: "#3b82f6" },
-                            { label: "لغوشده", value: person.cancelled, color: "#ef4444" },
+                            { label: "فروش رفته", value: person.sold, color: "#2dd4bf" },
+                            { label: "تکمیل‌شده", value: person.completed, color: "#60a5fa" },
+                            { label: "لغوشده", value: person.cancelled, color: "#fb7185" },
                         ].map((row) => (
                             <div
                                 key={row.label}
@@ -266,7 +264,8 @@ export default function DepartmentChurn({ departments, loading }: Props) {
     const maxCancelled = Math.max(0, ...dept.stages.map((s) => s.cancelled));
     const riskStage = dept.stages.find((s) => s.cancelled === maxCancelled && maxCancelled > 0);
 
-    const showWorst = dept.worst && dept.worst.key !== dept.best?.key;
+    const showWorst = Boolean(dept.worst && dept.worst.key !== dept.best?.key);
+    const panelColumns = showWorst ? "lg:grid-cols-[1fr_180px_180px]" : "lg:grid-cols-[1fr_180px]";
 
     return (
         <motion.div
@@ -276,19 +275,18 @@ export default function DepartmentChurn({ departments, loading }: Props) {
             className="flex flex-col rounded-2xl"
             style={{ border: `1px solid ${border}`, background: cardBg }}
         >
-            {/* Header */}
             <div className="flex items-start justify-between gap-3 px-4 pt-4">
                 <div className="flex items-center gap-2.5">
                     <div
                         className="flex h-8 w-8 items-center justify-center rounded-xl"
-                        style={{ background: isDark ? "rgba(99,102,241,0.12)" : "rgba(99,102,241,0.08)" }}
+                        style={{ background: "linear-gradient(135deg, rgba(129,140,248,0.16), rgba(56,189,248,0.16))" }}
                     >
-                        <Workflow size={15} className="text-indigo-500" />
+                        <Workflow size={15} className="text-indigo-400" />
                     </div>
                     <div className="flex flex-col">
                         <div className="flex items-center gap-1.5">
                             <h3 className="text-[13px] font-extrabold text-gray-900 dark:text-white">
-                                مسیر تسک‌ها در فرآیند های دپارتمان
+                                مسیر تسک‌ها در فرآیندهای دپارتمان
                             </h3>
                             <button
                                 type="button"
@@ -321,7 +319,6 @@ export default function DepartmentChurn({ departments, loading }: Props) {
                 </div>
             </div>
 
-            {/* Tabs */}
             <div className="mt-3.5 flex items-center gap-1 border-b px-4" style={{ borderColor: border }}>
                 <button
                     type="button"
@@ -346,7 +343,7 @@ export default function DepartmentChurn({ departments, loading }: Props) {
                                     className="whitespace-nowrap text-[12px] font-bold transition-colors"
                                     style={{
                                         color: active
-                                            ? isDark ? "#c7d2fe" : "#6366f1"
+                                            ? isDark ? "#93c5fd" : "#60a5fa"
                                             : isDark ? "#64748b" : "#94a3b8",
                                     }}
                                 >
@@ -359,7 +356,7 @@ export default function DepartmentChurn({ departments, loading }: Props) {
                                     <motion.span
                                         layoutId="dept-tab-indicator"
                                         className="absolute -bottom-[1px] h-[2px] w-full rounded-full"
-                                        style={{ background: isDark ? "#818cf8" : "#6366f1" }}
+                                        style={{ background: "linear-gradient(90deg, #60a5fa, #818cf8)" }}
                                     />
                                 )}
                             </button>
@@ -377,7 +374,6 @@ export default function DepartmentChurn({ departments, loading }: Props) {
                 </button>
             </div>
 
-            {/* Body */}
             <AnimatePresence mode="wait">
                 <motion.div
                     key={dept.key}
@@ -385,19 +381,18 @@ export default function DepartmentChurn({ departments, loading }: Props) {
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: 8 }}
                     transition={{ duration: 0.2, ease: [0.25, 0.46, 0.45, 0.94] }}
-                    className="grid grid-cols-1 gap-4 p-4 lg:grid-cols-[1fr_180px_180px] items-center"
+                    className={`grid grid-cols-1 items-center gap-4 p-4 ${panelColumns}`}
                 >
-                    {/* Chart */}
                     <div className="flex flex-col gap-4">
                         {riskStage && (
                             <div
                                 className="flex items-center gap-1.5 rounded-xl px-3 py-2 text-[11px]"
-                                style={{ background: isDark ? "rgba(244,63,94,0.08)" : "rgba(244,63,94,0.06)" }}
+                                style={{ background: isDark ? "rgba(251,113,133,0.08)" : "rgba(251,113,133,0.06)" }}
                             >
-                                <AlertCircle size={12} className="shrink-0 text-rose-500" />
+                                <AlertCircle size={12} className="shrink-0 text-rose-400" />
                                 <span className="text-gray-500 dark:text-gray-400">
                                     بیشترین ریزش در مرحله{" "}
-                                    <span className="font-bold text-rose-500">«{riskStage.name}»</span>{" "}
+                                    <span className="font-bold text-rose-400">«{riskStage.name}»</span>{" "}
                                     — بررسی این مرحله توصیه می‌شود
                                 </span>
                             </div>
@@ -422,7 +417,7 @@ export default function DepartmentChurn({ departments, loading }: Props) {
                     </div>
 
                     <EmployeePanel person={dept.best} isDark={isDark} variant="best" />
-                    <EmployeePanel person={dept.worst} isDark={isDark} variant="worst" />
+                    {showWorst && <EmployeePanel person={dept.worst} isDark={isDark} variant="worst" />}
                 </motion.div>
             </AnimatePresence>
         </motion.div>

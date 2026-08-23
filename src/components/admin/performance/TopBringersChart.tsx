@@ -21,13 +21,13 @@ interface Props {
 
 type ActiveSlice = { name: string; actual: number; count: number; color: string; glow: string; index: number };
 
-const INDIGO_SCALE = [
-    { color: "#6366f1", glow: "rgba(99,102,241,0.5)" },
-    { color: "#8b5cf6", glow: "rgba(139,92,246,0.5)" },
-    { color: "#a855f7", glow: "rgba(168,85,247,0.5)" },
-    { color: "#0ea5e9", glow: "rgba(14,165,233,0.5)" },
-    { color: "#06b6d4", glow: "rgba(6,182,212,0.5)" },
-    { color: "#ec4899", glow: "rgba(236,72,153,0.5)" },
+const VIOLET_SCALE = [
+    { color: "#818cf8", glow: "rgba(129,140,248,0.5)" },
+    { color: "#a78bfa", glow: "rgba(167,139,250,0.5)" },
+    { color: "#c084fc", glow: "rgba(192,132,252,0.5)" },
+    { color: "#38bdf8", glow: "rgba(56,189,248,0.5)" },
+    { color: "#2dd4bf", glow: "rgba(45,212,191,0.5)" },
+    { color: "#f472b6", glow: "rgba(244,114,182,0.5)" },
 ];
 
 function TopBringersChartSkeleton() {
@@ -55,7 +55,7 @@ export default function TopBringersChart({ items, loading }: Props) {
                 name: item.full_name,
                 actual: item.actual,
                 count: item.count,
-                fill: INDIGO_SCALE[i % INDIGO_SCALE.length].color,
+                fill: VIOLET_SCALE[i % VIOLET_SCALE.length].color,
             })),
         [items],
     );
@@ -66,7 +66,7 @@ export default function TopBringersChart({ items, loading }: Props) {
         (_: unknown, index: number) => {
             const item = data[index];
             if (!item) return;
-            const meta = INDIGO_SCALE[index % INDIGO_SCALE.length];
+            const meta = VIOLET_SCALE[index % VIOLET_SCALE.length];
             setActiveSlice({ name: item.name, actual: item.actual, count: item.count, color: meta.color, glow: meta.glow, index });
         },
         [data],
@@ -81,15 +81,21 @@ export default function TopBringersChart({ items, loading }: Props) {
             initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, ease: [0.25, 0.46, 0.45, 0.94] }}
-            className="relative rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-white/8 dark:bg-slate-950"
+            className="relative overflow-hidden rounded-2xl border p-4 shadow-sm"
+            style={{
+                borderColor: isDark ? "rgba(129,140,248,0.1)" : "rgba(129,140,248,0.12)",
+                background: isDark
+                    ? "linear-gradient(160deg, rgba(129,140,248,0.05), rgba(15,23,42,0))"
+                    : "linear-gradient(160deg, rgba(129,140,248,0.05), #ffffff)",
+            }}
         >
             <div className="mb-3 flex items-start justify-between gap-3" dir="rtl">
                 <div className="flex items-center gap-2.5">
                     <div
                         className="flex h-8 w-8 items-center justify-center rounded-xl"
-                        style={{ background: isDark ? "rgba(99,102,241,0.12)" : "rgba(99,102,241,0.08)" }}
+                        style={{ background: "linear-gradient(135deg, rgba(129,140,248,0.18), rgba(56,189,248,0.18))" }}
                     >
-                        <Users size={15} className="text-indigo-500" />
+                        <Users size={15} className="text-indigo-400" />
                     </div>
                     <div>
                         <h3 className="text-[14px] font-semibold text-gray-900 dark:text-white">آورنده‌های برتر مشتری</h3>
