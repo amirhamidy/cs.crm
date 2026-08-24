@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
 import { apiRoutes } from "@/lib/apiRoutes";
-import type { CaseItem } from "@/types/case";
+import type { CaseItem, Employee } from "@/types/case";
 import type { Customer } from "@/types/customer";
 import type { Department } from "@/types/department";
 import type { TaskItem } from "@/types/task";
@@ -39,9 +39,10 @@ interface Option {
 }
 
 interface EditTaskModalProps {
-    task: TaskItem | null;
+    task: TaskItem;
     customers: Customer[];
     departments: Department[];
+    employees: Employee[];   
     onClose: () => void;
     onSuccess: () => void;
 }
@@ -385,6 +386,7 @@ export default function EditTaskModal({
     task,
     customers,
     departments,
+    employees, 
     onClose,
     onSuccess,
 }: EditTaskModalProps) {

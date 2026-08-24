@@ -20,12 +20,7 @@ interface CalendarEvent {
     type: string;
 }
 
-const persianMonths = [
-    "فروردین", "اردیبهشت", "خرداد", "تیر", "مرداد", "شهریور",
-    "مهر", "آبان", "آذر", "دی", "بهمن", "اسفند",
-];
-
-const weekDays = ["ش", "ی", "د", "س", "چ", "پ", "ج"];
+const weekDays = ["شنبه", "یکشنبه", "دوشنبه", "سه شنبه", "چهارشنبه", "پنجشنبه", "جمعه"];
 
 const pad = (v: number) => String(v).padStart(2, "0");
 const toDateKey = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
@@ -49,19 +44,26 @@ const getMonthRange = (base: Date) => ({
 const getDaysInMonth = (date: Date): (Date | null)[] => {
     const year = date.getFullYear();
     const month = date.getMonth();
-    const firstWeekDay = (new Date(year, month, 1).getDay() + 1) % 7;
+    const firstDay = new Date(year, month, 1).getDay();
+    const offset = firstDay === 6 ? 0 : firstDay + 1;
     const daysCount = new Date(year, month + 1, 0).getDate();
-    const cells: (Date | null)[] = Array(firstWeekDay).fill(null);
+    const cells: (Date | null)[] = Array(offset).fill(null);
     for (let d = 1; d <= daysCount; d++) cells.push(new Date(year, month, d));
     while (cells.length % 7 !== 0) cells.push(null);
     return cells;
 };
 
 const getPersianMonthLabel = (date: Date) => {
-    const parts = new Intl.DateTimeFormat("fa-IR-u-ca-persian", { year: "numeric", month: "numeric" }).formatToParts(date);
+    const formatter = new Intl.DateTimeFormat("fa-IR-u-ca-persian", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+    });
+    const parts = formatter.formatToParts(date);
     const year = parts.find((p) => p.type === "year")?.value ?? "";
-    const monthIdx = Number(parts.find((p) => p.type === "month")?.value ?? "1") - 1;
-    return `${persianMonths[monthIdx]} ${year}`;
+    const month = parts.find((p) => p.type === "month")?.value ?? "";
+    const day = parts.find((p) => p.type === "day")?.value ?? "";
+    return `${month} ${year}`;
 };
 
 const getPersianDayNumber = (d: Date) =>
@@ -169,6 +171,9 @@ export default function PersianCalendar() {
         setIsModalOpen(true);
     };
 
+    const today = new Date();
+    const todayPersian = getPersianDayNumber(today);
+
     return (
         <>
             <div dir="rtl" className="w-full max-w-5xl mx-auto rounded-[2rem] border border-gray-100 dark:border-white/[0.06] bg-white dark:bg-[#0f172a] shadow-sm overflow-hidden">
@@ -185,6 +190,9 @@ export default function PersianCalendar() {
                         </div>
                         <h2 className="text-[13.5px] font-extrabold text-gray-900 dark:text-white tracking-tight">
                             {getPersianMonthLabel(currentMonth)}
+                            <span className="mr-2 text-[11px] font-semibold text-blue-500 dark:text-blue-400">
+                                (امروز: {todayPersian})
+                            </span>
                         </h2>
                     </div>
 
@@ -244,6 +252,7 @@ export default function PersianCalendar() {
                             const dayEvents = eventsByDay.get(key) ?? [];
                             const noteCount = noteCountByDay.get(key) ?? 0;
                             const today = isToday(date);
+                            const dayNumber = getPersianDayNumber(date);
 
                             return (
                                 <motion.button
@@ -251,14 +260,17 @@ export default function PersianCalendar() {
                                     type="button"
                                     whileTap={{ scale: 0.97 }}
                                     onClick={() => handleSelectDate(date)}
-                                    className="relative flex min-h-[96px] flex-col gap-1.5 p-2.5 text-right bg-white dark:bg-[#0f172a] hover:bg-gray-50 dark:hover:bg-white/[0.03] transition-colors"
+                                    className={`relative flex min-h-[96px] flex-col gap-1.5 p-2.5 text-right transition-colors ${today
+                                            ? "bg-blue-50 dark:bg-blue-500/10 ring-2 ring-blue-500/30 dark:ring-blue-400/30"
+                                            : "bg-white dark:bg-[#0f172a] hover:bg-gray-50 dark:hover:bg-white/[0.03]"
+                                        }`}
                                 >
                                     <div className="flex items-start justify-between gap-1">
                                         <span className={`flex h-6 w-6 items-center justify-center rounded-lg text-[11px] font-extrabold flex-shrink-0 ${today
-                                            ? "bg-gradient-to-br from-blue-500 to-indigo-500 text-white shadow-sm shadow-blue-500/30"
-                                            : "bg-gray-50 dark:bg-white/[0.04] text-gray-600 dark:text-gray-300"
+                                                ? "bg-gradient-to-br from-blue-500 to-indigo-500 text-white shadow-sm shadow-blue-500/30"
+                                                : "bg-gray-50 dark:bg-white/[0.04] text-gray-600 dark:text-gray-300"
                                             }`}>
-                                            {getPersianDayNumber(date)}
+                                            {dayNumber}
                                         </span>
 
                                         <div className="flex flex-col items-end gap-0.5">

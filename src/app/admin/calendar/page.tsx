@@ -31,7 +31,7 @@ const RANGE_LABELS: Record<RangeType, string> = {
     year: "سال",
 };
 
-const weekDays = ["ش", "ی", "د", "س", "چ", "پ", "ج"];
+const weekDays = ["شنبه", "یکشنبه", "دوشنبه", "سه شنبه", "چهارشنبه", "پنجشنبه", "جمعه"];
 
 const EVENT_TYPE_LABEL: Record<string, string> = {
     meeting: "جلسه",
@@ -43,7 +43,7 @@ const EVENT_TYPE_LABEL: Record<string, string> = {
 
 const EVENT_TYPE_COLOR: Record<string, { bg: string; text: string; dot: string }> = {
     meeting: { bg: "bg-violet-500/10", text: "text-violet-400", dot: "bg-violet-400" },
-    task: { bg: "bg-blue-500/10", text: "text-blue-400", dot: "bg-blue-200" },
+    task: { bg: "bg-blue-500/10", text: "text-blue-400", dot: "bg-blue-400" },
     reminder: { bg: "bg-sky-500/10", text: "text-sky-400", dot: "bg-sky-400" },
     deadline: { bg: "bg-rose-500/10", text: "text-rose-400", dot: "bg-rose-400" },
     note: { bg: "bg-emerald-500/10", text: "text-emerald-400", dot: "bg-emerald-400" },
@@ -210,7 +210,8 @@ export default function CalendarPage() {
     if (range === "week") {
         weeks.push(days);
     } else {
-        let current: (Date | null)[] = Array(dayIndex(days[0])).fill(null);
+        const firstDayIndex = dayIndex(days[0]);
+        let current: (Date | null)[] = Array(firstDayIndex).fill(null);
         for (const d of days) {
             if (current.length === 7) {
                 weeks.push(current);
@@ -219,7 +220,7 @@ export default function CalendarPage() {
             current.push(d);
         }
         while (current.length < 7) current.push(null);
-        weeks.push(current);
+        if (current.some((d) => d !== null)) weeks.push(current);
     }
 
     const flatCells = weeks.flat();
@@ -369,13 +370,18 @@ export default function CalendarPage() {
                                                 type="button"
                                                 whileTap={{ scale: 0.97 }}
                                                 onClick={() => handleSelectDate(date)}
-                                                className="relative flex min-h-[96px] flex-col gap-1.5 p-2.5 text-right bg-white dark:bg-[#0f172a] hover:bg-gray-50 dark:hover:bg-white/[0.03] transition-colors"
+                                                className={`relative flex min-h-[96px] flex-col gap-1.5 p-2.5 text-right transition-colors ${
+                                                    isToday
+                                                        ? "bg-blue-50 dark:bg-blue-500/10 ring-2 ring-blue-500/30 dark:ring-blue-400/30"
+                                                        : "bg-white dark:bg-[#0f172a] hover:bg-gray-50 dark:hover:bg-white/[0.03]"
+                                                }`}
                                             >
                                                 <div className="flex items-start justify-between gap-1">
-                                                    <span className={`flex h-6 w-6 items-center justify-center rounded-lg text-[11px] font-extrabold flex-shrink-0 ${isToday
-                                                        ? "bg-gradient-to-br from-blue-500 to-indigo-500 text-white shadow-sm shadow-blue-500/30"
-                                                        : "bg-gray-50 dark:bg-white/[0.04] text-gray-600 dark:text-gray-300"
-                                                        }`}>
+                                                    <span className={`flex h-6 w-6 items-center justify-center rounded-lg text-[11px] font-extrabold flex-shrink-0 ${
+                                                        isToday
+                                                            ? "bg-gradient-to-br from-blue-500 to-indigo-500 text-white shadow-sm shadow-blue-500/30"
+                                                            : "bg-gray-50 dark:bg-white/[0.04] text-gray-600 dark:text-gray-300"
+                                                    }`}>
                                                         {toPersianDigits(jd)}
                                                     </span>
 

@@ -33,6 +33,8 @@ interface TaskWithSchedule extends UserTask {
     started_at?: string | null;
     deadline?: string | null;
     due_date?: string | null;
+    customer_name?: string | null;
+    customer_phone?: string | null;
 }
 
 interface TaskCardProps {
@@ -49,6 +51,12 @@ interface DeadlineResponse {
 
 interface CaseResponse {
     customer: number;
+    customer_name?: string | null;
+}
+
+interface CustomerResponse {
+    full_name?: string | null;
+    name?: string | null;
 }
 
 interface LatestLog {
@@ -176,7 +184,6 @@ const LOG_ACTION_META: Record<
 
 function formatFaDate(date?: string) {
     if (!date) return "نامشخص";
-
     return new Date(date).toLocaleDateString("fa-IR", {
         year: "numeric",
         month: "long",
@@ -186,44 +193,30 @@ function formatFaDate(date?: string) {
 
 function formatJalali(value?: string | null) {
     if (!value) return null;
-
     const date = new Date(value);
-
     if (Number.isNaN(date.getTime())) return null;
-
     const [jy, jm, jd] = toJalali(
         date.getFullYear(),
         date.getMonth() + 1,
         date.getDate()
     ) as [number, number, number];
-
     return {
         full: `${toPersianDigits(jd)} ${JALALI_MONTHS[jm - 1]} ${toPersianDigits(jy)}`,
         short: `${toPersianDigits(jd)} ${JALALI_MONTHS[jm - 1]}`,
-        time: `${toPersianDigits(pad2(date.getHours()))}:${toPersianDigits(
-            pad2(date.getMinutes())
-        )}`,
+        time: `${toPersianDigits(pad2(date.getHours()))}:${toPersianDigits(pad2(date.getMinutes()))}`,
     };
 }
 
 function formatJalaliShort(value?: string | null) {
     if (!value) return "";
-
     const date = new Date(value);
-
     if (Number.isNaN(date.getTime())) return "";
-
     const [jy, jm, jd] = toJalali(
         date.getFullYear(),
         date.getMonth() + 1,
         date.getDate()
     ) as [number, number, number];
-
-    return `${toPersianDigits(jd)} ${JALALI_MONTHS[jm - 1]} ${toPersianDigits(
-        jy
-    )} - ${toPersianDigits(pad2(date.getHours()))}:${toPersianDigits(
-        pad2(date.getMinutes())
-    )}`;
+    return `${toPersianDigits(jd)} ${JALALI_MONTHS[jm - 1]} ${toPersianDigits(jy)} - ${toPersianDigits(pad2(date.getHours()))}:${toPersianDigits(pad2(date.getMinutes()))}`;
 }
 
 function getDeadlineState(deadline?: string | null) {
@@ -235,12 +228,10 @@ function getDeadlineState(deadline?: string | null) {
             icon: Clock3,
         };
     }
-
     const target = new Date(deadline).getTime();
     const now = Date.now();
     const diff = target - now;
     const hours = diff / (1000 * 60 * 60);
-
     if (diff < 0) {
         return {
             label: "منقضی شده",
@@ -249,7 +240,6 @@ function getDeadlineState(deadline?: string | null) {
             icon: AlarmClock,
         };
     }
-
     if (hours <= 24) {
         return {
             label: "فوری",
@@ -258,7 +248,6 @@ function getDeadlineState(deadline?: string | null) {
             icon: AlarmClock,
         };
     }
-
     return {
         label: "در زمانبندی",
         color: "text-emerald-600 dark:text-emerald-400",
@@ -276,7 +265,6 @@ function getStatusMeta(status: string) {
                 bg: "bg-emerald-500/10",
                 dot: "bg-emerald-500",
             };
-
         case "sold":
             return {
                 label: "فروش رفته",
@@ -284,7 +272,6 @@ function getStatusMeta(status: string) {
                 bg: "bg-amber-500/10",
                 dot: "bg-amber-500",
             };
-
         case "cancelled":
             return {
                 label: "لغو شده",
@@ -292,7 +279,6 @@ function getStatusMeta(status: string) {
                 bg: "bg-red-500/10",
                 dot: "bg-red-500",
             };
-
         default:
             return {
                 label: "در حال انجام",
@@ -314,17 +300,41 @@ function logMetaOf(action: string) {
     );
 }
 
+function InfoRow({
+    label,
+    value,
+    icon: Icon,
+}: {
+    label: string;
+    value: React.ReactNode;
+    icon?: React.ComponentType<{ size?: number; className?: string }>;
+}) {
+    return (
+        <div className="flex items-baseline gap-1.5 text-[11px]">
+            {Icon && (
+                <Icon
+                    size={11}
+                    className="mt-0.5 shrink-0 text-gray-400 dark:text-white/30"
+                />
+            )}
+            <span className="shrink-0 font-semibold text-gray-400 dark:text-white/35">
+                {label}:
+            </span>
+            <span className="truncate font-bold text-gray-700 dark:text-white/80">
+                {value}
+            </span>
+        </div>
+    );
+}
+
 function LatestLogAuthor({ employeeId }: { employeeId?: number }) {
     const { data, loading } = useEmployeeInfo(employeeId ?? 0);
-
     if (!employeeId) {
         return <span className="font-bold">نامشخص</span>;
     }
-
     if (loading) {
         return <span className="font-bold">در حال دریافت...</span>;
     }
-
     return (
         <span className="font-bold">
             {data?.full_name ??
@@ -335,25 +345,16 @@ function LatestLogAuthor({ employeeId }: { employeeId?: number }) {
 }
 
 function parseBackendError(err: unknown): string {
-    const error = err as {
-        response?: {
-            data?: unknown;
-        };
-    };
-
+    const error = err as { response?: { data?: unknown } };
     const data = error?.response?.data;
-
     if (!data) return "خطا در ثبت تغییرات";
     if (typeof data === "string") return data;
     if (Array.isArray(data)) return String(data[0]);
-
     if (typeof data === "object") {
         const first = Object.values(data as Record<string, unknown>)[0];
-
         if (Array.isArray(first)) return String(first[0]);
         if (typeof first === "string") return first;
     }
-
     return "خطا در ثبت تغییرات";
 }
 
@@ -372,6 +373,9 @@ export default function UserTaskCard({
     const [blockMsg, setBlockMsg] = useState<string | null>(null);
     const [latestLog, setLatestLog] = useState<LatestLog | null>(null);
     const [logsLoading, setLogsLoading] = useState(true);
+    const [customerName, setCustomerName] = useState<string | null>(
+        taskExt.customer_name ?? null
+    );
 
     const [schedule, setSchedule] = useState<DeadlineResponse>({
         started_at: taskExt.started_at ?? null,
@@ -395,7 +399,6 @@ export default function UserTaskCard({
 
     const fetchLatestLog = useCallback(() => {
         setLogsLoading(true);
-
         axiosInstance
             .get<LatestLog[]>(`/tasks/api/v1/tasks/${task.id}/logs/`)
             .then((response) => {
@@ -416,9 +419,7 @@ export default function UserTaskCard({
     useEffect(() => {
         const taskId = Number(task.id);
         const stepId = Number(task.current_step);
-
         if (!taskId || !stepId) return;
-
         axiosInstance
             .get<DeadlineResponse>(
                 `/tasks/api/v1/tasks/${taskId}/steps/${stepId}/deadline/`
@@ -432,18 +433,40 @@ export default function UserTaskCard({
             .catch(() => undefined);
     }, [task.id, task.current_step]);
 
+    useEffect(() => {
+        const caseId = taskExt.case;
+        if (!caseId || customerName) return;
+
+        axiosInstance
+            .get<CaseResponse>(`/tasks/api/v1/cases/${caseId}/`)
+            .then(({ data: caseData }) => {
+                if (caseData.customer_name) {
+                    setCustomerName(caseData.customer_name);
+                    return null;
+                }
+                if (caseData.customer) {
+                    return axiosInstance.get<CustomerResponse>(
+                        `/customers/api/v1/customers/${caseData.customer}/`
+                    );
+                }
+                return null;
+            })
+            .then((res) => {
+                if (res?.data) {
+                    setCustomerName(res.data.full_name ?? res.data.name ?? null);
+                }
+            })
+            .catch(() => undefined);
+    }, [taskExt.case, customerName]);
+
     async function syncCustomerToActive() {
         const caseId = taskExt.case;
-
         if (!caseId) return;
-
         try {
             const { data: caseData } = await axiosInstance.get<CaseResponse>(
                 `/tasks/api/v1/cases/${caseId}/`
             );
-
             if (!caseData.customer) return;
-
             await axiosInstance.patch(
                 `/customers/api/v1/customers/${caseData.customer}/update/`,
                 { status: 2 }
@@ -458,9 +481,7 @@ export default function UserTaskCard({
             `/tasks/api/v1/tasks/${task.id}/mark-as-sold/`,
             { status: "sold" }
         );
-
         await syncCustomerToActive();
-
         return {
             ...task,
             status: data.status as UserTask["status"],
@@ -477,7 +498,6 @@ export default function UserTaskCard({
                 assigned_employee: task.assigned_employee,
             }
         );
-
         return { ...task, ...data };
     }
 
@@ -493,11 +513,9 @@ export default function UserTaskCard({
                     : "cancel";
 
         const formData = new FormData();
-
         if (data.note.trim()) {
             formData.append("note", data.note.trim());
         }
-
         data.files.forEach((file) => {
             formData.append("files", file);
         });
@@ -505,13 +523,8 @@ export default function UserTaskCard({
         const { data: responseData } = await axiosInstance.post<UserTask>(
             `/tasks/api/v1/tasks/${task.id}/${endpoint}/`,
             formData,
-            {
-                headers: {
-                    "Content-Type": "multipart/form-data",
-                },
-            }
+            { headers: { "Content-Type": "multipart/form-data" } }
         );
-
         return { ...task, ...responseData };
     }
 
@@ -521,25 +534,20 @@ export default function UserTaskCard({
     ) {
         setSubmitting(true);
         setBlockMsg(null);
-
         try {
             let updated: UserTask;
-
             switch (direction) {
                 case "sold":
                     updated = await markAsSold();
                     break;
-
                 case "unsold":
                 case "uncancel":
                 case "uncomplete":
                     updated = await resetToInProgress();
                     break;
-
                 default:
                     updated = await advanceRevertOrCancel(direction, data);
             }
-
             onUpdated(updated);
             fetchLatestLog();
             setOpenModal(null);
@@ -555,9 +563,7 @@ export default function UserTaskCard({
             <motion.div
                 layout
                 className="group relative flex flex-col gap-0 overflow-hidden rounded-[1.8rem] border border-gray-100 bg-white p-4 shadow-[0_8px_28px_rgba(15,23,42,0.035)] transition-all duration-300 select-none hover:-translate-y-0.5 hover:shadow-[0_16px_36px_rgba(15,23,42,0.08)] dark:border-white/[0.07] dark:bg-[#111a2d] dark:shadow-none"
-                style={{
-                    opacity: isDragging ? 0.35 : 1,
-                }}
+                style={{ opacity: isDragging ? 0.35 : 1 }}
             >
                 <div
                     className="absolute inset-y-0 right-0 w-1"
@@ -604,38 +610,46 @@ export default function UserTaskCard({
                     </p>
                 )}
 
+                <div className="mt-3 flex flex-col gap-1.5 rounded-2xl bg-gray-50 px-3 py-2.5 dark:bg-white/[0.035]">
+                    {customerName && (
+                        <InfoRow
+                            label="نام مشتری"
+                            value={customerName}
+                            icon={Building2}
+                        />
+                    )}
+
+                    {task.current_step_name && (
+                        <InfoRow
+                            label="مرحله جاری"
+                            value={task.current_step_name}
+                            icon={Layers3}
+                        />
+                    )}
+
+                    {task.department_name && (
+                        <InfoRow
+                            label="دپارتمان"
+                            value={task.department_name}
+                            icon={Building2}
+                        />
+                    )}
+
+                    <InfoRow
+                        label="تاریخ ثبت"
+                        value={formatFaDate(task.created_at)}
+                        icon={CalendarDays}
+                    />
+                </div>
+
                 <div className="mt-3.5 flex flex-col gap-2.5">
-                    <div className="flex flex-wrap items-center gap-1.5">
-                        {task.department_name && (
-                            <div className="flex items-center gap-1.5 rounded-xl bg-gray-50 px-2.5 py-1.5 text-[10px] font-bold text-gray-500 dark:bg-white/[0.04] dark:text-white/45">
-                                <Building2 size={11} />
-                                <span className="max-w-[130px] truncate">
-                                    {task.department_name}
-                                </span>
-                            </div>
-                        )}
-
-                        {task.current_step_name && (
-                            <div className="flex items-center gap-1.5 rounded-xl bg-violet-50 px-2.5 py-1.5 text-[10px] font-bold text-violet-600 dark:bg-violet-500/10 dark:text-violet-300">
-                                <Layers3 size={11} />
-                                <span className="max-w-[130px] truncate">
-                                    {task.current_step_name}
-                                </span>
-                            </div>
-                        )}
-                    </div>
-
                     {deadlineDate ? (
                         <div className="flex items-center justify-between gap-2 rounded-2xl bg-gray-50 px-3 py-2.5 dark:bg-white/[0.035]">
                             <div className="flex min-w-0 items-center gap-2 text-gray-500 dark:text-white/45">
                                 <CalendarDays size={13} />
-
                                 <div className="min-w-0">
                                     <p className="text-[9.5px] font-bold">مهلت انجام</p>
-
-                                    <p
-                                        className={`mt-0.5 text-[11px] font-extrabold ${deadlineState.color}`}
-                                    >
+                                    <p className={`mt-0.5 text-[11px] font-extrabold ${deadlineState.color}`}>
                                         {deadlineDate.full} · {deadlineDate.time}
                                     </p>
                                 </div>
@@ -643,10 +657,7 @@ export default function UserTaskCard({
 
                             {startedDate && (
                                 <div className="border-r border-gray-200 pr-2 text-left dark:border-white/[0.08]">
-                                    <p className="text-[9px] font-bold text-gray-400">
-                                        شروع
-                                    </p>
-
+                                    <p className="text-[9px] font-bold text-gray-400">شروع</p>
                                     <p className="mt-0.5 text-[10px] font-bold text-gray-500 dark:text-white/50">
                                         {startedDate.short}
                                     </p>
@@ -698,9 +709,7 @@ export default function UserTaskCard({
 
                             <p className="text-[9.5px] font-semibold text-gray-400">
                                 ثبت‌کننده:{" "}
-                                <LatestLogAuthor
-                                    employeeId={latestLog.employee?.[0]}
-                                />
+                                <LatestLogAuthor employeeId={latestLog.employee?.[0]} />
                             </p>
                         </div>
                     ) : null}

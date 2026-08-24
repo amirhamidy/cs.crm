@@ -258,9 +258,8 @@ export default function UserTasksKanban() {
                         department: stage.department ?? null,
                         department_name:
                             stage.department_name ??
-                            (typeof stage.department === "object" &&
-                                stage.department
-                                ? stage.department.name ?? null
+                            (typeof stage.department === "object" && stage.department
+                                ? (stage.department as { name?: string }).name ?? null
                                 : null),
                     }))
                     .sort((a, b) => a.order - b.order);
@@ -323,6 +322,15 @@ export default function UserTasksKanban() {
     const departmentGroups = useMemo<DepartmentGroup[]>(() => {
         const map = new Map<number, DepartmentGroup>();
 
+        const deptNameFromTasks = new Map<number, string>();
+        tasks.forEach((task) => {
+            const id = extractDeptId(task);
+            const name = extractDeptName(task);
+            if (id !== -1 && !deptNameFromTasks.has(id)) {
+                deptNameFromTasks.set(id, name);
+            }
+        });
+
         stages.forEach((stage) => {
             const deptId = extractStageDeptId(stage);
             const deptName =
@@ -330,6 +338,7 @@ export default function UserTasksKanban() {
                 (typeof stage.department === "object" && stage.department
                     ? String((stage.department as { name?: string }).name ?? "")
                     : "") ||
+                deptNameFromTasks.get(deptId) ||
                 "بدون دپارتمان";
 
             if (!map.has(deptId)) {
@@ -364,10 +373,8 @@ export default function UserTasksKanban() {
             group.stages.sort((a, b) => a.order - b.order);
         });
 
-        return Array.from(map.values()).sort((a, b) =>
-            a.name.localeCompare(b.name, "fa")
-        );
-    }, [tasks, stages]);
+        return Array.from(map.values());
+    }, [stages, tasks]);
 
     useEffect(() => {
         if (departmentGroups.length === 0) {
