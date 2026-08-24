@@ -42,6 +42,7 @@ export default function AdminCasesPage() {
     const [editModalOpen, setEditModalOpen] = useState(false);
     const [deletingTaskId, setDeletingTaskId] = useState<number | null>(null);
 
+
     const fetchData = useCallback(async () => {
         try {
             setLoading(true);
@@ -260,6 +261,7 @@ export default function AdminCasesPage() {
                                         departments={departments}
                                         users={employees}
                                         isDeleting={deletingId === Number(item.id)}
+                                        hasActiveTasks={caseTasks.length > 0}
                                         onDelete={() => handleDeleteCase(item)}
                                     />
                                     {caseTasks.length > 0 && (
@@ -289,7 +291,7 @@ export default function AdminCasesPage() {
                 onCreated={fetchData}
                 customers={customers}
             />
-
+{/* 
             {editModalOpen && editingTask && (
                 <EditTaskModal
                     task={editingTask}
@@ -302,7 +304,7 @@ export default function AdminCasesPage() {
                     }}
                     onSuccess={handleTaskUpdate}
                 />
-            )}
+            )} */}
         </div>
     );
 }

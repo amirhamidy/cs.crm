@@ -42,7 +42,7 @@ export default function DepartmentDetailPage() {
     const [tasksLoading, setTasksLoading] = useState(false);
     const [pageLoading, setPageLoading] = useState(true);
 
-    const department = useMemo(() => departments.find((d) => d.id === id) ?? null, [departments, id]);
+    const department = useMemo(() => departments.find((d) => String(d.id) === String(id)) ?? null, [departments, id]);
     const accent = department?.accent || "#6366f1";
 
     const fetchTasks = useCallback(async () => {
@@ -68,7 +68,7 @@ export default function DepartmentDetailPage() {
     }, [fetchAll, fetchTasks, departments.length]);
 
     const departmentTasks = useMemo(() => {
-        if (!department) return [];
+        if (!department || !Array.isArray(department.stages)) return [];
         const stageIds = new Set(department.stages.map((s) => String(s.id)));
         return tasks.filter((t) => {
             const sid = getRelationId(t.current_step);
@@ -80,8 +80,20 @@ export default function DepartmentDetailPage() {
         if (!deleteTarget || !id) return;
         setDeleteLoading(true);
         try {
-            if (deleteTarget.type === "stage") await deleteStage(id, deleteTarget.stage.id);
-            if (deleteTarget.type === "employee") await removeEmployee(id, deleteTarget.employee.id);
+            if (deleteTarget.type === "stage") {
+                const targetId = deleteTarget.stage.id;
+                if (targetId !== undefined && targetId !== null && !String(targetId).startsWith("temp-")) {
+                    await deleteStage(id, targetId);
+                }
+            } else if (deleteTarget.type === "employee") {
+                const targetEmpId = deleteTarget.employee.id;
+                if (targetEmpId !== undefined && targetEmpId !== null) {
+                    await removeEmployee(id, targetEmpId);
+                }
+            }
+            await fetchAll();
+        } catch {
+            await fetchAll();
         } finally {
             setDeleteLoading(false);
             setDeleteTarget(null);
@@ -134,14 +146,21 @@ export default function DepartmentDetailPage() {
                 open={addStageOpen}
                 department={department}
                 onClose={() => setAddStageOpen(false)}
-                onSubmit={async (data) => { await addStage(id, { name: data.name }); setAddStageOpen(false); }}
+                onSubmit={async (data) => {
+                    await addStage(id, { name: data.name });
+                    await fetchAll();
+                    setAddStageOpen(false);
+                }}
             />
             <AddEmployeeModal
                 open={addEmployeeOpen}
                 department={department}
                 employees={allEmployees}
                 onClose={() => setAddEmployeeOpen(false)}
-                onSubmit={async (employeeId) => { await assignEmployee(id, employeeId); }}
+                onSubmit={async (employeeId) => {
+                    await assignEmployee(id, employeeId);
+                    await fetchAll();
+                }}
             />
 
             <div className="flex items-center gap-2.5">
@@ -163,7 +182,7 @@ export default function DepartmentDetailPage() {
                     <div className="mt-0.5 flex items-center gap-3 text-[11px] text-gray-400 dark:text-gray-600">
                         <span className="flex items-center gap-1">
                             <Users size={10} />
-                            {department.employees.length} عضو
+                            {department.employees?.length ?? 0} عضو
                         </span>
                         <span className="flex items-center gap-1">
                             <ListChecks size={10} />
@@ -193,7 +212,7 @@ export default function DepartmentDetailPage() {
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2">
-                    {department.employees.length === 0 ? (
+                    {!department.employees || department.employees.length === 0 ? (
                         <span className="text-[11px] italic text-gray-400 dark:text-gray-600">هنوز عضوی اضافه نشده</span>
                     ) : (
                         department.employees.map((emp) => (
@@ -209,7 +228,7 @@ export default function DepartmentDetailPage() {
                                     className="flex h-4 w-4 shrink-0 items-center justify-center rounded-md text-[9px] font-bold"
                                     style={{ background: `${accent}30` }}
                                 >
-                                    {emp.name.charAt(0)}
+                                    {emp.name?.charAt(0) || "U"}
                                 </span>
                                 {emp.name}
                             </button>
@@ -230,11 +249,14 @@ export default function DepartmentDetailPage() {
                     tasksLoading={tasksLoading}
                     stageColors={stageColors}
                     onAddStage={() => setAddStageOpen(true)}
-                    onEditStage={async (stage, values) => { await updateStage(id, stage.id, values); }}
+                    onEditStage={async (stage, values) => {
+                        await updateStage(id, stage.id, values);
+                        await fetchAll();
+                    }}
                     onDeleteStage={(stage) => setDeleteTarget({ type: "stage", stage })}
                     onReorder={(stages) =>
                         useDepartmentStore.setState((state) => ({
-                            departments: state.departments.map((d) => d.id === id ? { ...d, stages } : d),
+                            departments: state.departments.map((d) => String(d.id) === String(id) ? { ...d, stages } : d),
                         }))
                     }
                 />

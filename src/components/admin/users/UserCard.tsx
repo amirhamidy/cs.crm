@@ -1,151 +1,198 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { Trash2, Pencil, X, Loader, Star } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import { Loader2, Pencil, Star, Trash2, X } from "lucide-react";
 import { useTheme } from "next-themes";
+
 import axiosInstance from "@/lib/axiosInstance";
-import type { AxiosError } from "axios";
 import type { ApiEmployee, ApiUser } from "@/types/users";
-import EditUserModal from "./EditUserModal";
+import EditUserModal from "@/components/admin/users/EditUserModal";
 
 interface UserCardProps {
     employee: ApiEmployee;
     index: number;
+    hasActiveTasks?: boolean;
     onDelete: (id: number) => void;
-    onUpdated: (updatedEmployee: ApiEmployee) => void;
+    onUpdated: (employee: ApiEmployee) => void;
 }
 
 const AVATAR_GRADIENTS = [
     ["#6366f1", "#8b5cf6"],
-    ["#3b82f6", "#6366f1"],
-    ["#8b5cf6", "#ec4899"],
-    ["#06b6d4", "#6366f1"],
+    ["#ec4899", "#8b5cf6"],
+    ["#06b6d4", "#3b82f6"],
+    ["#10b981", "#14b8a6"],
     ["#f59e0b", "#ef4444"],
-];
+] as const;
 
-function getErrorMessage(err: unknown, fallback: string) {
-    const error = err as AxiosError<Record<string, unknown>>;
-    const data = error.response?.data;
-    if (!data) return fallback;
-    const possibleKeys = ["detail", "message", "error", "non_field_errors"];
-    for (const key of possibleKeys) {
-        const value = data[key];
-        if (typeof value === "string") return value;
-        if (Array.isArray(value) && typeof value[0] === "string") return value[0];
+function getErrorMessage(error: unknown, fallback: string) {
+    if (
+        typeof error === "object" &&
+        error !== null &&
+        "response" in error &&
+        typeof (error as { response?: unknown }).response === "object"
+    ) {
+        const response = (error as { response?: { data?: { detail?: string; message?: string } } })
+            .response;
+        const detail = response?.data?.detail || response?.data?.message;
+        if (detail) return detail;
     }
+
+    if (error instanceof Error && error.message) {
+        return error.message;
+    }
+
     return fallback;
 }
 
 function extractUserList(data: unknown): ApiUser[] {
-    if (Array.isArray(data)) return data;
+    if (Array.isArray(data)) return data as ApiUser[];
+
     if (data && typeof data === "object") {
-        const obj = data as Record<string, unknown>;
-        if (Array.isArray(obj.results)) return obj.results as ApiUser[];
-        if (Array.isArray(obj.data)) return obj.data as ApiUser[];
-        if (Array.isArray(obj.users)) return obj.users as ApiUser[];
+        const record = data as Record<string, unknown>;
+
+        if (Array.isArray(record.results)) return record.results as ApiUser[];
+        if (Array.isArray(record.data)) return record.data as ApiUser[];
+        if (Array.isArray(record.users)) return record.users as ApiUser[];
     }
+
     return [];
 }
 
 function extractEmployeeList(data: unknown): ApiEmployee[] {
-    if (Array.isArray(data)) return data;
+    if (Array.isArray(data)) return data as ApiEmployee[];
+
     if (data && typeof data === "object") {
-        const obj = data as Record<string, unknown>;
-        if (Array.isArray(obj.results)) return obj.results as ApiEmployee[];
-        if (Array.isArray(obj.data)) return obj.data as ApiEmployee[];
-        if (Array.isArray(obj.employees)) return obj.employees as ApiEmployee[];
+        const record = data as Record<string, unknown>;
+
+        if (Array.isArray(record.results)) return record.results as ApiEmployee[];
+        if (Array.isArray(record.data)) return record.data as ApiEmployee[];
+        if (Array.isArray(record.employees)) return record.employees as ApiEmployee[];
     }
+
     return [];
 }
 
-export default function UserCard({ employee, index, onDelete }: UserCardProps) {
+export default function UserCard({
+    employee,
+    index,
+    hasActiveTasks = false,
+    onDelete,
+    onUpdated,
+}: UserCardProps) {
     const { resolvedTheme } = useTheme();
     const isDark = resolvedTheme === "dark";
+
     const [hovered, setHovered] = useState(false);
+    const [tooltipVisible, setTooltipVisible] = useState(false);
     const [showConfirm, setShowConfirm] = useState(false);
+    const [showEditModal, setShowEditModal] = useState(false);
     const [deleting, setDeleting] = useState(false);
     const [deleteError, setDeleteError] = useState("");
-    const [showEditModal, setShowEditModal] = useState(false);
-    const [localEmployee, setLocalEmployee] = useState(employee);
     const [score, setScore] = useState<number | null>(null);
     const [scoreLoading, setScoreLoading] = useState(true);
 
     useEffect(() => {
-        if (!localEmployee?.id) return;
-        let alive = true;
-        setScoreLoading(true);
+        let mounted = true;
 
-        axiosInstance
-            .get(`/score/api/v1/employees/${localEmployee.id}/`)
-            .then(({ data }) => {
-                if (!alive) return;
+        const fetchScore = async () => {
+            if (!employee?.id) return;
+
+            setScoreLoading(true);
+
+            try {
+                const { data } = await axiosInstance.get(`/score/api/v1/employees/${employee.id}/`);
+                if (!mounted) return;
+
                 const value =
                     typeof data?.score === "number"
                         ? data.score
                         : typeof data?.total_score === "number"
                             ? data.total_score
                             : null;
+
                 setScore(value);
-            })
-            .catch(() => {
-                if (alive) setScore(null);
-            })
-            .finally(() => {
-                if (alive) setScoreLoading(false);
-            });
+            } catch {
+                if (mounted) {
+                    setScore(null);
+                }
+            } finally {
+                if (mounted) {
+                    setScoreLoading(false);
+                }
+            }
+        };
+
+        fetchScore();
 
         return () => {
-            alive = false;
+            mounted = false;
         };
-    }, [localEmployee?.id]);
+    }, [employee?.id]);
 
-    if (
-        !localEmployee ||
-        typeof localEmployee.id !== "number" ||
-        typeof localEmployee.full_name !== "string" ||
-        typeof localEmployee.username !== "string"
-    ) {
-        return null;
-    }
+    const loggedUserId = useMemo(() => {
+        if (typeof window === "undefined") return null;
 
-    const getLoggedUserId = (): number | null => {
-        if (typeof window !== "undefined") {
-            try {
-                const raw = localStorage.getItem("user");
-                if (raw) {
-                    const parsed = JSON.parse(raw);
-                    return typeof parsed.id === "number" ? parsed.id : null;
-                }
-            } catch {
-                return null;
-            }
+        try {
+            const raw = localStorage.getItem("user");
+            if (!raw) return null;
+
+            const parsed = JSON.parse(raw);
+            return typeof parsed?.id === "number" ? parsed.id : null;
+        } catch {
+            return null;
         }
+    }, []);
+
+    const isSelf = loggedUserId !== null && loggedUserId === employee.id;
+    const isAdmin = employee.type === 1;
+    const canDelete = !isAdmin && !isSelf && !hasActiveTasks;
+
+    const tooltipInfo = useMemo(() => {
+        if (isAdmin) {
+            return {
+                title: "حساب مدیر سیستم",
+                subtitle: "حذف ادمین مجاز نیست",
+            };
+        }
+
+        if (isSelf) {
+            return {
+                title: "حساب فعلی شما",
+                subtitle: "نمی‌توانید حساب خودتان را حذف کنید",
+            };
+        }
+
+        if (hasActiveTasks) {
+            return {
+                title: "این کاربر تسک دارد",
+                subtitle: "برای حذف، اول باید تسک‌های مربوط به این کاربر حذف شوند",
+            };
+        }
+
         return null;
-    };
+    }, [hasActiveTasks, isAdmin, isSelf]);
 
-    const loggedUserId = getLoggedUserId();
-    const isSelf = loggedUserId !== null && loggedUserId === localEmployee.id;
-    const isAdmin = localEmployee.type === 1;
-    const canDelete = !isAdmin && !isSelf;
+    const employeeName = employee.full_name?.trim() || "بدون نام";
+    const username = employee.username?.trim() || "unknown";
+    const [start, end] = AVATAR_GRADIENTS[employee.id % AVATAR_GRADIENTS.length];
 
-    const employeeName = localEmployee.full_name.trim() || "بدون نام";
-    const username = localEmployee.username.trim() || "unknown";
-
-    const gradient = AVATAR_GRADIENTS[localEmployee.id % AVATAR_GRADIENTS.length];
-    const start = gradient[0];
-    const end = gradient[1];
-
-    const joinedDate = localEmployee.created_at
-        ? new Date(localEmployee.created_at).toLocaleDateString("fa-IR", {
-            year: "numeric",
-            month: "2-digit",
-            day: "2-digit",
-        })
+    const joinedDate = employee.created_at
+        ? new Date(employee.created_at).toLocaleDateString("fa-IR", {
+              year: "numeric",
+              month: "2-digit",
+              day: "2-digit",
+          })
         : "نامشخص";
 
-    async function handleDelete() {
-        if (!localEmployee || !canDelete) return;
+    const handleCloseConfirm = () => {
+        if (deleting) return;
+        setShowConfirm(false);
+        setDeleteError("");
+    };
+
+    const handleDelete = async () => {
+        if (!canDelete) return;
 
         setDeleting(true);
         setDeleteError("");
@@ -159,72 +206,69 @@ export default function UserCard({ employee, index, onDelete }: UserCardProps) {
             const users = usersRes ? extractUserList(usersRes.data) : [];
             const employees = employeesRes ? extractEmployeeList(employeesRes.data) : [];
 
-            const targetUsername = localEmployee.username.trim().toLowerCase();
+            const normalizedUsername = username.toLowerCase();
 
             const matchedUser = users.find(
-                (u) => u.username?.trim().toLowerCase() === targetUsername
-            );
-            const matchedEmployee = employees.find(
-                (e) =>
-                    e.username?.trim().toLowerCase() === targetUsername ||
-                    e.id === localEmployee.id
+                (user) => user.username?.trim().toLowerCase() === normalizedUsername,
             );
 
-            const employeeDeleteId = matchedEmployee?.id ?? localEmployee.id;
+            const matchedEmployee = employees.find(
+                (item) =>
+                    item.username?.trim().toLowerCase() === normalizedUsername ||
+                    item.id === employee.id,
+            );
+
+            const employeeDeleteId = matchedEmployee?.id;
             const userDeleteId = matchedUser?.id;
 
+            if (!employeeDeleteId && !userDeleteId) {
+                throw new Error("شناسه حذف کاربر پیدا نشد");
+            }
+
             if (employeeDeleteId) {
-                await axiosInstance.delete(
-                    `/accounts/api/v1/employee/${employeeDeleteId}/delete/`
-                );
+                await axiosInstance.delete(`/accounts/api/v1/employee/${employeeDeleteId}/delete/`);
             }
 
             if (userDeleteId && matchedUser?.type !== 1) {
-                await axiosInstance.delete(
-                    `/accounts/api/v1/user/${userDeleteId}/delete/`
-                );
+                await axiosInstance.delete(`/accounts/api/v1/user/${userDeleteId}/delete/`);
             }
 
-            onDelete(localEmployee.id);
+            onDelete(employee.id);
             setShowConfirm(false);
-        } catch (err) {
-            setDeleteError(getErrorMessage(err, "خطا در حذف کارمند"));
+        } catch (error) {
+            setDeleteError(getErrorMessage(error, "حذف کاربر با خطا مواجه شد"));
         } finally {
             setDeleting(false);
         }
-    }
-
-    function handleClose() {
-        if (deleting) return;
-        setShowConfirm(false);
-        setDeleteError("");
-    }
+    };
 
     return (
         <>
             <motion.div
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                transition={{ duration: 0.2, delay: index * 0.05 }}
+                exit={{ opacity: 0, scale: 0.96 }}
+                transition={{ duration: 0.2, delay: index * 0.04 }}
                 onHoverStart={() => setHovered(true)}
-                onHoverEnd={() => setHovered(false)}
-                className="relative rounded-2xl p-4 flex flex-col gap-3 overflow-hidden"
+                onHoverEnd={() => {
+                    setHovered(false);
+                    setTooltipVisible(false);
+                }}
+                className="relative flex min-h-[148px] flex-col gap-4 overflow-visible rounded-3xl p-4"
                 style={{
+                    background: isDark ? "rgba(255,255,255,0.03)" : "#fafafa",
                     border: isDark
                         ? "1px solid rgba(255,255,255,0.06)"
-                        : "1px solid rgba(0,0,0,0.06)",
-                    minHeight: "130px",
-                    background: isDark ? "rgba(255,255,255,0.02)" : "#fafafa",
+                        : "1px solid rgba(15,23,42,0.06)",
+                    boxShadow: isDark
+                        ? "0 8px 30px rgba(0,0,0,0.22)"
+                        : "0 8px 24px rgba(15,23,42,0.05)",
                 }}
             >
-                <svg
-                    className="absolute inset-0 w-full h-full pointer-events-none"
-                    style={{ borderRadius: "1rem" }}
-                >
+                <svg className="pointer-events-none absolute inset-0 h-full w-full">
                     <defs>
                         <linearGradient
-                            id={`borderGrad-${localEmployee.id}`}
+                            id={`card-border-${employee.id}`}
                             x1="100%"
                             y1="100%"
                             x2="0%"
@@ -234,34 +278,32 @@ export default function UserCard({ employee, index, onDelete }: UserCardProps) {
                             <stop offset="100%" stopColor="#8b5cf6" />
                         </linearGradient>
                     </defs>
+
                     <motion.rect
                         x="1"
                         y="1"
                         width="calc(100% - 2px)"
                         height="calc(100% - 2px)"
-                        rx="15"
-                        ry="15"
+                        rx="23"
+                        ry="23"
                         fill="none"
-                        stroke={`url(#borderGrad-${localEmployee.id})`}
-                        strokeWidth="1.5"
-                        pathLength="1"
+                        stroke={`url(#card-border-${employee.id})`}
+                        strokeWidth="1.4"
                         initial={{ pathLength: 0, opacity: 0 }}
                         animate={
-                            hovered
-                                ? { pathLength: 1, opacity: 1 }
-                                : { pathLength: 0, opacity: 0 }
+                            hovered ? { pathLength: 1, opacity: 1 } : { pathLength: 0, opacity: 0 }
                         }
-                        transition={{ duration: 0.55, ease: "easeInOut" }}
+                        transition={{ duration: 0.45, ease: "easeInOut" }}
                     />
                 </svg>
 
-                <div className="absolute top-3 left-3 flex items-center gap-1.5 z-10">
+                <div className="absolute left-3 top-3 z-20 flex items-center gap-1.5">
                     {!scoreLoading && score !== null && (
                         <div
-                            className="h-7 px-2 rounded-xl flex items-center gap-1 flex-shrink-0"
+                            className="flex h-7 items-center gap-1 rounded-xl px-2"
                             style={{
                                 background: isDark
-                                    ? "rgba(234,179,8,0.12)"
+                                    ? "rgba(234,179,8,0.14)"
                                     : "rgba(234,179,8,0.08)",
                                 color: isDark ? "#fde047" : "#ca8a04",
                             }}
@@ -271,91 +313,129 @@ export default function UserCard({ employee, index, onDelete }: UserCardProps) {
                             <span className="text-[11px] font-extrabold">{score}</span>
                         </div>
                     )}
+
                     <button
+                        type="button"
                         onClick={() => setShowEditModal(true)}
-                        className="w-7 h-7 rounded-xl flex items-center justify-center transition-colors"
+                        className="flex h-7 w-7 items-center justify-center rounded-xl"
                         style={{
                             background: isDark
-                                ? "rgba(99,102,241,0.1)"
-                                : "rgba(99,102,241,0.07)",
+                                ? "rgba(99,102,241,0.12)"
+                                : "rgba(99,102,241,0.08)",
                             color: isDark ? "#a5b4fc" : "#6366f1",
                         }}
                         title="ویرایش"
-                        type="button"
                     >
                         <Pencil size={11} />
                     </button>
-                    {canDelete && (
+
+                    <div className="relative">
                         <button
-                            onClick={() => setShowConfirm(true)}
-                            className="w-7 h-7 rounded-xl flex items-center justify-center transition-colors"
-                            style={{
-                                background: isDark
-                                    ? "rgba(239,68,68,0.1)"
-                                    : "rgba(239,68,68,0.07)",
-                                color: "#ef4444",
-                            }}
-                            title="حذف"
                             type="button"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                if (canDelete) {
+                                    setShowConfirm(true);
+                                }
+                            }}
+                            onMouseEnter={() => {
+                                if (!canDelete) {
+                                    setTooltipVisible(true);
+                                }
+                            }}
+                            onMouseLeave={() => setTooltipVisible(false)}
+                            className="flex h-7 w-7 items-center justify-center rounded-xl"
+                            style={{
+                                background: canDelete
+                                    ? isDark
+                                        ? "rgba(239,68,68,0.12)"
+                                        : "rgba(239,68,68,0.08)"
+                                    : isDark
+                                        ? "rgba(255,255,255,0.05)"
+                                        : "rgba(15,23,42,0.04)",
+                                color: canDelete ? "#ef4444" : isDark ? "#4b5563" : "#9ca3af",
+                                cursor: canDelete ? "pointer" : "not-allowed",
+                            }}
+                            title={canDelete ? "حذف" : "عدم امکان حذف"}
                         >
                             <Trash2 size={11} />
                         </button>
-                    )}
+
+                        <AnimatePresence>
+                            {tooltipVisible && tooltipInfo && (
+                                <motion.div
+                                    initial={{ opacity: 0, y: 6, scale: 0.96 }}
+                                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                                    exit={{ opacity: 0, y: 6, scale: 0.96 }}
+                                    transition={{ duration: 0.15 }}
+                                    className="absolute bottom-full left-1/2 z-50 mb-2 -translate-x-1/2 whitespace-nowrap"
+                                >
+                                    <div
+                                        className="rounded-2xl px-3 py-2 text-center shadow-xl"
+                                        style={{
+                                            background: isDark ? "#0f172a" : "#1e293b",
+                                            border: "1px solid rgba(255,255,255,0.08)",
+                                        }}
+                                    >
+                                        <p className="text-[11px] font-bold text-white">
+                                            {tooltipInfo.title}
+                                        </p>
+                                        <p className="mt-1 text-[10px] text-slate-300">
+                                            {tooltipInfo.subtitle}
+                                        </p>
+                                    </div>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+                    </div>
                 </div>
 
                 <div className="flex items-center gap-3 pt-1">
                     <div
-                        className="w-11 h-11 rounded-2xl flex items-center justify-center text-white text-[15px] font-extrabold flex-shrink-0"
+                        className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-[15px] font-extrabold text-white"
                         style={{
                             background: `linear-gradient(135deg, ${start}, ${end})`,
                         }}
                     >
                         {employeeName.charAt(0)}
                     </div>
-                    <div className="flex flex-col gap-1 min-w-0">
-                        <p className="text-[13.5px] font-extrabold text-gray-800 dark:text-gray-100 leading-tight truncate">
+
+                    <div className="min-w-0 flex-1">
+                        <h3 className="truncate text-[13px] font-extrabold text-gray-900 dark:text-white">
                             {employeeName}
-                        </p>
-                        <p className="text-[11.5px] text-gray-400 dark:text-gray-500 truncate">
+                        </h3>
+                        <p className="mt-1 truncate text-[11.5px] text-gray-500 dark:text-gray-400">
                             @{username}
                         </p>
                     </div>
                 </div>
 
-                <div
-                    className="pt-2.5 border-t"
-                    style={{
-                        borderColor: isDark
-                            ? "rgba(255,255,255,0.05)"
-                            : "rgba(0,0,0,0.05)",
-                    }}
-                >
-                    <div className="flex items-center justify-between">
-                        <p className="text-[11.5px] text-gray-400 dark:text-gray-500">
-                            عضویت از {joinedDate}
-                        </p>
-                        <span
-                            className="text-[11px] font-bold px-2 py-0.5 rounded-lg"
-                            style={{
-                                background: isAdmin
-                                    ? isDark
-                                        ? "rgba(245,158,11,0.15)"
-                                        : "rgba(245,158,11,0.08)"
-                                    : isDark
-                                        ? "rgba(99,102,241,0.12)"
-                                        : "rgba(99,102,241,0.07)",
-                                color: isAdmin
-                                    ? isDark
-                                        ? "#fbbf24"
-                                        : "#d97706"
-                                    : isDark
-                                        ? "#a5b4fc"
-                                        : "#6366f1",
-                            }}
-                        >
-                            {isAdmin ? "ادمین سیستم" : "کارمند"}
-                        </span>
-                    </div>
+                <div className="mt-auto flex items-center justify-between gap-3">
+                    <span className="text-[11px] text-gray-500 dark:text-gray-400">
+                        {joinedDate}
+                    </span>
+
+                    <span
+                        className="inline-flex h-7 items-center rounded-xl px-2.5 text-[11px] font-bold"
+                        style={{
+                            background: isAdmin
+                                ? isDark
+                                    ? "rgba(245,158,11,0.14)"
+                                    : "rgba(245,158,11,0.1)"
+                                : isDark
+                                    ? "rgba(99,102,241,0.14)"
+                                    : "rgba(99,102,241,0.08)",
+                            color: isAdmin
+                                ? isDark
+                                    ? "#fbbf24"
+                                    : "#d97706"
+                                : isDark
+                                    ? "#a5b4fc"
+                                    : "#6366f1",
+                        }}
+                    >
+                        {isAdmin ? "ادمین سیستم" : "کارمند"}
+                    </span>
                 </div>
             </motion.div>
 
@@ -365,118 +445,108 @@ export default function UserCard({ employee, index, onDelete }: UserCardProps) {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
+                        onClick={handleCloseConfirm}
                         className="fixed inset-0 z-50 flex items-center justify-center px-4"
                         style={{
                             background: "rgba(0,0,0,0.5)",
                             backdropFilter: "blur(4px)",
                         }}
-                        onClick={handleClose}
                     >
                         <motion.div
-                            initial={{ scale: 0.95, y: 16, opacity: 0 }}
-                            animate={{ scale: 1, y: 0, opacity: 1 }}
-                            exit={{ scale: 0.95, y: 16, opacity: 0 }}
-                            transition={{ duration: 0.2, ease: "easeOut" }}
-                            className="w-full max-w-[360px] rounded-[2rem] overflow-hidden border p-5"
+                            initial={{ opacity: 0, scale: 0.96, y: 16 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.96, y: 16 }}
+                            transition={{ duration: 0.18 }}
+                            onClick={(e) => e.stopPropagation()}
+                            className="w-full max-w-[360px] rounded-[2rem] p-5"
                             style={{
                                 background: isDark ? "#0f172a" : "#ffffff",
-                                borderColor: isDark
-                                    ? "rgba(255,255,255,0.07)"
-                                    : "rgba(0,0,0,0.07)",
+                                border: isDark
+                                    ? "1px solid rgba(255,255,255,0.07)"
+                                    : "1px solid rgba(15,23,42,0.07)",
                                 boxShadow: "0 24px 64px rgba(0,0,0,0.35)",
                             }}
-                            onClick={(e) => e.stopPropagation()}
                             dir="rtl"
                         >
-                            <div
-                                className="flex items-center justify-between px-2 py-2 border-b"
-                                style={{
-                                    borderColor: isDark
-                                        ? "rgba(255,255,255,0.06)"
-                                        : "rgba(0,0,0,0.06)",
-                                }}
-                            >
+                            <div className="mb-4 flex items-center justify-between">
                                 <div className="flex items-center gap-2.5">
                                     <div
-                                        className="w-8 h-8 rounded-xl flex items-center justify-center"
+                                        className="flex h-9 w-9 items-center justify-center rounded-2xl"
                                         style={{
                                             background: isDark
-                                                ? "rgba(239,68,68,0.12)"
+                                                ? "rgba(239,68,68,0.14)"
                                                 : "rgba(239,68,68,0.08)",
                                         }}
                                     >
-                                        <Trash2 size={14} className="text-red-500" />
+                                        <Trash2 size={15} className="text-red-500" />
                                     </div>
                                     <h3 className="text-[13.5px] font-extrabold text-gray-900 dark:text-white">
-                                        حذف کارمند
+                                        حذف کاربر
                                     </h3>
                                 </div>
+
                                 <button
-                                    onClick={handleClose}
+                                    type="button"
+                                    onClick={handleCloseConfirm}
                                     disabled={deleting}
-                                    className="w-7 h-7 rounded-xl flex items-center justify-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors disabled:opacity-40"
+                                    className="flex h-8 w-8 items-center justify-center rounded-xl text-gray-400 disabled:opacity-50"
                                     style={{
                                         background: isDark
                                             ? "rgba(255,255,255,0.05)"
-                                            : "rgba(0,0,0,0.04)",
+                                            : "rgba(15,23,42,0.05)",
                                     }}
-                                    type="button"
                                 >
-                                    <X size={13} />
+                                    <X size={14} />
                                 </button>
                             </div>
 
-                            <div className="px-2 py-2 flex flex-col gap-4">
-                                <p className="text-[12.5px] text-gray-500 dark:text-gray-400 leading-relaxed">
-                                    کارمند{" "}
-                                    <span className="font-extrabold text-gray-800 dark:text-gray-200">
-                                        {employeeName}
-                                    </span>{" "}
-                                    حذف خواهد شد. این عملیات قابل بازگشت نیست.
+                            <p className="text-[12.5px] leading-6 text-gray-600 dark:text-gray-400">
+                                کاربر{" "}
+                                <span className="font-extrabold text-gray-900 dark:text-white">
+                                    {employeeName}
+                                </span>{" "}
+                                حذف خواهد شد. این عملیات قابل بازگشت نیست.
+                            </p>
+
+                            {deleteError && (
+                                <p className="mt-3 text-[11.5px] font-semibold text-red-500">
+                                    {deleteError}
                                 </p>
+                            )}
 
-                                {deleteError && (
-                                    <p className="text-[11.5px] text-red-500 dark:text-red-400 font-semibold text-center">
-                                        {deleteError}
-                                    </p>
-                                )}
+                            <div className="mt-5 flex gap-2">
+                                <button
+                                    type="button"
+                                    onClick={handleCloseConfirm}
+                                    disabled={deleting}
+                                    className="flex-1 rounded-2xl py-2.5 text-[12.5px] font-bold disabled:opacity-50"
+                                    style={{
+                                        background: isDark
+                                            ? "rgba(255,255,255,0.05)"
+                                            : "rgba(15,23,42,0.05)",
+                                        color: isDark ? "#cbd5e1" : "#475569",
+                                    }}
+                                >
+                                    انصراف
+                                </button>
 
-                                <div className="flex gap-2">
-                                    <button
-                                        onClick={handleClose}
-                                        disabled={deleting}
-                                        className="flex-1 py-2.5 rounded-2xl text-[12.5px] font-bold transition-colors disabled:opacity-40"
-                                        style={{
-                                            background: isDark
-                                                ? "rgba(255,255,255,0.05)"
-                                                : "rgba(0,0,0,0.04)",
-                                            color: isDark ? "#94a3b8" : "#64748b",
-                                        }}
-                                        type="button"
-                                    >
-                                        انصراف
-                                    </button>
-                                    <button
-                                        onClick={handleDelete}
-                                        disabled={deleting}
-                                        className="flex-1 py-2.5 rounded-2xl text-[12.5px] font-bold text-white flex items-center justify-center transition-opacity disabled:opacity-60 disabled:cursor-not-allowed"
-                                        style={{
-                                            background:
-                                                "linear-gradient(135deg, #ef4444, #dc2626)",
-                                            boxShadow: "0 4px 14px rgba(239,68,68,0.3)",
-                                        }}
-                                        type="button"
-                                    >
-                                        {deleting ? (
-                                            <Loader size={15} className="animate-spin" />
-                                        ) : (
-                                            <>
-                                                <Trash2 size={13} className="ml-1.5" />
-                                                حذف کن
-                                            </>
-                                        )}
-                                    </button>
-                                </div>
+                                <button
+                                    type="button"
+                                    onClick={handleDelete}
+                                    disabled={deleting}
+                                    className="flex flex-1 items-center justify-center gap-1.5 rounded-2xl py-2.5 text-[12.5px] font-bold text-white disabled:opacity-60"
+                                    style={{
+                                        background: "linear-gradient(135deg, #ef4444, #dc2626)",
+                                        boxShadow: "0 10px 24px rgba(239,68,68,0.22)",
+                                    }}
+                                >
+                                    {deleting ? (
+                                        <Loader2 size={15} className="animate-spin" />
+                                    ) : (
+                                        <Trash2 size={13} />
+                                    )}
+                                    {deleting ? "" : "حذف کن"}
+                                </button>
                             </div>
                         </motion.div>
                     </motion.div>
@@ -486,9 +556,9 @@ export default function UserCard({ employee, index, onDelete }: UserCardProps) {
             <EditUserModal
                 isOpen={showEditModal}
                 onClose={() => setShowEditModal(false)}
-                employee={localEmployee}
-                onUpdated={(updatedEmployee) => {
-                    setLocalEmployee(updatedEmployee);
+                employee={employee}
+                onUpdated={(updatedEmployee: ApiEmployee) => {
+                    onUpdated(updatedEmployee);
                     setShowEditModal(false);
                 }}
             />

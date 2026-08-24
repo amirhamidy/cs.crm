@@ -152,31 +152,32 @@ export default function StagesPanel({
     const [activeStageKey, setActiveStageKey] = useState<string | null>(null);
 
     const [localStages, setLocalStages] = useState<Stage[]>(() =>
-        [...department.stages].sort((a, b) => a.order - b.order)
+        [...(department.stages || [])].sort((a, b) => a.order - b.order)
     );
 
-    const prevServerStagesRef = useRef<Stage[]>(department.stages);
+    const prevServerStagesRef = useRef<Stage[]>(department.stages || []);
     const keyMapRef = useRef(new WeakMap<Stage, string>());
     const keyCounterRef = useRef(0);
 
     useEffect(() => {
+        const nextStages = department.stages || [];
         const prevIds = prevServerStagesRef.current
             .map((stage) => stage.id)
             .sort()
             .join(",");
 
-        const nextIds = department.stages
+        const nextIds = nextStages
             .map((stage) => stage.id)
             .sort()
             .join(",");
 
-        if (prevIds !== nextIds) {
+        if (prevIds !== nextIds || prevServerStagesRef.current.length !== nextStages.length) {
             setLocalStages(
-                [...department.stages].sort((a, b) => a.order - b.order)
+                [...nextStages].sort((a, b) => a.order - b.order)
             );
         }
 
-        prevServerStagesRef.current = department.stages;
+        prevServerStagesRef.current = nextStages;
     }, [department.stages]);
 
     const getStageKey = useCallback((stage: Stage) => {

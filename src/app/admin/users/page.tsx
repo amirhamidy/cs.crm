@@ -1,123 +1,201 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import { Loader2, RefreshCw, Search, UserPlus, Users } from "lucide-react";
 import { useTheme } from "next-themes";
-import { Users, UserPlus, RefreshCw, Loader } from "lucide-react";
-import axiosInstance from "@/lib/axiosInstance";
 import type { AxiosError } from "axios";
-import type { ApiEmployee } from "@/types/users";
+
+import axiosInstance from "@/lib/axiosInstance";
 import UserCard from "@/components/admin/users/UserCard";
 import AddUserModal from "@/components/admin/users/AddUserPage";
+import type { ApiEmployee } from "@/types/users";
+
+interface TaskItem {
+    id: number;
+    assigned_employee?:
+        | number
+        | string
+        | { id: number | string }
+        | Array<number | string | { id: number | string }>
+        | null;
+}
+
+type TasksResponse = TaskItem[] | { results?: TaskItem[] };
+
+const extractEmployeeIds = (value: TaskItem["assigned_employee"]): number[] => {
+    if (!value) return [];
+
+    if (Array.isArray(value)) {
+        return value
+            .map((item) => {
+                if (typeof item === "object" && item !== null) {
+                    return Number(item.id);
+                }
+                return Number(item);
+            })
+            .filter((id) => !Number.isNaN(id));
+    }
+
+    if (typeof value === "object") {
+        const id = Number(value.id);
+        return Number.isNaN(id) ? [] : [id];
+    }
+
+    const id = Number(value);
+    return Number.isNaN(id) ? [] : [id];
+};
 
 export default function UsersPage() {
     const { resolvedTheme } = useTheme();
     const isDark = resolvedTheme === "dark";
 
     const [employees, setEmployees] = useState<ApiEmployee[]>([]);
+    const [employeesWithTasks, setEmployeesWithTasks] = useState<Set<number>>(new Set());
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
     const [search, setSearch] = useState("");
     const [showAddModal, setShowAddModal] = useState(false);
 
-    async function fetchEmployees() {
+    const fetchData = useCallback(async () => {
         setLoading(true);
         setError("");
+
         try {
-            const { data } = await axiosInstance.get<ApiEmployee[]>(
-                "/accounts/api/v1/employee/list/"
-            );
-            setEmployees(data);
+            const [employeesRes, tasksRes] = await Promise.all([
+                axiosInstance.get<ApiEmployee[]>("/accounts/api/v1/employee/list/"),
+                axiosInstance
+                    .get<TasksResponse>("/tasks/api/v1/tasks/")
+                    .catch(() => ({ data: [] as TaskItem[] })),
+            ]);
+
+            const employeeList = Array.isArray(employeesRes.data) ? employeesRes.data : [];
+            setEmployees(employeeList);
+
+            const tasksData = tasksRes.data;
+            const tasks = Array.isArray(tasksData) ? tasksData : tasksData?.results ?? [];
+
+            const taskOwnerIds = new Set<number>();
+
+            for (const task of tasks) {
+                const ids = extractEmployeeIds(task.assigned_employee);
+                for (const id of ids) {
+                    taskOwnerIds.add(id);
+                }
+            }
+
+            setEmployeesWithTasks(taskOwnerIds);
         } catch (err) {
-            const e = err as AxiosError<{ detail?: string }>;
-            setError(e.response?.data?.detail ?? "خطا در دریافت لیست کارمندان");
+            const error = err as AxiosError<{ detail?: string }>;
+            setError(error.response?.data?.detail ?? "خطا در دریافت لیست کاربران");
+            setEmployees([]);
+            setEmployeesWithTasks(new Set());
         } finally {
             setLoading(false);
         }
-    }
-
-    useEffect(() => {
-        fetchEmployees();
     }, []);
 
-    const filtered = employees.filter((emp) =>
-        emp.full_name.toLowerCase().includes(search.toLowerCase()) ||
-        emp.username.toLowerCase().includes(search.toLowerCase())
-    );
+    useEffect(() => {
+        fetchData();
+    }, [fetchData]);
+
+    const filteredEmployees = useMemo(() => {
+        const keyword = search.trim().toLowerCase();
+        if (!keyword) return employees;
+
+        return employees.filter((employee) => {
+            const fullName = employee.full_name?.toLowerCase() ?? "";
+            const username = employee.username?.toLowerCase() ?? "";
+            return fullName.includes(keyword) || username.includes(keyword);
+        });
+    }, [employees, search]);
 
     return (
         <div className="flex flex-col gap-5 p-3 sm:p-4 md:p-6" dir="rtl">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-start gap-3">
                     <div
-                        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl"
+                        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl"
                         style={{
-                            background: isDark ? "rgba(99,102,241,0.12)" : "rgba(99,102,241,0.08)",
+                            background: isDark ? "rgba(99,102,241,0.14)" : "rgba(99,102,241,0.08)",
                         }}
                     >
-                        <Users size={16} className="text-indigo-500" />
+                        <Users size={18} className="text-indigo-500" />
                     </div>
+
                     <div className="min-w-0">
-                        <h1 className="text-[14px] font-extrabold text-gray-900 dark:text-white">
+                        <h1 className="text-[15px] font-extrabold text-gray-900 dark:text-white">
                             مدیریت کاربران
                         </h1>
-                        <p className="mt-0.5 text-[11.5px] text-gray-400 dark:text-gray-500">
-                            {loading ? "در حال بارگذاری..." : `${employees.length} کارمند ثبت‌شده`}
+                        <p className="mt-0.5 text-[11.5px] text-gray-500 dark:text-gray-400">
+                            {loading ? "در حال بارگذاری..." : `${employees.length} کاربر ثبت شده`}
                         </p>
                     </div>
                 </div>
 
-                <div className="flex items-center gap-2 sm:justify-end">
+                <div className="flex items-center gap-2">
                     <button
-                        onClick={fetchEmployees}
+                        type="button"
+                        onClick={fetchData}
                         disabled={loading}
-                        className="flex h-9 w-9 items-center justify-center rounded-xl text-gray-400 transition-colors hover:text-gray-600 disabled:opacity-40 dark:hover:text-gray-300"
+                        className="flex h-10 w-10 items-center justify-center rounded-2xl transition-colors disabled:opacity-50"
                         style={{
-                            background: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.04)",
+                            background: isDark ? "rgba(255,255,255,0.05)" : "rgba(15,23,42,0.05)",
+                            color: isDark ? "#cbd5e1" : "#475569",
                         }}
                         title="بارگذاری مجدد"
-                        type="button"
                     >
-                        <RefreshCw size={13} className={loading ? "animate-spin" : ""} />
+                        <RefreshCw size={15} className={loading ? "animate-spin" : ""} />
                     </button>
 
                     <button
-                        onClick={() => setShowAddModal(true)}
-                        className="flex h-9 flex-1 items-center justify-center gap-2 rounded-xl px-3.5 py-2 text-[12.5px] bg-blue-600 hover:bg-blue-100 hover:text-blue-500 transition-all duration-200  font-bold text-white hover:opacity-90 sm:flex-none"
                         type="button"
+                        onClick={() => setShowAddModal(true)}
+                        className="flex h-10 items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-4 text-[12.5px] font-bold text-white transition-colors hover:bg-indigo-700"
                     >
-                        <UserPlus size={13} />
-                        <span className="whitespace-nowrap">افزودن کاربر</span>
+                        <UserPlus size={15} />
+                        افزودن کاربر
                     </button>
                 </div>
             </div>
 
+            <div
+                className="flex h-11 items-center gap-2 rounded-2xl px-3"
+                style={{
+                    background: isDark ? "rgba(255,255,255,0.04)" : "rgba(15,23,42,0.04)",
+                    border: isDark ? "1px solid rgba(255,255,255,0.06)" : "1px solid rgba(15,23,42,0.06)",
+                }}
+            >
+                <Search size={15} className="text-gray-400" />
+                <input
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder="جستجو بر اساس نام یا نام کاربری"
+                    className="h-full w-full bg-transparent text-[12.5px] text-gray-800 outline-none placeholder:text-gray-400 dark:text-gray-100"
+                />
+            </div>
+
             {loading && (
                 <div className="flex flex-col items-center justify-center gap-3 py-16">
-                    <Loader size={22} className="text-indigo-500 animate-spin" />
-                    <p className="text-[12.5px] text-gray-400 dark:text-gray-500">
-                        در حال دریافت لیست کارمندان...
+                    <Loader2 size={24} className="animate-spin text-indigo-500" />
+                    <p className="text-[12.5px] text-gray-500 dark:text-gray-400">
+                        در حال دریافت اطلاعات کاربران...
                     </p>
                 </div>
             )}
 
             {!loading && error && (
                 <div
-                    className="flex flex-col items-center gap-3 py-12 rounded-2xl border"
+                    className="flex flex-col items-center gap-3 rounded-3xl border py-12"
                     style={{
-                        background: isDark
-                            ? "rgba(239,68,68,0.04)"
-                            : "rgba(239,68,68,0.03)",
-                        borderColor: isDark
-                            ? "rgba(239,68,68,0.12)"
-                            : "rgba(239,68,68,0.1)",
+                        background: isDark ? "rgba(239,68,68,0.05)" : "rgba(239,68,68,0.03)",
+                        borderColor: isDark ? "rgba(239,68,68,0.14)" : "rgba(239,68,68,0.1)",
                     }}
                 >
-                    <p className="text-[12.5px] text-red-500 dark:text-red-400 font-semibold">
-                        {error}
-                    </p>
+                    <p className="text-[12.5px] font-semibold text-red-500">{error}</p>
                     <button
-                        onClick={fetchEmployees}
+                        type="button"
+                        onClick={fetchData}
                         className="text-[12px] font-bold text-indigo-500 hover:underline"
                     >
                         تلاش مجدد
@@ -125,34 +203,40 @@ export default function UsersPage() {
                 </div>
             )}
 
-            {!loading && !error && filtered.length === 0 && (
+            {!loading && !error && filteredEmployees.length === 0 && (
                 <div className="flex flex-col items-center justify-center gap-2 py-16">
                     <Users size={28} className="text-gray-300 dark:text-gray-700" />
-                    <p className="text-[12.5px] text-gray-400 dark:text-gray-500">
-                        {search ? "کارمندی با این مشخصات یافت نشد" : "هنوز کارمندی ثبت نشده"}
+                    <p className="text-[12.5px] text-gray-500 dark:text-gray-400">
+                        {search ? "کاربری پیدا نشد" : "هنوز کاربری ثبت نشده"}
                     </p>
                 </div>
             )}
 
-            {!loading && !error && filtered.length > 0 && (
+            {!loading && !error && filteredEmployees.length > 0 && (
                 <motion.div
                     layout
-                    className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3"
+                    className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4"
                 >
                     <AnimatePresence mode="popLayout">
-                        {filtered.map((emp, i) => (
+                        {filteredEmployees.map((employee, index) => (
                             <UserCard
-                                key={emp.id}
-                                employee={emp}
-                                index={i}
-                                onDelete={(id) =>
-                                    setEmployees((prev) => prev.filter((e) => e.id !== id))
-                                }
-                                onUpdated={(updated) =>
+                                key={employee.id}
+                                employee={employee}
+                                index={index}
+                                hasActiveTasks={employeesWithTasks.has(employee.id)}
+                                onDelete={(id) => {
+                                    setEmployees((prev) => prev.filter((item) => item.id !== id));
+                                    setEmployeesWithTasks((prev) => {
+                                        const next = new Set(prev);
+                                        next.delete(id);
+                                        return next;
+                                    });
+                                }}
+                                onUpdated={(updatedEmployee) => {
                                     setEmployees((prev) =>
-                                        prev.map((e) => (e.id === updated.id ? updated : e))
-                                    )
-                                }
+                                        prev.map((item) => (item.id === updatedEmployee.id ? updatedEmployee : item)),
+                                    );
+                                }}
                             />
                         ))}
                     </AnimatePresence>
@@ -165,7 +249,7 @@ export default function UsersPage() {
                         onClose={() => setShowAddModal(false)}
                         onSuccess={() => {
                             setShowAddModal(false);
-                            fetchEmployees();
+                            fetchData();
                         }}
                     />
                 )}

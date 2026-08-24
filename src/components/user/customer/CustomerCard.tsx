@@ -1,10 +1,17 @@
 "use client";
 
 import { useState } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "next-themes";
-import { Phone, Building2, Trash2, SquarePen, User, CalendarDays } from "lucide-react";
-import axiosInstance from "@/lib/axiosInstance";
+import {
+    Phone,
+    Building2,
+    Trash2,
+    SquarePen,
+    User,
+    CalendarDays,
+    AlertCircle,
+} from "lucide-react";
 import type { Customer } from "@/types/customer";
 import { useEmployeeDirectory } from "@/hooks/useEmployeeDirectory";
 import CustomerDeleteModal from "./DeleteModal";
@@ -13,15 +20,10 @@ import CustomerEditModal from "./CustomerEditModal";
 interface Props {
     customer: Customer;
     index: number;
+    hasActiveCase?: boolean;
     onDeleted: (id: number) => void;
     onEdited: (updated: Customer) => void;
 }
-
-const statusStyle: Record<number, string> = {
-    1: "bg-amber-500/15 text-amber-400",
-    2: "bg-emerald-500/15 text-emerald-400",
-    3: "bg-red-500/15 text-red-400",
-};
 
 function formatDate(iso: string) {
     return new Date(iso).toLocaleDateString("fa-IR", {
@@ -31,21 +33,51 @@ function formatDate(iso: string) {
     });
 }
 
-export default function CustomerCard({ customer, index, onDeleted, onEdited }: Props) {
+function Avatar({ name, id }: { name: string; id: number }) {
+    const hue = (id * 47) % 360;
+    return (
+        <div
+            className="flex h-11 w-11 shrink-0 select-none items-center justify-center rounded-2xl text-[15px] font-extrabold text-white"
+            style={{
+                background: `linear-gradient(135deg,
+                    oklch(55% 0.18 ${hue}),
+                    oklch(45% 0.22 ${(hue + 30) % 360}))`,
+            }}
+        >
+            {name?.charAt(0) ?? "?"}
+        </div>
+    );
+}
+
+export default function CustomerCard({
+    customer,
+    index,
+    hasActiveCase = false,
+    onDeleted,
+    onEdited,
+}: Props) {
     const { resolvedTheme } = useTheme();
     const isDark = resolvedTheme === "dark";
+
     const [hovered, setHovered] = useState(false);
     const [showConfirm, setShowConfirm] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
     const [showEdit, setShowEdit] = useState(false);
-    const { resolveName } = useEmployeeDirectory();
+    const [tooltipVisible, setTooltipVisible] = useState(false);
 
-    const creatorName = resolveName(customer.created_by_username, customer.created_by_username);
+    const { resolveName } = useEmployeeDirectory();
+    const creatorName = resolveName(
+        customer.created_by_username,
+        customer.created_by_username
+    );
 
     const handleDelete = async () => {
         setIsDeleting(true);
         try {
-            await axiosInstance.delete(`/customers/api/v1/customers/${customer.id}/delete/`);
+            const axiosInstance = (await import("@/lib/axiosInstance")).default;
+            await axiosInstance.delete(
+                `/customers/api/v1/customers/${customer.id}/delete/`
+            );
             onDeleted(customer.id);
         } catch {
             setIsDeleting(false);
@@ -53,31 +85,36 @@ export default function CustomerCard({ customer, index, onDeleted, onEdited }: P
         }
     };
 
+    const borderColor = isDark
+        ? "rgba(255,255,255,0.06)"
+        : "rgba(0,0,0,0.06)";
+    const surfaceBg = isDark ? "rgba(255,255,255,0.02)" : "#fafafa";
+    const dividerColor = isDark
+        ? "rgba(255,255,255,0.05)"
+        : "rgba(0,0,0,0.05)";
+
     return (
         <>
             <motion.div
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95 }}
-                transition={{ duration: 0.2, delay: index * 0.05 }}
+                transition={{ duration: 0.2, delay: index * 0.04 }}
                 onHoverStart={() => setHovered(true)}
                 onHoverEnd={() => setHovered(false)}
-                className="relative rounded-2xl p-4 flex flex-col gap-3 overflow-hidden"
+                className="relative flex flex-col gap-3 overflow-visible rounded-2xl p-4"
                 style={{
-                    border: isDark
-                        ? "1px solid rgba(255,255,255,0.06)"
-                        : "1px solid rgba(0,0,0,0.06)",
-                    minHeight: "130px",
-                    background: isDark ? "rgba(255,255,255,0.02)" : "#fafafa",
+                    border: `1px solid ${borderColor}`,
+                    background: surfaceBg,
                 }}
             >
                 <svg
-                    className="absolute inset-0 w-full h-full pointer-events-none"
-                    style={{ borderRadius: "1rem" }}
+                    className="pointer-events-none absolute inset-0 h-full w-full"
+                    style={{ borderRadius: "1rem", overflow: "visible" }}
                 >
                     <defs>
                         <linearGradient
-                            id={`borderGrad-${customer.id}`}
+                            id={`cust-grad-${customer.id}`}
                             x1="100%"
                             y1="100%"
                             x2="0%"
@@ -95,7 +132,7 @@ export default function CustomerCard({ customer, index, onDeleted, onEdited }: P
                         rx="15"
                         ry="15"
                         fill="none"
-                        stroke={`url(#borderGrad-${customer.id})`}
+                        stroke={`url(#cust-grad-${customer.id})`}
                         strokeWidth="1.5"
                         pathLength="1"
                         initial={{ pathLength: 0, opacity: 0 }}
@@ -108,10 +145,10 @@ export default function CustomerCard({ customer, index, onDeleted, onEdited }: P
                     />
                 </svg>
 
-                <div className="absolute top-3 left-3 flex items-center gap-1.5 z-10">
+                <div className="absolute left-3 top-3 z-10 flex items-center gap-1.5">
                     <button
                         onClick={() => setShowEdit(true)}
-                        className="w-7 h-7 rounded-xl flex items-center justify-center transition-colors"
+                        className="flex h-7 w-7 items-center justify-center rounded-xl transition-colors"
                         style={{
                             background: isDark
                                 ? "rgba(99,102,241,0.1)"
@@ -123,77 +160,135 @@ export default function CustomerCard({ customer, index, onDeleted, onEdited }: P
                     >
                         <SquarePen size={11} />
                     </button>
-                    <button
-                        onClick={() => setShowConfirm(true)}
-                        className="w-7 h-7 rounded-xl flex items-center justify-center transition-colors"
-                        style={{
-                            background: isDark
-                                ? "rgba(239,68,68,0.1)"
-                                : "rgba(239,68,68,0.07)",
-                            color: "#ef4444",
-                        }}
-                        title="حذف"
-                        type="button"
-                    >
-                        <Trash2 size={11} />
-                    </button>
+
+                    <div className="relative">
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                if (hasActiveCase) return;
+                                setShowConfirm(true);
+                            }}
+                            onMouseEnter={() =>
+                                hasActiveCase && setTooltipVisible(true)
+                            }
+                            onMouseLeave={() => setTooltipVisible(false)}
+                            className="flex h-7 w-7 items-center justify-center rounded-xl transition-colors"
+                            style={{
+                                background: hasActiveCase
+                                    ? isDark
+                                        ? "rgba(255,255,255,0.04)"
+                                        : "rgba(0,0,0,0.04)"
+                                    : isDark
+                                        ? "rgba(239,68,68,0.1)"
+                                        : "rgba(239,68,68,0.07)",
+                                color: hasActiveCase
+                                    ? isDark
+                                        ? "#4b5563"
+                                        : "#9ca3af"
+                                    : "#ef4444",
+                                cursor: hasActiveCase
+                                    ? "not-allowed"
+                                    : "pointer",
+                            }}
+                            type="button"
+                        >
+                            <Trash2 size={11} />
+                        </button>
+
+                        <AnimatePresence>
+                            {tooltipVisible && (
+                                <motion.div
+                                    initial={{ opacity: 0, y: 4, scale: 0.95 }}
+                                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                                    exit={{ opacity: 0, y: 4, scale: 0.95 }}
+                                    transition={{ duration: 0.15, ease: "easeOut" }}
+                                    className="absolute bottom-full left-1/2 z-50 mb-2 -translate-x-1/2 whitespace-nowrap"
+                                    dir="rtl"
+                                >
+                                    <div
+                                        className="flex flex-col items-center gap-1 rounded-2xl px-3 py-2 text-center shadow-xl"
+                                        style={{
+                                            background: isDark ? "#0f172a" : "#1e293b",
+                                            border: isDark
+                                                ? "1px solid rgba(255,255,255,0.08)"
+                                                : "1px solid rgba(0,0,0,0.12)",
+                                        }}
+                                    >
+                                        <span className="text-[11px] font-bold text-white">
+                                            این مشتری پرونده دارد
+                                        </span>
+                                        <span className="text-[10px] text-slate-400">
+                                            برای حذف آن باید ابتدا پرونده‌هایش را حذف کنید
+                                        </span>
+                                    </div>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+
+                    </div>
                 </div>
 
                 <div className="flex items-center gap-3 pt-1">
-                    <div
-                        className="w-11 h-11 rounded-2xl flex items-center justify-center text-white text-[15px] font-extrabold flex-shrink-0"
-                        style={{
-                            background: `linear-gradient(135deg, #6366f1, #8b5cf6)`,
-                        }}
-                    >
-                        {customer.full_name?.charAt(0) ?? "?"}
-                    </div>
-                    <div className="flex flex-col gap-1 min-w-0">
-                        <p className="text-[13.5px] font-extrabold text-gray-800 dark:text-gray-100 leading-tight truncate">
+                    <Avatar name={customer.full_name} id={customer.id} />
+                    <div className="flex min-w-0 flex-col gap-0.5">
+                        <p className="truncate text-[13.5px] font-extrabold leading-tight text-gray-800 dark:text-gray-100">
                             {customer.full_name}
                         </p>
-                        <p className="text-[11.5px] text-gray-400 dark:text-gray-500 truncate">
+                        <p className="text-[11px] text-gray-400 dark:text-gray-500">
                             #{customer.id}
                         </p>
                     </div>
+                    {customer.status_display && (
+                        <div className="flex justify-center absolute left-2.5 top-[50%]">
+                            <span
+                                className="rounded-lg px-2 py-0.5 text-[10.5px] font-bold"
+                                style={
+                                    customer.status_display === "بالقوه"
+                                        ? {
+                                            background: "linear-gradient(135deg, rgba(148,163,184,0.18), rgba(100,116,139,0.18))",
+                                            color: isDark ? "#cbd5e1" : "#475569",
+                                            border: "1px solid rgba(148,163,184,0.25)",
+                                        }
+                                        : {
+                                            background: "linear-gradient(135deg, rgba(59,130,246,0.18), rgba(6,182,212,0.18))",
+                                            color: isDark ? "#60a5fa" : "#0369a1",
+                                            border: "1px solid rgba(59,130,246,0.25)",
+                                        }
+                                }
+                            >
+                                {customer.status_display}
+                            </span>
+                        </div>
+                    )}
+
                 </div>
 
                 <div
-                    className="pt-2.5 border-t flex flex-col gap-1.5"
-                    style={{
-                        borderColor: isDark
-                            ? "rgba(255,255,255,0.05)"
-                            : "rgba(0,0,0,0.05)",
-                    }}
+                    className="flex flex-col gap-1.5 border-t pt-2.5"
+                    style={{ borderColor: dividerColor }}
                 >
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2 text-[11.5px] text-gray-400 dark:text-gray-500">
-                            <Phone className="w-3.5 h-3.5" />
-                            <span dir="ltr">{customer.phone_number}</span>
-                        </div>
-                        <span
-                            className={`text-[11px] font-bold px-2 py-0.5 rounded-lg ${statusStyle[customer.status] ?? "bg-gray-500/15 text-gray-400"
-                                }`}
-                        >
-                            {customer.status_display}
-                        </span>
+                    <div className="flex items-center gap-2 text-[11.5px] text-gray-400 dark:text-gray-500">
+                        <Phone className="h-3.5 w-3.5 shrink-0" />
+                        <span dir="ltr">{customer.phone_number}</span>
                     </div>
 
                     {customer.company_name && (
                         <div className="flex items-center gap-2 text-[11.5px] text-gray-400 dark:text-gray-500">
-                            <Building2 className="w-3.5 h-3.5" />
-                            <span>{customer.company_name}</span>
+                            <Building2 className="h-3.5 w-3.5 shrink-0" />
+                            <span className="truncate">
+                                {customer.company_name}
+                            </span>
                         </div>
                     )}
 
                     <div className="flex items-center justify-between text-[11.5px] text-gray-400 dark:text-gray-500">
-                        <div className="flex items-center gap-2">
-                            <User className="w-3.5 h-3.5" />
-                            <span>ثبت‌کننده: {creatorName}</span>
+                        <div className="flex items-center gap-1.5">
+                            <User className="h-3.5 w-3.5 shrink-0" />
+                            <span className="truncate">{creatorName}</span>
                         </div>
-                        <div className="flex items-center gap-2">
-                            <CalendarDays className="w-3.5 h-3.5" />
-                            <span>تاریخ ثبت : {formatDate(customer.created_at)}</span>
+                        <div className="flex shrink-0 items-center gap-1.5">
+                            <CalendarDays className="h-3.5 w-3.5" />
+                            <span>{formatDate(customer.created_at)}</span>
                         </div>
                     </div>
                 </div>

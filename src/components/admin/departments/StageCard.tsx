@@ -80,7 +80,7 @@ export default function StageCard({
                                 </h4>
 
                                 <p className="text-[10px] font-bold text-gray-400 dark:text-gray-500 sm:text-[10.5px]">
-                                    {tasks.length} وظیفه
+                                    {tasks?.length ?? 0} وظیفه
                                 </p>
                             </div>
                         </div>
@@ -133,7 +133,7 @@ export default function StageCard({
                         className="animate-spin text-indigo-500"
                     />
                 </div>
-            ) : tasks.length === 0 ? (
+            ) : !tasks || tasks.length === 0 ? (
                 <div className="flex h-32 flex-col items-center justify-center gap-1.5 px-4 text-center sm:h-40">
                     <p className="text-[11px] text-gray-400">
                         وظیفه‌ای در این مرحله نیست
