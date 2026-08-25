@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { useSidebar } from "@/hooks/useSidebar";
 import { useMenuItems } from "@/hooks/useMenuItems";
 import { useLogout } from "@/hooks/useLogout";
+import Image from "next/image";
 
 const containerVariants: Variants = {
   hidden: {},
@@ -24,7 +25,6 @@ const itemVariants: Variants = {
     transition: { duration: 0.22, ease: [0.25, 0.46, 0.45, 0.94] },
   },
 };
-
 
 export default function MobileSidebar() {
   const pathname = usePathname();
@@ -127,7 +127,7 @@ export default function MobileSidebar() {
               })}
             </motion.nav>
 
-            <div className="p-3 border-t border-gray-200/60 dark:border-white/10">
+            <div className="p-3 border-t border-gray-200/60 dark:border-white/10 flex flex-col gap-2">
               <motion.button
                 onClick={logout}
                 whileHover={{ scale: 1.01, x: -2 }}
@@ -137,6 +137,22 @@ export default function MobileSidebar() {
                 <LogOut size={18} />
                 <span>خروج</span>
               </motion.button>
+
+              <a
+                href="https://radcosys.ir/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-between gap-2 px-3 py-2 text-[11px] text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 transition-colors rounded-lg hover:bg-gray-100/50 dark:hover:bg-white/5"
+              >
+                <span>توسعه داده شده توسط تیم فنی رادکو</span>
+                <Image
+                  src="/logo.jpg"
+                  alt="رادکو"
+                  width={30}
+                  height={30}
+                  className="rounded-md object-cover flex-shrink-0"
+                />
+              </a>
             </div>
           </motion.aside>
         </>
