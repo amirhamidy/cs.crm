@@ -3,82 +3,65 @@ import axiosInstance from "@/lib/axiosInstance";
 
 export type TimeRange = "weekly" | "monthly" | "yearly";
 
-export type SliceKey = "instagram" | "website" | "referral" | "ads" | "other";
+export interface CaseResource {
+  id: number;
+  title: string;
+}
+
+export interface CaseItem {
+  id: number;
+  customer: number;
+  created_by?: number | null;
+  title: string;
+  resources?: CaseResource[];
+  created_at: string;
+  updated_at?: string;
+}
 
 export interface SourceCount {
-  name: SliceKey;
+  name: string;
+  resourceId: number;
   value: number;
-}
-
-interface CustomerListItem {
-  id: number;
-}
-
-interface CustomerDetail {
-  id: number;
-  source?: string;
-  created_at: string;
+  color: string;
+  glow: string;
 }
 
 type RangeData = Record<TimeRange, SourceCount[]>;
 
-const SOURCE_NORMALIZE_MAP: Record<string, SliceKey> = {
-  instagram: "instagram",
-  insta: "instagram",
-  اینستاگرام: "instagram",
-  website: "website",
-  سایت: "website",
-  وبسایت: "website",
-  referral: "referral",
-  معرفی: "referral",
-  ads: "ads",
-  تبلیغات: "ads",
-};
+const PALETTE = [
+  { color: "#f472b6", glow: "rgba(244,114,182,0.35)" },
+  { color: "#38bdf8", glow: "rgba(56,189,248,0.35)" },
+  { color: "#4ade80", glow: "rgba(74,222,128,0.35)" },
+  { color: "#fb923c", glow: "rgba(251,146,60,0.35)" },
+  { color: "#a78bfa", glow: "rgba(167,139,250,0.35)" },
+  { color: "#facc15", glow: "rgba(250,204,21,0.35)" },
+  { color: "#2dd4bf", glow: "rgba(45,212,191,0.35)" },
+  { color: "#ec4899", glow: "rgba(236,72,153,0.35)" },
+  { color: "#818cf8", glow: "rgba(129,140,248,0.35)" },
+];
 
-function normalizeSource(raw?: string): SliceKey {
-  if (!raw) return "other";
-  const trimmed = raw.trim();
-  const lower = trimmed.toLowerCase();
-  return (
-    SOURCE_NORMALIZE_MAP[lower] ?? SOURCE_NORMALIZE_MAP[trimmed] ?? "other"
-  );
+function extractList<T>(data: unknown): T[] {
+  if (Array.isArray(data)) return data as T[];
+  if (data && typeof data === "object") {
+    const obj = data as { results?: T[]; data?: T[] };
+    if (Array.isArray(obj.results)) return obj.results;
+    if (Array.isArray(obj.data)) return obj.data;
+  }
+  return [];
 }
 
-function buildEmptyCounts(): Record<SliceKey, number> {
-  return {
-    instagram: 0,
-    website: 0,
-    referral: 0,
-    ads: 0,
-    other: 0,
-  };
-}
-
-function toCountArray(map: Record<SliceKey, number>): SourceCount[] {
-  return Object.entries(map)
-    .filter(([, value]) => value > 0)
-    .map(([name, value]) => ({
-      name: name as SliceKey,
-      value,
-    }))
-    .sort((a, b) => b.value - a.value);
-}
-
-async function fetchAllCustomerIds(): Promise<number[]> {
-  const ids: number[] = [];
-  let url = "/customers/api/v1/customers/";
+async function fetchAllCases(): Promise<CaseItem[]> {
+  const items: CaseItem[] = [];
+  let url = "/tasks/api/v1/cases/";
 
   while (url) {
     const res = await axiosInstance.get(url);
     const data = res.data;
 
-    const items: CustomerListItem[] = Array.isArray(data)
-      ? data
-      : (data.results ?? []);
+    const list = extractList<CaseItem>(data);
+    items.push(...list);
 
-    ids.push(...items.map((c) => c.id));
-
-    if (!Array.isArray(data) && data.next) {
+    if (data && typeof data === "object" && !Array.isArray(data) && data.next) {
       const parsed = new URL(data.next);
       url = parsed.pathname + parsed.search;
     } else {
@@ -86,64 +69,75 @@ async function fetchAllCustomerIds(): Promise<number[]> {
     }
   }
 
-  return ids;
+  return items;
 }
 
-async function fetchDetailsInBatches(
-  ids: number[],
-  batchSize = 20,
-): Promise<CustomerDetail[]> {
-  const results: CustomerDetail[] = [];
-
-  for (let i = 0; i < ids.length; i += batchSize) {
-    const batch = ids.slice(i, i + batchSize);
-    const settled = await Promise.allSettled(
-      batch.map((id) =>
-        axiosInstance
-          .get<CustomerDetail>(`/customers/api/v1/customers/${id}/`)
-          .then((r) => r.data),
-      ),
-    );
-
-    settled.forEach((s) => {
-      if (s.status === "fulfilled") results.push(s.value);
-    });
-  }
-
-  return results;
-}
-
-function buildRangeData(details: CustomerDetail[]): RangeData {
+function buildRangeData(cases: CaseItem[], allResources: CaseResource[]): RangeData {
   const now = Date.now();
   const weeklyCutoff = now - 7 * 24 * 60 * 60 * 1000;
   const monthlyCutoff = now - 30 * 24 * 60 * 60 * 1000;
   const yearlyCutoff = now - 365 * 24 * 60 * 60 * 1000;
 
-  const weekly = buildEmptyCounts();
-  const monthly = buildEmptyCounts();
-  const yearly = buildEmptyCounts();
+  const resourceTitleMap = new Map<number, string>();
+  allResources.forEach((r) => resourceTitleMap.set(r.id, r.title));
 
-  details.forEach((item) => {
+  const weeklyCounts: Record<number, number> = {};
+  const monthlyCounts: Record<number, number> = {};
+  const yearlyCounts: Record<number, number> = {};
+
+  allResources.forEach((r) => {
+    weeklyCounts[r.id] = 0;
+    monthlyCounts[r.id] = 0;
+    yearlyCounts[r.id] = 0;
+  });
+
+  cases.forEach((item) => {
     const createdAt = new Date(item.created_at).getTime();
     if (Number.isNaN(createdAt)) return;
 
-    const source = normalizeSource(item.source);
+    const resList = item.resources ?? [];
 
-    if (createdAt >= yearlyCutoff) {
-      yearly[source] += 1;
-    }
-    if (createdAt >= monthlyCutoff) {
-      monthly[source] += 1;
-    }
-    if (createdAt >= weeklyCutoff) {
-      weekly[source] += 1;
-    }
+    resList.forEach((r) => {
+      if (!resourceTitleMap.has(r.id)) {
+        resourceTitleMap.set(r.id, r.title);
+        weeklyCounts[r.id] = weeklyCounts[r.id] || 0;
+        monthlyCounts[r.id] = monthlyCounts[r.id] || 0;
+        yearlyCounts[r.id] = yearlyCounts[r.id] || 0;
+      }
+
+      if (createdAt >= yearlyCutoff) {
+        yearlyCounts[r.id] = (yearlyCounts[r.id] || 0) + 1;
+      }
+      if (createdAt >= monthlyCutoff) {
+        monthlyCounts[r.id] = (monthlyCounts[r.id] || 0) + 1;
+      }
+      if (createdAt >= weeklyCutoff) {
+        weeklyCounts[r.id] = (weeklyCounts[r.id] || 0) + 1;
+      }
+    });
   });
 
+  const getMappedArray = (counts: Record<number, number>): SourceCount[] => {
+    return Object.entries(counts)
+      .map(([resIdStr, value], index) => {
+        const resourceId = Number(resIdStr);
+        const name = resourceTitleMap.get(resourceId) || `منبع #${resourceId}`;
+        const paletteItem = PALETTE[index % PALETTE.length];
+        return {
+          name,
+          resourceId,
+          value,
+          color: paletteItem.color,
+          glow: paletteItem.glow,
+        };
+      })
+      .sort((a, b) => b.value - a.value);
+  };
+
   return {
-    weekly: toCountArray(weekly),
-    monthly: toCountArray(monthly),
-    yearly: toCountArray(yearly),
+    weekly: getMappedArray(weeklyCounts),
+    monthly: getMappedArray(monthlyCounts),
+    yearly: getMappedArray(yearlyCounts),
   };
 }
 
@@ -164,12 +158,24 @@ export function useCustomerSources() {
         setLoading(true);
         setError(null);
 
-        const ids = await fetchAllCustomerIds();
-        const details = await fetchDetailsInBatches(ids);
-        const rangeData = buildRangeData(details);
+        const [casesRes, resourcesRes] = await Promise.allSettled([
+          fetchAllCases(),
+          axiosInstance.get("/tasks/api/v1/cases/resources/"),
+        ]);
+
+        const cases = casesRes.status === "fulfilled" ? casesRes.value : [];
+        const resources =
+          resourcesRes.status === "fulfilled"
+            ? extractList<CaseResource>(resourcesRes.value.data)
+            : [];
+
+        if (casesRes.status === "rejected" && resourcesRes.status === "rejected") {
+          throw new Error("Failed to fetch cases and resources");
+        }
+
+        const rangeData = buildRangeData(cases, resources);
 
         if (cancelled) return;
-
         setData(rangeData);
       } catch (err) {
         console.error("[useCustomerSources]", err);

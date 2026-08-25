@@ -1,6 +1,8 @@
 "use client";
 
 import axiosInstance from "@/lib/axiosInstance";
+import { useAuthStore } from "@/store/authStore";
+import type { AxiosResponse } from "axios";
 import { useEffect, useRef, useState } from "react";
 
 type Trend = "up" | "down" | "same";
@@ -37,6 +39,25 @@ interface DepartmentEmployeeItem {
   department_name: string;
 }
 
+type CustomersApiResponse =
+  | CustomerListItem[]
+  | {
+      results: CustomerListItem[];
+      next: string | null;
+    };
+
+type EmployeesApiResponse =
+  | EmployeeInfo[]
+  | {
+      results: EmployeeInfo[];
+    };
+
+type DepartmentEmployeesApiResponse =
+  | DepartmentEmployeeItem[]
+  | {
+      results: DepartmentEmployeeItem[];
+    };
+
 export type TimeRange = "weekly" | "monthly" | "yearly";
 
 type RangeData = Record<TimeRange, User[]>;
@@ -45,23 +66,29 @@ let employeeListCache: EmployeeInfo[] | null = null;
 let inFlightRequest: Promise<EmployeeInfo[]> | null = null;
 
 async function fetchEmployeeList(): Promise<EmployeeInfo[]> {
-  if (employeeListCache) return employeeListCache;
-  if (inFlightRequest) return inFlightRequest;
+  if (employeeListCache) {
+    return employeeListCache;
+  }
+
+  if (inFlightRequest) {
+    return inFlightRequest;
+  }
 
   inFlightRequest = axiosInstance
-    .get<EmployeeInfo[] | { results: EmployeeInfo[] }>(
-      "/accounts/api/v1/employee/list/",
-    )
-    .then((res) => {
-      const list = Array.isArray(res.data)
-        ? res.data
-        : ((res.data as { results: EmployeeInfo[] }).results ?? []);
-      employeeListCache = list;
+    .get<EmployeesApiResponse>("/accounts/api/v1/employee/list/")
+    .then((response: AxiosResponse<EmployeesApiResponse>) => {
+      const employees = Array.isArray(response.data)
+        ? response.data
+        : (response.data.results ?? []);
+
+      employeeListCache = employees;
       inFlightRequest = null;
-      return list;
+
+      return employees;
     })
     .catch(() => {
       inFlightRequest = null;
+
       return [];
     });
 
@@ -73,106 +100,119 @@ export function clearEmployeeListCache() {
 }
 
 async function fetchDepartmentEmployees(): Promise<DepartmentEmployeeItem[]> {
-  const res = await axiosInstance.get<
-    DepartmentEmployeeItem[] | { results: DepartmentEmployeeItem[] }
-  >("/department/api/v1/department_employee/list/");
-  return Array.isArray(res.data)
-    ? res.data
-    : ((res.data as { results: DepartmentEmployeeItem[] }).results ?? []);
+  const response: AxiosResponse<DepartmentEmployeesApiResponse> =
+    await axiosInstance.get<DepartmentEmployeesApiResponse>(
+      "/department/api/v1/department_employee/list/",
+    );
+
+  const data: DepartmentEmployeesApiResponse = response.data;
+
+  return Array.isArray(data) ? data : (data.results ?? []);
 }
 
 async function fetchAllCustomers(): Promise<CustomerListItem[]> {
-  const all: CustomerListItem[] = [];
+  const allCustomers: CustomerListItem[] = [];
   let url: string | null = "/customers/api/v1/customers/";
 
   while (url) {
-    const response = await axiosInstance.get(url);
-    const data = response.data as
-      | CustomerListItem[]
-      | { results: CustomerListItem[]; next: string | null };
+    const response: AxiosResponse<CustomersApiResponse> =
+      await axiosInstance.get<CustomersApiResponse>(url);
+
+    const data: CustomersApiResponse = response.data;
 
     if (Array.isArray(data)) {
-      all.push(...data);
+      allCustomers.push(...data);
       break;
+    }
+
+    allCustomers.push(...(data.results ?? []));
+
+    if (data.next) {
+      const parsedUrl = new URL(data.next);
+      url = `${parsedUrl.pathname}${parsedUrl.search}`;
     } else {
-      all.push(...(data.results ?? []));
-      if (data.next) {
-        const parsed: URL = new URL(data.next);
-        url = parsed.pathname + parsed.search;
-      } else {
-        url = null;
-      }
+      url = null;
     }
   }
 
-  return all;
+  return allCustomers;
 }
 
 function buildNameMap(employees: EmployeeInfo[]): Map<string, string> {
-  const map = new Map<string, string>();
-  for (const emp of employees) {
-    map.set(emp.username, emp.full_name);
+  const nameMap = new Map<string, string>();
+
+  for (const employee of employees) {
+    nameMap.set(employee.username, employee.full_name);
   }
-  return map;
+
+  return nameMap;
 }
 
 function buildRoleMap(
   employees: EmployeeInfo[],
   departmentEmployees: DepartmentEmployeeItem[],
 ): Map<string, string> {
-  const empIdToUsername = new Map<number, string>();
-  for (const emp of employees) {
-    empIdToUsername.set(emp.id, emp.username);
+  const employeeIdToUsername = new Map<number, string>();
+
+  for (const employee of employees) {
+    employeeIdToUsername.set(employee.id, employee.username);
   }
 
-  const map = new Map<string, string>();
-  for (const de of departmentEmployees) {
-    const username = empIdToUsername.get(de.employee);
-    if (username && !map.has(username)) {
-      map.set(username, de.department_name);
+  const roleMap = new Map<string, string>();
+
+  for (const departmentEmployee of departmentEmployees) {
+    const username = employeeIdToUsername.get(departmentEmployee.employee);
+
+    if (username && !roleMap.has(username)) {
+      roleMap.set(username, departmentEmployee.department_name);
     }
   }
-  return map;
+
+  return roleMap;
 }
 
 function processRangeData(
   customers: CustomerListItem[],
   days: number,
-  nameMap?: Map<string, string>,
-  roleMap?: Map<string, string>,
+  nameMap: Map<string, string>,
+  roleMap: Map<string, string>,
 ): User[] {
   const now = Date.now();
   const rangeStart = now - days * 24 * 60 * 60 * 1000;
-  const midPoint = rangeStart + (now - rangeStart) / 2;
-
-  const inRange = customers.filter((c) => {
-    if (c.status !== 2) return false;
-    const t = new Date(c.created_at).getTime();
-    return t >= rangeStart && t <= now;
-  });
+  const midpoint = rangeStart + (now - rangeStart) / 2;
 
   const currentCounts = new Map<string, number>();
   const previousCounts = new Map<string, number>();
 
-  for (const c of inRange) {
-    const u = c.created_by_username || "نامشخص";
-    const t = new Date(c.created_at).getTime();
-    if (t >= midPoint) {
-      currentCounts.set(u, (currentCounts.get(u) ?? 0) + 1);
+  for (const customer of customers) {
+    if (customer.status !== 2) {
+      continue;
+    }
+
+    const createdAt = new Date(customer.created_at).getTime();
+
+    if (Number.isNaN(createdAt) || createdAt < rangeStart || createdAt > now) {
+      continue;
+    }
+
+    const username = customer.created_by_username || "نامشخص";
+
+    if (createdAt >= midpoint) {
+      currentCounts.set(username, (currentCounts.get(username) ?? 0) + 1);
     } else {
-      previousCounts.set(u, (previousCounts.get(u) ?? 0) + 1);
+      previousCounts.set(username, (previousCounts.get(username) ?? 0) + 1);
     }
   }
 
-  const allUsernames = new Set([
+  const usernames = new Set<string>([
     ...currentCounts.keys(),
     ...previousCounts.keys(),
   ]);
 
-  const users: User[] = Array.from(allUsernames).map((username, index) => {
+  const users: User[] = Array.from(usernames).map((username, index) => {
     const current = currentCounts.get(username) ?? 0;
     const previous = previousCounts.get(username) ?? 0;
-    const total = current + previous;
+    const count = current + previous;
 
     let trend: Trend = "same";
     let trendPct = 0;
@@ -180,65 +220,92 @@ function processRangeData(
     if (current > previous) {
       trend = "up";
       trendPct =
-        previous === 0 && current > 0
+        previous === 0
           ? 100
-          : Math.round((Math.abs(current - previous) / previous) * 100);
+          : Math.round(((current - previous) / previous) * 100);
     } else if (current < previous) {
       trend = "down";
-      trendPct = Math.round((Math.abs(current - previous) / previous) * 100);
+      trendPct = Math.round(((previous - current) / previous) * 100);
     }
 
-    const displayName =
-      username === "admin"
-        ? "مدیر سیستم"
-        : (nameMap?.get(username) ?? username);
-
-    const role = roleMap?.get(username) ?? "کارشناس فروش";
+    const name =
+      username === "admin" ? "مدیر سیستم" : (nameMap.get(username) ?? username);
 
     return {
       id: index + 1,
-      name: displayName,
+      name,
       username,
-      role,
+      role: roleMap.get(username) ?? "کارشناس فروش",
       avatar: username.charAt(0).toUpperCase(),
-      count: total,
+      count,
       trend,
       trendPct,
     };
   });
 
-  return users.sort((a, b) => b.count - a.count).slice(0, 5);
+  return users
+    .sort((firstUser, secondUser) => secondUser.count - firstUser.count)
+    .slice(0, 5);
 }
 
 export function useCurrentEmployee() {
-  const { useAuthStore } = require("@/store/authStore");
-  const username: string = useAuthStore(
-    (s: { username: string }) => s.username,
-  );
-  const hasHydrated: boolean = useAuthStore(
-    (s: { hasHydrated: boolean }) => s.hasHydrated,
-  );
+  const username = useAuthStore((state) => state.username);
+  const hasHydrated = useAuthStore((state) => state.hasHydrated);
 
   const [employee, setEmployee] = useState<EmployeeInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!hasHydrated) return;
-    setLoading(true);
-    fetchEmployeeList()
-      .then((list) => {
-        const match = list.find((emp) => emp.username === username) ?? null;
-        setEmployee(match);
-        setLoading(false);
-      })
-      .catch(() => {
-        setError("خطا در دریافت اطلاعات کارمند");
-        setLoading(false);
-      });
-  }, [username, hasHydrated]);
+    if (!hasHydrated) {
+      return;
+    }
 
-  return { employee, loading, error };
+    let isMounted = true;
+
+    async function loadCurrentEmployee() {
+      setLoading(true);
+      setError(null);
+
+      try {
+        const employees = await fetchEmployeeList();
+
+        if (!isMounted) {
+          return;
+        }
+
+        const currentEmployee =
+          employees.find(
+            (employeeItem) => employeeItem.username === username,
+          ) ?? null;
+
+        setEmployee(currentEmployee);
+      } catch {
+        if (!isMounted) {
+          return;
+        }
+
+        setEmployee(null);
+        setError("خطا در دریافت اطلاعات کارمند");
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    }
+
+    void loadCurrentEmployee();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [hasHydrated, username]);
+
+  return {
+    employee,
+    loading,
+    error,
+  };
 }
 
 export function useTopUsers() {
@@ -247,23 +314,34 @@ export function useTopUsers() {
     monthly: [],
     yearly: [],
   });
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const hasFetched = useRef(false);
 
   useEffect(() => {
-    if (hasFetched.current) return;
+    if (hasFetched.current) {
+      return;
+    }
+
     hasFetched.current = true;
 
-    (async () => {
+    let isMounted = true;
+
+    async function loadTopUsers() {
       try {
+        setLoading(true);
+        setError(null);
+
         const [customers, employees, departmentEmployees] = await Promise.all([
           fetchAllCustomers(),
-          fetchEmployeeList().catch(() => [] as EmployeeInfo[]),
-          fetchDepartmentEmployees().catch(
-            () => [] as DepartmentEmployeeItem[],
-          ),
+          fetchEmployeeList(),
+          fetchDepartmentEmployees(),
         ]);
+
+        if (!isMounted) {
+          return;
+        }
 
         const nameMap = buildNameMap(employees);
         const roleMap = buildRoleMap(employees, departmentEmployees);
@@ -273,13 +351,27 @@ export function useTopUsers() {
           monthly: processRangeData(customers, 30, nameMap, roleMap),
           yearly: processRangeData(customers, 365, nameMap, roleMap),
         });
-      } catch (err) {
-        setError("خطا در دریافت داده‌ها");
+      } catch {
+        if (isMounted) {
+          setError("خطا در دریافت داده‌ها");
+        }
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
-    })();
+    }
+
+    void loadTopUsers();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
-  return { data, loading, error };
+  return {
+    data,
+    loading,
+    error,
+  };
 }

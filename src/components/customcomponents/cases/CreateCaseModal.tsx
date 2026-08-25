@@ -7,7 +7,9 @@ import {
     Check,
     ClipboardList,
     Loader,
+    Plus,
     Search,
+    Trash2,
     User,
     X,
 } from "lucide-react";
@@ -21,6 +23,11 @@ type CreateCaseModalProps = {
     onClose: () => void;
     onCreated: () => Promise<void> | void;
     customers?: Customer[];
+};
+
+type CaseResource = {
+    id: number;
+    title: string;
 };
 
 function extractList<T>(data: unknown): T[] {
@@ -113,8 +120,28 @@ export default function CreateCaseModal({
     const [selectedCustomer, setSelectedCustomer] = useState<number | null>(null);
     const [title, setTitle] = useState("");
     const [description, setDescription] = useState("");
+    const [resources, setResources] = useState<CaseResource[]>([]);
+    const [loadingResources, setLoadingResources] = useState(false);
+    const [selectedResources, setSelectedResources] = useState<number[]>([]);
     const [submitting, setSubmitting] = useState(false);
     const [submitError, setSubmitError] = useState("");
+
+    const [isAddingResource, setIsAddingResource] = useState(false);
+    const [newResourceTitle, setNewResourceTitle] = useState("");
+    const [creatingResource, setCreatingResource] = useState(false);
+    const [deletingResourceId, setDeletingResourceId] = useState<number | null>(null);
+
+    const fetchResourcesList = useCallback(async () => {
+        try {
+            setLoadingResources(true);
+            const res = await axiosInstance.get("/tasks/api/v1/cases/resources/");
+            setResources(extractList<CaseResource>(res.data));
+        } catch {
+            setResources([]);
+        } finally {
+            setLoadingResources(false);
+        }
+    }, []);
 
     useEffect(() => {
         if (customersProp) setCustomers(customersProp);
@@ -138,6 +165,11 @@ export default function CreateCaseModal({
     }, [open, customersProp]);
 
     useEffect(() => {
+        if (!open) return;
+        fetchResourcesList();
+    }, [open, fetchResourcesList]);
+
+    useEffect(() => {
         if (open) return;
         const timer = setTimeout(() => {
             setStep(0);
@@ -145,8 +177,13 @@ export default function CreateCaseModal({
             setSelectedCustomer(null);
             setTitle("");
             setDescription("");
+            setSelectedResources([]);
             setSubmitError("");
             setSubmitting(false);
+            setIsAddingResource(false);
+            setNewResourceTitle("");
+            setCreatingResource(false);
+            setDeletingResourceId(null);
         }, 250);
         return () => clearTimeout(timer);
     }, [open]);
@@ -154,7 +191,9 @@ export default function CreateCaseModal({
     useEffect(() => {
         if (!open) return;
         const onKey = (e: KeyboardEvent) => {
-            if (e.key === "Escape" && !submitting) onClose();
+            if (e.key === "Escape" && !submitting && !creatingResource && !deletingResourceId) {
+                onClose();
+            }
         };
         window.addEventListener("keydown", onKey);
         document.body.style.overflow = "hidden";
@@ -162,7 +201,7 @@ export default function CreateCaseModal({
             window.removeEventListener("keydown", onKey);
             document.body.style.overflow = "";
         };
-    }, [open, submitting, onClose]);
+    }, [open, submitting, creatingResource, deletingResourceId, onClose]);
 
     const filteredCustomers = useMemo(() => {
         const q = customerQuery.trim().toLowerCase();
@@ -180,6 +219,51 @@ export default function CreateCaseModal({
         [customers, selectedCustomer]
     );
 
+    const toggleResource = useCallback((id: number) => {
+        setSelectedResources((prev) =>
+            prev.includes(id) ? prev.filter((r) => r !== id) : [...prev, id]
+        );
+    }, []);
+
+    const handleCreateResource = useCallback(async () => {
+        const trimmed = newResourceTitle.trim();
+        if (!trimmed || creatingResource) return;
+        try {
+            setCreatingResource(true);
+            const res = await axiosInstance.post("/tasks/api/v1/cases/resources/create/", {
+                title: trimmed,
+            });
+            const created = res.data as CaseResource;
+            if (created && created.id) {
+                setResources((prev) => [...prev, created]);
+                setSelectedResources((prev) => [...prev, created.id]);
+            } else {
+                await fetchResourcesList();
+            }
+            setNewResourceTitle("");
+            setIsAddingResource(false);
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setCreatingResource(false);
+        }
+    }, [newResourceTitle, creatingResource, fetchResourcesList]);
+
+    const handleDeleteResource = useCallback(async (e: React.MouseEvent, id: number) => {
+        e.stopPropagation();
+        if (deletingResourceId !== null) return;
+        try {
+            setDeletingResourceId(id);
+            await axiosInstance.delete(`/tasks/api/v1/cases/resources/${id}/delete/`);
+            setResources((prev) => prev.filter((r) => r.id !== id));
+            setSelectedResources((prev) => prev.filter((r) => r !== id));
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setDeletingResourceId(null);
+        }
+    }, [deletingResourceId]);
+
     const canSubmit = selectedCustomer !== null && title.trim().length > 1 && !submitting;
 
     const handleSubmit = useCallback(async () => {
@@ -193,6 +277,7 @@ export default function CreateCaseModal({
                 created_by: userId ? Number(userId) : null,
                 title: title.trim(),
                 description: description.trim(),
+                resources: selectedResources,
             });
             await onCreated();
             onClose();
@@ -204,7 +289,7 @@ export default function CreateCaseModal({
         } finally {
             setSubmitting(false);
         }
-    }, [canSubmit, selectedCustomer, title, description, onCreated, onClose]);
+    }, [canSubmit, selectedCustomer, title, description, selectedResources, onCreated, onClose]);
 
     return (
         <AnimatePresence>
@@ -300,21 +385,21 @@ export default function CreateCaseModal({
                                                             setStep(1);
                                                         }}
                                                         className={`flex w-full items-center justify-between rounded-2xl p-3.5 transition-all duration-200 group ${selectedCustomer === c.id
-                                                                ? "bg-blue-50 dark:bg-blue-500/10"
-                                                                : "hover:bg-gray-50 dark:hover:bg-white/5"
+                                                            ? "bg-blue-50 dark:bg-blue-500/10"
+                                                            : "hover:bg-gray-50 dark:hover:bg-white/5"
                                                             }`}
                                                     >
                                                         <div className="flex items-center gap-3">
                                                             <div className={`flex h-9 w-9 items-center justify-center rounded-xl transition-colors ${selectedCustomer === c.id
-                                                                    ? "bg-blue-500 text-white"
-                                                                    : "bg-white text-gray-400 border border-gray-100 dark:bg-white/5 dark:border-white/5"
+                                                                ? "bg-blue-500 text-white"
+                                                                : "bg-white text-gray-400 border border-gray-100 dark:bg-white/5 dark:border-white/5"
                                                                 }`}>
                                                                 <User size={14} />
                                                             </div>
                                                             <div className="text-right">
                                                                 <p className={`text-[12.5px] font-bold transition-colors ${selectedCustomer === c.id
-                                                                        ? "text-blue-600 dark:text-blue-400"
-                                                                        : "text-gray-700 dark:text-gray-300"
+                                                                    ? "text-blue-600 dark:text-blue-400"
+                                                                    : "text-gray-700 dark:text-gray-300"
                                                                     }`}>
                                                                     {customerDisplayName(c)}
                                                                 </p>
@@ -378,6 +463,108 @@ export default function CreateCaseModal({
                                             onChange={(e) => setDescription(e.target.value)}
                                             rows={4}
                                         />
+
+                                        <div className="space-y-2">
+                                            <div className="flex items-center justify-between px-1">
+                                                <p className="text-[11.5px] font-bold text-gray-500 dark:text-gray-400">
+                                                    منابع (اختیاری)
+                                                </p>
+                                                {!isAddingResource && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setIsAddingResource(true)}
+                                                        className="flex items-center gap-1 text-[11px] font-bold text-blue-600 hover:text-blue-500 dark:text-blue-400"
+                                                    >
+                                                        <Plus size={13} />
+                                                        افزودن منبع
+                                                    </button>
+                                                )}
+                                            </div>
+
+                                            {isAddingResource && (
+                                                <div className="flex items-center gap-2 rounded-2xl border border-gray-200 bg-gray-50/50 p-1.5 dark:border-white/10 dark:bg-white/5">
+                                                    <input
+                                                        autoFocus
+                                                        type="text"
+                                                        placeholder="عنوان منبع جدید…"
+                                                        value={newResourceTitle}
+                                                        onChange={(e) => setNewResourceTitle(e.target.value)}
+                                                        onKeyDown={(e) => {
+                                                            if (e.key === "Enter") {
+                                                                e.preventDefault();
+                                                                handleCreateResource();
+                                                            }
+                                                        }}
+                                                        className="h-8 flex-1 bg-transparent px-3 text-[12px] text-gray-900 outline-none placeholder:text-gray-400 dark:text-white dark:placeholder:text-gray-500"
+                                                    />
+                                                    <button
+                                                        type="button"
+                                                        onClick={handleCreateResource}
+                                                        disabled={creatingResource || !newResourceTitle.trim()}
+                                                        className="flex h-7 items-center justify-center rounded-xl bg-blue-600 px-3 text-[11px] font-bold text-white transition-opacity disabled:opacity-50 dark:bg-blue-500"
+                                                    >
+                                                        {creatingResource ? <Loader size={12} className="animate-spin" /> : "ثبت"}
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            setIsAddingResource(false);
+                                                            setNewResourceTitle("");
+                                                        }}
+                                                        className="flex h-7 w-7 items-center justify-center rounded-xl text-gray-400 hover:bg-gray-100 dark:hover:bg-white/10"
+                                                    >
+                                                        <X size={13} />
+                                                    </button>
+                                                </div>
+                                            )}
+
+                                            {loadingResources ? (
+                                                <div className="flex items-center justify-center py-4">
+                                                    <Loader size={16} className="animate-spin text-blue-500" />
+                                                </div>
+                                            ) : resources.length > 0 ? (
+                                                <div className="flex flex-wrap gap-2">
+                                                    {resources.map((r) => {
+                                                        const active = selectedResources.includes(r.id);
+                                                        const isDeleting = deletingResourceId === r.id;
+                                                        return (
+                                                            <div
+                                                                key={r.id}
+                                                                onClick={() => toggleResource(r.id)}
+                                                                role="button"
+                                                                tabIndex={0}
+                                                                className={`group relative flex cursor-pointer items-center gap-1.5 rounded-full border py-1.5 pl-2 pr-3.5 text-[11.5px] font-bold transition-all duration-200 ${active
+                                                                    ? "border-blue-500 bg-blue-500 text-white shadow-sm"
+                                                                    : "border-gray-200 bg-white text-gray-600 hover:border-gray-300 dark:border-white/10 dark:bg-white/[0.04] dark:text-gray-300 dark:hover:border-white/20"
+                                                                    }`}
+                                                            >
+                                                                {active && <Check size={11} strokeWidth={3} />}
+                                                                <span>{r.title}</span>
+                                                                <button
+                                                                    type="button"
+                                                                    title="حذف منبع"
+                                                                    onClick={(e) => handleDeleteResource(e, r.id)}
+                                                                    disabled={isDeleting}
+                                                                    className={`mr-0.5 flex h-4 w-4 items-center justify-center rounded-full transition-all ${
+                                                                        active
+                                                                            ? "text-blue-100 hover:bg-white/20 hover:text-white"
+                                                                            : "text-gray-400 hover:bg-gray-100 hover:text-red-500 dark:text-gray-500 dark:hover:bg-white/10 dark:hover:text-red-400"
+                                                                    }`}
+                                                                >
+                                                                    {isDeleting ? (
+                                                                        <Loader size={9} className="animate-spin" />
+                                                                    ) : (
+                                                                        <X size={10} strokeWidth={2.5} />
+                                                                    )}
+                                                                </button>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            ) : (
+                                                <p className="text-[11px] text-gray-400">منبعی یافت نشد</p>
+                                            )}
+                                        </div>
 
                                         {submitError && (
                                             <div className="rounded-xl bg-red-50 p-3 text-center text-[11.5px] font-bold text-red-500 dark:bg-red-500/10">

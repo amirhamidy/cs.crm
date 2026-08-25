@@ -33,5 +33,5 @@ export const userMenuItems: MenuItem[] = [
   { icon: FileText, label: "مشتری", href: "/user/customer" },
   { icon: FileText, label: "پرونده ها", href: "/user/cases" },
   { icon: FileText, label: "ایجاد وظایف", href: "/user/tasks" },
-  { icon: FileText, label: "تیکت به همکار", href: "/user/internalTasks" },
+  { icon: FileText, label: "تیکت به همکار", href: "/user/Ticketreceipt" },
 ];

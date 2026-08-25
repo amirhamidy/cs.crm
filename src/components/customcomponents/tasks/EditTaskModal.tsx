@@ -42,10 +42,10 @@ interface EditTaskModalProps {
     task: TaskItem;
     customers: Customer[];
     departments: Department[];
-    employees: Employee[];   
     onClose: () => void;
     onSuccess: () => void;
 }
+
 
 const GRADIENTS = [
     "from-blue-500 to-indigo-500",
@@ -230,8 +230,8 @@ function NiceSelect({
                     setOpen((v) => !v);
                 }}
                 className={`flex h-[52px] w-full items-center gap-2.5 rounded-2xl border px-3 text-right transition-all duration-200 ${open
-                        ? "border-blue-500 bg-blue-50/50 dark:border-blue-500/50 dark:bg-blue-500/[0.06]"
-                        : "border-gray-100 bg-gray-50 hover:border-gray-200 dark:border-white/[0.06] dark:bg-white/[0.03] dark:hover:border-white/[0.12]"
+                    ? "border-blue-500 bg-blue-50/50 dark:border-blue-500/50 dark:bg-blue-500/[0.06]"
+                    : "border-gray-100 bg-gray-50 hover:border-gray-200 dark:border-white/[0.06] dark:bg-white/[0.03] dark:hover:border-white/[0.12]"
                     } ${disabled
                         ? "pointer-events-none cursor-not-allowed opacity-40"
                         : "cursor-pointer"
@@ -258,8 +258,8 @@ function NiceSelect({
                 <span className="min-w-0 flex-1">
                     <span
                         className={`block truncate text-[12.5px] font-bold ${selectedOptions.length > 0
-                                ? "text-gray-900 dark:text-white"
-                                : "text-gray-400"
+                            ? "text-gray-900 dark:text-white"
+                            : "text-gray-400"
                             }`}
                     >
                         {displayText}
@@ -323,8 +323,8 @@ function NiceSelect({
                                             transition={{ delay: i * 0.02 }}
                                             onClick={() => handleSelect(o.id)}
                                             className={`flex w-full items-center gap-2.5 rounded-2xl px-2.5 py-2 text-right transition-colors ${active
-                                                    ? "bg-blue-50 dark:bg-blue-500/10"
-                                                    : "hover:bg-gray-50 dark:hover:bg-white/[0.04]"
+                                                ? "bg-blue-50 dark:bg-blue-500/10"
+                                                : "hover:bg-gray-50 dark:hover:bg-white/[0.04]"
                                                 }`}
                                         >
                                             <span
@@ -338,8 +338,8 @@ function NiceSelect({
                                             <span className="min-w-0 flex-1">
                                                 <span
                                                     className={`block truncate text-[12.5px] font-bold ${active
-                                                            ? "text-blue-600 dark:text-blue-400"
-                                                            : "text-gray-900 dark:text-white"
+                                                        ? "text-blue-600 dark:text-blue-400"
+                                                        : "text-gray-900 dark:text-white"
                                                         }`}
                                                 >
                                                     {o.label}
@@ -386,7 +386,6 @@ export default function EditTaskModal({
     task,
     customers,
     departments,
-    employees, 
     onClose,
     onSuccess,
 }: EditTaskModalProps) {

@@ -12,24 +12,20 @@ import {
     X,
 } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
+import axios from "axios";
 import { apiRoutes } from "@/lib/apiRoutes";
-
-type CustomerLike = {
-    id: number;
-    full_name?: string;
-    first_name?: string;
-    last_name?: string;
-    name?: string;
-    phone?: string;
-    phone_number?: string;
-    company_name?: string;
-};
+import type { Customer } from "@/types/customer";
 
 type CreateCaseModalProps = {
     open: boolean;
     onClose: () => void;
     onCreated: () => Promise<void> | void;
-    customers?: CustomerLike[];
+    customers?: Customer[];
+};
+
+type CaseResource = {
+    id: number;
+    title: string;
 };
 
 function extractList<T>(data: unknown): T[] {
@@ -42,30 +38,18 @@ function extractList<T>(data: unknown): T[] {
     return [];
 }
 
-function customerName(c: CustomerLike) {
-    const full = [c.first_name, c.last_name].filter(Boolean).join(" ").trim();
-    return c.full_name?.trim() || full || c.name?.trim() || c.company_name?.trim() || `مشتری #${c.id}`;
+function customerDisplayName(c: Customer) {
+    return c.full_name?.trim() || [c.first_name, c.last_name].filter(Boolean).join(" ").trim() || c.company_name?.trim() || `مشتری #${c.id}`;
 }
 
-function customerPhone(c: CustomerLike) {
-    return c.phone || c.phone_number || "";
-}
+type FloatingInputProps = React.InputHTMLAttributes<HTMLInputElement> & {
+    label: string;
+    id: string;
+};
 
-function getUserId(): number | null {
-    try {
-        const raw = localStorage.getItem("crm-user-id");
-        if (!raw) return null;
-        const parsed = parseInt(raw, 10);
-        return isNaN(parsed) ? null : parsed;
-    } catch {
-        return null;
-    }
-}
-
-const FloatingInput = forwardRef<HTMLInputElement, any>(
+const FloatingInput = forwardRef<HTMLInputElement, FloatingInputProps>(
     ({ label, id, className = "", value, ...props }, ref) => {
         const hasValue = value !== undefined && value !== null && value !== "";
-
         return (
             <div className="relative">
                 <input
@@ -78,9 +62,7 @@ const FloatingInput = forwardRef<HTMLInputElement, any>(
                 />
                 <label
                     htmlFor={id}
-                    className={`absolute right-5 pointer-events-none transition-all duration-200 bg-white dark:bg-[#0f172a] px-1.5 rounded text-sm text-gray-400 peer-focus:-top-2.5 peer-focus:translate-y-0 peer-focus:text-xs peer-focus:text-gray-500 ${hasValue
-                        ? "-top-2.5 translate-y-0 text-xs text-gray-500"
-                        : "top-1/2 -translate-y-1/2"
+                    className={`absolute right-5 pointer-events-none transition-all duration-200 bg-white dark:bg-[#0f172a] px-1.5 rounded text-sm text-gray-400 peer-focus:-top-2.5 peer-focus:translate-y-0 peer-focus:text-xs peer-focus:text-gray-500 ${hasValue ? "-top-2.5 translate-y-0 text-xs text-gray-500" : "top-1/2 -translate-y-1/2"
                         }`}
                 >
                     {label}
@@ -91,10 +73,14 @@ const FloatingInput = forwardRef<HTMLInputElement, any>(
 );
 FloatingInput.displayName = "FloatingInput";
 
-const FloatingTextarea = forwardRef<HTMLTextAreaElement, any>(
+type FloatingTextareaProps = React.TextareaHTMLAttributes<HTMLTextAreaElement> & {
+    label: string;
+    id: string;
+};
+
+const FloatingTextarea = forwardRef<HTMLTextAreaElement, FloatingTextareaProps>(
     ({ label, id, className = "", value, rows = 3, ...props }, ref) => {
         const hasValue = value !== undefined && value !== null && value !== "";
-
         return (
             <div className="relative">
                 <textarea
@@ -108,9 +94,7 @@ const FloatingTextarea = forwardRef<HTMLTextAreaElement, any>(
                 />
                 <label
                     htmlFor={id}
-                    className={`absolute right-5 pointer-events-none transition-all duration-200 bg-white dark:bg-[#0f172a] px-1.5 rounded text-sm text-gray-400 peer-focus:-top-2.5 peer-focus:translate-y-0 peer-focus:text-xs peer-focus:text-gray-500 ${hasValue
-                        ? "-top-2.5 translate-y-0 text-xs text-gray-500"
-                        : "top-4"
+                    className={`absolute right-5 pointer-events-none transition-all duration-200 bg-white dark:bg-[#0f172a] px-1.5 rounded text-sm text-gray-400 peer-focus:-top-2.5 peer-focus:translate-y-0 peer-focus:text-xs peer-focus:text-gray-500 ${hasValue ? "-top-2.5 translate-y-0 text-xs text-gray-500" : "top-4"
                         }`}
                 >
                     {label}
@@ -128,12 +112,15 @@ export default function CreateCaseModal({
     customers: customersProp,
 }: CreateCaseModalProps) {
     const [step, setStep] = useState(0);
-    const [customers, setCustomers] = useState<CustomerLike[]>(customersProp ?? []);
+    const [customers, setCustomers] = useState<Customer[]>(customersProp ?? []);
     const [loadingCustomers, setLoadingCustomers] = useState(false);
     const [customerQuery, setCustomerQuery] = useState("");
     const [selectedCustomer, setSelectedCustomer] = useState<number | null>(null);
     const [title, setTitle] = useState("");
     const [description, setDescription] = useState("");
+    const [resources, setResources] = useState<CaseResource[]>([]);
+    const [loadingResources, setLoadingResources] = useState(false);
+    const [selectedResources, setSelectedResources] = useState<number[]>([]);
     const [submitting, setSubmitting] = useState(false);
     const [submitError, setSubmitError] = useState("");
 
@@ -148,17 +135,32 @@ export default function CreateCaseModal({
             try {
                 setLoadingCustomers(true);
                 const res = await axiosInstance.get(apiRoutes.customers);
-                if (alive) setCustomers(extractList<CustomerLike>(res.data));
+                if (alive) setCustomers(extractList<Customer>(res.data));
             } catch {
                 if (alive) setCustomers([]);
             } finally {
                 if (alive) setLoadingCustomers(false);
             }
         })();
-        return () => {
-            alive = false;
-        };
+        return () => { alive = false; };
     }, [open, customersProp]);
+
+    useEffect(() => {
+        if (!open) return;
+        let alive = true;
+        (async () => {
+            try {
+                setLoadingResources(true);
+                const res = await axiosInstance.get("/tasks/api/v1/cases/resources/");
+                if (alive) setResources(extractList<CaseResource>(res.data));
+            } catch {
+                if (alive) setResources([]);
+            } finally {
+                if (alive) setLoadingResources(false);
+            }
+        })();
+        return () => { alive = false; };
+    }, [open]);
 
     useEffect(() => {
         if (open) return;
@@ -168,6 +170,7 @@ export default function CreateCaseModal({
             setSelectedCustomer(null);
             setTitle("");
             setDescription("");
+            setSelectedResources([]);
             setSubmitError("");
             setSubmitting(false);
         }, 250);
@@ -191,8 +194,8 @@ export default function CreateCaseModal({
         const q = customerQuery.trim().toLowerCase();
         if (!q) return customers;
         return customers.filter((c) => {
-            const name = customerName(c).toLowerCase();
-            const phone = customerPhone(c).toLowerCase();
+            const name = customerDisplayName(c).toLowerCase();
+            const phone = (c.phone_number ?? "").toLowerCase();
             const company = (c.company_name ?? "").toLowerCase();
             return name.includes(q) || phone.includes(q) || company.includes(q);
         });
@@ -203,37 +206,38 @@ export default function CreateCaseModal({
         [customers, selectedCustomer]
     );
 
+    const toggleResource = useCallback((id: number) => {
+        setSelectedResources((prev) =>
+            prev.includes(id) ? prev.filter((r) => r !== id) : [...prev, id]
+        );
+    }, []);
+
     const canSubmit = selectedCustomer !== null && title.trim().length > 1 && !submitting;
 
     const handleSubmit = useCallback(async () => {
         if (!canSubmit) return;
-
-        const userId = getUserId();
-        if (!userId) {
-            setSubmitError("شناسه کاربر یافت نشد، لطفاً دوباره وارد شوید");
-            return;
-        }
-
         try {
             setSubmitting(true);
             setSubmitError("");
+            const userId = localStorage.getItem("crm-user-id");
             await axiosInstance.post("/tasks/api/v1/cases/create/", {
                 customer: selectedCustomer,
+                created_by: userId ? Number(userId) : null,
                 title: title.trim(),
                 description: description.trim(),
-                created_by: userId,
+                resources: selectedResources,
             });
             await onCreated();
             onClose();
-        } catch (err: unknown) {
-            const e = err as { response?: { data?: unknown; status?: number } };
-            console.log("Status:", e.response?.status);
-            console.log("Error detail:", JSON.stringify(e.response?.data, null, 2));
+        } catch (err) {
+            if (axios.isAxiosError(err)) {
+                console.log(err.response?.data);
+            }
             setSubmitError("ثبت پرونده انجام نشد، دوباره تلاش کن");
         } finally {
             setSubmitting(false);
         }
-    }, [canSubmit, selectedCustomer, title, description, onCreated, onClose]);
+    }, [canSubmit, selectedCustomer, title, description, selectedResources, onCreated, onClose]);
 
     return (
         <AnimatePresence>
@@ -269,7 +273,6 @@ export default function CreateCaseModal({
                                     </p>
                                 </div>
                             </div>
-
                             <button
                                 type="button"
                                 onClick={() => !submitting && onClose()}
@@ -283,9 +286,7 @@ export default function CreateCaseModal({
                             {[0, 1].map((s) => (
                                 <div
                                     key={s}
-                                    className={`h-1 flex-1 rounded-full transition-colors duration-300 ${step >= s
-                                        ? "bg-blue-500"
-                                        : "bg-gray-100 dark:bg-white/10"
+                                    className={`h-1 flex-1 rounded-full transition-colors duration-300 ${step >= s ? "bg-blue-500" : "bg-gray-100 dark:bg-white/10"
                                         }`}
                                 />
                             ))}
@@ -316,7 +317,7 @@ export default function CreateCaseModal({
                                             />
                                         </div>
 
-                                        <div className="space-y-1.5 max-h-[320px] overflow-y-auto pr-0.5">
+                                        <div className="space-y-1.5 max-h-[320px] overflow-y-auto pr-0.5 custom-scrollbar">
                                             {loadingCustomers ? (
                                                 <div className="flex flex-col items-center justify-center py-8 gap-3">
                                                     <Loader size={18} className="animate-spin text-blue-500" />
@@ -337,17 +338,21 @@ export default function CreateCaseModal({
                                                             }`}
                                                     >
                                                         <div className="flex items-center gap-3">
-                                                            <div className={`flex h-9 w-9 items-center justify-center rounded-xl transition-colors ${selectedCustomer === c.id ? "bg-blue-500 text-white" : "bg-white text-gray-400 border border-gray-100 dark:bg-white/5 dark:border-white/5"
+                                                            <div className={`flex h-9 w-9 items-center justify-center rounded-xl transition-colors ${selectedCustomer === c.id
+                                                                ? "bg-blue-500 text-white"
+                                                                : "bg-white text-gray-400 border border-gray-100 dark:bg-white/5 dark:border-white/5"
                                                                 }`}>
                                                                 <User size={14} />
                                                             </div>
                                                             <div className="text-right">
-                                                                <p className={`text-[12.5px] font-bold transition-colors ${selectedCustomer === c.id ? "text-blue-600 dark:text-blue-400" : "text-gray-700 dark:text-gray-300"
+                                                                <p className={`text-[12.5px] font-bold transition-colors ${selectedCustomer === c.id
+                                                                    ? "text-blue-600 dark:text-blue-400"
+                                                                    : "text-gray-700 dark:text-gray-300"
                                                                     }`}>
-                                                                    {customerName(c)}
+                                                                    {customerDisplayName(c)}
                                                                 </p>
                                                                 <p className="text-[10.5px] text-gray-400 mt-0.5">
-                                                                    {customerPhone(c)}
+                                                                    {c.phone_number ?? ""}
                                                                 </p>
                                                             </div>
                                                         </div>
@@ -381,7 +386,7 @@ export default function CreateCaseModal({
                                             <div className="flex-1 min-w-0">
                                                 <p className="text-[10.5px] text-blue-500/80 font-bold">مشتری انتخاب شده:</p>
                                                 <p className="truncate text-[12px] font-extrabold text-blue-700 dark:text-blue-300">
-                                                    {activeCustomer ? customerName(activeCustomer) : "نامعلوم"}
+                                                    {activeCustomer ? customerDisplayName(activeCustomer) : "نامعلوم"}
                                                 </p>
                                             </div>
                                             <button
@@ -394,18 +399,51 @@ export default function CreateCaseModal({
 
                                         <FloatingInput
                                             label="عنوان پرونده"
-                                            id="user_case_title"
+                                            id="case_title"
                                             value={title}
-                                            onChange={(e: any) => setTitle(e.target.value)}
+                                            onChange={(e) => setTitle(e.target.value)}
                                         />
 
                                         <FloatingTextarea
                                             label="توضیحات (اختیاری)"
-                                            id="user_case_description"
+                                            id="case_description"
                                             value={description}
-                                            onChange={(e: any) => setDescription(e.target.value)}
+                                            onChange={(e) => setDescription(e.target.value)}
                                             rows={4}
                                         />
+
+                                        <div className="space-y-2">
+                                            <p className="px-1 text-[11.5px] font-bold text-gray-500 dark:text-gray-400">
+                                                منابع (اختیاری)
+                                            </p>
+                                            {loadingResources ? (
+                                                <div className="flex items-center justify-center py-4">
+                                                    <Loader size={16} className="animate-spin text-blue-500" />
+                                                </div>
+                                            ) : resources.length > 0 ? (
+                                                <div className="flex flex-wrap gap-2">
+                                                    {resources.map((r) => {
+                                                        const active = selectedResources.includes(r.id);
+                                                        return (
+                                                            <button
+                                                                key={r.id}
+                                                                type="button"
+                                                                onClick={() => toggleResource(r.id)}
+                                                                className={`flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-[11.5px] font-bold transition-all duration-200 ${active
+                                                                    ? "border-blue-500 bg-blue-500 text-white shadow-sm"
+                                                                    : "border-gray-200 bg-white text-gray-600 hover:border-gray-300 dark:border-white/10 dark:bg-white/[0.04] dark:text-gray-300 dark:hover:border-white/20"
+                                                                    }`}
+                                                            >
+                                                                {active && <Check size={11} strokeWidth={3} />}
+                                                                {r.title}
+                                                            </button>
+                                                        );
+                                                    })}
+                                                </div>
+                                            ) : (
+                                                <p className="text-[11px] text-gray-400">منبعی یافت نشد</p>
+                                            )}
+                                        </div>
 
                                         {submitError && (
                                             <div className="rounded-xl bg-red-50 p-3 text-center text-[11.5px] font-bold text-red-500 dark:bg-red-500/10">

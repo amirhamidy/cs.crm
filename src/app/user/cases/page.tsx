@@ -334,7 +334,6 @@ export default function UserCasesPage() {
                     task={editingTask}
                     customers={customers}
                     departments={departments}
-                    employees={employees}
                     onClose={() => {
                         setEditModalOpen(false);
                         setEditingTask(null);

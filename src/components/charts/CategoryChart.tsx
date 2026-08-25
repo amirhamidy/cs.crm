@@ -3,7 +3,7 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Cell, Pie, PieChart, ResponsiveContainer } from "recharts";
-import { useCustomerSources, type SliceKey, type TimeRange } from "@/hooks/useCustomerSources";
+import { useCustomerSources, type SourceCount, type TimeRange } from "@/hooks/useCustomerSources";
 
 const ranges: { key: TimeRange; label: string; sub: string }[] = [
   { key: "weekly", label: "هفتگی", sub: "۷ روز اخیر" },
@@ -11,16 +11,8 @@ const ranges: { key: TimeRange; label: string; sub: string }[] = [
   { key: "yearly", label: "سالانه", sub: "۳۶۵ روز اخیر" },
 ];
 
-const chartMeta: Record<SliceKey, { label: string; color: string; glow: string }> = {
-  instagram: { label: "اینستاگرام", color: "#f472b6", glow: "rgba(244,114,182,0.35)" },
-  website: { label: "وب‌سایت", color: "#38bdf8", glow: "rgba(56,189,248,0.35)" },
-  referral: { label: "معرفی", color: "#4ade80", glow: "rgba(74,222,128,0.35)" },
-  ads: { label: "تبلیغات", color: "#fb923c", glow: "rgba(251,146,60,0.35)" },
-  other: { label: "سایر", color: "#a78bfa", glow: "rgba(167,139,250,0.35)" },
-};
-
 type ActiveSlice = {
-  name: SliceKey;
+  id: number;
   label: string;
   value: number;
   color: string;
@@ -71,13 +63,12 @@ export default function CategoryChart() {
     (_: unknown, index: number) => {
       const item = data[index];
       if (!item) return;
-      const meta = chartMeta[item.name];
       setActiveSlice({
-        name: item.name,
-        label: meta.label,
+        id: item.resourceId,
+        label: item.name,
         value: item.value,
-        color: meta.color,
-        glow: meta.glow,
+        color: item.color,
+        glow: item.glow,
         pct: total ? ((item.value / total) * 100).toFixed(1) : "0.0",
       });
     },
@@ -90,34 +81,36 @@ export default function CategoryChart() {
 
   const pieDefs = (
     <defs>
-      {(Object.entries(chartMeta) as [SliceKey, (typeof chartMeta)[SliceKey]][]).map(
-        ([key, meta]) => (
-          <radialGradient key={key} id={`pieGrad-${key}`} cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stopColor={meta.color} stopOpacity={1} />
-            <stop offset="100%" stopColor={meta.color} stopOpacity={0.65} />
-          </radialGradient>
-        ),
-      )}
-      {(Object.entries(chartMeta) as [SliceKey, (typeof chartMeta)[SliceKey]][]).map(
-        ([key, meta]) => (
-          <filter
-            key={`filter-${key}`}
-            id={`glow-${key}`}
-            x="-20%"
-            y="-20%"
-            width="140%"
-            height="140%"
-          >
-            <feDropShadow
-              dx="0"
-              dy="0"
-              stdDeviation="3"
-              floodColor={meta.color}
-              floodOpacity="0.6"
-            />
-          </filter>
-        ),
-      )}
+      {data.map((item) => (
+        <radialGradient
+          key={`pieGrad-${item.resourceId}`}
+          id={`pieGrad-${item.resourceId}`}
+          cx="50%"
+          cy="50%"
+          r="50%"
+        >
+          <stop offset="0%" stopColor={item.color} stopOpacity={1} />
+          <stop offset="100%" stopColor={item.color} stopOpacity={0.65} />
+        </radialGradient>
+      ))}
+      {data.map((item) => (
+        <filter
+          key={`glow-${item.resourceId}`}
+          id={`glow-${item.resourceId}`}
+          x="-20%"
+          y="-20%"
+          width="140%"
+          height="140%"
+        >
+          <feDropShadow
+            dx="0"
+            dy="0"
+            stdDeviation="3"
+            floodColor={item.color}
+            floodOpacity="0.6"
+          />
+        </filter>
+      ))}
     </defs>
   );
 
@@ -158,10 +151,11 @@ export default function CategoryChart() {
                 />
               )}
               <span
-                className={`relative z-10 transition-colors ${activeRange === range.key
+                className={`relative z-10 transition-colors ${
+                  activeRange === range.key
                     ? "text-gray-900 dark:text-white"
                     : "text-gray-500 dark:text-gray-400"
-                  }`}
+                }`}
               >
                 {range.label}
               </span>
@@ -175,7 +169,7 @@ export default function CategoryChart() {
           <AnimatePresence mode="wait">
             {activeSlice && (
               <motion.div
-                key={`${activeRange}-${activeSlice.name}`}
+                key={`${activeRange}-${activeSlice.id}`}
                 initial={{ opacity: 0, y: 4, scale: 0.96 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: 4, scale: 0.96 }}
@@ -217,20 +211,20 @@ export default function CategoryChart() {
               cy="50%"
               innerRadius={48}
               outerRadius={74}
-              paddingAngle={4}
+              paddingAngle={data.length > 1 ? 4 : 0}
               strokeWidth={0}
               onMouseEnter={handleMouseEnter}
               onMouseLeave={handleMouseLeave}
               isAnimationActive={false}
             >
               {data.map((entry) => {
-                const isActive = activeSlice?.name === entry.name;
+                const isActive = activeSlice?.id === entry.resourceId;
                 return (
                   <Cell
-                    key={`${activeRange}-${entry.name}`}
-                    fill={`url(#pieGrad-${entry.name})`}
+                    key={`${activeRange}-${entry.resourceId}`}
+                    fill={`url(#pieGrad-${entry.resourceId})`}
                     stroke="none"
-                    filter={isActive ? `url(#glow-${entry.name})` : undefined}
+                    filter={isActive ? `url(#glow-${entry.resourceId})` : undefined}
                   />
                 );
               })}
@@ -242,7 +236,7 @@ export default function CategoryChart() {
           <AnimatePresence mode="wait">
             {activeSlice ? (
               <motion.div
-                key={activeSlice.name}
+                key={activeSlice.id}
                 initial={{ opacity: 0, scale: 0.85 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.85 }}
@@ -276,27 +270,26 @@ export default function CategoryChart() {
       </div>
 
       <div className="mt-2 grid grid-cols-2 gap-1" dir="rtl">
-        {data.map((entry) => {
-          const meta = chartMeta[entry.name];
+        {data.map((entry: SourceCount) => {
           const pct = total ? ((entry.value / total) * 100).toFixed(1) : "0.0";
-          const isActive = activeSlice?.name === entry.name;
+          const isActive = activeSlice?.id === entry.resourceId;
 
           return (
             <div
-              key={`${activeRange}-${entry.name}`}
+              key={`${activeRange}-${entry.resourceId}`}
               className="flex cursor-default items-center gap-1.5 rounded-lg px-2 py-1 transition-colors duration-150"
-              style={{ backgroundColor: isActive ? meta.glow : "transparent" }}
+              style={{ backgroundColor: isActive ? entry.glow : "transparent" }}
             >
               <span
                 className="h-2 w-2 flex-shrink-0 rounded-full"
-                style={{ backgroundColor: meta.color }}
+                style={{ backgroundColor: entry.color }}
               />
-              <span className="flex-1 text-[12px] text-gray-600 dark:text-gray-300">
-                {meta.label}
+              <span className="flex-1 truncate text-[12px] text-gray-600 dark:text-gray-300">
+                {entry.name}
               </span>
               <span
                 className="tabular-nums text-[12px] font-bold"
-                style={{ color: meta.color }}
+                style={{ color: entry.color }}
               >
                 {pct}%
               </span>
