@@ -11,7 +11,15 @@ import {
     Layers3,
 } from "lucide-react";
 import api from "@/lib/axiosInstance";
-import { toJalali, toPersianDigits, JALALI_MONTHS } from "@/lib/jalali";
+import {
+    toJalali,
+    toGregorian,
+    jalaliMonthLength,
+    jalaliWeekday,
+    toPersianDigits,
+    JALALI_MONTHS,
+    pad2,
+} from "@/lib/jalali";
 import CalendarNoteModal, { CalendarNote } from "./CalendarNoteModal";
 
 interface CalendarEvent {
@@ -61,45 +69,16 @@ const extractNoteInfo = (description: string, rawCreatedAt?: string) => {
 };
 
 function toISODate(d: Date) {
-    return d.toISOString().slice(0, 10);
-}
-
-function dayIndex(d: Date) {
-    return (d.getDay() + 1) % 7;
-}
-
-function getRangeDates(anchor: Date, range: RangeType): { start: Date; end: Date; days: Date[] } {
-    const s = new Date(anchor);
-    const e = new Date(anchor);
-
-    if (range === "week") {
-        s.setDate(anchor.getDate() - dayIndex(anchor));
-        e.setDate(s.getDate() + 6);
-    } else if (range === "month") {
-        s.setDate(1);
-        e.setMonth(s.getMonth() + 1);
-        e.setDate(0);
-    } else if (range === "season") {
-        const seasonStart = Math.floor(s.getMonth() / 3) * 3;
-        s.setMonth(seasonStart, 1);
-        e.setMonth(seasonStart + 3, 0);
-    } else {
-        s.setMonth(0, 1);
-        e.setMonth(12, 0);
-    }
-
-    const days: Date[] = [];
-    const cur = new Date(s);
-    while (cur <= e) {
-        days.push(new Date(cur));
-        cur.setDate(cur.getDate() + 1);
-    }
-
-    return { start: s, end: e, days };
+    return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
 }
 
 function toJalaliParts(d: Date) {
     return toJalali(d.getFullYear(), d.getMonth() + 1, d.getDate());
+}
+
+function jalaliToDate(jy: number, jm: number, jd: number): Date {
+    const [gy, gm, gd] = toGregorian(jy, jm, jd);
+    return new Date(gy, gm - 1, gd);
 }
 
 function jalaliLabel(d: Date) {
@@ -107,13 +86,98 @@ function jalaliLabel(d: Date) {
     return `${toPersianDigits(jd)} ${JALALI_MONTHS[jm - 1]} ${toPersianDigits(jy)}`;
 }
 
+function getRangeDates(anchor: Date, range: RangeType): { start: Date; end: Date; days: Date[] } {
+    const [jy, jm, jd] = toJalaliParts(anchor);
+
+    if (range === "week") {
+        const wDay = jalaliWeekday(jy, jm, jd);
+        const start = jalaliToDate(jy, jm, jd - wDay);
+        const end = jalaliToDate(jy, jm, jd - wDay + 6);
+        const days: Date[] = [];
+        for (let i = 0; i < 7; i++) {
+            days.push(jalaliToDate(jy, jm, jd - wDay + i));
+        }
+        return { start, end, days };
+    }
+
+    if (range === "month") {
+        const mLen = jalaliMonthLength(jy, jm);
+        const start = jalaliToDate(jy, jm, 1);
+        const end = jalaliToDate(jy, jm, mLen);
+        const days: Date[] = [];
+        for (let d = 1; d <= mLen; d++) {
+            days.push(jalaliToDate(jy, jm, d));
+        }
+        return { start, end, days };
+    }
+
+    if (range === "season") {
+        const seasonStartMonth = Math.floor((jm - 1) / 3) * 3 + 1;
+        const seasonEndMonth = seasonStartMonth + 2;
+        const start = jalaliToDate(jy, seasonStartMonth, 1);
+        const endLen = jalaliMonthLength(jy, seasonEndMonth);
+        const end = jalaliToDate(jy, seasonEndMonth, endLen);
+        const days: Date[] = [];
+        for (let m = seasonStartMonth; m <= seasonEndMonth; m++) {
+            const len = jalaliMonthLength(jy, m);
+            for (let d = 1; d <= len; d++) {
+                days.push(jalaliToDate(jy, m, d));
+            }
+        }
+        return { start, end, days };
+    }
+
+    const start = jalaliToDate(jy, 1, 1);
+    const endLen = jalaliMonthLength(jy, 12);
+    const end = jalaliToDate(jy, 12, endLen);
+    const days: Date[] = [];
+    for (let m = 1; m <= 12; m++) {
+        const len = jalaliMonthLength(jy, m);
+        for (let d = 1; d <= len; d++) {
+            days.push(jalaliToDate(jy, m, d));
+        }
+    }
+    return { start, end, days };
+}
+
 function advance(anchor: Date, range: RangeType, dir: 1 | -1): Date {
-    const d = new Date(anchor);
-    if (range === "week") d.setDate(d.getDate() + dir * 7);
-    else if (range === "month") d.setMonth(d.getMonth() + dir);
-    else if (range === "season") d.setMonth(d.getMonth() + dir * 3);
-    else d.setFullYear(d.getFullYear() + dir);
-    return d;
+    const [jy, jm, jd] = toJalaliParts(anchor);
+
+    if (range === "week") {
+        const nextDate = new Date(anchor);
+        nextDate.setDate(nextDate.getDate() + dir * 7);
+        return nextDate;
+    }
+
+    if (range === "month") {
+        let nextM = jm + dir;
+        let nextY = jy;
+        if (nextM > 12) {
+            nextM = 1;
+            nextY += 1;
+        } else if (nextM < 1) {
+            nextM = 12;
+            nextY -= 1;
+        }
+        return jalaliToDate(nextY, nextM, 1);
+    }
+
+    if (range === "season") {
+        let nextM = jm + dir * 3;
+        let nextY = jy;
+        while (nextM > 12) {
+            nextM -= 12;
+            nextY += 1;
+        }
+        while (nextM < 1) {
+            nextM += 12;
+            nextY -= 1;
+        }
+        const seasonStartMonth = Math.floor((nextM - 1) / 3) * 3 + 1;
+        return jalaliToDate(nextY, seasonStartMonth, 1);
+    }
+
+    return jalaliToDate(jy + dir, 1, 1);
 }
 
 function DayEventDots({ events }: { events: CalendarEvent[] }) {
@@ -139,7 +203,7 @@ function DayEventDots({ events }: { events: CalendarEvent[] }) {
 }
 
 export default function CalendarPage() {
-    const [range, setRange] = useState<RangeType>("week");
+    const [range, setRange] = useState<RangeType>("month");
     const [anchor, setAnchor] = useState(() => new Date());
     const [events, setEvents] = useState<CalendarEvent[]>([]);
     const [notes, setNotes] = useState<CalendarNote[]>([]);
@@ -148,7 +212,7 @@ export default function CalendarPage() {
     const [selectedDate, setSelectedDate] = useState<Date | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
 
-    const { start, end, days } = getRangeDates(anchor, range);
+    const { start, end, days } = useMemo(() => getRangeDates(anchor, range), [anchor, range]);
     const startISO = toISODate(start);
     const endISO = toISODate(end);
 
@@ -193,8 +257,11 @@ export default function CalendarPage() {
     }
 
     function gotoToday() {
-        setDir(1);
-        setAnchor(new Date());
+        const now = new Date();
+        setDir(now.getTime() >= anchor.getTime() ? 1 : -1);
+        setAnchor(now);
+        setSelectedDate(now);
+        setIsModalOpen(true);
     }
 
     function handleSelectDate(date: Date) {
@@ -206,30 +273,43 @@ export default function CalendarPage() {
     const totalEventCount = events.length;
     const totalNoteCount = notes.length;
 
-    const weeks: (Date | null)[][] = [];
-    if (range === "week") {
-        weeks.push(days);
-    } else {
-        const firstDayIndex = dayIndex(days[0]);
-        let current: (Date | null)[] = Array(firstDayIndex).fill(null);
+    const weeks: (Date | null)[][] = useMemo(() => {
+        if (range === "week") {
+            return [days];
+        }
+
+        const first = days[0];
+        const [fjy, fjm, fjd] = toJalaliParts(first);
+        const firstDayWeekIndex = jalaliWeekday(fjy, fjm, fjd);
+
+        const rows: (Date | null)[][] = [];
+        let current: (Date | null)[] = Array(firstDayWeekIndex).fill(null);
+
         for (const d of days) {
             if (current.length === 7) {
-                weeks.push(current);
+                rows.push(current);
                 current = [];
             }
             current.push(d);
         }
-        while (current.length < 7) current.push(null);
-        if (current.some((d) => d !== null)) weeks.push(current);
-    }
 
-    const flatCells = weeks.flat();
+        while (current.length < 7) {
+            current.push(null);
+        }
+
+        if (current.some((d) => d !== null)) {
+            rows.push(current);
+        }
+
+        return rows;
+    }, [days, range]);
+
+    const flatCells = useMemo(() => weeks.flat(), [weeks]);
 
     return (
         <>
             <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white dark:from-[#0b1220] dark:to-[#0f172a] p-4 md:p-8" dir="rtl">
                 <div className="mx-auto max-w-5xl rounded-[2rem] border border-gray-100 dark:border-white/[0.06] bg-white dark:bg-[#0f172a] shadow-sm overflow-hidden">
-
                     <div className="flex items-center justify-between border-b border-gray-100 dark:border-white/[0.06] px-6 py-4">
                         <button
                             type="button"
@@ -310,8 +390,9 @@ export default function CalendarPage() {
                                         setRange(r);
                                         setAnchor(new Date());
                                     }}
-                                    className={`relative z-10 px-3 py-1.5 text-[11px] font-bold transition-colors ${range === r ? "text-white" : "text-gray-400 dark:text-white/30 hover:text-gray-600 dark:hover:text-white/50"
-                                        }`}
+                                    className={`relative z-10 px-3 py-1.5 text-[11px] font-bold transition-colors ${
+                                        range === r ? "text-white" : "text-gray-400 dark:text-white/30 hover:text-gray-600 dark:hover:text-white/50"
+                                    }`}
                                 >
                                     {range === r && (
                                         <motion.div
@@ -354,9 +435,11 @@ export default function CalendarPage() {
                                     className="col-span-7 grid grid-cols-7 gap-px bg-gray-100 dark:bg-white/[0.04]"
                                 >
                                     {flatCells.map((date, index) => {
-                                        if (!date) return (
-                                            <div key={`empty-${index}`} className="min-h-[96px] bg-gray-50/40 dark:bg-white/[0.008]" />
-                                        );
+                                        if (!date) {
+                                            return (
+                                                <div key={`empty-${index}`} className="min-h-[96px] bg-gray-50/40 dark:bg-white/[0.008]" />
+                                            );
+                                        }
 
                                         const iso = toISODate(date);
                                         const dayEvents = eventsForDay(date);
@@ -377,11 +460,13 @@ export default function CalendarPage() {
                                                 }`}
                                             >
                                                 <div className="flex items-start justify-between gap-1">
-                                                    <span className={`flex h-6 w-6 items-center justify-center rounded-lg text-[11px] font-extrabold flex-shrink-0 ${
-                                                        isToday
-                                                            ? "bg-gradient-to-br from-blue-500 to-indigo-500 text-white shadow-sm shadow-blue-500/30"
-                                                            : "bg-gray-50 dark:bg-white/[0.04] text-gray-600 dark:text-gray-300"
-                                                    }`}>
+                                                    <span
+                                                        className={`flex h-6 w-6 items-center justify-center rounded-lg text-[11px] font-extrabold flex-shrink-0 ${
+                                                            isToday
+                                                                ? "bg-gradient-to-br from-blue-500 to-indigo-500 text-white shadow-sm shadow-blue-500/30"
+                                                                : "bg-gray-50 dark:bg-white/[0.04] text-gray-600 dark:text-gray-300"
+                                                        }`}
+                                                    >
                                                         {toPersianDigits(jd)}
                                                     </span>
 
