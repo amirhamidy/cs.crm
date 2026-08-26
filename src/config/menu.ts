@@ -34,4 +34,5 @@ export const userMenuItems: MenuItem[] = [
   { icon: FileText, label: "پرونده ها", href: "/user/cases" },
   { icon: FileText, label: "ایجاد وظایف", href: "/user/tasks" },
   { icon: FileText, label: "تیکت به همکار", href: "/user/Ticketreceipt" },
+  { icon: FileText, label: "تقویم", href: "/user/calendar" },
 ];
