@@ -17,9 +17,25 @@ import {
     CheckCircle2,
     ChevronDown,
     Check,
+    Plus,
 } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
 import type { Customer, CustomerFormData } from "@/types/customer";
+
+interface CaseResource {
+    id: number;
+    title: string;
+}
+
+function extractList<T>(data: unknown): T[] {
+    if (Array.isArray(data)) return data as T[];
+    if (data && typeof data === "object") {
+        const obj = data as { results?: T[]; data?: T[] };
+        if (Array.isArray(obj.results)) return obj.results;
+        if (Array.isArray(obj.data)) return obj.data;
+    }
+    return [];
+}
 
 const STATUS_OPTIONS = [
     { id: 1, label: "مشتری بالقوه", sub: "در مرحله مذاکره و پیگیری" },
@@ -280,6 +296,232 @@ function NiceSelect({
     );
 }
 
+interface SourceSelectProps {
+    label: string;
+    options: CaseResource[];
+    value: number | null;
+    onChange: (id: number) => void;
+    loading: boolean;
+    isAdding: boolean;
+    newTitle: string;
+    onNewTitleChange: (v: string) => void;
+    onStartAdd: () => void;
+    onCancelAdd: () => void;
+    onConfirmAdd: () => void;
+    creating: boolean;
+    onDelete: (e: React.MouseEvent, id: number) => void;
+    deletingId: number | null;
+}
+
+function SourceSelect({
+    label,
+    options,
+    value,
+    onChange,
+    loading,
+    isAdding,
+    newTitle,
+    onNewTitleChange,
+    onStartAdd,
+    onCancelAdd,
+    onConfirmAdd,
+    creating,
+    onDelete,
+    deletingId,
+}: SourceSelectProps) {
+    const [open, setOpen] = useState(false);
+    const [dropUp, setDropUp] = useState(false);
+    const wrapperRef = useRef<HTMLDivElement>(null);
+    const buttonRef = useRef<HTMLButtonElement>(null);
+
+    const selected = options.find((o) => o.id === value) ?? null;
+
+    useEffect(() => {
+        if (!open) return;
+        const handleClick = (e: MouseEvent) => {
+            if (!wrapperRef.current?.contains(e.target as Node)) setOpen(false);
+        };
+        const handleKey = (e: KeyboardEvent) => {
+            if (e.key === "Escape") {
+                e.stopPropagation();
+                setOpen(false);
+            }
+        };
+        document.addEventListener("mousedown", handleClick);
+        document.addEventListener("keydown", handleKey, true);
+        return () => {
+            document.removeEventListener("mousedown", handleClick);
+            document.removeEventListener("keydown", handleKey, true);
+        };
+    }, [open]);
+
+    const toggle = () => {
+        if (!open && buttonRef.current) {
+            const rect = buttonRef.current.getBoundingClientRect();
+            const needed = Math.min(options.length, 4) * 56 + 24;
+            setDropUp(window.innerHeight - rect.bottom < needed);
+        }
+        setOpen((p) => !p);
+    };
+
+    return (
+        <div className="relative" ref={wrapperRef}>
+            <label className="mb-2 block text-[11.5px] font-bold text-gray-400">
+                {label}
+            </label>
+
+            <button
+                ref={buttonRef}
+                type="button"
+                onClick={toggle}
+                className={`flex w-full items-center gap-2.5 rounded-4xl border px-5 py-3 text-right transition-all duration-200 ${open
+                        ? "border-blue-500 bg-white dark:border-blue-500 dark:bg-white/[0.05]"
+                        : "border-gray-200 bg-white hover:border-gray-300 dark:border-white/[0.08] dark:bg-white/[0.04] dark:hover:border-white/[0.15]"
+                    }`}
+            >
+                <span
+                    className={`min-w-0 flex-1 truncate text-sm ${selected
+                            ? "font-semibold text-black dark:text-white"
+                            : "text-gray-400"
+                        }`}
+                >
+                    {selected ? selected.title : "انتخاب منبع آشنایی"}
+                </span>
+                <motion.span
+                    animate={{ rotate: open ? 180 : 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="shrink-0 text-gray-400"
+                >
+                    <ChevronDown size={15} />
+                </motion.span>
+            </button>
+
+            <AnimatePresence>
+                {open && (
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.95, y: dropUp ? 8 : -8 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.95, y: dropUp ? 8 : -8 }}
+                        transition={{ duration: 0.15, ease: "easeOut" }}
+                        className={`absolute left-0 z-[100] w-full origin-center overflow-hidden rounded-[2rem] border border-gray-100 bg-white p-2 shadow-2xl dark:border-white/[0.08] dark:bg-[#1a2235] ${dropUp ? "bottom-[calc(100%+8px)]" : "top-[calc(100%+8px)]"
+                            }`}
+                    >
+                        <div className="flex items-center justify-between px-2 pb-2 pt-1">
+                            <span className="text-[10.5px] font-bold text-gray-400">
+                                منابع
+                            </span>
+                            {!isAdding && (
+                                <button
+                                    type="button"
+                                    onClick={onStartAdd}
+                                    className="flex items-center gap-1 text-[11px] font-bold text-blue-600 hover:text-blue-500 dark:text-blue-400"
+                                >
+                                    <Plus size={13} />
+                                    افزودن منبع
+                                </button>
+                            )}
+                        </div>
+
+                        {isAdding && (
+                            <div className="mb-2 flex items-center gap-2 rounded-2xl border border-gray-200 bg-gray-50/50 p-1.5 dark:border-white/10 dark:bg-white/5">
+                                <input
+                                    autoFocus
+                                    type="text"
+                                    placeholder="عنوان منبع جدید…"
+                                    value={newTitle}
+                                    onChange={(e) => onNewTitleChange(e.target.value)}
+                                    onKeyDown={(e) => {
+                                        if (e.key === "Enter") {
+                                            e.preventDefault();
+                                            onConfirmAdd();
+                                        }
+                                    }}
+                                    className="h-8 flex-1 bg-transparent px-3 text-[12px] text-gray-900 outline-none placeholder:text-gray-400 dark:text-white dark:placeholder:text-gray-500"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={onConfirmAdd}
+                                    disabled={creating || !newTitle.trim()}
+                                    className="flex h-7 items-center justify-center rounded-xl bg-blue-600 px-3 text-[11px] font-bold text-white transition-opacity disabled:opacity-50 dark:bg-blue-500"
+                                >
+                                    {creating ? <Loader size={12} className="animate-spin" /> : "ثبت"}
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={onCancelAdd}
+                                    className="flex h-7 w-7 items-center justify-center rounded-xl text-gray-400 hover:bg-gray-100 dark:hover:bg-white/10"
+                                >
+                                    <X size={13} />
+                                </button>
+                            </div>
+                        )}
+
+                        <div className="max-h-60 overflow-y-auto overflow-x-hidden custom-scrollbar">
+                            {loading ? (
+                                <div className="flex items-center justify-center py-8">
+                                    <Loader size={16} className="animate-spin text-blue-500" />
+                                </div>
+                            ) : options.length === 0 ? (
+                                <div className="px-4 py-8 text-center">
+                                    <p className="text-[12px] font-medium text-gray-400">
+                                        منبعی یافت نشد
+                                    </p>
+                                </div>
+                            ) : (
+                                <div className="flex flex-col gap-1">
+                                    {options.map((opt) => {
+                                        const active = value === opt.id;
+                                        const isDeleting = deletingId === opt.id;
+                                        return (
+                                            <button
+                                                key={opt.id}
+                                                type="button"
+                                                onClick={() => {
+                                                    onChange(opt.id);
+                                                    setOpen(false);
+                                                }}
+                                                className={`group relative flex w-full items-center justify-between gap-2 rounded-2xl px-4 py-2.5 text-right transition-all duration-200 ${active
+                                                        ? "bg-blue-600 dark:bg-blue-600"
+                                                        : "hover:bg-gray-100 dark:hover:bg-white/[0.05]"
+                                                    }`}
+                                            >
+                                                <span
+                                                    className={`truncate text-sm font-bold ${active ? "text-white" : "text-gray-900 dark:text-white"
+                                                        }`}
+                                                >
+                                                    {opt.title}
+                                                </span>
+                                                <span className="flex shrink-0 items-center gap-1.5">
+                                                    {active && <Check size={14} className="text-white" />}
+                                                    <span
+                                                        role="button"
+                                                        tabIndex={0}
+                                                        onClick={(e) => onDelete(e, opt.id)}
+                                                        className={`flex h-5 w-5 items-center justify-center rounded-full transition-all ${active
+                                                                ? "text-blue-100 hover:bg-white/20 hover:text-white"
+                                                                : "text-gray-400 hover:bg-gray-100 hover:text-red-500 dark:text-gray-500 dark:hover:bg-white/10 dark:hover:text-red-400"
+                                                            }`}
+                                                    >
+                                                        {isDeleting ? (
+                                                            <Loader size={10} className="animate-spin" />
+                                                        ) : (
+                                                            <X size={11} strokeWidth={2.5} />
+                                                        )}
+                                                    </span>
+                                                </span>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+        </div>
+    );
+}
+
 interface Props {
     customer: Customer;
     isOpen: boolean;
@@ -310,6 +552,39 @@ export default function CustomerEditModal({
     const [success, setSuccess] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
+    const [resources, setResources] = useState<CaseResource[]>([]);
+    const [loadingResources, setLoadingResources] = useState(false);
+    const [isAddingResource, setIsAddingResource] = useState(false);
+    const [newResourceTitle, setNewResourceTitle] = useState("");
+    const [creatingResource, setCreatingResource] = useState(false);
+    const [deletingResourceId, setDeletingResourceId] = useState<number | null>(null);
+
+    const fetchResourcesList = useCallback(async () => {
+        try {
+            setLoadingResources(true);
+            const res = await axiosInstance.get("/tasks/api/v1/cases/resources/");
+            setResources(extractList<CaseResource>(res.data));
+        } catch {
+            setResources([]);
+        } finally {
+            setLoadingResources(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        if (!isOpen) return;
+        fetchResourcesList();
+    }, [isOpen, fetchResourcesList]);
+
+    useEffect(() => {
+        if (!isOpen) {
+            setIsAddingResource(false);
+            setNewResourceTitle("");
+            setCreatingResource(false);
+            setDeletingResourceId(null);
+        }
+    }, [isOpen]);
+
     useEffect(() => {
         if (!isOpen || !customer?.id) return;
 
@@ -328,7 +603,7 @@ export default function CustomerEditModal({
                     job_title: data.job_title || "",
                     company_name: data.company_name || "",
                     address: data.address || "",
-                    source: data.source || "",
+                    source: data.source ? String(data.source) : "",
                     description: data.description || "",
                     status: data.status || 1,
                 });
@@ -375,6 +650,50 @@ export default function CustomerEditModal({
         setError(null);
     };
 
+    const handleSourceChange = useCallback((id: number) => {
+        setForm((f) => ({ ...f, source: String(id) }));
+        setError(null);
+    }, []);
+
+    const handleCreateResource = useCallback(async () => {
+        const trimmed = newResourceTitle.trim();
+        if (!trimmed || creatingResource) return;
+        try {
+            setCreatingResource(true);
+            const res = await axiosInstance.post("/tasks/api/v1/cases/resources/create/", {
+                title: trimmed,
+            });
+            const created = res.data as CaseResource;
+            if (created && created.id) {
+                setResources((prev) => [...prev, created]);
+                setForm((f) => ({ ...f, source: String(created.id) }));
+            } else {
+                await fetchResourcesList();
+            }
+            setNewResourceTitle("");
+            setIsAddingResource(false);
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setCreatingResource(false);
+        }
+    }, [newResourceTitle, creatingResource, fetchResourcesList]);
+
+    const handleDeleteResource = useCallback(async (e: React.MouseEvent, id: number) => {
+        e.stopPropagation();
+        if (deletingResourceId !== null) return;
+        try {
+            setDeletingResourceId(id);
+            await axiosInstance.delete(`/tasks/api/v1/cases/resources/${id}/delete/`);
+            setResources((prev) => prev.filter((r) => r.id !== id));
+            setForm((f) => (Number(f.source) === id ? { ...f, source: "" } : f));
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setDeletingResourceId(null);
+        }
+    }, [deletingResourceId]);
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
@@ -389,7 +708,7 @@ export default function CustomerEditModal({
         try {
             const { data } = await axiosInstance.patch<Customer>(
                 `/customers/api/v1/customers/${customer.id}/update/`,
-                form
+                { ...form, source: form.source ? Number(form.source) : null }
             );
             setSuccess(true);
             onEdited(data);
@@ -499,11 +818,24 @@ export default function CustomerEditModal({
                                             value={form.address}
                                             onChange={setField("address")}
                                         />
-                                        <FloatingInput
+                                        <SourceSelect
                                             label="منبع آشنایی"
-                                            id="edit_source"
-                                            value={form.source}
-                                            onChange={setField("source")}
+                                            options={resources}
+                                            value={form.source ? Number(form.source) : null}
+                                            onChange={handleSourceChange}
+                                            loading={loadingResources}
+                                            isAdding={isAddingResource}
+                                            newTitle={newResourceTitle}
+                                            onNewTitleChange={setNewResourceTitle}
+                                            onStartAdd={() => setIsAddingResource(true)}
+                                            onCancelAdd={() => {
+                                                setIsAddingResource(false);
+                                                setNewResourceTitle("");
+                                            }}
+                                            onConfirmAdd={handleCreateResource}
+                                            creating={creatingResource}
+                                            onDelete={handleDeleteResource}
+                                            deletingId={deletingResourceId}
                                         />
                                     </div>
 

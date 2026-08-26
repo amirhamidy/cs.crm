@@ -1,148 +1,108 @@
+"use client";
+
 import { useEffect, useState } from "react";
 import axiosInstance from "@/lib/axiosInstance";
 
 export type TimeRange = "weekly" | "monthly" | "yearly";
 
-export interface CaseResource {
-  id: number;
-  title: string;
-}
-
-export interface CaseItem {
-  id: number;
-  customer: number;
-  created_by?: number | null;
-  title: string;
-  resources?: CaseResource[];
-  created_at: string;
-  updated_at?: string;
-}
-
 export interface SourceCount {
-  name: string;
   resourceId: number;
+  name: string;
   value: number;
   color: string;
   glow: string;
 }
 
-type RangeData = Record<TimeRange, SourceCount[]>;
+interface Resource {
+  id: number;
+  title: string;
+}
 
-const PALETTE = [
-  { color: "#f472b6", glow: "rgba(244,114,182,0.35)" },
-  { color: "#38bdf8", glow: "rgba(56,189,248,0.35)" },
-  { color: "#4ade80", glow: "rgba(74,222,128,0.35)" },
-  { color: "#fb923c", glow: "rgba(251,146,60,0.35)" },
-  { color: "#a78bfa", glow: "rgba(167,139,250,0.35)" },
-  { color: "#facc15", glow: "rgba(250,204,21,0.35)" },
-  { color: "#2dd4bf", glow: "rgba(45,212,191,0.35)" },
-  { color: "#ec4899", glow: "rgba(236,72,153,0.35)" },
-  { color: "#818cf8", glow: "rgba(129,140,248,0.35)" },
+interface CustomerListItem {
+  id: number;
+  full_name: string;
+  phone_number: string;
+  company_name: string;
+  status: number;
+  status_display: string;
+  created_by_username: string;
+  created_at: string;
+}
+
+interface CustomerDetail {
+  id: number;
+  full_name: string;
+  source: string | null;
+  created_at: string;
+}
+
+const COLORS = [
+  "#a78bfa",
+  "#ec4899",
+  "#f59e0b",
+  "#10b981",
+  "#3b82f6",
+  "#8b5cf6",
+  "#ef4444",
+  "#06b6d4",
 ];
 
-function extractList<T>(data: unknown): T[] {
-  if (Array.isArray(data)) return data as T[];
-  if (data && typeof data === "object") {
-    const obj = data as { results?: T[]; data?: T[] };
-    if (Array.isArray(obj.results)) return obj.results;
-    if (Array.isArray(obj.data)) return obj.data;
+function getRangeStart(range: TimeRange): Date {
+  const now = new Date();
+  const d = new Date(now);
+  if (range === "weekly") {
+    d.setDate(d.getDate() - 7);
+  } else if (range === "monthly") {
+    d.setDate(d.getDate() - 30);
+  } else {
+    d.setDate(d.getDate() - 365);
   }
-  return [];
+  return d;
 }
 
-async function fetchAllCases(): Promise<CaseItem[]> {
-  const items: CaseItem[] = [];
-  let url = "/tasks/api/v1/cases/";
+function buildRangeData(
+  details: CustomerDetail[],
+  resources: Resource[],
+): Record<TimeRange, SourceCount[]> {
+  const ranges: TimeRange[] = ["weekly", "monthly", "yearly"];
+  const result = {} as Record<TimeRange, SourceCount[]>;
+  const resourceMap = new Map(resources.map((r) => [r.id, r.title]));
 
-  while (url) {
-    const res = await axiosInstance.get(url);
-    const data = res.data;
-
-    const list = extractList<CaseItem>(data);
-    items.push(...list);
-
-    if (data && typeof data === "object" && !Array.isArray(data) && data.next) {
-      const parsed = new URL(data.next);
-      url = parsed.pathname + parsed.search;
-    } else {
-      url = "";
-    }
-  }
-
-  return items;
-}
-
-function buildRangeData(cases: CaseItem[], allResources: CaseResource[]): RangeData {
-  const now = Date.now();
-  const weeklyCutoff = now - 7 * 24 * 60 * 60 * 1000;
-  const monthlyCutoff = now - 30 * 24 * 60 * 60 * 1000;
-  const yearlyCutoff = now - 365 * 24 * 60 * 60 * 1000;
-
-  const resourceTitleMap = new Map<number, string>();
-  allResources.forEach((r) => resourceTitleMap.set(r.id, r.title));
-
-  const weeklyCounts: Record<number, number> = {};
-  const monthlyCounts: Record<number, number> = {};
-  const yearlyCounts: Record<number, number> = {};
-
-  allResources.forEach((r) => {
-    weeklyCounts[r.id] = 0;
-    monthlyCounts[r.id] = 0;
-    yearlyCounts[r.id] = 0;
-  });
-
-  cases.forEach((item) => {
-    const createdAt = new Date(item.created_at).getTime();
-    if (Number.isNaN(createdAt)) return;
-
-    const resList = item.resources ?? [];
-
-    resList.forEach((r) => {
-      if (!resourceTitleMap.has(r.id)) {
-        resourceTitleMap.set(r.id, r.title);
-        weeklyCounts[r.id] = weeklyCounts[r.id] || 0;
-        monthlyCounts[r.id] = monthlyCounts[r.id] || 0;
-        yearlyCounts[r.id] = yearlyCounts[r.id] || 0;
-      }
-
-      if (createdAt >= yearlyCutoff) {
-        yearlyCounts[r.id] = (yearlyCounts[r.id] || 0) + 1;
-      }
-      if (createdAt >= monthlyCutoff) {
-        monthlyCounts[r.id] = (monthlyCounts[r.id] || 0) + 1;
-      }
-      if (createdAt >= weeklyCutoff) {
-        weeklyCounts[r.id] = (weeklyCounts[r.id] || 0) + 1;
-      }
+  for (const range of ranges) {
+    const start = getRangeStart(range);
+    const filtered = details.filter((c) => {
+      if (!c.source) return false;
+      const createdAt = new Date(c.created_at);
+      return createdAt >= start;
     });
-  });
 
-  const getMappedArray = (counts: Record<number, number>): SourceCount[] => {
-    return Object.entries(counts)
-      .map(([resIdStr, value], index) => {
-        const resourceId = Number(resIdStr);
-        const name = resourceTitleMap.get(resourceId) || `منبع #${resourceId}`;
-        const paletteItem = PALETTE[index % PALETTE.length];
-        return {
-          name,
-          resourceId,
-          value,
-          color: paletteItem.color,
-          glow: paletteItem.glow,
-        };
-      })
-      .sort((a, b) => b.value - a.value);
-  };
+    const counts: Record<number, number> = {};
+    for (const c of filtered) {
+      if (!c.source) continue;
+      const sourceId = parseInt(c.source, 10);
+      if (isNaN(sourceId)) continue;
+      counts[sourceId] = (counts[sourceId] ?? 0) + 1;
+    }
 
-  return {
-    weekly: getMappedArray(weeklyCounts),
-    monthly: getMappedArray(monthlyCounts),
-    yearly: getMappedArray(yearlyCounts),
-  };
+    const arr: SourceCount[] = [];
+    for (const [id, count] of Object.entries(counts)) {
+      const resourceId = parseInt(id, 10);
+      const name = resourceMap.get(resourceId) ?? "نامشخص";
+      const colorIndex = (resourceId - 1) % COLORS.length;
+      const color = COLORS[colorIndex];
+      const glow = `${color}20`;
+      arr.push({ resourceId, name, value: count, color, glow });
+    }
+
+    arr.sort((a, b) => b.value - a.value);
+    result[range] = arr;
+  }
+
+  return result;
 }
 
 export function useCustomerSources() {
-  const [data, setData] = useState<RangeData>({
+  const [data, setData] = useState<Record<TimeRange, SourceCount[]>>({
     weekly: [],
     monthly: [],
     yearly: [],
@@ -158,25 +118,37 @@ export function useCustomerSources() {
         setLoading(true);
         setError(null);
 
-        const [casesRes, resourcesRes] = await Promise.allSettled([
-          fetchAllCases(),
-          axiosInstance.get("/tasks/api/v1/cases/resources/"),
+        const [listRes, resourcesRes] = await Promise.all([
+          axiosInstance.get<CustomerListItem[]>("/customers/api/v1/customers/"),
+          axiosInstance.get<Resource[]>("/tasks/api/v1/cases/resources/"),
         ]);
 
-        const cases = casesRes.status === "fulfilled" ? casesRes.value : [];
-        const resources =
-          resourcesRes.status === "fulfilled"
-            ? extractList<CaseResource>(resourcesRes.value.data)
-            : [];
+        const customers: CustomerListItem[] = Array.isArray(listRes.data)
+          ? listRes.data
+          : [];
+        const resources: Resource[] = Array.isArray(resourcesRes.data)
+          ? resourcesRes.data
+          : [];
 
-        if (casesRes.status === "rejected" && resourcesRes.status === "rejected") {
-          throw new Error("Failed to fetch cases and resources");
-        }
+        const detailResults = await Promise.allSettled(
+          customers.map((c) =>
+            axiosInstance.get<CustomerDetail>(
+              `/customers/api/v1/customers/${c.id}/`,
+            ),
+          ),
+        );
 
-        const rangeData = buildRangeData(cases, resources);
+        const details: CustomerDetail[] = detailResults
+          .filter((r) => r.status === "fulfilled")
+          .map(
+            (r) =>
+              (r as PromiseFulfilledResult<{ data: CustomerDetail }>).value
+                .data,
+          );
 
-        if (cancelled) return;
-        setData(rangeData);
+        const rangeData = buildRangeData(details, resources);
+
+        if (!cancelled) setData(rangeData);
       } catch (err) {
         console.error("[useCustomerSources]", err);
         if (!cancelled) setError("خطا در بارگذاری داده‌ها");
@@ -186,7 +158,6 @@ export function useCustomerSources() {
     }
 
     load();
-
     return () => {
       cancelled = true;
     };

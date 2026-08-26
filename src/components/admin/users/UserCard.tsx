@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Loader2, Pencil, Star, Trash2, X } from "lucide-react";
+import { Loader2, Pencil, Phone, Star, Trash2, X } from "lucide-react";
 import { useTheme } from "next-themes";
 
 import axiosInstance from "@/lib/axiosInstance";
@@ -91,6 +91,7 @@ export default function UserCard({
     const [deleteError, setDeleteError] = useState("");
     const [score, setScore] = useState<number | null>(null);
     const [scoreLoading, setScoreLoading] = useState(true);
+    const [phoneNumber, setPhoneNumber] = useState<string | null>(null);
 
     useEffect(() => {
         let mounted = true;
@@ -123,12 +124,35 @@ export default function UserCard({
             }
         };
 
+        const fetchPhoneNumber = async () => {
+            if (!employee?.username) return;
+
+            try {
+                const { data } = await axiosInstance.get("/accounts/api/v1/user/list/");
+                if (!mounted) return;
+
+                const users = extractUserList(data);
+                const matched = users.find(
+                    (u) => u.username?.trim().toLowerCase() === employee.username?.trim().toLowerCase()
+                );
+
+                if (matched?.phone_number) {
+                    setPhoneNumber(matched.phone_number);
+                }
+            } catch {
+                if (mounted) {
+                    setPhoneNumber(null);
+                }
+            }
+        };
+
         fetchScore();
+        fetchPhoneNumber();
 
         return () => {
             mounted = false;
         };
-    }, [employee?.id]);
+    }, [employee?.id, employee?.username]);
 
     const loggedUserId = useMemo(() => {
         if (typeof window === "undefined") return null;
@@ -254,7 +278,7 @@ export default function UserCard({
                     setHovered(false);
                     setTooltipVisible(false);
                 }}
-                className="relative flex min-h-[148px] flex-col gap-4 overflow-visible rounded-3xl p-4"
+                className="relative flex min-h-[148px] flex-col justify-between overflow-visible rounded-3xl p-4"
                 style={{
                     background: isDark ? "rgba(255,255,255,0.03)" : "#fafafa",
                     border: isDark
@@ -300,7 +324,7 @@ export default function UserCard({
                 <div className="absolute left-3 top-3 z-20 flex items-center gap-1.5">
                     {!scoreLoading && score !== null && (
                         <div
-                            className="flex h-7 items-center gap-1 rounded-xl px-2"
+                            className="flex h-7 items-center justify-center gap-1 rounded-xl px-2 leading-none"
                             style={{
                                 background: isDark
                                     ? "rgba(234,179,8,0.14)"
@@ -309,8 +333,8 @@ export default function UserCard({
                             }}
                             title="امتیاز عملکرد"
                         >
-                            <Star size={11} fill="currentColor" strokeWidth={0} />
-                            <span className="text-[11px] font-extrabold">{score}</span>
+                            <Star size={11} fill="currentColor" strokeWidth={0} className="shrink-0" />
+                            <span className="text-[11px] font-extrabold leading-none">{score}</span>
                         </div>
                     )}
 
@@ -390,7 +414,7 @@ export default function UserCard({
                     </div>
                 </div>
 
-                <div className="flex items-center gap-3 pt-1">
+                <div className="flex my-auto mt-5 items-center gap-3">
                     <div
                         className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-[15px] font-extrabold text-white"
                         style={{
@@ -404,9 +428,17 @@ export default function UserCard({
                         <h3 className="truncate text-[13px] font-extrabold text-gray-900 dark:text-white">
                             {employeeName}
                         </h3>
-                        <p className="mt-1 truncate text-[11.5px] text-gray-500 dark:text-gray-400">
-                            @{username}
-                        </p>
+                        <div className="mt-0.5 flex items-center gap-x-2 gap-y-0.5">
+                            <span className="truncate text-[11.5px] text-gray-500 dark:text-gray-400">
+                                @{username}
+                            </span>
+                             {phoneNumber && (
+                                <span className="inline-flex items-center gap-1 text-[11px] text-gray-400 dark:text-gray-500" dir="ltr">
+                                    <Phone size={10} className="shrink-0" />
+                                    {phoneNumber}
+                                </span>
+                            )}
+                        </div>
                     </div>
                 </div>
 

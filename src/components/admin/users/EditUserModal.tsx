@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { X, Loader, User } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
 import type { AxiosError } from "axios";
-import type { ApiEmployee } from "@/types/users";
+import type { ApiEmployee, ApiUser } from "@/types/users";
 
 interface EditUserModalProps {
     isOpen: boolean;
@@ -62,13 +62,24 @@ function getErrorMessage(err: unknown, fallback: string) {
     const error = err as AxiosError<Record<string, unknown>>;
     const data = error.response?.data;
     if (!data) return fallback;
-    const keys = ["detail", "full_name", "user", "message", "error", "non_field_errors"];
+    const keys = ["detail", "phone_number", "full_name", "user", "username", "message", "error", "non_field_errors"];
     for (const key of keys) {
         const val = data[key];
         if (typeof val === "string") return val;
         if (Array.isArray(val) && typeof val[0] === "string") return val[0];
     }
     return fallback;
+}
+
+function extractUserList(data: unknown): ApiUser[] {
+    if (Array.isArray(data)) return data as ApiUser[];
+    if (data && typeof data === "object") {
+        const record = data as Record<string, unknown>;
+        if (Array.isArray(record.results)) return record.results as ApiUser[];
+        if (Array.isArray(record.data)) return record.data as ApiUser[];
+        if (Array.isArray(record.users)) return record.users as ApiUser[];
+    }
+    return [];
 }
 
 export default function EditUserModal({
@@ -78,14 +89,54 @@ export default function EditUserModal({
     onUpdated,
 }: EditUserModalProps) {
     const [fullName, setFullName] = useState("");
+    const [phoneNumber, setPhoneNumber] = useState("");
+    const [matchedUser, setMatchedUser] = useState<ApiUser | null>(null);
+    const [fetchingUser, setFetchingUser] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
 
     useEffect(() => {
-        if (isOpen) {
-            setFullName(employee.full_name || "");
-            setError("");
-        }
+        if (!isOpen) return;
+
+        setFullName(employee.full_name || "");
+        setPhoneNumber("");
+        setError("");
+        setMatchedUser(null);
+
+        let mounted = true;
+        setFetchingUser(true);
+
+        const fetchUserData = async () => {
+            try {
+                const res = await axiosInstance.get("/accounts/api/v1/user/list/");
+                if (!mounted) return;
+
+                const users = extractUserList(res.data);
+                const targetUsername = employee.username?.trim().toLowerCase();
+                const found = users.find(
+                    (u) => u.username?.trim().toLowerCase() === targetUsername
+                );
+
+                if (found) {
+                    setMatchedUser(found);
+                    setPhoneNumber(found.phone_number || "");
+                }
+            } catch {
+                if (mounted) {
+                    setError("خطا در دریافت اطلاعات کاربر");
+                }
+            } finally {
+                if (mounted) {
+                    setFetchingUser(false);
+                }
+            }
+        };
+
+        fetchUserData();
+
+        return () => {
+            mounted = false;
+        };
     }, [isOpen, employee]);
 
     async function handleSubmit(e: React.FormEvent) {
@@ -94,20 +145,47 @@ export default function EditUserModal({
             setError("نام و نام خانوادگی الزامی است");
             return;
         }
+
         setLoading(true);
         setError("");
+
         try {
-            const payload: Record<string, unknown> = {
+            const employeePayload: Record<string, unknown> = {
                 full_name: fullName.trim(),
             };
             if ("user" in employee && employee.user !== undefined) {
-                payload.user = employee.user;
+                employeePayload.user = employee.user;
             }
-            const res = await axiosInstance.put<ApiEmployee>(
+
+            const employeePromise = axiosInstance.put<ApiEmployee>(
                 `/accounts/api/v1/employee/${employee.id}/update/`,
-                payload
+                employeePayload
             );
-            onUpdated({ ...employee, ...res.data, full_name: res.data?.full_name ?? fullName.trim() });
+
+            let userPromise = Promise.resolve();
+
+            if (matchedUser?.id) {
+                const userPayload = {
+                    username: matchedUser.username,
+                    phone_number: phoneNumber.trim(),
+                    type: matchedUser.type,
+                    is_active: matchedUser.is_active,
+                };
+                userPromise = axiosInstance.put(
+                    `/accounts/api/v1/user/${matchedUser.id}/update/`,
+                    userPayload
+                );
+            }
+
+            const [employeeRes] = await Promise.all([employeePromise, userPromise]);
+
+            const updatedData = employeeRes && "data" in employeeRes ? employeeRes.data : {};
+
+            onUpdated({
+                ...employee,
+                ...updatedData,
+                full_name: (updatedData as ApiEmployee)?.full_name ?? fullName.trim(),
+            });
             onClose();
         } catch (err) {
             setError(getErrorMessage(err, "خطا در ویرایش اطلاعات"));
@@ -146,14 +224,14 @@ export default function EditUserModal({
                                         ویرایش کارمند
                                     </h3>
                                     <p className="mt-0.5 text-[11px] text-gray-400">
-                                        ویرایش نام و نام خانوادگی
+                                        ویرایش نام و شماره موبایل
                                     </p>
                                 </div>
                             </div>
                             <button
                                 type="button"
                                 onClick={onClose}
-                                disabled={loading}
+                                disabled={loading || fetchingUser}
                                 className="flex h-8 w-8 items-center justify-center rounded-xl bg-gray-100 text-gray-400 transition-colors hover:text-gray-600 disabled:opacity-40 dark:bg-white/[0.05] dark:hover:text-gray-300"
                             >
                                 <X size={15} />
@@ -173,6 +251,18 @@ export default function EditUserModal({
                                 dir="rtl"
                             />
 
+                            <FloatingInput
+                                label="شماره موبایل"
+                                id="edit_phone_number"
+                                type="tel"
+                                value={phoneNumber}
+                                onChange={(e) => {
+                                    setPhoneNumber(e.target.value);
+                                    setError("");
+                                }}
+                                dir="ltr"
+                            />
+
                             {error && (
                                 <p className="text-center text-[11.5px] font-semibold text-red-500 -mt-2">
                                     {error}
@@ -181,11 +271,11 @@ export default function EditUserModal({
 
                             <motion.button
                                 type="submit"
-                                disabled={loading}
+                                disabled={loading || fetchingUser}
                                 whileTap={{ scale: 0.97 }}
                                 className="flex items-center justify-center rounded-full bg-blue-600 py-3 text-sm font-bold text-white transition-colors hover:bg-blue-500 disabled:opacity-50"
                             >
-                                {loading ? (
+                                {loading || fetchingUser ? (
                                     <Loader size={18} className="animate-spin" />
                                 ) : (
                                     "ذخیره تغییرات"
