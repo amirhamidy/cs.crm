@@ -15,6 +15,8 @@ import {
     UserPlus,
 } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
+import { apiRoutes } from "@/lib/apiRoutes";
+import type { Customer } from "@/types/customer";
 
 interface Case { id: number; title: string; customer: number }
 interface Department { id: number; name: string }
@@ -39,6 +41,20 @@ const GRADIENTS = [
 
 const gradientOf = (seed: number) => GRADIENTS[Math.abs(seed) % GRADIENTS.length];
 const initialOf = (text: string) => (text || "").trim().charAt(0) || "؟";
+
+function customerDisplayName(c: Customer) {
+    return c.full_name?.trim() || [c.first_name, c.last_name].filter(Boolean).join(" ").trim() || c.company_name?.trim() || `مشتری #${c.id}`;
+}
+
+function extractList<T>(data: unknown): T[] {
+    if (Array.isArray(data)) return data as T[];
+    if (data && typeof data === "object") {
+        const obj = data as { results?: T[]; data?: T[] };
+        if (Array.isArray(obj.results)) return obj.results;
+        if (Array.isArray(obj.data)) return obj.data;
+    }
+    return [];
+}
 
 function FloatingInput({ label, id, value, onChange }: {
     label: string; id: string; value: string; onChange: (v: string) => void;
@@ -194,7 +210,9 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess }: Props) {
     const [cases, setCases] = useState<Case[]>([]);
     const [departments, setDepartments] = useState<Department[]>([]);
     const [employees, setEmployees] = useState<DepartmentEmployee[]>([]);
+    const [customers, setCustomers] = useState<Customer[]>([]);
 
+    const [selectedCustomer, setSelectedCustomer] = useState<number | null>(null);
     const [selectedCase, setSelectedCase] = useState<number | null>(null);
     const [selectedDepartment, setSelectedDepartment] = useState<number | null>(null);
     const [selectedEmployees, setSelectedEmployees] = useState<number[]>([]);
@@ -206,19 +224,26 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess }: Props) {
         axiosInstance.get("/tasks/api/v1/cases/").then((r) => setCases(r.data.results ?? r.data)).catch(() => setCases([]));
         axiosInstance.get("/department/api/v1/department/list/").then((r) => setDepartments(r.data.results ?? r.data)).catch(() => setDepartments([]));
         axiosInstance.get("/department/api/v1/department_employee/list/").then((r) => setEmployees(r.data.results ?? r.data)).catch(() => setEmployees([]));
+        axiosInstance.get(apiRoutes.customers).then((r) => setCustomers(extractList<Customer>(r.data))).catch(() => setCustomers([]));
     }, [isOpen]);
 
     useEffect(() => { setSelectedEmployees([]); }, [selectedDepartment]);
+    useEffect(() => { setSelectedCase(null); }, [selectedCustomer]);
 
     const filteredEmployees = useMemo(
         () => selectedDepartment ? employees.filter((e) => e.department === selectedDepartment) : employees,
         [employees, selectedDepartment]
     );
 
+    const filteredCases = useMemo(
+        () => selectedCustomer ? cases.filter((c) => c.customer === selectedCustomer) : cases,
+        [cases, selectedCustomer]
+    );
+
     const canSubmit = title.trim().length > 0 && selectedCase !== null && selectedDepartment !== null && selectedEmployees.length > 0 && !submitting;
 
     function resetAll() {
-        setSelectedCase(null); setSelectedDepartment(null); setSelectedEmployees([]);
+        setSelectedCustomer(null); setSelectedCase(null); setSelectedDepartment(null); setSelectedEmployees([]);
         setTitle(""); setFiles([]); setSubmitError("");
     }
 
@@ -307,8 +332,18 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess }: Props) {
                             </AnimatePresence>
 
                             <NiceSelect
-                                label="پرونده" placeholder="انتخاب پرونده" emptyText="پرونده‌ای یافت نشد"
-                                options={cases.map((c) => ({ id: c.id, label: c.title }))}
+                                label="مشتری" placeholder="انتخاب مشتری" emptyText="مشتری‌ای یافت نشد"
+                                options={customers.map((c) => ({ id: c.id, label: customerDisplayName(c), sub: c.phone_number || undefined }))}
+                                value={selectedCustomer}
+                                onChange={(id) => { setSelectedCustomer(id as number); setSubmitError(""); }}
+                            />
+
+                            <NiceSelect
+                                label="پرونده"
+                                placeholder={selectedCustomer ? "انتخاب پرونده" : "ابتدا مشتری را انتخاب کنید"}
+                                emptyText="پرونده‌ای برای این مشتری یافت نشد"
+                                disabled={!selectedCustomer}
+                                options={filteredCases.map((c) => ({ id: c.id, label: c.title }))}
                                 value={selectedCase}
                                 onChange={(id) => { setSelectedCase(id as number); setSubmitError(""); }}
                             />

@@ -2,19 +2,20 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { ClipboardList, Loader, Plus, RefreshCw, Search, X } from "lucide-react";
+import { ClipboardList, Loader, Pencil, Plus, RefreshCw, Search, X } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
 import { apiRoutes } from "@/lib/apiRoutes";
 import { Case, Department } from "@/types/case";
-import type { CaseItem } from '@/types/case';
-import type { Customer } from '@/types/customer';
-import type { Employee } from '@/types/employee';
+import type { CaseItem } from "@/types/case";
+import type { Customer } from "@/types/customer";
+import type { Employee } from "@/types/employee";
 
 import CaseCard from "@/components/customcomponents/cases/CaseCard";
 import CreateCaseModal from "@/components/customcomponents/cases/CreateCaseModal";
+import EditCaseModal from "@/components/customcomponents/cases/EditCaseModal";
 import TaskCard from "@/components/customcomponents/tasks/TaskCard";
-import type { TaskItem } from "@/types/task";
 import EditTaskModal from "@/components/customcomponents/tasks/EditTaskModal";
+import type { TaskItem } from "@/types/task";
 
 type ListResponse<T> = T[] | { results?: T[]; data?: T[] };
 
@@ -38,10 +39,11 @@ export default function AdminCasesPage() {
     const [query, setQuery] = useState("");
     const [caseModalOpen, setCaseModalOpen] = useState(false);
     const [deletingId, setDeletingId] = useState<number | null>(null);
+    const [editingCase, setEditingCase] = useState<CaseItem | null>(null);
+    const [editCaseModalOpen, setEditCaseModalOpen] = useState(false);
     const [editingTask, setEditingTask] = useState<TaskItem | null>(null);
-    const [editModalOpen, setEditModalOpen] = useState(false);
+    const [editTaskModalOpen, setEditTaskModalOpen] = useState(false);
     const [deletingTaskId, setDeletingTaskId] = useState<number | null>(null);
-
 
     const fetchData = useCallback(async () => {
         try {
@@ -89,6 +91,17 @@ export default function AdminCasesPage() {
         [fetchData]
     );
 
+    const handleEditCase = useCallback((item: Case) => {
+        setEditingCase(item as unknown as CaseItem);
+        setEditCaseModalOpen(true);
+    }, []);
+
+    const handleCaseUpdate = useCallback(() => {
+        fetchData();
+        setEditCaseModalOpen(false);
+        setEditingCase(null);
+    }, [fetchData]);
+
     const handleDeleteTask = useCallback(
         async (taskId: number) => {
             try {
@@ -108,12 +121,12 @@ export default function AdminCasesPage() {
 
     const handleEditTask = useCallback((task: TaskItem) => {
         setEditingTask(task);
-        setEditModalOpen(true);
+        setEditTaskModalOpen(true);
     }, []);
 
     const handleTaskUpdate = useCallback(() => {
         fetchData();
-        setEditModalOpen(false);
+        setEditTaskModalOpen(false);
         setEditingTask(null);
     }, [fetchData]);
 
@@ -253,19 +266,30 @@ export default function AdminCasesPage() {
                         {filteredCases.map((item, i) => {
                             const caseTasks = tasksByCase.get(Number(item.id)) || [];
                             return (
-                                <div key={item.id} className="flex flex-col gap-2 border-2 border-[#eeeeee] p-3 rounded-4xl">
-                                    <CaseCard
-                                        item={item as unknown as CaseItem}
-                                        index={i}
-                                        customers={customers}
-                                        departments={departments}
-                                        users={employees}
-                                        isDeleting={deletingId === Number(item.id)}
-                                        hasActiveTasks={caseTasks.length > 0}
-                                        onDelete={() => handleDeleteCase(item)}
-                                    />
+                                <div key={item.id} className="relative flex flex-col gap-2 rounded-4xl border-2 border-[#eeeeee] p-3 dark:border-white/[0.06]">
+                                    <div className="relative">
+                                        <CaseCard
+                                            item={item as unknown as CaseItem}
+                                            index={i}
+                                            customers={customers}
+                                            departments={departments}
+                                            users={employees}
+                                            isDeleting={deletingId === Number(item.id)}
+                                            hasActiveTasks={caseTasks.length > 0}
+                                            onDelete={() => handleDeleteCase(item)}
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => handleEditCase(item)}
+                                            className="absolute left-3 top-3 flex h-7 w-7 items-center justify-center rounded-xl transition-colors"
+                                            title="ویرایش پرونده"
+                                            style={{ background: "rgba(99, 102, 241, 0.07)", color: "rgb(99, 102, 241)" }}
+                                        >
+                                            <Pencil size={11} strokeWidth={2} />
+                                        </button>
+                                    </div>
                                     {caseTasks.length > 0 && (
-                                        <div className="pr-4 space-y-2">
+                                        <div className="space-y-2 pr-4">
                                             {caseTasks.map((task, taskIndex) => (
                                                 <TaskCard
                                                     key={task.id}
@@ -291,20 +315,29 @@ export default function AdminCasesPage() {
                 onCreated={fetchData}
                 customers={customers}
             />
-{/* 
-            {editModalOpen && editingTask && (
+
+            <EditCaseModal
+                isOpen={editCaseModalOpen}
+                caseItem={editingCase}
+                onClose={() => {
+                    setEditCaseModalOpen(false);
+                    setEditingCase(null);
+                }}
+                onSuccess={handleCaseUpdate}
+            />
+
+            {editTaskModalOpen && editingTask && (
                 <EditTaskModal
                     task={editingTask}
                     customers={customers}
                     departments={departments}
-                    employees={employees}
                     onClose={() => {
-                        setEditModalOpen(false);
+                        setEditTaskModalOpen(false);
                         setEditingTask(null);
                     }}
                     onSuccess={handleTaskUpdate}
                 />
-            )} */}
+            )}
         </div>
     );
 }

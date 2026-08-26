@@ -10,6 +10,7 @@ import {
     FolderKanban,
     Loader,
     Loader2,
+    MessageSquareText,
     Paperclip,
     Pencil,
     Trash2,
@@ -18,7 +19,11 @@ import {
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import type { Task, TaskStatus, TaskEmployeeRef } from "@/types/task";
+import type { Employee } from "@/types/employee";
 import { toJalali, toPersianDigits, JALALI_MONTHS, pad2 } from "@/lib/jalali";
+import { useEmployeeInfo } from "@/hooks/useEmployeeInfo";
+import AdminTaskNotesModal from "./TaskNotesModal";
+import TimeRangeModal from "./TimeRangeModal";
 import api from "@/lib/axiosInstance";
 
 const AVATAR_GRADIENTS = [
@@ -65,7 +70,7 @@ const URGENCY_LABEL: Record<Exclude<DeadlineUrgency, null | "normal">, string> =
     soon: "امروز",
 };
 
-interface TaskWithStep extends Task {
+interface TaskWithStep extends Omit<Task, "assigned_employee"> {
     current_step?: number | { id: number } | string | null;
     assigned_employee?: TaskEmployeeRef | TaskEmployeeRef[] | number | number[] | null;
 }
@@ -73,12 +78,6 @@ interface TaskWithStep extends Task {
 interface StepDeadline {
     started_at: string | null;
     deadline: string | null;
-}
-
-interface EmployeeOption {
-    id: number;
-    full_name?: string;
-    username?: string;
 }
 
 function formatJalaliDate(iso?: string | null) {
@@ -101,9 +100,17 @@ function extractId(value: unknown): number | null {
         const n = Number(value);
         return Number.isFinite(n) ? n : null;
     }
-    if (typeof value === "object" && !Array.isArray(value) && "id" in (value as Record<string, unknown>)) {
+    if (
+        typeof value === "object" &&
+        !Array.isArray(value) &&
+        "id" in (value as Record<string, unknown>)
+    ) {
         const id = (value as { id?: unknown }).id;
-        return typeof id === "number" ? id : Number.isFinite(Number(id)) ? Number(id) : null;
+        return typeof id === "number"
+            ? id
+            : Number.isFinite(Number(id))
+                ? Number(id)
+                : null;
     }
     return null;
 }
@@ -118,6 +125,15 @@ function extractDepartmentName(value: unknown): string | null {
     if (!value || typeof value !== "object" || Array.isArray(value)) return null;
     const dep = value as { name?: string };
     return dep.name ?? null;
+}
+
+function toTask(task: TaskWithStep): Task {
+    const emp = task.assigned_employee;
+    const assignedEmployee = Array.isArray(emp) ? (emp[0] ?? null) : (emp ?? null);
+    return {
+        ...task,
+        assigned_employee: assignedEmployee as Task["assigned_employee"],
+    } as Task;
 }
 
 function Chip({ isDark, children }: { isDark: boolean; children: React.ReactNode }) {
@@ -135,9 +151,10 @@ function Chip({ isDark, children }: { isDark: boolean; children: React.ReactNode
     );
 }
 
-function EmployeeChip({ id, employee, isDark }: { id: number; employee?: EmployeeOption; isDark: boolean }) {
+function EmployeeChip({ id, isDark }: { id: number; isDark: boolean }) {
+    const { data, loading } = useEmployeeInfo(id);
     const gradient = getGradient(id);
-    const name = employee?.full_name ?? employee?.username ?? `کارمند ${id}`;
+    const name = loading ? "..." : (data?.full_name ?? data?.username ?? `کارمند ${id}`);
 
     return (
         <div
@@ -153,7 +170,10 @@ function EmployeeChip({ id, employee, isDark }: { id: number; employee?: Employe
             >
                 <UserRound size={11} />
             </span>
-            <span className="text-[10.5px] font-bold" style={{ color: isDark ? "#cbd5e1" : "#475569" }}>
+            <span
+                className="text-[10.5px] font-bold"
+                style={{ color: isDark ? "#cbd5e1" : "#475569" }}
+            >
                 {name}
             </span>
         </div>
@@ -163,10 +183,11 @@ function EmployeeChip({ id, employee, isDark }: { id: number; employee?: Employe
 interface TaskCardProps {
     task: TaskWithStep;
     index?: number;
-    employees: EmployeeOption[];
+    employees?: Employee[];
     onEdit: (task: Task) => void;
-    onDelete: (taskId: number) => Promise<void> | void;
+    onDelete: (taskId: number) => Promise<boolean | void> | void;
     onUpdated?: (task: Task) => void;
+    canManageDeadline?: boolean;
 }
 
 export default function TaskCard({
@@ -176,20 +197,24 @@ export default function TaskCard({
     onEdit,
     onDelete,
     onUpdated,
+    canManageDeadline = true,
 }: TaskCardProps) {
     const { resolvedTheme } = useTheme();
     const isDark = resolvedTheme === "dark";
 
     const [hovered, setHovered] = useState(false);
+    const [timeModalOpen, setTimeModalOpen] = useState(false);
     const [showConfirm, setShowConfirm] = useState(false);
     const [deleting, setDeleting] = useState(false);
     const [deleteError, setDeleteError] = useState<string | null>(null);
+    const [savingTime, setSavingTime] = useState(false);
+    const [notesModalOpen, setNotesModalOpen] = useState(false);
+    const [timeError, setTimeError] = useState<string | null>(null);
     const [stepDeadline, setStepDeadline] = useState<StepDeadline | null>(null);
     const [loadingDeadline, setLoadingDeadline] = useState(false);
     const [, forceTick] = useState(0);
 
     const employeeIds = extractEmployeeIds(task.assigned_employee);
-
     const departmentName = extractDepartmentName(task.department);
     const caseTitle =
         task.case && typeof task.case === "object" && "title" in task.case
@@ -197,16 +222,17 @@ export default function TaskCard({
             : null;
 
     const stepId = extractId(task.current_step);
-
     const status = (task.status ?? "cancelled") as TaskStatus;
     const statusConfig = STATUS_CONFIG[status] ?? {
         label: "نامشخص",
         className: "border-slate-500/20 bg-slate-500/10 text-slate-400",
     };
 
-    const isActiveTask = status !== "completed" && status !== "cancelled" && status !== "sold";
+    const isActiveTask =
+        status !== "completed" && status !== "cancelled" && status !== "sold";
     const urgency = isActiveTask ? getDeadlineUrgency(stepDeadline?.deadline) : null;
-    const accent = urgency && urgency !== "normal" ? URGENCY_ACCENT[urgency] : null;
+    const accent =
+        urgency && urgency !== "normal" ? URGENCY_ACCENT[urgency] : null;
 
     useEffect(() => {
         if (!stepId) return;
@@ -254,6 +280,31 @@ export default function TaskCard({
         }
     }
 
+    async function handleTimeSubmit(startedAt: string, deadline: string) {
+        if (!stepId) {
+            setTimeError("مرحله فعلی این تسک مشخص نیست");
+            return;
+        }
+        setSavingTime(true);
+        setTimeError(null);
+        try {
+            const { data } = await api.patch(
+                `/tasks/api/v1/tasks/${task.id}/steps/${stepId}/deadline/patch/`,
+                { started_at: startedAt, deadline }
+            );
+            setStepDeadline({
+                started_at: data?.started_at ?? startedAt,
+                deadline: data?.deadline ?? deadline,
+            });
+            onUpdated?.(data);
+            setTimeModalOpen(false);
+        } catch {
+            setTimeError("خطا در ثبت بازه زمانی");
+        } finally {
+            setSavingTime(false);
+        }
+    }
+
     function handleCloseConfirm() {
         if (deleting) return;
         setShowConfirm(false);
@@ -274,50 +325,84 @@ export default function TaskCard({
                 style={{
                     border: accent
                         ? `1px solid color-mix(in srgb, ${accent} 40%, transparent)`
-                        : isDark ? "1px solid rgba(255,255,255,0.06)" : "1px solid rgba(0,0,0,0.06)",
+                        : isDark
+                            ? "1px solid rgba(255,255,255,0.06)"
+                            : "1px solid rgba(0,0,0,0.06)",
                     background: accent
-                        ? `color-mix(in srgb, ${accent} ${urgency === "overdue" ? 7 : urgency === "critical" ? 5 : 4}%, ${isDark ? "#0f172a" : "#fafafa"})`
-                        : isDark ? "rgba(255,255,255,0.02)" : "#fafafa",
+                        ? `color-mix(in srgb, ${accent} ${urgency === "overdue" ? 7 : urgency === "critical" ? 5 : 4
+                        }%, ${isDark ? "#0f172a" : "#fafafa"})`
+                        : isDark
+                            ? "rgba(255,255,255,0.02)"
+                            : "#fafafa",
                     minHeight: "130px",
                     opacity: deleting ? 0.45 : 1,
                     pointerEvents: deleting ? "none" : undefined,
                     boxShadow: accent
                         ? `0 0 0 1px color-mix(in srgb, ${accent} 15%, transparent), 0 4px 24px color-mix(in srgb, ${accent} 12%, transparent)`
-                        : isDark ? "0 2px 24px rgba(0,0,0,0.2)" : "0 2px 16px rgba(0,0,0,0.04)",
-                    transition: "border-color 0.4s ease, background 0.4s ease, box-shadow 0.4s ease",
+                        : isDark
+                            ? "0 2px 24px rgba(0,0,0,0.2)"
+                            : "0 2px 16px rgba(0,0,0,0.04)",
+                    transition:
+                        "border-color 0.4s ease, background 0.4s ease, box-shadow 0.4s ease",
                 }}
             >
                 {urgency === "overdue" && (
                     <motion.div
                         className="pointer-events-none absolute inset-x-0 top-0 h-[2px]"
-                        style={{ background: `linear-gradient(90deg, transparent, ${accent}, transparent)` }}
+                        style={{
+                            background: `linear-gradient(90deg, transparent, ${accent}, transparent)`,
+                        }}
                         animate={{ opacity: [0.4, 1, 0.4] }}
                         transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }}
                     />
                 )}
 
-                <svg className="pointer-events-none absolute inset-0 h-full w-full" style={{ borderRadius: "1rem" }}>
+                <svg
+                    className="pointer-events-none absolute inset-0 h-full w-full"
+                    style={{ borderRadius: "1rem" }}
+                >
                     <defs>
-                        <linearGradient id={`userTaskBorderGrad-${task.id}`} x1="100%" y1="100%" x2="0%" y2="0%">
+                        <linearGradient
+                            id={`taskCardBorderGrad-${task.id}`}
+                            x1="100%"
+                            y1="100%"
+                            x2="0%"
+                            y2="0%"
+                        >
                             <stop offset="0%" stopColor="#6366f1" />
                             <stop offset="100%" stopColor="#8b5cf6" />
                         </linearGradient>
                     </defs>
                     <motion.rect
-                        x="1" y="1" width="calc(100% - 2px)" height="calc(100% - 2px)"
-                        rx="15" ry="15" fill="none"
-                        stroke={`url(#userTaskBorderGrad-${task.id})`}
-                        strokeWidth="1.5" pathLength="1"
+                        x="1"
+                        y="1"
+                        width="calc(100% - 2px)"
+                        height="calc(100% - 2px)"
+                        rx="15"
+                        ry="15"
+                        fill="none"
+                        stroke={`url(#taskCardBorderGrad-${task.id})`}
+                        strokeWidth="1.5"
+                        pathLength="1"
                         initial={{ pathLength: 0, opacity: 0 }}
-                        animate={hovered ? { pathLength: 1, opacity: 1 } : { pathLength: 0, opacity: 0 }}
+                        animate={
+                            hovered
+                                ? { pathLength: 1, opacity: 1 }
+                                : { pathLength: 0, opacity: 0 }
+                        }
                         transition={{ duration: 0.55, ease: "easeInOut" }}
                     />
                 </svg>
 
                 <div className="flex items-start justify-between gap-3">
                     <div className="flex items-center gap-2">
-                        <span className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[10.5px] font-bold ${statusConfig.className}`}>
-                            <span className={`h-1.5 w-1.5 rounded-full bg-current ${status === "in_progress" ? "animate-pulse" : ""}`} />
+                        <span
+                            className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[10.5px] font-bold ${statusConfig.className}`}
+                        >
+                            <span
+                                className={`h-1.5 w-1.5 rounded-full bg-current ${status === "in_progress" ? "animate-pulse" : ""
+                                    }`}
+                            />
                             {statusConfig.label}
                         </span>
                         {accent && (
@@ -332,8 +417,16 @@ export default function TaskCard({
                                 <motion.span
                                     className="h-1.5 w-1.5 rounded-full"
                                     style={{ background: accent }}
-                                    animate={urgency !== "soon" ? { opacity: [1, 0.3, 1] } : undefined}
-                                    transition={{ duration: 1.6, repeat: Infinity, ease: "easeInOut" }}
+                                    animate={
+                                        urgency !== "soon"
+                                            ? { opacity: [1, 0.3, 1] }
+                                            : undefined
+                                    }
+                                    transition={{
+                                        duration: 1.6,
+                                        repeat: Infinity,
+                                        ease: "easeInOut",
+                                    }}
                                 />
                                 {URGENCY_LABEL[urgency as Exclude<DeadlineUrgency, null | "normal">]}
                             </span>
@@ -343,10 +436,41 @@ export default function TaskCard({
                     <div className="flex items-center gap-1.5">
                         <button
                             type="button"
-                            onClick={() => onEdit(task)}
+                            onClick={() => setNotesModalOpen(true)}
+                            className="flex h-8 w-8 items-center justify-center rounded-xl transition-colors"
+                            style={{
+                                background: isDark
+                                    ? "rgba(255,255,255,0.05)"
+                                    : "rgba(0,0,0,0.04)",
+                            }}
+                            title="یادداشت‌ها"
+                        >
+                            <MessageSquareText size={14} className="text-indigo-400" />
+                        </button>
+                        {canManageDeadline && (
+                            <button
+                                type="button"
+                                onClick={() => setTimeModalOpen(true)}
+                                className="flex h-7 w-7 items-center justify-center rounded-xl transition-colors"
+                                style={{
+                                    background: isDark
+                                        ? "rgba(99,102,241,0.1)"
+                                        : "rgba(99,102,241,0.07)",
+                                    color: isDark ? "#a5b4fc" : "#6366f1",
+                                }}
+                                title="تعیین بازه زمانی"
+                            >
+                                <Clock size={11} />
+                            </button>
+                        )}
+                        <button
+                            type="button"
+                            onClick={() => onEdit(toTask(task))}
                             className="flex h-7 w-7 items-center justify-center rounded-xl transition-colors"
                             style={{
-                                background: isDark ? "rgba(99,102,241,0.1)" : "rgba(99,102,241,0.07)",
+                                background: isDark
+                                    ? "rgba(99,102,241,0.1)"
+                                    : "rgba(99,102,241,0.07)",
                                 color: isDark ? "#a5b4fc" : "#6366f1",
                             }}
                             title="ویرایش تسک"
@@ -359,22 +483,34 @@ export default function TaskCard({
                             disabled={deleting}
                             className="flex h-7 w-7 items-center justify-center rounded-xl transition-colors disabled:opacity-40"
                             style={{
-                                background: isDark ? "rgba(239,68,68,0.1)" : "rgba(239,68,68,0.07)",
+                                background: isDark
+                                    ? "rgba(239,68,68,0.1)"
+                                    : "rgba(239,68,68,0.07)",
                                 color: "#ef4444",
                             }}
                             title="حذف تسک"
                         >
-                            {deleting ? <Loader2 size={11} className="animate-spin" /> : <Trash2 size={11} />}
+                            {deleting ? (
+                                <Loader2 size={11} className="animate-spin" />
+                            ) : (
+                                <Trash2 size={11} />
+                            )}
                         </button>
                     </div>
                 </div>
 
                 <div className="flex flex-col gap-1">
-                    <h3 className="text-[13.5px] font-extrabold leading-tight" style={{ color: isDark ? "#f1f5f9" : "#1e293b" }}>
+                    <h3
+                        className="text-[13.5px] font-extrabold leading-tight"
+                        style={{ color: isDark ? "#f1f5f9" : "#1e293b" }}
+                    >
                         {task.title}
                     </h3>
                     {task.description ? (
-                        <p className="line-clamp-2 text-[12px] leading-6" style={{ color: isDark ? "#94a3b8" : "#64748b" }}>
+                        <p
+                            className="line-clamp-2 text-[12px] leading-6"
+                            style={{ color: isDark ? "#94a3b8" : "#64748b" }}
+                        >
                             {task.description}
                         </p>
                     ) : null}
@@ -382,32 +518,40 @@ export default function TaskCard({
 
                 <div
                     className="mt-auto flex flex-wrap items-center gap-2 border-t pt-2.5"
-                    style={{ borderColor: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)" }}
+                    style={{
+                        borderColor: isDark
+                            ? "rgba(255,255,255,0.05)"
+                            : "rgba(0,0,0,0.05)",
+                    }}
                 >
                     {employeeIds.length > 0 ? (
                         employeeIds.map((id) => (
-                            <EmployeeChip
-                                key={id}
-                                id={id}
-                                employee={employees.find((e) => e.id === id)}
-                                isDark={isDark}
-                            />
+                            <EmployeeChip key={id} id={id} isDark={isDark} />
                         ))
                     ) : (
                         <div
                             className="flex items-center gap-1.5 rounded-full py-0.5 pl-2 pr-0.5"
                             style={{
-                                border: isDark ? "1px solid rgba(255,255,255,0.06)" : "1px solid rgba(0,0,0,0.06)",
-                                background: isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)",
+                                border: isDark
+                                    ? "1px solid rgba(255,255,255,0.06)"
+                                    : "1px solid rgba(0,0,0,0.06)",
+                                background: isDark
+                                    ? "rgba(255,255,255,0.04)"
+                                    : "rgba(0,0,0,0.03)",
                             }}
                         >
                             <span
                                 className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full text-[9px] font-extrabold text-white"
-                                style={{ background: `linear-gradient(135deg, #6366f1, #8b5cf6)` }}
+                                style={{
+                                    background: `linear-gradient(135deg, #6366f1, #8b5cf6)`,
+                                }}
                             >
                                 <UserRound size={11} />
                             </span>
-                            <span className="text-[10.5px] font-bold" style={{ color: isDark ? "#cbd5e1" : "#475569" }}>
+                            <span
+                                className="text-[10.5px] font-bold"
+                                style={{ color: isDark ? "#cbd5e1" : "#475569" }}
+                            >
                                 بدون مسئول
                             </span>
                         </div>
@@ -448,7 +592,10 @@ export default function TaskCard({
                     }}
                 >
                     {loadingDeadline ? (
-                        <div className="flex items-center gap-2 text-[10.5px] font-semibold" style={{ color: isDark ? "#94a3b8" : "#64748b" }}>
+                        <div
+                            className="flex items-center gap-2 text-[10.5px] font-semibold"
+                            style={{ color: isDark ? "#94a3b8" : "#64748b" }}
+                        >
                             <Loader2 size={12} className="animate-spin" />
                             در حال دریافت زمان‌بندی...
                         </div>
@@ -474,7 +621,10 @@ export default function TaskCard({
                             )}
                         </>
                     ) : (
-                        <div className="flex items-center gap-2 text-[10.5px] font-semibold" style={{ color: isDark ? "#64748b" : "#94a3b8" }}>
+                        <div
+                            className="flex items-center gap-2 text-[10.5px] font-semibold"
+                            style={{ color: isDark ? "#64748b" : "#94a3b8" }}
+                        >
                             <Clock size={12} />
                             زمان‌بندی تعیین نشده
                         </div>
@@ -572,6 +722,34 @@ export default function TaskCard({
                             </div>
                         </motion.div>
                     </motion.div>
+                )}
+            </AnimatePresence>
+
+            <AnimatePresence>
+                {notesModalOpen && (
+                    <AdminTaskNotesModal
+                        isOpen={notesModalOpen}
+                        taskId={task.id}
+                        taskTitle={task.title}
+                        onClose={() => setNotesModalOpen(false)}
+                    />
+                )}
+            </AnimatePresence>
+
+            <AnimatePresence>
+                {timeModalOpen && (
+                    <TimeRangeModal
+                        open={timeModalOpen}
+                        initialStartedAt={stepDeadline?.started_at}
+                        initialDeadline={stepDeadline?.deadline}
+                        loading={savingTime}
+                        error={timeError}
+                        onClose={() => {
+                            setTimeModalOpen(false);
+                            setTimeError(null);
+                        }}
+                        onSubmit={handleTimeSubmit}
+                    />
                 )}
             </AnimatePresence>
         </>

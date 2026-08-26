@@ -5,6 +5,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { ClipboardList, Loader, Plus, RefreshCw } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
 import { apiRoutes } from "@/lib/apiRoutes";
+import { useAuthStore } from "@/store/authStore";
 import type { Task, TaskStatus } from "@/types/task";
 import type { Customer } from "@/types/customer";
 import type { Department } from "@/types/department";
@@ -16,7 +17,7 @@ import { taskStatusLabels } from "@/components/customcomponents/shared/constants
 
 type ListResponse<T> = T[] | { results?: T[]; data?: T[] };
 
-function extractList<T>(data: ListResponse<T>): T[] {
+function extractList<T>(data: ListResponse<T> | undefined | null): T[] {
     if (Array.isArray(data)) return data;
     if (data && typeof data === "object") {
         if (Array.isArray(data.results)) return data.results;
@@ -25,16 +26,42 @@ function extractList<T>(data: ListResponse<T>): T[] {
     return [];
 }
 
+function parseAssignedEmployees(raw: unknown): number[] {
+    const ids: number[] = [];
+    if (Array.isArray(raw)) {
+        raw.forEach((item) => {
+            if (typeof item === "object" && item !== null) {
+                const id = Number((item as any).id ?? (item as any).employee ?? (item as any).user);
+                if (!isNaN(id) && id > 0) ids.push(id);
+            } else {
+                const id = Number(item);
+                if (!isNaN(id) && id > 0) ids.push(id);
+            }
+        });
+    } else if (typeof raw === "object" && raw !== null) {
+        const id = Number((raw as any).id ?? (raw as any).employee ?? (raw as any).user);
+        if (!isNaN(id) && id > 0) ids.push(id);
+    } else if (raw !== null && raw !== undefined) {
+        const id = Number(raw);
+        if (!isNaN(id) && id > 0) ids.push(id);
+    }
+    return ids;
+}
+
 export default function UserTasksPage() {
     const [tasks, setTasks] = useState<Task[]>([]);
     const [customers, setCustomers] = useState<Customer[]>([]);
     const [departments, setDepartments] = useState<Department[]>([]);
     const [employees, setEmployees] = useState<Employee[]>([]);
+    const [currentEmployeeId, setCurrentEmployeeId] = useState<number | null>(null);
     const [loading, setLoading] = useState(true);
     const [statusFilter, setStatusFilter] = useState<TaskStatus | "ALL">("ALL");
     const [search, setSearch] = useState("");
     const [showCreate, setShowCreate] = useState(false);
     const [editingTask, setEditingTask] = useState<Task | null>(null);
+
+    const userId = useAuthStore((state) => state.userId);
+    const username = useAuthStore((state) => state.username);
 
     const fetchAll = useCallback(async () => {
         try {
@@ -43,12 +70,50 @@ export default function UserTasksPage() {
                 axiosInstance.get<ListResponse<Task>>(apiRoutes.tasks),
                 axiosInstance.get<ListResponse<Customer>>(apiRoutes.customers),
                 axiosInstance.get<ListResponse<Department>>(apiRoutes.departments),
-                axiosInstance.get<ListResponse<Employee>>(apiRoutes.employees),
+                axiosInstance.get<ListResponse<Employee>>("/accounts/api/v1/employee/list/"),
             ]);
-            setTasks(extractList(tasksRes.data));
+
+            const employeeList = extractList<Employee>(employeesRes.data);
+            const taskList = extractList<Task>(tasksRes.data);
+
+            let empId: number | null = null;
+            const matchedEmployee = employeeList.find(
+                (emp: any) =>
+                    (username && emp.username === username) ||
+                    (userId && Number(emp.user_id ?? emp.user ?? emp.user_detail?.id) === Number(userId)) ||
+                    (userId && Number(emp.id) === Number(userId))
+            );
+
+            if (matchedEmployee) {
+                empId = Number(matchedEmployee.id);
+                setCurrentEmployeeId(empId);
+            }
+
+            const detailedTasks = await Promise.all(
+                taskList.map(async (task) => {
+                    try {
+                        const detailRes = await axiosInstance.get<Task>(
+                            `/tasks/api/v1/tasks/${task.id}/`
+                        );
+                        return { ...task, ...detailRes.data };
+                    } catch {
+                        return task;
+                    }
+                })
+            );
+
+            const userTasks = empId
+                ? detailedTasks.filter((task: any) => {
+                    const assignedList = parseAssignedEmployees(task.assigned_employee);
+                    const creatorId = Number(task.created_by ?? task.creator ?? task.user);
+                    return assignedList.includes(empId!) || (userId && creatorId === Number(userId));
+                })
+                : detailedTasks;
+
+            setTasks(userTasks);
             setCustomers(extractList(customersRes.data));
             setDepartments(extractList(departmentsRes.data));
-            setEmployees(extractList(employeesRes.data));
+            setEmployees(employeeList);
         } catch {
             setTasks([]);
             setCustomers([]);
@@ -57,7 +122,7 @@ export default function UserTasksPage() {
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [userId, username]);
 
     useEffect(() => {
         fetchAll();
@@ -159,7 +224,7 @@ export default function UserTasksPage() {
             ) : filteredTasks.length === 0 ? (
                 <div className="flex flex-col items-center justify-center gap-3 py-20">
                     <p className="text-[13px] text-gray-400 dark:text-gray-500">
-                        تسکی با این مشخصات پیدا نشد
+                        تسکی برای شما یافت نشد
                     </p>
                 </div>
             ) : (
