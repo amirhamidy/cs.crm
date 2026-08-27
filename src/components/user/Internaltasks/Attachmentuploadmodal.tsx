@@ -50,9 +50,9 @@ export default function AttachmentUploadModal({
         try {
             const { data } = await uploadInternalTaskAttachments(task.id, files, note);
             onUploaded(Array.isArray(data) ? data : []);
+            onClose();
         } catch {
             setError("خطا در ثبت یادداشت");
-        } finally {
             setLoading(false);
         }
     }

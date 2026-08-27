@@ -62,9 +62,9 @@ export default function CreateTicketModal({
                 assigned_to: selected,
             });
             onCreated(data);
+            onClose();
         } catch {
             setError("خطا در ایجاد تیکت");
-        } finally {
             setLoading(false);
         }
     }

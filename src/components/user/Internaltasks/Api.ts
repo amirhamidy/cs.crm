@@ -17,9 +17,7 @@ export type InternalTaskDeadlineResponse = {
 };
 
 export function fetchInternalTasks() {
-  return axiosInstance.get<InternalTask[]>(
-    "/tasks/api/v1/internal-tasks/",
-  );
+  return axiosInstance.get<InternalTask[]>("/tasks/api/v1/internal-tasks/");
 }
 
 export function fetchEmployeeList() {
@@ -59,15 +57,12 @@ export function updateInternalTaskStatus(
     description: string;
     status: InternalTask["status"];
     assigned_to: number[];
-  }>(
-    `/tasks/api/v1/internal-tasks/${id}/update/`,
-    {
-      title: payload.title,
-      description: payload.description,
-      status: payload.status,
-      assigned_to: payload.assigned_to,
-    },
-  );
+  }>(`/tasks/api/v1/internal-tasks/${id}/update/`, {
+    title: payload.title,
+    description: payload.description,
+    status: payload.status,
+    assigned_to: payload.assigned_to,
+  });
 }
 
 export function patchInternalTaskDeadline(

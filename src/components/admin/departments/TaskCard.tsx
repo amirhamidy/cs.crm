@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
 import { JALALI_MONTHS, pad2, toJalali, toPersianDigits } from "@/lib/jalali";
-import type { Employee, Task, TaskRelationId } from "./types";
+import type { Task, TaskRelationId } from "./types";
 import TaskAssignees from "./TaskAssignees";
 import TimeRangeModal from "@/components/customcomponents/tasks/TimeRangeModal";
 import AdminTaskNotesModal from "@/components/customcomponents/tasks/AdminTaskNotesModal";
@@ -76,6 +76,43 @@ interface CustomerResponse {
     company_name?: string;
     job_title?: string;
 }
+
+const STATUS_MAP: Record<
+    string,
+    { label: string; light: string; dark: string }
+> = {
+    sold: {
+        label: "فروش",
+        light: "bg-emerald-50 text-emerald-700 border-emerald-200",
+        dark: "bg-emerald-500/10 text-emerald-300 border-emerald-500/20",
+    },
+    in_progress: {
+        label: "در حال انجام",
+        light: "bg-amber-50 text-amber-700 border-amber-200",
+        dark: "bg-amber-500/10 text-amber-300 border-amber-500/20",
+    },
+    completed: {
+        label: "انجام شده",
+        light: "bg-sky-50 text-sky-700 border-sky-200",
+        dark: "bg-sky-500/10 text-sky-300 border-sky-500/20",
+    },
+    cancelled: {
+        label: "لغو شده",
+        light: "bg-rose-50 text-rose-700 border-rose-200",
+        dark: "bg-rose-500/10 text-rose-300 border-rose-500/20",
+    },
+};
+
+const getStatusBadge = (status: unknown) => {
+    const key = typeof status === "string" ? status.toLowerCase() : "";
+    return (
+        STATUS_MAP[key] ?? {
+            label: key || "نامشخص",
+            light: "bg-gray-100 text-gray-500 border-gray-200",
+            dark: "bg-white/[0.06] text-white/45 border-white/[0.08]",
+        }
+    );
+};
 
 const getRelationId = (value: any): number | null => {
     if (value === null || value === undefined) return null;
@@ -195,6 +232,9 @@ export default function TaskCard({
 
     const taskDescription = getNullableText((task as any).description);
 
+    const taskStatus = (task as any).status ?? null;
+    const statusBadge = taskStatus ? getStatusBadge(taskStatus) : null;
+
     const assigneeIds = useMemo(
         () => getAssigneeIds(task.assigned_employee),
         [task.assigned_employee]
@@ -261,25 +301,25 @@ export default function TaskCard({
     }, [caseId]);
 
     const buildEditableTask = (overrides?: Partial<Task>): Task =>
-    ({
-        ...task,
-        id: taskId ?? task.id,
-        title: getNullableText(task.title),
-        description: getNullableText((task as any).description),
-        status: getNullableText((task as any).status),
-        priority: getNullableText((task as any).priority),
-        created_at: getNullableText((task as any).created_at),
-        started_at: getNullableText(task.started_at),
-        deadline: getNullableText(task.deadline),
-        due_date: getNullableText(task.due_date),
-        current_step: task.current_step,
-        assigned_employee: task.assigned_employee,
-        case: task.case,
-        case_name: getNullableText(task.case_name),
-        department_name: getNullableText(task.department_name),
-        current_step_name: getNullableText(task.current_step_name),
-        ...overrides,
-    } as Task);
+        ({
+            ...task,
+            id: taskId ?? task.id,
+            title: getNullableText(task.title),
+            description: getNullableText((task as any).description),
+            status: getNullableText((task as any).status),
+            priority: getNullableText((task as any).priority),
+            created_at: getNullableText((task as any).created_at),
+            started_at: getNullableText(task.started_at),
+            deadline: getNullableText(task.deadline),
+            due_date: getNullableText(task.due_date),
+            current_step: task.current_step,
+            assigned_employee: task.assigned_employee,
+            case: task.case,
+            case_name: getNullableText(task.case_name),
+            department_name: getNullableText(task.department_name),
+            current_step_name: getNullableText(task.current_step_name),
+            ...overrides,
+        } as Task);
 
     const handleDelete = async () => {
         if (!taskId || !onDelete) return;
@@ -306,7 +346,9 @@ export default function TaskCard({
             );
             setSchedule({ started_at: startedAt, deadline });
             setTimeModalOpen(false);
-            onUpdated?.(buildEditableTask({ started_at: startedAt, deadline, due_date: deadline }));
+            onUpdated?.(
+                buildEditableTask({ started_at: startedAt, deadline, due_date: deadline })
+            );
         } catch {
             setDeadlineError("ذخیرهٔ بازهٔ زمانی انجام نشد، دوباره تلاش کن");
         } finally {
@@ -329,12 +371,22 @@ export default function TaskCard({
                 />
 
                 <div className="mb-3 flex items-start justify-between gap-3 pl-1">
-                    <span
-                        className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-extrabold ${deadlineState.background} ${deadlineState.color}`}
-                    >
-                        <DeadlineIcon size={10} />
-                        {deadlineState.label}
-                    </span>
+                    <div className="flex flex-wrap items-center gap-1.5">
+                        <span
+                            className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-extrabold ${deadlineState.background} ${deadlineState.color}`}
+                        >
+                            <DeadlineIcon size={10} />
+                            {deadlineState.label}
+                        </span>
+
+                        {statusBadge && (
+                            <span
+                                className={`flex items-center rounded-full border px-2.5 py-1 text-[10px] font-extrabold ${statusBadge.light} dark:${statusBadge.dark}`}
+                            >
+                                {statusBadge.label}
+                            </span>
+                        )}
+                    </div>
 
                     <div className="flex shrink-0 items-center gap-1">
                         {onEdit && (

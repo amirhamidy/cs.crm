@@ -49,9 +49,9 @@ export default function CustomersPage() {
         setCustomers((prev) => prev.filter((c) => c.id !== id));
     }, []);
 
-    const handleAdded = useCallback((c: Customer) => {
-        setCustomers((prev) => [c, ...prev]);
-    }, []);
+      const handleAdded = useCallback(() => {
+        fetchData();
+    }, [fetchData]);
 
     const handleEdited = useCallback((updated: Customer) => {
         setCustomers((prev) =>

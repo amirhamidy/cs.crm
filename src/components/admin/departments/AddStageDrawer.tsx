@@ -184,17 +184,6 @@ export default function AddStageModal({ open, department, defaultOrder = 0, onCl
                                 dir="rtl"
                             />
 
-                            <FloatingInput
-                                label="ترتیب"
-                                id="stage_order"
-                                type="number"
-                                value={order}
-                                onChange={(e) => setOrder(Number(e.target.value))}
-                                disabled={loading || success}
-                                dir="ltr"
-                                className="text-left"
-                            />
-
                             <AnimatePresence mode="wait">
                                 {success ? (
                                     <motion.div

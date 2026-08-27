@@ -118,7 +118,7 @@ export default function InternalTimeRangeModal({
         }
     }
 
-    function handleSubmit() {
+    async function handleSubmit() {
         const s = fieldToIso(start);
         const d = fieldToIso(deadline);
         if (new Date(d) <= new Date(s)) {
@@ -126,7 +126,7 @@ export default function InternalTimeRangeModal({
             return;
         }
         setError("");
-        void onSubmit(s, d);
+        await onSubmit(s, d);
     }
 
     const [ty, tm, td] = todayJalali();
@@ -183,8 +183,8 @@ export default function InternalTimeRangeModal({
                                             type="button"
                                             onClick={() => setActiveField(field)}
                                             className={`rounded-2xl border px-3 py-2.5 text-right transition-all duration-200 ${active
-                                                    ? "border-blue-500 bg-blue-50/50 dark:border-blue-500/50 dark:bg-blue-500/[0.06]"
-                                                    : "border-gray-100 bg-gray-50 hover:border-gray-200 dark:border-white/[0.06] dark:bg-white/[0.03] dark:hover:border-white/[0.12]"
+                                                ? "border-blue-500 bg-blue-50/50 dark:border-blue-500/50 dark:bg-blue-500/[0.06]"
+                                                : "border-gray-100 bg-gray-50 hover:border-gray-200 dark:border-white/[0.06] dark:bg-white/[0.03] dark:hover:border-white/[0.12]"
                                                 }`}
                                         >
                                             <div
@@ -195,8 +195,8 @@ export default function InternalTimeRangeModal({
                                             </div>
                                             <div
                                                 className={`text-[12.5px] font-bold ${active
-                                                        ? "text-blue-600 dark:text-blue-400"
-                                                        : "text-gray-900 dark:text-white"
+                                                    ? "text-blue-600 dark:text-blue-400"
+                                                    : "text-gray-900 dark:text-white"
                                                     }`}
                                             >
                                                 {toPersianDigits(f.jd)} {JALALI_MONTHS[f.jm - 1]} —{" "}
@@ -265,12 +265,12 @@ export default function InternalTimeRangeModal({
                                                     }))
                                                 }
                                                 className={`aspect-square rounded-xl text-[12.5px] font-bold transition-colors ${day === null
-                                                        ? "invisible"
-                                                        : isSelected
-                                                            ? "bg-blue-600 text-white"
-                                                            : isToday
-                                                                ? "border border-blue-400 bg-blue-50 text-blue-600 dark:border-blue-500/40 dark:bg-blue-500/10 dark:text-blue-300"
-                                                                : "text-gray-500 hover:bg-gray-100 dark:text-white/60 dark:hover:bg-white/[0.06] dark:hover:text-white"
+                                                    ? "invisible"
+                                                    : isSelected
+                                                        ? "bg-blue-600 text-white"
+                                                        : isToday
+                                                            ? "border border-blue-400 bg-blue-50 text-blue-600 dark:border-blue-500/40 dark:bg-blue-500/10 dark:text-blue-300"
+                                                            : "text-gray-500 hover:bg-gray-100 dark:text-white/60 dark:hover:bg-white/[0.06] dark:hover:text-white"
                                                     }`}
                                             >
                                                 {day !== null ? toPersianDigits(day) : ""}

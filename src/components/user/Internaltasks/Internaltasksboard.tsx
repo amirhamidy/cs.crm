@@ -208,7 +208,10 @@ export default function InternalTasksBoard(): JSX.Element {
 
         setCreateOpen(false);
         setTab("sent");
+
+        void loadTasks();
     }
+
 
     async function handleDeleteTask(taskId: number) {
         const safeTaskId = Number(taskId);
@@ -286,16 +289,16 @@ export default function InternalTasksBoard(): JSX.Element {
                     type="button"
                     onClick={() => setTab("sent")}
                     className={`flex shrink-0 items-center gap-2 rounded-2xl px-3.5 py-2 text-[11.5px] font-bold transition-colors ${tab === "sent"
-                            ? "bg-indigo-600 text-white"
-                            : "bg-gray-100 text-gray-500 hover:bg-gray-200 dark:bg-white/[0.05] dark:text-gray-400 dark:hover:bg-white/[0.08]"
+                        ? "bg-indigo-600 text-white"
+                        : "bg-gray-100 text-gray-500 hover:bg-gray-200 dark:bg-white/[0.05] dark:text-gray-400 dark:hover:bg-white/[0.08]"
                         }`}
                 >
                     <Send size={12} />
                     <span>ارسال شده توسط من</span>
                     <span
                         className={`rounded-full px-1.5 py-0.5 text-[10px] font-extrabold ${tab === "sent"
-                                ? "bg-white/20"
-                                : "bg-black/5 dark:bg-white/10"
+                            ? "bg-white/20"
+                            : "bg-black/5 dark:bg-white/10"
                             }`}
                     >
                         {sentTasks.length}
@@ -306,16 +309,16 @@ export default function InternalTasksBoard(): JSX.Element {
                     type="button"
                     onClick={() => setTab("received")}
                     className={`flex shrink-0 items-center gap-2 rounded-2xl px-3.5 py-2 text-[11.5px] font-bold transition-colors ${tab === "received"
-                            ? "bg-indigo-600 text-white"
-                            : "bg-gray-100 text-gray-500 hover:bg-gray-200 dark:bg-white/[0.05] dark:text-gray-400 dark:hover:bg-white/[0.08]"
+                        ? "bg-indigo-600 text-white"
+                        : "bg-gray-100 text-gray-500 hover:bg-gray-200 dark:bg-white/[0.05] dark:text-gray-400 dark:hover:bg-white/[0.08]"
                         }`}
                 >
                     <Inbox size={12} />
                     <span>ارسال شده به من</span>
                     <span
                         className={`rounded-full px-1.5 py-0.5 text-[10px] font-extrabold ${tab === "received"
-                                ? "bg-white/20"
-                                : "bg-black/5 dark:bg-white/10"
+                            ? "bg-white/20"
+                            : "bg-black/5 dark:bg-white/10"
                             }`}
                     >
                         {receivedTasks.length}

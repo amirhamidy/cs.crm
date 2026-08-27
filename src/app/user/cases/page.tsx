@@ -88,12 +88,6 @@ export default function UserCasesPage() {
 
             const taskList = extractList(tasksRes.data);
 
-            console.log("DEBUG cases ids:", detailedCases.map((c) => c.id));
-            console.log(
-                "DEBUG tasks case ids:",
-                taskList.map((t) => ({ taskId: t.id, extractedCaseId: extractCaseId(t), rawCase: (t as any).case }))
-            );
-
             setCases(detailedCases);
             setCustomers(extractList(customersRes.data));
             setDepartments(extractList(departmentsRes.data));
@@ -111,10 +105,26 @@ export default function UserCasesPage() {
         fetchData();
     }, [fetchData]);
 
+    const tasksByCase = useMemo(() => {
+        const map = new Map<string, TaskItem[]>();
+        tasks.forEach((task) => {
+            const caseId = extractCaseId(task);
+            if (caseId) {
+                if (!map.has(caseId)) map.set(caseId, []);
+                map.get(caseId)!.push(task);
+            }
+        });
+        return map;
+    }, [tasks]);
+
     const handleDeleteCase = useCallback(
         async (item: CaseItem) => {
             const id = Number(item.id);
             if (!id) return;
+
+            const caseTasks = tasksByCase.get(String(item.id)) || [];
+            if (caseTasks.length > 0) return;
+
             try {
                 setDeletingId(id);
                 await axiosInstance.delete(`/tasks/api/v1/cases/${id}/delete/`);
@@ -127,7 +137,7 @@ export default function UserCasesPage() {
                 setDeletingId(null);
             }
         },
-        [fetchData]
+        [fetchData, tasksByCase]
     );
 
     const handleDeleteTask = useCallback(
@@ -181,18 +191,6 @@ export default function UserCasesPage() {
             );
         });
     }, [cases, customers, query]);
-
-    const tasksByCase = useMemo(() => {
-        const map = new Map<string, TaskItem[]>();
-        tasks.forEach((task) => {
-            const caseId = extractCaseId(task);
-            if (caseId) {
-                if (!map.has(caseId)) map.set(caseId, []);
-                map.get(caseId)!.push(task);
-            }
-        });
-        return map;
-    }, [tasks]);
 
     return (
         <div className="flex flex-col gap-6 p-4 md:p-6" dir="rtl">
@@ -299,6 +297,7 @@ export default function UserCasesPage() {
                                         departments={departments}
                                         users={employees}
                                         isDeleting={deletingId === Number(item.id)}
+                                        hasActiveTasks={caseTasks.length > 0}
                                         onDelete={handleDeleteCase}
                                     />
                                     {caseTasks.length > 0 && (

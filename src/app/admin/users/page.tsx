@@ -21,9 +21,29 @@ interface TaskItem {
         | null;
 }
 
-type TasksResponse = TaskItem[] | { results?: TaskItem[] };
+interface InternalTaskItem {
+    id: number;
+    assigned_to?:
+        | number
+        | string
+        | { id: number | string }
+        | Array<number | string | { id: number | string }>
+        | null;
+    created_by?: string | null;
+}
 
-const extractEmployeeIds = (value: TaskItem["assigned_employee"]): number[] => {
+type TasksResponse = TaskItem[] | { results?: TaskItem[] };
+type InternalTasksResponse = InternalTaskItem[] | { results?: InternalTaskItem[] };
+
+const extractEmployeeIds = (
+    value:
+        | number
+        | string
+        | { id: number | string }
+        | Array<number | string | { id: number | string }>
+        | null
+        | undefined,
+): number[] => {
     if (!value) return [];
 
     if (Array.isArray(value)) {
@@ -62,18 +82,33 @@ export default function UsersPage() {
         setError("");
 
         try {
-            const [employeesRes, tasksRes] = await Promise.all([
+            const [employeesRes, tasksRes, internalTasksRes] = await Promise.all([
                 axiosInstance.get<ApiEmployee[]>("/accounts/api/v1/employee/list/"),
                 axiosInstance
                     .get<TasksResponse>("/tasks/api/v1/tasks/")
                     .catch(() => ({ data: [] as TaskItem[] })),
+                axiosInstance
+                    .get<InternalTasksResponse>("/tasks/api/v1/internal-tasks/")
+                    .catch(() => ({ data: [] as InternalTaskItem[] })),
             ]);
 
             const employeeList = Array.isArray(employeesRes.data) ? employeesRes.data : [];
             setEmployees(employeeList);
 
+            const usernameToId = new Map<string, number>();
+            for (const emp of employeeList) {
+                if (emp.username) {
+                    usernameToId.set(emp.username.trim().toLowerCase(), emp.id);
+                }
+            }
+
             const tasksData = tasksRes.data;
             const tasks = Array.isArray(tasksData) ? tasksData : tasksData?.results ?? [];
+
+            const internalTasksData = internalTasksRes.data;
+            const internalTasks = Array.isArray(internalTasksData)
+                ? internalTasksData
+                : internalTasksData?.results ?? [];
 
             const taskOwnerIds = new Set<number>();
 
@@ -81,6 +116,21 @@ export default function UsersPage() {
                 const ids = extractEmployeeIds(task.assigned_employee);
                 for (const id of ids) {
                     taskOwnerIds.add(id);
+                }
+            }
+
+            for (const task of internalTasks) {
+                const ids = extractEmployeeIds(task.assigned_to);
+                for (const id of ids) {
+                    taskOwnerIds.add(id);
+                }
+
+                const createdByUsername = task.created_by?.trim().toLowerCase();
+                if (createdByUsername) {
+                    const creatorId = usernameToId.get(createdByUsername);
+                    if (creatorId !== undefined) {
+                        taskOwnerIds.add(creatorId);
+                    }
                 }
             }
 

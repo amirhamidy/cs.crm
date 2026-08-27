@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import { ChevronLeft, Loader, Pencil, Plus, Trash2 } from "lucide-react";
+import type { TaskStatus } from "@/types/task";
 import type { Stage, Task } from "./types";
 import TaskCard from "./TaskCard";
 
@@ -18,6 +19,16 @@ interface StageCardProps {
     onAddTask?: (stage: Stage) => void;
 }
 
+const STATUS_SUMMARY_CONFIG: Record<
+    TaskStatus,
+    { label: string; dot: string; text: string }
+> = {
+    sold: { label: "فروش", dot: "bg-emerald-500", text: "text-emerald-600 dark:text-emerald-400" },
+    completed: { label: "تکمیل", dot: "bg-blue-500", text: "text-blue-600 dark:text-blue-400" },
+    in_progress: { label: "درحال انجام", dot: "bg-amber-500", text: "text-amber-600 dark:text-amber-400" },
+    cancelled: { label: "لغو", dot: "bg-red-500", text: "text-red-600 dark:text-red-400" },
+};
+
 export default function StageCard({
     stage,
     index,
@@ -30,7 +41,17 @@ export default function StageCard({
     onDeleteStage,
     onAddTask,
 }: StageCardProps) {
-    const stageColor = stage.color || "#6366f1";
+    const stageColor = stage.color ?? "#6366f1";
+
+    const statusCounts = (tasks ?? []).reduce<Record<string, number>>(
+        (acc, task) => {
+            if (task.status && typeof task.status === "string") {
+                acc[task.status] = (acc[task.status] ?? 0) + 1;
+            }
+            return acc;
+        },
+        {}
+    );
 
     return (
         <motion.div
@@ -39,14 +60,8 @@ export default function StageCard({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.96 }}
             transition={{
-                layout: {
-                    type: "spring",
-                    stiffness: 300,
-                    damping: 30,
-                },
-                opacity: {
-                    duration: 0.2,
-                },
+                layout: { type: "spring", stiffness: 300, damping: 30 },
+                opacity: { duration: 0.2 },
             }}
             className="relative flex min-w-0 flex-col overflow-hidden rounded-[1.7rem] border border-gray-200/60 bg-white/70 dark:border-white/[0.06] dark:bg-white/[0.02]"
         >
@@ -79,9 +94,36 @@ export default function StageCard({
                                     {stage.name}
                                 </h4>
 
-                                <p className="text-[10px] font-bold text-gray-400 dark:text-gray-500 sm:text-[10.5px]">
-                                    {tasks?.length ?? 0} وظیفه
-                                </p>
+                                <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
+                                    <p className="text-[10px] font-bold text-gray-400 dark:text-gray-500 sm:text-[10.5px]">
+                                        {tasks?.length ?? 0} وظیفه
+                                    </p>
+
+                                    {Object.entries(statusCounts).map(([status, count]) => {
+                                        const config =
+                                            STATUS_SUMMARY_CONFIG[status as TaskStatus];
+                                        if (!config || count === 0) return null;
+
+                                        return (
+                                            <span
+                                                key={status}
+                                                className={`flex items-center gap-1 text-[10px] font-bold ${config.text}`}
+                                            >
+                                                <span className="relative flex h-1.5 w-1.5">
+                                                    {status === "in_progress" && (
+                                                        <span
+                                                            className={`absolute inline-flex h-full w-full animate-ping rounded-full ${config.dot} opacity-60`}
+                                                        />
+                                                    )}
+                                                    <span
+                                                        className={`relative inline-flex h-1.5 w-1.5 rounded-full ${config.dot}`}
+                                                    />
+                                                </span>
+                                                {count}
+                                            </span>
+                                        );
+                                    })}
+                                </div>
                             </div>
                         </div>
 
@@ -128,10 +170,7 @@ export default function StageCard({
 
             {tasksLoading ? (
                 <div className="flex h-32 items-center justify-center sm:h-40">
-                    <Loader
-                        size={18}
-                        className="animate-spin text-indigo-500"
-                    />
+                    <Loader size={18} className="animate-spin text-indigo-500" />
                 </div>
             ) : !tasks || tasks.length === 0 ? (
                 <div className="flex h-32 flex-col items-center justify-center gap-1.5 px-4 text-center sm:h-40">

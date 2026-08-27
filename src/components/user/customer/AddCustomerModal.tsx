@@ -75,8 +75,8 @@ const FloatingInput = forwardRef<HTMLInputElement, FloatingInputProps>(
                 <label
                     htmlFor={id}
                     className={`absolute right-5 pointer-events-none transition-all duration-200 bg-white dark:bg-[#0f172a] px-1.5 rounded text-sm text-gray-400 peer-focus:-top-2.5 peer-focus:translate-y-0 peer-focus:text-xs peer-focus:text-gray-500 ${hasValue
-                            ? "-top-2.5 translate-y-0 text-xs text-gray-500"
-                            : "top-1/2 -translate-y-1/2"
+                        ? "-top-2.5 translate-y-0 text-xs text-gray-500"
+                        : "top-1/2 -translate-y-1/2"
                         }`}
                 >
                     {label}
@@ -190,16 +190,16 @@ function NiceSelect({
                 onClick={toggle}
                 disabled={disabled}
                 className={`flex w-full items-center gap-2.5 rounded-4xl border px-5 py-3 text-right transition-all duration-200 ${disabled
-                        ? "cursor-not-allowed border-gray-200 bg-gray-50/60 opacity-60 dark:border-white/[0.06] dark:bg-white/[0.02]"
-                        : open
-                            ? "border-blue-500 bg-white dark:border-blue-500 dark:bg-white/[0.05]"
-                            : "border-gray-200 bg-white hover:border-gray-300 dark:border-white/[0.08] dark:bg-white/[0.04] dark:hover:border-white/[0.15]"
+                    ? "cursor-not-allowed border-gray-200 bg-gray-50/60 opacity-60 dark:border-white/[0.06] dark:bg-white/[0.02]"
+                    : open
+                        ? "border-blue-500 bg-white dark:border-blue-500 dark:bg-white/[0.05]"
+                        : "border-gray-200 bg-white hover:border-gray-300 dark:border-white/[0.08] dark:bg-white/[0.04] dark:hover:border-white/[0.15]"
                     }`}
             >
                 <span
                     className={`min-w-0 flex-1 truncate text-sm ${selected
-                            ? "font-semibold text-black dark:text-white"
-                            : "text-gray-400"
+                        ? "font-semibold text-black dark:text-white"
+                        : "text-gray-400"
                         }`}
                 >
                     {selected ? selected.label : placeholder}
@@ -249,15 +249,15 @@ function NiceSelect({
                                                 setOpen(false);
                                             }}
                                             className={`group relative flex flex-col items-start gap-0.5 rounded-2xl px-4 py-2.5 text-right transition-all duration-200 ${value === opt.id
-                                                    ? "bg-blue-600 dark:bg-blue-600"
-                                                    : "hover:bg-gray-100 dark:hover:bg-white/[0.05]"
+                                                ? "bg-blue-600 dark:bg-blue-600"
+                                                : "hover:bg-gray-100 dark:hover:bg-white/[0.05]"
                                                 }`}
                                         >
                                             <div className="flex w-full items-center justify-between gap-2">
                                                 <span
                                                     className={`truncate text-sm font-bold ${value === opt.id
-                                                            ? "text-white"
-                                                            : "text-gray-900 dark:text-white"
+                                                        ? "text-white"
+                                                        : "text-gray-900 dark:text-white"
                                                         }`}
                                                 >
                                                     {opt.label}
@@ -274,8 +274,8 @@ function NiceSelect({
                                             {opt.sub && (
                                                 <span
                                                     className={`truncate text-[10px] ${value === opt.id
-                                                            ? "text-blue-100"
-                                                            : "text-gray-400"
+                                                        ? "text-blue-100"
+                                                        : "text-gray-400"
                                                         }`}
                                                 >
                                                     {opt.sub}
@@ -369,14 +369,14 @@ function SourceSelect({
                 type="button"
                 onClick={toggle}
                 className={`flex w-full items-center gap-2.5 rounded-4xl border px-5 py-3 text-right transition-all duration-200 ${open
-                        ? "border-blue-500 bg-white dark:border-blue-500 dark:bg-white/[0.05]"
-                        : "border-gray-200 bg-white hover:border-gray-300 dark:border-white/[0.08] dark:bg-white/[0.04] dark:hover:border-white/[0.15]"
+                    ? "border-blue-500 bg-white dark:border-blue-500 dark:bg-white/[0.05]"
+                    : "border-gray-200 bg-white hover:border-gray-300 dark:border-white/[0.08] dark:bg-white/[0.04] dark:hover:border-white/[0.15]"
                     }`}
             >
                 <span
                     className={`min-w-0 flex-1 truncate text-sm ${selected
-                            ? "font-semibold text-black dark:text-white"
-                            : "text-gray-400"
+                        ? "font-semibold text-black dark:text-white"
+                        : "text-gray-400"
                         }`}
                 >
                     {selected ? selected.title : "انتخاب منبع آشنایی"}
@@ -475,8 +475,8 @@ function SourceSelect({
                                                     setOpen(false);
                                                 }}
                                                 className={`group relative flex w-full items-center justify-between gap-2 rounded-2xl px-4 py-2.5 text-right transition-all duration-200 ${active
-                                                        ? "bg-blue-600 dark:bg-blue-600"
-                                                        : "hover:bg-gray-100 dark:hover:bg-white/[0.05]"
+                                                    ? "bg-blue-600 dark:bg-blue-600"
+                                                    : "hover:bg-gray-100 dark:hover:bg-white/[0.05]"
                                                     }`}
                                             >
                                                 <span
@@ -492,8 +492,8 @@ function SourceSelect({
                                                         tabIndex={0}
                                                         onClick={(e) => onDelete(e, opt.id)}
                                                         className={`flex h-5 w-5 items-center justify-center rounded-full transition-all ${active
-                                                                ? "text-blue-100 hover:bg-white/20 hover:text-white"
-                                                                : "text-gray-400 hover:bg-gray-100 hover:text-red-500 dark:text-gray-500 dark:hover:bg-white/10 dark:hover:text-red-400"
+                                                            ? "text-blue-100 hover:bg-white/20 hover:text-white"
+                                                            : "text-gray-400 hover:bg-gray-100 hover:text-red-500 dark:text-gray-500 dark:hover:bg-white/10 dark:hover:text-red-400"
                                                             }`}
                                                     >
                                                         {isDeleting ? (
@@ -519,7 +519,7 @@ function SourceSelect({
 interface AddCustomerModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onAdded: (c: Customer) => void;
+    onAdded: () => void;
 }
 
 export default function AddCustomerModal({
@@ -628,12 +628,12 @@ export default function AddCustomerModal({
         setError(null);
 
         try {
-            const res = await axiosInstance.post<Customer>(
+            await axiosInstance.post<Customer>(
                 "/customers/api/v1/customers/create/",
                 { ...form, source: form.source ? Number(form.source) : null }
             );
             setSuccess(true);
-            onAdded(res.data);
+            onAdded();
             setTimeout(onClose, 1400);
         } catch {
             setError("خطا در ثبت مشتری. دوباره امتحان کن.");

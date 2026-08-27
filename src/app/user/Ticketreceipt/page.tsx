@@ -1,4 +1,4 @@
-import InternalTasksBoard from "./Internaltasksboard";
+import InternalTasksBoard from "../../../components/user/Internaltasks/Internaltasksboard";
 
 export default function InternalTasksPage() {
     return (

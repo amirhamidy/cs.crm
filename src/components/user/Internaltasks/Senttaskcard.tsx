@@ -163,8 +163,8 @@ export default function SentTaskCard({
         deadline: task.deadline ?? null,
     });
     const assignedEmployees: EmployeeRef[] = Array.isArray(task.assigned_to)
-    ? task.assigned_to
-    : [];
+        ? task.assigned_to
+        : [];
     const [loadingDeadline, setLoadingDeadline] = useState(false);
     const [, forceTick] = useState(0);
 

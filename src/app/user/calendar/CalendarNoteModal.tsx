@@ -82,12 +82,36 @@ const EVENT_TYPE_LABEL: Record<string, string> = {
 };
 
 const EVENT_TYPE_COLOR: Record<string, { bg: string; text: string; dot: string }> = {
-    meeting: { bg: "bg-violet-500/10", text: "text-violet-400", dot: "bg-violet-400" },
-    task: { bg: "bg-amber-500/10", text: "text-amber-400", dot: "bg-amber-400" },
-    reminder: { bg: "bg-sky-500/10", text: "text-sky-400", dot: "bg-sky-400" },
-    deadline: { bg: "bg-rose-500/10", text: "text-rose-400", dot: "bg-rose-400" },
-    note: { bg: "bg-emerald-500/10", text: "text-emerald-400", dot: "bg-emerald-400" },
-    default: { bg: "bg-gray-500/10", text: "text-gray-400", dot: "bg-gray-400" },
+    meeting: {
+        bg: "bg-[#5B5FA6]/10 dark:bg-[#9694E0]/15",
+        text: "text-[#5B5FA6] dark:text-[#B7B5EE]",
+        dot: "bg-[#6C6FC0] dark:bg-[#9694E0]",
+    },
+    task: {
+        bg: "bg-[#A9823D]/10 dark:bg-[#D9AE6C]/15",
+        text: "text-[#A9823D] dark:text-[#E4C48D]",
+        dot: "bg-[#BA9450] dark:bg-[#D9AE6C]",
+    },
+    reminder: {
+        bg: "bg-[#3F8E93]/10 dark:bg-[#7EC3C7]/15",
+        text: "text-[#3F8E93] dark:text-[#9ED7DA]",
+        dot: "bg-[#4B9EA3] dark:bg-[#7EC3C7]",
+    },
+    deadline: {
+        bg: "bg-[#B15667]/10 dark:bg-[#DE93A2]/15",
+        text: "text-[#B15667] dark:text-[#EAADB9]",
+        dot: "bg-[#BF6576] dark:bg-[#DE93A2]",
+    },
+    note: {
+        bg: "bg-[#4E8B6C]/10 dark:bg-[#8ECBA9]/15",
+        text: "text-[#4E8B6C] dark:text-[#A9DABE]",
+        dot: "bg-[#5B9C7A] dark:bg-[#8ECBA9]",
+    },
+    default: {
+        bg: "bg-gray-500/[0.06] dark:bg-gray-400/10",
+        text: "text-gray-500 dark:text-gray-400",
+        dot: "bg-gray-400 dark:bg-gray-500",
+    },
 };
 
 function getTypeStyle(type: string) {
@@ -193,7 +217,7 @@ export default function CalendarNoteModal({
                                     جزئیات روز
                                 </h3>
                                 <div className="flex items-center gap-2 text-[11px] font-bold text-gray-400">
-                                    <CalendarDays size={13} />
+                                    <CalendarDays size={13} className="text-indigo-500" />
                                     <span>{formatDayTitle(selectedDate)}</span>
                                 </div>
                             </div>
@@ -246,16 +270,16 @@ export default function CalendarNoteModal({
                                     placeholder=" "
                                     rows={4}
                                     disabled={disabled}
-                                    className="peer w-full rounded-[2rem] border border-gray-200 dark:border-white/[0.06] bg-gray-50/80 dark:bg-white/[0.03] px-5 pt-7 pb-16 text-sm leading-7 text-gray-800 dark:text-gray-100 outline-none transition-all focus:border-blue-500/60 focus:ring-4 focus:ring-blue-500/10 resize-none disabled:cursor-not-allowed disabled:opacity-60"
+                                    className="peer w-full rounded-[2rem] border border-gray-200 dark:border-white/[0.06] bg-gray-50/80 dark:bg-white/[0.03] px-5 pt-7 pb-16 text-sm leading-7 text-gray-800 dark:text-gray-100 outline-none transition-all focus:border-indigo-500/60 focus:ring-4 focus:ring-indigo-500/10 resize-none disabled:cursor-not-allowed disabled:opacity-60"
                                 />
-                                <label className="absolute right-5 top-5 text-sm text-gray-400 transition-all pointer-events-none peer-focus:top-3 peer-focus:text-[11px] peer-focus:text-blue-500 peer-[:not(:placeholder-shown)]:top-3 peer-[:not(:placeholder-shown)]:text-[11px]">
+                                <label className="absolute right-5 top-5 text-sm text-gray-400 transition-all pointer-events-none peer-focus:top-3 peer-focus:text-[11px] peer-focus:text-indigo-500 peer-[:not(:placeholder-shown)]:top-3 peer-[:not(:placeholder-shown)]:text-[11px]">
                                     {disabled ? "برای روزهای گذشته امکان ثبت یادداشت وجود ندارد" : "یادداشت این روز..."}
                                 </label>
 
                                 <button
                                     onClick={handleSubmit}
                                     disabled={submitting || !description.trim() || disabled}
-                                    className="absolute left-4 bottom-4 flex h-11 w-11 items-center justify-center rounded-full bg-blue-500 text-white transition-all hover:bg-blue-600 disabled:opacity-40 disabled:cursor-not-allowed"
+                                    className="absolute left-4 bottom-4 flex h-11 w-11 items-center justify-center rounded-full bg-indigo-600 text-white transition-all hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed dark:bg-indigo-500 dark:hover:bg-indigo-400"
                                 >
                                     {submitting ? (
                                         <Loader2 size={18} className="animate-spin" />
@@ -292,12 +316,12 @@ export default function CalendarNoteModal({
                                                     <button
                                                         onClick={() => handleDelete(note.id)}
                                                         disabled={deletingId === note.id}
-                                                        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-all hover:bg-rose-500/10"
+                                                        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-all hover:bg-[#B15667]/10"
                                                     >
                                                         {deletingId === note.id ? (
-                                                            <Loader2 size={15} className="animate-spin text-rose-500" />
+                                                            <Loader2 size={15} className="animate-spin text-[#B15667]" />
                                                         ) : (
-                                                            <Trash2 size={15} className="text-rose-500" />
+                                                            <Trash2 size={15} className="text-[#B15667]" />
                                                         )}
                                                     </button>
                                                 </div>

@@ -217,9 +217,8 @@ export default function ReceivedTaskCard({
                             type="button"
                             onClick={toggleStatus}
                             disabled={submitting}
-                            className={`flex h-9 w-full items-center justify-center gap-1.5 rounded-xl text-[11px] font-extrabold text-white transition-opacity disabled:opacity-50 ${
-                                isCompleted ? "bg-amber-500" : "bg-emerald-500"
-                            }`}
+                            className={`flex h-9 w-full items-center justify-center gap-1.5 rounded-xl text-[11px] font-extrabold text-white transition-opacity disabled:opacity-50 ${isCompleted ? "bg-amber-500" : "bg-emerald-500"
+                                }`}
                         >
                             {isCompleted ? (
                                 <>
