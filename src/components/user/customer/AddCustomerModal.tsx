@@ -628,7 +628,7 @@ export default function AddCustomerModal({
         setError(null);
 
         try {
-            await axiosInstance.post<Customer>(
+            const res = await axiosInstance.post<Customer>(
                 "/customers/api/v1/customers/create/",
                 { ...form, source: form.source ? Number(form.source) : null }
             );
@@ -641,6 +641,7 @@ export default function AddCustomerModal({
             setLoading(false);
         }
     };
+
 
     const handleFieldChange =
         (key: keyof CustomerFormData) =>

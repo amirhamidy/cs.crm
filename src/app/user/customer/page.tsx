@@ -151,16 +151,22 @@ export default function CustomersPage() {
 
             const filteredCustomers = empId
                 ? allCustomers.filter((customer: any) => {
-                    const isCreator = userId && Number(customer.created_by ?? customer.creator ?? customer.user) === Number(userId);
+                    const isCreator =
+                        username &&
+                        customer.created_by_username &&
+                        customer.created_by_username === username;
+
                     const isAssigned =
                         empId &&
                         (parseAssignedEmployees(customer.assigned_employee).includes(empId) ||
                             parseAssignedEmployees(customer.employees).includes(empId));
+
                     const hasPermittedCase = allowedCaseCustomerIds.has(Number(customer.id));
 
                     return isCreator || isAssigned || hasPermittedCase;
                 })
                 : allCustomers;
+
 
             setCustomers(filteredCustomers);
             setCustomersWithCase(activeCaseCustomerIds);
@@ -180,9 +186,9 @@ export default function CustomersPage() {
         setCustomers((prev) => prev.filter((c) => c.id !== id));
     }, []);
 
-    const handleAdded = useCallback((c: Customer) => {
-        setCustomers((prev) => [c, ...prev]);
-    }, []);
+    const handleAdded = useCallback(() => {
+        fetchData();
+    }, [fetchData]);
 
     const handleEdited = useCallback((updated: Customer) => {
         setCustomers((prev) =>
