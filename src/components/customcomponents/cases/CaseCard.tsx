@@ -3,7 +3,6 @@
 import { useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useTheme } from "next-themes";
-
 import {
     Briefcase,
     CalendarDays,
@@ -174,6 +173,7 @@ export default function CaseCard({
     );
 
     const createdAt = formatDate(item.created_at);
+    const description = typeof item.description === "string" ? item.description.trim() : "";
 
     const handleDelete = async () => {
         if (!onDelete) return;
@@ -288,19 +288,22 @@ export default function CaseCard({
                             <Briefcase size={18} />
                         </div>
 
-                        <div className="min-w-0">
+                        <div className="min-w-0 flex-1">
                             <h3
                                 className="truncate text-[13.5px] font-extrabold leading-tight"
                                 style={{ color: isDark ? "#f1f5f9" : "#1e293b" }}
                             >
                                 {item.title}
                             </h3>
-                            {isFilled(item.description) && (
+                            {description.length > 0 && (
                                 <p
-                                    className="mt-1 line-clamp-1 text-[12px] leading-6"
-                                    style={{ color: isDark ? "#94a3b8" : "#64748b" }}
+                                    className="mt-1 line-clamp-2 text-[12px] leading-6"
+                                    style={{
+                                        color: isDark ? "#94a3b8" : "#64748b",
+                                        maxWidth: "100px",
+                                    }}
                                 >
-                                    {item.description}
+                                    {description}
                                 </p>
                             )}
                         </div>
@@ -417,7 +420,6 @@ export default function CaseCard({
                             </AnimatePresence>
                         </div>
                     )}
-
                 </div>
             </motion.article>
 

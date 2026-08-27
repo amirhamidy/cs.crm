@@ -5,7 +5,15 @@ import { AnimatePresence, motion } from "framer-motion";
 import { X, Check, Loader, FileUp, MessageSquare } from "lucide-react";
 import { useTheme } from "next-themes";
 
-export type ActionDirection = "next" | "prev" | "sold" | "unsold" | "cancel" | "uncancel" | "uncomplete";
+type ActionDirection =
+    | "next"
+    | "prev"
+    | "sold"
+    | "cancel"
+    | "unsold"
+    | "uncancel"
+    | "uncomplete"
+    | "complete";
 
 interface TaskActionModalProps {
     isOpen: boolean;
@@ -59,6 +67,12 @@ const directionStyle: Record<ActionDirection, { gradient: string; shadow: string
         shadow: "0 4px 14px rgba(52,211,153,0.3)",
         iconColor: "text-emerald-400",
         iconBg: "rgba(52,211,153,0.10)",
+    },
+    complete: {
+        gradient: "linear-gradient(135deg, #22c55e, #16a34a)",
+        shadow: "0 4px 14px rgba(34,197,94,0.3)",
+        iconColor: "text-green-500",
+        iconBg: "rgba(34,197,94,0.10)",
     },
 };
 

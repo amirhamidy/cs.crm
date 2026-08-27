@@ -84,7 +84,8 @@ type ModalType =
     | "cancel"
     | "unsold"
     | "uncancel"
-    | "uncomplete";
+    | "uncomplete"
+    | "complete";
 
 const modalMetaMap: Record<ModalType, { title: string; desc: string }> = {
     next: {
@@ -93,7 +94,7 @@ const modalMetaMap: Record<ModalType, { title: string; desc: string }> = {
     },
     prev: {
         title: "برگشت به مرحله قبل",
-        desc: "تسک به مرحله قبلی برمی‌گردد",
+        desc: "تسک به مرحله قبل برمی‌گردد",
     },
     sold: {
         title: "ثبت فروش",
@@ -114,6 +115,10 @@ const modalMetaMap: Record<ModalType, { title: string; desc: string }> = {
     uncomplete: {
         title: "بازگشت از تکمیل",
         desc: "وضعیت تسک به در حال انجام برمی‌گردد",
+    },
+    complete: {
+        title: "تکمیل تسک",
+        desc: "این تسک به عنوان تکمیل‌شده ثبت می‌شود",
     },
 };
 
@@ -488,6 +493,14 @@ export default function UserTaskCard({
         };
     }
 
+    async function markAsCompleted(): Promise<UserTask> {
+        const { data } = await axiosInstance.patch<UserTask>(
+            `/tasks/api/v1/tasks/${task.id}/update/`,
+            { status: "completed" }
+        );
+        return { ...task, ...data };
+    }
+
     async function resetToInProgress(): Promise<UserTask> {
         const { data } = await axiosInstance.put<UserTask>(
             `/tasks/api/v1/tasks/${task.id}/update/`,
@@ -537,8 +550,16 @@ export default function UserTaskCard({
         try {
             let updated: UserTask;
             switch (direction) {
+                case "next":
+                case "prev":
+                case "cancel":
+                    updated = await advanceRevertOrCancel(direction, data);
+                    break;
                 case "sold":
                     updated = await markAsSold();
+                    break;
+                case "complete":
+                    updated = await markAsCompleted();
                     break;
                 case "unsold":
                 case "uncancel":
@@ -546,7 +567,7 @@ export default function UserTaskCard({
                     updated = await resetToInProgress();
                     break;
                 default:
-                    updated = await advanceRevertOrCancel(direction, data);
+                    throw new Error("عملیات نامعتبر");
             }
             onUpdated(updated);
             fetchLatestLog();
@@ -562,7 +583,7 @@ export default function UserTaskCard({
         <>
             <motion.div
                 layout
-                className="group relative flex flex-col gap-0 overflow-hidden rounded-[1.8rem] border border-gray-100 bg-white p-4 shadow-[0_8px_28px_rgba(15,23,42,0.035)] transition-all duration-300 select-none hover:-translate-y-0.5 hover:shadow-[0_16px_36px_rgba(15,23,42,0.08)] dark:border-white/[0.07] dark:bg-[#111a2d] dark:shadow-none"
+                className="group relative flex flex-col gap-0 overflow-hidden rounded-[1.8rem] border border-gray-100 bg-white p-4 shadow-[0_8px_28px_rgba(15,23,42,0.035)] transition-all duration-300 select-none hover:shadow-[0_12px_36px_rgba(15,23,42,0.08)] dark:border-white/[0.07] dark:bg-[#111a2d] dark:shadow-none"
                 style={{ opacity: isDragging ? 0.35 : 1 }}
             >
                 <div
@@ -613,16 +634,8 @@ export default function UserTaskCard({
                 <div className="mt-3 flex flex-col gap-1.5 rounded-2xl bg-gray-50 px-3 py-2.5 dark:bg-white/[0.035]">
                     {customerName && (
                         <InfoRow
-                            label="نام مشتری"
+                            label="مشتری"
                             value={customerName}
-                            icon={Building2}
-                        />
-                    )}
-
-                    {task.current_step_name && (
-                        <InfoRow
-                            label="مرحله جاری"
-                            value={task.current_step_name}
                             icon={Layers3}
                         />
                     )}
@@ -826,6 +839,16 @@ export default function UserTaskCard({
                                 />
                             </div>
 
+                            <ActionBtn
+                                rippleKey={`complete-${task.id}`}
+                                active={false}
+                                onClick={() => setOpenModal("complete")}
+                                color="emerald"
+                                icon={<CheckCircle2 size={13} />}
+                                label="تکمیل تسک"
+                                full
+                            />
+
                             <button
                                 type="button"
                                 onClick={() => setNotesOpen(true)}
@@ -848,6 +871,7 @@ export default function UserTaskCard({
                     "unsold",
                     "uncancel",
                     "uncomplete",
+                    "complete",
                 ] as ModalType[]
             ).map((direction) => (
                 <TaskActionModal

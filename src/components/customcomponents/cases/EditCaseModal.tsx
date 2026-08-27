@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { X, FolderOpen, CheckCircle2, Loader, AlertCircle } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
 import type { CaseItem, EditCaseModalProps } from "@/types/case";
+// اینم برای ادمین هست 
 
 interface FloatingInputProps extends InputHTMLAttributes<HTMLInputElement> {
   label: string;

@@ -12,67 +12,22 @@ import {
     User,
     X,
 } from "lucide-react";
-
-export type CaseStatus = "sold" | "in_progress" | "completed" | "cancelled";
-
-export type PersonLike =
-    | {
-        id?: number | string;
-        first_name?: string | null;
-        last_name?: string | null;
-        full_name?: string | null;
-        username?: string | null;
-        name?: string | null;
-        title?: string | null;
-    }
-    | number
-    | string
-    | null
-    | undefined;
-
-export interface CaseItem {
-    id: number | string;
-    title: string;
-    description?: string | null;
-    status: CaseStatus;
-    created_at?: string | null;
-    customer?: PersonLike;
-    customer_name?: string | null;
-    customerName?: string | null;
-    department?: PersonLike;
-    department_name?: string | null;
-    departmentName?: string | null;
-    assigned_to?: PersonLike;
-    assigned_to_name?: string | null;
-    assignedToName?: string | null;
-    assignee?: PersonLike;
-    responsible?: PersonLike;
-}
-
-export interface CaseListProps {
-    cases: CaseItem[]
-    selectedCaseId?: number | string | null
-    onSelect: (caseItem: CaseItem) => void
-    onCreate: () => void
-    onEdit: (caseItem: CaseItem) => void
-    onDelete: (caseId: number) => void
-    loading?: boolean
-    deletingCaseId?: number | string | null
-}
-
+import type { CaseItem, CaseStatus } from "@/types/case";
+import type { Customer } from "@/types/customer";
+import type { Department } from "@/types/department";
+import type { Employee } from "@/types/employee";
 
 interface CaseCardProps {
     item: CaseItem;
-    deleting?: boolean
     index?: number;
-    users?: PersonLike[];
-    customers?: PersonLike[];
-    departments?: PersonLike[];
+    users?: Employee[];
+    customers?: Customer[];
+    departments?: Department[];
     isDeleting?: boolean;
+    hasActiveTasks?: boolean; // 👈 این رو اضافه کن
     onEdit?: (item: CaseItem) => void;
     onDelete?: (item: CaseItem) => void;
     onClick?: (item: CaseItem) => void;
-    onSelect: (caseItem: CaseItem) => void
 }
 
 const STATUS_MAP: Record<CaseStatus, { label: string; light: string; dark: string }> = {
@@ -101,7 +56,7 @@ const STATUS_MAP: Record<CaseStatus, { label: string; light: string; dark: strin
 const isFilled = (v?: string | null): v is string =>
     typeof v === "string" && v.trim().length > 0;
 
-const nameFromObject = (value: PersonLike): string => {
+const nameFromObject = (value: any): string => {
     if (!value || typeof value !== "object") return "";
     const full = value.full_name ?? value.name ?? value.title ?? "";
     if (isFilled(full)) return full.trim();
@@ -112,9 +67,9 @@ const nameFromObject = (value: PersonLike): string => {
 };
 
 const resolveName = (
-    value: PersonLike,
+    value: any,
     directName?: string | null,
-    pool?: PersonLike[]
+    pool?: any[]
 ): string => {
     if (isFilled(directName)) return directName!.trim();
     const fromObj = nameFromObject(value);
@@ -150,7 +105,10 @@ export default function CaseCard({
     item,
     index = 0,
     customers,
+    departments,
+    users,
     isDeleting = false,
+    hasActiveTasks = false, // 👈 مقدار پیش‌فرض
     onEdit,
     onDelete,
     onClick,
@@ -161,8 +119,9 @@ export default function CaseCard({
     const [showConfirm, setShowConfirm] = useState(false);
     const [deleteLoading, setDeleteLoading] = useState(false);
     const [deleteError, setDeleteError] = useState<string | null>(null);
+    const [tooltipVisible, setTooltipVisible] = useState(false);
 
-    const status = STATUS_MAP[item.status] ?? STATUS_MAP.in_progress;
+    const status = item.status ? STATUS_MAP[item.status] : STATUS_MAP.in_progress;
 
     const customerName = useMemo(
         () =>
@@ -171,8 +130,34 @@ export default function CaseCard({
         [item.customer, item.customerName, item.customer_name, customers]
     );
 
-    const createdAt = formatDate(item.created_at);
+    const departmentName = useMemo(
+        () =>
+            resolveName(
+                item.department,
+                item.departmentName ?? item.department_name,
+                departments
+            ) || "بدون دپارتمان",
+        [item.department, item.departmentName, item.department_name, departments]
+    );
 
+    const assigneeName = useMemo(
+        () =>
+            resolveName(
+                item.assigned_to ?? item.assignee ?? item.responsible,
+                item.assignedToName ?? item.assigned_to_name,
+                users
+            ) || "بدون مسئول",
+        [
+            item.assigned_to,
+            item.assignee,
+            item.responsible,
+            item.assignedToName,
+            item.assigned_to_name,
+            users,
+        ]
+    );
+
+    const createdAt = formatDate(item.created_at);
     const description = typeof item.description === "string" ? item.description.trim() : "";
 
     const chipStyle = {
@@ -211,7 +196,7 @@ export default function CaseCard({
                 onHoverStart={() => setHovered(true)}
                 onHoverEnd={() => setHovered(false)}
                 onClick={() => onClick?.(item)}
-                className="group relative overflow-hidden rounded-2xl p-4"
+                className="group relative rounded-2xl p-4"
                 style={{
                     border: isDark ? "1px solid rgba(255,255,255,0.06)" : "1px solid rgba(0,0,0,0.06)",
                     background: isDark ? "rgba(255,255,255,0.02)" : "#fafafa",
@@ -225,7 +210,7 @@ export default function CaseCard({
             >
                 <svg className="pointer-events-none absolute inset-0 h-full w-full" style={{ borderRadius: "1rem" }}>
                     <defs>
-                        <linearGradient id={`userCaseBorder-${item.id}`} x1="100%" y1="100%" x2="0%" y2="0%">
+                        <linearGradient id={`caseBorder-${item.id}`} x1="100%" y1="100%" x2="0%" y2="0%">
                             <stop offset="0%" stopColor="#6366f1" />
                             <stop offset="100%" stopColor="#8b5cf6" />
                         </linearGradient>
@@ -233,13 +218,21 @@ export default function CaseCard({
                     <motion.rect
                         x="1" y="1" width="calc(100% - 2px)" height="calc(100% - 2px)"
                         rx="15" ry="15" fill="none"
-                        stroke={`url(#userCaseBorder-${item.id})`}
+                        stroke={`url(#caseBorder-${item.id})`}
                         strokeWidth="1.5" pathLength="1"
                         initial={{ pathLength: 0, opacity: 0 }}
                         animate={hovered ? { pathLength: 1, opacity: 1 } : { pathLength: 0, opacity: 0 }}
                         transition={{ duration: 0.55, ease: "easeInOut" }}
                     />
                 </svg>
+
+                <div className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-500 group-hover:opacity-100"
+                    style={{
+                        background: isDark
+                            ? "linear-gradient(135deg, rgba(99,102,241,0.08), transparent 55%)"
+                            : "linear-gradient(135deg, rgba(99,102,241,0.06), transparent 55%)",
+                    }}
+                />
 
                 <div className="relative flex items-start justify-between gap-3">
                     <div className="flex min-w-0 items-start gap-3">
@@ -262,8 +255,7 @@ export default function CaseCard({
                                     className="mt-1 line-clamp-2 text-[12px] leading-6"
                                     style={{
                                         color: isDark ? "#94a3b8" : "#64748b",
-                                        width: "100px",
-                                        maxWidth: "100px",
+                                        maxWidth: "180px",
                                     }}
                                 >
                                     {description}
@@ -293,37 +285,87 @@ export default function CaseCard({
                     )}
                 </div>
 
-                {(onEdit || onDelete) && (
-                    <div className="relative mt-3 flex items-center justify-end gap-1.5">
-                        {onEdit && (
+                <div className="relative mt-3 flex items-center justify-end gap-1.5">
+                    {onEdit && (
+                        <button
+                            type="button"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onEdit(item);
+                            }}
+                            className="flex h-7 w-7 items-center justify-center rounded-xl transition-colors"
+                            style={{
+                                background: isDark ? "rgba(99,102,241,0.1)" : "rgba(99,102,241,0.07)",
+                                color: isDark ? "#a5b4fc" : "#6366f1",
+                            }}
+                        >
+                            <Pencil size={11} />
+                        </button>
+                    )}
+                    {onDelete && (
+                        <div className="relative">
                             <button
                                 type="button"
                                 onClick={(e) => {
                                     e.stopPropagation();
-                                    onEdit(item);
-                                }}
-                                className="flex h-7 w-7 items-center justify-center rounded-xl transition-colors"
-                                style={{ background: isDark ? "rgba(99,102,241,0.1)" : "rgba(99,102,241,0.07)", color: isDark ? "#a5b4fc" : "#6366f1" }}
-                            >
-                                <Pencil size={11} />
-                            </button>
-                        )}
-                        {onDelete && (
-                            <button
-                                type="button"
-                                onClick={(e) => {
-                                    e.stopPropagation();
+                                    if (hasActiveTasks) return;
                                     setShowConfirm(true);
                                 }}
+                                onMouseEnter={() => setTooltipVisible(true)}
+                                onMouseLeave={() => setTooltipVisible(false)}
                                 disabled={isDeleting}
                                 className="flex h-7 w-7 items-center justify-center rounded-xl transition-colors disabled:opacity-40"
-                                style={{ background: isDark ? "rgba(239,68,68,0.1)" : "rgba(239,68,68,0.07)", color: "#ef4444" }}
+                                style={{
+                                    background: hasActiveTasks
+                                        ? isDark
+                                            ? "rgba(100,116,139,0.1)"
+                                            : "rgba(100,116,139,0.07)"
+                                        : isDark
+                                            ? "rgba(239,68,68,0.1)"
+                                            : "rgba(239,68,68,0.07)",
+                                    color: hasActiveTasks ? "#94a3b8" : "#ef4444",
+                                    cursor: hasActiveTasks ? "not-allowed" : "pointer",
+                                }}
                             >
-                                {isDeleting ? <Loader2 size={11} className="animate-spin" /> : <Trash2 size={11} />}
+                                {isDeleting ? (
+                                    <Loader2 size={11} className="animate-spin" />
+                                ) : (
+                                    <Trash2 size={11} />
+                                )}
                             </button>
-                        )}
-                    </div>
-                )}
+
+                            <AnimatePresence>
+                                {tooltipVisible && hasActiveTasks && (
+                                    <motion.div
+                                        initial={{ opacity: 0, y: 4, scale: 0.95 }}
+                                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                                        exit={{ opacity: 0, y: 4, scale: 0.95 }}
+                                        transition={{ duration: 0.15, ease: "easeOut" }}
+                                        className="absolute bottom-full left-1/2 z-50 mb-2 -translate-x-1/2 whitespace-nowrap"
+                                        dir="rtl"
+                                    >
+                                        <div
+                                            className="flex flex-col items-center gap-1 rounded-2xl px-3 py-2 text-center shadow-xl"
+                                            style={{
+                                                background: isDark ? "#0f172a" : "#1e293b",
+                                                border: isDark
+                                                    ? "1px solid rgba(255,255,255,0.08)"
+                                                    : "1px solid rgba(0,0,0,0.12)",
+                                            }}
+                                        >
+                                            <span className="text-[11px] font-bold text-white">
+                                                این پرونده وظیفه دارد
+                                            </span>
+                                            <span className="text-[10px] text-slate-400">
+                                                برای حذف آن باید ابتدا وظایفش را حذف کنید
+                                            </span>
+                                        </div>
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+                        </div>
+                    )}
+                </div>
             </motion.article>
 
             <AnimatePresence>

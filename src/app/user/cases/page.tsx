@@ -2,16 +2,17 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { ClipboardList, Loader, Plus, RefreshCw, Search } from "lucide-react";
+import { ClipboardList, Loader, Plus, RefreshCw } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
 import { apiRoutes } from "@/lib/apiRoutes";
-import type { Customer } from "@/types/customer";
 import type { Department } from "@/types/department";
 import type { Employee } from "@/types/employee";
 import type { TaskItem } from "@/types/task";
-import type { CaseStatus, CaseItem } from "@/types/case";
 import CreateCaseModal from "@/components/user/cases/CreateCaseModal";
-import CaseCard from "@/components/customcomponents/cases/CaseCard";
+import type { CaseItem } from "@/types/case";
+import type { Customer } from "@/types/customer";
+import EditCaseModal from "@/components/user/cases/EditCaseModal";
+import CaseCard from "@/components/user/cases/CaseCard";
 import TaskCard from "@/components/customcomponents/tasks/TaskCard";
 import EditTaskModal from "@/components/customcomponents/tasks/EditTaskModal";
 
@@ -53,6 +54,8 @@ export default function UserCasesPage() {
     const [error, setError] = useState("");
     const [query, setQuery] = useState("");
     const [caseModalOpen, setCaseModalOpen] = useState(false);
+    const [editingCase, setEditingCase] = useState<CaseItem | null>(null);
+    const [editCaseModalOpen, setEditCaseModalOpen] = useState(false);
     const [deletingId, setDeletingId] = useState<number | null>(null);
     const [editingTask, setEditingTask] = useState<TaskItem | null>(null);
     const [editModalOpen, setEditModalOpen] = useState(false);
@@ -79,8 +82,7 @@ export default function UserCasesPage() {
                             `/tasks/api/v1/cases/${item.id}/`
                         );
                         return { ...item, ...detailRes.data };
-                    } catch (err) {
-                        console.error(`خطا در دریافت جزئیات پرونده ${item.id}`, err);
+                    } catch {
                         return item;
                     }
                 })
@@ -93,8 +95,7 @@ export default function UserCasesPage() {
             setDepartments(extractList(departmentsRes.data));
             setEmployees(extractList(employeesRes.data));
             setTasks(taskList);
-        } catch (err) {
-            console.error(err);
+        } catch {
             setError("دریافت اطلاعات با خطا مواجه شد");
         } finally {
             setLoading(false);
@@ -129,16 +130,26 @@ export default function UserCasesPage() {
                 setDeletingId(id);
                 await axiosInstance.delete(`/tasks/api/v1/cases/${id}/delete/`);
                 setCases((prev) => prev.filter((c) => Number(c.id) !== id));
-            } catch (err) {
-                console.error(err);
+            } catch {
                 await fetchData();
-                throw err;
+                throw new Error("خطا در حذف پرونده");
             } finally {
                 setDeletingId(null);
             }
         },
         [fetchData, tasksByCase]
     );
+
+    const handleEditCase = useCallback((item: CaseItem) => {
+        setEditingCase(item);
+        setEditCaseModalOpen(true);
+    }, []);
+
+    const handleCaseUpdate = useCallback(() => {
+        fetchData();
+        setEditCaseModalOpen(false);
+        setEditingCase(null);
+    }, [fetchData]);
 
     const handleDeleteTask = useCallback(
         async (taskId: number) => {
@@ -147,9 +158,8 @@ export default function UserCasesPage() {
                 await axiosInstance.delete(`/tasks/api/v1/tasks/${taskId}/delete/`);
                 setTasks((prev) => prev.filter((t) => t.id !== taskId));
                 return Promise.resolve();
-            } catch (err) {
-                console.error(err);
-                throw err;
+            } catch {
+                throw new Error("خطا در حذف وظیفه");
             } finally {
                 setDeletingTaskId(null);
             }
@@ -233,7 +243,6 @@ export default function UserCasesPage() {
                 </div>
             </div>
 
-
             {error && !loading && (
                 <div className="flex flex-col items-start gap-3 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-[12.5px] text-rose-600 dark:border-rose-500/20 dark:bg-rose-500/10 dark:text-rose-300 sm:flex-row sm:items-center sm:justify-between">
                     <span>{error}</span>
@@ -289,15 +298,16 @@ export default function UserCasesPage() {
                         {filteredCases.map((item, i) => {
                             const caseTasks = tasksByCase.get(String(item.id)) || [];
                             return (
-                                <div key={item.id} className="flex flex-col gap-2 border-2 border-[#eeeeee] p-3 rounded-4xl dark:border-white/[0.06]">
+                                <div key={item.id} className="relative flex flex-col gap-2 border-2 border-[#eeeeee] p-3 rounded-4xl dark:border-white/[0.06]">
                                     <CaseCard
                                         item={item}
                                         index={i}
                                         customers={customers}
                                         departments={departments}
+                                        hasActiveTasks={caseTasks.length > 0}
                                         users={employees}
                                         isDeleting={deletingId === Number(item.id)}
-                                        hasActiveTasks={caseTasks.length > 0}
+                                        onEdit={handleEditCase}
                                         onDelete={handleDeleteCase}
                                     />
                                     {caseTasks.length > 0 && (
@@ -327,6 +337,21 @@ export default function UserCasesPage() {
                 onCreated={fetchData}
                 customers={customers}
             />
+
+            {editCaseModalOpen && editingCase && (
+                <EditCaseModal
+                    isOpen={editCaseModalOpen}
+                    caseItem={editingCase}
+                    customers={customers}
+                    departments={departments}
+                    users={employees}
+                    onClose={() => {
+                        setEditCaseModalOpen(false);
+                        setEditingCase(null);
+                    }}
+                    onSuccess={handleCaseUpdate}
+                />
+            )}
 
             {editModalOpen && editingTask && (
                 <EditTaskModal
