@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import {
     Ban,
@@ -17,6 +17,7 @@ import type { InternalTask, InternalTaskAttachment, InternalTaskStatus } from ".
 import { updateInternalTaskStatus } from "./Api";
 import AttachmentUploadModal from "./Attachmentuploadmodal";
 import AttachmentsViewModal from "./Attachmentsviewmodal";
+import api from "@/lib/axiosInstance";
 
 function formatJalali(value?: string | null): string | null {
     if (!value) return null;
@@ -72,12 +73,48 @@ export default function ReceivedTaskCard({
     const [error, setError] = useState<string | null>(null);
     const [uploadOpen, setUploadOpen] = useState(false);
     const [attachmentsOpen, setAttachmentsOpen] = useState(false);
+    const [deadlineData, setDeadlineData] = useState<{ started_at: string | null; deadline: string | null }>({
+        started_at: task.started_at ?? null,
+        deadline: task.deadline ?? null,
+    });
+    const [loadingDeadline, setLoadingDeadline] = useState(false);
 
     const isCompleted = task.status === "completed";
     const isCancelled = task.status === "cancelled";
 
-    const deadlineState = getDeadlineState(task.deadline);
-    const deadlineDate = formatJalali(task.deadline);
+    useEffect(() => {
+        let cancelled = false;
+        setLoadingDeadline(true);
+
+        api.get(`/tasks/api/v1/internal-tasks/${task.id}/deadline/`)
+            .then((res) => {
+                if (cancelled) return;
+                const data = res.data?.data ?? res.data;
+                setDeadlineData({
+                    started_at: data?.started_at ?? task.started_at ?? null,
+                    deadline: data?.deadline ?? task.deadline ?? null,
+                });
+            })
+            .catch(() => {
+                if (!cancelled) {
+                    setDeadlineData({
+                        started_at: task.started_at ?? null,
+                        deadline: task.deadline ?? null,
+                    });
+                }
+            })
+            .finally(() => {
+                if (!cancelled) setLoadingDeadline(false);
+            });
+
+        return () => {
+            cancelled = true;
+        };
+    }, [task.id, task.started_at, task.deadline]);
+
+    const deadlineState = getDeadlineState(deadlineData.deadline);
+    const deadlineDate = formatJalali(deadlineData.deadline);
+    const startedAtDate = formatJalali(deadlineData.started_at);
     const createdDate = formatJalali(task.created_at);
 
     async function toggleStatus() {
@@ -189,21 +226,44 @@ export default function ReceivedTaskCard({
                     <span>ایجاد: {createdDate}</span>
                 </div>
 
-                <div
-                    className={`flex items-center gap-2 rounded-2xl px-3 py-2.5 ${deadlineState.background}`}
-                >
-                    <Clock3 size={13} className={deadlineState.color} />
-                    <div>
-                        <p className={`text-[11px] font-extrabold ${deadlineState.color}`}>
-                            {deadlineState.label}
-                        </p>
-                        {deadlineDate && (
-                            <p className="mt-0.5 text-[10px] font-bold text-gray-500 dark:text-gray-400">
-                                {deadlineDate}
-                            </p>
-                        )}
+                {loadingDeadline ? (
+                    <div className="flex items-center gap-2 rounded-2xl bg-gray-50 px-3 py-2.5 dark:bg-white/[0.03]">
+                        <Clock3 size={13} className="text-gray-400" />
+                        <span className="text-[11px] font-semibold text-gray-400">در حال دریافت زمان‌بندی...</span>
                     </div>
-                </div>
+                ) : (
+                    <>
+                        {startedAtDate && (
+                            <div className="flex items-center gap-2 rounded-2xl bg-indigo-50 px-3 py-2.5 dark:bg-indigo-500/10">
+                                <Clock3 size={13} className="text-indigo-500 dark:text-indigo-400" />
+                                <div>
+                                    <p className="text-[11px] font-extrabold text-indigo-500 dark:text-indigo-400">
+                                        زمان شروع
+                                    </p>
+                                    <p className="mt-0.5 text-[10px] font-bold text-gray-500 dark:text-gray-400">
+                                        {startedAtDate}
+                                    </p>
+                                </div>
+                            </div>
+                        )}
+
+                        <div
+                            className={`flex items-center gap-2 rounded-2xl px-3 py-2.5 ${deadlineState.background}`}
+                        >
+                            <Clock3 size={13} className={deadlineState.color} />
+                            <div>
+                                <p className={`text-[11px] font-extrabold ${deadlineState.color}`}>
+                                    {deadlineState.label}
+                                </p>
+                                {deadlineDate && (
+                                    <p className="mt-0.5 text-[10px] font-bold text-gray-500 dark:text-gray-400">
+                                        {deadlineDate}
+                                    </p>
+                                )}
+                            </div>
+                        </div>
+                    </>
+                )}
 
                 {error && (
                     <p className="rounded-xl bg-red-500/10 px-3 py-2 text-center text-[11px] font-bold text-red-500">

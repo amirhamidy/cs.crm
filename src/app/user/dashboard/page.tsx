@@ -6,6 +6,7 @@ import CompanyNews from "@/components/user/dashboard/CompanyNews";
 import ScoreCard from "@/components/user/dashboard/ScoreCard";
 import TodayEventCards from "@/components/user/dashboard/TodayEventCards";
 import axiosInstance from "@/lib/axiosInstance";
+import EmployeePerformanceChart from "@/components/user/dashboard/EmployeePerformanceChart";
 
 interface CalendarEvent {
     id: number;
@@ -90,15 +91,21 @@ export default function EmployeeDashboardPage() {
             <div className="w-full space-y-6">
                 <div className="grid w-full grid-cols-1 gap-6 lg:grid-cols-3">
                     <div className="space-y-6 lg:col-span-2">
-                        <TasksWidget />
+                        <div>
+                            <EmployeePerformanceChart />
+                        </div>
+                        <div className="flex justify-center gap-2">
+                            <span className="text-blue-500">_________</span>
+                            <span className="text-[14px]">امروز شما</span>
+                            <span className="text-blue-500">_________</span>
+                        </div>
                         <TodayEventCards events={events} />
                     </div>
 
                     <div className="space-y-6">
                         <CompanyNews />
-
                         {employeeId !== null && (
-                            <ScoreCard employeeId={employeeId} />
+                            <ScoreCard />
                         )}
                     </div>
                 </div>

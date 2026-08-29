@@ -246,7 +246,7 @@ export default function UserTasksPage() {
             <AnimatePresence>
                 {showCreate && (
                     <CreateTaskModal
-                        isOpen={showCreate}
+                        open={showCreate}
                         onClose={() => setShowCreate(false)}
                         onSuccess={handleCreateSuccess}
                         departments={departments}

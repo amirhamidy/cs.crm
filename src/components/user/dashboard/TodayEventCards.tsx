@@ -205,6 +205,7 @@ export default function TodayEventCards({
                 </div>
             ) : (
                 <div className="flex w-full flex-wrap gap-3">
+                    
                     {eventTypes.map((type) => {
                         const eventsByType = groupedEvents[type];
 

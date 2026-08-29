@@ -23,11 +23,6 @@ type CreateCaseModalProps = {
     customers?: Customer[];
 };
 
-type CaseResource = {
-    id: number;
-    title: string;
-};
-
 function extractList<T>(data: unknown): T[] {
     if (Array.isArray(data)) return data as T[];
     if (data && typeof data === "object") {
@@ -118,9 +113,6 @@ export default function CreateCaseModal({
     const [selectedCustomer, setSelectedCustomer] = useState<number | null>(null);
     const [title, setTitle] = useState("");
     const [description, setDescription] = useState("");
-    const [resources, setResources] = useState<CaseResource[]>([]);
-    const [loadingResources, setLoadingResources] = useState(false);
-    const [selectedResources, setSelectedResources] = useState<number[]>([]);
     const [submitting, setSubmitting] = useState(false);
     const [submitError, setSubmitError] = useState("");
 
@@ -146,23 +138,6 @@ export default function CreateCaseModal({
     }, [open, customersProp]);
 
     useEffect(() => {
-        if (!open) return;
-        let alive = true;
-        (async () => {
-            try {
-                setLoadingResources(true);
-                const res = await axiosInstance.get("/tasks/api/v1/cases/resources/");
-                if (alive) setResources(extractList<CaseResource>(res.data));
-            } catch {
-                if (alive) setResources([]);
-            } finally {
-                if (alive) setLoadingResources(false);
-            }
-        })();
-        return () => { alive = false; };
-    }, [open]);
-
-    useEffect(() => {
         if (open) return;
         const timer = setTimeout(() => {
             setStep(0);
@@ -170,7 +145,6 @@ export default function CreateCaseModal({
             setSelectedCustomer(null);
             setTitle("");
             setDescription("");
-            setSelectedResources([]);
             setSubmitError("");
             setSubmitting(false);
         }, 250);
@@ -206,12 +180,6 @@ export default function CreateCaseModal({
         [customers, selectedCustomer]
     );
 
-    const toggleResource = useCallback((id: number) => {
-        setSelectedResources((prev) =>
-            prev.includes(id) ? prev.filter((r) => r !== id) : [...prev, id]
-        );
-    }, []);
-
     const canSubmit = selectedCustomer !== null && title.trim().length > 1 && !submitting;
 
     const handleSubmit = useCallback(async () => {
@@ -225,7 +193,6 @@ export default function CreateCaseModal({
                 created_by: userId ? Number(userId) : null,
                 title: title.trim(),
                 description: description.trim(),
-                resources: selectedResources,
             });
             await onCreated();
             onClose();
@@ -237,7 +204,7 @@ export default function CreateCaseModal({
         } finally {
             setSubmitting(false);
         }
-    }, [canSubmit, selectedCustomer, title, description, selectedResources, onCreated, onClose]);
+    }, [canSubmit, selectedCustomer, title, description, onCreated, onClose]);
 
     return (
         <AnimatePresence>
@@ -411,39 +378,6 @@ export default function CreateCaseModal({
                                             onChange={(e) => setDescription(e.target.value)}
                                             rows={4}
                                         />
-
-                                        <div className="space-y-2">
-                                            <p className="px-1 text-[11.5px] font-bold text-gray-500 dark:text-gray-400">
-                                                منابع (اختیاری)
-                                            </p>
-                                            {loadingResources ? (
-                                                <div className="flex items-center justify-center py-4">
-                                                    <Loader size={16} className="animate-spin text-blue-500" />
-                                                </div>
-                                            ) : resources.length > 0 ? (
-                                                <div className="flex flex-wrap gap-2">
-                                                    {resources.map((r) => {
-                                                        const active = selectedResources.includes(r.id);
-                                                        return (
-                                                            <button
-                                                                key={r.id}
-                                                                type="button"
-                                                                onClick={() => toggleResource(r.id)}
-                                                                className={`flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-[11.5px] font-bold transition-all duration-200 ${active
-                                                                    ? "border-blue-500 bg-blue-500 text-white shadow-sm"
-                                                                    : "border-gray-200 bg-white text-gray-600 hover:border-gray-300 dark:border-white/10 dark:bg-white/[0.04] dark:text-gray-300 dark:hover:border-white/20"
-                                                                    }`}
-                                                            >
-                                                                {active && <Check size={11} strokeWidth={3} />}
-                                                                {r.title}
-                                                            </button>
-                                                        );
-                                                    })}
-                                                </div>
-                                            ) : (
-                                                <p className="text-[11px] text-gray-400">منبعی یافت نشد</p>
-                                            )}
-                                        </div>
 
                                         {submitError && (
                                             <div className="rounded-xl bg-red-50 p-3 text-center text-[11.5px] font-bold text-red-500 dark:bg-red-500/10">

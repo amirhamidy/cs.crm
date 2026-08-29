@@ -18,6 +18,7 @@ import type { InternalTask, InternalTaskStatus, EmployeeRef } from "./types";
 import { toJalali, toPersianDigits, JALALI_MONTHS, pad2 } from "@/lib/jalali";
 import api from "@/lib/axiosInstance";
 import InternalTimeRangeModal from "./InternalTimeRangeModal";
+import AttachmentsViewModal from "./Attachmentsviewmodal";
 
 const AVATAR_GRADIENTS = [
     ["#6366f1", "#8b5cf6"],
@@ -162,6 +163,7 @@ export default function SentTaskCard({
         started_at: task.started_at ?? null,
         deadline: task.deadline ?? null,
     });
+    const [attachmentsOpen, setAttachmentsOpen] = useState(false);
     const assignedEmployees: EmployeeRef[] = Array.isArray(task.assigned_to)
         ? task.assigned_to
         : [];
@@ -380,6 +382,18 @@ export default function SentTaskCard({
                     <div className="flex items-center gap-1.5">
                         <button
                             type="button"
+                            onClick={() => setAttachmentsOpen(true)}
+                            className="flex h-7 w-7 items-center justify-center rounded-xl transition-colors"
+                            style={{
+                                background: isDark ? "rgba(99,102,241,0.1)" : "rgba(99,102,241,0.07)",
+                                color: isDark ? "#a5b4fc" : "#6366f1",
+                            }}
+                            title="مشاهده یادداشت‌ها و فایل‌ها"
+                        >
+                            <Paperclip size={11} />
+                        </button>
+                        <button
+                            type="button"
                             onClick={() => setTimeModalOpen(true)}
                             className="flex h-7 w-7 items-center justify-center rounded-xl transition-colors"
                             style={{
@@ -461,13 +475,6 @@ export default function SentTaskCard({
                             </span>
                         </div>
                     )}
-
-                    {task.attachments && task.attachments.length > 0 ? (
-                        <Chip isDark={isDark}>
-                            <Paperclip size={11} />
-                            {task.attachments.length}
-                        </Chip>
-                    ) : null}
                 </div>
 
                 <div
@@ -642,6 +649,12 @@ export default function SentTaskCard({
                 error={timeError}
                 onClose={() => setTimeModalOpen(false)}
                 onSubmit={handleTimeSubmit}
+            />
+
+            <AttachmentsViewModal
+                isOpen={attachmentsOpen}
+                onClose={() => setAttachmentsOpen(false)}
+                task={task}
             />
         </>
     );

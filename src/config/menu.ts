@@ -2,11 +2,11 @@ import {
   Home,
   Users,
   ClipboardList,
-  FileText,
   Building2,
   File,
   ChartColumn,
   CalendarCheck2,
+  Ticket,
 } from "lucide-react";
 import { LucideIcon } from "lucide-react";
 
@@ -30,9 +30,9 @@ export const adminMenuItems: MenuItem[] = [
 export const userMenuItems: MenuItem[] = [
   { icon: Home, label: "داشبورد", href: "/user/dashboard" },
   { icon: ClipboardList, label: "وظایف", href: "/user/processes" },
-  { icon: FileText, label: "مشتری", href: "/user/customer" },
-  { icon: FileText, label: "پرونده ها", href: "/user/cases" },
-  { icon: FileText, label: "ایجاد وظایف", href: "/user/tasks" },
-  { icon: FileText, label: "تیکت به همکار", href: "/user/Ticketreceipt" },
-  { icon: FileText, label: "تقویم", href: "/user/calendar" },
+  { icon: Users, label: "مشتری", href: "/user/customer" },
+  { icon: File, label: "پرونده ها", href: "/user/cases" },
+  { icon: ClipboardList, label: "ایجاد وظایف", href: "/user/tasks" },
+  { icon: Ticket, label: "تیکت به همکار", href: "/user/Ticketreceipt" },
+  { icon: CalendarCheck2, label: "تقویم", href: "/user/calendar" },
 ];

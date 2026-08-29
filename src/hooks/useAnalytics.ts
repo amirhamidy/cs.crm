@@ -55,6 +55,8 @@ export interface StageRankItem {
   department_name: string;
   total: number;
   sold: number;
+  completed: number;
+  in_progress: number;
   cancelled: number;
 }
 
@@ -636,6 +638,8 @@ export function useAnalytics(range: TimeRange = "monthly") {
         department_name: dep.department_name,
         total: stage.total,
         sold: stage.sold,
+        completed: stage.completed,
+        in_progress: stage.in_progress,
         cancelled: stage.cancelled,
       })),
     );
@@ -643,12 +647,22 @@ export function useAnalytics(range: TimeRange = "monthly") {
     const topSoldStages = [...allStageRanks]
       .filter((s) => s.sold > 0)
       .sort((a, b) => b.sold - a.sold || b.total - a.total)
-      .slice(0, 10);
+      .slice(0, 5);
+
+    const topCompletedStages = [...allStageRanks]
+      .filter((s) => s.completed > 0)
+      .sort((a, b) => b.completed - a.completed || b.total - a.total)
+      .slice(0, 5);
+
+    const topInProgressStages = [...allStageRanks]
+      .filter((s) => s.in_progress > 0)
+      .sort((a, b) => b.in_progress - a.in_progress || b.total - a.total)
+      .slice(0, 5);
 
     const topCancelledStages = [...allStageRanks]
       .filter((s) => s.cancelled > 0)
       .sort((a, b) => b.cancelled - a.cancelled || b.total - a.total)
-      .slice(0, 10);
+      .slice(0, 5);
 
     const bringerAcc = new Map<string, BringerStat>();
 
@@ -712,6 +726,8 @@ export function useAnalytics(range: TimeRange = "monthly") {
       bestEmployees,
       weakestEmployees,
       topSoldStages,
+      topCompletedStages,
+      topInProgressStages,
       topCancelledStages,
       topBringers,
       summary,
@@ -735,6 +751,8 @@ export function useAnalytics(range: TimeRange = "monthly") {
     bestEmployees: result.bestEmployees,
     weakestEmployees: result.weakestEmployees,
     topSoldStages: result.topSoldStages,
+    topCompletedStages: result.topCompletedStages,
+    topInProgressStages: result.topInProgressStages,
     topCancelledStages: result.topCancelledStages,
     topBringers: result.topBringers,
     summary: result.summary,
