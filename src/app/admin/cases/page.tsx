@@ -56,7 +56,23 @@ export default function AdminCasesPage() {
                 axiosInstance.get<ListResponse<Employee>>(apiRoutes.departmentEmployees),
                 axiosInstance.get<ListResponse<TaskItem>>(apiRoutes.tasks),
             ]);
-            setCases(extractList(casesRes.data));
+
+            const caseList = extractList<Case>(casesRes.data);
+
+            const detailedCases = await Promise.all(
+                caseList.map(async (item) => {
+                    try {
+                        const detailRes = await axiosInstance.get<Case>(
+                            `/tasks/api/v1/cases/${item.id}/`
+                        );
+                        return { ...item, ...detailRes.data };
+                    } catch {
+                        return item;
+                    }
+                })
+            );
+
+            setCases(detailedCases);
             setCustomers(extractList(customersRes.data));
             setDepartments(extractList(departmentsRes.data));
             setEmployees(extractList(employeesRes.data));

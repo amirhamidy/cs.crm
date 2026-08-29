@@ -162,7 +162,7 @@ export default function CalendarNoteModal({
         if (!selectedDate || !description.trim() || !userId || submitting || disabled) return;
 
         const key = toDateKey(selectedDate);
-        const payloadDescription = `[DATE:${key}] ${description.trim()}`;
+        const payloadDescription = ` ${description.trim()}`;
 
         setSubmitting(true);
         try {

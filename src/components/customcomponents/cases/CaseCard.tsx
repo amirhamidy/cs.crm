@@ -300,7 +300,7 @@ export default function CaseCard({
                                     className="mt-1 line-clamp-2 text-[12px] leading-6"
                                     style={{
                                         color: isDark ? "#94a3b8" : "#64748b",
-                                        maxWidth: "100px",
+                                        maxWidth: "180px",
                                     }}
                                 >
                                     {description}
