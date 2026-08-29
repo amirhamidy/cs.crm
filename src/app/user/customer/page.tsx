@@ -26,6 +26,7 @@ function extractList<T>(data: ListResponse<T> | undefined | null): T[] {
         if (Array.isArray(data.data)) return data.data;
     }
 
+    
     return [];
 }
 
