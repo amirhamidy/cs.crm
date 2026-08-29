@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Star, TrendingDown, Award } from "lucide-react";
+import { Award, Star, TrendingDown } from "lucide-react";
 import { useTheme } from "next-themes";
 import axiosInstance from "@/lib/axiosInstance";
 import { useCurrentEmployee } from "@/hooks/usecurrentemployee";
@@ -11,6 +11,17 @@ interface ScoreData {
     employee: number;
     score: number;
     total_deducted: number;
+}
+
+interface ScoreHistory {
+    id: number;
+    employee: number;
+    task: number;
+    department_step: number;
+    amount: number;
+    reason: string;
+    overdue_period: number;
+    created_at: string;
 }
 
 interface ScoreCardProps {
@@ -51,6 +62,20 @@ function getTier(score: number) {
     );
 }
 
+function formatDate(date: string) {
+    try {
+        return new Intl.DateTimeFormat("fa-IR", {
+            year: "numeric",
+            month: "short",
+            day: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+        }).format(new Date(date));
+    } catch {
+        return "";
+    }
+}
+
 export default function ScoreCard({ employeeName }: ScoreCardProps) {
     const { resolvedTheme } = useTheme();
     const isDark = resolvedTheme === "dark";
@@ -62,7 +87,9 @@ export default function ScoreCard({ employeeName }: ScoreCardProps) {
     } = useCurrentEmployee();
 
     const [data, setData] = useState<ScoreData | null>(null);
+    const [history, setHistory] = useState<ScoreHistory[]>([]);
     const [loading, setLoading] = useState(true);
+    const [historyLoading, setHistoryLoading] = useState(true);
     const [error, setError] = useState(false);
 
     useEffect(() => {
@@ -77,35 +104,52 @@ export default function ScoreCard({ employeeName }: ScoreCardProps) {
 
         if (!employee?.id) {
             setData(null);
+            setHistory([]);
             setLoading(false);
+            setHistoryLoading(false);
             setError(true);
+
             return () => {
                 alive = false;
             };
         }
 
+        const employeeId = Number(employee.id);
+
+        const scorePath = `/score/api/v1/employees/${employeeId}/`;
+        const historyPath = `/score/api/v1/employees/${employeeId}/history/`;
+
+        console.log("SCORE REQUEST:", {
+            employeeId,
+            scorePath,
+            historyPath,
+        });
+
         setLoading(true);
+        setHistoryLoading(true);
         setError(false);
 
         axiosInstance
-            .get<ScoreData>(
-                `/score/api/v1/employees/${employee.id}/`
-            )
-            .then(({ data: response }) => {
+            .get<ScoreData>(scorePath)
+            .then((response) => {
                 if (!alive) return;
 
-                setData(response);
+                console.log("SCORE SUCCESS:", response.data);
+
+                setData(response.data);
                 setError(false);
             })
-            .catch((error) => {
+            .catch((err) => {
                 if (!alive) return;
 
-                console.error("Score API Error:", {
-                    employeeId: employee.id,
-                    username: employee.username,
-                    status: error?.response?.status,
-                    data: error?.response?.data,
-                    message: error?.message,
+                console.error("SCORE ERROR:", {
+                    employeeId,
+                    path: scorePath,
+                    status: err?.response?.status,
+                    data: err?.response?.data,
+                    url: err?.config?.url,
+                    baseURL: err?.config?.baseURL,
+                    message: err?.message,
                 });
 
                 setData(null);
@@ -113,7 +157,42 @@ export default function ScoreCard({ employeeName }: ScoreCardProps) {
             })
             .finally(() => {
                 if (!alive) return;
+
                 setLoading(false);
+            });
+
+        axiosInstance
+            .get<ScoreHistory[]>(historyPath)
+            .then((response) => {
+                if (!alive) return;
+
+                console.log("SCORE HISTORY SUCCESS:", response.data);
+
+                setHistory(
+                    Array.isArray(response.data)
+                        ? response.data
+                        : []
+                );
+            })
+            .catch((err) => {
+                if (!alive) return;
+
+                console.error("SCORE HISTORY ERROR:", {
+                    employeeId,
+                    path: historyPath,
+                    status: err?.response?.status,
+                    data: err?.response?.data,
+                    url: err?.config?.url,
+                    baseURL: err?.config?.baseURL,
+                    message: err?.message,
+                });
+
+                setHistory([]);
+            })
+            .finally(() => {
+                if (!alive) return;
+
+                setHistoryLoading(false);
             });
 
         return () => {
@@ -204,7 +283,12 @@ export default function ScoreCard({ employeeName }: ScoreCardProps) {
                     </p>
                 </div>
             ) : (
-                <ScoreBody data={data} isDark={isDark} />
+                <ScoreBody
+                    data={data}
+                    history={history}
+                    historyLoading={historyLoading}
+                    isDark={isDark}
+                />
             )}
         </motion.div>
     );
@@ -212,9 +296,13 @@ export default function ScoreCard({ employeeName }: ScoreCardProps) {
 
 function ScoreBody({
     data,
+    history,
+    historyLoading,
     isDark,
 }: {
     data: ScoreData;
+    history: ScoreHistory[];
+    historyLoading: boolean;
     isDark: boolean;
 }) {
     const tier = getTier(data.score);
@@ -320,6 +408,138 @@ function ScoreBody({
                     }
                 />
             </div>
+
+            <ScoreHistory
+                history={history}
+                loading={historyLoading}
+                isDark={isDark}
+            />
+        </div>
+    );
+}
+
+function ScoreHistory({
+    history,
+    loading,
+    isDark,
+}: {
+    history: ScoreHistory[];
+    loading: boolean;
+    isDark: boolean;
+}) {
+    const border = isDark
+        ? "rgba(255,255,255,0.05)"
+        : "rgba(0,0,0,0.05)";
+
+    return (
+        <div
+            className="flex flex-col gap-2.5 border-t pt-3"
+            style={{
+                borderColor: border,
+            }}
+        >
+            <div className="flex items-center justify-between">
+                <p className="text-[11px] font-bold text-gray-700 dark:text-gray-300">
+                    دلایل کسر امتیاز
+                </p>
+
+                {history.length > 0 && (
+                    <span className="text-[10px] text-gray-400 dark:text-gray-500">
+                        {history.length} مورد
+                    </span>
+                )}
+            </div>
+
+            {loading ? (
+                <div className="flex items-center justify-center py-2">
+                    <motion.div
+                        animate={{ rotate: 360 }}
+                        transition={{
+                            repeat: Infinity,
+                            duration: 1,
+                            ease: "linear",
+                        }}
+                        className="h-4 w-4 rounded-full border-2 border-transparent"
+                        style={{
+                            borderTopColor: isDark
+                                ? "#f87171"
+                                : "#ef4444",
+                            borderRightColor: isDark
+                                ? "rgba(248,113,113,0.25)"
+                                : "rgba(239,68,68,0.2)",
+                        }}
+                    />
+                </div>
+            ) : history.length === 0 ? (
+                <div
+                    className="rounded-xl px-3 py-2.5 text-center"
+                    style={{
+                        background: isDark
+                            ? "rgba(34,197,94,0.05)"
+                            : "rgba(34,197,94,0.04)",
+                    }}
+                >
+                    <p className="text-[10.5px] text-gray-400 dark:text-gray-500">
+                        کسر امتیازی ثبت نشده است
+                    </p>
+                </div>
+            ) : (
+                <div className="flex max-h-64 flex-col gap-2 overflow-y-auto">
+                    {history.map((item) => (
+                        <motion.div
+                            key={item.id}
+                            initial={{
+                                opacity: 0,
+                                y: 5,
+                            }}
+                            animate={{
+                                opacity: 1,
+                                y: 0,
+                            }}
+                            transition={{
+                                duration: 0.2,
+                            }}
+                            className="rounded-xl px-3 py-2.5"
+                            style={{
+                                background: isDark
+                                    ? "rgba(255,255,255,0.025)"
+                                    : "rgba(0,0,0,0.025)",
+                                border: `1px solid ${border}`,
+                            }}
+                        >
+                            <div className="flex items-start justify-between gap-3">
+                                <p className="min-w-0 flex-1 text-[10.5px] leading-5 text-gray-600 dark:text-gray-400">
+                                    {item.reason}
+                                </p>
+
+                                <span
+                                    className="shrink-0 rounded-lg px-2 py-1 text-[10px] font-extrabold"
+                                    style={{
+                                        color: "#ef4444",
+                                        background: isDark
+                                            ? "rgba(239,68,68,0.1)"
+                                            : "rgba(239,68,68,0.07)",
+                                    }}
+                                >
+                                    -{item.amount}
+                                </span>
+                            </div>
+
+                            <div className="mt-1.5 flex items-center justify-between gap-2">
+                                <span className="text-[9.5px] text-gray-400 dark:text-gray-600">
+                                    {formatDate(item.created_at)}
+                                </span>
+
+                                {item.overdue_period > 0 && (
+                                    <span className="text-[9.5px] text-gray-400 dark:text-gray-600">
+                                        دوره تأخیر {item.overdue_period}
+                                    </span>
+                                )}
+                            </div>
+                        </motion.div>
+                    ))}
+                </div>
+            )}
         </div>
     );
 }

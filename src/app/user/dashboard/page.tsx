@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import TasksWidget from "@/components/user/dashboard/TasksWidget";
 import CompanyNews from "@/components/user/dashboard/CompanyNews";
 import ScoreCard from "@/components/user/dashboard/ScoreCard";
 import TodayEventCards from "@/components/user/dashboard/TodayEventCards";
@@ -63,7 +62,7 @@ export default function EmployeeDashboardPage() {
                 const end = getLocalISODate(tomorrow);
 
                 const response = await axiosInstance.get<CalendarResponse>(
-                    "https://api.radcosys.ir/appraisal/api/v1/calendar/",
+                    "/appraisal/api/v1/calendar/",
                     {
                         params: {
                             start,
@@ -94,19 +93,28 @@ export default function EmployeeDashboardPage() {
                         <div>
                             <EmployeePerformanceChart />
                         </div>
+
                         <div className="flex justify-center gap-2">
-                            <span className="text-blue-500">_________</span>
-                            <span className="text-[14px]">امروز شما</span>
-                            <span className="text-blue-500">_________</span>
+                            <span className="text-blue-500">
+                                _________
+                            </span>
+
+                            <span className="text-[14px]">
+                                امروز شما
+                            </span>
+
+                            <span className="text-blue-500">
+                                _________
+                            </span>
                         </div>
+
                         <TodayEventCards events={events} />
                     </div>
 
                     <div className="space-y-6">
                         <CompanyNews />
-                        {employeeId !== null && (
-                            <ScoreCard />
-                        )}
+
+                        {employeeId !== null && <ScoreCard />}
                     </div>
                 </div>
             </div>
