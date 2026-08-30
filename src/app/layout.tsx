@@ -2,12 +2,10 @@ import type { Metadata } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
 import { Providers } from "@/components/providers";
-import { Geist } from "next/font/google";
+import { GeistSans } from "geist/font/sans";
+import { GeistMono } from "geist/font/mono";
 import { cn } from "@/lib/utils";
 import { AuthInitializer } from "@/components/AuthInitializer";
-
-
-const geist = Geist({ subsets: ['latin'], variable: '--font-sans' });
 
 const vazir = localFont({
   src: [
@@ -33,7 +31,12 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="fa" dir="rtl" suppressHydrationWarning className={cn("font-sans", geist.variable)}>
+    <html
+      lang="fa"
+      dir="rtl"
+      suppressHydrationWarning
+      className={cn("font-sans", GeistSans.variable, GeistMono.variable)}
+    >
       <body className={`${vazir.variable} font-vazir antialiased`}>
         <Providers>
           <AuthInitializer />
@@ -43,4 +46,3 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     </html>
   );
 }
-
