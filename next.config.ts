@@ -14,14 +14,6 @@ const nextConfig: NextConfig = {
       "@dnd-kit/utilities",
     ],
   },
-  images: {
-    remotePatterns: [
-      {
-        protocol: "https",
-        hostname: "**",
-      },
-    ],
-  },
   webpack: (config, { isServer }) => {
     if (!isServer) {
       config.resolve.fallback = {

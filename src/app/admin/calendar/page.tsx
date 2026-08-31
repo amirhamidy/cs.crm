@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+
+import { motion } from "framer-motion";
+
 import {
     ChevronRight,
     ChevronLeft,
@@ -14,7 +16,9 @@ import {
     CalendarRange,
     ChevronDown,
 } from "lucide-react";
+
 import api from "@/lib/axiosInstance";
+
 import {
     toJalali,
     toGregorian,
@@ -24,6 +28,7 @@ import {
     JALALI_MONTHS,
     pad2,
 } from "@/lib/jalali";
+
 import CalendarNoteModal, { CalendarNote } from "./CalendarNoteModal";
 
 interface CalendarEvent {
@@ -66,13 +71,17 @@ const jalaliToDate = (jy: number, jm: number, jd: number): Date => {
 };
 
 const extractNoteInfo = (description: string, rawCreatedAt?: string) => {
-    const match = description.match(/^\[DATE:(\d{4}-\d{2}-\d{2})\]\s*([\s\S]*)$/);
+    const match = description.match(
+        /^\[DATE:(\d{4}-\d{2}-\d{2})\]\s*([\s\S]*)$/
+    );
+
     if (match) {
         return {
             cleanDescription: match[2],
             targetDate: match[1],
         };
     }
+
     return {
         cleanDescription: description,
         targetDate: rawCreatedAt ? rawCreatedAt.split("T")[0] : "",
@@ -168,22 +177,38 @@ function getEventType(type: string) {
     if (type === "internal_task" || type === "internal-task") {
         return "internal_task";
     }
+
     if (type === "task" || type === "tasks") {
         return "task";
     }
+
     if (type === "note" || type === "notes") {
         return "note";
     }
+
     return type;
+}
+
+function isEventOnDate(event: CalendarEvent, dateISO: string) {
+    if (!event.start) return false;
+
+    const eventStart = event.start.slice(0, 10);
+    const eventEnd = event.end
+        ? event.end.slice(0, 10)
+        : eventStart;
+
+    return eventStart <= dateISO && eventEnd >= dateISO;
 }
 
 function DayEventDots({ events }: { events: CalendarEvent[] }) {
     const grouped = useMemo(() => {
         const map = new Map<string, number>();
+
         events.forEach((event) => {
             const type = getEventType(event.type);
             map.set(type, (map.get(type) || 0) + 1);
         });
+
         return Array.from(map.entries()).slice(0, 4);
     }, [events]);
 
@@ -191,12 +216,15 @@ function DayEventDots({ events }: { events: CalendarEvent[] }) {
         <div className="mt-auto flex flex-wrap gap-1">
             {grouped.map(([type, count]) => {
                 const style = getTypeStyle(type);
+
                 return (
                     <span
                         key={type}
                         className={`flex items-center gap-1 rounded-lg border px-1.5 py-0.5 text-[9px] font-bold ${style.bg} ${style.text} ${style.border}`}
                     >
-                        <span className={`h-1.5 w-1.5 rounded-full ${style.dot}`} />
+                        <span
+                            className={`h-1.5 w-1.5 rounded-full ${style.dot}`}
+                        />
                         {toPersianDigits(count)}
                     </span>
                 );
@@ -225,15 +253,18 @@ function CalendarMonthGrid({
                     <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-indigo-100 text-indigo-600 dark:bg-indigo-500/15 dark:text-indigo-300">
                         <CalendarDays size={14} />
                     </div>
+
                     <div className="flex flex-col gap-0.5">
                         <h3 className="text-[13px] font-extrabold text-slate-800 dark:text-white">
                             {JALALI_MONTHS[month.jm - 1]}
                         </h3>
+
                         <span className="text-[10px] font-medium text-slate-400 dark:text-slate-500">
                             تقویم ماهانه
                         </span>
                     </div>
                 </div>
+
                 <span className="rounded-lg bg-slate-100 px-2 py-1 text-[10px] font-bold text-slate-500 dark:bg-white/[0.05] dark:text-slate-400">
                     {toPersianDigits(month.jy)}
                 </span>
@@ -244,8 +275,8 @@ function CalendarMonthGrid({
                     <div
                         key={day}
                         className={`py-2.5 text-center text-[9px] font-bold ${index === 6
-                            ? "text-rose-400 dark:text-rose-300"
-                            : "text-slate-400 dark:text-slate-500"
+                                ? "text-rose-400 dark:text-rose-300"
+                                : "text-slate-400 dark:text-slate-500"
                             }`}
                     >
                         {day}
@@ -278,21 +309,22 @@ function CalendarMonthGrid({
                             whileTap={{ scale: 0.975 }}
                             onClick={() => onSelectDate(date)}
                             className={`group relative flex min-h-[92px] flex-col gap-1.5 p-2.5 text-right transition-all ${isToday
-                                ? "bg-indigo-50/80 dark:bg-indigo-500/[0.09]"
-                                : "bg-white hover:bg-slate-50 dark:bg-[#111827] dark:hover:bg-white/[0.025]"
+                                    ? "bg-indigo-50/80 dark:bg-indigo-500/[0.09]"
+                                    : "bg-white hover:bg-slate-50 dark:bg-[#111827] dark:hover:bg-white/[0.025]"
                                 }`}
                         >
                             <div className="flex items-start justify-between gap-1">
                                 <span
                                     className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-[10px] text-[11px] font-extrabold transition-all ${isToday
-                                        ? "bg-indigo-600 text-white shadow-[0_4px_10px_-4px_rgba(79,70,229,0.6)] dark:bg-indigo-500"
-                                        : dayOfWeek === 5
-                                            ? "bg-rose-50 text-rose-500 dark:bg-rose-500/10 dark:text-rose-300"
-                                            : "bg-slate-50 text-slate-600 group-hover:bg-white dark:bg-white/[0.045] dark:text-slate-300 dark:group-hover:bg-white/[0.07]"
+                                            ? "bg-indigo-600 text-white shadow-[0_4px_10px_-4px_rgba(79,70,229,0.6)] dark:bg-indigo-500"
+                                            : dayOfWeek === 5
+                                                ? "bg-rose-50 text-rose-500 dark:bg-rose-500/10 dark:text-rose-300"
+                                                : "bg-slate-50 text-slate-600 group-hover:bg-white dark:bg-white/[0.045] dark:text-slate-300 dark:group-hover:bg-white/[0.07]"
                                         }`}
                                 >
                                     {toPersianDigits(jd)}
                                 </span>
+
                                 {noteCount > 0 && (
                                     <span className="flex items-center gap-1 rounded-lg bg-emerald-50 px-1.5 py-1 text-[8.5px] font-bold text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-300">
                                         <MessageSquareText size={9} />
@@ -300,7 +332,11 @@ function CalendarMonthGrid({
                                     </span>
                                 )}
                             </div>
-                            {dayEvents.length > 0 && <DayEventDots events={dayEvents} />}
+
+                            {dayEvents.length > 0 && (
+                                <DayEventDots events={dayEvents} />
+                            )}
+
                             {isToday && (
                                 <span className="absolute bottom-1.5 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-indigo-500" />
                             )}
@@ -332,25 +368,34 @@ export default function PersianCalendar() {
         [currentMonthDate]
     );
 
-    const [realTodayJy, realTodayJm] = useMemo(() => toJalaliParts(new Date()), []);
+    const [realTodayJy, realTodayJm] = useMemo(
+        () => toJalaliParts(new Date()),
+        []
+    );
 
     const quickMonths = useMemo(() => {
         const list: { jy: number; jm: number }[] = [];
+
         let jy = realTodayJy;
         let jm = realTodayJm;
+
         for (let i = 0; i < 12; i++) {
             list.push({ jy, jm });
+
             jm++;
+
             if (jm > 12) {
                 jm = 1;
                 jy++;
             }
         }
+
         return list;
     }, [realTodayJy, realTodayJm]);
 
     const visibleMonths = useMemo<MonthData[]>(() => {
         const seasonStart = getSeasonStartMonth(currentJm);
+
         const months =
             view === "month"
                 ? [{ jy: currentJy, jm: currentJm }]
@@ -364,7 +409,8 @@ export default function PersianCalendar() {
             const monthLength = jalaliMonthLength(jy, jm);
             const firstDayWeekIndex = jalaliWeekday(jy, jm, 1);
 
-            const monthCells: (Date | null)[] = Array(firstDayWeekIndex).fill(null);
+            const monthCells: (Date | null)[] =
+                Array(firstDayWeekIndex).fill(null);
 
             for (let day = 1; day <= monthLength; day++) {
                 monthCells.push(jalaliToDate(jy, jm, day));
@@ -379,24 +425,40 @@ export default function PersianCalendar() {
                 jm,
                 monthCells,
                 startISO: toISODate(jalaliToDate(jy, jm, 1)),
-                endISO: toISODate(jalaliToDate(jy, jm, monthLength)),
+                endISO: toISODate(
+                    jalaliToDate(jy, jm, monthLength)
+                ),
             };
         });
     }, [currentJy, currentJm, view]);
 
     const startISO = visibleMonths[0].startISO;
-    const endISO = visibleMonths[visibleMonths.length - 1].endISO;
+    const endISO =
+        visibleMonths[visibleMonths.length - 1].endISO;
 
     useEffect(() => {
         const fetchCalendarData = async () => {
             setLoading(true);
+
             try {
                 const [calendarRes, notesRes] = await Promise.all([
-                    api.get(`/appraisal/api/v1/calendar/?start=${startISO}&end=${endISO}`),
+                    api.get(
+                        `/appraisal/api/v1/calendar/?start=${startISO}&end=${endISO}`
+                    ),
                     api.get("/note/api/v1/"),
                 ]);
-                setCalendarEvents(Array.isArray(calendarRes.data?.events) ? calendarRes.data.events : []);
-                setNotes(Array.isArray(notesRes.data) ? notesRes.data : []);
+
+                setCalendarEvents(
+                    Array.isArray(calendarRes.data?.events)
+                        ? calendarRes.data.events
+                        : []
+                );
+
+                setNotes(
+                    Array.isArray(notesRes.data)
+                        ? notesRes.data
+                        : []
+                );
             } catch {
                 setCalendarEvents([]);
                 setNotes([]);
@@ -404,28 +466,32 @@ export default function PersianCalendar() {
                 setLoading(false);
             }
         };
+
         fetchCalendarData();
     }, [startISO, endISO]);
 
     const eventsByDay = useMemo(() => {
         const map = new Map<string, CalendarEvent[]>();
+
         const allDates = visibleMonths.flatMap((month) =>
-            month.monthCells.filter((date): date is Date => Boolean(date))
+            month.monthCells.filter(
+                (date): date is Date => Boolean(date)
+            )
         );
 
         calendarEvents.forEach((event) => {
             if (!event.start) return;
-            const eventStart = event.start.slice(0, 10);
-            const eventEnd = event.end ? event.end.slice(0, 10) : eventStart;
 
             allDates.forEach((date) => {
                 const dateISO = toISODate(date);
-                if (eventStart <= dateISO && eventEnd >= dateISO) {
-                    if (!map.has(dateISO)) {
-                        map.set(dateISO, []);
-                    }
-                    map.get(dateISO)!.push(event);
+
+                if (!isEventOnDate(event, dateISO)) return;
+
+                if (!map.has(dateISO)) {
+                    map.set(dateISO, []);
                 }
+
+                map.get(dateISO)!.push(event);
             });
         });
 
@@ -434,11 +500,21 @@ export default function PersianCalendar() {
 
     const noteCountByDay = useMemo(() => {
         const map = new Map<string, number>();
+
         notes.forEach((note) => {
-            const { targetDate } = extractNoteInfo(note.description, note.created_at);
+            const { targetDate } = extractNoteInfo(
+                note.description,
+                note.created_at
+            );
+
             if (!targetDate) return;
-            map.set(targetDate, (map.get(targetDate) || 0) + 1);
+
+            map.set(
+                targetDate,
+                (map.get(targetDate) || 0) + 1
+            );
         });
+
         return map;
     }, [notes]);
 
@@ -446,29 +522,42 @@ export default function PersianCalendar() {
         if (view === "month") {
             let nextMonth = currentJm + delta;
             let nextYear = currentJy;
+
             if (nextMonth > 12) {
                 nextMonth = 1;
                 nextYear++;
             }
+
             if (nextMonth < 1) {
                 nextMonth = 12;
                 nextYear--;
             }
-            setCurrentMonthDate(jalaliToDate(nextYear, nextMonth, 1));
+
+            setCurrentMonthDate(
+                jalaliToDate(nextYear, nextMonth, 1)
+            );
+
             return;
         }
 
-        let nextSeasonMonth = getSeasonStartMonth(currentJm) + delta * 3;
+        let nextSeasonMonth =
+            getSeasonStartMonth(currentJm) + delta * 3;
+
         let nextYear = currentJy;
+
         if (nextSeasonMonth > 12) {
             nextSeasonMonth = 1;
             nextYear++;
         }
+
         if (nextSeasonMonth < 1) {
             nextSeasonMonth = 10;
             nextYear--;
         }
-        setCurrentMonthDate(jalaliToDate(nextYear, nextSeasonMonth, 1));
+
+        setCurrentMonthDate(
+            jalaliToDate(nextYear, nextSeasonMonth, 1)
+        );
     };
 
     const goToMonth = (jy: number, jm: number) => {
@@ -489,22 +578,35 @@ export default function PersianCalendar() {
     const gotoToday = () => {
         const now = new Date();
         const [nowYear, nowMonth] = toJalaliParts(now);
-        setCurrentMonthDate(jalaliToDate(nowYear, nowMonth, 1));
+
+        setCurrentMonthDate(
+            jalaliToDate(nowYear, nowMonth, 1)
+        );
+
         setSelectedDate(now);
         setIsModalOpen(true);
     };
 
     const todayISO = toISODate(new Date());
-    const [todayJy, todayJm, todayJd] = toJalaliParts(new Date());
+    const [todayJy, todayJm, todayJd] =
+        toJalaliParts(new Date());
 
-    const todayPersian = `${toPersianDigits(todayJd)} ${JALALI_MONTHS[todayJm - 1]}`;
+    const todayPersian = `${toPersianDigits(todayJd)} ${JALALI_MONTHS[todayJm - 1]
+        }`;
 
     const headerTitle =
         view === "month"
-            ? `${JALALI_MONTHS[currentJm - 1]} ${toPersianDigits(currentJy)}`
-            : `${getSeasonName(currentJm)} ${toPersianDigits(currentJy)}`;
+            ? `${JALALI_MONTHS[currentJm - 1]} ${toPersianDigits(
+                currentJy
+            )}`
+            : `${getSeasonName(currentJm)} ${toPersianDigits(
+                currentJy
+            )}`;
 
-    const taskCount = calendarEvents.filter((event) => getEventType(event.type) === "task").length;
+    const taskCount = calendarEvents.filter(
+        (event) => getEventType(event.type) === "task"
+    ).length;
+
     const internalTaskCount = calendarEvents.filter(
         (event) => getEventType(event.type) === "internal_task"
     ).length;
@@ -538,8 +640,13 @@ export default function PersianCalendar() {
                                 <h2 className="text-[14px] font-extrabold tracking-tight text-slate-900 dark:text-white">
                                     {headerTitle}
                                 </h2>
-                                <ChevronDown size={13} className="text-slate-400" />
+
+                                <ChevronDown
+                                    size={13}
+                                    className="text-slate-400"
+                                />
                             </span>
+
                             <span className="mt-0.5 text-[10px] font-semibold text-indigo-500 dark:text-indigo-400">
                                 امروز: {todayPersian}
                             </span>
@@ -556,53 +663,98 @@ export default function PersianCalendar() {
 
                     {pickerOpen && pickerYear !== null && (
                         <>
-                            <div className="fixed inset-0 z-20" onClick={() => setPickerOpen(false)} />
+                            <div
+                                className="fixed inset-0 z-20"
+                                onClick={() => setPickerOpen(false)}
+                            />
+
                             <motion.div
-                                initial={{ opacity: 0, y: -8, scale: 0.97 }}
-                                animate={{ opacity: 1, y: 0, scale: 1 }}
+                                initial={{
+                                    opacity: 0,
+                                    y: -8,
+                                    scale: 0.97,
+                                }}
+                                animate={{
+                                    opacity: 1,
+                                    y: 0,
+                                    scale: 1,
+                                }}
                                 transition={{ duration: 0.15 }}
                                 className="absolute right-1/2 top-[calc(100%+8px)] z-30 w-[min(18rem,calc(100vw-2rem))] translate-x-1/2 overflow-hidden rounded-[1.5rem] border border-slate-200 bg-white p-4 shadow-[0_20px_50px_-20px_rgba(0,0,0,0.25)] dark:border-white/[0.08] dark:bg-[#111827]"
                             >
                                 <div className="mb-3 flex items-center justify-between">
                                     <button
                                         type="button"
-                                        onClick={() => setPickerYear((y) => (y ?? currentJy) + 1)}
+                                        onClick={() =>
+                                            setPickerYear(
+                                                (y) =>
+                                                    (y ??
+                                                        currentJy) +
+                                                    1
+                                            )
+                                        }
                                         className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-100 text-slate-400 transition-colors hover:bg-indigo-50 hover:text-indigo-600 dark:bg-white/[0.05] dark:hover:bg-indigo-500/10 dark:hover:text-indigo-300"
                                     >
                                         <ChevronRight size={13} />
                                     </button>
+
                                     <span className="rounded-lg bg-indigo-50 px-3 py-1 text-[12.5px] font-extrabold text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-300">
-                                        {toPersianDigits(pickerYear)}
+                                        {toPersianDigits(
+                                            pickerYear
+                                        )}
                                     </span>
+
                                     <button
                                         type="button"
-                                        onClick={() => setPickerYear((y) => (y ?? currentJy) - 1)}
+                                        onClick={() =>
+                                            setPickerYear(
+                                                (y) =>
+                                                    (y ??
+                                                        currentJy) -
+                                                    1
+                                            )
+                                        }
                                         className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-100 text-slate-400 transition-colors hover:bg-indigo-50 hover:text-indigo-600 dark:bg-white/[0.05] dark:hover:bg-indigo-500/10 dark:hover:text-indigo-300"
                                     >
                                         <ChevronLeft size={13} />
                                     </button>
                                 </div>
+
                                 <div className="grid grid-cols-3 gap-1.5">
-                                    {JALALI_MONTHS.map((label, index) => {
-                                        const monthNumber = index + 1;
-                                        const isActive = pickerYear === currentJy && monthNumber === currentJm;
-                                        return (
-                                            <button
-                                                key={label}
-                                                type="button"
-                                                onClick={() => {
-                                                    goToMonth(pickerYear, monthNumber);
-                                                    setPickerOpen(false);
-                                                }}
-                                                className={`rounded-xl px-2 py-2.5 text-[11px] font-bold transition-all ${isActive
-                                                    ? "bg-indigo-600 text-white shadow-sm shadow-indigo-500/20 dark:bg-indigo-500"
-                                                    : "bg-slate-50 text-slate-500 hover:bg-indigo-50 hover:text-indigo-600 dark:bg-white/[0.035] dark:text-slate-400 dark:hover:bg-indigo-500/10 dark:hover:text-indigo-300"
-                                                    }`}
-                                            >
-                                                {label}
-                                            </button>
-                                        );
-                                    })}
+                                    {JALALI_MONTHS.map(
+                                        (label, index) => {
+                                            const monthNumber =
+                                                index + 1;
+
+                                            const isActive =
+                                                pickerYear ===
+                                                currentJy &&
+                                                monthNumber ===
+                                                currentJm;
+
+                                            return (
+                                                <button
+                                                    key={label}
+                                                    type="button"
+                                                    onClick={() => {
+                                                        goToMonth(
+                                                            pickerYear,
+                                                            monthNumber
+                                                        );
+                                                        setPickerOpen(
+                                                            false
+                                                        );
+                                                    }}
+                                                    className={`rounded-xl px-2 py-2.5 text-[11px] font-bold transition-all ${isActive
+                                                            ? "bg-indigo-600 text-white shadow-sm shadow-indigo-500/20 dark:bg-indigo-500"
+                                                            : "bg-slate-50 text-slate-500 hover:bg-indigo-50 hover:text-indigo-600 dark:bg-white/[0.035] dark:text-slate-400 dark:hover:bg-indigo-500/10 dark:hover:text-indigo-300"
+                                                        }`}
+                                                >
+                                                    {label}
+                                                </button>
+                                            );
+                                        }
+                                    )}
                                 </div>
                             </motion.div>
                         </>
@@ -615,19 +767,20 @@ export default function PersianCalendar() {
                             type="button"
                             onClick={() => setView("month")}
                             className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[10.5px] font-bold transition-all ${view === "month"
-                                ? "bg-white text-indigo-600 shadow-sm dark:bg-[#1e293b] dark:text-indigo-300"
-                                : "text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+                                    ? "bg-white text-indigo-600 shadow-sm dark:bg-[#1e293b] dark:text-indigo-300"
+                                    : "text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
                                 }`}
                         >
                             <CalendarDays size={12} />
                             ماهانه
                         </button>
+
                         <button
                             type="button"
                             onClick={() => setView("season")}
                             className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[10.5px] font-bold transition-all ${view === "season"
-                                ? "bg-white text-indigo-600 shadow-sm dark:bg-[#1e293b] dark:text-indigo-300"
-                                : "text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+                                    ? "bg-white text-indigo-600 shadow-sm dark:bg-[#1e293b] dark:text-indigo-300"
+                                    : "text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
                                 }`}
                         >
                             <CalendarRange size={12} />
@@ -650,10 +803,14 @@ export default function PersianCalendar() {
                                 <ClipboardCheck size={11} />
                                 {toPersianDigits(taskCount)} تسک
                             </span>
+
                             <span className="flex items-center gap-1.5 rounded-lg bg-amber-50 px-2 py-1 text-[10px] font-bold text-amber-600 dark:bg-amber-500/10 dark:text-amber-300">
                                 <Layers3 size={11} />
-                                {toPersianDigits(internalTaskCount)} داخلی
+                                {toPersianDigits(
+                                    internalTaskCount
+                                )} داخلی
                             </span>
+
                             <span className="flex items-center gap-1.5 rounded-lg bg-emerald-50 px-2 py-1 text-[10px] font-bold text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-300">
                                 <FileText size={11} />
                                 {toPersianDigits(notes.length)} یادداشت
@@ -664,27 +821,37 @@ export default function PersianCalendar() {
 
                 <div className="flex items-center gap-2 overflow-x-auto border-b border-slate-100 px-5 py-3 sm:px-6 dark:border-white/[0.06]">
                     {quickMonths.map(({ jy, jm }) => {
-                        const isSelected = jy === currentJy && jm === currentJm;
-                        const isRealToday = jy === realTodayJy && jm === realTodayJm;
+                        const isSelected =
+                            jy === currentJy && jm === currentJm;
+
+                        const isRealToday =
+                            jy === realTodayJy &&
+                            jm === realTodayJm;
+
                         return (
                             <button
                                 key={`${jy}-${jm}`}
                                 type="button"
                                 onClick={() => goToMonth(jy, jm)}
                                 className={`flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-3.5 py-1.5 text-[11px] font-bold transition-all ${isSelected
-                                    ? "border-indigo-600 bg-indigo-600 text-white shadow-sm shadow-indigo-500/20 dark:border-indigo-500 dark:bg-indigo-500"
-                                    : "border-slate-200 bg-white text-slate-500 hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-600 dark:border-white/[0.06] dark:bg-white/[0.025] dark:text-slate-400 dark:hover:border-indigo-500/20 dark:hover:bg-indigo-500/10 dark:hover:text-indigo-300"
+                                        ? "border-indigo-600 bg-indigo-600 text-white shadow-sm shadow-indigo-500/20 dark:border-indigo-500 dark:bg-indigo-500"
+                                        : "border-slate-200 bg-white text-slate-500 hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-600 dark:border-white/[0.06] dark:bg-white/[0.025] dark:text-slate-400 dark:hover:border-indigo-500/20 dark:hover:bg-indigo-500/10 dark:hover:text-indigo-300"
                                     }`}
                             >
                                 {isRealToday && (
                                     <span
-                                        className={`h-1.5 w-1.5 rounded-full ${isSelected ? "bg-white" : "bg-indigo-500"
+                                        className={`h-1.5 w-1.5 rounded-full ${isSelected
+                                                ? "bg-white"
+                                                : "bg-indigo-500"
                                             }`}
                                     />
                                 )}
+
                                 {jy === realTodayJy
                                     ? JALALI_MONTHS[jm - 1]
-                                    : `${JALALI_MONTHS[jm - 1]} ${toPersianDigits(jy)}`}
+                                    : `${JALALI_MONTHS[jm - 1]} ${toPersianDigits(
+                                        jy
+                                    )}`}
                             </button>
                         );
                     })}
@@ -692,18 +859,25 @@ export default function PersianCalendar() {
 
                 {!loading && (
                     <div className="flex flex-wrap items-center gap-x-5 gap-y-2 border-b border-slate-100 px-5 py-3 sm:px-6 dark:border-white/[0.06]">
-                        {["task", "internal_task", "note"].map((type) => {
-                            const style = EVENT_TYPE_COLOR[type];
-                            return (
-                                <span
-                                    key={type}
-                                    className={`flex items-center gap-1.5 text-[9.5px] font-bold ${style.text}`}
-                                >
-                                    <span className={`h-1.5 w-1.5 rounded-full ${style.dot}`} />
-                                    {EVENT_TYPE_LABEL[type]}
-                                </span>
-                            );
-                        })}
+                        {["task", "internal_task", "note"].map(
+                            (type) => {
+                                const style =
+                                    EVENT_TYPE_COLOR[type];
+
+                                return (
+                                    <span
+                                        key={type}
+                                        className={`flex items-center gap-1.5 text-[9.5px] font-bold ${style.text}`}
+                                    >
+                                        <span
+                                            className={`h-1.5 w-1.5 rounded-full ${style.dot}`}
+                                        />
+
+                                        {EVENT_TYPE_LABEL[type]}
+                                    </span>
+                                );
+                            }
+                        )}
                     </div>
                 )}
 
@@ -711,9 +885,14 @@ export default function PersianCalendar() {
                     <div className="flex flex-col items-center justify-center gap-3 py-24">
                         <motion.div
                             animate={{ rotate: 360 }}
-                            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                            transition={{
+                                duration: 1,
+                                repeat: Infinity,
+                                ease: "linear",
+                            }}
                             className="h-5 w-5 rounded-full border-2 border-indigo-500/15 border-t-indigo-500"
                         />
+
                         <p className="text-[11px] font-semibold text-slate-400">
                             در حال دریافت تقویم...
                         </p>
@@ -721,8 +900,8 @@ export default function PersianCalendar() {
                 ) : (
                     <div
                         className={`p-4 sm:p-6 ${view === "season"
-                            ? "grid grid-cols-1 gap-5 xl:grid-cols-3"
-                            : "mx-auto max-w-5xl"
+                                ? "grid grid-cols-1 gap-5 xl:grid-cols-3"
+                                : "mx-auto max-w-5xl"
                             }`}
                     >
                         {visibleMonths.map((month) => (
@@ -745,9 +924,15 @@ export default function PersianCalendar() {
                 selectedDate={selectedDate}
                 notes={notes}
                 events={calendarEvents}
-                onCreated={(note) => setNotes((prev) => [note, ...prev])}
-                onDeleted={(id) => setNotes((prev) => prev.filter((note) => note.id !== id))}
+                onCreated={(note) =>
+                    setNotes((prev) => [note, ...prev])
+                }
+                onDeleted={(id) =>
+                    setNotes((prev) =>
+                        prev.filter((note) => note.id !== id)
+                    )
+                }
             />
         </>
     );
-} 
+}
