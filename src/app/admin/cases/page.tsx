@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { ClipboardList, Loader, Pencil, Plus, RefreshCw, Search, X } from "lucide-react";
+import { ClipboardList, Layers, Loader, Pencil, Plus, RefreshCw, Search, X } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
 import { apiRoutes } from "@/lib/apiRoutes";
 import { Case, Department } from "@/types/case";
@@ -13,7 +13,7 @@ import type { Employee } from "@/types/employee";
 import CaseCard from "@/components/customcomponents/cases/CaseCard";
 import CreateCaseModal from "@/components/customcomponents/cases/CreateCaseModal";
 import EditCaseModal from "@/components/customcomponents/cases/EditCaseModal";
-import TaskCard from "@/components/customcomponents/tasks/TaskCard";
+import CaseTasksModal from "@/components/customcomponents/cases/CaseTasksModal";
 import EditTaskModal from "@/components/customcomponents/tasks/EditTaskModal";
 import type { TaskItem } from "@/types/task";
 
@@ -44,6 +44,8 @@ export default function AdminCasesPage() {
     const [editingTask, setEditingTask] = useState<TaskItem | null>(null);
     const [editTaskModalOpen, setEditTaskModalOpen] = useState(false);
     const [deletingTaskId, setDeletingTaskId] = useState<number | null>(null);
+    const [tasksModalOpen, setTasksModalOpen] = useState(false);
+    const [selectedCaseForTasks, setSelectedCaseForTasks] = useState<CaseItem | null>(null);
 
     const fetchData = useCallback(async () => {
         try {
@@ -146,6 +148,11 @@ export default function AdminCasesPage() {
         setEditingTask(null);
     }, [fetchData]);
 
+    const handleOpenTasksModal = useCallback((item: CaseItem) => {
+        setSelectedCaseForTasks(item);
+        setTasksModalOpen(true);
+    }, []);
+
     const filteredCases = useMemo(() => {
         const q = query.trim().toLowerCase();
         if (!q) return cases;
@@ -182,6 +189,11 @@ export default function AdminCasesPage() {
         });
         return map;
     }, [tasks]);
+
+    const selectedCaseTasks = useMemo(() => {
+        if (!selectedCaseForTasks) return [];
+        return tasksByCase.get(Number(selectedCaseForTasks.id)) || [];
+    }, [selectedCaseForTasks, tasksByCase]);
 
     return (
         <div className="flex flex-col gap-6 p-4 md:p-6" dir="rtl">
@@ -304,20 +316,27 @@ export default function AdminCasesPage() {
                                             <Pencil size={11} strokeWidth={2} />
                                         </button>
                                     </div>
-                                    {caseTasks.length > 0 && (
-                                        <div className="space-y-2 pr-4">
-                                            {caseTasks.map((task, taskIndex) => (
-                                                <TaskCard
-                                                    key={task.id}
-                                                    task={task}
-                                                    index={taskIndex}
-                                                    onEdit={handleEditTask}
-                                                    onDelete={handleDeleteTask}
-                                                    deleting={deletingTaskId === task.id}
-                                                />
-                                            ))}
-                                        </div>
-                                    )}
+
+                                    <button
+                                        type="button"
+                                        onClick={() => handleOpenTasksModal(item as unknown as CaseItem)}
+                                        className="flex items-center justify-between gap-2 rounded-2xl px-3.5 py-2.5 text-[12px] font-bold transition-colors"
+                                        style={{
+                                            background: "rgba(99, 102, 241, 0.06)",
+                                            color: "rgb(99, 102, 241)",
+                                        }}
+                                    >
+                                        <span className="flex items-center gap-2">
+                                            <Layers size={13} />
+                                            دیدن تسک‌های این پرونده
+                                        </span>
+                                        <span
+                                            className="rounded-full px-2 py-0.5 text-[10.5px] font-extrabold"
+                                            style={{ background: "rgba(99,102,241,0.14)" }}
+                                        >
+                                            {caseTasks.length}
+                                        </span>
+                                    </button>
                                 </div>
                             );
                         })}
@@ -354,6 +373,19 @@ export default function AdminCasesPage() {
                     onSuccess={handleTaskUpdate}
                 />
             )}
+
+            <CaseTasksModal
+                isOpen={tasksModalOpen}
+                onClose={() => {
+                    setTasksModalOpen(false);
+                    setSelectedCaseForTasks(null);
+                }}
+                caseItem={selectedCaseForTasks}
+                tasks={selectedCaseTasks}
+                onEditTask={handleEditTask}
+                onDeleteTask={handleDeleteTask}
+                deletingTaskId={deletingTaskId}
+            />
         </div>
     );
 }

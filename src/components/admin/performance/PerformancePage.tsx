@@ -21,13 +21,13 @@ export default function PerformancePage() {
         loading,
         error,
         departments,
-        bestEmployees,
         weakestEmployees,
         topBringers,
         topSoldStages,
         topCompletedStages,
         topInProgressStages,
         topCancelledStages,
+        bestEmployees,
     } = useAnalytics(range);
 
     const chips = [
@@ -61,8 +61,8 @@ export default function PerformancePage() {
                             background:
                                 "linear-gradient(135deg, rgba(96,165,250,0.15), rgba(129,140,248,0.15))",
                             border: `1px solid ${isDark
-                                    ? "rgba(129,140,248,0.2)"
-                                    : "rgba(129,140,248,0.15)"
+                                ? "rgba(129,140,248,0.2)"
+                                : "rgba(129,140,248,0.15)"
                                 }`,
                         }}
                     >
@@ -89,8 +89,8 @@ export default function PerformancePage() {
                                     ? "rgba(255,255,255,0.04)"
                                     : "rgba(0,0,0,0.03)",
                                 border: `1px solid ${isDark
-                                        ? "rgba(255,255,255,0.06)"
-                                        : "rgba(0,0,0,0.05)"
+                                    ? "rgba(255,255,255,0.06)"
+                                    : "rgba(0,0,0,0.05)"
                                     }`,
                             }}
                         >
@@ -142,8 +142,9 @@ export default function PerformancePage() {
             )}
 
             <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-                <BestEmployeesChart
-                    items={bestEmployees}
+
+                <DepartmentChurn
+                    departments={departments}
                     loading={loading}
                 />
 
@@ -156,6 +157,10 @@ export default function PerformancePage() {
                     items={topBringers}
                     loading={loading}
                 />
+                <BestEmployeesChart
+                    items={bestEmployees}
+                    loading={loading}
+                />
 
                 <TopStagesChart
                     topSoldStages={topSoldStages}
@@ -166,11 +171,6 @@ export default function PerformancePage() {
                     activeRange={range}
                 />
             </div>
-
-            <DepartmentChurn
-                departments={departments}
-                loading={loading}
-            />
         </div>
     );
 }

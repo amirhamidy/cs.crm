@@ -19,8 +19,10 @@ import {
     ShoppingBag,
     XCircle,
     ClipboardList,
+    FileText,
 } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
+import TaskCaseDescriptionModal from "./TaskCaseDescriptionModal";
 import TaskNotesModal from "./TaskNotesModal";
 import TaskActionModal from "./TaskActionModal";
 import TaskLogsModal from "./TaskLogsModal";
@@ -377,6 +379,7 @@ export default function UserTaskCard({
     const [submitting, setSubmitting] = useState(false);
     const [blockMsg, setBlockMsg] = useState<string | null>(null);
     const [latestLog, setLatestLog] = useState<LatestLog | null>(null);
+    const [caseDescOpen, setCaseDescOpen] = useState(false);
     const [logsLoading, setLogsLoading] = useState(true);
     const [customerName, setCustomerName] = useState<string | null>(
         taskExt.customer_name ?? null
@@ -614,7 +617,7 @@ export default function UserTaskCard({
                         type="button"
                         onClick={() => setLogsOpen(true)}
                         onPointerDown={(event) => event.stopPropagation()}
-                        className="inline-flex h-7 items-center gap-1 rounded-xl bg-gray-50 px-2 text-[10px] font-extrabold text-gray-400 transition-colors hover:bg-indigo-50 hover:text-indigo-600 dark:bg-white/[0.05] dark:text-white/40 dark:hover:bg-indigo-500/10 dark:hover:text-indigo-300"
+                        className="inline-flex h-7 items-center gap-1 rounded-xl bg-gray-100 px-2 text-[10px] font-extrabold text-gray-400 transition-colors hover:bg-indigo-50 hover:text-indigo-600 dark:bg-white/[0.05] dark:text-white/40 dark:hover:bg-indigo-500/10 dark:hover:text-indigo-300"
                     >
                         <History size={11} />
                         تاریخچه
@@ -654,6 +657,8 @@ export default function UserTaskCard({
                         icon={CalendarDays}
                     />
                 </div>
+
+
 
                 <div className="mt-3.5 flex flex-col gap-2.5">
                     {deadlineDate ? (
@@ -737,6 +742,18 @@ export default function UserTaskCard({
                             {blockMsg}
                         </motion.div>
                     )}
+                </div>
+
+                <div className="flex items-center gap-1.5">
+                    <button
+                        type="button"
+                        onClick={() => setCaseDescOpen(true)}
+                        onPointerDown={(event) => event.stopPropagation()}
+                        className="inline-flex h-7 mt-3 items-center gap-1 rounded-xl bg-gray-100 px-2 text-[10px] font-extrabold text-gray-400 transition-colors hover:bg-indigo-50 hover:text-indigo-600 dark:bg-white/[0.05] dark:text-white/40 dark:hover:bg-indigo-500/10 dark:hover:text-indigo-300"
+                    >
+                        <FileText size={11} />
+                        توضیحات پرونده
+                    </button>
                 </div>
 
                 <div
@@ -897,6 +914,12 @@ export default function UserTaskCard({
                 isOpen={notesOpen}
                 onClose={() => setNotesOpen(false)}
                 taskId={task.id}
+                taskTitle={task.title}
+            />
+            <TaskCaseDescriptionModal
+                isOpen={caseDescOpen}
+                onClose={() => setCaseDescOpen(false)}
+                caseId={taskExt.case}
                 taskTitle={task.title}
             />
         </>

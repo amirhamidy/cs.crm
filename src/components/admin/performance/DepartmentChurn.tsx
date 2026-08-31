@@ -10,9 +10,10 @@ import {
     Crown,
     HelpCircle,
     TrendingDown,
+    User,
     Workflow,
 } from "lucide-react";
-import type { DepartmentStat, StageStat } from "@/hooks/useAnalytics";
+import type { DepartmentStat, EmployeeStat, StageStat } from "@/hooks/useAnalytics";
 
 interface Props {
     departments: DepartmentStat[];
@@ -142,7 +143,7 @@ function EmployeePanel({
     isDark,
     variant,
 }: {
-    person: DepartmentStat["best"] | null;
+    person: EmployeeStat | null;
     isDark: boolean;
     variant: "best" | "worst";
 }) {
@@ -219,6 +220,65 @@ function EmployeePanel({
     );
 }
 
+function SoloEmployeePanel({ person, isDark }: { person: EmployeeStat; isDark: boolean }) {
+    const border = isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.07)";
+    const accentBg = "linear-gradient(135deg, rgba(129,140,248,0.16), rgba(56,189,248,0.16))";
+    const accentText = "#818cf8";
+
+    return (
+        <div className="flex h-full flex-col rounded-2xl p-4" style={{ border: `1px dashed ${border}` }}>
+            <div className="mb-3 flex items-center gap-1.5">
+                <User size={13} className="text-indigo-400" />
+                <span className="text-[10.5px] font-extrabold text-gray-400 dark:text-gray-500">
+                    آمار تنها کارمند دپارتمان
+                </span>
+            </div>
+
+            <div className="flex flex-1 flex-col">
+                <div className="mb-4 flex items-center gap-2.5">
+                    <div
+                        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[14px] font-extrabold"
+                        style={{ background: accentBg, color: accentText }}
+                    >
+                        {person.full_name.charAt(0) || "؟"}
+                    </div>
+                    <div className="min-w-0">
+                        <p className="truncate text-[12.5px] font-bold text-gray-800 dark:text-gray-100">
+                            {person.full_name}
+                        </p>
+                        <p className="text-[10.5px] text-gray-400 dark:text-gray-500">
+                            {person.total} تسک واگذارشده
+                        </p>
+                    </div>
+                </div>
+
+                <div className="flex flex-col gap-2.5">
+                    {[
+                        { label: "فروش رفته", value: person.sold, color: "#2dd4bf" },
+                        { label: "تکمیل‌شده", value: person.completed, color: "#60a5fa" },
+                        { label: "در جریان", value: person.in_progress, color: "#a5b4fc" },
+                        { label: "لغوشده", value: person.cancelled, color: "#fb7185" },
+                    ].map((row) => (
+                        <div
+                            key={row.label}
+                            className="flex items-center justify-between border-b border-dashed pb-2 last:border-0"
+                            style={{ borderColor: border }}
+                        >
+                            <div className="flex items-center gap-1.5">
+                                <span className="h-1.5 w-1.5 rounded-full" style={{ background: row.color }} />
+                                <span className="text-[11px] text-gray-500 dark:text-gray-400">{row.label}</span>
+                            </div>
+                            <span className="text-[12px] font-extrabold" style={{ color: row.color }}>
+                                {row.value}
+                            </span>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </div>
+    );
+}
+
 function DepartmentChurnSkeleton() {
     return (
         <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-white/8 dark:bg-slate-950">
@@ -264,8 +324,14 @@ export default function DepartmentChurn({ departments, loading }: Props) {
     const maxCancelled = Math.max(0, ...dept.stages.map((s) => s.cancelled));
     const riskStage = dept.stages.find((s) => s.cancelled === maxCancelled && maxCancelled > 0);
 
+    const showSolo = Boolean(dept.solo);
     const showWorst = Boolean(dept.worst && dept.worst.key !== dept.best?.key);
-    const panelColumns = showWorst ? "lg:grid-cols-[1fr_180px_180px]" : "lg:grid-cols-[1fr_180px]";
+
+    const panelColumns = showSolo
+        ? "lg:grid-cols-[1fr_220px]"
+        : showWorst
+            ? "lg:grid-cols-[1fr_180px_180px]"
+            : "lg:grid-cols-[1fr_180px]";
 
     return (
         <motion.div
@@ -416,8 +482,14 @@ export default function DepartmentChurn({ departments, loading }: Props) {
                         </div>
                     </div>
 
-                    <EmployeePanel person={dept.best} isDark={isDark} variant="best" />
-                    {showWorst && <EmployeePanel person={dept.worst} isDark={isDark} variant="worst" />}
+                    {showSolo ? (
+                        <SoloEmployeePanel person={dept.solo!} isDark={isDark} />
+                    ) : (
+                        <>
+                            <EmployeePanel person={dept.best} isDark={isDark} variant="best" />
+                            {showWorst && <EmployeePanel person={dept.worst} isDark={isDark} variant="worst" />}
+                        </>
+                    )}
                 </motion.div>
             </AnimatePresence>
         </motion.div>

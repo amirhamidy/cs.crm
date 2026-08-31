@@ -14,6 +14,11 @@ export interface EmployeeStat {
   cancelled: number;
 }
 
+export interface EmployeeOverallStat extends EmployeeStat {
+  department_key: string;
+  department_name: string;
+}
+
 export interface StageStat {
   key: string;
   name: string;
@@ -39,6 +44,7 @@ export interface DepartmentStat {
   stages: StageStat[];
   best: EmployeeStat | null;
   worst: EmployeeStat | null;
+  solo: EmployeeStat | null;
 }
 
 export interface BringerStat {
@@ -153,12 +159,16 @@ const firstDefined = (...values: unknown[]) => {
 
 const relationKey = (value: unknown): string | null => {
   if (value === null || value === undefined) return null;
+
   if (typeof value === "object") {
     const item = value as { id?: unknown; apiId?: unknown };
     const id = item.id ?? item.apiId;
+
     if (id === null || id === undefined) return null;
+
     return String(id);
   }
+
   return String(value);
 };
 
@@ -171,7 +181,9 @@ async function fetchAllPages<T>(url: string): Promise<T[]> {
   while (nextUrl) {
     const res = await axiosInstance.get(nextUrl);
     const data = res.data as T[] | PaginatedResponse<T>;
+
     const items = Array.isArray(data) ? data : (data.results ?? []);
+
     results.push(...items);
 
     if (!Array.isArray(data) && data.next) {
@@ -187,8 +199,15 @@ async function fetchAllPages<T>(url: string): Promise<T[]> {
 
 function getTimeCutoff(range: TimeRange) {
   const now = Date.now();
-  if (range === "weekly") return now - 7 * 24 * 60 * 60 * 1000;
-  if (range === "monthly") return now - 30 * 24 * 60 * 60 * 1000;
+
+  if (range === "weekly") {
+    return now - 7 * 24 * 60 * 60 * 1000;
+  }
+
+  if (range === "monthly") {
+    return now - 30 * 24 * 60 * 60 * 1000;
+  }
+
   return now - 365 * 24 * 60 * 60 * 1000;
 }
 
@@ -197,9 +216,12 @@ function filterByRange<T extends { created_at?: string }>(
   range: TimeRange,
 ) {
   const cutoff = getTimeCutoff(range);
+
   return items.filter((item) => {
     if (!item.created_at) return false;
+
     const t = new Date(item.created_at).getTime();
+
     return !Number.isNaN(t) && t >= cutoff;
   });
 }
@@ -213,10 +235,15 @@ const bump = (
   },
   status: string,
 ) => {
-  if (status === "sold") s.sold++;
-  else if (status === "completed") s.completed++;
-  else if (status === "in_progress") s.in_progress++;
-  else if (status === "cancelled") s.cancelled++;
+  if (status === "sold") {
+    s.sold++;
+  } else if (status === "completed") {
+    s.completed++;
+  } else if (status === "in_progress") {
+    s.in_progress++;
+  } else if (status === "cancelled") {
+    s.cancelled++;
+  }
 };
 
 export function useAnalytics(range: TimeRange = "monthly") {
@@ -270,7 +297,9 @@ export function useAnalytics(range: TimeRange = "monthly") {
           );
         }
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     }
 
@@ -285,6 +314,7 @@ export function useAnalytics(range: TimeRange = "monthly") {
     () => filterByRange(tasks, range),
     [tasks, range],
   );
+
   const filteredCustomers = useMemo(
     () => filterByRange(customers, range),
     [customers, range],
@@ -292,39 +322,65 @@ export function useAnalytics(range: TimeRange = "monthly") {
 
   const employeeById = useMemo(() => {
     const m = new Map<string, RawEmployee>();
-    employees.forEach((emp) => m.set(String(emp.id), emp));
+
+    employees.forEach((emp) => {
+      m.set(String(emp.id), emp);
+    });
+
     return m;
   }, [employees]);
 
   const employeeByUsername = useMemo(() => {
     const m = new Map<string, RawEmployee>();
+
     employees.forEach((emp) => {
-      if (emp.username) m.set(norm(emp.username), emp);
+      if (emp.username) {
+        m.set(norm(emp.username), emp);
+      }
     });
+
     return m;
   }, [employees]);
 
   const userById = useMemo(() => {
     const m = new Map<string, RawUser>();
-    users.forEach((u) => m.set(String(u.id), u));
+
+    users.forEach((u) => {
+      m.set(String(u.id), u);
+    });
+
     return m;
   }, [users]);
 
   const departmentById = useMemo(() => {
     const m = new Map<string, RawDepartment>();
-    departments.forEach((d) => m.set(String(d.id), d));
+
+    departments.forEach((d) => {
+      m.set(String(d.id), d);
+    });
+
     return m;
   }, [departments]);
 
   const stepsByDepartment = useMemo(() => {
     const m = new Map<string, RawDepartmentStep[]>();
+
     departmentSteps.forEach((s) => {
       const depKey = relationKey(s.department);
+
       if (!depKey) return;
-      if (!m.has(depKey)) m.set(depKey, []);
+
+      if (!m.has(depKey)) {
+        m.set(depKey, []);
+      }
+
       m.get(depKey)!.push(s);
     });
-    m.forEach((list) => list.sort((a, b) => toNum(a.order) - toNum(b.order)));
+
+    m.forEach((list) => {
+      list.sort((a, b) => toNum(a.order) - toNum(b.order));
+    });
+
     return m;
   }, [departmentSteps]);
 
@@ -338,28 +394,47 @@ export function useAnalytics(range: TimeRange = "monthly") {
 
       if (idKey) {
         const direct = employeeById.get(idKey);
-        if (direct) return direct;
+
+        if (direct) {
+          return direct;
+        }
 
         const viaUser = userById.get(idKey);
+
         if (viaUser?.username) {
           const emp = employeeByUsername.get(norm(viaUser.username));
-          if (emp) return emp;
+
+          if (emp) {
+            return emp;
+          }
         }
 
         const viaUsernameKey = employeeByUsername.get(norm(idKey));
-        if (viaUsernameKey) return viaUsernameKey;
+
+        if (viaUsernameKey) {
+          return viaUsernameKey;
+        }
       }
 
-      const usernameStr = typeof rawUsername === "string" ? rawUsername : "";
+      const usernameStr =
+        typeof rawUsername === "string" ? rawUsername.trim() : "";
+
       if (usernameStr) {
         const emp = employeeByUsername.get(norm(usernameStr));
-        if (emp) return emp;
+
+        if (emp) {
+          return emp;
+        }
       }
 
-      const nameStr = typeof rawName === "string" ? rawName : "";
+      const nameStr = typeof rawName === "string" ? rawName.trim() : "";
+
       if (nameStr) {
         const emp = employeeByUsername.get(norm(nameStr));
-        if (emp) return emp;
+
+        if (emp) {
+          return emp;
+        }
       }
 
       return null;
@@ -387,8 +462,10 @@ export function useAnalytics(range: TimeRange = "monthly") {
           stages: [],
           best: null,
           worst: null,
+          solo: null,
         });
       }
+
       return departmentAcc.get(key)!;
     };
 
@@ -399,6 +476,7 @@ export function useAnalytics(range: TimeRange = "monthly") {
       order: number,
     ) => {
       let stage = dep.stages.find((s) => s.key === key);
+
       if (!stage) {
         stage = {
           key,
@@ -410,8 +488,10 @@ export function useAnalytics(range: TimeRange = "monthly") {
           in_progress: 0,
           cancelled: 0,
         };
+
         dep.stages.push(stage);
       }
+
       return stage;
     };
 
@@ -427,6 +507,7 @@ export function useAnalytics(range: TimeRange = "monthly") {
           cancelled: 0,
         });
       }
+
       return employeeAcc.get(key)!;
     };
 
@@ -435,9 +516,12 @@ export function useAnalytics(range: TimeRange = "monthly") {
       empKey: string,
       fullName: string,
     ) => {
-      if (!deptEmployeeAcc.has(deptKey))
+      if (!deptEmployeeAcc.has(deptKey)) {
         deptEmployeeAcc.set(deptKey, new Map());
+      }
+
       const m = deptEmployeeAcc.get(deptKey)!;
+
       if (!m.has(empKey)) {
         m.set(empKey, {
           key: empKey,
@@ -449,17 +533,21 @@ export function useAnalytics(range: TimeRange = "monthly") {
           cancelled: 0,
         });
       }
+
       return m.get(empKey)!;
     };
 
     departments.forEach((dep) => {
       const key = String(dep.id);
+
       const stat = ensureDept(
         key,
         firstDefined(dep.name, dep.title, "دپارتمان نامشخص"),
         toNum(dep.order),
       );
+
       const steps = stepsByDepartment.get(key) ?? [];
+
       steps.forEach((st) => {
         ensureStage(
           stat,
@@ -472,6 +560,7 @@ export function useAnalytics(range: TimeRange = "monthly") {
 
     const getAssignees = (task: RawTask): RawEmployee[] => {
       const rawRaw = task.assigned_employee;
+
       const rawArr = Array.isArray(rawRaw)
         ? rawRaw
         : rawRaw !== null && rawRaw !== undefined
@@ -479,6 +568,7 @@ export function useAnalytics(range: TimeRange = "monthly") {
           : [];
 
       const unameRaw = task.assigned_employee_username;
+
       const unameArr = Array.isArray(unameRaw)
         ? unameRaw
         : unameRaw !== null && unameRaw !== undefined
@@ -486,6 +576,7 @@ export function useAnalytics(range: TimeRange = "monthly") {
           : [];
 
       const nameRaw = task.assigned_employee_name;
+
       const nameArr = Array.isArray(nameRaw)
         ? nameRaw
         : nameRaw !== null && nameRaw !== undefined
@@ -493,22 +584,29 @@ export function useAnalytics(range: TimeRange = "monthly") {
           : [];
 
       const length = Math.max(rawArr.length, unameArr.length, nameArr.length);
+
       const out = new Map<string, RawEmployee>();
 
       for (let i = 0; i < length; i++) {
         const emp = resolveEmployee(rawArr[i], unameArr[i], nameArr[i]);
+
         if (emp) {
           out.set(`e:${norm(String(emp.id))}`, emp);
           continue;
         }
+
         const fallbackUsername = norm(unameArr[i]);
+
         const fallbackId = relationKey(rawArr[i]) ?? "";
+
         const fallbackName = firstDefined(
-          typeof nameArr[i] === "string" ? (nameArr[i] as string) : "",
+          typeof nameArr[i] === "string" ? nameArr[i] : "",
           fallbackUsername,
           fallbackId,
         );
+
         const fallbackKey = fallbackUsername || fallbackId;
+
         if (fallbackKey) {
           out.set(`u:${norm(fallbackKey)}`, {
             id: fallbackKey,
@@ -525,13 +623,16 @@ export function useAnalytics(range: TimeRange = "monthly") {
       const status = statusOf(task);
 
       const rawDeptKey = relationKey(task.department);
+
       const deptKey =
         rawDeptKey && departmentById.has(rawDeptKey)
           ? rawDeptKey
           : (rawDeptKey ?? "unknown");
+
       const deptName = departmentById.has(deptKey)
         ? firstDefined(departmentById.get(deptKey)?.name, "دپارتمان نامشخص")
         : firstDefined(task.department_name, "دپارتمان نامشخص");
+
       const dep = ensureDept(
         deptKey,
         deptName,
@@ -541,34 +642,51 @@ export function useAnalytics(range: TimeRange = "monthly") {
       );
 
       dep.total++;
+
       bump(dep, status);
 
       const rawStepKey = relationKey(task.current_step);
+
       const stepInfo = rawStepKey
         ? stepsByDepartment
             .get(deptKey)
             ?.find((s) => String(s.id) === rawStepKey)
         : undefined;
+
       const stageKey = rawStepKey ?? "unknown";
+
       const stageName = stepInfo
         ? firstDefined(stepInfo.name, "مرحله نامشخص")
         : firstDefined(task.current_step_name, "مرحله نامشخص");
+
       const stageOrder = stepInfo ? toNum(stepInfo.order) : 9999;
+
       const stage = ensureStage(dep, stageKey, stageName, stageOrder);
 
       stage.total++;
+
       bump(stage, status);
 
       getAssignees(task).forEach((emp) => {
         const empKey = norm(String(emp.id));
-        const fullName = firstDefined(emp.full_name, emp.username, empKey);
+
+        const fullName = firstDefined(
+          emp.full_name,
+          emp.name,
+          emp.username,
+          empKey,
+        );
 
         const empStat = ensureEmp(empKey, fullName);
+
         empStat.total++;
+
         bump(empStat, status);
 
         const deptEmp = ensureDeptEmp(deptKey, empKey, fullName);
+
         deptEmp.total++;
+
         bump(deptEmp, status);
       });
     });
@@ -581,26 +699,45 @@ export function useAnalytics(range: TimeRange = "monthly") {
 
         const emps = Array.from(deptEmployeeAcc.get(dep.key)?.values() ?? []);
 
-        const bestSorted = [...emps].sort(
-          (a, b) => b.sold - a.sold || b.total - a.total,
-        );
-        dep.best =
-          bestSorted[0] && bestSorted[0].sold > 0 ? bestSorted[0] : null;
+        if (emps.length === 0) {
+          dep.best = null;
+          dep.worst = null;
+          dep.solo = null;
+        } else if (emps.length === 1) {
+          dep.best = null;
+          dep.worst = null;
+          dep.solo = emps[0];
+        } else {
+          dep.solo = null;
 
-        const worstSorted = [...emps].sort(
-          (a, b) => b.cancelled - a.cancelled || b.total - a.total,
-        );
-        dep.worst =
-          worstSorted[0] && worstSorted[0].cancelled > 0
-            ? worstSorted[0]
-            : null;
+          const bestSorted = [...emps].sort(
+            (a, b) =>
+              a.cancelled - b.cancelled ||
+              b.sold + b.completed - (a.sold + a.completed) ||
+              b.total - a.total,
+          );
+
+          dep.best =
+            bestSorted[0] && bestSorted[0].total > 0 ? bestSorted[0] : null;
+
+          const worstSorted = [...emps].sort(
+            (a, b) => b.cancelled - a.cancelled || b.total - a.total,
+          );
+
+          dep.worst =
+            worstSorted[0] && worstSorted[0].cancelled > 0
+              ? worstSorted[0]
+              : null;
+        }
 
         dep.conversion = dep.total
           ? Math.round((dep.sold / dep.total) * 100)
           : 0;
+
         dep.churnRate = dep.total
           ? Math.round((dep.cancelled / dep.total) * 100)
           : 0;
+
         return dep;
       })
       .sort(
@@ -609,22 +746,40 @@ export function useAnalytics(range: TimeRange = "monthly") {
           a.department_name.localeCompare(b.department_name),
       );
 
-    const bestEmployees = departmentsList
-      .map((dep) => {
-        if (!dep.best) return null;
-        return {
-          key: dep.best.key,
-          full_name: dep.best.full_name,
-          sold: dep.best.sold,
-          completed: dep.best.completed,
-          cancelled: dep.best.cancelled,
-          total: dep.best.total,
-          department_key: dep.key,
-          department_name: dep.department_name,
-        };
-      })
-      .filter((item): item is NonNullable<typeof item> => item !== null)
-      .sort((a, b) => b.sold - a.sold || b.total - a.total);
+    const employeeDepartmentMap = new Map<
+      string,
+      {
+        department_key: string;
+        department_name: string;
+      }
+    >();
+
+    deptEmployeeAcc.forEach((employeeMap, departmentKey) => {
+      const department = departmentAcc.get(departmentKey);
+
+      if (!department) return;
+
+      employeeMap.forEach((_, employeeKey) => {
+        if (!employeeDepartmentMap.has(employeeKey)) {
+          employeeDepartmentMap.set(employeeKey, {
+            department_key: departmentKey,
+            department_name: department.department_name,
+          });
+        }
+      });
+    });
+
+    const bestEmployees: EmployeeOverallStat[] = Array.from(
+      employeeAcc.values(),
+    ).map((employee) => {
+      const department = employeeDepartmentMap.get(employee.key);
+
+      return {
+        ...employee,
+        department_key: department?.department_key ?? "unknown",
+        department_name: department?.department_name ?? "دپارتمان نامشخص",
+      };
+    });
 
     const weakestEmployees = Array.from(employeeAcc.values())
       .filter((e) => e.total > 0)
@@ -672,6 +827,7 @@ export function useAnalytics(range: TimeRange = "monthly") {
         cust.created_by_username,
         cust.creator_name,
       );
+
       const key = emp
         ? norm(String(emp.id))
         : norm(cust.created_by_username) || norm(cust.created_by) || "unknown";
@@ -680,7 +836,7 @@ export function useAnalytics(range: TimeRange = "monthly") {
         bringerAcc.set(key, {
           key,
           full_name: emp
-            ? firstDefined(emp.full_name, emp.username, key)
+            ? firstDefined(emp.full_name, emp.name, emp.username, key)
             : firstDefined(
                 cust.creator_name,
                 cust.created_by_username,
@@ -692,10 +848,16 @@ export function useAnalytics(range: TimeRange = "monthly") {
           potential: 0,
         });
       }
+
       const row = bringerAcc.get(key)!;
+
       row.count++;
-      if (toNum(cust.status ?? cust.customer_status) === 2) row.actual++;
-      else row.potential++;
+
+      if (toNum(cust.status ?? cust.customer_status) === 2) {
+        row.actual++;
+      } else {
+        row.potential++;
+      }
     });
 
     const topBringers = Array.from(bringerAcc.values()).sort(
