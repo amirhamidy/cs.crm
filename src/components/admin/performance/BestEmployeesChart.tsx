@@ -1,35 +1,30 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import {
+    useEffect,
+    useMemo,
+    useState,
+} from "react";
+import {
+    AnimatePresence,
+    motion,
+} from "framer-motion";
 import { useTheme } from "next-themes";
 import {
     Award,
-    Ban,
-    CheckCircle2,
     Crown,
     Loader2,
-    ShoppingBag,
     Star,
 } from "lucide-react";
 import { createPortal } from "react-dom";
 import axiosInstance from "@/lib/axiosInstance";
+import type {
+    EmployeeOverallStat,
+} from "@/hooks/useAnalytics";
 
 interface Props {
     items: EmployeeOverallStat[];
     loading: boolean;
-}
-
-export interface EmployeeOverallStat {
-    key: string;
-    full_name: string;
-    sold: number;
-    completed: number;
-    in_progress: number;
-    cancelled: number;
-    total: number;
-    department_key: string;
-    department_name: string;
 }
 
 interface ScoreInfo {
@@ -37,7 +32,8 @@ interface ScoreInfo {
     total_deducted: number;
 }
 
-interface RankedEmployee extends EmployeeOverallStat {
+interface RankedEmployee
+    extends EmployeeOverallStat {
     score: number | null;
     total_deducted: number | null;
 }
@@ -73,21 +69,26 @@ const RANK_STYLES = [
     {
         bg: "linear-gradient(135deg, #fbbf24, #f59e0b)",
         color: "#ffffff",
-        shadow: "0 4px 14px rgba(245,158,11,0.35)",
+        shadow:
+            "0 4px 14px rgba(245,158,11,0.35)",
     },
     {
         bg: "linear-gradient(135deg, #cbd5e1, #94a3b8)",
         color: "#ffffff",
-        shadow: "0 4px 14px rgba(148,163,184,0.3)",
+        shadow:
+            "0 4px 14px rgba(148,163,184,0.3)",
     },
     {
         bg: "linear-gradient(135deg, #d97706, #92400e)",
         color: "#ffffff",
-        shadow: "0 4px 14px rgba(146,64,14,0.3)",
+        shadow:
+            "0 4px 14px rgba(146,64,14,0.3)",
     },
 ];
 
-function getTier(score: number | null) {
+function getTier(
+    score: number | null,
+) {
     if (score === null) {
         return {
             min: 0,
@@ -107,72 +108,171 @@ function getTier(score: number | null) {
     );
 }
 
+function successCount(
+    employee: RankedEmployee,
+) {
+    return (
+        employee.sold +
+        employee.completed
+    );
+}
+
+function successRate(
+    employee: RankedEmployee,
+) {
+    if (employee.total <= 0) {
+        return 0;
+    }
+
+    return (
+        successCount(employee) /
+        employee.total
+    );
+}
+
+function cancellationRate(
+    employee: RankedEmployee,
+) {
+    if (employee.total <= 0) {
+        return 1;
+    }
+
+    return (
+        employee.cancelled /
+        employee.total
+    );
+}
+
 function rankEmployees(
     items: RankedEmployee[],
 ) {
-    return [...items].sort((a, b) => {
-        const aHasWork = a.total > 0;
-        const bHasWork = b.total > 0;
+    return [...items].sort(
+        (a, b) => {
+            const aHasWork =
+                a.total > 0;
+            const bHasWork =
+                b.total > 0;
 
-        if (aHasWork !== bHasWork) {
-            return (
-                Number(bHasWork) -
-                Number(aHasWork)
-            );
-        }
+            if (
+                aHasWork !==
+                bHasWork
+            ) {
+                return (
+                    Number(bHasWork) -
+                    Number(aHasWork)
+                );
+            }
 
-        if (!aHasWork && !bHasWork) {
+            if (
+                !aHasWork &&
+                !bHasWork
+            ) {
+                return a.full_name.localeCompare(
+                    b.full_name,
+                    "fa",
+                );
+            }
+
+            const successRateDifference =
+                successRate(b) -
+                successRate(a);
+
+            if (
+                successRateDifference !==
+                0
+            ) {
+                return successRateDifference;
+            }
+
+            const cancellationRateDifference =
+                cancellationRate(a) -
+                cancellationRate(b);
+
+            if (
+                cancellationRateDifference !==
+                0
+            ) {
+                return cancellationRateDifference;
+            }
+
+            const aScore =
+                a.score ?? -1;
+            const bScore =
+                b.score ?? -1;
+
+            if (
+                aScore !==
+                bScore
+            ) {
+                return (
+                    bScore - aScore
+                );
+            }
+
+            if (
+                successCount(a) !==
+                successCount(b)
+            ) {
+                return (
+                    successCount(b) -
+                    successCount(a)
+                );
+            }
+
+            if (
+                a.total !==
+                b.total
+            ) {
+                return (
+                    b.total - a.total
+                );
+            }
+
+            if (
+                a.sold !==
+                b.sold
+            ) {
+                return (
+                    b.sold - a.sold
+                );
+            }
+
+            if (
+                a.completed !==
+                b.completed
+            ) {
+                return (
+                    b.completed -
+                    a.completed
+                );
+            }
+
+            if (
+                a.in_progress !==
+                b.in_progress
+            ) {
+                return (
+                    b.in_progress -
+                    a.in_progress
+                );
+            }
+
+            if (
+                a.cancelled !==
+                b.cancelled
+            ) {
+                return (
+                    a.cancelled -
+                    b.cancelled
+                );
+            }
+
             return a.full_name.localeCompare(
                 b.full_name,
+                "fa",
             );
-        }
-
-        if (a.total !== b.total) {
-            return b.total - a.total;
-        }
-
-        if (a.sold !== b.sold) {
-            return b.sold - a.sold;
-        }
-
-        if (a.completed !== b.completed) {
-            return (
-                b.completed -
-                a.completed
-            );
-        }
-
-        if (
-            a.in_progress !==
-            b.in_progress
-        ) {
-            return (
-                b.in_progress -
-                a.in_progress
-            );
-        }
-
-        if (
-            a.cancelled !==
-            b.cancelled
-        ) {
-            return (
-                a.cancelled -
-                b.cancelled
-            );
-        }
-
-        const aScore = a.score ?? -1;
-        const bScore = b.score ?? -1;
-
-        if (aScore !== bScore) {
-            return bScore - aScore;
-        }
-
-        return a.full_name.localeCompare(
-            b.full_name,
-        );
-    });
+        },
+    );
 }
 
 function EmployeeTooltip({
@@ -184,7 +284,9 @@ function EmployeeTooltip({
     isDark: boolean;
     anchorRect: DOMRect;
 }) {
-    const tier = getTier(employee.score);
+    const tier = getTier(
+        employee.score,
+    );
 
     const rows = [
         {
@@ -242,7 +344,9 @@ function EmployeeTooltip({
         <motion.div
             initial={{
                 opacity: 0,
-                y: shouldShowAbove ? -6 : 6,
+                y: shouldShowAbove
+                    ? -6
+                    : 6,
                 scale: 0.96,
             }}
             animate={{
@@ -252,7 +356,9 @@ function EmployeeTooltip({
             }}
             exit={{
                 opacity: 0,
-                y: shouldShowAbove ? -6 : 6,
+                y: shouldShowAbove
+                    ? -6
+                    : 6,
                 scale: 0.96,
             }}
             transition={{
@@ -262,9 +368,10 @@ function EmployeeTooltip({
             style={{
                 left,
                 top,
-                transform: shouldShowAbove
-                    ? "translateY(-100%)"
-                    : undefined,
+                transform:
+                    shouldShowAbove
+                        ? "translateY(-100%)"
+                        : undefined,
                 background: isDark
                     ? "#0f172a"
                     : "#ffffff",
@@ -281,24 +388,31 @@ function EmployeeTooltip({
                 <span
                     className="rounded-lg px-2 py-0.5 text-[10px] font-extrabold"
                     style={{
-                        background: tier.bg,
-                        color: tier.color,
+                        background:
+                            tier.bg,
+                        color:
+                            tier.color,
                     }}
                 >
-                    {employee.score !== null
-                        ? employee.score
+                    {employee.score !==
+                        null
+                        ? employee.score.toLocaleString(
+                            "fa-IR",
+                        )
                         : "-"}
                 </span>
             </div>
 
             <p className="mb-2 text-[10px] text-gray-400 dark:text-gray-500">
-                {employee.department_name}
+                {
+                    employee.department_name
+                }
             </p>
 
             <div className="flex flex-col gap-1.5">
-                {rows.map((r) => (
+                {rows.map((row) => (
                     <div
-                        key={r.label}
+                        key={row.label}
                         className="flex items-center justify-between"
                     >
                         <div className="flex items-center gap-1.5">
@@ -306,17 +420,19 @@ function EmployeeTooltip({
                                 className="h-1.5 w-1.5 rounded-full"
                                 style={{
                                     background:
-                                        r.color,
+                                        row.color,
                                 }}
                             />
 
                             <span className="text-[10.5px] text-gray-500 dark:text-gray-400">
-                                {r.label}
+                                {row.label}
                             </span>
                         </div>
 
                         <span className="text-[11px] font-bold text-gray-700 dark:text-gray-200">
-                            {r.value}
+                            {row.value.toLocaleString(
+                                "fa-IR",
+                            )}
                         </span>
                     </div>
                 ))}
@@ -334,7 +450,9 @@ function EmployeeTooltip({
                     </span>
 
                     <span className="text-[11px] font-extrabold text-indigo-400">
-                        {employee.total}
+                        {employee.total.toLocaleString(
+                            "fa-IR",
+                        )}
                     </span>
                 </div>
 
@@ -347,9 +465,9 @@ function EmployeeTooltip({
 
                             <span className="text-[11px] font-extrabold text-rose-400">
                                 -
-                                {
-                                    employee.total_deducted
-                                }
+                                {employee.total_deducted.toLocaleString(
+                                    "fa-IR",
+                                )}
                             </span>
                         </div>
                     )}
@@ -391,9 +509,14 @@ function EmployeeRow({
     const [
         anchorRect,
         setAnchorRect,
-    ] = useState<DOMRect | null>(null);
+    ] =
+        useState<DOMRect | null>(
+            null,
+        );
 
-    const tier = getTier(employee.score);
+    const tier = getTier(
+        employee.score,
+    );
 
     const rankStyle =
         RANK_STYLES[rank] ?? null;
@@ -407,20 +530,21 @@ function EmployeeRow({
             return;
         }
 
-        const updatePosition = () => {
-            const element =
-                document.querySelector(
-                    `[data-employee-key="${CSS.escape(
-                        employee.key,
-                    )}"]`,
-                );
+        const updatePosition =
+            () => {
+                const element =
+                    document.querySelector(
+                        `[data-employee-key="${CSS.escape(
+                            employee.key,
+                        )}"]`,
+                    );
 
-            if (element) {
-                setAnchorRect(
-                    element.getBoundingClientRect(),
-                );
-            }
-        };
+                if (element) {
+                    setAnchorRect(
+                        element.getBoundingClientRect(),
+                    );
+                }
+            };
 
         updatePosition();
 
@@ -447,7 +571,10 @@ function EmployeeRow({
                 updatePosition,
             );
         };
-    }, [hovered, employee.key]);
+    }, [
+        hovered,
+        employee.key,
+    ]);
 
     return (
         <>
@@ -463,7 +590,8 @@ function EmployeeRow({
                 }}
                 transition={{
                     duration: 0.25,
-                    delay: rank * 0.02,
+                    delay:
+                        rank * 0.02,
                 }}
                 data-employee-key={
                     employee.key
@@ -528,7 +656,11 @@ function EmployeeRow({
                     {rank < 3 ? (
                         <Crown size={13} />
                     ) : (
-                        rank + 1
+                        (
+                            rank + 1
+                        ).toLocaleString(
+                            "fa-IR",
+                        )
                     )}
                 </div>
 
@@ -536,7 +668,8 @@ function EmployeeRow({
                     className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[12.5px] font-extrabold"
                     style={{
                         background: `${tier.color}18`,
-                        color: tier.color,
+                        color:
+                            tier.color,
                     }}
                 >
                     {employee.full_name.charAt(
@@ -546,19 +679,25 @@ function EmployeeRow({
 
                 <div className="min-w-0 flex-1">
                     <p className="truncate text-[12.5px] font-bold text-gray-800 dark:text-gray-100">
-                        {employee.full_name}
+                        {
+                            employee.full_name
+                        }
                     </p>
 
                     <p className="truncate text-[10.5px] text-gray-400 dark:text-gray-500">
-                        {employee.department_name}
+                        {
+                            employee.department_name
+                        }
                     </p>
                 </div>
 
                 <div
                     className="flex h-8 min-w-[46px] shrink-0 items-center justify-center rounded-xl px-2.5 text-[11.5px] font-extrabold"
                     style={{
-                        background: tier.bg,
-                        color: tier.color,
+                        background:
+                            tier.bg,
+                        color:
+                            tier.color,
                     }}
                 >
                     {scoresLoading ? (
@@ -568,7 +707,9 @@ function EmployeeRow({
                         />
                     ) : employee.score !==
                         null ? (
-                        employee.score
+                        employee.score.toLocaleString(
+                            "fa-IR",
+                        )
                     ) : (
                         "-"
                     )}
@@ -630,11 +771,15 @@ export default function BestEmployeesChart({
         useTheme();
 
     const isDark =
-        resolvedTheme === "dark";
+        resolvedTheme ===
+        "dark";
 
     const [scores, setScores] =
         useState<
-            Record<string, ScoreInfo>
+            Record<
+                string,
+                ScoreInfo
+            >
         >({});
 
     const [
@@ -642,14 +787,19 @@ export default function BestEmployeesChart({
         setScoresLoading,
     ] = useState(true);
 
-    const safeItems = Array.isArray(
-        items,
-    )
-        ? items
-        : [];
+    const safeItems = useMemo(
+        () =>
+            Array.isArray(items)
+                ? items
+                : [],
+        [items],
+    );
 
     useEffect(() => {
-        if (safeItems.length === 0) {
+        if (
+            safeItems.length ===
+            0
+        ) {
             setScores({});
             setScoresLoading(false);
             return;
@@ -659,16 +809,26 @@ export default function BestEmployeesChart({
 
         setScoresLoading(true);
 
-        const targets = safeItems
-            .map((item) => ({
-                key: item.key,
-                id: Number(item.key),
-            }))
-            .filter((entry) =>
-                Number.isFinite(
-                    entry.id,
-                ),
-            );
+        const targets =
+            safeItems
+                .map((item) => ({
+                    key: item.key,
+                    id: Number(item.key),
+                }))
+                .filter((entry) =>
+                    Number.isFinite(
+                        entry.id,
+                    ),
+                );
+
+        if (
+            targets.length ===
+            0
+        ) {
+            setScores({});
+            setScoresLoading(false);
+            return;
+        }
 
         Promise.allSettled(
             targets.map((entry) =>
@@ -676,9 +836,9 @@ export default function BestEmployeesChart({
                     .get<ScoreInfo>(
                         `/score/api/v1/employees/${entry.id}/`,
                     )
-                    .then((res) => ({
+                    .then((response) => ({
                         key: entry.key,
-                        data: res.data,
+                        data: response.data,
                     })),
             ),
         ).then((results) => {
@@ -698,8 +858,7 @@ export default function BestEmployeesChart({
                         "fulfilled"
                     ) {
                         map[
-                            result.value
-                                .key
+                            result.value.key
                         ] =
                             result.value.data;
                     }
@@ -715,34 +874,35 @@ export default function BestEmployeesChart({
         };
     }, [safeItems]);
 
-    const ranked = useMemo<
-        RankedEmployee[]
-    >(() => {
-        const merged =
-            safeItems.map(
-                (item) => ({
-                    ...item,
-                    score:
-                        scores[
-                            item.key
-                        ]?.score ??
-                        null,
-                    total_deducted:
-                        scores[
-                            item.key
-                        ]
-                            ?.total_deducted ??
-                        null,
-                }),
-            );
+    const ranked =
+        useMemo<
+            RankedEmployee[]
+        >(() => {
+            const merged =
+                safeItems.map(
+                    (item) => ({
+                        ...item,
+                        score:
+                            scores[
+                                item.key
+                            ]?.score ??
+                            null,
+                        total_deducted:
+                            scores[
+                                item.key
+                            ]
+                                ?.total_deducted ??
+                            null,
+                    }),
+                );
 
-        return rankEmployees(
-            merged,
-        );
-    }, [
-        safeItems,
-        scores,
-    ]);
+            return rankEmployees(
+                merged,
+            );
+        }, [
+            safeItems,
+            scores,
+        ]);
 
     if (loading) {
         return (
@@ -811,9 +971,9 @@ export default function BestEmployeesChart({
                             strokeWidth={0}
                         />
 
-                        {
-                            ranked.length
-                        }{" "}
+                        {ranked.length.toLocaleString(
+                            "fa-IR",
+                        )}{" "}
                         کارمند
                     </div>
                 )}
@@ -841,9 +1001,7 @@ export default function BestEmployeesChart({
                                 employee={
                                     employee
                                 }
-                                rank={
-                                    index
-                                }
+                                rank={index}
                                 isDark={
                                     isDark
                                 }

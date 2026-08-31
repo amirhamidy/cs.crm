@@ -30,6 +30,7 @@ export function createInternalTask(data: {
   title: string;
   description: string;
   assigned_to: number[];
+  created_by: number;
 }) {
   return axiosInstance.post<InternalTask>(
     "/tasks/api/v1/internal-tasks/create/",
@@ -38,6 +39,7 @@ export function createInternalTask(data: {
       description: data.description,
       status: "in_progress",
       assigned_to: data.assigned_to,
+      created_by: data.created_by,
     },
   );
 }

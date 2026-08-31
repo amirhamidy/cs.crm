@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Check, Loader, Send, UserRound, X } from "lucide-react";
 import { useTheme } from "next-themes";
+import { useAuthStore } from "@/store/authStore";
 import type { EmployeeListItem, InternalTask } from "./types";
 import { createInternalTask } from "./Api";
 
@@ -22,6 +23,8 @@ export default function CreateTicketModal({
 }: CreateTicketModalProps) {
     const { resolvedTheme } = useTheme();
     const isDark = resolvedTheme === "dark";
+
+    const { userId } = useAuthStore();
 
     const [title, setTitle] = useState("");
     const [description, setDescription] = useState("");
@@ -49,17 +52,26 @@ export default function CreateTicketModal({
 
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
+
         if (!title.trim() || selected.length === 0) {
             setError("عنوان و حداقل یک کارمند را انتخاب کن");
             return;
         }
+
+        if (!userId) {
+            setError("اطلاعات کاربری یافت نشد، مجدداً وارد شوید");
+            return;
+        }
+
         setLoading(true);
         setError("");
+
         try {
             const { data } = await createInternalTask({
                 title: title.trim(),
                 description: description.trim(),
                 assigned_to: selected,
+                created_by: userId,
             });
             onCreated(data);
             onClose();
