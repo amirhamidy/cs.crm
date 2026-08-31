@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { motion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import {
     Building2,
     Users,
@@ -77,6 +77,9 @@ export default function DepartmentDetailPage() {
 
     const [deleteLoading, setDeleteLoading] =
         useState(false);
+
+    const [stageRefreshing, setStageRefreshing] = useState(false);
+
 
     const [addStageOpen, setAddStageOpen] =
         useState(false);
@@ -306,15 +309,12 @@ export default function DepartmentDetailPage() {
             <AddStageModal
                 open={addStageOpen}
                 department={department}
-                onClose={() =>
-                    setAddStageOpen(false)
-                }
+                onClose={() => setAddStageOpen(false)}
                 onSubmit={async (data) => {
-                    await addStage(id, {
-                        name: data.name,
-                    });
-
-                    setAddStageOpen(false);
+                    await addStage(id, { name: data.name });
+                    setStageRefreshing(true);
+                    await fetchAll();
+                    setStageRefreshing(false);
                 }}
             />
 
@@ -428,7 +428,7 @@ export default function DepartmentDetailPage() {
 
                 <div className="flex flex-wrap items-center gap-2">
                     {!department.employees ||
-                    department.employees.length ===
+                        department.employees.length ===
                         0 ? (
                         <span className="text-[11px] italic text-gray-400 dark:text-gray-600">
                             هنوز عضوی اضافه نشده
@@ -476,62 +476,40 @@ export default function DepartmentDetailPage() {
             </motion.div>
 
             <motion.div
-                initial={{
-                    opacity: 0,
-                    y: 12,
-                }}
-                animate={{
-                    opacity: 1,
-                    y: 0,
-                }}
-                transition={{
-                    duration: 0.25,
-                    delay: 0.05,
-                }}
-                className="flex flex-col rounded-[1.6rem] border border-gray-200/60 bg-white/40 p-4 dark:border-white/[0.06] dark:bg-white/[0.015]"
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.25, delay: 0.05 }}
+                className="relative flex flex-col rounded-[1.6rem] border border-gray-200/60 bg-white/40 p-4 dark:border-white/[0.06] dark:bg-white/[0.015]"
             >
+                <AnimatePresence>
+                    {stageRefreshing && (
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="absolute inset-0 z-10 flex items-center justify-center rounded-[1.6rem] bg-white/70 backdrop-blur-sm dark:bg-black/50"
+                        >
+                            <Loader size={20} className="animate-spin text-indigo-500" />
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+
                 <StagesPanel
                     department={department}
                     tasks={departmentTasks}
                     tasksLoading={tasksLoading}
                     stageColors={stageColors}
-                    onAddStage={() =>
-                        setAddStageOpen(true)
-                    }
-                    onEditStage={async (
-                        stage,
-                        values,
-                    ) => {
-                        await updateStage(
-                            id,
-                            stage.id,
-                            values,
-                        );
+                    onAddStage={() => setAddStageOpen(true)}
+                    onEditStage={async (stage, values) => {
+                        await updateStage(id, stage.id, values);
                     }}
-                    onDeleteStage={(stage) =>
-                        setDeleteTarget({
-                            type: "stage",
-                            stage,
-                        })
-                    }
+                    onDeleteStage={(stage) => setDeleteTarget({ type: "stage", stage })}
                     onReorder={(stages) =>
-                        useDepartmentStore.setState(
-                            (state) => ({
-                                departments:
-                                    state.departments.map(
-                                        (d) =>
-                                            String(
-                                                d.id,
-                                            ) ===
-                                            String(id)
-                                                ? {
-                                                      ...d,
-                                                      stages,
-                                                  }
-                                                : d,
-                                    ),
-                            }),
-                        )
+                        useDepartmentStore.setState((state) => ({
+                            departments: state.departments.map((d) =>
+                                String(d.id) === String(id) ? { ...d, stages } : d
+                            ),
+                        }))
                     }
                 />
             </motion.div>

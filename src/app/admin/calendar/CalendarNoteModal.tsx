@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { CalendarDays, Clock, Loader2, Send, Tag, Trash2, X } from "lucide-react";
+import { CalendarDays, Loader2, Send, Tag, Trash2, X } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
 import { useAuthStore } from "@/store/authStore";
 
@@ -199,12 +199,6 @@ export default function CalendarNoteModal({
                                         {dayEvents.map((ev) => {
                                             const s = getTypeStyle(ev.type);
                                             const label = EVENT_TYPE_LABEL[ev.type] ?? ev.type;
-                                            const timeStart = ev.start?.includes("T")
-                                                ? ev.start.split("T")[1]?.slice(0, 5)
-                                                : null;
-                                            const timeEnd = ev.end?.includes("T")
-                                                ? ev.end.split("T")[1]?.slice(0, 5)
-                                                : null;
                                             return (
                                                 <div
                                                     key={ev.id}
@@ -220,13 +214,6 @@ export default function CalendarNoteModal({
                                                                 <Tag size={9} />
                                                                 {label}
                                                             </span>
-                                                            {timeStart && (
-                                                                <span className="flex items-center gap-1 text-[12px] text-gray-400">
-                                                                    <Clock size={9} />
-                                                                    {timeStart}
-                                                                    {timeEnd ? ` — ${timeEnd}` : ""}
-                                                                </span>
-                                                            )}
                                                         </div>
                                                     </div>
                                                 </div>

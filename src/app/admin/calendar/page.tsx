@@ -244,8 +244,8 @@ function CalendarMonthGrid({
                     <div
                         key={day}
                         className={`py-2.5 text-center text-[9px] font-bold ${index === 6
-                                ? "text-rose-400 dark:text-rose-300"
-                                : "text-slate-400 dark:text-slate-500"
+                            ? "text-rose-400 dark:text-rose-300"
+                            : "text-slate-400 dark:text-slate-500"
                             }`}
                     >
                         {day}
@@ -278,17 +278,17 @@ function CalendarMonthGrid({
                             whileTap={{ scale: 0.975 }}
                             onClick={() => onSelectDate(date)}
                             className={`group relative flex min-h-[92px] flex-col gap-1.5 p-2.5 text-right transition-all ${isToday
-                                    ? "bg-indigo-50/80 dark:bg-indigo-500/[0.09]"
-                                    : "bg-white hover:bg-slate-50 dark:bg-[#111827] dark:hover:bg-white/[0.025]"
+                                ? "bg-indigo-50/80 dark:bg-indigo-500/[0.09]"
+                                : "bg-white hover:bg-slate-50 dark:bg-[#111827] dark:hover:bg-white/[0.025]"
                                 }`}
                         >
                             <div className="flex items-start justify-between gap-1">
                                 <span
                                     className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-[10px] text-[11px] font-extrabold transition-all ${isToday
-                                            ? "bg-indigo-600 text-white shadow-[0_4px_10px_-4px_rgba(79,70,229,0.6)] dark:bg-indigo-500"
-                                            : dayOfWeek === 5
-                                                ? "bg-rose-50 text-rose-500 dark:bg-rose-500/10 dark:text-rose-300"
-                                                : "bg-slate-50 text-slate-600 group-hover:bg-white dark:bg-white/[0.045] dark:text-slate-300 dark:group-hover:bg-white/[0.07]"
+                                        ? "bg-indigo-600 text-white shadow-[0_4px_10px_-4px_rgba(79,70,229,0.6)] dark:bg-indigo-500"
+                                        : dayOfWeek === 5
+                                            ? "bg-rose-50 text-rose-500 dark:bg-rose-500/10 dark:text-rose-300"
+                                            : "bg-slate-50 text-slate-600 group-hover:bg-white dark:bg-white/[0.045] dark:text-slate-300 dark:group-hover:bg-white/[0.07]"
                                         }`}
                                 >
                                     {toPersianDigits(jd)}
@@ -595,8 +595,8 @@ export default function PersianCalendar() {
                                                     setPickerOpen(false);
                                                 }}
                                                 className={`rounded-xl px-2 py-2.5 text-[11px] font-bold transition-all ${isActive
-                                                        ? "bg-indigo-600 text-white shadow-sm shadow-indigo-500/20 dark:bg-indigo-500"
-                                                        : "bg-slate-50 text-slate-500 hover:bg-indigo-50 hover:text-indigo-600 dark:bg-white/[0.035] dark:text-slate-400 dark:hover:bg-indigo-500/10 dark:hover:text-indigo-300"
+                                                    ? "bg-indigo-600 text-white shadow-sm shadow-indigo-500/20 dark:bg-indigo-500"
+                                                    : "bg-slate-50 text-slate-500 hover:bg-indigo-50 hover:text-indigo-600 dark:bg-white/[0.035] dark:text-slate-400 dark:hover:bg-indigo-500/10 dark:hover:text-indigo-300"
                                                     }`}
                                             >
                                                 {label}
@@ -615,8 +615,8 @@ export default function PersianCalendar() {
                             type="button"
                             onClick={() => setView("month")}
                             className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[10.5px] font-bold transition-all ${view === "month"
-                                    ? "bg-white text-indigo-600 shadow-sm dark:bg-[#1e293b] dark:text-indigo-300"
-                                    : "text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+                                ? "bg-white text-indigo-600 shadow-sm dark:bg-[#1e293b] dark:text-indigo-300"
+                                : "text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
                                 }`}
                         >
                             <CalendarDays size={12} />
@@ -626,8 +626,8 @@ export default function PersianCalendar() {
                             type="button"
                             onClick={() => setView("season")}
                             className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[10.5px] font-bold transition-all ${view === "season"
-                                    ? "bg-white text-indigo-600 shadow-sm dark:bg-[#1e293b] dark:text-indigo-300"
-                                    : "text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+                                ? "bg-white text-indigo-600 shadow-sm dark:bg-[#1e293b] dark:text-indigo-300"
+                                : "text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
                                 }`}
                         >
                             <CalendarRange size={12} />
@@ -672,8 +672,8 @@ export default function PersianCalendar() {
                                 type="button"
                                 onClick={() => goToMonth(jy, jm)}
                                 className={`flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-3.5 py-1.5 text-[11px] font-bold transition-all ${isSelected
-                                        ? "border-indigo-600 bg-indigo-600 text-white shadow-sm shadow-indigo-500/20 dark:border-indigo-500 dark:bg-indigo-500"
-                                        : "border-slate-200 bg-white text-slate-500 hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-600 dark:border-white/[0.06] dark:bg-white/[0.025] dark:text-slate-400 dark:hover:border-indigo-500/20 dark:hover:bg-indigo-500/10 dark:hover:text-indigo-300"
+                                    ? "border-indigo-600 bg-indigo-600 text-white shadow-sm shadow-indigo-500/20 dark:border-indigo-500 dark:bg-indigo-500"
+                                    : "border-slate-200 bg-white text-slate-500 hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-600 dark:border-white/[0.06] dark:bg-white/[0.025] dark:text-slate-400 dark:hover:border-indigo-500/20 dark:hover:bg-indigo-500/10 dark:hover:text-indigo-300"
                                     }`}
                             >
                                 {isRealToday && (
@@ -721,8 +721,8 @@ export default function PersianCalendar() {
                 ) : (
                     <div
                         className={`p-4 sm:p-6 ${view === "season"
-                                ? "grid grid-cols-1 gap-5 xl:grid-cols-3"
-                                : "mx-auto max-w-5xl"
+                            ? "grid grid-cols-1 gap-5 xl:grid-cols-3"
+                            : "mx-auto max-w-5xl"
                             }`}
                     >
                         {visibleMonths.map((month) => (
@@ -750,4 +750,4 @@ export default function PersianCalendar() {
             />
         </>
     );
-}
+} 
