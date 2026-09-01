@@ -388,9 +388,6 @@ function SourceSelect({
 
     return (
         <div className="relative" ref={wrapperRef}>
-            <label className="mb-2 block text-[11.5px] font-bold text-gray-400">
-                {label}
-            </label>
             <button
                 ref={buttonRef}
                 type="button"
@@ -424,7 +421,7 @@ function SourceSelect({
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.95, y: dropUp ? 8 : -8 }}
                         transition={{ duration: 0.15, ease: "easeOut" }}
-                        className={`absolute left-0 z-[100] w-full origin-center overflow-hidden rounded-[2rem] border border-gray-100 bg-white p-2 shadow-2xl dark:border-white/[0.08] dark:bg-[#1a2235] ${dropUp ? "bottom-[calc(100%+8px)]" : "top-[calc(100%+8px)]"
+                        className={`absolute left-0 z-[100] w-[300px] origin-center overflow-hidden rounded-[2rem] border border-gray-100 bg-white p-2 shadow-2xl dark:border-white/[0.08] dark:bg-[#1a2235] ${dropUp ? "bottom-[calc(100%+8px)]" : "top-[calc(100%+8px)]"
                             }`}
                     >
                         <div className="flex items-center justify-between px-2 pb-2 pt-1">
