@@ -502,6 +502,9 @@ export default function DepartmentDetailPage() {
                     onAddStage={() => setAddStageOpen(true)}
                     onEditStage={async (stage, values) => {
                         await updateStage(id, stage.id, values);
+                        setStageRefreshing(true);
+                        await fetchAll();
+                        setStageRefreshing(false);
                     }}
                     onDeleteStage={(stage) => setDeleteTarget({ type: "stage", stage })}
                     onReorder={(stages) =>

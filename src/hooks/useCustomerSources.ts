@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import axiosInstance from "@/lib/axiosInstance";
+import { AxiosResponse } from "axios";
 
 export type TimeRange = "weekly" | "monthly" | "yearly";
 
@@ -47,55 +48,97 @@ const COLORS = [
   "#06b6d4",
 ];
 
-function getRangeStart(range: TimeRange): Date {
-  const now = new Date();
-  const d = new Date(now);
-  if (range === "weekly") {
-    d.setDate(d.getDate() - 7);
-  } else if (range === "monthly") {
-    d.setDate(d.getDate() - 30);
-  } else {
-    d.setDate(d.getDate() - 365);
+const RANGE_DAYS: Record<TimeRange, number> = {
+  weekly: 7,
+  monthly: 30,
+  yearly: 365,
+};
+
+function getRangeStart(range: TimeRange, now: Date): Date {
+  const start = new Date(now.getTime());
+  start.setTime(start.getTime() - RANGE_DAYS[range] * 24 * 60 * 60 * 1000);
+  return start;
+}
+
+function isDateInRange(
+  createdAtValue: string,
+  rangeStart: Date,
+  rangeEnd: Date,
+): boolean {
+  const createdAt = new Date(createdAtValue);
+
+  if (Number.isNaN(createdAt.getTime())) {
+    return false;
   }
-  return d;
+
+  return createdAt >= rangeStart && createdAt <= rangeEnd;
 }
 
 function buildRangeData(
   details: CustomerDetail[],
   resources: Resource[],
+  now: Date,
 ): Record<TimeRange, SourceCount[]> {
   const ranges: TimeRange[] = ["weekly", "monthly", "yearly"];
   const result = {} as Record<TimeRange, SourceCount[]>;
-  const resourceMap = new Map(resources.map((r) => [r.id, r.title]));
+  const resourceMap = new Map(
+    resources.map((resource) => [resource.id, resource.title]),
+  );
 
   for (const range of ranges) {
-    const start = getRangeStart(range);
-    const filtered = details.filter((c) => {
-      if (!c.source) return false;
-      const createdAt = new Date(c.created_at);
-      return createdAt >= start;
+    const rangeStart = getRangeStart(range, now);
+
+    const filtered = details.filter((customer) => {
+      if (!customer.source) {
+        return false;
+      }
+
+      return isDateInRange(customer.created_at, rangeStart, now);
     });
 
-    const counts: Record<number, number> = {};
-    for (const c of filtered) {
-      if (!c.source) continue;
-      const sourceId = parseInt(c.source, 10);
-      if (isNaN(sourceId)) continue;
-      counts[sourceId] = (counts[sourceId] ?? 0) + 1;
+    const counts = new Map<number, number>();
+
+    for (const customer of filtered) {
+      if (!customer.source) {
+        continue;
+      }
+
+      const sourceId = Number.parseInt(customer.source, 10);
+
+      if (Number.isNaN(sourceId)) {
+        continue;
+      }
+
+      counts.set(sourceId, (counts.get(sourceId) ?? 0) + 1);
     }
 
-    const arr: SourceCount[] = [];
-    for (const [id, count] of Object.entries(counts)) {
-      const resourceId = parseInt(id, 10);
+    const rangeItems: SourceCount[] = [];
+
+    counts.forEach((count, resourceId) => {
       const name = resourceMap.get(resourceId) ?? "نامشخص";
-      const colorIndex = (resourceId - 1) % COLORS.length;
+      const colorIndex =
+        (((resourceId - 1) % COLORS.length) + COLORS.length) % COLORS.length;
       const color = COLORS[colorIndex];
       const glow = `${color}20`;
-      arr.push({ resourceId, name, value: count, color, glow });
-    }
 
-    arr.sort((a, b) => b.value - a.value);
-    result[range] = arr;
+      rangeItems.push({
+        resourceId,
+        name,
+        value: count,
+        color,
+        glow,
+      });
+    });
+
+    rangeItems.sort((a, b) => {
+      if (b.value !== a.value) {
+        return b.value - a.value;
+      }
+
+      return a.name.localeCompare(b.name, "fa");
+    });
+
+    result[range] = rangeItems;
   }
 
   return result;
@@ -107,6 +150,7 @@ export function useCustomerSources() {
     monthly: [],
     yearly: [],
   });
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -123,45 +167,61 @@ export function useCustomerSources() {
           axiosInstance.get<Resource[]>("/tasks/api/v1/cases/resources/"),
         ]);
 
-        const customers: CustomerListItem[] = Array.isArray(listRes.data)
-          ? listRes.data
-          : [];
-        const resources: Resource[] = Array.isArray(resourcesRes.data)
+        const customers = Array.isArray(listRes.data) ? listRes.data : [];
+
+        const resources = Array.isArray(resourcesRes.data)
           ? resourcesRes.data
           : [];
 
         const detailResults = await Promise.allSettled(
-          customers.map((c) =>
+          customers.map((customer) =>
             axiosInstance.get<CustomerDetail>(
-              `/customers/api/v1/customers/${c.id}/`,
+              `/customers/api/v1/customers/${customer.id}/`,
             ),
           ),
         );
 
         const details: CustomerDetail[] = detailResults
-          .filter((r) => r.status === "fulfilled")
-          .map(
-            (r) =>
-              (r as PromiseFulfilledResult<{ data: CustomerDetail }>).value
-                .data,
-          );
+          .filter(
+            (
+              result,
+            ): result is PromiseFulfilledResult<
+              AxiosResponse<CustomerDetail>
+            > => result.status === "fulfilled",
+          )
+          .map((result) => result.value.data);
+        const now = new Date();
+        const rangeData = buildRangeData(details, resources, now);
 
-        const rangeData = buildRangeData(details, resources);
-
-        if (!cancelled) setData(rangeData);
+        if (!cancelled) {
+          setData(rangeData);
+        }
       } catch (err) {
         console.error("[useCustomerSources]", err);
-        if (!cancelled) setError("خطا در بارگذاری داده‌ها");
+
+        if (!cancelled) {
+          setError("خطا در بارگذاری داده‌ها");
+        }
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     }
 
     load();
+
     return () => {
       cancelled = true;
     };
   }, []);
 
-  return { data, loading, error };
+  return useMemo(
+    () => ({
+      data,
+      loading,
+      error,
+    }),
+    [data, loading, error],
+  );
 }

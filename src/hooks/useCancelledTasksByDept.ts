@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import axiosInstance from "@/lib/axiosInstance";
+import { toJalali } from "@/lib/jalali";
 
 export type TimeRange = "weekly" | "monthly" | "yearly";
 
@@ -17,78 +18,157 @@ interface DeptIssues {
   issues: number;
 }
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+const createLocalDate = (date: Date) =>
+  new Date(date.getFullYear(), date.getMonth(), date.getDate());
+
+const parseTaskDate = (value: string) => {
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+
+  return createLocalDate(date);
+};
+
+const getDateKey = (date: Date) =>
+  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(
+    2,
+    "0",
+  )}-${String(date.getDate()).padStart(2, "0")}`;
+
+const getToday = () => createLocalDate(new Date());
+
+const getStartDate = (today: Date, days: number) =>
+  new Date(today.getTime() - (days - 1) * DAY_MS);
+
+const getJalaliDate = (date: Date) =>
+  toJalali(date.getFullYear(), date.getMonth() + 1, date.getDate());
+
 export function useCancelledTasksByDept() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    let mounted = true;
+
     const fetchTasks = async () => {
       try {
         const res = await axiosInstance.get<Task[]>("/tasks/api/v1/tasks/");
-        setTasks(res.data);
+
+        if (!mounted) return;
+
+        setTasks(Array.isArray(res.data) ? res.data : []);
       } catch (err: any) {
+        if (!mounted) return;
+
         const status = err?.response?.status;
-        if (status === 401) {
-          setError("401: دسترسی غیرمجاز");
-        } else {
-          setError("خطا در دریافت اطلاعات تسک‌ها");
-        }
+
+        setError(
+          status === 401
+            ? "401: دسترسی غیرمجاز"
+            : "خطا در دریافت اطلاعات تسک‌ها",
+        );
       } finally {
-        setLoading(false);
+        if (mounted) {
+          setLoading(false);
+        }
       }
     };
 
     fetchTasks();
+
+    return () => {
+      mounted = false;
+    };
   }, []);
 
-  const allDepartments = useMemo(() => {
-    const depts = new Set(
+  const normalizedTasks = useMemo(
+    () =>
       tasks
-        .map((t) => t.department_name || "نامشخص")
-        .filter(Boolean)
-    );
+        .map((task) => {
+          const date = parseTaskDate(task.created_at);
+
+          if (!date) return null;
+
+          return {
+            ...task,
+            date,
+            dateKey: getDateKey(date),
+            jalali: getJalaliDate(date),
+          };
+        })
+        .filter(
+          (
+            task,
+          ): task is Task & {
+            date: Date;
+            dateKey: string;
+            jalali: [number, number, number];
+          } => task !== null,
+        ),
+    [tasks],
+  );
+
+  const allDepartments = useMemo(() => {
+    const depts = new Set<string>();
+
+    tasks.forEach((task) => {
+      const department = task.department_name?.trim();
+
+      if (department) {
+        depts.add(department);
+      } else {
+        depts.add("نامشخص");
+      }
+    });
+
     return Array.from(depts);
   }, [tasks]);
 
-  const getIssuesByRange = (range: TimeRange): DeptIssues[] => {
-    const now = new Date();
+  const chartData = useMemo(() => {
+    const today = getToday();
 
-    const filtered = tasks.filter((task) => {
-      if (task.status !== "cancelled") return false;
+    const getIssuesByRange = (range: TimeRange): DeptIssues[] => {
+      const days = range === "weekly" ? 7 : range === "monthly" ? 30 : 365;
 
-      const createdAt = new Date(task.created_at);
-      const diffDays = Math.ceil(
-        Math.abs(now.getTime() - createdAt.getTime()) / (1000 * 60 * 60 * 24),
-      );
+      const startDate = getStartDate(today, days);
+      const endDate = new Date(today.getTime() + DAY_MS);
 
-      if (range === "weekly") return diffDays <= 7;
-      if (range === "monthly") return diffDays <= 30;
-      if (range === "yearly") return diffDays <= 365;
-      return true;
-    });
+      const deptCounts: Record<string, number> = {};
 
-    const deptCounts: Record<string, number> = {};
+      normalizedTasks.forEach((task) => {
+        if (task.status !== "cancelled") return;
 
-    filtered.forEach((task) => {
-      const dept = task.department_name || "نامشخص";
-      deptCounts[dept] = (deptCounts[dept] || 0) + 1;
-    });
+        if (task.date < startDate || task.date >= endDate) {
+          return;
+        }
 
-    return allDepartments.map((dept) => ({
-      stage: dept,
-      issues: deptCounts[dept] ?? 0,
-    }));
-  };
+        const department = task.department_name?.trim() || "نامشخص";
 
-  const chartData = useMemo(
-    () => ({
+        deptCounts[department] = (deptCounts[department] ?? 0) + 1;
+      });
+
+      return allDepartments.map((department) => ({
+        stage: department,
+        issues: deptCounts[department] ?? 0,
+      }));
+    };
+
+    return {
       weekly: getIssuesByRange("weekly"),
       monthly: getIssuesByRange("monthly"),
       yearly: getIssuesByRange("yearly"),
-    }),
-    [tasks, allDepartments],
-  );
+    };
+  }, [normalizedTasks, allDepartments]);
 
-  return { chartData, loading, error, allDepartments };
+  return {
+    chartData,
+    loading,
+    error,
+    allDepartments,
+  };
 }

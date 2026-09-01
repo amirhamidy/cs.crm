@@ -10,7 +10,7 @@ interface Props {
     stage: Stage | null;
     accent: string;
     onClose: () => void;
-    onSubmit: (values: { name: string; description?: string; order: number }) => Promise<void>;
+    onSubmit: (values: { name: string; description: string; order: number }) => Promise<void>;
 }
 
 interface FloatingInputProps extends InputHTMLAttributes<HTMLInputElement> {
@@ -104,7 +104,7 @@ export default function EditStageModal({ open, stage, onClose, onSubmit }: Props
         const validOrder = Number.isFinite(parsedOrder) && parsedOrder > 0 ? Math.floor(parsedOrder) : 1;
         setLoading(true);
         try {
-            await onSubmit({ name: name.trim(), description: description.trim() || undefined, order: validOrder });
+            await onSubmit({ name: name.trim(), description: description.trim(), order: validOrder });
             setSuccess(true);
             setTimeout(() => {
                 setSuccess(false);

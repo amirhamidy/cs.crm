@@ -41,7 +41,7 @@ interface StagesPanelProps {
         stage: Stage,
         values: {
             name: string;
-            description?: string;
+            description: string;
             order: number;
         }
     ) => Promise<void> | void;
@@ -197,7 +197,7 @@ function StageHeader({
                 )}
 
                 <div
-                    className="flex h-[66px] items-center justify-between gap-2 rounded-[1.35rem] border bg-white/75 px-3.5 dark:bg-white/[0.03]"
+                    className="flex min-h-[66px] items-center justify-between gap-2 rounded-[1.35rem] border bg-white/75 px-3.5 py-2 dark:bg-white/[0.03]"
                     style={{
                         borderColor: `${stageColor}35`,
                     }}
@@ -216,6 +216,12 @@ function StageHeader({
                             <h4 className="truncate text-[12px] font-extrabold text-gray-800 dark:text-gray-100">
                                 {stage.name}
                             </h4>
+
+                            {stage.description && (
+                                <p className="mt-0.5 truncate text-[10px] font-medium text-gray-400 dark:text-gray-500">
+                                    {stage.description}
+                                </p>
+                            )}
 
                             <p className="mt-0.5 text-[10px] font-bold text-gray-400 dark:text-gray-500">
                                 {tasksCount} وظیفه
@@ -426,7 +432,7 @@ export default function StagesPanel({
             targetStage: Stage,
             values: {
                 name: string;
-                description?: string;
+                description: string;
                 order: number;
             }
         ) => {
@@ -512,7 +518,7 @@ export default function StagesPanel({
                             name:
                                 conflictingStage.name,
                             description:
-                                conflictingStage.description,
+                                conflictingStage.description ?? "",
                             order: oldOrder,
                         }
                     );
@@ -718,8 +724,8 @@ export default function StagesPanel({
                                                 )
                                             }
                                             className={`flex min-w-[118px] shrink-0 items-center gap-2 rounded-2xl border px-3 py-2 text-right transition ${isActive
-                                                    ? "border-transparent shadow-sm"
-                                                    : "border-gray-200/70 bg-white/60 dark:border-white/[0.07] dark:bg-white/[0.03]"
+                                                ? "border-transparent shadow-sm"
+                                                : "border-gray-200/70 bg-white/60 dark:border-white/[0.07] dark:bg-white/[0.03]"
                                                 }`}
                                             style={
                                                 isActive
@@ -743,8 +749,8 @@ export default function StagesPanel({
 
                                             <span
                                                 className={`min-w-0 truncate text-[11px] font-extrabold ${isActive
-                                                        ? "text-gray-800 dark:text-gray-100"
-                                                        : "text-gray-500 dark:text-gray-400"
+                                                    ? "text-gray-800 dark:text-gray-100"
+                                                    : "text-gray-500 dark:text-gray-400"
                                                     }`}
                                             >
                                                 {

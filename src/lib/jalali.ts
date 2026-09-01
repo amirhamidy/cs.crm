@@ -144,7 +144,15 @@ export const JALALI_MONTHS = [
   "اسفند",
 ];
 
-export const JALALI_WEEKDAYS = ["ش", "ی", "د", "س", "چ", "پ", "ج"];
+export const JALALI_WEEKDAYS = [
+  "شنبه",
+  "یکشنبه",
+  "دوشنبه",
+  "سه‌شنبه",
+  "چهارشنبه",
+  "پنجشنبه",
+  "جمعه",
+];
 
 export function toPersianDigits(value: number | string) {
   const map: Record<string, string> = {

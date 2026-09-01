@@ -3,7 +3,11 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Cell, Pie, PieChart, ResponsiveContainer } from "recharts";
-import { useCustomerSources, type SourceCount, type TimeRange } from "@/hooks/useCustomerSources";
+import {
+  useCustomerSources,
+  type SourceCount,
+  type TimeRange,
+} from "@/hooks/useCustomerSources";
 
 const ranges: { key: TimeRange; label: string; sub: string }[] = [
   { key: "weekly", label: "هفتگی", sub: "۷ روز اخیر" },
@@ -28,11 +32,14 @@ function ChartSkeleton() {
           <div className="h-4 w-36 animate-pulse rounded-md bg-gray-200 dark:bg-slate-800" />
           <div className="h-3 w-24 animate-pulse rounded-md bg-gray-100 dark:bg-slate-800/60" />
         </div>
+
         <div className="h-8 w-36 animate-pulse rounded-xl bg-gray-100 dark:bg-slate-800/60" />
       </div>
+
       <div className="flex h-[180px] items-center justify-center">
         <div className="h-[148px] w-[148px] animate-pulse rounded-full bg-gray-100 dark:bg-slate-800/60" />
       </div>
+
       <div className="mt-2 grid grid-cols-2 gap-1" dir="rtl">
         {[1, 2, 3, 4].map((i) => (
           <div
@@ -47,37 +54,65 @@ function ChartSkeleton() {
 
 export default function CategoryChart() {
   const { data: rangeData, loading, error } = useCustomerSources();
-  const [activeRange, setActiveRange] = useState<TimeRange>("weekly");
-  const [activeSlice, setActiveSlice] = useState<ActiveSlice | null>(null);
 
-  const data = useMemo(() => rangeData[activeRange] ?? [], [rangeData, activeRange]);
+  const [activeRange, setActiveRange] =
+    useState<TimeRange>("weekly");
 
-  const total = useMemo(() => data.reduce((sum, i) => sum + i.value, 0), [data]);
-  const totalFormatted = useMemo(() => total.toLocaleString("fa-IR"), [total]);
+  const [activeSlice, setActiveSlice] =
+    useState<ActiveSlice | null>(null);
+
+  const data = useMemo(
+    () => rangeData[activeRange] ?? [],
+    [rangeData, activeRange],
+  );
+
+  const total = useMemo(
+    () => data.reduce((sum, item) => sum + item.value, 0),
+    [data],
+  );
+
+  const totalFormatted = useMemo(
+    () => total.toLocaleString("fa-IR"),
+    [total],
+  );
+
   const currentRange = useMemo(
-    () => ranges.find((r) => r.key === activeRange),
+    () => ranges.find((range) => range.key === activeRange),
     [activeRange],
   );
 
   const handleMouseEnter = useCallback(
-    (_: unknown, index: number) => {
-      const item = data[index];
-      if (!item) return;
+    (
+      entry: SourceCount,
+      index: number,
+    ) => {
+      const item = data[index] ?? entry;
+
+      if (!item) {
+        return;
+      }
+
       setActiveSlice({
         id: item.resourceId,
         label: item.name,
         value: item.value,
         color: item.color,
         glow: item.glow,
-        pct: total ? ((item.value / total) * 100).toFixed(1) : "0.0",
+        pct: total
+          ? ((item.value / total) * 100).toFixed(1)
+          : "0.0",
       });
     },
     [data, total],
   );
 
-  const handleMouseLeave = useCallback(() => setActiveSlice(null), []);
+  const handleMouseLeave = useCallback(() => {
+    setActiveSlice(null);
+  }, []);
 
-  useEffect(() => setActiveSlice(null), [activeRange]);
+  useEffect(() => {
+    setActiveSlice(null);
+  }, [activeRange]);
 
   const pieDefs = (
     <defs>
@@ -90,9 +125,14 @@ export default function CategoryChart() {
           r="50%"
         >
           <stop offset="0%" stopColor={item.color} stopOpacity={1} />
-          <stop offset="100%" stopColor={item.color} stopOpacity={0.65} />
+          <stop
+            offset="100%"
+            stopColor={item.color}
+            stopOpacity={0.65}
+          />
         </radialGradient>
       ))}
+
       {data.map((item) => (
         <filter
           key={`glow-${item.resourceId}`}
@@ -114,22 +154,29 @@ export default function CategoryChart() {
     </defs>
   );
 
-  if (loading) return <ChartSkeleton />;
+  if (loading) {
+    return <ChartSkeleton />;
+  }
 
-  if (error)
+  if (error) {
     return (
       <div className="flex h-[320px] items-center justify-center rounded-2xl border border-red-200/50 bg-white dark:border-red-500/10 dark:bg-slate-950">
         <p className="text-[13px] text-red-400">{error}</p>
       </div>
     );
+  }
 
   return (
     <div className="relative rounded-2xl border border-gray-100 bg-white p-4 shadow-sm dark:border-white/5 dark:bg-slate-950">
-      <div className="mb-3 flex items-start justify-between gap-3" dir="rtl">
+      <div
+        className="mb-3 flex items-start justify-between gap-3"
+        dir="rtl"
+      >
         <div>
           <h3 className="text-[14px] font-semibold text-gray-900 dark:text-white">
             بیشترین منابع فروش
           </h3>
+
           <p className="mt-0.5 text-[13px] text-gray-500 dark:text-gray-400">
             {currentRange?.sub}
           </p>
@@ -147,15 +194,19 @@ export default function CategoryChart() {
                 <motion.span
                   layoutId="categoryChartRangeIndicator"
                   className="absolute inset-0 rounded-lg bg-white shadow-sm dark:bg-slate-800"
-                  transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                  transition={{
+                    type: "spring",
+                    stiffness: 400,
+                    damping: 30,
+                  }}
                 />
               )}
+
               <span
-                className={`relative z-10 transition-colors ${
-                  activeRange === range.key
+                className={`relative z-10 transition-colors ${activeRange === range.key
                     ? "text-gray-900 dark:text-white"
                     : "text-gray-500 dark:text-gray-400"
-                }`}
+                  }`}
               >
                 {range.label}
               </span>
@@ -170,27 +221,47 @@ export default function CategoryChart() {
             {activeSlice && (
               <motion.div
                 key={`${activeRange}-${activeSlice.id}`}
-                initial={{ opacity: 0, y: 4, scale: 0.96 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: 4, scale: 0.96 }}
+                initial={{
+                  opacity: 0,
+                  y: 4,
+                  scale: 0.96,
+                }}
+                animate={{
+                  opacity: 1,
+                  y: 0,
+                  scale: 1,
+                }}
+                exit={{
+                  opacity: 0,
+                  y: 4,
+                  scale: 0.96,
+                }}
                 transition={{ duration: 0.15 }}
                 className="pointer-events-none rounded-xl border border-gray-200/60 bg-white/95 px-3 py-2 shadow-lg backdrop-blur-sm dark:border-white/10 dark:bg-slate-900/95"
-                style={{ boxShadow: `0 4px 20px ${activeSlice.glow}` }}
+                style={{
+                  boxShadow: `0 4px 20px ${activeSlice.glow}`,
+                }}
               >
                 <div className="mb-1 flex items-center gap-1.5">
                   <span
                     className="h-2 w-2 rounded-full"
-                    style={{ backgroundColor: activeSlice.color }}
+                    style={{
+                      backgroundColor: activeSlice.color,
+                    }}
                   />
+
                   <span className="text-[12px] font-semibold text-gray-800 dark:text-gray-100">
                     {activeSlice.label}
                   </span>
                 </div>
+
                 <p className="text-[11px] text-gray-500 dark:text-gray-400">
                   سهم فروش:{" "}
                   <span
                     className="font-bold tabular-nums"
-                    style={{ color: activeSlice.color }}
+                    style={{
+                      color: activeSlice.color,
+                    }}
                   >
                     {activeSlice.pct}%
                   </span>
@@ -203,6 +274,7 @@ export default function CategoryChart() {
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             {pieDefs}
+
             <Pie
               data={data}
               dataKey="value"
@@ -218,13 +290,19 @@ export default function CategoryChart() {
               isAnimationActive={false}
             >
               {data.map((entry) => {
-                const isActive = activeSlice?.id === entry.resourceId;
+                const isActive =
+                  activeSlice?.id === entry.resourceId;
+
                 return (
                   <Cell
                     key={`${activeRange}-${entry.resourceId}`}
                     fill={`url(#pieGrad-${entry.resourceId})`}
                     stroke="none"
-                    filter={isActive ? `url(#glow-${entry.resourceId})` : undefined}
+                    filter={
+                      isActive
+                        ? `url(#glow-${entry.resourceId})`
+                        : undefined
+                    }
                   />
                 );
               })}
@@ -237,15 +315,26 @@ export default function CategoryChart() {
             {activeSlice ? (
               <motion.div
                 key={activeSlice.id}
-                initial={{ opacity: 0, scale: 0.85 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.85 }}
+                initial={{
+                  opacity: 0,
+                  scale: 0.85,
+                }}
+                animate={{
+                  opacity: 1,
+                  scale: 1,
+                }}
+                exit={{
+                  opacity: 0,
+                  scale: 0.85,
+                }}
                 transition={{ duration: 0.12 }}
                 className="text-center"
               >
                 <p
                   className="text-[20px] font-bold tabular-nums"
-                  style={{ color: activeSlice.color }}
+                  style={{
+                    color: activeSlice.color,
+                  }}
                 >
                   {activeSlice.pct}%
                 </p>
@@ -259,7 +348,10 @@ export default function CategoryChart() {
                 transition={{ duration: 0.12 }}
                 className="text-center"
               >
-                <p className="text-[10px] text-gray-400 dark:text-gray-500">کل</p>
+                <p className="text-[10px] text-gray-400 dark:text-gray-500">
+                  کل
+                </p>
+
                 <p className="text-[16px] font-bold tabular-nums text-gray-700 dark:text-gray-200">
                   {totalFormatted}
                 </p>
@@ -271,25 +363,39 @@ export default function CategoryChart() {
 
       <div className="mt-2 grid grid-cols-2 gap-1" dir="rtl">
         {data.map((entry: SourceCount) => {
-          const pct = total ? ((entry.value / total) * 100).toFixed(1) : "0.0";
-          const isActive = activeSlice?.id === entry.resourceId;
+          const pct = total
+            ? ((entry.value / total) * 100).toFixed(1)
+            : "0.0";
+
+          const isActive =
+            activeSlice?.id === entry.resourceId;
 
           return (
             <div
               key={`${activeRange}-${entry.resourceId}`}
               className="flex cursor-default items-center gap-1.5 rounded-lg px-2 py-1 transition-colors duration-150"
-              style={{ backgroundColor: isActive ? entry.glow : "transparent" }}
+              style={{
+                backgroundColor: isActive
+                  ? entry.glow
+                  : "transparent",
+              }}
             >
               <span
                 className="h-2 w-2 flex-shrink-0 rounded-full"
-                style={{ backgroundColor: entry.color }}
+                style={{
+                  backgroundColor: entry.color,
+                }}
               />
+
               <span className="flex-1 truncate text-[12px] text-gray-600 dark:text-gray-300">
                 {entry.name}
               </span>
+
               <span
                 className="tabular-nums text-[12px] font-bold"
-                style={{ color: entry.color }}
+                style={{
+                  color: entry.color,
+                }}
               >
                 {pct}%
               </span>

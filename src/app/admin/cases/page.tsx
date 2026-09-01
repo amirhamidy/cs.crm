@@ -328,7 +328,7 @@ export default function AdminCasesPage() {
                                     >
                                         <span className="flex items-center gap-2">
                                             <Layers size={13} />
-                                            دیدن تسک‌های این پرونده
+                                            دیدن وظیفه های این پرونده
                                         </span>
                                         <span
                                             className="rounded-full px-2 py-0.5 text-[10.5px] font-extrabold"

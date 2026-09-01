@@ -1,7 +1,7 @@
 "use client";
 
-import { motion } from "framer-motion";
-import { useMemo, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Area,
   AreaChart,
@@ -11,7 +11,11 @@ import {
   YAxis,
 } from "recharts";
 import { ChartContainer, type ChartConfig } from "@/components/ui/chart";
-import { useSoldTasksByTimeRange, type TimeRange } from "@/hooks/useSoldTasksByTimeRange";
+
+import {
+  useSoldTasksByTimeRange,
+  type TimeRange,
+} from "@/hooks/useSoldTasksByTimeRange";
 
 const chartConfig: ChartConfig = {
   sales: { label: "فروش", color: "#38bdf8" },
@@ -37,6 +41,12 @@ const CHART_DEFS = (
   </defs>
 );
 
+type ActivePoint = {
+  name: string;
+  sales: number;
+  revenue: number;
+};
+
 function SalesChartSkeleton() {
   return (
     <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm dark:border-white/5 dark:bg-slate-950">
@@ -54,9 +64,14 @@ function SalesChartSkeleton() {
 
 export default function SalesChart() {
   const [activeRange, setActiveRange] = useState<TimeRange>("monthly");
+  const [activePoint, setActivePoint] = useState<ActivePoint | null>(null);
+
   const { chartData, loading, error } = useSoldTasksByTimeRange();
 
-  const data = chartData[activeRange];
+  const data = useMemo(
+    () => chartData[activeRange] ?? [],
+    [chartData, activeRange]
+  );
 
   const currentRange = useMemo(
     () => ranges.find((r) => r.key === activeRange),
@@ -65,8 +80,71 @@ export default function SalesChart() {
 
   const hasData = useMemo(() => {
     if (!data || data.length === 0) return false;
-    return data.some((item) => item.sales > 0 || item.revenue > 0);
+
+    return data.some(
+      (item) => item.sales > 0 || item.revenue > 0
+    );
   }, [data]);
+
+  const handleMouseMove = useCallback(
+    (state: any) => {
+      if (
+        !state ||
+        !state.isTooltipActive ||
+        state.activeTooltipIndex === undefined ||
+        state.activeTooltipIndex === null
+      ) {
+        return;
+      }
+
+      const index = Number(state.activeTooltipIndex);
+      const item = data[index];
+
+      if (!item) return;
+
+      setActivePoint((current) => {
+        if (
+          current &&
+          current.name === item.name &&
+          current.sales === item.sales &&
+          current.revenue === item.revenue
+        ) {
+          return current;
+        }
+
+        return {
+          name: item.name,
+          sales: item.sales,
+          revenue: item.revenue,
+        };
+      });
+    },
+    [data]
+  );
+
+  const handleMouseLeave = useCallback(() => {
+    setActivePoint(null);
+  }, []);
+
+  useEffect(() => {
+    setActivePoint(null);
+  }, [activeRange]);
+
+  const formattedSales = useMemo(
+    () =>
+      activePoint
+        ? activePoint.sales.toLocaleString("fa-IR")
+        : null,
+    [activePoint]
+  );
+
+  const formattedRevenue = useMemo(
+    () =>
+      activePoint
+        ? activePoint.revenue.toLocaleString("fa-IR")
+        : null,
+    [activePoint]
+  );
 
   if (loading) return <SalesChartSkeleton />;
 
@@ -82,7 +160,10 @@ export default function SalesChart() {
     <motion.div
       initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3, ease: [0.25, 0.46, 0.45, 0.94] }}
+      transition={{
+        duration: 0.3,
+        ease: [0.25, 0.46, 0.45, 0.94],
+      }}
       className="relative overflow-hidden rounded-2xl border border-gray-100 bg-white p-4 shadow-sm dark:border-white/5 dark:bg-slate-950"
     >
       <div className="mb-3 flex items-center justify-between" dir="rtl">
@@ -90,6 +171,7 @@ export default function SalesChart() {
           <h3 className="text-[14px] font-semibold text-gray-900 dark:text-white">
             نمودار فروش
           </h3>
+
           <p className="mt-0.5 text-[13px] text-gray-500 dark:text-gray-400">
             گزارش عملکرد {currentRange?.sub}
           </p>
@@ -107,9 +189,14 @@ export default function SalesChart() {
                 <motion.span
                   layoutId="salesChartRangeIndicator"
                   className="absolute inset-0 rounded-lg bg-white shadow-sm dark:bg-slate-800"
-                  transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                  transition={{
+                    type: "spring",
+                    stiffness: 400,
+                    damping: 30,
+                  }}
                 />
               )}
+
               <span
                 className={`relative z-10 transition-colors ${activeRange === range.key
                     ? "text-gray-900 dark:text-white"
@@ -123,70 +210,186 @@ export default function SalesChart() {
         </div>
       </div>
 
-      <div className="h-[180px] w-full flex items-center justify-center">
-        {!hasData ? (
-          <div className="text-xs text-gray-400 dark:text-gray-500" dir="rtl">
-            تسک فروخته شده‌ای در این بازه ثبت نشده است.
+      <div className="relative h-[180px]">
+        <div className="absolute left-2 top-2 z-10 min-w-[150px]">
+          <AnimatePresence mode="wait">
+            {activePoint && (
+              <motion.div
+                key={`${activeRange}-${activePoint.name}`}
+                initial={{
+                  opacity: 0,
+                  y: 4,
+                  scale: 0.96,
+                }}
+                animate={{
+                  opacity: 1,
+                  y: 0,
+                  scale: 1,
+                }}
+                exit={{
+                  opacity: 0,
+                  y: 4,
+                  scale: 0.96,
+                }}
+                transition={{ duration: 0.15 }}
+                className="pointer-events-none rounded-xl border border-gray-200/60 bg-white/95 px-3 py-2 shadow-lg backdrop-blur-sm dark:border-white/10 dark:bg-slate-900/95"
+                style={{
+                  boxShadow:
+                    "0 4px 20px rgba(56,189,248,0.35)",
+                }}
+              >
+                <div className="mb-1 flex items-center gap-1.5">
+                  <span
+                    className="h-2 w-2 rounded-full"
+                    style={{
+                      backgroundColor: "#38bdf8",
+                    }}
+                  />
+
+                  <span className="text-[12px] font-semibold text-gray-800 dark:text-gray-100">
+                    {activePoint.name}
+                  </span>
+                </div>
+
+                <div className="flex flex-col gap-0.5">
+                  <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                    فروش:{" "}
+                    <span
+                      className="font-bold tabular-nums"
+                      style={{
+                        color: "#38bdf8",
+                      }}
+                    >
+                      {formattedSales}
+                    </span>
+                  </p>
+
+                  <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                    درآمد:{" "}
+                    <span
+                      className="font-bold tabular-nums"
+                      style={{
+                        color: "#c084fc",
+                      }}
+                    >
+                      {formattedRevenue}
+                    </span>
+                  </p>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+
+        <ChartContainer
+          config={chartConfig}
+          className="h-full w-full"
+        >
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart
+              data={data}
+              margin={{
+                top: 4,
+                right: 4,
+                left: -24,
+                bottom: 0,
+              }}
+              onMouseMove={handleMouseMove}
+              onMouseLeave={handleMouseLeave}
+            >
+              {CHART_DEFS}
+
+              <CartesianGrid
+                strokeDasharray="3 3"
+                className="[&_line]:stroke-gray-100 dark:[&_line]:stroke-white/[0.04]"
+                vertical={false}
+              />
+
+              <XAxis
+                dataKey="name"
+                tick={{
+                  fontSize: 11,
+                  fontWeight: 500,
+                }}
+                className="[&_text]:fill-gray-500 dark:[&_text]:fill-gray-400"
+                axisLine={false}
+                tickLine={false}
+                dy={5}
+              />
+
+              <YAxis
+                tick={{
+                  fontSize: 11,
+                  fontWeight: 500,
+                }}
+                className="[&_text]:fill-gray-500 dark:[&_text]:fill-gray-400"
+                axisLine={false}
+                tickLine={false}
+                tickFormatter={(v: number) => `${v}`}
+              />
+
+              <Area
+                type="monotone"
+                dataKey="sales"
+                stroke="#38bdf8"
+                strokeWidth={2.5}
+                fill="url(#salesGradFill)"
+                dot={false}
+                activeDot={{
+                  r: 5,
+                  strokeWidth: 0,
+                  fill: "#38bdf8",
+                }}
+                isAnimationActive={false}
+              />
+
+              <Area
+                type="monotone"
+                dataKey="revenue"
+                stroke="#c084fc"
+                strokeWidth={2.5}
+                fill="url(#revenueGradFill)"
+                dot={false}
+                activeDot={{
+                  r: 5,
+                  strokeWidth: 0,
+                  fill: "#c084fc",
+                }}
+                isAnimationActive={false}
+              />
+            </AreaChart>
+          </ResponsiveContainer>
+        </ChartContainer>
+
+        {!hasData && (
+          <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+            <div
+              className="text-xs text-gray-400 dark:text-gray-500"
+              dir="rtl"
+            >
+              تسک فروخته شده‌ای در این بازه ثبت نشده است.
+            </div>
           </div>
-        ) : (
-          <ChartContainer config={chartConfig} className="h-full w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={data} margin={{ top: 4, right: 4, left: -24, bottom: 0 }}>
-                {CHART_DEFS}
-                <CartesianGrid
-                  strokeDasharray="3 3"
-                  className="[&_line]:stroke-gray-100 dark:[&_line]:stroke-white/[0.04]"
-                  vertical={false}
-                />
-                <XAxis
-                  dataKey="name"
-                  tick={{ fontSize: 11, fontWeight: 500 }}
-                  className="[&_text]:fill-gray-500 dark:[&_text]:fill-gray-400"
-                  axisLine={false}
-                  tickLine={false}
-                  dy={5}
-                />
-                <YAxis
-                  tick={{ fontSize: 11, fontWeight: 500 }}
-                  className="[&_text]:fill-gray-500 dark:[&_text]:fill-gray-400"
-                  axisLine={false}
-                  tickLine={false}
-                  tickFormatter={(v: number) => `${v}`}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="sales"
-                  stroke="#38bdf8"
-                  strokeWidth={2.5}
-                  fill="url(#salesGradFill)"
-                  dot={false}
-                  activeDot={{ r: 5, strokeWidth: 0, fill: "#38bdf8" }}
-                  isAnimationActive={false}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="revenue"
-                  stroke="#c084fc"
-                  strokeWidth={2.5}
-                  fill="url(#revenueGradFill)"
-                  dot={false}
-                  activeDot={{ r: 5, strokeWidth: 0, fill: "#c084fc" }}
-                  isAnimationActive={false}
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          </ChartContainer>
         )}
       </div>
 
       {hasData && (
-        <div className="mt-2 flex items-center justify-end gap-4" dir="rtl">
+        <div
+          className="mt-2 flex items-center justify-end gap-4"
+          dir="rtl"
+        >
           {Object.entries(chartConfig).map(([key, val]) => (
-            <div key={key} className="flex items-center gap-1.5">
+            <div
+              key={key}
+              className="flex items-center gap-1.5"
+            >
               <span
                 className="inline-block h-0.5 w-3 rounded-full"
-                style={{ backgroundColor: val.color }}
+                style={{
+                  backgroundColor: val.color,
+                }}
               />
+
               <span className="text-[11px] text-gray-500 dark:text-gray-400">
                 {val.label}
               </span>

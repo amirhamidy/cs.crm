@@ -287,7 +287,7 @@ export default function TaskCard({
 
     async function handleTimeSubmit(startedAt: string, deadline: string) {
         if (!stepId) {
-            setTimeError("مرحله فعلی این تسک مشخص نیست");
+            setTimeError("مرحله فعلی این وظیفه مشخص نیست");
             return;
         }
         setSavingTime(true);
