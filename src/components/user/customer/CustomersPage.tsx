@@ -2,8 +2,8 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Users, Plus, Loader, RefreshCw, Filter } from "lucide-react";
 import { useTheme } from "next-themes";
+import { Users, Plus, Loader, RefreshCw, Filter, Search } from "lucide-react";
 import CustomerCard from "./CustomerCard";
 import AddCustomerModal from "./AddCustomerModal";
 import { Customer } from "@/types/customer";
@@ -26,6 +26,7 @@ export default function CustomersPage() {
     const [filterLoading, setFilterLoading] = useState(false);
     const [showAdd, setShowAdd] = useState(false);
     const [filter, setFilter] = useState<FilterType>("all");
+    const [search, setSearch] = useState("");
 
     const fetchData = useCallback(async () => {
         setLoading(true);
@@ -73,10 +74,18 @@ export default function CustomersPage() {
     };
 
     const filteredCustomers = customers.filter((customer) => {
-        if (filter === "all") return true;
-        if (filter === "potential") return customer.status === 1;
-        if (filter === "active") return customer.status === 2;
-        return true;
+        const matchesFilter = filter === "all" ||
+            (filter === "potential" && customer.status === 1) ||
+            (filter === "active" && customer.status === 2);
+
+        const keyword = search.trim().toLowerCase();
+        const matchesSearch = !keyword ||
+            customer.first_name?.toLowerCase().includes(keyword) ||
+            customer.last_name?.toLowerCase().includes(keyword) ||
+            customer.company_name?.toLowerCase().includes(keyword) ||
+            customer.email?.toLowerCase().includes(keyword);
+
+        return matchesFilter && matchesSearch;
     });
 
     const potentialCount = customers.filter((c) => c.status === 1).length;
@@ -95,55 +104,66 @@ export default function CustomersPage() {
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-start gap-3">
                     <div
-                        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl"
+                        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl"
                         style={{
-                            background: isDark
-                                ? "rgba(99,102,241,0.12)"
-                                : "rgba(99,102,241,0.08)",
+                            background: isDark ? "rgba(99,102,241,0.14)" : "rgba(99,102,241,0.08)",
                         }}
                     >
-                        <Users size={16} className="text-indigo-500" />
+                        <Users size={18} className="text-indigo-500" />
                     </div>
                     <div className="min-w-0">
-                        <h1 className="text-[14px] font-extrabold text-gray-900 dark:text-white">
+                        <h1 className="text-[15px] font-extrabold text-gray-900 dark:text-white">
                             مدیریت مشتریان
                         </h1>
-                        <p className="mt-0.5 text-[11.5px] text-gray-400 dark:text-gray-500">
+                        <p className="mt-0.5 text-[11.5px] text-gray-500 dark:text-gray-400">
                             {isLoading
                                 ? "در حال بارگذاری..."
                                 : `${filteredCustomers.length} مشتری ثبت شده`}
                         </p>
                     </div>
                 </div>
-
-                <div className="flex items-center gap-2 sm:justify-end">
+                <div className="flex items-center gap-2">
                     <button
                         onClick={fetchData}
                         disabled={isLoading}
-                        className="flex h-9 w-9 items-center justify-center rounded-xl text-gray-400 transition-colors hover:text-gray-600 disabled:opacity-40 dark:hover:text-gray-300"
+                        className="flex h-10 w-10 items-center justify-center rounded-2xl transition-colors disabled:opacity-50"
                         style={{
-                            background: isDark
-                                ? "rgba(255,255,255,0.05)"
-                                : "rgba(0,0,0,0.04)",
+                            background: isDark ? "rgba(255,255,255,0.05)" : "rgba(15,23,42,0.05)",
+                            color: isDark ? "#cbd5e1" : "#475569",
                         }}
                         title="بارگذاری مجدد"
                         type="button"
                     >
                         <RefreshCw
-                            size={13}
+                            size={15}
                             className={isLoading ? "animate-spin" : ""}
                         />
                     </button>
-
                     <button
                         onClick={() => setShowAdd(true)}
-                        className="flex h-9 flex-1 items-center justify-center gap-2 rounded-xl bg-indigo-600 px-3.5 py-2 text-[12.5px] font-bold text-white transition-all duration-200 hover:bg-indigo-700 sm:flex-none"
+                        className="flex h-10 items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-4 text-[12.5px] font-bold text-white transition-colors hover:bg-indigo-700"
                         type="button"
                     >
-                        <Plus size={13} />
-                        <span className="whitespace-nowrap">افزودن مشتری</span>
+                        <Plus size={15} />
+                        <span>افزودن مشتری</span>
                     </button>
                 </div>
+            </div>
+
+            <div
+                className="flex h-11 items-center gap-2 rounded-2xl px-3"
+                style={{
+                    background: isDark ? "rgba(255,255,255,0.04)" : "rgba(15,23,42,0.04)",
+                    border: isDark ? "1px solid rgba(255,255,255,0.06)" : "1px solid rgba(15,23,42,0.06)",
+                }}
+            >
+                <Search size={15} className="text-gray-400" />
+                <input
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder="جستجو بر اساس نام، شرکت یا ایمیل"
+                    className="h-full w-full bg-transparent text-[12.5px] text-gray-800 outline-none placeholder:text-gray-400 dark:text-gray-100"
+                />
             </div>
 
             <div className="flex items-center gap-2">
@@ -164,8 +184,8 @@ export default function CustomersPage() {
                             key={opt.value}
                             onClick={() => handleFilterChange(opt.value)}
                             className={`flex h-9 items-center gap-1.5 rounded-xl px-3.5 text-[11.5px] font-bold transition-all duration-200 ${filter === opt.value
-                                    ? "bg-indigo-600 text-white shadow-sm"
-                                    : "text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                                ? "bg-indigo-600 text-white shadow-sm"
+                                : "text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
                                 }`}
                             style={{
                                 background:
@@ -180,8 +200,8 @@ export default function CustomersPage() {
                             {opt.label}
                             <span
                                 className={`rounded-lg px-1.5 py-0.5 text-[10px] font-bold ${filter === opt.value
-                                        ? "bg-white/20 text-white"
-                                        : "bg-gray-200/50 text-gray-400 dark:bg-white/10 dark:text-gray-500"
+                                    ? "bg-white/20 text-white"
+                                    : "bg-gray-200/50 text-gray-400 dark:bg-white/10 dark:text-gray-500"
                                     }`}
                             >
                                 {opt.count}
@@ -193,8 +213,8 @@ export default function CustomersPage() {
 
             {isLoading ? (
                 <div className="flex flex-col items-center justify-center gap-3 py-16">
-                    <Loader size={22} className="animate-spin text-indigo-500" />
-                    <p className="text-[12.5px] text-gray-400 dark:text-gray-500">
+                    <Loader size={24} className="animate-spin text-indigo-500" />
+                    <p className="text-[12.5px] text-gray-500 dark:text-gray-400">
                         {loading ? "در حال دریافت لیست مشتریان..." : "در حال اعمال فیلتر..."}
                     </p>
                 </div>
@@ -212,7 +232,7 @@ export default function CustomersPage() {
                                 size={28}
                                 className="text-gray-300 dark:text-gray-700"
                             />
-                            <p className="text-[12.5px] text-gray-400 dark:text-gray-500">
+                            <p className="text-[12.5px] text-gray-500 dark:text-gray-400">
                                 {filter === "all"
                                     ? "هنوز مشتری‌ای ثبت نشده"
                                     : filter === "potential"
@@ -224,7 +244,7 @@ export default function CustomersPage() {
                         <motion.div
                             layout
                             key="grid"
-                            className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+                            className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4"
                         >
                             <AnimatePresence mode="popLayout">
                                 {filteredCustomers.map((customer, i) => (

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { ClipboardList, Loader, Plus, RefreshCw, Search } from "lucide-react";
+import { useTheme } from "next-themes";
 import axiosInstance from "@/lib/axiosInstance";
 import { apiRoutes } from "@/lib/apiRoutes";
 import { Task, TaskStatus } from "@/types/task";
@@ -28,6 +29,9 @@ function extractList<T>(data: ListResponse<T>): T[] {
 }
 
 export default function AdminTasksPage() {
+    const { resolvedTheme } = useTheme();
+    const isDark = resolvedTheme === "dark";
+
     const [tasks, setTasks] = useState<Task[]>([]);
     const [customers, setCustomers] = useState<Customer[]>([]);
     const [departments, setDepartments] = useState<Department[]>([]);
@@ -118,73 +122,120 @@ export default function AdminTasksPage() {
     }, []);
 
     return (
-        <div className="flex flex-col gap-6 p-4 md:p-6" dir="rtl">
+        <div className="flex flex-col gap-5 p-3 sm:p-4 md:p-6" dir="rtl">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-start gap-3">
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-indigo-50 dark:bg-indigo-500/10">
-                        <ClipboardList
-                            size={16}
-                            className="text-indigo-500 dark:text-indigo-400"
-                        />
+                    <div
+                        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl"
+                        style={{
+                            background: isDark ? "rgba(99,102,241,0.14)" : "rgba(99,102,241,0.08)",
+                        }}
+                    >
+                        <ClipboardList size={18} className="text-indigo-500" />
                     </div>
                     <div className="min-w-0">
-                        <h1 className="text-[14px] font-extrabold text-gray-900 dark:text-white">
+                        <h1 className="text-[15px] font-extrabold text-gray-900 dark:text-white">
                             وظایف
                         </h1>
-                        <p className="mt-0.5 text-[11.5px] text-gray-400 dark:text-gray-500">
-                            {loading
-                                ? "در حال بارگذاری..."
-                                : `${departments.length} دپارتمان فعال در سیستم`}
+                        <p className="mt-0.5 text-[11.5px] text-gray-500 dark:text-gray-400">
+                            {loading ? "در حال بارگذاری..." : `${tasks.length} وظیفه ثبت شده`}
                         </p>
                     </div>
                 </div>
-
-                <div className="flex items-center gap-2 sm:justify-end">
+                <div className="flex items-center gap-2">
                     <button
                         type="button"
                         onClick={fetchAll}
                         disabled={loading}
-                        className="flex h-9 w-9 items-center justify-center rounded-xl text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 disabled:opacity-40 dark:text-gray-500 dark:hover:bg-white/5 dark:hover:text-gray-300"
+                        className="flex h-10 w-10 items-center justify-center rounded-2xl transition-colors disabled:opacity-50"
+                        style={{
+                            background: isDark ? "rgba(255,255,255,0.05)" : "rgba(15,23,42,0.05)",
+                            color: isDark ? "#cbd5e1" : "#475569",
+                        }}
                         title="بارگذاری مجدد"
                     >
-                        <RefreshCw size={13} className={loading ? "animate-spin" : ""} />
+                        <RefreshCw size={15} className={loading ? "animate-spin" : ""} />
                     </button>
-
                     <button
                         type="button"
                         onClick={() => setShowCreate(true)}
-                        className="flex h-9 flex-1 items-center justify-center gap-2 rounded-xl bg-blue-600 px-3.5 py-2 text-[12.5px] font-bold text-white transition-all duration-200 hover:bg-blue-100 hover:text-blue-600 dark:bg-blue-500 dark:hover:bg-blue-500/15 dark:hover:text-blue-300 sm:flex-none"
+                        className="flex h-10 items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-4 text-[12.5px] font-bold text-white transition-colors hover:bg-indigo-700"
                     >
-                        <Plus size={13} strokeWidth={2.5} />
-                        <span className="whitespace-nowrap">افزودن وظیفه</span>
+                        <Plus size={15} />
+                        افزودن وظیفه
                     </button>
                 </div>
             </div>
 
-            {loading ? (
+            <div
+                className="flex h-11 items-center gap-2 rounded-2xl px-3"
+                style={{
+                    background: isDark ? "rgba(255,255,255,0.04)" : "rgba(15,23,42,0.04)",
+                    border: isDark ? "1px solid rgba(255,255,255,0.06)" : "1px solid rgba(15,23,42,0.06)",
+                }}
+            >
+                <Search size={15} className="text-gray-400" />
+                <input
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder="جستجو بر اساس عنوان یا توضیحات"
+                    className="h-full w-full bg-transparent text-[12.5px] text-gray-800 outline-none placeholder:text-gray-400 dark:text-gray-100"
+                />
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+                {statusOptions.map((opt) => (
+                    <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() => setStatusFilter(opt.value)}
+                        className={`rounded-xl px-3.5 py-1.5 text-[11.5px] font-bold transition-all duration-200 ${statusFilter === opt.value
+                                ? "bg-indigo-600 text-white shadow-sm"
+                                : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                            }`}
+                        style={{
+                            background:
+                                statusFilter === opt.value
+                                    ? undefined
+                                    : isDark
+                                        ? "rgba(255,255,255,0.04)"
+                                        : "rgba(15,23,42,0.04)",
+                        }}
+                    >
+                        {opt.label}
+                    </button>
+                ))}
+            </div>
+
+            {loading && (
                 <div className="flex flex-col items-center justify-center gap-3 py-16">
-                    <Loader size={22} className="animate-spin text-indigo-500" />
-                    <p className="text-[12.5px] text-gray-400 dark:text-gray-500">
+                    <Loader size={24} className="animate-spin text-indigo-500" />
+                    <p className="text-[12.5px] text-gray-500 dark:text-gray-400">
                         در حال دریافت لیست وظایف...
                     </p>
                 </div>
-            ) : filteredTasks.length === 0 ? (
-                <div className="flex flex-col items-center justify-center gap-3 py-20">
-                    <p className="text-[13px] text-gray-400 dark:text-gray-500">
-                        تسکی با این مشخصات پیدا نشد
+            )}
+
+            {!loading && filteredTasks.length === 0 && (
+                <div className="flex flex-col items-center justify-center gap-2 py-16">
+                    <ClipboardList size={28} className="text-gray-300 dark:text-gray-700" />
+                    <p className="text-[12.5px] text-gray-500 dark:text-gray-400">
+                        {search ? "وظیفه‌ای پیدا نشد" : "هنوز وظیفه‌ای ثبت نشده"}
                     </p>
                 </div>
-            ) : (
+            )}
+
+            {!loading && filteredTasks.length > 0 && (
                 <motion.div
                     layout
-                    className="grid grid-cols-1 gap-3 lg:grid-cols-2 xl:grid-cols-3"
+                    className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3"
                 >
                     <AnimatePresence mode="popLayout">
-                        {filteredTasks.map((task, i) => (
+                        {filteredTasks.map((task, index) => (
                             <TaskCard
                                 key={task.id}
                                 task={task}
-                                index={i}
+                                index={index}
                                 employees={employees}
                                 onEdit={(t) => setEditingTask(t)}
                                 onDelete={handleDelete}
