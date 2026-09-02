@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { ClipboardList, Loader, Plus, RefreshCw } from "lucide-react";
+import { Check, ClipboardList, Eye, Loader, Plus, RefreshCw } from "lucide-react";
+import { useSearchParams, useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import axiosInstance from "@/lib/axiosInstance";
 import { apiRoutes } from "@/lib/apiRoutes";
@@ -19,16 +20,23 @@ type ListResponse<T> = T[] | { results?: T[]; data?: T[] };
 
 function extractList<T>(data: ListResponse<T>): T[] {
     if (Array.isArray(data)) return data;
+
     if (data && typeof data === "object") {
-        if (Array.isArray((data as { results?: T[] }).results))
+        if (Array.isArray((data as { results?: T[] }).results)) {
             return (data as { results: T[] }).results;
-        if (Array.isArray((data as { data?: T[] }).data))
+        }
+
+        if (Array.isArray((data as { data?: T[] }).data)) {
             return (data as { data: T[] }).data;
+        }
     }
+
     return [];
 }
 
 export default function AdminTasksPage() {
+    const router = useRouter();
+    const searchParams = useSearchParams();
     const { resolvedTheme } = useTheme();
     const isDark = resolvedTheme === "dark";
 
@@ -40,10 +48,13 @@ export default function AdminTasksPage() {
     const [statusFilter, setStatusFilter] = useState<TaskStatus | "ALL">("ALL");
     const [showCreate, setShowCreate] = useState(false);
     const [editingTask, setEditingTask] = useState<Task | null>(null);
+    const [highlightedTaskId, setHighlightedTaskId] = useState<number | null>(null);
+    const [viewedTaskId, setViewedTaskId] = useState<number | null>(null);
 
     const fetchAll = useCallback(async () => {
         try {
             setLoading(true);
+
             const [tasksRes, customersRes, departmentsRes, employeesRes] =
                 await Promise.all([
                     axiosInstance.get<ListResponse<Task>>(apiRoutes.tasks),
@@ -70,6 +81,24 @@ export default function AdminTasksPage() {
         fetchAll();
     }, [fetchAll]);
 
+    useEffect(() => {
+        const taskParam = searchParams.get("task");
+
+        if (!taskParam || loading || !tasks.length) return;
+
+        const targetId = Number(taskParam);
+
+        if (!Number.isFinite(targetId)) return;
+
+        const targetTask = tasks.find((task) => task.id === targetId);
+
+        if (!targetTask) return;
+
+        setStatusFilter("ALL");
+        setViewedTaskId(null);
+        setHighlightedTaskId(targetTask.id);
+    }, [searchParams, loading, tasks]);
+
     const statusOptions = useMemo(
         () => [
             { value: "ALL" as const, label: "همه" },
@@ -81,12 +110,11 @@ export default function AdminTasksPage() {
     );
 
     const filteredTasks = useMemo(() => {
-        return tasks.filter((task) => {
-            return (
+        return tasks.filter(
+            (task) =>
                 statusFilter === "ALL" ||
                 task.status === statusFilter
-            );
-        });
+        );
     }, [tasks, statusFilter]);
 
     const handleDelete = useCallback(
@@ -119,6 +147,28 @@ export default function AdminTasksPage() {
         );
     }, []);
 
+    const handleTaskViewed = useCallback(
+        (taskId: number) => {
+            setHighlightedTaskId(null);
+            setViewedTaskId(taskId);
+
+            setTimeout(() => {
+                setViewedTaskId(null);
+
+                const params = new URLSearchParams(searchParams.toString());
+                params.delete("task");
+
+                router.replace(
+                    params.toString()
+                        ? `?${params.toString()}`
+                        : window.location.pathname,
+                    { scroll: false }
+                );
+            }, 1000);
+        },
+        [router, searchParams]
+    );
+
     return (
         <div className="flex flex-col gap-5 p-3 sm:p-4 md:p-6" dir="rtl">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -131,10 +181,7 @@ export default function AdminTasksPage() {
                                 : "rgba(99,102,241,0.08)",
                         }}
                     >
-                        <ClipboardList
-                            size={18}
-                            className="text-indigo-500"
-                        />
+                        <ClipboardList size={18} className="text-indigo-500" />
                     </div>
 
                     <div className="min-w-0">
@@ -207,10 +254,7 @@ export default function AdminTasksPage() {
 
             {loading && (
                 <div className="flex flex-col items-center justify-center gap-3 py-16">
-                    <Loader
-                        size={24}
-                        className="animate-spin text-indigo-500"
-                    />
+                    <Loader size={24} className="animate-spin text-indigo-500" />
                     <p className="text-[12.5px] text-gray-500 dark:text-gray-400">
                         در حال دریافت لیست وظایف...
                     </p>
@@ -235,17 +279,181 @@ export default function AdminTasksPage() {
                     className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3"
                 >
                     <AnimatePresence mode="popLayout">
-                        {filteredTasks.map((task, index) => (
-                            <TaskCard
-                                key={task.id}
-                                task={task}
-                                index={index}
-                                employees={employees}
-                                onEdit={(t) => setEditingTask(t)}
-                                onDelete={handleDelete}
-                                onUpdated={handleTaskUpdated}
-                            />
-                        ))}
+                        {filteredTasks.map((task, index) => {
+                            const isHighlighted =
+                                highlightedTaskId === task.id;
+                            const isViewed = viewedTaskId === task.id;
+
+                            return (
+                                <motion.div
+                                    key={task.id}
+                                    layout
+                                    className="relative"
+                                    animate={
+                                        isHighlighted
+                                            ? {
+                                                scale: [1, 1.012, 1],
+                                            }
+                                            : {
+                                                scale: 1,
+                                            }
+                                    }
+                                    transition={
+                                        isHighlighted
+                                            ? {
+                                                duration: 1.4,
+                                                repeat: Infinity,
+                                                ease: "easeInOut",
+                                            }
+                                            : {
+                                                duration: 0.2,
+                                            }
+                                    }
+                                >
+                                    {isHighlighted && (
+                                        <>
+                                            <motion.div
+                                                className="pointer-events-none absolute -inset-1 z-0 rounded-[26px] bg-red-500/20 blur-xl"
+                                                animate={{
+                                                    opacity: [0.35, 0.7, 0.35],
+                                                    scale: [0.98, 1.03, 0.98],
+                                                }}
+                                                transition={{
+                                                    duration: 1.5,
+                                                    repeat: Infinity,
+                                                    ease: "easeInOut",
+                                                }}
+                                            />
+
+                                            <motion.div
+                                                className="pointer-events-none absolute inset-0 z-10 rounded-[24px]"
+                                                animate={{
+                                                    boxShadow: [
+                                                        "0 0 0 1px rgba(239,68,68,0.5), 0 0 15px rgba(239,68,68,0.15)",
+                                                        "0 0 0 2px rgba(239,68,68,0.9), 0 0 30px rgba(239,68,68,0.35)",
+                                                        "0 0 0 1px rgba(239,68,68,0.5), 0 0 15px rgba(239,68,68,0.15)",
+                                                    ],
+                                                }}
+                                                transition={{
+                                                    duration: 1.5,
+                                                    repeat: Infinity,
+                                                    ease: "easeInOut",
+                                                }}
+                                            />
+                                        </>
+                                    )}
+
+                                    <div
+                                        className={`relative z-20 ${isHighlighted
+                                                ? "pointer-events-none [&_*:hover]:!border-transparent [&_*:hover]:!ring-0 [&_*:hover]:!shadow-none"
+                                                : ""
+                                            }`}
+                                    >
+                                        <TaskCard
+                                            task={task}
+                                            index={index}
+                                            employees={employees}
+                                            onEdit={(t) => setEditingTask(t)}
+                                            onDelete={handleDelete}
+                                            onUpdated={handleTaskUpdated}
+                                        />
+                                    </div>
+
+                                    <AnimatePresence>
+                                        {isHighlighted && (
+                                            <motion.button
+                                                type="button"
+                                                onClick={() =>
+                                                    handleTaskViewed(task.id)
+                                                }
+                                                className="absolute bottom-3 left-3 z-40 flex items-center gap-2 overflow-hidden rounded-xl px-3 py-2 text-[11px] font-extrabold text-white"
+                                                style={{
+                                                    background:
+                                                        "linear-gradient(135deg,#ef4444,#b91c1c)",
+                                                    boxShadow:
+                                                        "0 8px 22px rgba(185,28,28,.35)",
+                                                }}
+                                                initial={{
+                                                    opacity: 0,
+                                                    scale: 0.7,
+                                                    y: 8,
+                                                }}
+                                                animate={{
+                                                    opacity: 1,
+                                                    scale: 1,
+                                                    y: 0,
+                                                }}
+                                                exit={{
+                                                    opacity: 0,
+                                                    scale: 0.7,
+                                                    y: 8,
+                                                }}
+                                                whileTap={{
+                                                    scale: 0.94,
+                                                }}
+                                            >
+                                                <motion.span
+                                                    className="h-1.5 w-1.5 rounded-full bg-white"
+                                                    animate={{
+                                                        opacity: [0.4, 1, 0.4],
+                                                        scale: [0.8, 1.2, 0.8],
+                                                    }}
+                                                    transition={{
+                                                        duration: 0.8,
+                                                        repeat: Infinity,
+                                                    }}
+                                                />
+                                                <Eye size={13} />
+                                                مشاهده شد
+                                            </motion.button>
+                                        )}
+                                    </AnimatePresence>
+
+                                    <AnimatePresence>
+                                        {isViewed && (
+                                            <motion.div
+                                                className="pointer-events-none absolute inset-0 z-50 flex items-center justify-center"
+                                                initial={{
+                                                    opacity: 0,
+                                                    scale: 0.5,
+                                                }}
+                                                animate={{
+                                                    opacity: 1,
+                                                    scale: 1,
+                                                }}
+                                                exit={{
+                                                    opacity: 0,
+                                                    scale: 0.05,
+                                                }}
+                                                transition={{
+                                                    enter: {
+                                                        duration: 0.2,
+                                                        ease: "easeOut",
+                                                    },
+                                                    exit: {
+                                                        duration: 0.45,
+                                                        ease: "easeIn",
+                                                    },
+                                                }}
+                                            >
+                                                <motion.div
+                                                    className="flex h-11 w-11 items-center justify-center rounded-full bg-emerald-500 text-white shadow-lg shadow-emerald-500/30"
+                                                    initial={{ scale: 0.7 }}
+                                                    animate={{ scale: 1 }}
+                                                    exit={{ scale: 0.05 }}
+                                                    transition={{
+                                                        duration: 0.45,
+                                                        ease: "easeInOut",
+                                                    }}
+                                                >
+                                                    <Check size={21} strokeWidth={3} />
+                                                </motion.div>
+                                            </motion.div>
+                                        )}
+                                    </AnimatePresence>
+                                </motion.div>
+                            );
+                        })}
                     </AnimatePresence>
                 </motion.div>
             )}

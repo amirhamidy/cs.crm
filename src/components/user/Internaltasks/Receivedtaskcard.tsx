@@ -8,15 +8,13 @@ import {
     Clock3,
     History,
     MessageSquareText,
-    Paperclip,
     RotateCcw,
     UserRound,
 } from "lucide-react";
 import { JALALI_MONTHS, pad2, toJalali, toPersianDigits } from "@/lib/jalali";
-import type { InternalTask, InternalTaskAttachment, InternalTaskStatus } from "./types";
+import type { InternalTask, InternalTaskStatus } from "./types";
 import { updateInternalTaskStatus } from "./Api";
-import AttachmentUploadModal from "./Attachmentuploadmodal";
-import AttachmentsViewModal from "./Attachmentsviewmodal";
+import InternalTaskChatModal from "./InternalTaskChatModal";
 import api from "@/lib/axiosInstance";
 
 function formatJalali(value?: string | null): string | null {
@@ -71,8 +69,7 @@ export default function ReceivedTaskCard({
 }) {
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [uploadOpen, setUploadOpen] = useState(false);
-    const [attachmentsOpen, setAttachmentsOpen] = useState(false);
+    const [chatOpen, setChatOpen] = useState(false);
     const [deadlineData, setDeadlineData] = useState<{ started_at: string | null; deadline: string | null }>({
         started_at: task.started_at ?? null,
         deadline: task.deadline ?? null,
@@ -198,10 +195,10 @@ export default function ReceivedTaskCard({
 
                     <button
                         type="button"
-                        onClick={() => setAttachmentsOpen(true)}
+                        onClick={() => setChatOpen(true)}
                         className="inline-flex items-center gap-1 rounded-full bg-gray-50 px-2 py-1 text-[10px] font-extrabold text-gray-400 transition-colors hover:bg-indigo-50 hover:text-indigo-600 dark:bg-white/[0.05] dark:text-white/40 dark:hover:bg-indigo-500/10 dark:hover:text-indigo-300"
                     >
-                        <Paperclip size={11} />
+                        <MessageSquareText size={11} />
                         {task.attachments.length}
                     </button>
                 </div>
@@ -320,32 +317,20 @@ export default function ReceivedTaskCard({
 
                     <button
                         type="button"
-                        onClick={() => setUploadOpen(true)}
+                        onClick={() => setChatOpen(true)}
                         className="flex h-9 w-full items-center justify-center gap-1.5 rounded-xl bg-indigo-50 text-[10.5px] font-extrabold text-indigo-600 transition-colors hover:bg-indigo-100 dark:bg-indigo-500/10 dark:text-indigo-300 dark:hover:bg-indigo-500/20"
                     >
                         <MessageSquareText size={13} />
-                        یادداشت و فایل
+                        گفتگو و فایل‌ها
                     </button>
                 </div>
             </motion.div>
 
-            <AttachmentUploadModal
-                isOpen={uploadOpen}
-                onClose={() => setUploadOpen(false)}
+            <InternalTaskChatModal
+                open={chatOpen}
                 task={task}
-                onUploaded={(attachments: InternalTaskAttachment[]) => {
-                    onUpdated({
-                        ...task,
-                        attachments: [...task.attachments, ...attachments],
-                    });
-                    setUploadOpen(false);
-                }}
-            />
-
-            <AttachmentsViewModal
-                isOpen={attachmentsOpen}
-                onClose={() => setAttachmentsOpen(false)}
-                task={task}
+                onClose={() => setChatOpen(false)}
+                onUpdated={onUpdated}
             />
         </>
     );

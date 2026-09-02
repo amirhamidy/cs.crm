@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useTheme } from "next-themes";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
     ClipboardList,
     Layers,
@@ -41,6 +42,10 @@ function extractList<T>(data: ListResponse<T> | undefined | null): T[] {
 export default function AdminCasesPage() {
     const { resolvedTheme } = useTheme();
     const isDark = resolvedTheme === "dark";
+
+    const router = useRouter();
+    const pathname = usePathname();
+    const searchParams = useSearchParams();
 
     const [cases, setCases] = useState<Case[]>([]);
     const [customers, setCustomers] = useState<Customer[]>([]);
@@ -116,6 +121,46 @@ export default function AdminCasesPage() {
         fetchData();
     }, [fetchData]);
 
+    useEffect(() => {
+        const caseIdParam = searchParams.get("case");
+
+        if (!caseIdParam || loading || cases.length === 0) {
+            return;
+        }
+
+        const caseId = Number(caseIdParam);
+
+        if (!Number.isFinite(caseId)) {
+            return;
+        }
+
+        const foundCase = cases.find(
+            (item) => Number(item.id) === caseId
+        );
+
+        if (!foundCase) {
+            return;
+        }
+
+        setEditingCase(foundCase as unknown as CaseItem);
+        setEditCaseModalOpen(true);
+    }, [searchParams, loading, cases]);
+
+    const clearCaseSearchParam = useCallback(() => {
+        const params = new URLSearchParams(searchParams.toString());
+
+        params.delete("case");
+
+        const queryString = params.toString();
+
+        router.replace(
+            queryString
+                ? `${pathname}?${queryString}`
+                : pathname,
+            { scroll: false }
+        );
+    }, [pathname, router, searchParams]);
+
     const handleDeleteCase = useCallback(
         async (item: Case) => {
             const id = Number(item.id);
@@ -151,7 +196,14 @@ export default function AdminCasesPage() {
         fetchData();
         setEditCaseModalOpen(false);
         setEditingCase(null);
-    }, [fetchData]);
+        clearCaseSearchParam();
+    }, [fetchData, clearCaseSearchParam]);
+
+    const handleCloseEditCaseModal = useCallback(() => {
+        setEditCaseModalOpen(false);
+        setEditingCase(null);
+        clearCaseSearchParam();
+    }, [clearCaseSearchParam]);
 
     const handleDeleteTask = useCallback(async (taskId: number) => {
         try {
@@ -428,10 +480,7 @@ export default function AdminCasesPage() {
             <EditCaseModal
                 isOpen={editCaseModalOpen}
                 caseItem={editingCase}
-                onClose={() => {
-                    setEditCaseModalOpen(false);
-                    setEditingCase(null);
-                }}
+                onClose={handleCloseEditCaseModal}
                 onSuccess={handleCaseUpdate}
             />
 

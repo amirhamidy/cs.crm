@@ -1,4 +1,5 @@
 import axiosInstance from "@/lib/axiosInstance";
+
 import type {
   GlobalSearchApiResponse,
   GlobalSearchApiResult,
@@ -22,26 +23,38 @@ function getTypeLabel(type: string): string {
   switch (type) {
     case "customer":
       return "مشتری";
+
     case "employee":
       return "کارمند";
+
     case "department":
       return "دپارتمان";
+
     case "case":
       return "پرونده";
+
     case "task":
       return "وظیفه";
+
     case "internal_task":
       return "تسک درون‌سازمانی";
+
     case "note":
       return "یادداشت";
+
     case "calendar":
       return "تقویم";
+
     default:
       return type || "نتیجه";
   }
 }
 
-function getHref(type: string, userType: number | null): string {
+function getHref(
+  type: string,
+  userType: number | null,
+  id: number | string,
+): string {
   const isAdmin = userType === 1;
 
   switch (type) {
@@ -55,17 +68,29 @@ function getHref(type: string, userType: number | null): string {
       return isAdmin ? "/admin/departments" : "/user/dashboard";
 
     case "case":
-      return isAdmin ? "/admin/cases" : "/user/cases";
+      return isAdmin
+        ? `/admin/cases?case=${encodeURIComponent(String(id))}`
+        : `/user/cases?case=${encodeURIComponent(String(id))}`;
 
     case "task":
-      return isAdmin ? "/admin/tasks" : "/user/tasks";
+      return isAdmin
+        ? `/admin/tasks?task=${encodeURIComponent(String(id))}`
+        : `/user/tasks?task=${encodeURIComponent(String(id))}`;
 
     case "internal_task":
-      return isAdmin ? "/admin/calendar" : "/user/calendar";
+      return isAdmin
+        ? `/admin/tasks?task=${encodeURIComponent(String(id))}`
+        : `/user/tasks?task=${encodeURIComponent(String(id))}`;
 
     case "note":
+      return isAdmin
+        ? `/admin/calendar?note=${encodeURIComponent(String(id))}`
+        : `/user/calendar?note=${encodeURIComponent(String(id))}`;
+
     case "calendar":
-      return isAdmin ? "/admin/calendar" : "/user/calendar";
+      return isAdmin
+        ? `/admin/calendar?event=${encodeURIComponent(String(id))}`
+        : `/user/calendar?event=${encodeURIComponent(String(id))}`;
 
     default:
       return isAdmin ? "/admin/dashboard" : "/user/dashboard";
@@ -83,7 +108,7 @@ function normalizeResult(
     description: result.description || "",
     score: typeof result.score === "number" ? result.score : 0,
     typeLabel: getTypeLabel(result.type),
-    href: getHref(result.type, userType),
+    href: getHref(result.type, userType, result.id),
   };
 }
 

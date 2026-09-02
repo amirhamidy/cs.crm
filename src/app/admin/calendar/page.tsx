@@ -1,6 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import {
+    useEffect,
+    useMemo,
+    useState,
+} from "react";
+
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 import { motion } from "framer-motion";
 
@@ -29,7 +35,9 @@ import {
     pad2,
 } from "@/lib/jalali";
 
-import CalendarNoteModal, { CalendarNote } from "./CalendarNoteModal";
+import CalendarNoteModal, {
+    CalendarNote,
+} from "./CalendarNoteModal";
 
 interface CalendarEvent {
     id: number;
@@ -60,33 +68,31 @@ const weekDays = [
 ];
 
 const toISODate = (date: Date) =>
-    `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}`;
+    `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(
+        date.getDate()
+    )}`;
 
 const toJalaliParts = (date: Date) =>
-    toJalali(date.getFullYear(), date.getMonth() + 1, date.getDate());
+    toJalali(
+        date.getFullYear(),
+        date.getMonth() + 1,
+        date.getDate()
+    );
 
-const jalaliToDate = (jy: number, jm: number, jd: number): Date => {
+const jalaliToDate = (
+    jy: number,
+    jm: number,
+    jd: number
+): Date => {
     const [gy, gm, gd] = toGregorian(jy, jm, jd);
+
     return new Date(gy, gm - 1, gd);
 };
 
-const extractNoteInfo = (description: string, rawCreatedAt?: string) => {
-    const match = description.match(
-        /^\[DATE:(\d{4}-\d{2}-\d{2})\]\s*([\s\S]*)$/
-    );
-
-    if (match) {
-        return {
-            cleanDescription: match[2],
-            targetDate: match[1],
-        };
-    }
-
-    return {
-        cleanDescription: description,
-        targetDate: rawCreatedAt ? rawCreatedAt.split("T")[0] : "",
-    };
-};
+const getNoteDate = (note: CalendarNote) =>
+    note.created_at
+        ? note.created_at.slice(0, 10)
+        : "";
 
 const EVENT_TYPE_LABEL: Record<string, string> = {
     task: "تسک",
@@ -159,13 +165,17 @@ const EVENT_TYPE_COLOR: Record<
 };
 
 function getTypeStyle(type: string) {
-    return EVENT_TYPE_COLOR[type] ?? EVENT_TYPE_COLOR.default;
+    return (
+        EVENT_TYPE_COLOR[type] ??
+        EVENT_TYPE_COLOR.default
+    );
 }
 
 function getSeasonName(month: number) {
     if (month >= 1 && month <= 3) return "بهار";
     if (month >= 4 && month <= 6) return "تابستان";
     if (month >= 7 && month <= 9) return "پاییز";
+
     return "زمستان";
 }
 
@@ -174,7 +184,10 @@ function getSeasonStartMonth(month: number) {
 }
 
 function getEventType(type: string) {
-    if (type === "internal_task" || type === "internal-task") {
+    if (
+        type === "internal_task" ||
+        type === "internal-task"
+    ) {
         return "internal_task";
     }
 
@@ -189,24 +202,39 @@ function getEventType(type: string) {
     return type;
 }
 
-function isEventOnDate(event: CalendarEvent, dateISO: string) {
+function isEventOnDate(
+    event: CalendarEvent,
+    dateISO: string
+) {
     if (!event.start) return false;
 
     const eventStart = event.start.slice(0, 10);
+
     const eventEnd = event.end
         ? event.end.slice(0, 10)
         : eventStart;
 
-    return eventStart <= dateISO && eventEnd >= dateISO;
+    return (
+        eventStart <= dateISO &&
+        eventEnd >= dateISO
+    );
 }
 
-function DayEventDots({ events }: { events: CalendarEvent[] }) {
+function DayEventDots({
+    events,
+}: {
+    events: CalendarEvent[];
+}) {
     const grouped = useMemo(() => {
         const map = new Map<string, number>();
 
         events.forEach((event) => {
             const type = getEventType(event.type);
-            map.set(type, (map.get(type) || 0) + 1);
+
+            map.set(
+                type,
+                (map.get(type) || 0) + 1
+            );
         });
 
         return Array.from(map.entries()).slice(0, 4);
@@ -225,6 +253,7 @@ function DayEventDots({ events }: { events: CalendarEvent[] }) {
                         <span
                             className={`h-1.5 w-1.5 rounded-full ${style.dot}`}
                         />
+
                         {toPersianDigits(count)}
                     </span>
                 );
@@ -241,7 +270,10 @@ function CalendarMonthGrid({
     onSelectDate,
 }: {
     month: MonthData;
-    eventsByDay: Map<string, CalendarEvent[]>;
+    eventsByDay: Map<
+        string,
+        CalendarEvent[]
+    >;
     noteCountByDay: Map<string, number>;
     todayISO: string;
     onSelectDate: (date: Date) => void;
@@ -256,7 +288,9 @@ function CalendarMonthGrid({
 
                     <div className="flex flex-col gap-0.5">
                         <h3 className="text-[13px] font-extrabold text-slate-800 dark:text-white">
-                            {JALALI_MONTHS[month.jm - 1]}
+                            {JALALI_MONTHS[
+                                month.jm - 1
+                            ]}
                         </h3>
 
                         <span className="text-[10px] font-medium text-slate-400 dark:text-slate-500">
@@ -285,102 +319,185 @@ function CalendarMonthGrid({
             </div>
 
             <div className="grid grid-cols-7 gap-px bg-slate-100 dark:bg-white/[0.045]">
-                {month.monthCells.map((date, index) => {
-                    if (!date) {
+                {month.monthCells.map(
+                    (date, index) => {
+                        if (!date) {
+                            return (
+                                <div
+                                    key={`empty-${month.jy}-${month.jm}-${index}`}
+                                    className="min-h-[92px] bg-slate-50/70 dark:bg-[#0f172a]/80"
+                                />
+                            );
+                        }
+
+                        const iso =
+                            toISODate(date);
+
+                        const dayEvents =
+                            eventsByDay.get(
+                                iso
+                            ) ?? [];
+
+                        const noteCount =
+                            noteCountByDay.get(
+                                iso
+                            ) ?? 0;
+
+                        const isToday =
+                            iso === todayISO;
+
+                        const [, , jd] =
+                            toJalaliParts(
+                                date
+                            );
+
+                        const dayOfWeek =
+                            date.getDay();
+
                         return (
-                            <div
-                                key={`empty-${month.jy}-${month.jm}-${index}`}
-                                className="min-h-[92px] bg-slate-50/70 dark:bg-[#0f172a]/80"
-                            />
+                            <motion.button
+                                key={iso}
+                                type="button"
+                                whileTap={{
+                                    scale: 0.975,
+                                }}
+                                onClick={() =>
+                                    onSelectDate(
+                                        date
+                                    )
+                                }
+                                className={`group relative flex min-h-[92px] flex-col gap-1.5 p-2.5 text-right transition-all ${isToday
+                                        ? "bg-indigo-50/80 dark:bg-indigo-500/[0.09]"
+                                        : "bg-white hover:bg-slate-50 dark:bg-[#111827] dark:hover:bg-white/[0.025]"
+                                    }`}
+                            >
+                                <div className="flex items-start justify-between gap-1">
+                                    <span
+                                        className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-[10px] text-[11px] font-extrabold transition-all ${isToday
+                                                ? "bg-indigo-600 text-white shadow-[0_4px_10px_-4px_rgba(79,70,229,0.6)] dark:bg-indigo-500"
+                                                : dayOfWeek ===
+                                                    5
+                                                    ? "bg-rose-50 text-rose-500 dark:bg-rose-500/10 dark:text-rose-300"
+                                                    : "bg-slate-50 text-slate-600 group-hover:bg-white dark:bg-white/[0.045] dark:text-slate-300 dark:group-hover:bg-white/[0.07]"
+                                            }`}
+                                    >
+                                        {toPersianDigits(
+                                            jd
+                                        )}
+                                    </span>
+
+                                    {noteCount >
+                                        0 && (
+                                            <span className="flex items-center gap-1 rounded-lg bg-emerald-50 px-1.5 py-1 text-[8.5px] font-bold text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-300">
+                                                <MessageSquareText
+                                                    size={
+                                                        9
+                                                    }
+                                                />
+
+                                                {toPersianDigits(
+                                                    noteCount
+                                                )}
+                                            </span>
+                                        )}
+                                </div>
+
+                                {dayEvents.length >
+                                    0 && (
+                                        <DayEventDots
+                                            events={
+                                                dayEvents
+                                            }
+                                        />
+                                    )}
+
+                                {isToday && (
+                                    <span className="absolute bottom-1.5 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-indigo-500" />
+                                )}
+                            </motion.button>
                         );
                     }
-
-                    const iso = toISODate(date);
-                    const dayEvents = eventsByDay.get(iso) ?? [];
-                    const noteCount = noteCountByDay.get(iso) ?? 0;
-                    const isToday = iso === todayISO;
-                    const [, , jd] = toJalaliParts(date);
-                    const dayOfWeek = date.getDay();
-
-                    return (
-                        <motion.button
-                            key={iso}
-                            type="button"
-                            whileTap={{ scale: 0.975 }}
-                            onClick={() => onSelectDate(date)}
-                            className={`group relative flex min-h-[92px] flex-col gap-1.5 p-2.5 text-right transition-all ${isToday
-                                    ? "bg-indigo-50/80 dark:bg-indigo-500/[0.09]"
-                                    : "bg-white hover:bg-slate-50 dark:bg-[#111827] dark:hover:bg-white/[0.025]"
-                                }`}
-                        >
-                            <div className="flex items-start justify-between gap-1">
-                                <span
-                                    className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-[10px] text-[11px] font-extrabold transition-all ${isToday
-                                            ? "bg-indigo-600 text-white shadow-[0_4px_10px_-4px_rgba(79,70,229,0.6)] dark:bg-indigo-500"
-                                            : dayOfWeek === 5
-                                                ? "bg-rose-50 text-rose-500 dark:bg-rose-500/10 dark:text-rose-300"
-                                                : "bg-slate-50 text-slate-600 group-hover:bg-white dark:bg-white/[0.045] dark:text-slate-300 dark:group-hover:bg-white/[0.07]"
-                                        }`}
-                                >
-                                    {toPersianDigits(jd)}
-                                </span>
-
-                                {noteCount > 0 && (
-                                    <span className="flex items-center gap-1 rounded-lg bg-emerald-50 px-1.5 py-1 text-[8.5px] font-bold text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-300">
-                                        <MessageSquareText size={9} />
-                                        {toPersianDigits(noteCount)}
-                                    </span>
-                                )}
-                            </div>
-
-                            {dayEvents.length > 0 && (
-                                <DayEventDots events={dayEvents} />
-                            )}
-
-                            {isToday && (
-                                <span className="absolute bottom-1.5 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-indigo-500" />
-                            )}
-                        </motion.button>
-                    );
-                })}
+                )}
             </div>
         </section>
     );
 }
 
 export default function PersianCalendar() {
-    const [currentMonthDate, setCurrentMonthDate] = useState(() => {
-        const [jy, jm] = toJalaliParts(new Date());
-        return jalaliToDate(jy, jm, 1);
-    });
+    const router = useRouter();
+    const pathname = usePathname();
+    const searchParams = useSearchParams();
 
-    const [view, setView] = useState<CalendarView>("month");
-    const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
-    const [notes, setNotes] = useState<CalendarNote[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const [pickerOpen, setPickerOpen] = useState(false);
-    const [pickerYear, setPickerYear] = useState<number | null>(null);
+    const [currentMonthDate, setCurrentMonthDate] =
+        useState(() => {
+            const [jy, jm] =
+                toJalaliParts(new Date());
 
-    const [currentJy, currentJm] = useMemo(
-        () => toJalaliParts(currentMonthDate),
-        [currentMonthDate]
-    );
+            return jalaliToDate(
+                jy,
+                jm,
+                1
+            );
+        });
 
-    const [realTodayJy, realTodayJm] = useMemo(
-        () => toJalaliParts(new Date()),
-        []
-    );
+    const [view, setView] =
+        useState<CalendarView>("month");
+
+    const [
+        calendarEvents,
+        setCalendarEvents,
+    ] = useState<CalendarEvent[]>([]);
+
+    const [notes, setNotes] =
+        useState<CalendarNote[]>([]);
+
+    const [loading, setLoading] =
+        useState(true);
+
+    const [selectedDate, setSelectedDate] =
+        useState<Date | null>(null);
+
+    const [isModalOpen, setIsModalOpen] =
+        useState(false);
+
+    const [pickerOpen, setPickerOpen] =
+        useState(false);
+
+    const [pickerYear, setPickerYear] =
+        useState<number | null>(null);
+
+    const [currentJy, currentJm] =
+        useMemo(
+            () =>
+                toJalaliParts(
+                    currentMonthDate
+                ),
+            [currentMonthDate]
+        );
+
+    const [realTodayJy, realTodayJm] =
+        useMemo(
+            () =>
+                toJalaliParts(
+                    new Date()
+                ),
+            []
+        );
 
     const quickMonths = useMemo(() => {
-        const list: { jy: number; jm: number }[] = [];
+        const list: {
+            jy: number;
+            jm: number;
+        }[] = [];
 
         let jy = realTodayJy;
         let jm = realTodayJm;
 
         for (let i = 0; i < 12; i++) {
-            list.push({ jy, jm });
+            list.push({
+                jy,
+                jm,
+            });
 
             jm++;
 
@@ -393,176 +510,469 @@ export default function PersianCalendar() {
         return list;
     }, [realTodayJy, realTodayJm]);
 
-    const visibleMonths = useMemo<MonthData[]>(() => {
-        const seasonStart = getSeasonStartMonth(currentJm);
+    const visibleMonths =
+        useMemo<MonthData[]>(() => {
+            const seasonStart =
+                getSeasonStartMonth(
+                    currentJm
+                );
 
-        const months =
-            view === "month"
-                ? [{ jy: currentJy, jm: currentJm }]
-                : [
-                    { jy: currentJy, jm: seasonStart },
-                    { jy: currentJy, jm: seasonStart + 1 },
-                    { jy: currentJy, jm: seasonStart + 2 },
-                ];
+            const months =
+                view === "month"
+                    ? [
+                        {
+                            jy: currentJy,
+                            jm: currentJm,
+                        },
+                    ]
+                    : [
+                        {
+                            jy: currentJy,
+                            jm: seasonStart,
+                        },
+                        {
+                            jy: currentJy,
+                            jm:
+                                seasonStart +
+                                1,
+                        },
+                        {
+                            jy: currentJy,
+                            jm:
+                                seasonStart +
+                                2,
+                        },
+                    ];
 
-        return months.map(({ jy, jm }) => {
-            const monthLength = jalaliMonthLength(jy, jm);
-            const firstDayWeekIndex = jalaliWeekday(jy, jm, 1);
+            return months.map(
+                ({ jy, jm }) => {
+                    const monthLength =
+                        jalaliMonthLength(
+                            jy,
+                            jm
+                        );
 
-            const monthCells: (Date | null)[] =
-                Array(firstDayWeekIndex).fill(null);
+                    const firstDayWeekIndex =
+                        jalaliWeekday(
+                            jy,
+                            jm,
+                            1
+                        );
 
-            for (let day = 1; day <= monthLength; day++) {
-                monthCells.push(jalaliToDate(jy, jm, day));
-            }
+                    const monthCells:
+                        (Date | null)[] =
+                        Array(
+                            firstDayWeekIndex
+                        ).fill(null);
 
-            while (monthCells.length % 7 !== 0) {
-                monthCells.push(null);
-            }
+                    for (
+                        let day = 1;
+                        day <= monthLength;
+                        day++
+                    ) {
+                        monthCells.push(
+                            jalaliToDate(
+                                jy,
+                                jm,
+                                day
+                            )
+                        );
+                    }
 
-            return {
-                jy,
-                jm,
-                monthCells,
-                startISO: toISODate(jalaliToDate(jy, jm, 1)),
-                endISO: toISODate(
-                    jalaliToDate(jy, jm, monthLength)
-                ),
-            };
-        });
-    }, [currentJy, currentJm, view]);
+                    while (
+                        monthCells.length %
+                        7 !==
+                        0
+                    ) {
+                        monthCells.push(null);
+                    }
 
-    const startISO = visibleMonths[0].startISO;
+                    return {
+                        jy,
+                        jm,
+                        monthCells,
+                        startISO:
+                            toISODate(
+                                jalaliToDate(
+                                    jy,
+                                    jm,
+                                    1
+                                )
+                            ),
+                        endISO:
+                            toISODate(
+                                jalaliToDate(
+                                    jy,
+                                    jm,
+                                    monthLength
+                                )
+                            ),
+                    };
+                }
+            );
+        }, [currentJy, currentJm, view]);
+
+    const startISO =
+        visibleMonths[0].startISO;
+
     const endISO =
-        visibleMonths[visibleMonths.length - 1].endISO;
+        visibleMonths[
+            visibleMonths.length - 1
+        ].endISO;
 
     useEffect(() => {
-        const fetchCalendarData = async () => {
-            setLoading(true);
+        const fetchCalendarData =
+            async () => {
+                setLoading(true);
 
-            try {
-                const [calendarRes, notesRes] = await Promise.all([
-                    api.get(
-                        `/appraisal/api/v1/calendar/?start=${startISO}&end=${endISO}`
-                    ),
-                    api.get("/note/api/v1/"),
-                ]);
+                try {
+                    const [
+                        calendarRes,
+                        notesRes,
+                    ] = await Promise.all([
+                        api.get(
+                            `/appraisal/api/v1/calendar/?start=${startISO}&end=${endISO}`
+                        ),
+                        api.get(
+                            "/note/api/v1/"
+                        ),
+                    ]);
 
-                setCalendarEvents(
-                    Array.isArray(calendarRes.data?.events)
-                        ? calendarRes.data.events
-                        : []
-                );
+                    setCalendarEvents(
+                        Array.isArray(
+                            calendarRes
+                                .data?.events
+                        )
+                            ? calendarRes
+                                .data
+                                .events
+                            : []
+                    );
 
-                setNotes(
-                    Array.isArray(notesRes.data)
-                        ? notesRes.data
-                        : []
-                );
-            } catch {
-                setCalendarEvents([]);
-                setNotes([]);
-            } finally {
-                setLoading(false);
-            }
-        };
+                    setNotes(
+                        Array.isArray(
+                            notesRes.data
+                        )
+                            ? notesRes.data
+                            : []
+                    );
+                } catch {
+                    setCalendarEvents(
+                        []
+                    );
+
+                    setNotes([]);
+                } finally {
+                    setLoading(false);
+                }
+            };
 
         fetchCalendarData();
     }, [startISO, endISO]);
 
-    const eventsByDay = useMemo(() => {
-        const map = new Map<string, CalendarEvent[]>();
+    useEffect(() => {
+        if (loading) return;
 
-        const allDates = visibleMonths.flatMap((month) =>
-            month.monthCells.filter(
-                (date): date is Date => Boolean(date)
-            )
-        );
+        const eventParam =
+            searchParams.get("event");
 
-        calendarEvents.forEach((event) => {
-            if (!event.start) return;
+        const noteParam =
+            searchParams.get("note");
 
-            allDates.forEach((date) => {
-                const dateISO = toISODate(date);
+        if (noteParam) {
+            const noteId =
+                Number(noteParam);
 
-                if (!isEventOnDate(event, dateISO)) return;
+            if (
+                !Number.isFinite(noteId)
+            ) {
+                return;
+            }
 
-                if (!map.has(dateISO)) {
-                    map.set(dateISO, []);
-                }
+            const note =
+                notes.find(
+                    (item) =>
+                        Number(
+                            item.id
+                        ) === noteId
+                );
 
-                map.get(dateISO)!.push(event);
-            });
-        });
+            if (!note?.created_at) {
+                return;
+            }
 
-        return map;
-    }, [calendarEvents, visibleMonths]);
-
-    const noteCountByDay = useMemo(() => {
-        const map = new Map<string, number>();
-
-        notes.forEach((note) => {
-            const { targetDate } = extractNoteInfo(
-                note.description,
+            const date = new Date(
                 note.created_at
             );
 
-            if (!targetDate) return;
+            if (
+                Number.isNaN(
+                    date.getTime()
+                )
+            ) {
+                return;
+            }
 
-            map.set(
-                targetDate,
-                (map.get(targetDate) || 0) + 1
+            const [
+                jy,
+                jm,
+            ] = toJalaliParts(date);
+
+            setView("month");
+            setCurrentMonthDate(
+                jalaliToDate(
+                    jy,
+                    jm,
+                    1
+                )
             );
-        });
+            setSelectedDate(date);
+            setIsModalOpen(true);
+
+            router.replace(
+                pathname,
+                {
+                    scroll: false,
+                }
+            );
+
+            return;
+        }
+
+        if (eventParam) {
+            const eventId =
+                Number(eventParam);
+
+            if (
+                !Number.isFinite(eventId)
+            ) {
+                return;
+            }
+
+            const event =
+                calendarEvents.find(
+                    (item) =>
+                        Number(
+                            item.id
+                        ) === eventId
+                );
+
+            if (!event?.start) {
+                return;
+            }
+
+            const date = new Date(
+                event.start
+            );
+
+            if (
+                Number.isNaN(
+                    date.getTime()
+                )
+            ) {
+                return;
+            }
+
+            const [
+                jy,
+                jm,
+            ] = toJalaliParts(date);
+
+            setView("month");
+            setCurrentMonthDate(
+                jalaliToDate(
+                    jy,
+                    jm,
+                    1
+                )
+            );
+            setSelectedDate(date);
+            setIsModalOpen(true);
+
+            router.replace(
+                pathname,
+                {
+                    scroll: false,
+                }
+            );
+        }
+    }, [
+        loading,
+        notes,
+        calendarEvents,
+        searchParams,
+        router,
+        pathname,
+    ]);
+
+    const eventsByDay = useMemo(() => {
+        const map = new Map<
+            string,
+            CalendarEvent[]
+        >();
+
+        const allDates =
+            visibleMonths.flatMap(
+                (month) =>
+                    month.monthCells.filter(
+                        (
+                            date
+                        ): date is Date =>
+                            Boolean(date)
+                    )
+            );
+
+        calendarEvents.forEach(
+            (event) => {
+                if (!event.start)
+                    return;
+
+                allDates.forEach(
+                    (date) => {
+                        const dateISO =
+                            toISODate(
+                                date
+                            );
+
+                        if (
+                            !isEventOnDate(
+                                event,
+                                dateISO
+                            )
+                        ) {
+                            return;
+                        }
+
+                        if (
+                            !map.has(
+                                dateISO
+                            )
+                        ) {
+                            map.set(
+                                dateISO,
+                                []
+                            );
+                        }
+
+                        map.get(
+                            dateISO
+                        )!.push(event);
+                    }
+                );
+            }
+        );
 
         return map;
-    }, [notes]);
+    }, [
+        calendarEvents,
+        visibleMonths,
+    ]);
 
-    const changeDate = (delta: 1 | -1) => {
+    const noteCountByDay =
+        useMemo(() => {
+            const map = new Map<
+                string,
+                number
+            >();
+
+            notes.forEach((note) => {
+                const targetDate =
+                    getNoteDate(note);
+
+                if (!targetDate)
+                    return;
+
+                map.set(
+                    targetDate,
+                    (map.get(
+                        targetDate
+                    ) || 0) + 1
+                );
+            });
+
+            return map;
+        }, [notes]);
+
+    const changeDate = (
+        delta: 1 | -1
+    ) => {
         if (view === "month") {
-            let nextMonth = currentJm + delta;
-            let nextYear = currentJy;
+            let nextMonth =
+                currentJm + delta;
 
-            if (nextMonth > 12) {
+            let nextYear =
+                currentJy;
+
+            if (
+                nextMonth > 12
+            ) {
                 nextMonth = 1;
                 nextYear++;
             }
 
-            if (nextMonth < 1) {
+            if (
+                nextMonth < 1
+            ) {
                 nextMonth = 12;
                 nextYear--;
             }
 
             setCurrentMonthDate(
-                jalaliToDate(nextYear, nextMonth, 1)
+                jalaliToDate(
+                    nextYear,
+                    nextMonth,
+                    1
+                )
             );
 
             return;
         }
 
         let nextSeasonMonth =
-            getSeasonStartMonth(currentJm) + delta * 3;
+            getSeasonStartMonth(
+                currentJm
+            ) +
+            delta * 3;
 
-        let nextYear = currentJy;
+        let nextYear =
+            currentJy;
 
-        if (nextSeasonMonth > 12) {
+        if (
+            nextSeasonMonth > 12
+        ) {
             nextSeasonMonth = 1;
             nextYear++;
         }
 
-        if (nextSeasonMonth < 1) {
+        if (
+            nextSeasonMonth < 1
+        ) {
             nextSeasonMonth = 10;
             nextYear--;
         }
 
         setCurrentMonthDate(
-            jalaliToDate(nextYear, nextSeasonMonth, 1)
+            jalaliToDate(
+                nextYear,
+                nextSeasonMonth,
+                1
+            )
         );
     };
 
-    const goToMonth = (jy: number, jm: number) => {
+    const goToMonth = (
+        jy: number,
+        jm: number
+    ) => {
         setView("month");
-        setCurrentMonthDate(jalaliToDate(jy, jm, 1));
+
+        setCurrentMonthDate(
+            jalaliToDate(
+                jy,
+                jm,
+                1
+            )
+        );
     };
 
     const openPicker = () => {
@@ -570,46 +980,80 @@ export default function PersianCalendar() {
         setPickerOpen(true);
     };
 
-    const handleSelectDate = (date: Date) => {
+    const handleSelectDate = (
+        date: Date
+    ) => {
         setSelectedDate(date);
         setIsModalOpen(true);
     };
 
     const gotoToday = () => {
         const now = new Date();
-        const [nowYear, nowMonth] = toJalaliParts(now);
+
+        const [
+            nowYear,
+            nowMonth,
+        ] = toJalaliParts(now);
 
         setCurrentMonthDate(
-            jalaliToDate(nowYear, nowMonth, 1)
+            jalaliToDate(
+                nowYear,
+                nowMonth,
+                1
+            )
         );
 
         setSelectedDate(now);
         setIsModalOpen(true);
     };
 
-    const todayISO = toISODate(new Date());
-    const [todayJy, todayJm, todayJd] =
-        toJalaliParts(new Date());
+    const todayISO =
+        toISODate(new Date());
 
-    const todayPersian = `${toPersianDigits(todayJd)} ${JALALI_MONTHS[todayJm - 1]
+    const [
+        todayJy,
+        todayJm,
+        todayJd,
+    ] = toJalaliParts(new Date());
+
+    const todayPersian = `${toPersianDigits(
+        todayJd
+    )} ${JALALI_MONTHS[
+        todayJm - 1
+        ]
         }`;
 
     const headerTitle =
         view === "month"
-            ? `${JALALI_MONTHS[currentJm - 1]} ${toPersianDigits(
+            ? `${JALALI_MONTHS[
+            currentJm - 1
+            ]
+            } ${toPersianDigits(
                 currentJy
             )}`
-            : `${getSeasonName(currentJm)} ${toPersianDigits(
+            : `${getSeasonName(
+                currentJm
+            )
+            } ${toPersianDigits(
                 currentJy
             )}`;
 
-    const taskCount = calendarEvents.filter(
-        (event) => getEventType(event.type) === "task"
-    ).length;
+    const taskCount =
+        calendarEvents.filter(
+            (event) =>
+                getEventType(
+                    event.type
+                ) === "task"
+        ).length;
 
-    const internalTaskCount = calendarEvents.filter(
-        (event) => getEventType(event.type) === "internal_task"
-    ).length;
+    const internalTaskCount =
+        calendarEvents.filter(
+            (event) =>
+                getEventType(
+                    event.type
+                ) ===
+                "internal_task"
+        ).length;
 
     return (
         <>
@@ -620,260 +1064,380 @@ export default function PersianCalendar() {
                 <div className="relative flex items-center justify-between border-b border-slate-100 px-5 py-4 sm:px-6 dark:border-white/[0.06]">
                     <button
                         type="button"
-                        onClick={() => changeDate(1)}
+                        onClick={() =>
+                            changeDate(1)
+                        }
                         className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-400 shadow-sm transition-all hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-600 dark:border-white/[0.07] dark:bg-white/[0.04] dark:hover:border-indigo-500/20 dark:hover:bg-indigo-500/10 dark:hover:text-indigo-300"
                     >
-                        <ChevronRight size={14} />
+                        <ChevronRight
+                            size={14}
+                        />
                     </button>
 
                     <div className="flex items-center gap-2.5 sm:gap-3">
                         <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-300">
-                            <CalendarDays size={15} />
+                            <CalendarDays
+                                size={15}
+                            />
                         </div>
 
                         <button
                             type="button"
-                            onClick={openPicker}
+                            onClick={
+                                openPicker
+                            }
                             className="flex flex-col items-center rounded-xl px-2 py-1 transition-colors hover:bg-slate-50 dark:hover:bg-white/[0.035]"
                         >
                             <span className="flex items-center gap-1">
                                 <h2 className="text-[14px] font-extrabold tracking-tight text-slate-900 dark:text-white">
-                                    {headerTitle}
+                                    {
+                                        headerTitle
+                                    }
                                 </h2>
 
                                 <ChevronDown
-                                    size={13}
+                                    size={
+                                        13
+                                    }
                                     className="text-slate-400"
                                 />
                             </span>
 
                             <span className="mt-0.5 text-[10px] font-semibold text-indigo-500 dark:text-indigo-400">
-                                امروز: {todayPersian}
+                                امروز:{" "}
+                                {
+                                    todayPersian
+                                }
                             </span>
                         </button>
                     </div>
 
                     <button
                         type="button"
-                        onClick={() => changeDate(-1)}
+                        onClick={() =>
+                            changeDate(
+                                -1
+                            )
+                        }
                         className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-400 shadow-sm transition-all hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-600 dark:border-white/[0.07] dark:bg-white/[0.04] dark:hover:border-indigo-500/20 dark:hover:bg-indigo-500/10 dark:hover:text-indigo-300"
                     >
-                        <ChevronLeft size={14} />
+                        <ChevronLeft
+                            size={14}
+                        />
                     </button>
 
-                    {pickerOpen && pickerYear !== null && (
-                        <>
-                            <div
-                                className="fixed inset-0 z-20"
-                                onClick={() => setPickerOpen(false)}
-                            />
+                    {pickerOpen &&
+                        pickerYear !==
+                        null && (
+                            <>
+                                <div
+                                    className="fixed inset-0 z-20"
+                                    onClick={() =>
+                                        setPickerOpen(
+                                            false
+                                        )
+                                    }
+                                />
 
-                            <motion.div
-                                initial={{
-                                    opacity: 0,
-                                    y: -8,
-                                    scale: 0.97,
-                                }}
-                                animate={{
-                                    opacity: 1,
-                                    y: 0,
-                                    scale: 1,
-                                }}
-                                transition={{ duration: 0.15 }}
-                                className="absolute right-1/2 top-[calc(100%+8px)] z-30 w-[min(18rem,calc(100vw-2rem))] translate-x-1/2 overflow-hidden rounded-[1.5rem] border border-slate-200 bg-white p-4 shadow-[0_20px_50px_-20px_rgba(0,0,0,0.25)] dark:border-white/[0.08] dark:bg-[#111827]"
-                            >
-                                <div className="mb-3 flex items-center justify-between">
-                                    <button
-                                        type="button"
-                                        onClick={() =>
-                                            setPickerYear(
-                                                (y) =>
-                                                    (y ??
-                                                        currentJy) +
-                                                    1
-                                            )
-                                        }
-                                        className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-100 text-slate-400 transition-colors hover:bg-indigo-50 hover:text-indigo-600 dark:bg-white/[0.05] dark:hover:bg-indigo-500/10 dark:hover:text-indigo-300"
-                                    >
-                                        <ChevronRight size={13} />
-                                    </button>
+                                <motion.div
+                                    initial={{
+                                        opacity: 0,
+                                        y: -8,
+                                        scale: 0.97,
+                                    }}
+                                    animate={{
+                                        opacity: 1,
+                                        y: 0,
+                                        scale: 1,
+                                    }}
+                                    transition={{
+                                        duration: 0.15,
+                                    }}
+                                    className="absolute right-1/2 top-[calc(100%+8px)] z-30 w-[min(18rem,calc(100vw-2rem))] translate-x-1/2 overflow-hidden rounded-[1.5rem] border border-slate-200 bg-white p-4 shadow-[0_20px_50px_-20px_rgba(0,0,0,0.25)] dark:border-white/[0.08] dark:bg-[#111827]"
+                                >
+                                    <div className="mb-3 flex items-center justify-between">
+                                        <button
+                                            type="button"
+                                            onClick={() =>
+                                                setPickerYear(
+                                                    (
+                                                        y
+                                                    ) =>
+                                                        (y ??
+                                                            currentJy) +
+                                                        1
+                                                )
+                                            }
+                                            className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-100 text-slate-400 transition-colors hover:bg-indigo-50 hover:text-indigo-600 dark:bg-white/[0.05] dark:hover:bg-indigo-500/10 dark:hover:text-indigo-300"
+                                        >
+                                            <ChevronRight
+                                                size={
+                                                    13
+                                                }
+                                            />
+                                        </button>
 
-                                    <span className="rounded-lg bg-indigo-50 px-3 py-1 text-[12.5px] font-extrabold text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-300">
-                                        {toPersianDigits(
-                                            pickerYear
+                                        <span className="rounded-lg bg-indigo-50 px-3 py-1 text-[12.5px] font-extrabold text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-300">
+                                            {toPersianDigits(
+                                                pickerYear
+                                            )}
+                                        </span>
+
+                                        <button
+                                            type="button"
+                                            onClick={() =>
+                                                setPickerYear(
+                                                    (
+                                                        y
+                                                    ) =>
+                                                        (y ??
+                                                            currentJy) -
+                                                        1
+                                                )
+                                            }
+                                            className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-100 text-slate-400 transition-colors hover:bg-indigo-50 hover:text-indigo-600 dark:bg-white/[0.05] dark:hover:bg-indigo-500/10 dark:hover:text-indigo-300"
+                                        >
+                                            <ChevronLeft
+                                                size={
+                                                    13
+                                                }
+                                            />
+                                        </button>
+                                    </div>
+
+                                    <div className="grid grid-cols-3 gap-1.5">
+                                        {JALALI_MONTHS.map(
+                                            (
+                                                label,
+                                                index
+                                            ) => {
+                                                const monthNumber =
+                                                    index +
+                                                    1;
+
+                                                const isActive =
+                                                    pickerYear ===
+                                                    currentJy &&
+                                                    monthNumber ===
+                                                    currentJm;
+
+                                                return (
+                                                    <button
+                                                        key={
+                                                            label
+                                                        }
+                                                        type="button"
+                                                        onClick={() => {
+                                                            goToMonth(
+                                                                pickerYear,
+                                                                monthNumber
+                                                            );
+
+                                                            setPickerOpen(
+                                                                false
+                                                            );
+                                                        }}
+                                                        className={`rounded-xl px-2 py-2.5 text-[11px] font-bold transition-all ${isActive
+                                                                ? "bg-indigo-600 text-white shadow-sm shadow-indigo-500/20 dark:bg-indigo-500"
+                                                                : "bg-slate-50 text-slate-500 hover:bg-indigo-50 hover:text-indigo-600 dark:bg-white/[0.035] dark:text-slate-400 dark:hover:bg-indigo-500/10 dark:hover:text-indigo-300"
+                                                            }`}
+                                                    >
+                                                        {
+                                                            label
+                                                        }
+                                                    </button>
+                                                );
+                                            }
                                         )}
-                                    </span>
-
-                                    <button
-                                        type="button"
-                                        onClick={() =>
-                                            setPickerYear(
-                                                (y) =>
-                                                    (y ??
-                                                        currentJy) -
-                                                    1
-                                            )
-                                        }
-                                        className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-100 text-slate-400 transition-colors hover:bg-indigo-50 hover:text-indigo-600 dark:bg-white/[0.05] dark:hover:bg-indigo-500/10 dark:hover:text-indigo-300"
-                                    >
-                                        <ChevronLeft size={13} />
-                                    </button>
-                                </div>
-
-                                <div className="grid grid-cols-3 gap-1.5">
-                                    {JALALI_MONTHS.map(
-                                        (label, index) => {
-                                            const monthNumber =
-                                                index + 1;
-
-                                            const isActive =
-                                                pickerYear ===
-                                                currentJy &&
-                                                monthNumber ===
-                                                currentJm;
-
-                                            return (
-                                                <button
-                                                    key={label}
-                                                    type="button"
-                                                    onClick={() => {
-                                                        goToMonth(
-                                                            pickerYear,
-                                                            monthNumber
-                                                        );
-                                                        setPickerOpen(
-                                                            false
-                                                        );
-                                                    }}
-                                                    className={`rounded-xl px-2 py-2.5 text-[11px] font-bold transition-all ${isActive
-                                                            ? "bg-indigo-600 text-white shadow-sm shadow-indigo-500/20 dark:bg-indigo-500"
-                                                            : "bg-slate-50 text-slate-500 hover:bg-indigo-50 hover:text-indigo-600 dark:bg-white/[0.035] dark:text-slate-400 dark:hover:bg-indigo-500/10 dark:hover:text-indigo-300"
-                                                        }`}
-                                                >
-                                                    {label}
-                                                </button>
-                                            );
-                                        }
-                                    )}
-                                </div>
-                            </motion.div>
-                        </>
-                    )}
+                                    </div>
+                                </motion.div>
+                            </>
+                        )}
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2 border-b border-slate-100 px-5 py-3 sm:px-6 dark:border-white/[0.06]">
                     <div className="flex rounded-xl border border-slate-200 bg-slate-50 p-1 dark:border-white/[0.06] dark:bg-white/[0.035]">
                         <button
                             type="button"
-                            onClick={() => setView("month")}
-                            className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[10.5px] font-bold transition-all ${view === "month"
+                            onClick={() =>
+                                setView(
+                                    "month"
+                                )
+                            }
+                            className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[10.5px] font-bold transition-all ${view ===
+                                    "month"
                                     ? "bg-white text-indigo-600 shadow-sm dark:bg-[#1e293b] dark:text-indigo-300"
                                     : "text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
                                 }`}
                         >
-                            <CalendarDays size={12} />
+                            <CalendarDays
+                                size={12}
+                            />
                             ماهانه
                         </button>
 
                         <button
                             type="button"
-                            onClick={() => setView("season")}
-                            className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[10.5px] font-bold transition-all ${view === "season"
+                            onClick={() =>
+                                setView(
+                                    "season"
+                                )
+                            }
+                            className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[10.5px] font-bold transition-all ${view ===
+                                    "season"
                                     ? "bg-white text-indigo-600 shadow-sm dark:bg-[#1e293b] dark:text-indigo-300"
                                     : "text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
                                 }`}
                         >
-                            <CalendarRange size={12} />
+                            <CalendarRange
+                                size={12}
+                            />
                             فصل
                         </button>
                     </div>
 
                     <button
                         type="button"
-                        onClick={gotoToday}
+                        onClick={
+                            gotoToday
+                        }
                         className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-bold text-slate-500 shadow-sm transition-all hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-600 dark:border-white/[0.06] dark:bg-white/[0.035] dark:text-slate-400 dark:hover:bg-indigo-500/10 dark:hover:text-indigo-300"
                     >
-                        <CalendarClock size={12} />
+                        <CalendarClock
+                            size={12}
+                        />
                         امروز
                     </button>
 
                     {!loading && (
                         <div className="mr-auto flex flex-wrap items-center gap-2">
                             <span className="flex items-center gap-1.5 rounded-lg bg-indigo-50 px-2 py-1 text-[10px] font-bold text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-300">
-                                <ClipboardCheck size={11} />
-                                {toPersianDigits(taskCount)} تسک
+                                <ClipboardCheck
+                                    size={11}
+                                />
+                                {
+                                    toPersianDigits(
+                                        taskCount
+                                    )
+                                }{" "}
+                                تسک
                             </span>
 
                             <span className="flex items-center gap-1.5 rounded-lg bg-amber-50 px-2 py-1 text-[10px] font-bold text-amber-600 dark:bg-amber-500/10 dark:text-amber-300">
-                                <Layers3 size={11} />
-                                {toPersianDigits(
-                                    internalTaskCount
-                                )} داخلی
+                                <Layers3
+                                    size={11}
+                                />
+                                {
+                                    toPersianDigits(
+                                        internalTaskCount
+                                    )}{" "}
+                                داخلی
                             </span>
 
                             <span className="flex items-center gap-1.5 rounded-lg bg-emerald-50 px-2 py-1 text-[10px] font-bold text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-300">
-                                <FileText size={11} />
-                                {toPersianDigits(notes.length)} یادداشت
+                                <FileText
+                                    size={11}
+                                />
+                                {
+                                    toPersianDigits(
+                                        notes.length
+                                    )}{" "}
+                                یادداشت
                             </span>
                         </div>
                     )}
                 </div>
 
                 <div className="flex items-center gap-2 overflow-x-auto border-b border-slate-100 px-5 py-3 sm:px-6 dark:border-white/[0.06]">
-                    {quickMonths.map(({ jy, jm }) => {
-                        const isSelected =
-                            jy === currentJy && jm === currentJm;
+                    {quickMonths.map(
+                        ({
+                            jy,
+                            jm,
+                        }) => {
+                            const isSelected =
+                                jy ===
+                                currentJy &&
+                                jm ===
+                                currentJm;
 
-                        const isRealToday =
-                            jy === realTodayJy &&
-                            jm === realTodayJm;
+                            const isRealToday =
+                                jy ===
+                                realTodayJy &&
+                                jm ===
+                                realTodayJm;
 
-                        return (
-                            <button
-                                key={`${jy}-${jm}`}
-                                type="button"
-                                onClick={() => goToMonth(jy, jm)}
-                                className={`flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-3.5 py-1.5 text-[11px] font-bold transition-all ${isSelected
-                                        ? "border-indigo-600 bg-indigo-600 text-white shadow-sm shadow-indigo-500/20 dark:border-indigo-500 dark:bg-indigo-500"
-                                        : "border-slate-200 bg-white text-slate-500 hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-600 dark:border-white/[0.06] dark:bg-white/[0.025] dark:text-slate-400 dark:hover:border-indigo-500/20 dark:hover:bg-indigo-500/10 dark:hover:text-indigo-300"
-                                    }`}
-                            >
-                                {isRealToday && (
-                                    <span
-                                        className={`h-1.5 w-1.5 rounded-full ${isSelected
-                                                ? "bg-white"
-                                                : "bg-indigo-500"
-                                            }`}
-                                    />
-                                )}
+                            return (
+                                <button
+                                    key={`${jy}-${jm}`}
+                                    type="button"
+                                    onClick={() =>
+                                        goToMonth(
+                                            jy,
+                                            jm
+                                        )
+                                    }
+                                    className={`flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-3.5 py-1.5 text-[11px] font-bold transition-all ${isSelected
+                                            ? "border-indigo-600 bg-indigo-600 text-white shadow-sm shadow-indigo-500/20 dark:border-indigo-500 dark:bg-indigo-500"
+                                            : "border-slate-200 bg-white text-slate-500 hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-600 dark:border-white/[0.06] dark:bg-white/[0.025] dark:text-slate-400 dark:hover:border-indigo-500/20 dark:hover:bg-indigo-500/10 dark:hover:text-indigo-300"
+                                        }`}
+                                >
+                                    {isRealToday && (
+                                        <span
+                                            className={`h-1.5 w-1.5 rounded-full ${isSelected
+                                                    ? "bg-white"
+                                                    : "bg-indigo-500"
+                                                }`}
+                                        />
+                                    )}
 
-                                {jy === realTodayJy
-                                    ? JALALI_MONTHS[jm - 1]
-                                    : `${JALALI_MONTHS[jm - 1]} ${toPersianDigits(
-                                        jy
-                                    )}`}
-                            </button>
-                        );
-                    })}
+                                    {jy ===
+                                        realTodayJy
+                                        ? JALALI_MONTHS[
+                                        jm -
+                                        1
+                                        ]
+                                        : `${JALALI_MONTHS[
+                                        jm -
+                                        1
+                                        ]
+                                        } ${toPersianDigits(
+                                            jy
+                                        )}`}
+                                </button>
+                            );
+                        }
+                    )}
                 </div>
 
                 {!loading && (
                     <div className="flex flex-wrap items-center gap-x-5 gap-y-2 border-b border-slate-100 px-5 py-3 sm:px-6 dark:border-white/[0.06]">
-                        {["task", "internal_task", "note"].map(
+                        {[
+                            "task",
+                            "internal_task",
+                            "note",
+                        ].map(
                             (type) => {
                                 const style =
-                                    EVENT_TYPE_COLOR[type];
+                                    EVENT_TYPE_COLOR[
+                                    type
+                                    ];
 
                                 return (
                                     <span
-                                        key={type}
+                                        key={
+                                            type
+                                        }
                                         className={`flex items-center gap-1.5 text-[9.5px] font-bold ${style.text}`}
                                     >
                                         <span
                                             className={`h-1.5 w-1.5 rounded-full ${style.dot}`}
                                         />
 
-                                        {EVENT_TYPE_LABEL[type]}
+                                        {
+                                            EVENT_TYPE_LABEL[
+                                            type
+                                            ]
+                                        }
                                     </span>
                                 );
                             }
@@ -884,7 +1448,9 @@ export default function PersianCalendar() {
                 {loading ? (
                     <div className="flex flex-col items-center justify-center gap-3 py-24">
                         <motion.div
-                            animate={{ rotate: 360 }}
+                            animate={{
+                                rotate: 360,
+                            }}
                             transition={{
                                 duration: 1,
                                 repeat: Infinity,
@@ -894,42 +1460,80 @@ export default function PersianCalendar() {
                         />
 
                         <p className="text-[11px] font-semibold text-slate-400">
-                            در حال دریافت تقویم...
+                            در حال دریافت
+                            تقویم...
                         </p>
                     </div>
                 ) : (
                     <div
-                        className={`p-4 sm:p-6 ${view === "season"
+                        className={`p-4 sm:p-6 ${view ===
+                                "season"
                                 ? "grid grid-cols-1 gap-5 xl:grid-cols-3"
                                 : "mx-auto max-w-5xl"
                             }`}
                     >
-                        {visibleMonths.map((month) => (
-                            <CalendarMonthGrid
-                                key={`${month.jy}-${month.jm}`}
-                                month={month}
-                                eventsByDay={eventsByDay}
-                                noteCountByDay={noteCountByDay}
-                                todayISO={todayISO}
-                                onSelectDate={handleSelectDate}
-                            />
-                        ))}
+                        {visibleMonths.map(
+                            (month) => (
+                                <CalendarMonthGrid
+                                    key={`${month.jy}-${month.jm}`}
+                                    month={
+                                        month
+                                    }
+                                    eventsByDay={
+                                        eventsByDay
+                                    }
+                                    noteCountByDay={
+                                        noteCountByDay
+                                    }
+                                    todayISO={
+                                        todayISO
+                                    }
+                                    onSelectDate={
+                                        handleSelectDate
+                                    }
+                                />
+                            )
+                        )}
                     </div>
                 )}
             </div>
 
             <CalendarNoteModal
-                isOpen={isModalOpen}
-                onClose={() => setIsModalOpen(false)}
-                selectedDate={selectedDate}
+                isOpen={
+                    isModalOpen
+                }
+                onClose={() =>
+                    setIsModalOpen(
+                        false
+                    )
+                }
+                selectedDate={
+                    selectedDate
+                }
                 notes={notes}
-                events={calendarEvents}
-                onCreated={(note) =>
-                    setNotes((prev) => [note, ...prev])
+                events={
+                    calendarEvents
+                }
+                onCreated={(
+                    note
+                ) =>
+                    setNotes(
+                        (prev) => [
+                            note,
+                            ...prev,
+                        ]
+                    )
                 }
                 onDeleted={(id) =>
-                    setNotes((prev) =>
-                        prev.filter((note) => note.id !== id)
+                    setNotes(
+                        (prev) =>
+                            prev.filter(
+                                (
+                                    note
+                                ) =>
+                                    note.id !==
+                                    id
+                            )
                     )
                 }
             />

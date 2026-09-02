@@ -19,6 +19,7 @@ import { useAuthStore } from "@/store/authStore";
 
 export interface CalendarNote {
     id: number;
+    user?: number;
     description: string;
     created_at?: string;
     updated_at?: string;
@@ -49,28 +50,8 @@ const toDateKey = (date: Date) =>
         date.getDate()
     )}`;
 
-const extractNoteInfo = (
-    description: string,
-    rawCreatedAt?: string
-) => {
-    const match = description.match(
-        /^\[DATE:(\d{4}-\d{2}-\d{2})\]\s*([\s\S]*)$/
-    );
-
-    if (match) {
-        return {
-            cleanDescription: match[2],
-            targetDate: match[1],
-        };
-    }
-
-    return {
-        cleanDescription: description,
-        targetDate: rawCreatedAt
-            ? rawCreatedAt.split("T")[0]
-            : "",
-    };
-};
+const getNoteDate = (note: CalendarNote) =>
+    note.created_at ? note.created_at.slice(0, 10) : "";
 
 const formatDayTitle = (date: Date | null) => {
     if (!date) return "";
@@ -87,11 +68,9 @@ const isPastDay = (date: Date | null) => {
     if (!date) return false;
 
     const today = new Date();
-
     today.setHours(0, 0, 0, 0);
 
     const target = new Date(date);
-
     target.setHours(0, 0, 0, 0);
 
     return target.getTime() < today.getTime();
@@ -198,9 +177,7 @@ export default function CalendarNoteModal({
     const { userId } = useAuthStore();
 
     const [description, setDescription] = useState("");
-
     const [submitting, setSubmitting] = useState(false);
-
     const [deletingId, setDeletingId] =
         useState<number | null>(null);
 
@@ -211,27 +188,9 @@ export default function CalendarNoteModal({
     const dayNotes = useMemo(() => {
         if (!selectedKey) return [];
 
-        return notes
-            .filter((note) => {
-                const info = extractNoteInfo(
-                    note.description,
-                    note.created_at
-                );
-
-                return info.targetDate === selectedKey;
-            })
-            .map((note) => {
-                const info = extractNoteInfo(
-                    note.description,
-                    note.created_at
-                );
-
-                return {
-                    ...note,
-                    displayDescription:
-                        info.cleanDescription,
-                };
-            });
+        return notes.filter(
+            (note) => getNoteDate(note) === selectedKey
+        );
     }, [notes, selectedKey]);
 
     const dayEvents = useMemo(() => {
@@ -255,11 +214,6 @@ export default function CalendarNoteModal({
             return;
         }
 
-        const key = toDateKey(selectedDate);
-
-        const payloadDescription =
-            `[DATE:${key}] ${description.trim()}`;
-
         setSubmitting(true);
 
         try {
@@ -268,12 +222,11 @@ export default function CalendarNoteModal({
                     "/note/api/v1/create/",
                     {
                         user: Number(userId),
-                        description: payloadDescription,
+                        description: description.trim(),
                     }
                 );
 
             onCreated(data);
-
             setDescription("");
         } catch (error) {
             console.error(error);
@@ -362,60 +315,55 @@ export default function CalendarNoteModal({
                                             رویدادهای این روز
                                         </p>
 
-                                        {dayEvents.map(
-                                            (ev, index) => {
-                                                const normalizedType =
-                                                    getEventType(
-                                                        ev.type
-                                                    );
+                                        {dayEvents.map((ev) => {
+                                            const normalizedType =
+                                                getEventType(
+                                                    ev.type
+                                                );
 
-                                                const s =
-                                                    getTypeStyle(
-                                                        normalizedType
-                                                    );
-
-                                                const label =
-                                                    EVENT_TYPE_LABEL[
+                                            const s =
+                                                getTypeStyle(
                                                     normalizedType
-                                                    ] ??
-                                                    ev.type;
+                                                );
 
-                                                return (
-                                                    <div
-                                                        key={`${normalizedType}-${ev.id}-${ev.start}-${index}`}
-                                                        className={`flex items-start gap-2.5 rounded-2xl ${s.bg} px-3 py-2.5`}
-                                                    >
-                                                        <span
-                                                            className={`mt-0.5 h-2 w-2 flex-shrink-0 rounded-full ${s.dot}`}
-                                                        />
+                                            const label =
+                                                EVENT_TYPE_LABEL[
+                                                normalizedType
+                                                ] ?? ev.type;
 
-                                                        <div className="flex-1 min-w-0">
-                                                            <p
-                                                                className={`truncate text-[13.5px] font-semibold ${s.text}`}
-                                                            >
-                                                                {
-                                                                    ev.title
-                                                                }
-                                                            </p>
+                                            return (
+                                                <div
+                                                    key={ev.id}
+                                                    className={`flex items-start gap-2.5 rounded-2xl ${s.bg} px-3 py-2.5`}
+                                                >
+                                                    <span
+                                                        className={`mt-0.5 h-2 w-2 flex-shrink-0 rounded-full ${s.dot}`}
+                                                    />
 
-                                                            <div className="mt-0.5 flex items-center gap-2">
-                                                                <span className="flex items-center gap-1 text-[12px] text-gray-400">
-                                                                    <Tag
-                                                                        size={
-                                                                            9
-                                                                        }
-                                                                    />
+                                                    <div className="flex-1 min-w-0">
+                                                        <p
+                                                            className={`truncate text-[13.5px] font-semibold ${s.text}`}
+                                                        >
+                                                            {ev.title}
+                                                        </p>
 
-                                                                    {
-                                                                        label
+                                                        <div className="mt-0.5 flex items-center gap-2">
+                                                            <span className="flex items-center gap-1 text-[12px] text-gray-400">
+                                                                <Tag
+                                                                    size={
+                                                                        9
                                                                     }
-                                                                </span>
-                                                            </div>
+                                                                />
+
+                                                                {
+                                                                    label
+                                                                }
+                                                            </span>
                                                         </div>
                                                     </div>
-                                                );
-                                            }
-                                        )}
+                                                </div>
+                                            );
+                                        })}
                                     </div>
                                 )}
 
@@ -494,7 +442,7 @@ export default function CalendarNoteModal({
                                                         <div className="flex items-start justify-between gap-3">
                                                             <p className="whitespace-pre-wrap break-words text-[11.5px] leading-7 font-semibold text-gray-700 dark:text-gray-200">
                                                                 {
-                                                                    note.displayDescription
+                                                                    note.description
                                                                 }
                                                             </p>
 

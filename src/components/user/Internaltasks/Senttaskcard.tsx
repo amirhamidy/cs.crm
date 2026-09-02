@@ -8,7 +8,7 @@ import {
     Clock,
     Loader,
     Loader2,
-    Paperclip,
+    MessageSquareText,
     Trash2,
     UserRound,
     X,
@@ -18,7 +18,7 @@ import type { InternalTask, InternalTaskStatus, EmployeeRef } from "./types";
 import { toJalali, toPersianDigits, JALALI_MONTHS, pad2 } from "@/lib/jalali";
 import api from "@/lib/axiosInstance";
 import InternalTimeRangeModal from "./InternalTimeRangeModal";
-import AttachmentsViewModal from "./Attachmentsviewmodal";
+import InternalTaskChatModal from "./InternalTaskChatModal";
 
 const AVATAR_GRADIENTS = [
     ["#6366f1", "#8b5cf6"],
@@ -90,21 +90,6 @@ function getGradient(id: number) {
     return AVATAR_GRADIENTS[Math.abs(id) % AVATAR_GRADIENTS.length];
 }
 
-function Chip({ isDark, children }: { isDark: boolean; children: React.ReactNode }) {
-    return (
-        <div
-            className="flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10.5px] font-bold"
-            style={{
-                border: isDark ? "1px solid rgba(255,255,255,0.06)" : "1px solid rgba(0,0,0,0.06)",
-                background: isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)",
-                color: isDark ? "#94a3b8" : "#64748b",
-            }}
-        >
-            {children}
-        </div>
-    );
-}
-
 function EmployeeChip({ employee, isDark }: { employee: EmployeeRef; isDark: boolean }) {
     const gradient = getGradient(employee.id);
     const name = employee.full_name || `کارمند ${employee.id}`;
@@ -136,7 +121,6 @@ function EmployeeChip({ employee, isDark }: { employee: EmployeeRef; isDark: boo
 interface SentTaskCardProps {
     task: InternalTask;
     index?: number;
-    onEdit?: (task: InternalTask) => void;
     onUpdated?: (task: InternalTask) => void;
     onDelete?: (taskId: number) => Promise<boolean> | void | Promise<void>;
     isDeleting?: boolean;
@@ -163,7 +147,7 @@ export default function SentTaskCard({
         started_at: task.started_at ?? null,
         deadline: task.deadline ?? null,
     });
-    const [attachmentsOpen, setAttachmentsOpen] = useState(false);
+    const [chatOpen, setChatOpen] = useState(false);
     const assignedEmployees: EmployeeRef[] = Array.isArray(task.assigned_to)
         ? task.assigned_to
         : [];
@@ -250,11 +234,13 @@ export default function SentTaskCard({
                 deadline: updatedDeadline,
             });
 
-            onUpdated?.({
-                ...task,
-                started_at: updatedStartedAt,
-                deadline: updatedDeadline,
-            });
+            if (onUpdated) {
+                onUpdated({
+                    ...task,
+                    started_at: updatedStartedAt,
+                    deadline: updatedDeadline,
+                });
+            }
 
             setTimeModalOpen(false);
         } catch {
@@ -382,15 +368,15 @@ export default function SentTaskCard({
                     <div className="flex items-center gap-1.5">
                         <button
                             type="button"
-                            onClick={() => setAttachmentsOpen(true)}
+                            onClick={() => setChatOpen(true)}
                             className="flex h-7 w-7 items-center justify-center rounded-xl transition-colors"
                             style={{
                                 background: isDark ? "rgba(99,102,241,0.1)" : "rgba(99,102,241,0.07)",
                                 color: isDark ? "#a5b4fc" : "#6366f1",
                             }}
-                            title="مشاهده یادداشت‌ها و فایل‌ها"
+                            title="مشاهده گفتگو و فایل‌ها"
                         >
-                            <Paperclip size={11} />
+                            <MessageSquareText size={11} />
                         </button>
                         <button
                             type="button"
@@ -651,10 +637,11 @@ export default function SentTaskCard({
                 onSubmit={handleTimeSubmit}
             />
 
-            <AttachmentsViewModal
-                isOpen={attachmentsOpen}
-                onClose={() => setAttachmentsOpen(false)}
+            <InternalTaskChatModal
+                open={chatOpen}
                 task={task}
+                onClose={() => setChatOpen(false)}
+                onUpdated={onUpdated || (() => { })}
             />
         </>
     );
