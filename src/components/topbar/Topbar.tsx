@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { useSidebar } from "@/hooks/useSidebar";
 import { useCurrentEmployee } from "@/hooks/usecurrentemployee";
 import { ThemeToggle } from "../ThemeToggle";
+import GlobalSearch from "@/components/customcomponents/search/GlobalSearch";
 
 export default function Topbar() {
   const { toggle } = useSidebar();
@@ -35,6 +36,8 @@ export default function Topbar() {
             </h1>
           </div>
         </div>
+
+        <GlobalSearch />
 
         <div className="flex items-center gap-2">
           <ThemeToggle />

@@ -149,7 +149,7 @@ export default function CategoryChart() {
       <div className="mb-3 flex items-start justify-between gap-3" dir="rtl">
         <div>
           <h3 className="text-[14px] font-semibold text-gray-900 dark:text-white">
-            بیشترین منابع فروش
+            بیشترین منابع مشتری 
           </h3>
           <p className="mt-0.5 text-[13px] text-gray-500 dark:text-gray-400">
             {currentRange?.sub}
@@ -208,7 +208,7 @@ export default function CategoryChart() {
                   </span>
                 </div>
                 <p className="text-[11px] text-gray-500 dark:text-gray-400">
-                  سهم فروش:{" "}
+                  سهم منبع:{" "}
                   <span
                     className="font-bold tabular-nums"
                     style={{ color: activeSlice.color }}

@@ -87,9 +87,11 @@ const isPastDay = (date: Date | null) => {
     if (!date) return false;
 
     const today = new Date();
+
     today.setHours(0, 0, 0, 0);
 
     const target = new Date(date);
+
     target.setHours(0, 0, 0, 0);
 
     return target.getTime() < today.getTime();
@@ -176,6 +178,7 @@ function isEventOnDate(
     if (!event.start) return false;
 
     const eventStart = event.start.slice(0, 10);
+
     const eventEnd = event.end
         ? event.end.slice(0, 10)
         : eventStart;
@@ -195,7 +198,9 @@ export default function CalendarNoteModal({
     const { userId } = useAuthStore();
 
     const [description, setDescription] = useState("");
+
     const [submitting, setSubmitting] = useState(false);
+
     const [deletingId, setDeletingId] =
         useState<number | null>(null);
 
@@ -252,7 +257,8 @@ export default function CalendarNoteModal({
 
         const key = toDateKey(selectedDate);
 
-        const payloadDescription = `[DATE:${key}] ${description.trim()}`;
+        const payloadDescription =
+            `[DATE:${key}] ${description.trim()}`;
 
         setSubmitting(true);
 
@@ -267,6 +273,7 @@ export default function CalendarNoteModal({
                 );
 
             onCreated(data);
+
             setDescription("");
         } catch (error) {
             console.error(error);
@@ -355,58 +362,60 @@ export default function CalendarNoteModal({
                                             رویدادهای این روز
                                         </p>
 
-                                        {dayEvents.map((ev) => {
-                                            const normalizedType =
-                                                getEventType(
-                                                    ev.type
-                                                );
+                                        {dayEvents.map(
+                                            (ev, index) => {
+                                                const normalizedType =
+                                                    getEventType(
+                                                        ev.type
+                                                    );
 
-                                            const s =
-                                                getTypeStyle(
+                                                const s =
+                                                    getTypeStyle(
+                                                        normalizedType
+                                                    );
+
+                                                const label =
+                                                    EVENT_TYPE_LABEL[
                                                     normalizedType
-                                                );
+                                                    ] ??
+                                                    ev.type;
 
-                                            const label =
-                                                EVENT_TYPE_LABEL[
-                                                normalizedType
-                                                ] ??
-                                                ev.type;
+                                                return (
+                                                    <div
+                                                        key={`${normalizedType}-${ev.id}-${ev.start}-${index}`}
+                                                        className={`flex items-start gap-2.5 rounded-2xl ${s.bg} px-3 py-2.5`}
+                                                    >
+                                                        <span
+                                                            className={`mt-0.5 h-2 w-2 flex-shrink-0 rounded-full ${s.dot}`}
+                                                        />
 
-                                            return (
-                                                <div
-                                                    key={ev.id}
-                                                    className={`flex items-start gap-2.5 rounded-2xl ${s.bg} px-3 py-2.5`}
-                                                >
-                                                    <span
-                                                        className={`mt-0.5 h-2 w-2 flex-shrink-0 rounded-full ${s.dot}`}
-                                                    />
-
-                                                    <div className="flex-1 min-w-0">
-                                                        <p
-                                                            className={`truncate text-[13.5px] font-semibold ${s.text}`}
-                                                        >
-                                                            {
-                                                                ev.title
-                                                            }
-                                                        </p>
-
-                                                        <div className="mt-0.5 flex items-center gap-2">
-                                                            <span className="flex items-center gap-1 text-[12px] text-gray-400">
-                                                                <Tag
-                                                                    size={
-                                                                        9
-                                                                    }
-                                                                />
-
+                                                        <div className="flex-1 min-w-0">
+                                                            <p
+                                                                className={`truncate text-[13.5px] font-semibold ${s.text}`}
+                                                            >
                                                                 {
-                                                                    label
+                                                                    ev.title
                                                                 }
-                                                            </span>
+                                                            </p>
+
+                                                            <div className="mt-0.5 flex items-center gap-2">
+                                                                <span className="flex items-center gap-1 text-[12px] text-gray-400">
+                                                                    <Tag
+                                                                        size={
+                                                                            9
+                                                                        }
+                                                                    />
+
+                                                                    {
+                                                                        label
+                                                                    }
+                                                                </span>
+                                                            </div>
                                                         </div>
                                                     </div>
-                                                </div>
-                                            );
-                                        })}
+                                                );
+                                            }
+                                        )}
                                     </div>
                                 )}
 
