@@ -3,7 +3,14 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useTheme } from "next-themes";
-import { ClipboardList, Layers, Loader, Pencil, Plus, RefreshCw, Search, X } from "lucide-react";
+import {
+    ClipboardList,
+    Layers,
+    Loader,
+    Pencil,
+    Plus,
+    RefreshCw,
+} from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
 import { apiRoutes } from "@/lib/apiRoutes";
 import { Case, Department } from "@/types/case";
@@ -22,10 +29,12 @@ type ListResponse<T> = T[] | { results?: T[]; data?: T[] };
 
 function extractList<T>(data: ListResponse<T> | undefined | null): T[] {
     if (Array.isArray(data)) return data;
+
     if (data && typeof data === "object") {
         if (Array.isArray(data.results)) return data.results;
         if (Array.isArray(data.data)) return data.data;
     }
+
     return [];
 }
 
@@ -40,7 +49,6 @@ export default function AdminCasesPage() {
     const [tasks, setTasks] = useState<TaskItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
-    const [query, setQuery] = useState("");
     const [caseModalOpen, setCaseModalOpen] = useState(false);
     const [deletingId, setDeletingId] = useState<number | null>(null);
     const [editingCase, setEditingCase] = useState<CaseItem | null>(null);
@@ -49,17 +57,29 @@ export default function AdminCasesPage() {
     const [editTaskModalOpen, setEditTaskModalOpen] = useState(false);
     const [deletingTaskId, setDeletingTaskId] = useState<number | null>(null);
     const [tasksModalOpen, setTasksModalOpen] = useState(false);
-    const [selectedCaseForTasks, setSelectedCaseForTasks] = useState<CaseItem | null>(null);
+    const [selectedCaseForTasks, setSelectedCaseForTasks] =
+        useState<CaseItem | null>(null);
 
     const fetchData = useCallback(async () => {
         try {
             setLoading(true);
             setError("");
-            const [casesRes, customersRes, departmentsRes, employeesRes, tasksRes] = await Promise.all([
+
+            const [
+                casesRes,
+                customersRes,
+                departmentsRes,
+                employeesRes,
+                tasksRes,
+            ] = await Promise.all([
                 axiosInstance.get<ListResponse<Case>>(apiRoutes.cases),
                 axiosInstance.get<ListResponse<Customer>>(apiRoutes.customers),
-                axiosInstance.get<ListResponse<Department>>(apiRoutes.departments),
-                axiosInstance.get<ListResponse<Employee>>(apiRoutes.departmentEmployees),
+                axiosInstance.get<ListResponse<Department>>(
+                    apiRoutes.departments
+                ),
+                axiosInstance.get<ListResponse<Employee>>(
+                    apiRoutes.departmentEmployees
+                ),
                 axiosInstance.get<ListResponse<TaskItem>>(apiRoutes.tasks),
             ]);
 
@@ -71,6 +91,7 @@ export default function AdminCasesPage() {
                         const detailRes = await axiosInstance.get<Case>(
                             `/tasks/api/v1/cases/${item.id}/`
                         );
+
                         return { ...item, ...detailRes.data };
                     } catch {
                         return item;
@@ -98,11 +119,19 @@ export default function AdminCasesPage() {
     const handleDeleteCase = useCallback(
         async (item: Case) => {
             const id = Number(item.id);
+
             if (!id) return;
+
             try {
                 setDeletingId(id);
-                await axiosInstance.delete(`/tasks/api/v1/cases/${id}/delete/`);
-                setCases((prev) => prev.filter((c) => Number(c.id) !== id));
+
+                await axiosInstance.delete(
+                    `/tasks/api/v1/cases/${id}/delete/`
+                );
+
+                setCases((prev) =>
+                    prev.filter((c) => Number(c.id) !== id)
+                );
             } catch (err) {
                 console.error(err);
                 await fetchData();
@@ -124,22 +153,26 @@ export default function AdminCasesPage() {
         setEditingCase(null);
     }, [fetchData]);
 
-    const handleDeleteTask = useCallback(
-        async (taskId: number) => {
-            try {
-                setDeletingTaskId(taskId);
-                await axiosInstance.delete(`/tasks/api/v1/tasks/${taskId}/delete/`);
-                setTasks((prev) => prev.filter((t) => t.id !== taskId));
-                return Promise.resolve();
-            } catch (err) {
-                console.error(err);
-                throw err;
-            } finally {
-                setDeletingTaskId(null);
-            }
-        },
-        []
-    );
+    const handleDeleteTask = useCallback(async (taskId: number) => {
+        try {
+            setDeletingTaskId(taskId);
+
+            await axiosInstance.delete(
+                `/tasks/api/v1/tasks/${taskId}/delete/`
+            );
+
+            setTasks((prev) =>
+                prev.filter((t) => t.id !== taskId)
+            );
+
+            return Promise.resolve();
+        } catch (err) {
+            console.error(err);
+            throw err;
+        } finally {
+            setDeletingTaskId(null);
+        }
+    }, []);
 
     const handleEditTask = useCallback((task: TaskItem) => {
         setEditingTask(task);
@@ -157,64 +190,63 @@ export default function AdminCasesPage() {
         setTasksModalOpen(true);
     }, []);
 
-    const filteredCases = useMemo(() => {
-        const q = query.trim().toLowerCase();
-        if (!q) return cases;
-        return cases.filter((item) => {
-            const customer = customers.find((c) => Number(c.id) === Number(item.customer));
-            const customerName = [
-                (customer as unknown as { first_name?: string })?.first_name,
-                (customer as unknown as { last_name?: string })?.last_name,
-                (customer as unknown as { full_name?: string })?.full_name,
-                (customer as unknown as { company_name?: string })?.company_name,
-            ]
-                .filter(Boolean)
-                .join(" ")
-                .toLowerCase();
-
-            return (
-                String(item.title ?? "").toLowerCase().includes(q) ||
-                String(item.description ?? "").toLowerCase().includes(q) ||
-                String(item.id ?? "").includes(q) ||
-                customerName.includes(q)
-            );
-        });
-    }, [cases, customers, query]);
-
     const tasksByCase = useMemo(() => {
         const map = new Map<number, TaskItem[]>();
+
         tasks.forEach((task) => {
-            const caseId = task.case && typeof task.case === "object" ? task.case.id : task.case;
+            const caseId =
+                task.case && typeof task.case === "object"
+                    ? task.case.id
+                    : task.case;
+
             if (caseId) {
                 const id = Number(caseId);
-                if (!map.has(id)) map.set(id, []);
+
+                if (!map.has(id)) {
+                    map.set(id, []);
+                }
+
                 map.get(id)!.push(task);
             }
         });
+
         return map;
     }, [tasks]);
 
     const selectedCaseTasks = useMemo(() => {
         if (!selectedCaseForTasks) return [];
-        return tasksByCase.get(Number(selectedCaseForTasks.id)) || [];
+
+        return (
+            tasksByCase.get(Number(selectedCaseForTasks.id)) || []
+        );
     }, [selectedCaseForTasks, tasksByCase]);
 
     return (
-        <div className="flex flex-col gap-5 p-3 sm:p-4 md:p-6" dir="rtl">
+        <div
+            className="flex flex-col gap-5 p-3 sm:p-4 md:p-6"
+            dir="rtl"
+        >
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-start gap-3">
                     <div
                         className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl"
                         style={{
-                            background: isDark ? "rgba(99,102,241,0.14)" : "rgba(99,102,241,0.08)",
+                            background: isDark
+                                ? "rgba(99,102,241,0.14)"
+                                : "rgba(99,102,241,0.08)",
                         }}
                     >
-                        <ClipboardList size={18} className="text-indigo-500" />
+                        <ClipboardList
+                            size={18}
+                            className="text-indigo-500"
+                        />
                     </div>
+
                     <div className="min-w-0">
                         <h1 className="text-[15px] font-extrabold text-gray-900 dark:text-white">
                             پرونده‌ها
                         </h1>
+
                         <p className="mt-0.5 text-[11.5px] text-gray-500 dark:text-gray-400">
                             {loading
                                 ? "در حال بارگذاری..."
@@ -222,6 +254,7 @@ export default function AdminCasesPage() {
                         </p>
                     </div>
                 </div>
+
                 <div className="flex items-center gap-2">
                     <button
                         onClick={fetchData}
@@ -230,12 +263,18 @@ export default function AdminCasesPage() {
                         title="بارگذاری مجدد"
                         className="flex h-10 w-10 items-center justify-center rounded-2xl transition-colors disabled:opacity-50"
                         style={{
-                            background: isDark ? "rgba(255,255,255,0.05)" : "rgba(15,23,42,0.05)",
+                            background: isDark
+                                ? "rgba(255,255,255,0.05)"
+                                : "rgba(15,23,42,0.05)",
                             color: isDark ? "#cbd5e1" : "#475569",
                         }}
                     >
-                        <RefreshCw size={15} className={loading ? "animate-spin" : ""} />
+                        <RefreshCw
+                            size={15}
+                            className={loading ? "animate-spin" : ""}
+                        />
                     </button>
+
                     <button
                         onClick={() => setCaseModalOpen(true)}
                         type="button"
@@ -247,25 +286,10 @@ export default function AdminCasesPage() {
                 </div>
             </div>
 
-            <div
-                className="flex h-11 items-center gap-2 rounded-2xl px-3"
-                style={{
-                    background: isDark ? "rgba(255,255,255,0.04)" : "rgba(15,23,42,0.04)",
-                    border: isDark ? "1px solid rgba(255,255,255,0.06)" : "1px solid rgba(15,23,42,0.06)",
-                }}
-            >
-                <Search size={15} className="text-gray-400" />
-                <input
-                    value={query}
-                    onChange={(e) => setQuery(e.target.value)}
-                    placeholder="جستجو بر اساس عنوان، توضیحات یا نام مشتری"
-                    className="h-full w-full bg-transparent text-[12.5px] text-gray-800 outline-none placeholder:text-gray-400 dark:text-gray-100"
-                />
-            </div>
-
             {error && !loading && (
                 <div className="flex flex-col items-start gap-3 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-[12.5px] text-rose-600 dark:border-rose-500/20 dark:bg-rose-500/10 dark:text-rose-300 sm:flex-row sm:items-center sm:justify-between">
                     <span>{error}</span>
+
                     <button
                         onClick={fetchData}
                         type="button"
@@ -278,59 +302,97 @@ export default function AdminCasesPage() {
 
             {loading && (
                 <div className="flex flex-col items-center justify-center gap-3 py-16">
-                    <Loader size={24} className="animate-spin text-indigo-500" />
+                    <Loader
+                        size={24}
+                        className="animate-spin text-indigo-500"
+                    />
+
                     <p className="text-[12.5px] text-gray-500 dark:text-gray-400">
                         در حال دریافت لیست پرونده‌ها...
                     </p>
                 </div>
             )}
 
-            {!loading && filteredCases.length === 0 && (
+            {!loading && cases.length === 0 && (
                 <div className="flex flex-col items-center justify-center gap-2 py-16">
-                    <ClipboardList size={28} className="text-gray-300 dark:text-gray-700" />
+                    <ClipboardList
+                        size={28}
+                        className="text-gray-300 dark:text-gray-700"
+                    />
+
                     <p className="text-[12.5px] text-gray-500 dark:text-gray-400">
-                        {query ? "پرونده‌ای پیدا نشد" : "هنوز پرونده‌ای ثبت نشده"}
+                        هنوز پرونده‌ای ثبت نشده
                     </p>
                 </div>
             )}
 
-            {!loading && filteredCases.length > 0 && (
+            {!loading && cases.length > 0 && (
                 <motion.div
                     layout
                     className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3"
                 >
                     <AnimatePresence mode="popLayout">
-                        {filteredCases.map((item, i) => {
-                            const caseTasks = tasksByCase.get(Number(item.id)) || [];
+                        {cases.map((item, i) => {
+                            const caseTasks =
+                                tasksByCase.get(Number(item.id)) || [];
+
                             return (
-                                <div key={item.id} className="relative flex flex-col gap-2 rounded-4xl border-2 border-[#eeeeee] p-3 dark:border-white/[0.06]">
+                                <div
+                                    key={item.id}
+                                    className="relative flex flex-col gap-2 rounded-4xl border-2 border-[#eeeeee] p-3 dark:border-white/[0.06]"
+                                >
                                     <div className="relative">
                                         <CaseCard
-                                            item={item as unknown as CaseItem}
+                                            item={
+                                                item as unknown as CaseItem
+                                            }
                                             index={i}
                                             customers={customers}
                                             departments={departments}
                                             users={employees}
-                                            isDeleting={deletingId === Number(item.id)}
-                                            hasActiveTasks={caseTasks.length > 0}
-                                            onDelete={() => handleDeleteCase(item)}
+                                            isDeleting={
+                                                deletingId ===
+                                                Number(item.id)
+                                            }
+                                            hasActiveTasks={
+                                                caseTasks.length > 0
+                                            }
+                                            onDelete={() =>
+                                                handleDeleteCase(item)
+                                            }
                                         />
+
                                         <button
                                             type="button"
-                                            onClick={() => handleEditCase(item)}
+                                            onClick={() =>
+                                                handleEditCase(item)
+                                            }
                                             className="absolute left-3 top-3 flex h-7 w-7 items-center justify-center rounded-xl transition-colors"
                                             title="ویرایش پرونده"
-                                            style={{ background: "rgba(99, 102, 241, 0.07)", color: "rgb(99, 102, 241)" }}
+                                            style={{
+                                                background:
+                                                    "rgba(99, 102, 241, 0.07)",
+                                                color: "rgb(99, 102, 241)",
+                                            }}
                                         >
-                                            <Pencil size={11} strokeWidth={2} />
+                                            <Pencil
+                                                size={11}
+                                                strokeWidth={2}
+                                            />
                                         </button>
                                     </div>
+
                                     <button
                                         type="button"
-                                        onClick={() => handleOpenTasksModal(item as unknown as CaseItem)}
+                                        onClick={() =>
+                                            handleOpenTasksModal(
+                                                item as unknown as CaseItem
+                                            )
+                                        }
                                         className="flex items-center justify-between gap-2 rounded-2xl px-3.5 py-2.5 text-[12px] font-bold transition-colors"
                                         style={{
-                                            background: "rgba(99, 102, 241, 0.06)",
+                                            background:
+                                                "rgba(99, 102, 241, 0.06)",
                                             color: "rgb(99, 102, 241)",
                                         }}
                                     >
@@ -338,9 +400,13 @@ export default function AdminCasesPage() {
                                             <Layers size={13} />
                                             دیدن وظیفه های این پرونده
                                         </span>
+
                                         <span
                                             className="rounded-full px-2 py-0.5 text-[10.5px] font-extrabold"
-                                            style={{ background: "rgba(99,102,241,0.14)" }}
+                                            style={{
+                                                background:
+                                                    "rgba(99,102,241,0.14)",
+                                            }}
                                         >
                                             {caseTasks.length}
                                         </span>

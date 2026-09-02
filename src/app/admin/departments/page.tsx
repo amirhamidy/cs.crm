@@ -1,6 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState, forwardRef, InputHTMLAttributes, useMemo } from "react";
+import {
+    useEffect,
+    useRef,
+    useState,
+    forwardRef,
+    InputHTMLAttributes,
+    useMemo,
+} from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "next-themes";
 import {
@@ -13,7 +20,6 @@ import {
     Pencil,
     CheckCircle2,
     RefreshCw,
-    Search,
 } from "lucide-react";
 import { useDepartmentStore } from "@/components/admin/departments/departmentStore";
 import { Department } from "@/components/admin/departments/types";
@@ -44,6 +50,7 @@ const FloatingInput = forwardRef<HTMLInputElement, FloatingInputProps>(
                 className={`peer w-full border border-gray-200 rounded-[1.5rem] px-5 py-3 text-sm text-black outline-none transition-all duration-200 focus:border-gray-400 dark:bg-white/[0.04] dark:border-white/[0.08] dark:text-white dark:focus:border-blue-500 ${className}`}
                 {...props}
             />
+
             <label
                 htmlFor={id}
                 className="absolute right-5 top-1/2 -translate-y-1/2 text-sm text-gray-400 pointer-events-none transition-all duration-200 bg-white dark:bg-[#0f172a] px-1.5 rounded peer-focus:top-0 peer-focus:text-xs peer-focus:text-gray-500 peer-[:not(:placeholder-shown)]:top-0 peer-[:not(:placeholder-shown)]:text-xs peer-[:not(:placeholder-shown)]:text-gray-500"
@@ -125,7 +132,6 @@ export default function DepartmentsPage() {
         deleteDepartment,
     } = useDepartmentStore();
 
-    const [search, setSearch] = useState("");
     const [deleteTarget, setDeleteTarget] = useState<{
         id: string;
         name: string;
@@ -146,7 +152,9 @@ export default function DepartmentsPage() {
 
     const fetchTasks = async () => {
         try {
-            const response = await axiosInstance.get("/tasks/api/v1/tasks/");
+            const response = await axiosInstance.get(
+                "/tasks/api/v1/tasks/"
+            );
             setTasks(extractTasks(response.data));
         } catch {
             setTasks([]);
@@ -224,7 +232,8 @@ export default function DepartmentsPage() {
         );
 
         return {
-            hasDependencies: hasEmployees || hasStages || hasTasks,
+            hasDependencies:
+                hasEmployees || hasStages || hasTasks,
             hasEmployees,
             hasStages,
             hasTasks,
@@ -232,14 +241,8 @@ export default function DepartmentsPage() {
     };
 
     const filteredDepartments = useMemo(() => {
-        const keyword = search.trim().toLowerCase();
-        if (!keyword) return departments;
-
-        return departments.filter((department) => {
-            const name = department.name?.toLowerCase() ?? "";
-            return name.includes(keyword);
-        });
-    }, [departments, search]);
+        return departments;
+    }, [departments]);
 
     if (loading && departments.length === 0) {
         return (
@@ -248,6 +251,7 @@ export default function DepartmentsPage() {
                     size={22}
                     className="text-indigo-500 animate-spin"
                 />
+
                 <p className="text-[12.5px] text-gray-400 dark:text-gray-500">
                     در حال دریافت لیست دپارتمان‌ها...
                 </p>
@@ -261,7 +265,10 @@ export default function DepartmentsPage() {
                 className="flex flex-col items-center justify-center py-24 gap-3 px-4"
                 dir="rtl"
             >
-                <AlertCircle size={28} className="text-red-500" />
+                <AlertCircle
+                    size={28}
+                    className="text-red-500"
+                />
 
                 <p className="text-[13px] font-semibold text-red-500 text-center">
                     {error}
@@ -317,14 +324,25 @@ export default function DepartmentsPage() {
                             }
                         >
                             <motion.div
-                                initial={{ opacity: 0, y: 16 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, y: 16 }}
+                                initial={{
+                                    opacity: 0,
+                                    y: 16,
+                                }}
+                                animate={{
+                                    opacity: 1,
+                                    y: 0,
+                                }}
+                                exit={{
+                                    opacity: 0,
+                                    y: 16,
+                                }}
                                 transition={{
                                     duration: 0.35,
                                     ease: "easeOut",
                                 }}
-                                onClick={(e) => e.stopPropagation()}
+                                onClick={(e) =>
+                                    e.stopPropagation()
+                                }
                                 className="w-full max-w-[92vw] sm:max-w-sm overflow-hidden rounded-[1.75rem] sm:rounded-[2rem] border border-gray-100 bg-white shadow-sm dark:border-white/[0.06] dark:bg-[#0f172a]"
                             >
                                 <div className="flex items-center justify-between gap-3 px-5 sm:px-8 pb-5 sm:pb-6 pt-6 sm:pt-8">
@@ -355,7 +373,8 @@ export default function DepartmentsPage() {
                                             setEditDept(null)
                                         }
                                         disabled={
-                                            editLoading || editSuccess
+                                            editLoading ||
+                                            editSuccess
                                         }
                                         className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gray-100 text-gray-400 transition-colors hover:text-gray-600 disabled:opacity-40 dark:bg-white/[0.05] dark:hover:text-gray-300"
                                     >
@@ -370,10 +389,14 @@ export default function DepartmentsPage() {
                                         id="edit_dept_name"
                                         value={editName}
                                         onChange={(e) =>
-                                            setEditName(e.target.value)
+                                            setEditName(
+                                                e.target.value
+                                            )
                                         }
                                         onKeyDown={(e) => {
-                                            if (e.key === "Enter") {
+                                            if (
+                                                e.key === "Enter"
+                                            ) {
                                                 handleEditDepartment();
                                             }
 
@@ -385,7 +408,8 @@ export default function DepartmentsPage() {
                                             }
                                         }}
                                         disabled={
-                                            editLoading || editSuccess
+                                            editLoading ||
+                                            editSuccess
                                         }
                                         dir="rtl"
                                     />
@@ -408,23 +432,35 @@ export default function DepartmentsPage() {
                                                 }}
                                                 className="flex items-center justify-center gap-2 rounded-2xl bg-green-50 py-3 text-sm font-medium text-green-600 dark:bg-green-500/10 dark:text-green-400"
                                             >
-                                                <CheckCircle2 size={16} />
+                                                <CheckCircle2
+                                                    size={16}
+                                                />
                                                 تغییرات با موفقیت ذخیره شد
                                             </motion.div>
                                         ) : (
                                             <motion.div
                                                 key="actions"
-                                                initial={{ opacity: 0 }}
-                                                animate={{ opacity: 1 }}
-                                                exit={{ opacity: 0 }}
+                                                initial={{
+                                                    opacity: 0,
+                                                }}
+                                                animate={{
+                                                    opacity: 1,
+                                                }}
+                                                exit={{
+                                                    opacity: 0,
+                                                }}
                                                 className="flex flex-col-reverse sm:flex-row gap-2"
                                             >
                                                 <button
                                                     type="button"
                                                     onClick={() =>
-                                                        setEditDept(null)
+                                                        setEditDept(
+                                                            null
+                                                        )
                                                     }
-                                                    disabled={editLoading}
+                                                    disabled={
+                                                        editLoading
+                                                    }
                                                     className="flex-1 rounded-full bg-gray-100 py-3 text-sm font-bold text-gray-500 transition-colors hover:bg-gray-200 disabled:opacity-40 dark:bg-white/[0.05] dark:hover:bg-white/[0.08]"
                                                 >
                                                     انصراف
@@ -450,7 +486,9 @@ export default function DepartmentsPage() {
                                                             className="animate-spin"
                                                         />
                                                     ) : (
-                                                        <Check size={16} />
+                                                        <Check
+                                                            size={16}
+                                                        />
                                                     )}
                                                     ذخیره تغییرات
                                                 </motion.button>
@@ -468,10 +506,15 @@ export default function DepartmentsPage() {
                         <div
                             className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl"
                             style={{
-                                background: isDark ? "rgba(99,102,241,0.14)" : "rgba(99,102,241,0.08)",
+                                background: isDark
+                                    ? "rgba(99,102,241,0.14)"
+                                    : "rgba(99,102,241,0.08)",
                             }}
                         >
-                            <Building2 size={18} className="text-indigo-500" />
+                            <Building2
+                                size={18}
+                                className="text-indigo-500"
+                            />
                         </div>
 
                         <div className="min-w-0">
@@ -496,8 +539,12 @@ export default function DepartmentsPage() {
                             disabled={loading}
                             className="flex h-10 w-10 items-center justify-center rounded-2xl transition-colors disabled:opacity-50"
                             style={{
-                                background: isDark ? "rgba(255,255,255,0.05)" : "rgba(15,23,42,0.05)",
-                                color: isDark ? "#cbd5e1" : "#475569",
+                                background: isDark
+                                    ? "rgba(255,255,255,0.05)"
+                                    : "rgba(15,23,42,0.05)",
+                                color: isDark
+                                    ? "#cbd5e1"
+                                    : "#475569",
                             }}
                             title="بارگذاری مجدد"
                             type="button"
@@ -505,13 +552,17 @@ export default function DepartmentsPage() {
                             <RefreshCw
                                 size={15}
                                 className={
-                                    loading ? "animate-spin" : ""
+                                    loading
+                                        ? "animate-spin"
+                                        : ""
                                 }
                             />
                         </button>
 
                         <button
-                            onClick={() => setAddDeptOpen(true)}
+                            onClick={() =>
+                                setAddDeptOpen(true)
+                            }
                             className="flex h-10 items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-4 text-[12.5px] font-bold text-white transition-colors hover:bg-indigo-700"
                             type="button"
                         >
@@ -521,88 +572,92 @@ export default function DepartmentsPage() {
                     </div>
                 </div>
 
-                <div
-                    className="flex h-11 items-center gap-2 rounded-2xl px-3"
-                    style={{
-                        background: isDark ? "rgba(255,255,255,0.04)" : "rgba(15,23,42,0.04)",
-                        border: isDark ? "1px solid rgba(255,255,255,0.06)" : "1px solid rgba(15,23,42,0.06)",
-                    }}
-                >
-                    <Search size={15} className="text-gray-400" />
-                    <input
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                        placeholder="جستجو بر اساس نام دپارتمان"
-                        className="h-full w-full bg-transparent text-[12.5px] text-gray-800 outline-none placeholder:text-gray-400 dark:text-gray-100"
-                    />
-                </div>
-
                 {loading && departments.length === 0 && (
                     <div className="flex flex-col items-center justify-center gap-3 py-16">
-                        <Loader size={24} className="animate-spin text-indigo-500" />
+                        <Loader
+                            size={24}
+                            className="animate-spin text-indigo-500"
+                        />
+
                         <p className="text-[12.5px] text-gray-500 dark:text-gray-400">
                             در حال دریافت لیست دپارتمان‌ها...
                         </p>
                     </div>
                 )}
 
-                {!loading && filteredDepartments.length === 0 && (
-                    <div className="flex flex-col items-center justify-center gap-2 py-16">
-                        <Building2 size={28} className="text-gray-300 dark:text-gray-700" />
-                        <p className="text-[12.5px] text-gray-500 dark:text-gray-400">
-                            {search ? "دپارتمانی پیدا نشد" : "هنوز دپارتمانی ثبت نشده"}
-                        </p>
-                    </div>
-                )}
+                {!loading &&
+                    filteredDepartments.length === 0 && (
+                        <div className="flex flex-col items-center justify-center gap-2 py-16">
+                            <Building2
+                                size={28}
+                                className="text-gray-300 dark:text-gray-700"
+                            />
 
-                {!loading && filteredDepartments.length > 0 && (
-                    <motion.div
-                        layout
-                        className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3"
-                    >
-                        <AnimatePresence mode="popLayout">
-                            {filteredDepartments.map((dept, index) => {
-                                const dependencies =
-                                    getDepartmentDependencies(dept);
+                            <p className="text-[12.5px] text-gray-500 dark:text-gray-400">
+                                هنوز دپارتمانی ثبت نشده
+                            </p>
+                        </div>
+                    )}
 
-                                return (
-                                    <DepartmentCard
-                                        key={dept.id}
-                                        department={dept}
-                                        index={index}
-                                        isSelected={false}
-                                        hasDependencies={
-                                            dependencies.hasDependencies
-                                        }
-                                        dependencyMessage={
-                                            dependencies.hasTasks
-                                                ? "این دپارتمان وظیفه دارد"
-                                                : dependencies.hasStages
-                                                    ? "این دپارتمان فرآیند دارد"
-                                                    : "این دپارتمان عضو دارد"
-                                        }
-                                        onDelete={() => {
-                                            if (
-                                                dependencies.hasDependencies
-                                            ) {
-                                                return;
-                                            }
+                {!loading &&
+                    filteredDepartments.length > 0 && (
+                        <motion.div
+                            layout
+                            className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3"
+                        >
+                            <AnimatePresence mode="popLayout">
+                                {filteredDepartments.map(
+                                    (dept, index) => {
+                                        const dependencies =
+                                            getDepartmentDependencies(
+                                                dept
+                                            );
 
-                                            setDeleteTarget({
-                                                id: dept.id,
-                                                name: dept.name,
-                                            });
-                                        }}
-                                        onEdit={() => {
-                                            setEditDept(dept);
-                                            setEditName(dept.name);
-                                        }}
-                                    />
-                                );
-                            })}
-                        </AnimatePresence>
-                    </motion.div>
-                )}
+                                        return (
+                                            <DepartmentCard
+                                                key={dept.id}
+                                                department={dept}
+                                                index={index}
+                                                isSelected={false}
+                                                hasDependencies={
+                                                    dependencies.hasDependencies
+                                                }
+                                                dependencyMessage={
+                                                    dependencies.hasTasks
+                                                        ? "این دپارتمان وظیفه دارد"
+                                                        : dependencies.hasStages
+                                                            ? "این دپارتمان فرآیند دارد"
+                                                            : "این دپارتمان عضو دارد"
+                                                }
+                                                onDelete={() => {
+                                                    if (
+                                                        dependencies.hasDependencies
+                                                    ) {
+                                                        return;
+                                                    }
+
+                                                    setDeleteTarget(
+                                                        {
+                                                            id: dept.id,
+                                                            name: dept.name,
+                                                        }
+                                                    );
+                                                }}
+                                                onEdit={() => {
+                                                    setEditDept(
+                                                        dept
+                                                    );
+                                                    setEditName(
+                                                        dept.name
+                                                    );
+                                                }}
+                                            />
+                                        );
+                                    }
+                                )}
+                            </AnimatePresence>
+                        </motion.div>
+                    )}
             </div>
         </>
     );

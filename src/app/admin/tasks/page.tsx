@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { ClipboardList, Loader, Plus, RefreshCw, Search } from "lucide-react";
+import { ClipboardList, Loader, Plus, RefreshCw } from "lucide-react";
 import { useTheme } from "next-themes";
 import axiosInstance from "@/lib/axiosInstance";
 import { apiRoutes } from "@/lib/apiRoutes";
@@ -12,8 +12,8 @@ import TaskCard from "@/components/customcomponents/tasks/TaskCard";
 import CreateTaskModal from "@/components/customcomponents/tasks/CreateTaskModal";
 import EditTaskModal from "@/components/customcomponents/tasks/EditTaskModal";
 import { taskStatusLabels } from "@/components/customcomponents/shared/constants";
-import type { Customer } from '@/types/customer';
-import type { Employee } from '@/types/employee';
+import type { Customer } from "@/types/customer";
+import type { Employee } from "@/types/employee";
 
 type ListResponse<T> = T[] | { results?: T[]; data?: T[] };
 
@@ -38,7 +38,6 @@ export default function AdminTasksPage() {
     const [employees, setEmployees] = useState<Employee[]>([]);
     const [loading, setLoading] = useState(true);
     const [statusFilter, setStatusFilter] = useState<TaskStatus | "ALL">("ALL");
-    const [search, setSearch] = useState("");
     const [showCreate, setShowCreate] = useState(false);
     const [editingTask, setEditingTask] = useState<Task | null>(null);
 
@@ -52,6 +51,7 @@ export default function AdminTasksPage() {
                     axiosInstance.get<ListResponse<Department>>(apiRoutes.departments),
                     axiosInstance.get<ListResponse<Employee>>(apiRoutes.employees),
                 ]);
+
             setTasks(extractList(tasksRes.data));
             setCustomers(extractList(customersRes.data));
             setDepartments(extractList(departmentsRes.data));
@@ -81,17 +81,13 @@ export default function AdminTasksPage() {
     );
 
     const filteredTasks = useMemo(() => {
-        const query = search.trim().toLowerCase();
         return tasks.filter((task) => {
-            const matchesStatus =
-                statusFilter === "ALL" || task.status === statusFilter;
-            const matchesSearch =
-                !query ||
-                task.title?.toLowerCase().includes(query) ||
-                task.description?.toLowerCase().includes(query);
-            return matchesStatus && matchesSearch;
+            return (
+                statusFilter === "ALL" ||
+                task.status === statusFilter
+            );
         });
-    }, [tasks, search, statusFilter]);
+    }, [tasks, statusFilter]);
 
     const handleDelete = useCallback(
         async (taskId: number): Promise<boolean> => {
@@ -118,7 +114,9 @@ export default function AdminTasksPage() {
     }, [fetchAll]);
 
     const handleTaskUpdated = useCallback((updated: Task) => {
-        setTasks((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
+        setTasks((prev) =>
+            prev.map((t) => (t.id === updated.id ? updated : t))
+        );
     }, []);
 
     return (
@@ -128,20 +126,30 @@ export default function AdminTasksPage() {
                     <div
                         className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl"
                         style={{
-                            background: isDark ? "rgba(99,102,241,0.14)" : "rgba(99,102,241,0.08)",
+                            background: isDark
+                                ? "rgba(99,102,241,0.14)"
+                                : "rgba(99,102,241,0.08)",
                         }}
                     >
-                        <ClipboardList size={18} className="text-indigo-500" />
+                        <ClipboardList
+                            size={18}
+                            className="text-indigo-500"
+                        />
                     </div>
+
                     <div className="min-w-0">
                         <h1 className="text-[15px] font-extrabold text-gray-900 dark:text-white">
                             وظایف
                         </h1>
+
                         <p className="mt-0.5 text-[11.5px] text-gray-500 dark:text-gray-400">
-                            {loading ? "در حال بارگذاری..." : `${tasks.length} وظیفه ثبت شده`}
+                            {loading
+                                ? "در حال بارگذاری..."
+                                : `${tasks.length} وظیفه ثبت شده`}
                         </p>
                     </div>
                 </div>
+
                 <div className="flex items-center gap-2">
                     <button
                         type="button"
@@ -149,13 +157,19 @@ export default function AdminTasksPage() {
                         disabled={loading}
                         className="flex h-10 w-10 items-center justify-center rounded-2xl transition-colors disabled:opacity-50"
                         style={{
-                            background: isDark ? "rgba(255,255,255,0.05)" : "rgba(15,23,42,0.05)",
+                            background: isDark
+                                ? "rgba(255,255,255,0.05)"
+                                : "rgba(15,23,42,0.05)",
                             color: isDark ? "#cbd5e1" : "#475569",
                         }}
                         title="بارگذاری مجدد"
                     >
-                        <RefreshCw size={15} className={loading ? "animate-spin" : ""} />
+                        <RefreshCw
+                            size={15}
+                            className={loading ? "animate-spin" : ""}
+                        />
                     </button>
+
                     <button
                         type="button"
                         onClick={() => setShowCreate(true)}
@@ -165,22 +179,6 @@ export default function AdminTasksPage() {
                         افزودن وظیفه
                     </button>
                 </div>
-            </div>
-
-            <div
-                className="flex h-11 items-center gap-2 rounded-2xl px-3"
-                style={{
-                    background: isDark ? "rgba(255,255,255,0.04)" : "rgba(15,23,42,0.04)",
-                    border: isDark ? "1px solid rgba(255,255,255,0.06)" : "1px solid rgba(15,23,42,0.06)",
-                }}
-            >
-                <Search size={15} className="text-gray-400" />
-                <input
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    placeholder="جستجو بر اساس عنوان یا توضیحات"
-                    className="h-full w-full bg-transparent text-[12.5px] text-gray-800 outline-none placeholder:text-gray-400 dark:text-gray-100"
-                />
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
@@ -209,7 +207,10 @@ export default function AdminTasksPage() {
 
             {loading && (
                 <div className="flex flex-col items-center justify-center gap-3 py-16">
-                    <Loader size={24} className="animate-spin text-indigo-500" />
+                    <Loader
+                        size={24}
+                        className="animate-spin text-indigo-500"
+                    />
                     <p className="text-[12.5px] text-gray-500 dark:text-gray-400">
                         در حال دریافت لیست وظایف...
                     </p>
@@ -218,9 +219,12 @@ export default function AdminTasksPage() {
 
             {!loading && filteredTasks.length === 0 && (
                 <div className="flex flex-col items-center justify-center gap-2 py-16">
-                    <ClipboardList size={28} className="text-gray-300 dark:text-gray-700" />
+                    <ClipboardList
+                        size={28}
+                        className="text-gray-300 dark:text-gray-700"
+                    />
                     <p className="text-[12.5px] text-gray-500 dark:text-gray-400">
-                        {search ? "وظیفه‌ای پیدا نشد" : "هنوز وظیفه‌ای ثبت نشده"}
+                        هنوز وظیفه‌ای ثبت نشده
                     </p>
                 </div>
             )}
