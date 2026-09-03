@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Check, ClipboardList, Eye, Loader, Plus, RefreshCw } from "lucide-react";
+import { Archive, Check, ClipboardList, Eye, Loader, Plus, RefreshCw } from "lucide-react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import axiosInstance from "@/lib/axiosInstance";
@@ -12,25 +12,19 @@ import { Department } from "@/types/department";
 import TaskCard from "@/components/customcomponents/tasks/TaskCard";
 import CreateTaskModal from "@/components/customcomponents/tasks/CreateTaskModal";
 import EditTaskModal from "@/components/customcomponents/tasks/EditTaskModal";
-import { taskStatusLabels } from "@/components/customcomponents/shared/constants";
 import type { Customer } from "@/types/customer";
 import type { Employee } from "@/types/employee";
 
 type ListResponse<T> = T[] | { results?: T[]; data?: T[] };
 
+const ACTIVE_STATUS = "in_progress" as TaskStatus;
+
 function extractList<T>(data: ListResponse<T>): T[] {
     if (Array.isArray(data)) return data;
-
     if (data && typeof data === "object") {
-        if (Array.isArray((data as { results?: T[] }).results)) {
-            return (data as { results: T[] }).results;
-        }
-
-        if (Array.isArray((data as { data?: T[] }).data)) {
-            return (data as { data: T[] }).data;
-        }
+        if (Array.isArray((data as any).results)) return (data as any).results;
+        if (Array.isArray((data as any).data)) return (data as any).data;
     }
-
     return [];
 }
 
@@ -45,7 +39,6 @@ export default function AdminTasksPage() {
     const [departments, setDepartments] = useState<Department[]>([]);
     const [employees, setEmployees] = useState<Employee[]>([]);
     const [loading, setLoading] = useState(true);
-    const [statusFilter, setStatusFilter] = useState<TaskStatus | "ALL">("ALL");
     const [showCreate, setShowCreate] = useState(false);
     const [editingTask, setEditingTask] = useState<Task | null>(null);
     const [highlightedTaskId, setHighlightedTaskId] = useState<number | null>(null);
@@ -55,15 +48,14 @@ export default function AdminTasksPage() {
         try {
             setLoading(true);
 
-            const [tasksRes, customersRes, departmentsRes, employeesRes] =
-                await Promise.all([
-                    axiosInstance.get<ListResponse<Task>>(apiRoutes.tasks),
-                    axiosInstance.get<ListResponse<Customer>>(apiRoutes.customers),
-                    axiosInstance.get<ListResponse<Department>>(apiRoutes.departments),
-                    axiosInstance.get<ListResponse<Employee>>(apiRoutes.employees),
-                ]);
+            const [tasksRes, customersRes, departmentsRes, employeesRes] = await Promise.all([
+                axiosInstance.get<ListResponse<Task>>(apiRoutes.tasks),
+                axiosInstance.get<ListResponse<Customer>>(apiRoutes.customers),
+                axiosInstance.get<ListResponse<Department>>(apiRoutes.departments),
+                axiosInstance.get<ListResponse<Employee>>(apiRoutes.employees),
+            ]);
 
-            setTasks(extractList(tasksRes.data));
+            setTasks(extractList(tasksRes.data).filter((task) => task.status === ACTIVE_STATUS));
             setCustomers(extractList(customersRes.data));
             setDepartments(extractList(departmentsRes.data));
             setEmployees(extractList(employeesRes.data));
@@ -83,39 +75,17 @@ export default function AdminTasksPage() {
 
     useEffect(() => {
         const taskParam = searchParams.get("task");
-
         if (!taskParam || loading || !tasks.length) return;
 
         const targetId = Number(taskParam);
-
         if (!Number.isFinite(targetId)) return;
 
         const targetTask = tasks.find((task) => task.id === targetId);
-
         if (!targetTask) return;
 
-        setStatusFilter("ALL");
         setViewedTaskId(null);
         setHighlightedTaskId(targetTask.id);
     }, [searchParams, loading, tasks]);
-
-    const statusOptions = useMemo(
-        () => [
-            { value: "ALL" as const, label: "همه" },
-            ...(Object.entries(taskStatusLabels) as [TaskStatus, string][]).map(
-                ([value, label]) => ({ value, label })
-            ),
-        ],
-        []
-    );
-
-    const filteredTasks = useMemo(() => {
-        return tasks.filter(
-            (task) =>
-                statusFilter === "ALL" ||
-                task.status === statusFilter
-        );
-    }, [tasks, statusFilter]);
 
     const handleDelete = useCallback(
         async (taskId: number): Promise<boolean> => {
@@ -143,7 +113,7 @@ export default function AdminTasksPage() {
 
     const handleTaskUpdated = useCallback((updated: Task) => {
         setTasks((prev) =>
-            prev.map((t) => (t.id === updated.id ? updated : t))
+            updated.status !== ACTIVE_STATUS ? prev.filter((t) => t.id !== updated.id) : prev.map((t) => (t.id === updated.id ? updated : t))
         );
     }, []);
 
@@ -154,16 +124,9 @@ export default function AdminTasksPage() {
 
             setTimeout(() => {
                 setViewedTaskId(null);
-
                 const params = new URLSearchParams(searchParams.toString());
                 params.delete("task");
-
-                router.replace(
-                    params.toString()
-                        ? `?${params.toString()}`
-                        : window.location.pathname,
-                    { scroll: false }
-                );
+                router.replace(params.toString() ? `?${params.toString()}` : window.location.pathname, { scroll: false });
             }, 1000);
         },
         [router, searchParams]
@@ -173,48 +136,36 @@ export default function AdminTasksPage() {
         <div className="flex flex-col gap-5 p-3 sm:p-4 md:p-6" dir="rtl">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-start gap-3">
-                    <div
-                        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl"
-                        style={{
-                            background: isDark
-                                ? "rgba(99,102,241,0.14)"
-                                : "rgba(99,102,241,0.08)",
-                        }}
-                    >
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl" style={{ background: isDark ? "rgba(99,102,241,0.14)" : "rgba(99,102,241,0.08)" }}>
                         <ClipboardList size={18} className="text-indigo-500" />
                     </div>
 
                     <div className="min-w-0">
-                        <h1 className="text-[15px] font-extrabold text-gray-900 dark:text-white">
-                            وظایف
-                        </h1>
-
-                        <p className="mt-0.5 text-[11.5px] text-gray-500 dark:text-gray-400">
-                            {loading
-                                ? "در حال بارگذاری..."
-                                : `${tasks.length} وظیفه ثبت شده`}
-                        </p>
+                        <h1 className="text-[15px] font-extrabold text-gray-900 dark:text-white">وظایف در حال انجام</h1>
+                        <p className="mt-0.5 text-[11.5px] text-gray-500 dark:text-gray-400">{loading ? "در حال بارگذاری..." : `${tasks.length} وظیفه`}</p>
                     </div>
                 </div>
 
                 <div className="flex items-center gap-2">
                     <button
                         type="button"
+                        onClick={() => router.push("/admin/archive")}
+                        className="flex h-10 items-center gap-2 rounded-2xl px-3.5 text-[12px] font-bold transition-colors"
+                        style={{ background: isDark ? "rgba(255,255,255,0.05)" : "rgba(15,23,42,0.05)", color: isDark ? "#cbd5e1" : "#475569" }}
+                    >
+                        <Archive size={15} />
+                        بایگانی
+                    </button>
+
+                    <button
+                        type="button"
                         onClick={fetchAll}
                         disabled={loading}
                         className="flex h-10 w-10 items-center justify-center rounded-2xl transition-colors disabled:opacity-50"
-                        style={{
-                            background: isDark
-                                ? "rgba(255,255,255,0.05)"
-                                : "rgba(15,23,42,0.05)",
-                            color: isDark ? "#cbd5e1" : "#475569",
-                        }}
+                        style={{ background: isDark ? "rgba(255,255,255,0.05)" : "rgba(15,23,42,0.05)", color: isDark ? "#cbd5e1" : "#475569" }}
                         title="بارگذاری مجدد"
                     >
-                        <RefreshCw
-                            size={15}
-                            className={loading ? "animate-spin" : ""}
-                        />
+                        <RefreshCw size={15} className={loading ? "animate-spin" : ""} />
                     </button>
 
                     <button
@@ -228,60 +179,25 @@ export default function AdminTasksPage() {
                 </div>
             </div>
 
-            <div className="flex flex-wrap items-center gap-2">
-                {statusOptions.map((opt) => (
-                    <button
-                        key={opt.value}
-                        type="button"
-                        onClick={() => setStatusFilter(opt.value)}
-                        className={`rounded-xl px-3.5 py-1.5 text-[11.5px] font-bold transition-all duration-200 ${statusFilter === opt.value
-                                ? "bg-indigo-600 text-white shadow-sm"
-                                : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-                            }`}
-                        style={{
-                            background:
-                                statusFilter === opt.value
-                                    ? undefined
-                                    : isDark
-                                        ? "rgba(255,255,255,0.04)"
-                                        : "rgba(15,23,42,0.04)",
-                        }}
-                    >
-                        {opt.label}
-                    </button>
-                ))}
-            </div>
-
             {loading && (
                 <div className="flex flex-col items-center justify-center gap-3 py-16">
                     <Loader size={24} className="animate-spin text-indigo-500" />
-                    <p className="text-[12.5px] text-gray-500 dark:text-gray-400">
-                        در حال دریافت لیست وظایف...
-                    </p>
+                    <p className="text-[12.5px] text-gray-500 dark:text-gray-400">در حال دریافت لیست وظایف...</p>
                 </div>
             )}
 
-            {!loading && filteredTasks.length === 0 && (
+            {!loading && tasks.length === 0 && (
                 <div className="flex flex-col items-center justify-center gap-2 py-16">
-                    <ClipboardList
-                        size={28}
-                        className="text-gray-300 dark:text-gray-700"
-                    />
-                    <p className="text-[12.5px] text-gray-500 dark:text-gray-400">
-                        هنوز وظیفه‌ای ثبت نشده
-                    </p>
+                    <ClipboardList size={28} className="text-gray-300 dark:text-gray-700" />
+                    <p className="text-[12.5px] text-gray-500 dark:text-gray-400">تسک در حال انجامی وجود ندارد</p>
                 </div>
             )}
 
-            {!loading && filteredTasks.length > 0 && (
-                <motion.div
-                    layout
-                    className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3"
-                >
+            {!loading && tasks.length > 0 && (
+                <motion.div layout className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
                     <AnimatePresence mode="popLayout">
-                        {filteredTasks.map((task, index) => {
-                            const isHighlighted =
-                                highlightedTaskId === task.id;
+                        {tasks.map((task, index) => {
+                            const isHighlighted = highlightedTaskId === task.id;
                             const isViewed = viewedTaskId === task.id;
 
                             return (
@@ -289,42 +205,16 @@ export default function AdminTasksPage() {
                                     key={task.id}
                                     layout
                                     className="relative"
-                                    animate={
-                                        isHighlighted
-                                            ? {
-                                                scale: [1, 1.012, 1],
-                                            }
-                                            : {
-                                                scale: 1,
-                                            }
-                                    }
-                                    transition={
-                                        isHighlighted
-                                            ? {
-                                                duration: 1.4,
-                                                repeat: Infinity,
-                                                ease: "easeInOut",
-                                            }
-                                            : {
-                                                duration: 0.2,
-                                            }
-                                    }
+                                    animate={{ scale: isHighlighted ? [1, 1.012, 1] : 1 }}
+                                    transition={isHighlighted ? { duration: 1.4, repeat: Infinity, ease: "easeInOut" } : { duration: 0.2 }}
                                 >
                                     {isHighlighted && (
                                         <>
                                             <motion.div
                                                 className="pointer-events-none absolute -inset-1 z-0 rounded-[26px] bg-red-500/20 blur-xl"
-                                                animate={{
-                                                    opacity: [0.35, 0.7, 0.35],
-                                                    scale: [0.98, 1.03, 0.98],
-                                                }}
-                                                transition={{
-                                                    duration: 1.5,
-                                                    repeat: Infinity,
-                                                    ease: "easeInOut",
-                                                }}
+                                                animate={{ opacity: [0.35, 0.7, 0.35], scale: [0.98, 1.03, 0.98] }}
+                                                transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
                                             />
-
                                             <motion.div
                                                 className="pointer-events-none absolute inset-0 z-10 rounded-[24px]"
                                                 animate={{
@@ -334,75 +224,28 @@ export default function AdminTasksPage() {
                                                         "0 0 0 1px rgba(239,68,68,0.5), 0 0 15px rgba(239,68,68,0.15)",
                                                     ],
                                                 }}
-                                                transition={{
-                                                    duration: 1.5,
-                                                    repeat: Infinity,
-                                                    ease: "easeInOut",
-                                                }}
+                                                transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
                                             />
                                         </>
                                     )}
 
-                                    <div
-                                        className={`relative z-20 ${isHighlighted
-                                                ? "pointer-events-none [&_*:hover]:!border-transparent [&_*:hover]:!ring-0 [&_*:hover]:!shadow-none"
-                                                : ""
-                                            }`}
-                                    >
-                                        <TaskCard
-                                            task={task}
-                                            index={index}
-                                            employees={employees}
-                                            onEdit={(t) => setEditingTask(t)}
-                                            onDelete={handleDelete}
-                                            onUpdated={handleTaskUpdated}
-                                        />
+                                    <div className={`relative z-20 ${isHighlighted ? "pointer-events-none [&_*:hover]:!border-transparent [&_*:hover]:!ring-0 [&_*:hover]:!shadow-none" : ""}`}>
+                                        <TaskCard task={task} index={index} employees={employees} onEdit={(t) => setEditingTask(t)} onDelete={handleDelete} onUpdated={handleTaskUpdated} />
                                     </div>
 
                                     <AnimatePresence>
                                         {isHighlighted && (
                                             <motion.button
                                                 type="button"
-                                                onClick={() =>
-                                                    handleTaskViewed(task.id)
-                                                }
+                                                onClick={() => handleTaskViewed(task.id)}
                                                 className="absolute bottom-3 left-3 z-40 flex items-center gap-2 overflow-hidden rounded-xl px-3 py-2 text-[11px] font-extrabold text-white"
-                                                style={{
-                                                    background:
-                                                        "linear-gradient(135deg,#ef4444,#b91c1c)",
-                                                    boxShadow:
-                                                        "0 8px 22px rgba(185,28,28,.35)",
-                                                }}
-                                                initial={{
-                                                    opacity: 0,
-                                                    scale: 0.7,
-                                                    y: 8,
-                                                }}
-                                                animate={{
-                                                    opacity: 1,
-                                                    scale: 1,
-                                                    y: 0,
-                                                }}
-                                                exit={{
-                                                    opacity: 0,
-                                                    scale: 0.7,
-                                                    y: 8,
-                                                }}
-                                                whileTap={{
-                                                    scale: 0.94,
-                                                }}
+                                                style={{ background: "linear-gradient(135deg,#ef4444,#b91c1c)", boxShadow: "0 8px 22px rgba(185,28,28,.35)" }}
+                                                initial={{ opacity: 0, scale: 0.7, y: 8 }}
+                                                animate={{ opacity: 1, scale: 1, y: 0 }}
+                                                exit={{ opacity: 0, scale: 0.7, y: 8 }}
+                                                whileTap={{ scale: 0.94 }}
                                             >
-                                                <motion.span
-                                                    className="h-1.5 w-1.5 rounded-full bg-white"
-                                                    animate={{
-                                                        opacity: [0.4, 1, 0.4],
-                                                        scale: [0.8, 1.2, 0.8],
-                                                    }}
-                                                    transition={{
-                                                        duration: 0.8,
-                                                        repeat: Infinity,
-                                                    }}
-                                                />
+                                                <motion.span className="h-1.5 w-1.5 rounded-full bg-white" animate={{ opacity: [0.4, 1, 0.4], scale: [0.8, 1.2, 0.8] }} transition={{ duration: 0.8, repeat: Infinity }} />
                                                 <Eye size={13} />
                                                 مشاهده شد
                                             </motion.button>
@@ -411,41 +254,8 @@ export default function AdminTasksPage() {
 
                                     <AnimatePresence>
                                         {isViewed && (
-                                            <motion.div
-                                                className="pointer-events-none absolute inset-0 z-50 flex items-center justify-center"
-                                                initial={{
-                                                    opacity: 0,
-                                                    scale: 0.5,
-                                                }}
-                                                animate={{
-                                                    opacity: 1,
-                                                    scale: 1,
-                                                }}
-                                                exit={{
-                                                    opacity: 0,
-                                                    scale: 0.05,
-                                                }}
-                                                transition={{
-                                                    enter: {
-                                                        duration: 0.2,
-                                                        ease: "easeOut",
-                                                    },
-                                                    exit: {
-                                                        duration: 0.45,
-                                                        ease: "easeIn",
-                                                    },
-                                                }}
-                                            >
-                                                <motion.div
-                                                    className="flex h-11 w-11 items-center justify-center rounded-full bg-emerald-500 text-white shadow-lg shadow-emerald-500/30"
-                                                    initial={{ scale: 0.7 }}
-                                                    animate={{ scale: 1 }}
-                                                    exit={{ scale: 0.05 }}
-                                                    transition={{
-                                                        duration: 0.45,
-                                                        ease: "easeInOut",
-                                                    }}
-                                                >
+                                            <motion.div className="pointer-events-none absolute inset-0 z-50 flex items-center justify-center" initial={{ opacity: 0, scale: 0.5 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.05 }} transition={{ duration: 0.35 }}>
+                                                <motion.div className="flex h-11 w-11 items-center justify-center rounded-full bg-emerald-500 text-white shadow-lg shadow-emerald-500/30" initial={{ scale: 0.7 }} animate={{ scale: 1 }} exit={{ scale: 0.05 }} transition={{ duration: 0.45, ease: "easeInOut" }}>
                                                     <Check size={21} strokeWidth={3} />
                                                 </motion.div>
                                             </motion.div>
@@ -459,24 +269,12 @@ export default function AdminTasksPage() {
             )}
 
             <AnimatePresence>
-                {showCreate && (
-                    <CreateTaskModal
-                        isOpen={showCreate}
-                        onClose={() => setShowCreate(false)}
-                        onSuccess={handleCreateSuccess}
-                    />
-                )}
+                {showCreate && <CreateTaskModal isOpen={showCreate} onClose={() => setShowCreate(false)} onSuccess={handleCreateSuccess} />}
             </AnimatePresence>
 
             <AnimatePresence>
                 {editingTask && (
-                    <EditTaskModal
-                        task={editingTask}
-                        customers={customers}
-                        departments={departments}
-                        onClose={() => setEditingTask(null)}
-                        onSuccess={handleEditSuccess}
-                    />
+                    <EditTaskModal task={editingTask} customers={customers} departments={departments} onClose={() => setEditingTask(null)} onSuccess={handleEditSuccess} />
                 )}
             </AnimatePresence>
         </div>

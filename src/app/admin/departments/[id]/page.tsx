@@ -49,9 +49,7 @@ const getRelationId = (
     }
 
     if (typeof value === "object") {
-        return value.id == null
-            ? null
-            : String(value.id);
+        return value.id == null ? null : String(value.id);
     }
 
     return String(value);
@@ -78,8 +76,8 @@ export default function DepartmentDetailPage() {
     const [deleteLoading, setDeleteLoading] =
         useState(false);
 
-    const [stageRefreshing, setStageRefreshing] = useState(false);
-
+    const [stageRefreshing, setStageRefreshing] =
+        useState(false);
 
     const [addStageOpen, setAddStageOpen] =
         useState(false);
@@ -97,8 +95,8 @@ export default function DepartmentDetailPage() {
     const department = useMemo(
         () =>
             departments.find(
-                (d) =>
-                    String(d.id) === String(id),
+                (department) =>
+                    String(department.id) === String(id),
             ) ?? null,
         [departments, id],
     );
@@ -147,31 +145,40 @@ export default function DepartmentDetailPage() {
         return () => {
             mounted = false;
         };
-    }, [fetchAll, fetchTasks]);
+    }, [fetchAll, fetchTasks, departments.length]);
 
     const departmentTasks = useMemo(() => {
-        if (
-            !department ||
-            !Array.isArray(department.stages)
-        ) {
+        if (!department?.stages?.length) {
             return [];
         }
 
         const stageIds = new Set(
-            department.stages.map((s) =>
-                String(s.id),
+            department.stages.map((stage) =>
+                String(stage.id),
             ),
         );
 
-        return tasks.filter((t) => {
-            const sid = getRelationId(
-                t.current_step,
+        return tasks.filter((task) => {
+            const stageId = getRelationId(
+                task.current_step,
             );
 
-            return (
-                sid !== null &&
-                stageIds.has(sid)
-            );
+            const status = String(
+                task.status ?? "",
+            ).toLowerCase();
+
+            if (
+                !stageId ||
+                !stageIds.has(stageId)
+            ) {
+                return false;
+            }
+
+            return ![
+                "completed",
+                "cancelled",
+                "sold",
+            ].includes(status);
         });
     }, [tasks, department]);
 
@@ -190,18 +197,14 @@ export default function DepartmentDetailPage() {
                 if (
                     targetId !== undefined &&
                     targetId !== null &&
-                    !String(targetId).startsWith(
-                        "temp-",
-                    )
+                    !String(targetId).startsWith("temp-")
                 ) {
                     await deleteStage(
                         id,
                         String(targetId),
                     );
                 }
-            } else if (
-                deleteTarget.type === "employee"
-            ) {
+            } else {
                 const targetEmpId =
                     deleteTarget.employee.id;
 
@@ -309,11 +312,18 @@ export default function DepartmentDetailPage() {
             <AddStageModal
                 open={addStageOpen}
                 department={department}
-                onClose={() => setAddStageOpen(false)}
+                onClose={() =>
+                    setAddStageOpen(false)
+                }
                 onSubmit={async (data) => {
-                    await addStage(id, { name: data.name });
+                    await addStage(id, {
+                        name: data.name,
+                    });
+
                     setStageRefreshing(true);
+
                     await fetchAll();
+
                     setStageRefreshing(false);
                 }}
             />
@@ -407,9 +417,7 @@ export default function DepartmentDetailPage() {
                     <button
                         type="button"
                         onClick={() =>
-                            setAddEmployeeOpen(
-                                true,
-                            )
+                            setAddEmployeeOpen(true)
                         }
                         className="flex h-8 items-center justify-center gap-1.5 rounded-xl px-3 text-[11.5px] font-bold transition-all active:scale-95"
                         style={{
@@ -435,18 +443,15 @@ export default function DepartmentDetailPage() {
                         </span>
                     ) : (
                         department.employees.map(
-                            (emp) => (
+                            (employee) => (
                                 <button
-                                    key={emp.id}
+                                    key={employee.id}
                                     type="button"
                                     onClick={() =>
-                                        setDeleteTarget(
-                                            {
-                                                type: "employee",
-                                                employee:
-                                                    emp,
-                                            },
-                                        )
+                                        setDeleteTarget({
+                                            type: "employee",
+                                            employee,
+                                        })
                                     }
                                     className="flex items-center gap-1.5 rounded-xl px-2.5 py-1 text-[11px] font-bold transition-all hover:opacity-75 active:scale-95"
                                     style={{
@@ -454,7 +459,7 @@ export default function DepartmentDetailPage() {
                                         border: `1px solid ${accent}30`,
                                         color: accent,
                                     }}
-                                    title={`حذف ${emp.name}`}
+                                    title={`حذف ${employee.name}`}
                                 >
                                     <span
                                         className="flex h-4 w-4 shrink-0 items-center justify-center rounded-md text-[9px] font-bold"
@@ -462,12 +467,12 @@ export default function DepartmentDetailPage() {
                                             background: `${accent}30`,
                                         }}
                                     >
-                                        {emp.name?.charAt(
+                                        {employee.name?.charAt(
                                             0,
                                         ) || "U"}
                                     </span>
 
-                                    {emp.name}
+                                    {employee.name}
                                 </button>
                             ),
                         )
@@ -476,20 +481,38 @@ export default function DepartmentDetailPage() {
             </motion.div>
 
             <motion.div
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.25, delay: 0.05 }}
+                initial={{
+                    opacity: 0,
+                    y: 12,
+                }}
+                animate={{
+                    opacity: 1,
+                    y: 0,
+                }}
+                transition={{
+                    duration: 0.25,
+                    delay: 0.05,
+                }}
                 className="relative flex flex-col rounded-[1.6rem] border border-gray-200/60 bg-white/40 p-4 dark:border-white/[0.06] dark:bg-white/[0.015]"
             >
                 <AnimatePresence>
                     {stageRefreshing && (
                         <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
+                            initial={{
+                                opacity: 0,
+                            }}
+                            animate={{
+                                opacity: 1,
+                            }}
+                            exit={{
+                                opacity: 0,
+                            }}
                             className="absolute inset-0 z-10 flex items-center justify-center rounded-[1.6rem] bg-white/70 backdrop-blur-sm dark:bg-black/50"
                         >
-                            <Loader size={20} className="animate-spin text-indigo-500" />
+                            <Loader
+                                size={20}
+                                className="animate-spin text-indigo-500"
+                            />
                         </motion.div>
                     )}
                 </AnimatePresence>
@@ -499,20 +522,48 @@ export default function DepartmentDetailPage() {
                     tasks={departmentTasks}
                     tasksLoading={tasksLoading}
                     stageColors={stageColors}
-                    onAddStage={() => setAddStageOpen(true)}
-                    onEditStage={async (stage, values) => {
-                        await updateStage(id, stage.id, values);
+                    onAddStage={() =>
+                        setAddStageOpen(true)
+                    }
+                    onEditStage={async (
+                        stage,
+                        values,
+                    ) => {
+                        await updateStage(
+                            id,
+                            stage.id,
+                            values,
+                        );
+
                         setStageRefreshing(true);
+
                         await fetchAll();
+
                         setStageRefreshing(false);
                     }}
-                    onDeleteStage={(stage) => setDeleteTarget({ type: "stage", stage })}
+                    onDeleteStage={(stage) =>
+                        setDeleteTarget({
+                            type: "stage",
+                            stage,
+                        })
+                    }
                     onReorder={(stages) =>
-                        useDepartmentStore.setState((state) => ({
-                            departments: state.departments.map((d) =>
-                                String(d.id) === String(id) ? { ...d, stages } : d
-                            ),
-                        }))
+                        useDepartmentStore.setState(
+                            (state) => ({
+                                departments:
+                                    state.departments.map(
+                                        (departmentItem) =>
+                                            String(
+                                                departmentItem.id,
+                                            ) === String(id)
+                                                ? {
+                                                    ...departmentItem,
+                                                    stages,
+                                                }
+                                                : departmentItem,
+                                    ),
+                            }),
+                        )
                     }
                 />
             </motion.div>

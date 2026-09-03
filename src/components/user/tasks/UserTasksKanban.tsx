@@ -6,13 +6,8 @@ import {
     Kanban,
     Loader,
     GripVertical,
-    LayoutGrid,
     AlertCircle,
     Building2,
-    Layers3,
-    CheckCircle2,
-    ShoppingBag,
-    Ban,
 } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
 import UserTaskCard from "./UserTaskCard";
@@ -46,20 +41,11 @@ interface PendingDrop {
     direction: "forward" | "backward";
 }
 
-type TaskStatusFilter =
-    | "all"
-    | "in_progress"
-    | "completed"
-    | "sold"
-    | "cancelled";
-
-
 type KanbanStage = UserStage & {
     title?: string;
     department?: number | string | { id: number; name?: string } | null;
     department_name?: string | null;
 };
-
 
 const stageColors = [
     "#6366f1",
@@ -71,56 +57,6 @@ const stageColors = [
     "#ef4444",
     "#14b8a6",
 ];
-
-const statusFilters: {
-    id: TaskStatusFilter;
-    label: string;
-    icon: typeof Layers3;
-    color: string;
-    activeBg: string;
-    activeBorder: string;
-}[] = [
-        {
-            id: "all",
-            label: "همه",
-            icon: Layers3,
-            color: "#818cf8",
-            activeBg: "rgba(99,102,241,0.16)",
-            activeBorder: "rgba(99,102,241,0.4)",
-        },
-        {
-            id: "in_progress",
-            label: "در حال انجام",
-            icon: Layers3,
-            color: "#818cf8",
-            activeBg: "rgba(99,102,241,0.16)",
-            activeBorder: "rgba(99,102,241,0.4)",
-        },
-        {
-            id: "completed",
-            label: "تکمیل شده",
-            icon: CheckCircle2,
-            color: "#34d399",
-            activeBg: "rgba(16,185,129,0.14)",
-            activeBorder: "rgba(16,185,129,0.4)",
-        },
-        {
-            id: "sold",
-            label: "فروش رفته",
-            icon: ShoppingBag,
-            color: "#fbbf24",
-            activeBg: "rgba(245,158,11,0.14)",
-            activeBorder: "rgba(245,158,11,0.4)",
-        },
-        {
-            id: "cancelled",
-            label: "لغو شده",
-            icon: Ban,
-            color: "#fb7185",
-            activeBg: "rgba(239,68,68,0.14)",
-            activeBorder: "rgba(239,68,68,0.4)",
-        },
-    ];
 
 function useMediaQuery(query: string) {
     const [matches, setMatches] = useState(false);
@@ -187,7 +123,6 @@ function extractStageDeptId(stage: KanbanStage): number {
     return -1;
 }
 
-
 function extractAssignedEmployeeIds(task: UserTask): number[] {
     const raw = (task as any).assigned_employee;
 
@@ -226,7 +161,6 @@ export default function UserTasksKanban() {
     const [limitToast, setLimitToast] = useState(false);
     const [activeDeptId, setActiveDeptId] = useState<number | null>(null);
     const [activeMobileStageId, setActiveMobileStageId] = useState<number | null>(null);
-    const [statusFilter, setStatusFilter] = useState<TaskStatusFilter>("all");
 
     const pendingRef = useRef<Set<number>>(new Set());
     const limitToastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -266,7 +200,6 @@ export default function UserTasksKanban() {
 
                 setStages(mapped);
             })
-
             .catch(() => setError("دریافت فرآیند ها با خطا مواجه شد"))
             .finally(() => setStagesLoading(false));
     }, []);
@@ -297,11 +230,13 @@ export default function UserTasksKanban() {
                     ? res.data
                     : res.data.results ?? [];
 
-                const myTasks = data.filter((task) =>
-                    extractAssignedEmployeeIds(task).includes(employee.id)
+                const myActiveTasks = data.filter(
+                    (task) =>
+                        extractAssignedEmployeeIds(task).includes(employee.id) &&
+                        task.status === "in_progress"
                 );
 
-                setTasks(myTasks);
+                setTasks(myActiveTasks);
             })
             .catch(() => {
                 if (!cancelled) {
@@ -393,30 +328,10 @@ export default function UserTasksKanban() {
     const activeGroup =
         departmentGroups.find((group) => group.id === activeDeptId) ?? null;
 
-    const filteredActiveTasks = useMemo(() => {
-        const activeTasks = activeGroup?.tasks ?? [];
-
-        if (statusFilter === "all") {
-            return activeTasks;
-        }
-
-        return activeTasks.filter((task) => task.status === statusFilter);
-    }, [activeGroup, statusFilter]);
-
     const grouped = useMemo(
-        () => groupTasksByStep(filteredActiveTasks),
-        [filteredActiveTasks]
+        () => groupTasksByStep(activeGroup?.tasks ?? []),
+        [activeGroup]
     );
-
-    const getStatusCount = (status: TaskStatusFilter) => {
-        const activeTasks = activeGroup?.tasks ?? [];
-
-        if (status === "all") {
-            return activeTasks.length;
-        }
-
-        return activeTasks.filter((task) => task.status === status).length;
-    };
 
     useEffect(() => {
         const availableStages = activeGroup?.stages ?? [];
@@ -435,6 +350,11 @@ export default function UserTasksKanban() {
     }, [activeGroup, activeMobileStageId]);
 
     function handleUpdated(updated: UserTask) {
+        if (updated.status !== "in_progress") {
+            setTasks((prev) => prev.filter((task) => task.id !== updated.id));
+            return;
+        }
+
         setTasks((prev) =>
             prev.map((task) => (task.id === updated.id ? updated : task))
         );
@@ -607,11 +527,11 @@ export default function UserTasksKanban() {
     if (tasks.length === 0) {
         return (
             <div className="flex h-64 flex-col items-center justify-center gap-3 rounded-3xl border border-dashed border-gray-200 dark:border-white/[0.07]">
-                <LayoutGrid
+                <Kanban
                     size={28}
                     className="text-gray-300 dark:text-gray-700"
                 />
-                <p className="text-[12px] text-gray-400">تسکی وجود ندارد</p>
+                <p className="text-[12px] text-gray-400">تسک در حال انجامی وجود ندارد</p>
             </div>
         );
     }
@@ -669,7 +589,7 @@ export default function UserTasksKanban() {
                     </div>
 
                     <span className="rounded-2xl bg-gray-100 px-3 py-1.5 text-[11px] font-bold text-gray-600 dark:bg-white/[0.06] dark:text-gray-400">
-                        {filteredActiveTasks.length} تسک
+                        {(activeGroup?.tasks ?? []).length} تسک
                     </span>
                 </div>
 
@@ -698,64 +618,6 @@ export default function UserTasksKanban() {
                                         }`}
                                 >
                                     {group.tasks.length}
-                                </span>
-                            </button>
-                        );
-                    })}
-                </div>
-
-                <div className="flex gap-2 overflow-x-auto pb-1">
-                    {statusFilters.map((filter) => {
-                        const isActive = statusFilter === filter.id;
-                        const Icon = filter.icon;
-                        const count = getStatusCount(filter.id);
-
-                        return (
-                            <button
-                                key={filter.id}
-                                type="button"
-                                onClick={() => setStatusFilter(filter.id)}
-                                className="flex shrink-0 items-center gap-2 rounded-2xl border px-3.5 py-2 text-[11px] font-bold transition-all duration-200"
-                                style={{
-                                    color: isActive ? filter.color : undefined,
-                                    backgroundColor: isActive
-                                        ? filter.activeBg
-                                        : "rgba(255,255,255,0.025)",
-                                    borderColor: isActive
-                                        ? filter.activeBorder
-                                        : "rgba(255,255,255,0.07)",
-                                    boxShadow: isActive
-                                        ? `0 5px 18px ${filter.color}14`
-                                        : "none",
-                                }}
-                            >
-                                <Icon
-                                    size={13}
-                                    style={{
-                                        color: isActive
-                                            ? filter.color
-                                            : "rgb(148 163 184)",
-                                    }}
-                                />
-
-                                <span
-                                    className={
-                                        isActive
-                                            ? ""
-                                            : "text-gray-500 dark:text-gray-400"
-                                    }
-                                >
-                                    {filter.label}
-                                </span>
-
-                                <span
-                                    className="rounded-full px-1.5 py-0.5 text-[9.5px] font-extrabold tabular-nums"
-                                    style={{
-                                        color: filter.color,
-                                        backgroundColor: `${filter.color}18`,
-                                    }}
-                                >
-                                    {count}
                                 </span>
                             </button>
                         );
@@ -827,7 +689,7 @@ export default function UserTasksKanban() {
                             {mobileStage && (
                                 <AnimatePresence mode="wait">
                                     <motion.div
-                                        key={`${mobileStage.id}-${statusFilter}`}
+                                        key={mobileStage.id}
                                         initial={{ opacity: 0, y: 10 }}
                                         animate={{ opacity: 1, y: 0 }}
                                         exit={{ opacity: 0, y: -8 }}

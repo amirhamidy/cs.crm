@@ -16,7 +16,7 @@ import { useTheme } from "next-themes";
 import { useAuthStore } from "@/store/authStore";
 import api from "@/lib/axiosInstance";
 import type { InternalTask, InternalTaskAttachment } from "./types";
-import { uploadInternalTaskAttachments } from "./Api";
+import { fetchInternalTasks, uploadInternalTaskAttachments } from "./Api";
 
 interface InternalTaskChatModalProps {
     open: boolean;
@@ -83,10 +83,23 @@ export default function InternalTaskChatModal({
     const [message, setMessage] = useState("");
     const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
     const [sending, setSending] = useState(false);
+    const [isPolling, setIsPolling] = useState(false);
 
     const scrollRef = useRef<HTMLDivElement | null>(null);
     const textareaRef = useRef<HTMLTextAreaElement | null>(null);
     const fileInputRef = useRef<HTMLInputElement | null>(null);
+    const bottomAnchorRef = useRef<HTMLDivElement | null>(null);
+    const shouldAutoScrollRef = useRef(true);
+    const taskRef = useRef(task);
+    const sendingRef = useRef(false);
+
+    useEffect(() => {
+        taskRef.current = task;
+    }, [task]);
+
+    useEffect(() => {
+        sendingRef.current = sending;
+    }, [sending]);
 
     const attachments = useMemo(
         () =>
@@ -110,16 +123,38 @@ export default function InternalTaskChatModal({
         return Object.entries(groups);
     }, [attachments]);
 
+    const scrollToBottom = (behavior: ScrollBehavior = "smooth") => {
+        bottomAnchorRef.current?.scrollIntoView({ behavior, block: "end" });
+    };
+
     useEffect(() => {
         if (!open) return;
         const timer = window.setTimeout(() => {
-            scrollRef.current?.scrollTo({
-                top: scrollRef.current.scrollHeight,
-                behavior: "smooth",
-            });
+            scrollToBottom("auto");
         }, 80);
         return () => window.clearTimeout(timer);
+    }, [open]);
+
+    useEffect(() => {
+        if (!open) return;
+        if (!shouldAutoScrollRef.current) return;
+        const timer = window.setTimeout(() => {
+            scrollToBottom("smooth");
+        }, 50);
+        return () => window.clearTimeout(timer);
     }, [open, attachments.length]);
+
+    useEffect(() => {
+        const container = scrollRef.current;
+        if (!container) return;
+        const handleScroll = () => {
+            const distanceFromBottom =
+                container.scrollHeight - container.scrollTop - container.clientHeight;
+            shouldAutoScrollRef.current = distanceFromBottom < 120;
+        };
+        container.addEventListener("scroll", handleScroll);
+        return () => container.removeEventListener("scroll", handleScroll);
+    }, [open]);
 
     useEffect(() => {
         if (!open) return;
@@ -128,6 +163,91 @@ export default function InternalTaskChatModal({
         return () => {
             document.body.style.overflow = previousOverflow;
         };
+    }, [open]);
+
+    useEffect(() => {
+        if (!open) return;
+        let cancelled = false;
+
+        const poll = async () => {
+            if (cancelled || sendingRef.current) return;
+            try {
+                setIsPolling(true);
+                const response = await fetchInternalTasks();
+                if (cancelled) return;
+
+                const rawList = Array.isArray(response.data) ? response.data : [];
+                const currentTask = taskRef.current;
+                const rawTask = rawList.find(
+                    (item: any) => Number(item?.id) === Number(currentTask.id),
+                );
+                if (!rawTask) return;
+
+                const rawAttachments: InternalTaskAttachment[] = Array.isArray(
+                    rawTask.attachments,
+                )
+                    ? rawTask.attachments
+                    : [];
+
+                const existingIds = new Set(
+                    (currentTask.attachments ?? []).map((item) => Number(item.id)),
+                );
+
+                const incomingIds = new Set(
+                    rawAttachments.map((item) => Number(item.id)),
+                );
+
+                const newOnes = rawAttachments.filter(
+                    (item) => !existingIds.has(Number(item.id)),
+                );
+
+                const stillExists = (currentTask.attachments ?? []).filter((item) =>
+                    incomingIds.has(Number(item.id)),
+                );
+
+                if (
+                    newOnes.length === 0 &&
+                    stillExists.length === (currentTask.attachments ?? []).length
+                ) {
+                    return;
+                }
+
+                const mergedAttachments = [...stillExists, ...newOnes];
+
+                onUpdated({
+                    ...currentTask,
+                    attachments: mergedAttachments,
+                    status:
+                        typeof rawTask.status === "string"
+                            ? rawTask.status
+                            : currentTask.status,
+                });
+            } catch {
+                return;
+            } finally {
+                if (!cancelled) setIsPolling(false);
+            }
+        };
+
+        const intervalId = window.setInterval(poll, 2000);
+        void poll();
+
+        return () => {
+            cancelled = true;
+            window.clearInterval(intervalId);
+        };
+    }, [open, task.id, onUpdated]);
+
+    useEffect(() => {
+        if (!open) return;
+        const handleVisibility = () => {
+            if (document.visibilityState === "visible") {
+                shouldAutoScrollRef.current = true;
+            }
+        };
+        document.addEventListener("visibilitychange", handleVisibility);
+        return () =>
+            document.removeEventListener("visibilitychange", handleVisibility);
     }, [open]);
 
     const handleFiles = (event: ChangeEvent<HTMLInputElement>) => {
@@ -150,6 +270,7 @@ export default function InternalTaskChatModal({
         }
 
         setSending(true);
+        shouldAutoScrollRef.current = true;
 
         try {
             const response = await uploadInternalTaskAttachments(
@@ -162,9 +283,17 @@ export default function InternalTaskChatModal({
                 ? response.data
                 : [];
 
+            const existingIds = new Set(
+                (task.attachments ?? []).map((item) => Number(item.id)),
+            );
+
+            const dedupedNewAttachments = newAttachments.filter(
+                (item: InternalTaskAttachment) => !existingIds.has(Number(item.id)),
+            );
+
             const updatedTask: InternalTask = {
                 ...task,
-                attachments: [...(task.attachments ?? []), ...newAttachments],
+                attachments: [...(task.attachments ?? []), ...dedupedNewAttachments],
                 updated_at: new Date().toISOString(),
             };
 
@@ -176,10 +305,7 @@ export default function InternalTaskChatModal({
             requestAnimationFrame(() => {
                 textareaRef.current?.focus();
                 requestAnimationFrame(() => {
-                    scrollRef.current?.scrollTo({
-                        top: scrollRef.current.scrollHeight,
-                        behavior: "smooth",
-                    });
+                    scrollToBottom("smooth");
                 });
             });
         } catch {
@@ -263,6 +389,13 @@ export default function InternalTaskChatModal({
                                     <span className="h-1 w-1 rounded-full bg-current opacity-40" />
 
                                     <span>{attachments.length} پیام</span>
+
+                                    {isPolling && (
+                                        <span className="flex items-center gap-1 text-emerald-500">
+                                            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />
+                                            زنده
+                                        </span>
+                                    )}
                                 </div>
                             </div>
 
@@ -482,6 +615,7 @@ export default function InternalTaskChatModal({
                                             </div>
                                         </div>
                                     ))}
+                                    <div ref={bottomAnchorRef} />
                                 </div>
                             )}
                         </div>
