@@ -109,7 +109,12 @@ export const userMenuItems: MenuItem[] = [
   },
   {
     icon: Ticket,
-    label: "تیکت به همکار",
+    label: "تیکت ارسال شده",
+    href: "/user/Ticketsent",
+  },
+  {
+    icon: Ticket,
+    label: "تیکت دریافت شده",
     href: "/user/Ticketreceipt",
   },
   {
