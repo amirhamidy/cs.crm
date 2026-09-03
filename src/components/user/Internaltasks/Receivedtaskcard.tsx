@@ -21,11 +21,13 @@ function formatJalali(value?: string | null): string | null {
     if (!value) return null;
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) return null;
+
     const [jy, jm, jd] = toJalali(
         date.getFullYear(),
         date.getMonth() + 1,
         date.getDate()
     ) as [number, number, number];
+
     return `${toPersianDigits(jd)} ${JALALI_MONTHS[jm - 1]} ${toPersianDigits(jy)} - ${toPersianDigits(pad2(date.getHours()))}:${toPersianDigits(pad2(date.getMinutes()))}`;
 }
 
@@ -37,8 +39,10 @@ function getDeadlineState(deadline?: string | null) {
             background: "bg-gray-50 dark:bg-white/[0.03]",
         };
     }
+
     const diff = new Date(deadline).getTime() - Date.now();
     const hours = diff / (1000 * 60 * 60);
+
     if (diff < 0) {
         return {
             label: "منقضی شده",
@@ -46,6 +50,7 @@ function getDeadlineState(deadline?: string | null) {
             background: "bg-red-50 dark:bg-red-500/10",
         };
     }
+
     if (hours <= 24) {
         return {
             label: "فوری",
@@ -53,6 +58,7 @@ function getDeadlineState(deadline?: string | null) {
             background: "bg-amber-50 dark:bg-amber-500/10",
         };
     }
+
     return {
         label: "در زمانبندی",
         color: "text-emerald-600 dark:text-emerald-400",
@@ -70,7 +76,10 @@ export default function ReceivedTaskCard({
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [chatOpen, setChatOpen] = useState(false);
-    const [deadlineData, setDeadlineData] = useState<{ started_at: string | null; deadline: string | null }>({
+    const [deadlineData, setDeadlineData] = useState<{
+        started_at: string | null;
+        deadline: string | null;
+    }>({
         started_at: task.started_at ?? null,
         deadline: task.deadline ?? null,
     });
@@ -86,7 +95,9 @@ export default function ReceivedTaskCard({
         api.get(`/tasks/api/v1/internal-tasks/${task.id}/deadline/`)
             .then((res) => {
                 if (cancelled) return;
+
                 const data = res.data?.data ?? res.data;
+
                 setDeadlineData({
                     started_at: data?.started_at ?? task.started_at ?? null,
                     deadline: data?.deadline ?? task.deadline ?? null,
@@ -117,16 +128,22 @@ export default function ReceivedTaskCard({
     async function toggleStatus() {
         setSubmitting(true);
         setError(null);
+
         try {
             const nextStatus: InternalTaskStatus =
                 isCompleted || isCancelled ? "in_progress" : "completed";
+
             const { data } = await updateInternalTaskStatus(task.id, {
                 title: task.title,
                 description: task.description,
                 status: nextStatus,
                 assigned_to: task.assigned_to.map((item) => item.id),
             });
-            onUpdated({ ...task, status: data.status ?? nextStatus });
+
+            onUpdated({
+                ...task,
+                status: data.status ?? nextStatus,
+            });
         } catch {
             setError("خطا در ثبت تغییرات");
         } finally {
@@ -137,6 +154,7 @@ export default function ReceivedTaskCard({
     async function cancelTask() {
         setSubmitting(true);
         setError(null);
+
         try {
             const { data } = await updateInternalTaskStatus(task.id, {
                 title: task.title,
@@ -144,7 +162,11 @@ export default function ReceivedTaskCard({
                 status: "cancelled",
                 assigned_to: task.assigned_to.map((item) => item.id),
             });
-            onUpdated({ ...task, status: data.status ?? "cancelled" });
+
+            onUpdated({
+                ...task,
+                status: data.status ?? "cancelled",
+            });
         } catch {
             setError("خطا در ثبت تغییرات");
         } finally {
@@ -160,6 +182,7 @@ export default function ReceivedTaskCard({
                 badge: "bg-emerald-500/10 text-emerald-500",
             };
         }
+
         if (isCancelled) {
             return {
                 label: "لغو شده",
@@ -167,6 +190,7 @@ export default function ReceivedTaskCard({
                 badge: "bg-red-500/10 text-red-500",
             };
         }
+
         return {
             label: "در حال انجام",
             dot: "bg-indigo-500",
@@ -189,7 +213,9 @@ export default function ReceivedTaskCard({
                     <span
                         className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-extrabold ${statusBadge.badge}`}
                     >
-                        <span className={`h-1.5 w-1.5 rounded-full ${statusBadge.dot}`} />
+                        <span
+                            className={`h-1.5 w-1.5 rounded-full ${statusBadge.dot}`}
+                        />
                         {statusBadge.label}
                     </span>
 
@@ -226,13 +252,18 @@ export default function ReceivedTaskCard({
                 {loadingDeadline ? (
                     <div className="flex items-center gap-2 rounded-2xl bg-gray-50 px-3 py-2.5 dark:bg-white/[0.03]">
                         <Clock3 size={13} className="text-gray-400" />
-                        <span className="text-[11px] font-semibold text-gray-400">در حال دریافت زمان‌بندی...</span>
+                        <span className="text-[11px] font-semibold text-gray-400">
+                            در حال دریافت زمان‌بندی...
+                        </span>
                     </div>
                 ) : (
                     <>
                         {startedAtDate && (
                             <div className="flex items-center gap-2 rounded-2xl bg-indigo-50 px-3 py-2.5 dark:bg-indigo-500/10">
-                                <Clock3 size={13} className="text-indigo-500 dark:text-indigo-400" />
+                                <Clock3
+                                    size={13}
+                                    className="text-indigo-500 dark:text-indigo-400"
+                                />
                                 <div>
                                     <p className="text-[11px] font-extrabold text-indigo-500 dark:text-indigo-400">
                                         زمان شروع
@@ -247,11 +278,17 @@ export default function ReceivedTaskCard({
                         <div
                             className={`flex items-center gap-2 rounded-2xl px-3 py-2.5 ${deadlineState.background}`}
                         >
-                            <Clock3 size={13} className={deadlineState.color} />
+                            <Clock3
+                                size={13}
+                                className={deadlineState.color}
+                            />
                             <div>
-                                <p className={`text-[11px] font-extrabold ${deadlineState.color}`}>
+                                <p
+                                    className={`text-[11px] font-extrabold ${deadlineState.color}`}
+                                >
                                     {deadlineState.label}
                                 </p>
+
                                 {deadlineDate && (
                                     <p className="mt-0.5 text-[10px] font-bold text-gray-500 dark:text-gray-400">
                                         {deadlineDate}
@@ -268,52 +305,56 @@ export default function ReceivedTaskCard({
                     </p>
                 )}
 
-                <div className="mt-1 flex flex-col gap-1.5 border-t border-gray-100 pt-3 dark:border-white/[0.06]">
-                    {!isCancelled && (
-                        <button
-                            type="button"
-                            onClick={toggleStatus}
-                            disabled={submitting}
-                            className={`flex h-9 w-full items-center justify-center gap-1.5 rounded-xl text-[11px] font-extrabold text-white transition-opacity disabled:opacity-50 ${isCompleted ? "bg-amber-500" : "bg-emerald-500"
-                                }`}
-                        >
-                            {isCompleted ? (
-                                <>
-                                    <RotateCcw size={13} />
-                                    بازگشت به در حال انجام
-                                </>
-                            ) : (
-                                <>
-                                    <CheckCircle2 size={13} />
-                                    علامت‌گذاری به عنوان انجام‌شده
-                                </>
-                            )}
-                        </button>
-                    )}
+                <div className="relative z-10 flex flex-col gap-2 border-t border-black/5 pt-2.5 dark:border-white/[0.05]">
+                    <div className="flex gap-2">
+                        {!isCancelled && (
+                            <button
+                                type="button"
+                                onClick={toggleStatus}
+                                disabled={submitting}
+                                className={`flex h-9 flex-1 items-center justify-center gap-1.5 rounded-xl text-[10.5px] font-extrabold text-white transition-opacity disabled:opacity-50 ${isCompleted
+                                        ? "bg-amber-500"
+                                        : "bg-emerald-500"
+                                    }`}
+                            >
+                                {isCompleted ? (
+                                    <>
+                                        <RotateCcw size={13} />
+                                        انجام تیکت
+                                    </>
+                                ) : (
+                                    <>
+                                        <CheckCircle2 size={13} />
+                                        انجام تیکت
+                                    </>
+                                )}
+                            </button>
+                        )}
 
-                    {isCancelled && (
-                        <button
-                            type="button"
-                            onClick={toggleStatus}
-                            disabled={submitting}
-                            className="flex h-9 w-full items-center justify-center gap-1.5 rounded-xl bg-amber-500 text-[11px] font-extrabold text-white transition-opacity disabled:opacity-50"
-                        >
-                            <RotateCcw size={13} />
-                            بازگشت به در حال انجام
-                        </button>
-                    )}
+                        {isCancelled && (
+                            <button
+                                type="button"
+                                onClick={toggleStatus}
+                                disabled={submitting}
+                                className="flex h-9 flex-1 items-center justify-center gap-1.5 rounded-xl bg-amber-500 text-[10.5px] font-extrabold text-white transition-opacity disabled:opacity-50"
+                            >
+                                <RotateCcw size={13} />
+                                انجام تیکت
+                            </button>
+                        )}
 
-                    {!isCancelled && !isCompleted && (
-                        <button
-                            type="button"
-                            onClick={cancelTask}
-                            disabled={submitting}
-                            className="flex h-9 w-full items-center justify-center gap-1.5 rounded-xl bg-red-50 text-[10.5px] font-extrabold text-red-500 transition-colors hover:bg-red-100 disabled:opacity-50 dark:bg-red-500/10 dark:text-red-400 dark:hover:bg-red-500/20"
-                        >
-                            <Ban size={13} />
-                            لغو تسک
-                        </button>
-                    )}
+                        {!isCancelled && !isCompleted && (
+                            <button
+                                type="button"
+                                onClick={cancelTask}
+                                disabled={submitting}
+                                className="flex h-9 flex-1 items-center justify-center gap-1.5 rounded-xl bg-red-500 text-[10.5px] font-extrabold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+                            >
+                                <Ban size={13} />
+                                لغو تیکت
+                            </button>
+                        )}
+                    </div>
 
                     <button
                         type="button"

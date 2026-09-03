@@ -8,16 +8,32 @@ import {
     useRef,
     useState,
 } from "react";
+
 import { AnimatePresence, motion } from "framer-motion";
-import { Check, Download, File, Image as ImageIcon, Loader2, MessageSquareText, Paperclip, Send, UserRound, X, } from "lucide-react";
+
+import {
+    Check,
+    Download,
+    File,
+    Loader2,
+    MessageSquareText,
+    Paperclip,
+    Send,
+    UserRound,
+    X,
+} from "lucide-react";
+
 import { useTheme } from "next-themes";
 import { useAuthStore } from "@/store/authStore";
 import api from "@/lib/axiosInstance";
+
 import type {
+    EmployeeListItem,
     EmployeeRef,
     InternalTask,
     InternalTaskAttachment,
 } from "./types";
+
 import {
     fetchInternalTasks,
     uploadInternalTaskAttachments,
@@ -57,9 +73,8 @@ function EmployeeChip({
     isDark: boolean;
 }) {
     const gradient = getGradient(employee.id);
-    const name = employee.full_name || "";
 
-    if (!name) return null;
+    if (!employee.full_name?.trim()) return null;
 
     return (
         <div
@@ -88,7 +103,7 @@ function EmployeeChip({
                     color: isDark ? "#cbd5e1" : "#475569",
                 }}
             >
-                {name}
+                {employee.full_name}
             </span>
         </div>
     );
@@ -162,35 +177,28 @@ export default function InternalTaskChatModal({
 }: InternalTaskChatModalProps) {
     const { resolvedTheme } = useTheme();
     const { userId } = useAuthStore();
-
     const isDark = resolvedTheme === "dark";
 
     const [message, setMessage] = useState("");
-    const [selectedFiles, setSelectedFiles] =
-        useState<File[]>([]);
+    const [selectedFiles, setSelectedFiles] = useState<File[]>(
+        [],
+    );
     const [sending, setSending] = useState(false);
     const [isPolling, setIsPolling] = useState(false);
+    const [employees, setEmployees] = useState<EmployeeListItem[]>(
+        [],
+    );
 
-    const scrollRef =
-        useRef<HTMLDivElement | null>(null);
+    const scrollRef = useRef<HTMLDivElement | null>(null);
     const textareaRef =
         useRef<HTMLTextAreaElement | null>(null);
     const fileInputRef =
         useRef<HTMLInputElement | null>(null);
     const bottomAnchorRef =
         useRef<HTMLDivElement | null>(null);
-    const shouldAutoScrollRef =
-        useRef(true);
+    const shouldAutoScrollRef = useRef(true);
     const taskRef = useRef(task);
     const sendingRef = useRef(false);
-
-    const assignedEmployees = useMemo<EmployeeRef[]>(
-        () =>
-            Array.isArray(task.assigned_to)
-                ? task.assigned_to
-                : [],
-        [task.assigned_to],
-    );
 
     useEffect(() => {
         taskRef.current = task;
@@ -199,6 +207,136 @@ export default function InternalTaskChatModal({
     useEffect(() => {
         sendingRef.current = sending;
     }, [sending]);
+
+    useEffect(() => {
+        if (!open) return;
+
+        let cancelled = false;
+
+        const loadEmployees = async () => {
+            try {
+                const response = await api.get(
+                    "/accounts/api/v1/employee/list/",
+                );
+
+                if (cancelled) return;
+
+                const data =
+                    response.data?.data ??
+                    response.data;
+
+                setEmployees(
+                    Array.isArray(data)
+                        ? data.filter(
+                            (
+                                item,
+                            ): item is EmployeeListItem =>
+                                Boolean(
+                                    item &&
+                                    typeof item.id ===
+                                    "number" &&
+                                    typeof item.username ===
+                                    "string" &&
+                                    typeof item.full_name ===
+                                    "string" &&
+                                    item.full_name.trim(),
+                                ),
+                        )
+                        : [],
+                );
+            } catch {
+                if (!cancelled) {
+                    setEmployees([]);
+                }
+            }
+        };
+
+        void loadEmployees();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [open]);
+
+    const employeeById = useMemo(
+        () =>
+            new Map(
+                employees.map((employee) => [
+                    Number(employee.id),
+                    employee,
+                ]),
+            ),
+        [employees],
+    );
+
+    const employeeByUsername = useMemo(
+        () =>
+            new Map(
+                employees.map((employee) => [
+                    employee.username.trim(),
+                    employee,
+                ]),
+            ),
+        [employees],
+    );
+
+    const senderName = useMemo(() => {
+        const value = task.created_by?.trim();
+
+        if (!value) return "";
+
+        const employeeByUsernameMatch =
+            employeeByUsername.get(value);
+
+        if (employeeByUsernameMatch?.full_name?.trim()) {
+            return employeeByUsernameMatch.full_name.trim();
+        }
+
+        const employeeByFullNameMatch = employees.find(
+            (employee) =>
+                employee.full_name.trim() === value,
+        );
+
+        return (
+            employeeByFullNameMatch?.full_name?.trim() || ""
+        );
+    }, [
+        task.created_by,
+        employees,
+        employeeByUsername,
+    ]);
+
+    const assignedEmployees = useMemo<EmployeeRef[]>(
+        () =>
+            Array.isArray(task.assigned_to)
+                ? task.assigned_to
+                    .map((assigned) => {
+                        const employee =
+                            employeeById.get(
+                                Number(assigned.id),
+                            );
+
+                        if (
+                            !employee?.full_name?.trim()
+                        ) {
+                            return null;
+                        }
+
+                        return {
+                            id: employee.id,
+                            full_name:
+                                employee.full_name.trim(),
+                        };
+                    })
+                    .filter(
+                        (
+                            employee,
+                        ): employee is EmployeeRef =>
+                            employee !== null,
+                    )
+                : [],
+        [task.assigned_to, employeeById],
+    );
 
     const attachments = useMemo(
         () =>
@@ -251,7 +389,10 @@ export default function InternalTaskChatModal({
     }, [open]);
 
     useEffect(() => {
-        if (!open || !shouldAutoScrollRef.current) {
+        if (
+            !open ||
+            !shouldAutoScrollRef.current
+        ) {
             return;
         }
 
@@ -360,8 +501,9 @@ export default function InternalTaskChatModal({
 
                 const incomingIds = new Set(
                     rawAttachments.map(
-                        (item: InternalTaskAttachment) =>
-                            Number(item.id),
+                        (
+                            item: InternalTaskAttachment,
+                        ) => Number(item.id),
                     ),
                 );
 
@@ -509,15 +651,16 @@ export default function InternalTaskChatModal({
                 );
 
             const newAttachments =
-                Array.isArray(response.data)
+                Array.isArray(
+                    response.data,
+                )
                     ? response.data
                     : [];
 
             const existingIds = new Set(
-                (
-                    task.attachments ?? []
-                ).map((item) =>
-                    Number(item.id),
+                (task.attachments ?? []).map(
+                    (item) =>
+                        Number(item.id),
                 ),
             );
 
@@ -547,9 +690,13 @@ export default function InternalTaskChatModal({
             requestAnimationFrame(() => {
                 textareaRef.current?.focus();
 
-                requestAnimationFrame(() => {
-                    scrollToBottom("smooth");
-                });
+                requestAnimationFrame(
+                    () => {
+                        scrollToBottom(
+                            "smooth",
+                        );
+                    },
+                );
             });
         } catch {
             return;
@@ -605,21 +752,31 @@ export default function InternalTaskChatModal({
                 );
 
             const anchor =
-                document.createElement("a");
+                document.createElement(
+                    "a",
+                );
 
             anchor.href = blobUrl;
             anchor.download =
-                getFileName(attachment);
+                getFileName(
+                    attachment,
+                );
 
-            document.body.appendChild(anchor);
+            document.body.appendChild(
+                anchor,
+            );
+
             anchor.click();
             anchor.remove();
 
-            URL.revokeObjectURL(blobUrl);
-        } catch {
-            const url = getAttachmentUrl(
-                attachment.file,
+            URL.revokeObjectURL(
+                blobUrl,
             );
+        } catch {
+            const url =
+                getAttachmentUrl(
+                    attachment.file,
+                );
 
             if (url) {
                 window.open(
@@ -675,9 +832,7 @@ export default function InternalTaskChatModal({
                         <div className="relative z-10 shrink-0 border-b border-black/[0.06] bg-white/85 px-4 py-4 backdrop-blur-2xl dark:border-white/[0.06] dark:bg-[#151619]/90 sm:px-5">
                             <div className="flex items-center gap-3">
                                 <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500 to-violet-500 text-white shadow-lg shadow-blue-500/15">
-                                    <MessageSquareText
-                                        size={19}
-                                    />
+                                    <MessageSquareText size={19} />
                                 </div>
 
                                 <div className="min-w-0 flex-1">
@@ -686,32 +841,51 @@ export default function InternalTaskChatModal({
                                     </h2>
 
                                     <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                                        {assignedEmployees.map(
-                                            (
-                                                employee,
-                                            ) => (
-                                                <EmployeeChip
-                                                    key={
-                                                        employee.id
-                                                    }
-                                                    employee={
-                                                        employee
-                                                    }
-                                                    isDark={
-                                                        isDark
-                                                    }
-                                                />
-                                            ),
+                                        {senderName && (
+                                            <div className="flex items-center gap-1.5 rounded-full border border-blue-500/10 bg-blue-500/[0.06] py-0.5 pl-2 pr-2">
+                                                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-500 text-white">
+                                                    <UserRound size={11} />
+                                                </span>
+
+                                                <span className="text-[10.5px] font-bold text-blue-600 dark:text-blue-400">
+                                                    ارسال‌کننده:{" "}
+                                                    {senderName}
+                                                </span>
+                                            </div>
                                         )}
 
-                                        {assignedEmployees.length ===
+                                        {assignedEmployees.length >
                                             0 && (
-                                                <span className="text-[10px] text-black/35 dark:text-white/30">
-                                                    بدون مسئول
-                                                </span>
+                                                <div className="flex flex-wrap items-center gap-1.5">
+                                                    <span className="text-[10px] font-bold text-black/35 dark:text-white/30">
+                                                        دریافت‌کننده:
+                                                    </span>
+
+                                                    {assignedEmployees.map(
+                                                        (
+                                                            employee,
+                                                        ) => (
+                                                            <EmployeeChip
+                                                                key={
+                                                                    employee.id
+                                                                }
+                                                                employee={
+                                                                    employee
+                                                                }
+                                                                isDark={
+                                                                    isDark
+                                                                }
+                                                            />
+                                                        ),
+                                                    )}
+                                                </div>
                                             )}
 
-                                        <span className="mx-1 h-1 w-1 rounded-full bg-black/20 dark:bg-white/20" />
+                                        {(senderName ||
+                                            assignedEmployees.length >
+                                            0) && (
+                                                <span className="mx-1 h-1 w-1 rounded-full bg-black/20 dark:bg-white/20" />
+                                            )}
 
                                         <span className="text-[10px] text-black/40 dark:text-white/35">
                                             {
@@ -735,14 +909,10 @@ export default function InternalTaskChatModal({
 
                                 <button
                                     type="button"
-                                    onClick={
-                                        onClose
-                                    }
+                                    onClick={onClose}
                                     className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-black/[0.045] text-black/45 transition-colors hover:bg-black/[0.08] hover:text-black/70 dark:bg-white/[0.055] dark:text-white/45 dark:hover:bg-white/[0.09] dark:hover:text-white/75"
                                 >
-                                    <X
-                                        size={17}
-                                    />
+                                    <X size={17} />
                                 </button>
                             </div>
                         </div>
@@ -760,11 +930,7 @@ export default function InternalTaskChatModal({
                                 <div className="flex h-full min-h-[300px] items-center justify-center">
                                     <div className="text-center">
                                         <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-[24px] bg-blue-500/[0.08] text-blue-500 dark:bg-blue-400/[0.08]">
-                                            <Send
-                                                size={
-                                                    23
-                                                }
-                                            />
+                                            <Send size={23} />
                                         </div>
 
                                         <h3 className="mt-4 text-[14px] font-bold text-black/75 dark:text-white/80">
@@ -922,17 +1088,9 @@ export default function InternalTaskChatModal({
                                                                                                     }`}
                                                                                             >
                                                                                                 {pdf ? (
-                                                                                                    <File
-                                                                                                        size={
-                                                                                                            19
-                                                                                                        }
-                                                                                                    />
+                                                                                                    <File size={19} />
                                                                                                 ) : (
-                                                                                                    <Paperclip
-                                                                                                        size={
-                                                                                                            19
-                                                                                                        }
-                                                                                                    />
+                                                                                                    <Paperclip size={19} />
                                                                                                 )}
                                                                                             </div>
 
@@ -957,8 +1115,7 @@ export default function InternalTaskChatModal({
                                                                                                             : "text-black/30 dark:text-white/30"
                                                                                                         }`}
                                                                                                 >
-                                                                                                    مشاهده
-                                                                                                    فایل
+                                                                                                    مشاهده فایل
                                                                                                 </span>
                                                                                             </button>
 
@@ -974,11 +1131,7 @@ export default function InternalTaskChatModal({
                                                                                                         : "bg-black/[0.05] text-black/45 dark:bg-white/[0.06] dark:text-white/45"
                                                                                                     }`}
                                                                                             >
-                                                                                                <Download
-                                                                                                    size={
-                                                                                                        14
-                                                                                                    }
-                                                                                                />
+                                                                                                <Download size={14} />
                                                                                             </button>
                                                                                         </div>
                                                                                     )}
@@ -993,11 +1146,7 @@ export default function InternalTaskChatModal({
                                                                                         }`}
                                                                                 >
                                                                                     {isMine && (
-                                                                                        <Check
-                                                                                            size={
-                                                                                                10
-                                                                                            }
-                                                                                        />
+                                                                                        <Check size={10} />
                                                                                     )}
 
                                                                                     <span className="text-[8px]">
@@ -1062,11 +1211,7 @@ export default function InternalTaskChatModal({
                                                             className="flex min-w-[150px] max-w-[190px] items-center gap-2 rounded-2xl border border-black/[0.06] bg-black/[0.025] px-2.5 py-2 dark:border-white/[0.06] dark:bg-white/[0.035]"
                                                         >
                                                             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-blue-500/[0.08] text-blue-500">
-                                                                <Paperclip
-                                                                    size={
-                                                                        14
-                                                                    }
-                                                                />
+                                                                <Paperclip size={14} />
                                                             </div>
 
                                                             <span className="min-w-0 flex-1 truncate text-[9px] text-black/55 dark:text-white/55">
@@ -1084,11 +1229,7 @@ export default function InternalTaskChatModal({
                                                                 }
                                                                 className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-black/35 hover:bg-red-500/10 hover:text-red-500 dark:text-white/35"
                                                             >
-                                                                <X
-                                                                    size={
-                                                                        12
-                                                                    }
-                                                                />
+                                                                <X size={12} />
                                                             </button>
                                                         </div>
                                                     ),
@@ -1100,15 +1241,11 @@ export default function InternalTaskChatModal({
 
                             <div className="flex items-end gap-2 rounded-[24px] border border-black/[0.07] bg-black/[0.025] p-1.5 transition-colors focus-within:border-blue-500/30 focus-within:bg-white dark:border-white/[0.07] dark:bg-white/[0.035] dark:focus-within:bg-white/[0.045]">
                                 <input
-                                    ref={
-                                        fileInputRef
-                                    }
+                                    ref={fileInputRef}
                                     type="file"
                                     multiple
                                     className="hidden"
-                                    onChange={
-                                        handleFiles
-                                    }
+                                    onChange={handleFiles}
                                 />
 
                                 <button
@@ -1116,38 +1253,22 @@ export default function InternalTaskChatModal({
                                     onClick={() =>
                                         fileInputRef.current?.click()
                                     }
-                                    disabled={
-                                        sending
-                                    }
+                                    disabled={sending}
                                     className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[18px] text-black/40 transition-colors hover:bg-black/[0.06] hover:text-blue-500 disabled:opacity-40 dark:text-white/40 dark:hover:bg-white/[0.07]"
                                 >
-                                    <Paperclip
-                                        size={
-                                            18
-                                        }
-                                    />
+                                    <Paperclip size={18} />
                                 </button>
 
                                 <textarea
-                                    ref={
-                                        textareaRef
-                                    }
+                                    ref={textareaRef}
                                     value={message}
-                                    onChange={(
-                                        event,
-                                    ) =>
+                                    onChange={(event) =>
                                         setMessage(
-                                            event
-                                                .target
-                                                .value,
+                                            event.target.value,
                                         )
                                     }
-                                    onKeyDown={
-                                        handleKeyDown
-                                    }
-                                    disabled={
-                                        sending
-                                    }
+                                    onKeyDown={handleKeyDown}
+                                    disabled={sending}
                                     rows={1}
                                     placeholder="پیامتان را بنویسید..."
                                     className="max-h-28 min-h-10 flex-1 resize-none bg-transparent px-2 py-2.5 text-[11px] leading-5 text-black outline-none placeholder:text-black/25 disabled:opacity-50 dark:text-white dark:placeholder:text-white/25"
@@ -1168,16 +1289,12 @@ export default function InternalTaskChatModal({
                                 >
                                     {sending ? (
                                         <Loader2
-                                            size={
-                                                17
-                                            }
+                                            size={17}
                                             className="animate-spin"
                                         />
                                     ) : (
                                         <Send
-                                            size={
-                                                17
-                                            }
+                                            size={17}
                                             className="translate-x-[-1px]"
                                         />
                                     )}
