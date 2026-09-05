@@ -13,6 +13,7 @@ import {
   ListTodo,
   BriefcaseBusiness,
   BarChart3,
+  Boxes,
 } from "lucide-react";
 
 import { LucideIcon } from "lucide-react";
@@ -38,6 +39,11 @@ export const adminMenuItems: MenuItem[] = [
     icon: Building2,
     label: "دپارتمان‌ها",
     href: "/admin/departments",
+  },
+  {
+    icon: Boxes,
+    label: "انبار",
+    href: "/admin/warehouse",
   },
   {
     icon: FolderKanban,
