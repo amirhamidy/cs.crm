@@ -59,9 +59,6 @@ export interface ApiProduct {
   volume_unit_detail?: (ApiUnitData & { id: number }) | null;
   area_unit_detail?: (ApiUnitData & { id: number }) | null;
   dimension_unit_detail?: (ApiUnitData & { id: number }) | null;
-  current_stock?: number | null;
-  minimum_stock?: number | null;
-  maximum_stock?: number | null;
   created_at: string;
   updated_at: string;
 }
@@ -76,6 +73,20 @@ export interface ApiProductInitDraft {
   volume_unit_data?: ApiUnitData;
   area_unit_data?: ApiUnitData;
   dimension_unit_data?: ApiUnitData;
+}
+
+export interface ApiStockInfo {
+  id: number;
+  product: number;
+  product_name: string;
+  initial_quantity: number;
+  current_quantity: number;
+  minimum_stock: number;
+  maximum_stock: number;
+  unit_label: string;
+  performed_by: { id: number; full_name: string } | null;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface ApiStockTransaction {
@@ -115,6 +126,70 @@ export interface ApiWarehouseTask {
   created_at: string;
   completed_at: string | null;
   updated_at: string;
+}
+
+export interface ApiWarehouseTaskCompleteResponse {
+  detail: string;
+  warehouse_task: ApiWarehouseTask;
+  stock_transaction_id: number;
+}
+
+export interface ApiOrderTaskCase {
+  id: number;
+  title: string;
+}
+
+export interface ApiOrderTaskDepartment {
+  id: number;
+  name: string;
+}
+
+export interface ApiOrderTaskStep {
+  id: number;
+  name: string;
+}
+
+export interface ApiOrderTaskEmployeeRef {
+  id: number;
+  full_name: string;
+}
+
+export interface ApiOrderTaskCreatedBy {
+  id: number;
+  username: string;
+}
+
+export interface ApiOrderTaskPerformer {
+  id: number;
+  employee_id: number;
+  full_name: string;
+}
+
+export interface ApiOrderTask {
+  id: number;
+  task: number;
+  title: string;
+  description: string;
+  case: ApiOrderTaskCase | null;
+  department: ApiOrderTaskDepartment | null;
+  current_step: ApiOrderTaskStep | null;
+  assigned_employee: ApiOrderTaskEmployeeRef[];
+  created_by: ApiOrderTaskCreatedBy | null;
+  note: string | null;
+  file: string | null;
+  performed_by: ApiOrderTaskPerformer | null;
+  status: string;
+  status_display: string;
+  deadline: string | null;
+  attachments: unknown[];
+  created_at: string;
+}
+
+export interface ApiOrderTaskDeadline {
+  id: number;
+  order_task: number;
+  started_at: string;
+  deadline: string;
 }
 
 export function unitDataKey(unitType: UnitType): keyof ApiProductInitDraft {

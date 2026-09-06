@@ -2,28 +2,37 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { Boxes, Loader2, Plus, Tags, UserCog, PackageSearch } from "lucide-react";
+import { Boxes, LayoutGrid, Loader2, PackageSearch, Plus, Send, Tags, UserCog } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
 import {
     ApiCategory,
+    ApiOrderTask,
+    ApiOrderTaskDeadline,
     ApiProduct,
+    ApiStockInfo,
+    ApiStockTransaction,
     ApiWarehouseStaff,
     ApiWarehouseTask,
 } from "@/types/warehouse";
 import CategoryModal from "@/components/admin/warehouse/CategoryModal";
+import CategoryCard from "@/components/admin/warehouse/Categorycard";
 import StaffModal from "@/components/admin/warehouse/StaffModal";
+import StaffCard from "@/components/admin/warehouse/StaffCard";
 import ProductWizardModal from "@/components/admin/warehouse/ProductWizardModal";
 import ProductCard from "@/components/admin/warehouse/ProductCard";
-import StaffCard from "@/components/admin/warehouse/StaffCard";
 import WarehouseTaskCard from "@/components/admin/warehouse/WarehouseTaskCard";
+import OrderTaskCard from "@/components/admin/warehouse/Ordertaskcard";
+import WarehouseOverview from "@/components/admin/warehouse/Warehouseoverview";
 
-type Tab = "products" | "categories" | "staff" | "tasks";
+type Tab = "overview" | "products" | "categories" | "staff" | "tasks" | "orders";
 
 const TABS: { id: Tab; label: string; icon: typeof Boxes }[] = [
+    { id: "overview", label: "نمای کلی", icon: LayoutGrid },
     { id: "products", label: "محصولات", icon: Boxes },
     { id: "categories", label: "دسته‌بندی‌ها", icon: Tags },
     { id: "staff", label: "کارمندان انبار", icon: UserCog },
-    { id: "tasks", label: "وظایف دریافتی", icon: PackageSearch },
+    { id: "tasks", label: "وظایف دریافت کالا", icon: PackageSearch },
+    { id: "orders", label: "درخواست‌های داخلی", icon: Send },
 ];
 
 function extractList<T>(data: unknown): T[] {
@@ -37,12 +46,16 @@ function extractList<T>(data: unknown): T[] {
 }
 
 export default function WarehousePage() {
-    const [tab, setTab] = useState<Tab>("products");
+    const [tab, setTab] = useState<Tab>("overview");
 
     const [categories, setCategories] = useState<ApiCategory[]>([]);
     const [staff, setStaff] = useState<ApiWarehouseStaff[]>([]);
     const [products, setProducts] = useState<ApiProduct[]>([]);
+    const [stockInfos, setStockInfos] = useState<ApiStockInfo[]>([]);
+    const [transactions, setTransactions] = useState<ApiStockTransaction[]>([]);
     const [tasks, setTasks] = useState<ApiWarehouseTask[]>([]);
+    const [orderTasks, setOrderTasks] = useState<ApiOrderTask[]>([]);
+    const [orderTaskDeadlines, setOrderTaskDeadlines] = useState<ApiOrderTaskDeadline[]>([]);
 
     const [loading, setLoading] = useState(true);
 
@@ -53,17 +66,34 @@ export default function WarehousePage() {
     const loadAll = useCallback(async () => {
         setLoading(true);
         try {
-            const [categoriesRes, staffRes, productsRes, tasksRes] = await Promise.all([
+            const [
+                categoriesRes,
+                staffRes,
+                productsRes,
+                stockRes,
+                transactionsRes,
+                tasksRes,
+                orderTasksRes,
+                deadlinesRes,
+            ] = await Promise.all([
                 axiosInstance.get("/warehouse/api/v1/products/categories/").catch(() => null),
                 axiosInstance.get("/warehouse/api/v1/staff/").catch(() => null),
                 axiosInstance.get("/warehouse/api/v1/products/").catch(() => null),
+                axiosInstance.get("/warehouse/api/v1/process/stock/").catch(() => null),
+                axiosInstance.get("/warehouse/api/v1/process/transactions/").catch(() => null),
                 axiosInstance.get("/warehouse/api/v1/task/").catch(() => null),
+                axiosInstance.get("/warehouse/api/v1/order_task/").catch(() => null),
+                axiosInstance.get("/warehouse/api/v1/order_task/deadlines/").catch(() => null),
             ]);
 
             setCategories(categoriesRes ? extractList<ApiCategory>(categoriesRes.data) : []);
             setStaff(staffRes ? extractList<ApiWarehouseStaff>(staffRes.data) : []);
             setProducts(productsRes ? extractList<ApiProduct>(productsRes.data) : []);
+            setStockInfos(stockRes ? extractList<ApiStockInfo>(stockRes.data) : []);
+            setTransactions(transactionsRes ? extractList<ApiStockTransaction>(transactionsRes.data) : []);
             setTasks(tasksRes ? extractList<ApiWarehouseTask>(tasksRes.data) : []);
+            setOrderTasks(orderTasksRes ? extractList<ApiOrderTask>(orderTasksRes.data) : []);
+            setOrderTaskDeadlines(deadlinesRes ? extractList<ApiOrderTaskDeadline>(deadlinesRes.data) : []);
         } finally {
             setLoading(false);
         }
@@ -73,9 +103,24 @@ export default function WarehousePage() {
         loadAll();
     }, [loadAll]);
 
+    const stockByProduct = useMemo(
+        () => new Map(stockInfos.map((s) => [s.product, s])),
+        [stockInfos]
+    );
+
+    const deadlineByOrderTask = useMemo(
+        () => new Map(orderTaskDeadlines.map((d) => [d.order_task, d])),
+        [orderTaskDeadlines]
+    );
+
     const pendingTasksCount = useMemo(
         () => tasks.filter((t) => t.status !== "completed").length,
         [tasks]
+    );
+
+    const pendingOrderTasksCount = useMemo(
+        () => orderTasks.filter((t) => t.status !== "completed").length,
+        [orderTasks]
     );
 
     function handleAddClick() {
@@ -94,7 +139,7 @@ export default function WarehousePage() {
                     </p>
                 </div>
 
-                {tab !== "tasks" && (
+                {(tab === "categories" || tab === "staff" || tab === "products") && (
                     <motion.button
                         type="button"
                         whileTap={{ scale: 0.96 }}
@@ -127,6 +172,11 @@ export default function WarehousePage() {
                                 {pendingTasksCount}
                             </span>
                         )}
+                        {t.id === "orders" && pendingOrderTasksCount > 0 && (
+                            <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-extrabold text-white">
+                                {pendingOrderTasksCount}
+                            </span>
+                        )}
                     </button>
                 ))}
             </div>
@@ -137,6 +187,16 @@ export default function WarehousePage() {
                 </div>
             ) : (
                 <>
+                    {tab === "overview" && (
+                        <WarehouseOverview
+                            products={products}
+                            stockInfos={stockInfos}
+                            transactions={transactions}
+                            tasks={tasks}
+                            orderTasks={orderTasks}
+                        />
+                    )}
+
                     {tab === "products" && (
                         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                             {products.length === 0 ? (
@@ -148,6 +208,7 @@ export default function WarehousePage() {
                                     <ProductCard
                                         key={product.id}
                                         product={product}
+                                        stockInfo={stockByProduct.get(product.id) ?? null}
                                         index={index}
                                         categories={categories}
                                         staff={staff}
@@ -157,6 +218,9 @@ export default function WarehousePage() {
                                             )
                                         }
                                         onStockChanged={() => loadAll()}
+                                        onDeleted={(id) =>
+                                            setProducts((prev) => prev.filter((p) => p.id !== id))
+                                        }
                                     />
                                 ))
                             )}
@@ -171,20 +235,19 @@ export default function WarehousePage() {
                                 </p>
                             ) : (
                                 categories.map((category, index) => (
-                                    <motion.div
+                                    <CategoryCard
                                         key={category.id}
-                                        initial={{ opacity: 0, y: 10 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        transition={{ duration: 0.2, delay: index * 0.03 }}
-                                        className="flex items-center gap-3 rounded-2xl border border-gray-100 bg-white p-4 dark:border-white/[0.06] dark:bg-white/[0.02]"
-                                    >
-                                        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-50 dark:bg-indigo-500/10">
-                                            <Tags size={15} className="text-indigo-500" />
-                                        </div>
-                                        <span className="text-[13px] font-extrabold text-gray-900 dark:text-white">
-                                            {category.name}
-                                        </span>
-                                    </motion.div>
+                                        category={category}
+                                        index={index}
+                                        onUpdated={(updated) =>
+                                            setCategories((prev) =>
+                                                prev.map((c) => (c.id === updated.id ? updated : c))
+                                            )
+                                        }
+                                        onDeleted={(id) =>
+                                            setCategories((prev) => prev.filter((c) => c.id !== id))
+                                        }
+                                    />
                                 ))
                             )}
                         </div>
@@ -239,13 +302,32 @@ export default function WarehousePage() {
                             )}
                         </div>
                     )}
+
+                    {tab === "orders" && (
+                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                            {orderTasks.length === 0 ? (
+                                <p className="col-span-full py-16 text-center text-[12.5px] text-gray-400">
+                                    درخواست داخلی‌ای برای انبار ثبت نشده است
+                                </p>
+                            ) : (
+                                orderTasks.map((orderTask, index) => (
+                                    <OrderTaskCard
+                                        key={orderTask.id}
+                                        orderTask={orderTask}
+                                        deadline={deadlineByOrderTask.get(orderTask.id) ?? null}
+                                        index={index}
+                                    />
+                                ))
+                            )}
+                        </div>
+                    )}
                 </>
             )}
 
             <CategoryModal
                 isOpen={showCategoryModal}
                 onClose={() => setShowCategoryModal(false)}
-                onCreated={(category) => setCategories((prev) => [...prev, category])}
+                onSaved={(category) => setCategories((prev) => [...prev, category])}
             />
 
             <StaffModal

@@ -138,11 +138,10 @@ export default function StockModal({ isOpen, onClose, product, staff, onComplete
                             <button
                                 type="button"
                                 onClick={() => setMode("in")}
-                                className={`flex flex-1 items-center justify-center gap-1.5 rounded-xl py-2 text-[12px] font-extrabold transition-colors ${
-                                    mode === "in"
+                                className={`flex flex-1 items-center justify-center gap-1.5 rounded-xl py-2 text-[12px] font-extrabold transition-colors ${mode === "in"
                                         ? "bg-white text-emerald-600 shadow-sm dark:bg-[#1e293b]"
                                         : "text-gray-400"
-                                }`}
+                                    }`}
                             >
                                 <ArrowDownCircle size={14} />
                                 ورود کالا
@@ -150,11 +149,10 @@ export default function StockModal({ isOpen, onClose, product, staff, onComplete
                             <button
                                 type="button"
                                 onClick={() => setMode("out")}
-                                className={`flex flex-1 items-center justify-center gap-1.5 rounded-xl py-2 text-[12px] font-extrabold transition-colors ${
-                                    mode === "out"
+                                className={`flex flex-1 items-center justify-center gap-1.5 rounded-xl py-2 text-[12px] font-extrabold transition-colors ${mode === "out"
                                         ? "bg-white text-red-500 shadow-sm dark:bg-[#1e293b]"
                                         : "text-gray-400"
-                                }`}
+                                    }`}
                             >
                                 <ArrowUpCircle size={14} />
                                 خروج کالا
@@ -228,11 +226,10 @@ export default function StockModal({ isOpen, onClose, product, staff, onComplete
                                 type="submit"
                                 disabled={loading}
                                 whileTap={{ scale: 0.97 }}
-                                className={`flex items-center justify-center rounded-full py-3 text-sm font-bold text-white transition-colors disabled:opacity-50 ${
-                                    mode === "in"
+                                className={`flex items-center justify-center rounded-full py-3 text-sm font-bold text-white transition-colors disabled:opacity-50 ${mode === "in"
                                         ? "bg-emerald-600 hover:bg-emerald-500"
                                         : "bg-red-600 hover:bg-red-500"
-                                }`}
+                                    }`}
                             >
                                 {loading ? (
                                     <Loader size={18} className="animate-spin" />

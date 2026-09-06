@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Loader, Tag, X } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
@@ -11,7 +11,8 @@ import { FloatingInput } from "./FormControls";
 interface CategoryModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onCreated: (category: ApiCategory) => void;
+    category?: ApiCategory | null;
+    onSaved: (category: ApiCategory) => void;
 }
 
 function getErrorMessage(err: unknown, fallback: string) {
@@ -27,15 +28,21 @@ function getErrorMessage(err: unknown, fallback: string) {
     return fallback;
 }
 
-export default function CategoryModal({ isOpen, onClose, onCreated }: CategoryModalProps) {
+export default function CategoryModal({ isOpen, onClose, category, onSaved }: CategoryModalProps) {
     const [name, setName] = useState("");
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
 
+    const isEdit = Boolean(category);
+
+    useEffect(() => {
+        if (!isOpen) return;
+        setName(category?.name ?? "");
+        setError("");
+    }, [isOpen, category]);
+
     function handleClose() {
         if (loading) return;
-        setName("");
-        setError("");
         onClose();
     }
 
@@ -50,12 +57,19 @@ export default function CategoryModal({ isOpen, onClose, onCreated }: CategoryMo
         setError("");
 
         try {
-            const { data } = await axiosInstance.post<ApiCategory>(
-                "/warehouse/api/v1/products/categories/create/",
-                { name: name.trim() }
-            );
-            onCreated(data);
-            setName("");
+            if (isEdit && category) {
+                const { data } = await axiosInstance.put<ApiCategory>(
+                    `/warehouse/api/v1/products/categories/${category.id}/update/`,
+                    { name: name.trim() }
+                );
+                onSaved(data);
+            } else {
+                const { data } = await axiosInstance.post<ApiCategory>(
+                    "/warehouse/api/v1/products/categories/create/",
+                    { name: name.trim() }
+                );
+                onSaved(data);
+            }
             onClose();
         } catch (err) {
             setError(getErrorMessage(err, "خطا در ثبت دسته‌بندی"));
@@ -91,7 +105,7 @@ export default function CategoryModal({ isOpen, onClose, onCreated }: CategoryMo
                                 </div>
                                 <div>
                                     <h3 className="text-[14px] font-extrabold text-gray-900 dark:text-white">
-                                        دسته‌بندی جدید
+                                        {isEdit ? "ویرایش دسته‌بندی" : "دسته‌بندی جدید"}
                                     </h3>
                                     <p className="mt-0.5 text-[11px] text-gray-400">
                                         برای دسته‌بندی محصولات انبار
@@ -133,7 +147,13 @@ export default function CategoryModal({ isOpen, onClose, onCreated }: CategoryMo
                                 whileTap={{ scale: 0.97 }}
                                 className="flex items-center justify-center rounded-full bg-indigo-600 py-3 text-sm font-bold text-white transition-colors hover:bg-indigo-500 disabled:opacity-50"
                             >
-                                {loading ? <Loader size={18} className="animate-spin" /> : "ثبت دسته‌بندی"}
+                                {loading ? (
+                                    <Loader size={18} className="animate-spin" />
+                                ) : isEdit ? (
+                                    "ذخیره تغییرات"
+                                ) : (
+                                    "ثبت دسته‌بندی"
+                                )}
                             </motion.button>
                         </form>
                     </motion.div>
