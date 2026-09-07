@@ -1,7 +1,7 @@
 "use client";
 
-import PurchasingOverview from "@/components/admin/purchasing/PurchasingOverview";
+import PurchasingPage from "@/components/admin/purchasing/PurchasingPage";
 
 export default function Page() {
-    return <PurchasingOverview />;
+    return <PurchasingPage />;
 }

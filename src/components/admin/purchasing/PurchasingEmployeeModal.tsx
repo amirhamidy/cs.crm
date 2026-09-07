@@ -2,183 +2,226 @@
 
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Loader, UserPlus, X } from "lucide-react";
+import {
+    Check,
+    Loader2,
+    UserPlus,
+    X,
+} from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
-import type { AxiosError } from "axios";
-import type { ApiEmployee } from "@/types/users";
 import type { ApiPurchasingEmployee } from "@/types/purchasing";
 import { FloatingSelect } from "./FormControls";
 
-interface PurchasingEmployeeModalProps {
-    isOpen: boolean;
-    onClose: () => void;
+interface Employee {
+    id: number;
+    full_name?: string;
+    username?: string;
+}
+
+interface Props {
+    open: boolean;
     existingEmployees: ApiPurchasingEmployee[];
-    onCreated: (employee: ApiPurchasingEmployee) => void;
-}
-
-function getErrorMessage(err: unknown, fallback: string) {
-    const error = err as AxiosError<Record<string, unknown>>;
-    const data = error.response?.data;
-    if (!data) return fallback;
-    const keys = ["detail", "employee", "message", "error", "non_field_errors"];
-    for (const key of keys) {
-        const val = data[key];
-        if (typeof val === "string") return val;
-        if (Array.isArray(val) && typeof val[0] === "string") return val[0];
-    }
-    return fallback;
-}
-
-function extractEmployeeList(data: unknown): ApiEmployee[] {
-    if (Array.isArray(data)) return data as ApiEmployee[];
-    if (data && typeof data === "object") {
-        const record = data as Record<string, unknown>;
-        if (Array.isArray(record.results)) return record.results as ApiEmployee[];
-        if (Array.isArray(record.data)) return record.data as ApiEmployee[];
-    }
-    return [];
+    onClose: () => void;
+    onSaved: () => void;
 }
 
 export default function PurchasingEmployeeModal({
-    isOpen,
-    onClose,
+    open,
     existingEmployees,
-    onCreated,
-}: PurchasingEmployeeModalProps) {
-    const [employees, setEmployees] = useState<ApiEmployee[]>([]);
+    onClose,
+    onSaved,
+}: Props) {
+    const [employees, setEmployees] = useState<Employee[]>([]);
     const [employeeId, setEmployeeId] = useState("");
-    const [fetching, setFetching] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [fetching, setFetching] = useState(false);
     const [error, setError] = useState("");
 
     useEffect(() => {
-        if (!isOpen) return;
-        setError("");
+        if (!open) return;
+
         setEmployeeId("");
+        setError("");
         setFetching(true);
 
         axiosInstance
             .get("/accounts/api/v1/employee/list/")
-            .then(({ data }) => setEmployees(extractEmployeeList(data)))
-            .catch(() => setEmployees([]))
+            .then((res) => {
+                const data = Array.isArray(res.data)
+                    ? res.data
+                    : res.data?.results ?? [];
+
+                const existing = new Set(
+                    existingEmployees.map(
+                        (item) => item.employee
+                    )
+                );
+
+                setEmployees(
+                    data.filter(
+                        (item: Employee) =>
+                            !existing.has(item.id)
+                    )
+                );
+            })
+            .catch(() => {
+                setError(
+                    "دریافت لیست کارکنان انجام نشد."
+                );
+            })
             .finally(() => setFetching(false));
-    }, [isOpen]);
+    }, [open, existingEmployees]);
 
-    const usedEmployeeIds = new Set(existingEmployees.map((e) => e.employee));
-    const availableEmployees = employees.filter((e) => !usedEmployeeIds.has(e.id));
-
-    function handleClose() {
-        if (loading) return;
-        onClose();
-    }
-
-    async function handleSubmit(e: React.FormEvent) {
-        e.preventDefault();
+    const submit = async () => {
         if (!employeeId) {
-            setError("انتخاب کارمند الزامی است");
+            setError("یک کارمند انتخاب کنید.");
             return;
         }
 
-        setLoading(true);
-        setError("");
-
         try {
-            const { data } = await axiosInstance.post<ApiPurchasingEmployee>(
+            setLoading(true);
+            setError("");
+
+            await axiosInstance.post(
                 "/purchasing/api/v1/employees/create/",
-                { employee: Number(employeeId), is_active: true }
+                {
+                    employee: Number(employeeId),
+                    is_active: true,
+                }
             );
-            onCreated(data);
+
+            onSaved();
             onClose();
-        } catch (err) {
-            setError(getErrorMessage(err, "خطا در افزودن کارمند خرید"));
+        } catch (err: any) {
+            setError(
+                err?.response?.data?.detail ||
+                err?.response?.data?.message ||
+                "افزودن کارمند انجام نشد."
+            );
         } finally {
             setLoading(false);
         }
-    }
+    };
 
     return (
         <AnimatePresence>
-            {isOpen && (
-                <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    className="fixed inset-0 z-50 flex items-center justify-center px-4"
-                    style={{ background: "rgba(0,0,0,0.45)", backdropFilter: "blur(3px)" }}
-                    onClick={handleClose}
-                >
+            {open && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/45 p-4 backdrop-blur-sm">
                     <motion.div
-                        initial={{ opacity: 0, y: 16 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: 16 }}
-                        transition={{ duration: 0.35, ease: "easeOut" }}
-                        className="w-full max-w-sm rounded-[2rem] border border-gray-100 bg-white p-8 shadow-sm dark:border-white/[0.06] dark:bg-[#0f172a]"
-                        onClick={(e) => e.stopPropagation()}
+                        initial={{
+                            opacity: 0,
+                            scale: 0.96,
+                            y: 12,
+                        }}
+                        animate={{
+                            opacity: 1,
+                            scale: 1,
+                            y: 0,
+                        }}
+                        exit={{
+                            opacity: 0,
+                            scale: 0.96,
+                            y: 12,
+                        }}
+                        className="w-full max-w-[420px] rounded-[2rem] border border-gray-100 bg-white p-5 shadow-2xl dark:border-white/[0.07] dark:bg-[#0f172a]"
                         dir="rtl"
                     >
-                        <div className="mb-6 flex items-center justify-between">
-                            <div className="flex items-center gap-2.5">
-                                <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-50 dark:bg-blue-500/10">
-                                    <UserPlus size={15} className="text-blue-500" />
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-500">
+                                    <UserPlus size={16} />
                                 </div>
+
                                 <div>
-                                    <h3 className="text-[14px] font-extrabold text-gray-900 dark:text-white">
-                                        افزودن کارمند خرید
+                                    <h3 className="text-[13px] font-extrabold text-gray-900 dark:text-white">
+                                        افزودن کارمند
                                     </h3>
-                                    <p className="mt-0.5 text-[11px] text-gray-400">
-                                        از بین کارمندان شرکت انتخاب کنید
+
+                                    <p className="mt-0.5 text-[9.5px] text-gray-400">
+                                        افزودن عضو جدید به خرید
                                     </p>
                                 </div>
                             </div>
+
                             <button
                                 type="button"
-                                onClick={handleClose}
+                                onClick={onClose}
                                 disabled={loading}
-                                className="flex h-8 w-8 items-center justify-center rounded-xl bg-gray-100 text-gray-400 transition-colors hover:text-gray-600 disabled:opacity-40 dark:bg-white/[0.05] dark:hover:text-gray-300"
+                                className="flex h-8 w-8 items-center justify-center rounded-xl bg-gray-100 text-gray-400 dark:bg-white/[0.05]"
                             >
-                                <X size={15} />
+                                <X size={14} />
                             </button>
                         </div>
 
-                        <form onSubmit={handleSubmit} autoComplete="off" className="flex flex-col gap-6">
+                        <div className="mt-5">
                             <FloatingSelect
                                 label="کارمند"
-                                id="purchasing_employee"
                                 value={employeeId}
-                                onChange={(e) => {
-                                    setEmployeeId(e.target.value);
-                                    setError("");
-                                }}
+                                onChange={(e) =>
+                                    setEmployeeId(
+                                        e.target.value
+                                    )
+                                }
                                 disabled={fetching}
-                                dir="rtl"
                             >
-                                <option value="" disabled>
-                                    {fetching ? "در حال دریافت..." : "انتخاب کنید"}
+                                <option value="">
+                                    {fetching
+                                        ? "در حال دریافت..."
+                                        : "انتخاب کارمند"}
                                 </option>
-                                {availableEmployees.map((emp) => (
-                                    <option key={emp.id} value={emp.id}>
-                                        {emp.full_name}
+
+                                {employees.map((employee) => (
+                                    <option
+                                        key={employee.id}
+                                        value={employee.id}
+                                    >
+                                        {employee.full_name ||
+                                            employee.username ||
+                                            `کارمند ${employee.id}`}
                                     </option>
                                 ))}
                             </FloatingSelect>
+                        </div>
 
-                            {error && (
-                                <p className="text-center text-[11.5px] font-semibold text-red-500 -mt-2">
-                                    {error}
-                                </p>
-                            )}
+                        {error && (
+                            <div className="mt-3 rounded-2xl bg-red-500/10 px-3 py-2.5 text-[10px] font-semibold text-red-500">
+                                {error}
+                            </div>
+                        )}
 
-                            <motion.button
-                                type="submit"
-                                disabled={loading || fetching}
-                                whileTap={{ scale: 0.97 }}
-                                className="flex items-center justify-center rounded-full bg-blue-600 py-3 text-sm font-bold text-white transition-colors hover:bg-blue-500 disabled:opacity-50"
+                        <div className="mt-4 flex gap-2">
+                            <button
+                                type="button"
+                                onClick={onClose}
+                                disabled={loading}
+                                className="flex-1 rounded-2xl bg-gray-100 py-3 text-[10.5px] font-bold text-gray-600 dark:bg-white/[0.06] dark:text-white/70"
                             >
-                                {loading ? <Loader size={18} className="animate-spin" /> : "افزودن به تیم خرید"}
-                            </motion.button>
-                        </form>
+                                انصراف
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={submit}
+                                disabled={
+                                    loading ||
+                                    fetching ||
+                                    !employeeId
+                                }
+                                className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-indigo-600 py-3 text-[10.5px] font-bold text-white disabled:opacity-50"
+                            >
+                                {loading ? (
+                                    <Loader2
+                                        size={14}
+                                        className="animate-spin"
+                                    />
+                                ) : (
+                                    <Check size={13} />
+                                )}
+                                افزودن
+                            </button>
+                        </div>
                     </motion.div>
-                </motion.div>
+                </div>
             )}
         </AnimatePresence>
     );

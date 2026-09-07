@@ -3,6 +3,7 @@ import type {
   EmployeeListItem,
   InternalTask,
   InternalTaskAttachment,
+  InternalTaskStatus,
 } from "./types";
 
 export type InternalTaskDeadlinePayload = {
@@ -14,6 +15,14 @@ export type InternalTaskDeadlineResponse = {
   id: number;
   started_at: string;
   deadline: string;
+};
+
+export type UpdateInternalTaskPayload = {
+  title: string;
+  description: string;
+  status: InternalTaskStatus;
+  assigned_to: number[];
+  created_by: number;
 };
 
 export function fetchInternalTasks() {
@@ -46,25 +55,18 @@ export function createInternalTask(data: {
 
 export function updateInternalTaskStatus(
   id: number,
-  payload: {
-    title: string;
-    description: string;
-    status: InternalTask["status"];
-    assigned_to: number[];
-  },
+  payload: UpdateInternalTaskPayload,
 ) {
-  return axiosInstance.put<{
-    id: number;
-    title: string;
-    description: string;
-    status: InternalTask["status"];
-    assigned_to: number[];
-  }>(`/tasks/api/v1/internal-tasks/${id}/update/`, {
-    title: payload.title,
-    description: payload.description,
-    status: payload.status,
-    assigned_to: payload.assigned_to,
-  });
+  return axiosInstance.patch<InternalTask>(
+    `/tasks/api/v1/internal-tasks/${id}/update/`,
+    {
+      title: payload.title,
+      description: payload.description,
+      status: payload.status,
+      assigned_to: payload.assigned_to,
+      created_by: payload.created_by,
+    },
+  );
 }
 
 export function patchInternalTaskDeadline(

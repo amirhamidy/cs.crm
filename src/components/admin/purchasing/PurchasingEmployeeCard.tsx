@@ -1,29 +1,22 @@
 "use client";
 
-import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Loader2, Power, Trash2, User, X } from "lucide-react";
+import {
+    Check,
+    Power,
+    Trash2,
+    UserRound,
+    X,
+} from "lucide-react";
+import { useState } from "react";
 import axiosInstance from "@/lib/axiosInstance";
-import type { AxiosError } from "axios";
 import type { ApiPurchasingEmployee } from "@/types/purchasing";
 
-interface PurchasingEmployeeCardProps {
+interface Props {
     employee: ApiPurchasingEmployee;
     index: number;
-    onUpdated: (employee: ApiPurchasingEmployee) => void;
-    onDeleted: (id: number) => void;
-}
-
-function getErrorMessage(err: unknown, fallback: string) {
-    const error = err as AxiosError<Record<string, unknown>>;
-    const data = error.response?.data;
-    if (!data) return fallback;
-    const keys = ["detail", "message", "error"];
-    for (const key of keys) {
-        const val = data[key];
-        if (typeof val === "string") return val;
-    }
-    return fallback;
+    onUpdated: () => void;
+    onDeleted: () => void;
 }
 
 export default function PurchasingEmployeeCard({
@@ -31,153 +24,239 @@ export default function PurchasingEmployeeCard({
     index,
     onUpdated,
     onDeleted,
-}: PurchasingEmployeeCardProps) {
-    const [showConfirm, setShowConfirm] = useState(false);
-    const [deleting, setDeleting] = useState(false);
-    const [toggling, setToggling] = useState(false);
-    const [error, setError] = useState("");
+}: Props) {
+    const [confirmDelete, setConfirmDelete] = useState(false);
+    const [loading, setLoading] = useState(false);
 
-    async function handleToggle() {
-        setToggling(true);
-        setError("");
+    const toggle = async () => {
         try {
-            const { data } = await axiosInstance.patch<ApiPurchasingEmployee>(
+            setLoading(true);
+
+            await axiosInstance.patch(
                 `/purchasing/api/v1/employees/${employee.id}/patch/`,
-                { is_active: !employee.is_active }
+                {
+                    is_active: !employee.is_active,
+                }
             );
-            onUpdated(data);
-        } catch (err) {
-            setError(getErrorMessage(err, "خطا در تغییر وضعیت"));
-        } finally {
-            setToggling(false);
-        }
-    }
 
-    async function handleDelete() {
-        setDeleting(true);
-        setError("");
-        try {
-            await axiosInstance.delete(`/purchasing/api/v1/employees/${employee.id}/delete/`);
-            onDeleted(employee.id);
-            setShowConfirm(false);
-        } catch (err) {
-            setError(getErrorMessage(err, "خطا در حذف کارمند"));
+            onUpdated();
         } finally {
-            setDeleting(false);
+            setLoading(false);
         }
-    }
+    };
+
+    const remove = async () => {
+        try {
+            setLoading(true);
+
+            await axiosInstance.delete(
+                `/purchasing/api/v1/employees/${employee.id}/delete/`
+            );
+
+            setConfirmDelete(false);
+            onDeleted();
+        } finally {
+            setLoading(false);
+        }
+    };
 
     return (
         <>
             <motion.div
-                initial={{ opacity: 0, y: 12 }}
+                initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.2, delay: index * 0.04 }}
-                className="flex items-center justify-between gap-3 rounded-3xl border border-gray-100 bg-white p-4 dark:border-white/[0.06] dark:bg-white/[0.02]"
+                transition={{
+                    duration: 0.2,
+                    delay: index * 0.03,
+                }}
+                className="group relative overflow-hidden rounded-[1.8rem] border border-gray-100 bg-white p-4 shadow-[0_8px_28px_rgba(15,23,42,0.035)] transition-all hover:shadow-[0_12px_36px_rgba(15,23,42,0.08)] dark:border-white/[0.07] dark:bg-[#111a2d]"
             >
-                <div className="flex min-w-0 items-center gap-3">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-blue-50 dark:bg-blue-500/10">
-                        <User size={16} className="text-blue-500" />
+                <div
+                    className={`absolute right-0 top-0 h-full w-1 ${employee.is_active
+                        ? "bg-gradient-to-b from-indigo-500 to-violet-500"
+                        : "bg-gradient-to-b from-gray-300 to-gray-400 dark:from-white/10 dark:to-white/5"
+                        }`}
+                />
+
+                <div className="flex items-start justify-between gap-3">
+                    <div className="flex min-w-0 items-center gap-3">
+                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-indigo-500/10 text-indigo-500">
+                            <UserRound size={18} />
+                        </div>
+
+                        <div className="min-w-0">
+                            <h3 className="truncate text-[12.5px] font-extrabold text-gray-900 dark:text-white">
+                                {employee.employee_name}
+                            </h3>
+
+                            <div className="mt-1 flex items-center gap-1.5">
+                                <span
+                                    className={`rounded-lg px-2 py-1 text-[8.5px] font-bold ${employee.is_active
+                                        ? "bg-emerald-500/10 text-emerald-500"
+                                        : "bg-gray-500/10 text-gray-400"
+                                        }`}
+                                >
+                                    {employee.is_active
+                                        ? "فعال"
+                                        : "غیرفعال"}
+                                </span>
+                            </div>
+                        </div>
                     </div>
-                    <div className="min-w-0">
-                        <h3 className="truncate text-[13px] font-extrabold text-gray-900 dark:text-white">
-                            {employee.employee_name}
-                        </h3>
+
+                    <button
+                        type="button"
+                        onClick={() => setConfirmDelete(true)}
+                        disabled={loading}
+                        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-xl bg-red-500/10 text-red-500 opacity-0 transition-all group-hover:opacity-100 disabled:opacity-40"
+                    >
+                        <Trash2 size={12} />
+                    </button>
+                </div>
+
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                    <div className="rounded-2xl bg-gray-50 px-3 py-2 dark:bg-white/[0.035]">
+                        <p className="text-[8.5px] font-semibold text-gray-400">
+                            وضعیت
+                        </p>
+
+                        <p className="mt-1 text-[10px] font-extrabold text-gray-700 dark:text-white/75">
+                            {employee.is_active
+                                ? "در دسترس"
+                                : "غیرفعال"}
+                        </p>
+                    </div>
+
+                    <div className="rounded-2xl bg-gray-50 px-3 py-2 dark:bg-white/[0.035]">
+                        <p className="text-[8.5px] font-semibold text-gray-400">
+                            شناسه
+                        </p>
+
+                        <p className="mt-1 text-[10px] font-extrabold text-gray-700 dark:text-white/75">
+                            #{employee.employee}
+                        </p>
+                    </div>
+                </div>
+
+                <button
+                    type="button"
+                    onClick={toggle}
+                    disabled={loading}
+                    className={`mt-3 flex w-full items-center justify-between rounded-2xl px-3 py-2 transition-all disabled:opacity-50 ${employee.is_active
+                        ? "bg-emerald-500/10"
+                        : "bg-gray-500/10"
+                        }`}
+                >
+                    <span
+                        className={`text-[9.5px] font-bold ${employee.is_active
+                            ? "text-emerald-500"
+                            : "text-gray-400"
+                            }`}
+                    >
+                        {employee.is_active
+                            ? "دسترسی فعال"
+                            : "دسترسی غیرفعال"}
+                    </span>
+
+                    <span
+                        className={`relative flex h-6 w-10 items-center rounded-full transition-all ${employee.is_active
+                            ? "bg-emerald-500"
+                            : "bg-gray-300 dark:bg-white/10"
+                            }`}
+                    >
                         <span
-                            className={`mt-0.5 inline-flex items-center rounded-lg px-2 py-0.5 text-[10px] font-bold ${employee.is_active
-                                ? "bg-emerald-500/10 text-emerald-500"
-                                : "bg-gray-200 text-gray-500 dark:bg-white/[0.06] dark:text-gray-400"
+                            className={`absolute flex h-5 w-5 items-center justify-center rounded-full bg-white shadow-sm transition-all ${employee.is_active
+                                ? "right-0.5"
+                                : "right-[1.1rem]"
                                 }`}
                         >
-                            {employee.is_active ? "فعال" : "غیرفعال"}
+                            {employee.is_active ? (
+                                <Check
+                                    size={10}
+                                    className="text-emerald-500"
+                                />
+                            ) : (
+                                <Power
+                                    size={10}
+                                    className="text-gray-400"
+                                />
+                            )}
                         </span>
-                    </div>
-                </div>
-
-                <div className="flex shrink-0 items-center gap-1.5">
-                    <button
-                        type="button"
-                        onClick={handleToggle}
-                        disabled={toggling}
-                        className="flex h-8 w-8 items-center justify-center rounded-xl bg-amber-50 text-amber-500 disabled:opacity-50 dark:bg-amber-500/10"
-                        title="تغییر وضعیت"
-                    >
-                        {toggling ? <Loader2 size={13} className="animate-spin" /> : <Power size={13} />}
-                    </button>
-                    <button
-                        type="button"
-                        onClick={() => setShowConfirm(true)}
-                        className="flex h-8 w-8 items-center justify-center rounded-xl bg-red-50 text-red-500 dark:bg-red-500/10"
-                        title="حذف"
-                    >
-                        <Trash2 size={13} />
-                    </button>
-                </div>
+                    </span>
+                </button>
             </motion.div>
 
-            {error && (
-                <p className="mt-1 text-center text-[11px] font-semibold text-red-500">{error}</p>
-            )}
-
             <AnimatePresence>
-                {showConfirm && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        onClick={() => !deleting && setShowConfirm(false)}
-                        className="fixed inset-0 z-50 flex items-center justify-center px-4"
-                        style={{ background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)" }}
-                    >
+                {confirmDelete && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
                         <motion.div
-                            initial={{ opacity: 0, scale: 0.96, y: 16 }}
-                            animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.96, y: 16 }}
-                            onClick={(e) => e.stopPropagation()}
-                            className="w-full max-w-[340px] rounded-[2rem] bg-white p-5 dark:bg-[#0f172a]"
+                            initial={{
+                                opacity: 0,
+                                scale: 0.95,
+                            }}
+                            animate={{
+                                opacity: 1,
+                                scale: 1,
+                            }}
+                            exit={{
+                                opacity: 0,
+                                scale: 0.95,
+                            }}
+                            className="w-full max-w-[360px] rounded-[2rem] border border-gray-100 bg-white p-5 shadow-2xl dark:border-white/[0.07] dark:bg-[#111827]"
                             dir="rtl"
                         >
-                            <div className="mb-4 flex items-center justify-between">
-                                <h3 className="text-[13.5px] font-extrabold text-gray-900 dark:text-white">
-                                    حذف کارمند خرید
-                                </h3>
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <h3 className="text-[13px] font-extrabold text-gray-900 dark:text-white">
+                                        حذف کارمند
+                                    </h3>
+
+                                    <p className="mt-1 text-[10px] text-gray-400">
+                                        این عملیات قابل بازگشت نیست.
+                                    </p>
+                                </div>
+
                                 <button
                                     type="button"
-                                    onClick={() => setShowConfirm(false)}
-                                    disabled={deleting}
+                                    onClick={() =>
+                                        setConfirmDelete(false)
+                                    }
                                     className="flex h-8 w-8 items-center justify-center rounded-xl bg-gray-100 text-gray-400 dark:bg-white/[0.05]"
                                 >
                                     <X size={14} />
                                 </button>
                             </div>
 
-                            <p className="text-[12.5px] leading-6 text-gray-600 dark:text-gray-400">
-                                <span className="font-extrabold text-gray-900 dark:text-white">
+                            <div className="mt-4 rounded-2xl bg-red-500/10 px-3 py-3 text-[11px] font-semibold leading-6 text-red-500">
+                                آیا از حذف{" "}
+                                <span className="font-extrabold">
                                     {employee.employee_name}
                                 </span>{" "}
-                                از لیست کارمندان خرید حذف خواهد شد.
-                            </p>
+                                مطمئن هستید؟
+                            </div>
 
-                            <div className="mt-5 flex gap-2">
+                            <div className="mt-4 flex gap-2">
                                 <button
                                     type="button"
-                                    onClick={() => setShowConfirm(false)}
-                                    disabled={deleting}
-                                    className="flex-1 rounded-2xl bg-gray-100 py-2.5 text-[12.5px] font-bold text-gray-600 dark:bg-white/[0.05] dark:text-gray-300"
+                                    onClick={() =>
+                                        setConfirmDelete(false)
+                                    }
+                                    className="flex-1 rounded-2xl bg-gray-100 py-2.5 text-[10.5px] font-bold text-gray-600 dark:bg-white/[0.06] dark:text-white/70"
                                 >
                                     انصراف
                                 </button>
+
                                 <button
                                     type="button"
-                                    onClick={handleDelete}
-                                    disabled={deleting}
-                                    className="flex flex-1 items-center justify-center gap-1.5 rounded-2xl bg-red-600 py-2.5 text-[12.5px] font-bold text-white disabled:opacity-60"
+                                    onClick={remove}
+                                    disabled={loading}
+                                    className="flex-1 rounded-2xl bg-red-500 py-2.5 text-[10.5px] font-bold text-white disabled:opacity-50"
                                 >
-                                    {deleting ? <Loader2 size={14} className="animate-spin" /> : "حذف کن"}
+                                    حذف
                                 </button>
                             </div>
                         </motion.div>
-                    </motion.div>
+                    </div>
                 )}
             </AnimatePresence>
         </>

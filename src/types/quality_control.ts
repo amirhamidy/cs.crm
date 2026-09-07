@@ -23,19 +23,45 @@ export interface ApiQualityControlEmployee {
   updated_at: string;
 }
 
+export interface ApiUser {
+  id: number;
+  username: string;
+  first_name?: string | null;
+  last_name?: string | null;
+  email?: string | null;
+  is_active?: boolean;
+}
+
+export interface QualityControlActionResponse {
+  detail: string;
+  quality_control_id: number;
+  warehouse_task_id?: number;
+  purchase_task_id?: number;
+  status: QualityControlStatus;
+  current_step?: string;
+}
+
 export const QC_STATUS_META: Record<
   QualityControlStatus,
-  { label: string; color: string; bg: string }
+  {
+    label: string;
+    description: string;
+    icon: string;
+  }
 > = {
   pending: {
     label: "در انتظار بررسی",
-    color: "#f59e0b",
-    bg: "rgba(245,158,11,0.1)",
+    description: "این مورد هنوز توسط کنترل کیفی بررسی نشده است",
+    icon: "pending",
   },
   approved: {
     label: "تایید شده",
-    color: "#10b981",
-    bg: "rgba(16,185,129,0.1)",
+    description: "کنترل کیفی این مورد را تایید کرده است",
+    icon: "approved",
   },
-  rejected: { label: "رد شده", color: "#ef4444", bg: "rgba(239,68,68,0.1)" },
+  rejected: {
+    label: "رد شده",
+    description: "این مورد توسط کنترل کیفی رد شده است",
+    icon: "rejected",
+  },
 };

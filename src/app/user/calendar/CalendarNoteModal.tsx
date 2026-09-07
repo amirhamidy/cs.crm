@@ -19,6 +19,7 @@ import { useAuthStore } from "@/store/authStore";
 
 export interface CalendarNote {
     id: number;
+    user?: number;
     description: string;
     created_at?: string;
     updated_at?: string;
@@ -49,28 +50,8 @@ const toDateKey = (date: Date) =>
         date.getDate()
     )}`;
 
-const extractNoteInfo = (
-    description: string,
-    rawCreatedAt?: string
-) => {
-    const match = description.match(
-        /^\[DATE:(\d{4}-\d{2}-\d{2})\]\s*([\s\S]*)$/
-    );
-
-    if (match) {
-        return {
-            cleanDescription: match[2],
-            targetDate: match[1],
-        };
-    }
-
-    return {
-        cleanDescription: description,
-        targetDate: rawCreatedAt
-            ? rawCreatedAt.split("T")[0]
-            : "",
-    };
-};
+const getNoteDate = (note: CalendarNote) =>
+    note.created_at ? note.created_at.slice(0, 10) : "";
 
 const formatDayTitle = (date: Date | null) => {
     if (!date) return "";
@@ -176,6 +157,7 @@ function isEventOnDate(
     if (!event.start) return false;
 
     const eventStart = event.start.slice(0, 10);
+
     const eventEnd = event.end
         ? event.end.slice(0, 10)
         : eventStart;
@@ -206,27 +188,9 @@ export default function CalendarNoteModal({
     const dayNotes = useMemo(() => {
         if (!selectedKey) return [];
 
-        return notes
-            .filter((note) => {
-                const info = extractNoteInfo(
-                    note.description,
-                    note.created_at
-                );
-
-                return info.targetDate === selectedKey;
-            })
-            .map((note) => {
-                const info = extractNoteInfo(
-                    note.description,
-                    note.created_at
-                );
-
-                return {
-                    ...note,
-                    displayDescription:
-                        info.cleanDescription,
-                };
-            });
+        return notes.filter(
+            (note) => getNoteDate(note) === selectedKey
+        );
     }, [notes, selectedKey]);
 
     const dayEvents = useMemo(() => {
@@ -250,10 +214,6 @@ export default function CalendarNoteModal({
             return;
         }
 
-        const key = toDateKey(selectedDate);
-
-        const payloadDescription = `[DATE:${key}] ${description.trim()}`;
-
         setSubmitting(true);
 
         try {
@@ -262,7 +222,7 @@ export default function CalendarNoteModal({
                     "/note/api/v1/create/",
                     {
                         user: Number(userId),
-                        description: payloadDescription,
+                        description: description.trim(),
                     }
                 );
 
@@ -369,8 +329,7 @@ export default function CalendarNoteModal({
                                             const label =
                                                 EVENT_TYPE_LABEL[
                                                 normalizedType
-                                                ] ??
-                                                ev.type;
+                                                ] ?? ev.type;
 
                                             return (
                                                 <div
@@ -385,9 +344,7 @@ export default function CalendarNoteModal({
                                                         <p
                                                             className={`truncate text-[13.5px] font-semibold ${s.text}`}
                                                         >
-                                                            {
-                                                                ev.title
-                                                            }
+                                                            {ev.title}
                                                         </p>
 
                                                         <div className="mt-0.5 flex items-center gap-2">
@@ -485,7 +442,7 @@ export default function CalendarNoteModal({
                                                         <div className="flex items-start justify-between gap-3">
                                                             <p className="whitespace-pre-wrap break-words text-[11.5px] leading-7 font-semibold text-gray-700 dark:text-gray-200">
                                                                 {
-                                                                    note.displayDescription
+                                                                    note.description
                                                                 }
                                                             </p>
 

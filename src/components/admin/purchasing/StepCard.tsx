@@ -1,191 +1,217 @@
 "use client";
 
-import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Loader2, ListOrdered, Pencil, Trash2, X } from "lucide-react";
+import {
+    Edit3,
+    Layers3,
+    MoreHorizontal,
+    Trash2,
+    UserRound,
+    Users,
+    X,
+} from "lucide-react";
+import { useState } from "react";
 import axiosInstance from "@/lib/axiosInstance";
-import type { AxiosError } from "axios";
-import type { ApiPurchasingEmployee, ApiPurchasingStep } from "@/types/purchasing";
-import StepModal from "./StepModal";
+import type { ApiPurchasingStep } from "@/types/purchasing";
 
-interface StepCardProps {
+interface Props {
     step: ApiPurchasingStep;
     index: number;
-    employees: ApiPurchasingEmployee[];
-    onUpdated: (step: ApiPurchasingStep) => void;
-    onDeleted: (id: number) => void;
+    onEdit: () => void;
+    onDeleted: () => void;
 }
 
-function getErrorMessage(err: unknown, fallback: string) {
-    const error = err as AxiosError<Record<string, unknown>>;
-    const data = error.response?.data;
-    if (!data) return fallback;
-    const keys = ["detail", "message", "error"];
-    for (const key of keys) {
-        const val = data[key];
-        if (typeof val === "string") return val;
-    }
-    return fallback;
-}
+export default function StepCard({
+    step,
+    index,
+    onEdit,
+    onDeleted,
+}: Props) {
+    const [confirmDelete, setConfirmDelete] = useState(false);
+    const [loading, setLoading] = useState(false);
 
-export default function StepCard({ step, index, employees, onUpdated, onDeleted }: StepCardProps) {
-    const [showEdit, setShowEdit] = useState(false);
-    const [showConfirm, setShowConfirm] = useState(false);
-    const [deleting, setDeleting] = useState(false);
-    const [error, setError] = useState("");
-
-    async function handleDelete() {
-        setDeleting(true);
-        setError("");
+    const remove = async () => {
         try {
-            await axiosInstance.delete(`/purchasing/api/v1/steps/${step.id}/delete/`);
-            onDeleted(step.id);
-            setShowConfirm(false);
-        } catch (err) {
-            setError(getErrorMessage(err, "خطا در حذف مرحله"));
+            setLoading(true);
+
+            await axiosInstance.delete(
+                `/purchasing/api/v1/steps/${step.id}/delete/`
+            );
+
+            setConfirmDelete(false);
+            onDeleted();
         } finally {
-            setDeleting(false);
+            setLoading(false);
         }
-    }
+    };
 
     return (
         <>
             <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.2, delay: index * 0.03 }}
-                className="flex flex-col gap-3 rounded-2xl border border-gray-100 bg-white p-4 dark:border-white/[0.06] dark:bg-white/[0.02]"
+                transition={{
+                    duration: 0.2,
+                    delay: index * 0.03,
+                }}
+                className="group relative h-full overflow-hidden rounded-[1.8rem] border border-gray-100 bg-white p-4 shadow-[0_8px_28px_rgba(15,23,42,0.035)] transition-all hover:shadow-[0_12px_36px_rgba(15,23,42,0.08)] dark:border-white/[0.07] dark:bg-[#111a2d]"
             >
-                <div className="flex items-center justify-between gap-3">
+                <div className="absolute right-0 top-0 h-full w-1 bg-gradient-to-b from-indigo-500 to-violet-500" />
+
+                <div className="flex items-start justify-between gap-3">
                     <div className="flex min-w-0 items-center gap-3">
-                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-indigo-50 dark:bg-indigo-500/10">
-                            <ListOrdered size={15} className="text-indigo-500" />
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-indigo-500/10 text-indigo-500">
+                            <Layers3 size={17} />
                         </div>
+
                         <div className="min-w-0">
-                            <span className="truncate text-[13px] font-extrabold text-gray-900 dark:text-white">
-                                {step.title}
-                            </span>
-                            <p className="text-[10.5px] font-semibold text-gray-400">
-                                ترتیب: {step.order}
+                            <div className="flex items-center gap-1.5">
+                                <span className="rounded-lg bg-indigo-500/10 px-2 py-1 text-[8px] font-extrabold text-indigo-500">
+                                    {step.order}
+                                </span>
+
+                                <h3 className="truncate text-[12px] font-extrabold text-gray-900 dark:text-white">
+                                    {step.title}
+                                </h3>
+                            </div>
+
+                            <p className="mt-1 truncate text-[9.5px] text-gray-400">
+                                {step.description ||
+                                    "بدون توضیحات"}
                             </p>
                         </div>
                     </div>
 
-                    <div className="flex shrink-0 items-center gap-1.5">
+                    <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
                         <button
                             type="button"
-                            onClick={() => setShowEdit(true)}
-                            className="flex h-8 w-8 items-center justify-center rounded-xl bg-indigo-50 text-indigo-500 dark:bg-indigo-500/10"
-                            title="ویرایش"
+                            onClick={onEdit}
+                            className="flex h-7 w-7 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-500"
                         >
-                            <Pencil size={13} />
+                            <Edit3 size={11} />
                         </button>
+
                         <button
                             type="button"
-                            onClick={() => setShowConfirm(true)}
-                            className="flex h-8 w-8 items-center justify-center rounded-xl bg-red-50 text-red-500 dark:bg-red-500/10"
-                            title="حذف"
+                            onClick={() =>
+                                setConfirmDelete(true)
+                            }
+                            className="flex h-7 w-7 items-center justify-center rounded-xl bg-red-500/10 text-red-500"
                         >
-                            <Trash2 size={13} />
+                            <Trash2 size={11} />
                         </button>
                     </div>
                 </div>
 
-                {step.description && (
-                    <p className="text-[11.5px] leading-6 text-gray-500 dark:text-gray-400">
-                        {step.description}
-                    </p>
-                )}
+                <div className="mt-4 rounded-2xl bg-gray-50 p-3 dark:bg-white/[0.035]">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-1.5 text-[9.5px] font-bold text-gray-400">
+                            <Users size={11} />
+                            مسئولان مرحله
+                        </div>
 
-                {step.employees_detail.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5">
-                        {step.employees_detail.map((emp) => (
-                            <span
-                                key={emp.id}
-                                className="rounded-lg bg-gray-100 px-2 py-1 text-[10.5px] font-bold text-gray-600 dark:bg-white/[0.06] dark:text-gray-300"
-                            >
-                                {emp.full_name}
-                            </span>
-                        ))}
+                        <span className="rounded-lg bg-indigo-500/10 px-2 py-1 text-[8px] font-extrabold text-indigo-500">
+                            {step.employees_detail.length}
+                        </span>
                     </div>
-                )}
+
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                        {step.employees_detail.length ? (
+                            step.employees_detail.map(
+                                (employee) => (
+                                    <span
+                                        key={employee.id}
+                                        className="inline-flex items-center gap-1 rounded-xl bg-white px-2 py-1.5 text-[9px] font-bold text-gray-600 shadow-sm dark:bg-white/[0.05] dark:text-white/60"
+                                    >
+                                        <UserRound
+                                            size={9}
+                                        />
+                                        {
+                                            employee.full_name
+                                        }
+                                    </span>
+                                )
+                            )
+                        ) : (
+                            <span className="text-[9px] text-gray-400">
+                                مسئول تعیین نشده
+                            </span>
+                        )}
+                    </div>
+                </div>
             </motion.div>
 
-            <StepModal
-                isOpen={showEdit}
-                onClose={() => setShowEdit(false)}
-                step={step}
-                employees={employees}
-                onSaved={(updated) => {
-                    onUpdated(updated);
-                    setShowEdit(false);
-                }}
-            />
-
             <AnimatePresence>
-                {showConfirm && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        onClick={() => !deleting && setShowConfirm(false)}
-                        className="fixed inset-0 z-50 flex items-center justify-center px-4"
-                        style={{ background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)" }}
-                    >
+                {confirmDelete && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
                         <motion.div
-                            initial={{ opacity: 0, scale: 0.96, y: 16 }}
-                            animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.96, y: 16 }}
-                            onClick={(e) => e.stopPropagation()}
-                            className="w-full max-w-[340px] rounded-[2rem] bg-white p-5 dark:bg-[#0f172a]"
+                            initial={{
+                                opacity: 0,
+                                scale: 0.95,
+                            }}
+                            animate={{
+                                opacity: 1,
+                                scale: 1,
+                            }}
+                            exit={{
+                                opacity: 0,
+                                scale: 0.95,
+                            }}
+                            className="w-full max-w-[360px] rounded-[2rem] bg-white p-5 shadow-2xl dark:bg-[#111827]"
                             dir="rtl"
                         >
-                            <div className="mb-4 flex items-center justify-between">
-                                <h3 className="text-[13.5px] font-extrabold text-gray-900 dark:text-white">
-                                    حذف مرحله
-                                </h3>
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <h3 className="text-[13px] font-extrabold text-gray-900 dark:text-white">
+                                        حذف مرحله
+                                    </h3>
+
+                                    <p className="mt-1 text-[10px] text-gray-400">
+                                        این عملیات قابل بازگشت نیست.
+                                    </p>
+                                </div>
+
                                 <button
                                     type="button"
-                                    onClick={() => setShowConfirm(false)}
-                                    disabled={deleting}
+                                    onClick={() =>
+                                        setConfirmDelete(false)
+                                    }
                                     className="flex h-8 w-8 items-center justify-center rounded-xl bg-gray-100 text-gray-400 dark:bg-white/[0.05]"
                                 >
                                     <X size={14} />
                                 </button>
                             </div>
 
-                            <p className="text-[12.5px] leading-6 text-gray-600 dark:text-gray-400">
-                                مرحله{" "}
-                                <span className="font-extrabold text-gray-900 dark:text-white">
+                            <div className="mt-4 rounded-2xl bg-red-500/10 px-3 py-3 text-[10.5px] font-semibold leading-6 text-red-500">
+                                آیا از حذف مرحله{" "}
+                                <span className="font-extrabold">
                                     {step.title}
                                 </span>{" "}
-                                حذف خواهد شد.
-                            </p>
+                                مطمئن هستید؟
+                            </div>
 
-                            {error && (
-                                <p className="mt-3 text-[11.5px] font-semibold text-red-500">{error}</p>
-                            )}
-
-                            <div className="mt-5 flex gap-2">
+                            <div className="mt-4 flex gap-2">
                                 <button
                                     type="button"
-                                    onClick={() => setShowConfirm(false)}
-                                    disabled={deleting}
-                                    className="flex-1 rounded-2xl bg-gray-100 py-2.5 text-[12.5px] font-bold text-gray-600 dark:bg-white/[0.05] dark:text-gray-300"
+                                    onClick={() =>
+                                        setConfirmDelete(false)
+                                    }
+                                    className="flex-1 rounded-2xl bg-gray-100 py-2.5 text-[10.5px] font-bold text-gray-600 dark:bg-white/[0.06] dark:text-white/70"
                                 >
                                     انصراف
                                 </button>
+
                                 <button
                                     type="button"
-                                    onClick={handleDelete}
-                                    disabled={deleting}
-                                    className="flex flex-1 items-center justify-center gap-1.5 rounded-2xl bg-red-600 py-2.5 text-[12.5px] font-bold text-white disabled:opacity-60"
+                                    onClick={remove}
+                                    disabled={loading}
+                                    className="flex-1 rounded-2xl bg-red-500 py-2.5 text-[10.5px] font-bold text-white disabled:opacity-50"
                                 >
-                                    {deleting ? <Loader2 size={14} className="animate-spin" /> : "حذف کن"}
+                                    حذف
                                 </button>
                             </div>
                         </motion.div>
-                    </motion.div>
+                    </div>
                 )}
             </AnimatePresence>
         </>

@@ -12,7 +12,10 @@ export interface InternalTaskAttachment {
   created_at: string;
 }
 
-export type InternalTaskStatus = "in_progress" | "completed" | "cancelled";
+export type InternalTaskStatus =
+  | "in_progress"
+  | "completed"
+  | "cancelled";
 
 export interface InternalTask {
   id: number;
@@ -35,4 +38,8 @@ export interface EmployeeListItem {
   username: string;
   created_at: string;
   updated_at: string;
+}
+
+export interface InternalTaskState extends InternalTask {
+  created_by_id: number;
 }

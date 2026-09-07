@@ -58,17 +58,25 @@ export interface ApiTaskAttachment {
 
 export const PURCHASING_TASK_STATUS_META: Record<
   PurchasingTaskStatus,
-  { label: string; color: string; bg: string }
+  {
+    label: string;
+    color: string;
+    bg: string;
+  }
 > = {
-  pending: { label: "در انتظار", color: "#f59e0b", bg: "rgba(245,158,11,0.1)" },
+  pending: {
+    label: "در انتظار",
+    color: "#f59e0b",
+    bg: "rgba(245,158,11,0.10)",
+  },
   in_progress: {
     label: "در حال انجام",
     color: "#6366f1",
-    bg: "rgba(99,102,241,0.1)",
+    bg: "rgba(99,102,241,0.10)",
   },
   completed: {
     label: "تکمیل شده",
     color: "#10b981",
-    bg: "rgba(16,185,129,0.1)",
+    bg: "rgba(16,185,129,0.10)",
   },
 };

@@ -1,260 +1,433 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
-    ArrowLeftCircle,
-    ArrowRightCircle,
+    ArrowLeft,
+    ArrowRight,
     CheckCircle2,
-    History,
-    Loader2,
-    Paperclip,
-    ShoppingCart,
+    ChevronDown,
+    FileText,
+    Package,
+    User,
 } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
-import type { AxiosError } from "axios";
-import {
+import type {
     ApiPurchasingEmployee,
+    ApiPurchasingStep,
     ApiPurchasingTask,
     ApiTaskAttachment,
-    PURCHASING_TASK_STATUS_META,
 } from "@/types/purchasing";
+import { PURCHASING_TASK_STATUS_META } from "@/types/purchasing";
 import TaskActionModal from "./TaskActionModal";
 
-interface TaskCardProps {
+interface Props {
     task: ApiPurchasingTask;
     index: number;
     employees: ApiPurchasingEmployee[];
+    steps: ApiPurchasingStep[];
+    attachments: ApiTaskAttachment[];
     onUpdated: () => void;
 }
 
-function getErrorMessage(err: unknown, fallback: string) {
-    const error = err as AxiosError<Record<string, unknown>>;
-    const data = error.response?.data;
-    if (!data) return fallback;
-    const keys = ["detail", "status", "message", "error"];
-    for (const key of keys) {
-        const val = data[key];
-        if (typeof val === "string") return val;
-    }
-    return fallback;
-}
-
-export default function TaskCard({ task, index, employees, onUpdated }: TaskCardProps) {
-    const [modalMode, setModalMode] = useState<"advance" | "revert" | null>(null);
-    const [completing, setCompleting] = useState(false);
+export default function TaskCard({
+    task,
+    index,
+    employees,
+    steps,
+    attachments,
+    onUpdated,
+}: Props) {
+    const [open, setOpen] = useState(false);
+    const [action, setAction] = useState<
+        "advance" | "revert" | null
+    >(null);
+    const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
 
-    const [showHistory, setShowHistory] = useState(false);
-    const [history, setHistory] = useState<ApiTaskAttachment[]>([]);
-    const [loadingHistory, setLoadingHistory] = useState(false);
+    const status =
+        PURCHASING_TASK_STATUS_META[task.status];
 
-    const meta = PURCHASING_TASK_STATUS_META[task.status];
-    const isCompleted = task.status === "completed";
+    const orderedSteps = useMemo(
+        () =>
+            [...steps].sort(
+                (a, b) => a.order - b.order
+            ),
+        [steps]
+    );
 
-    async function handleComplete() {
-        setCompleting(true);
-        setError("");
+    const currentIndex = orderedSteps.findIndex(
+        (step) => step.id === task.process_step
+    );
+
+    const currentStep = orderedSteps[currentIndex];
+
+    const isFirstStep = currentIndex <= 0;
+
+    const isLastStep =
+        currentIndex !== -1 &&
+        currentIndex >= orderedSteps.length - 1;
+
+    const allowedEmployees = useMemo(() => {
+        if (!currentStep) return [];
+
+        return employees.filter(
+            (employee) =>
+                employee.is_active &&
+                currentStep.employees.includes(
+                    employee.id
+                )
+        );
+    }, [employees, currentStep]);
+
+    const complete = async () => {
         try {
-            await axiosInstance.patch(`/purchasing/api/v1/tasks/${task.id}/status/`, {
-                status: "completed",
-            });
-            onUpdated();
-        } catch (err) {
-            setError(getErrorMessage(err, "خطا در تکمیل وظیفه"));
-        } finally {
-            setCompleting(false);
-        }
-    }
+            setLoading(true);
+            setError("");
 
-    async function toggleHistory() {
-        if (showHistory) {
-            setShowHistory(false);
-            return;
-        }
-        setShowHistory(true);
-        setLoadingHistory(true);
-        try {
-            const { data } = await axiosInstance.get<ApiTaskAttachment[]>(
-                `/purchasing/api/v1/tasks/${task.id}/history/`
+            await axiosInstance.patch(
+                `/purchasing/api/v1/tasks/${task.id}/status/`,
+                {
+                    status: "completed",
+                }
             );
-            setHistory(Array.isArray(data) ? data : []);
-        } catch {
-            setHistory([]);
+
+            onUpdated();
+        } catch (err: any) {
+            setError(
+                err?.response?.data?.detail ||
+                err?.response?.data?.message ||
+                "تغییر وضعیت تسک انجام نشد."
+            );
         } finally {
-            setLoadingHistory(false);
+            setLoading(false);
         }
-    }
+    };
 
     return (
         <>
             <motion.div
-                initial={{ opacity: 0, y: 12 }}
+                initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.2, delay: index * 0.04 }}
-                className="flex flex-col gap-3 rounded-3xl border border-gray-100 bg-white p-4 dark:border-white/[0.06] dark:bg-white/[0.02]"
+                transition={{
+                    duration: 0.2,
+                    delay: index * 0.025,
+                }}
+                className="group relative overflow-hidden rounded-[1.8rem] border border-gray-100 bg-white shadow-[0_8px_28px_rgba(15,23,42,0.035)] transition-all hover:shadow-[0_12px_36px_rgba(15,23,42,0.08)] dark:border-white/[0.07] dark:bg-[#111a2d]"
             >
-                <div className="flex items-center justify-between">
-                    <span
-                        className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-extrabold"
-                        style={{ background: meta.bg, color: meta.color }}
-                    >
-                        {meta.label}
-                    </span>
-                    <span className="text-[10px] font-semibold text-gray-400">
-                        وظیفه خرید #{task.id}
-                    </span>
-                </div>
-
-                <div className="flex items-center gap-3">
-                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-blue-50 dark:bg-blue-500/10">
-                        <ShoppingCart size={18} className="text-blue-500" />
-                    </div>
-                    <div className="min-w-0">
-                        <h3 className="truncate text-[13px] font-extrabold text-gray-900 dark:text-white">
-                            {task.product_name}
-                        </h3>
-                        <p className="mt-0.5 text-[11px] text-gray-400 dark:text-gray-500">
-                            مرحله فعلی: {task.process_step_title} (#{task.process_step_order})
-                        </p>
-                    </div>
-                </div>
-
-                <div className="flex flex-col gap-1.5 rounded-2xl bg-gray-50 px-3 py-2.5 dark:bg-white/[0.035]">
-                    <div className="flex items-center justify-between text-[11px]">
-                        <span className="font-semibold text-gray-400 dark:text-white/35">مقدار قابل خرید</span>
-                        <span className="font-extrabold text-gray-700 dark:text-white/80">
-                            {task.purchase_quantity}
-                        </span>
-                    </div>
-                    <div className="flex items-center justify-between text-[11px]">
-                        <span className="font-semibold text-gray-400 dark:text-white/35">موجودی فعلی انبار</span>
-                        <span className="font-extrabold text-gray-700 dark:text-white/80">
-                            {task.quantity_after}
-                        </span>
-                    </div>
-                    <div className="flex items-center justify-between text-[11px]">
-                        <span className="font-semibold text-gray-400 dark:text-white/35">بازه مجاز موجودی</span>
-                        <span className="font-extrabold text-gray-700 dark:text-white/80">
-                            {task.minimum_stock} تا {task.maximum_stock}
-                        </span>
-                    </div>
-                </div>
-
-                {!isCompleted && (
-                    <div className="flex flex-wrap gap-2">
-                        <button
-                            type="button"
-                            onClick={() => setModalMode("advance")}
-                            className="flex flex-1 items-center justify-center gap-1.5 rounded-2xl bg-emerald-600 py-2.5 text-[12px] font-bold text-white transition-colors hover:bg-emerald-500"
-                        >
-                            <ArrowLeftCircle size={14} />
-                            مرحله بعد
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => setModalMode("revert")}
-                            className="flex flex-1 items-center justify-center gap-1.5 rounded-2xl bg-amber-500 py-2.5 text-[12px] font-bold text-white transition-colors hover:bg-amber-400"
-                        >
-                            <ArrowRightCircle size={14} />
-                            مرحله قبل
-                        </button>
-                        <button
-                            type="button"
-                            onClick={handleComplete}
-                            disabled={completing}
-                            className="flex flex-1 items-center justify-center gap-1.5 rounded-2xl bg-indigo-600 py-2.5 text-[12px] font-bold text-white transition-colors hover:bg-indigo-500 disabled:opacity-60"
-                        >
-                            {completing ? (
-                                <Loader2 size={14} className="animate-spin" />
-                            ) : (
-                                <>
-                                    <CheckCircle2 size={14} />
-                                    ارسال به کنترل کیفی
-                                </>
-                            )}
-                        </button>
-                    </div>
-                )}
-
-                {error && (
-                    <p className="text-center text-[11px] font-semibold text-red-500">{error}</p>
-                )}
+                <div
+                    className="absolute right-0 top-0 h-full w-1"
+                    style={{
+                        background: `linear-gradient(180deg, ${status.color}, ${status.color}45)`,
+                    }}
+                />
 
                 <button
                     type="button"
-                    onClick={toggleHistory}
-                    className="flex items-center justify-center gap-1.5 rounded-2xl bg-gray-100 py-2 text-[11.5px] font-bold text-gray-600 transition-colors dark:bg-white/[0.05] dark:text-gray-300"
+                    onClick={() => setOpen((v) => !v)}
+                    className="flex w-full items-center gap-3 p-4 text-right"
                 >
-                    <History size={13} />
-                    {showHistory ? "بستن تاریخچه" : "نمایش تاریخچه"}
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-indigo-500/10 text-indigo-500">
+                        <Package size={18} />
+                    </div>
+
+                    <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                            <h3 className="truncate text-[13px] font-extrabold text-gray-900 dark:text-white">
+                                {task.product_name}
+                            </h3>
+
+                            <span
+                                className="rounded-full px-2.5 py-1 text-[8.5px] font-bold"
+                                style={{
+                                    color: status.color,
+                                    background:
+                                        status.bg,
+                                }}
+                            >
+                                {status.label}
+                            </span>
+                        </div>
+
+                        <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-[9.5px] text-gray-400">
+                            <span>
+                                مرحله{" "}
+                                {task.process_step_order}:{" "}
+                                {task.process_step_title}
+                            </span>
+
+                            <span>
+                                خرید:{" "}
+                                {task.purchase_quantity}
+                            </span>
+                        </div>
+                    </div>
+
+                    <ChevronDown
+                        size={16}
+                        className={`shrink-0 text-gray-400 transition-transform ${open ? "rotate-180" : ""
+                            }`}
+                    />
                 </button>
 
-                <AnimatePresence>
-                    {showHistory && (
+                <AnimatePresence initial={false}>
+                    {open && (
                         <motion.div
-                            initial={{ opacity: 0, height: 0 }}
-                            animate={{ opacity: 1, height: "auto" }}
-                            exit={{ opacity: 0, height: 0 }}
-                            className="overflow-hidden"
+                            initial={{
+                                height: 0,
+                                opacity: 0,
+                            }}
+                            animate={{
+                                height: "auto",
+                                opacity: 1,
+                            }}
+                            exit={{
+                                height: 0,
+                                opacity: 0,
+                            }}
                         >
-                            {loadingHistory ? (
-                                <div className="flex items-center justify-center py-4 text-gray-400">
-                                    <Loader2 size={16} className="animate-spin" />
+                            <div className="border-t border-gray-100 px-4 pb-4 pt-4 dark:border-white/[0.05]">
+                                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                                    <InfoItem
+                                        label="مرحله فعلی"
+                                        value={
+                                            task.process_step_title
+                                        }
+                                    />
+
+                                    <InfoItem
+                                        label="موجودی بعد"
+                                        value={
+                                            task.quantity_after
+                                        }
+                                    />
+
+                                    <InfoItem
+                                        label="حداقل"
+                                        value={
+                                            task.minimum_stock
+                                        }
+                                    />
+
+                                    <InfoItem
+                                        label="حداکثر"
+                                        value={
+                                            task.maximum_stock
+                                        }
+                                    />
                                 </div>
-                            ) : history.length === 0 ? (
-                                <p className="py-3 text-center text-[11px] text-gray-400">
-                                    تاریخچه‌ای ثبت نشده است
-                                </p>
-                            ) : (
-                                <div className="flex flex-col gap-2 pt-1">
-                                    {history.map((item) => (
-                                        <div
-                                            key={item.id}
-                                            className="flex items-start gap-2 rounded-2xl bg-gray-50 px-3 py-2 dark:bg-white/[0.035]"
-                                        >
-                                            <div className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-gray-200 dark:bg-white/[0.08]">
-                                                <Paperclip size={11} className="text-gray-500" />
+
+                                {error && (
+                                    <div className="mt-3 rounded-2xl bg-red-500/10 px-3 py-2.5 text-[10px] font-semibold text-red-500">
+                                        {error}
+                                    </div>
+                                )}
+
+                                {task.status !==
+                                    "completed" && (
+                                        <>
+                                            <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
+                                                <button
+                                                    type="button"
+                                                    disabled={
+                                                        loading ||
+                                                        isLastStep ||
+                                                        !allowedEmployees.length
+                                                    }
+                                                    onClick={() =>
+                                                        setAction(
+                                                            "advance"
+                                                        )
+                                                    }
+                                                    className="flex items-center justify-center gap-1.5 rounded-2xl bg-indigo-600 px-3 py-2.5 text-[10px] font-bold text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-40"
+                                                >
+                                                    <ArrowLeft
+                                                        size={13}
+                                                    />
+                                                    مرحله بعد
+                                                </button>
+
+                                                <button
+                                                    type="button"
+                                                    disabled={
+                                                        loading ||
+                                                        isFirstStep ||
+                                                        !allowedEmployees.length
+                                                    }
+                                                    onClick={() =>
+                                                        setAction(
+                                                            "revert"
+                                                        )
+                                                    }
+                                                    className="flex items-center justify-center gap-1.5 rounded-2xl bg-pink-500/10 px-3 py-2.5 text-[10px] font-bold text-pink-500 transition hover:bg-pink-500/15 disabled:cursor-not-allowed disabled:opacity-40"
+                                                >
+                                                    <ArrowRight
+                                                        size={13}
+                                                    />
+                                                    مرحله قبل
+                                                </button>
+
+                                                <button
+                                                    type="button"
+                                                    disabled={
+                                                        loading
+                                                    }
+                                                    onClick={
+                                                        complete
+                                                    }
+                                                    className="col-span-2 flex items-center justify-center gap-1.5 rounded-2xl bg-emerald-500/10 px-3 py-2.5 text-[10px] font-bold text-emerald-500 transition hover:bg-emerald-500/15 disabled:opacity-40 sm:col-span-1"
+                                                >
+                                                    <CheckCircle2
+                                                        size={13}
+                                                    />
+                                                    تکمیل تسک
+                                                </button>
                                             </div>
-                                            <div className="min-w-0 flex-1">
-                                                <p className="text-[11px] font-bold text-gray-700 dark:text-gray-200">
-                                                    {item.type_display} · {item.created_by_name}
-                                                </p>
-                                                {item.note && (
-                                                    <p className="mt-0.5 text-[10.5px] text-gray-500 dark:text-gray-400">
-                                                        {item.note}
-                                                    </p>
-                                                )}
-                                                {item.file_url && (
-                                                    <a
-                                                        href={item.file_url}
-                                                        target="_blank"
-                                                        rel="noreferrer"
-                                                        className="mt-1 inline-block text-[10.5px] font-bold text-indigo-500"
-                                                    >
-                                                        مشاهده پیوست
-                                                    </a>
-                                                )}
-                                            </div>
+
+                                            {!allowedEmployees.length && (
+                                                <div className="mt-3 flex items-center gap-2 rounded-2xl bg-amber-500/10 px-3 py-2.5 text-[9.5px] font-semibold text-amber-500">
+                                                    <User
+                                                        size={13}
+                                                    />
+                                                    برای این مرحله
+                                                    کارمند فعالی
+                                                    تعیین نشده است.
+                                                </div>
+                                            )}
+                                        </>
+                                    )}
+
+                                {attachments.length > 0 && (
+                                    <div className="mt-5">
+                                        <div className="mb-2.5 flex items-center gap-2">
+                                            <FileText
+                                                size={13}
+                                                className="text-gray-400"
+                                            />
+
+                                            <span className="text-[10.5px] font-extrabold text-gray-700 dark:text-white/75">
+                                                آخرین فعالیت‌ها
+                                            </span>
                                         </div>
-                                    ))}
-                                </div>
-                            )}
+
+                                        <div className="flex flex-col gap-2">
+                                            {[
+                                                ...attachments,
+                                            ]
+                                                .sort(
+                                                    (
+                                                        a,
+                                                        b
+                                                    ) =>
+                                                        new Date(
+                                                            b.created_at
+                                                        ).getTime() -
+                                                        new Date(
+                                                            a.created_at
+                                                        ).getTime()
+                                                )
+                                                .slice(0, 4)
+                                                .map(
+                                                    (
+                                                        item
+                                                    ) => (
+                                                        <div
+                                                            key={
+                                                                item.id
+                                                            }
+                                                            className="rounded-2xl bg-gray-50 p-3 dark:bg-white/[0.035]"
+                                                        >
+                                                            <div className="flex items-center justify-between gap-2">
+                                                                <div className="flex min-w-0 items-center gap-2">
+                                                                    <span className="rounded-xl bg-indigo-500/10 px-2 py-1 text-[8.5px] font-bold text-indigo-500">
+                                                                        {
+                                                                            item.type_display
+                                                                        }
+                                                                    </span>
+
+                                                                    <span className="truncate text-[9.5px] font-bold text-gray-500 dark:text-white/55">
+                                                                        {
+                                                                            item.created_by_name
+                                                                        }
+                                                                    </span>
+                                                                </div>
+
+                                                                <span className="text-[8.5px] text-gray-400">
+                                                                    مرحله{" "}
+                                                                    {item.process_step_order ??
+                                                                        "-"}
+                                                                </span>
+                                                            </div>
+
+                                                            {item.note && (
+                                                                <p className="mt-2 text-[9.5px] leading-5 text-gray-500 dark:text-white/45">
+                                                                    {
+                                                                        item.note
+                                                                    }
+                                                                </p>
+                                                            )}
+
+                                                            {item.file_url && (
+                                                                <a
+                                                                    href={
+                                                                        item.file_url
+                                                                    }
+                                                                    target="_blank"
+                                                                    rel="noreferrer"
+                                                                    className="mt-2 inline-flex items-center gap-1 text-[9px] font-bold text-indigo-500"
+                                                                >
+                                                                    <FileText
+                                                                        size={
+                                                                            11
+                                                                        }
+                                                                    />
+                                                                    مشاهده
+                                                                    فایل
+                                                                </a>
+                                                            )}
+                                                        </div>
+                                                    )
+                                                )}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
                         </motion.div>
                     )}
                 </AnimatePresence>
             </motion.div>
 
-            {modalMode && (
-                <TaskActionModal
-                    isOpen={Boolean(modalMode)}
-                    onClose={() => setModalMode(null)}
-                    mode={modalMode}
-                    task={task}
-                    employees={employees}
-                    onCompleted={onUpdated}
-                />
-            )}
+            <TaskActionModal
+                isOpen={action !== null}
+                onClose={() => setAction(null)}
+                mode={action ?? "advance"}
+                task={task}
+                employees={allowedEmployees}
+                onCompleted={() => {
+                    setAction(null);
+                    onUpdated();
+                }}
+            />
         </>
+    );
+}
+
+function InfoItem({
+    label,
+    value,
+}: {
+    label: string;
+    value: string | number;
+}) {
+    return (
+        <div className="rounded-2xl bg-gray-50 px-3 py-2.5 dark:bg-white/[0.035]">
+            <p className="text-[8.5px] font-semibold text-gray-400">
+                {label}
+            </p>
+
+            <p className="mt-1 truncate text-[10px] font-extrabold text-gray-700 dark:text-white/75">
+                {value}
+            </p>
+        </div>
     );
 }
