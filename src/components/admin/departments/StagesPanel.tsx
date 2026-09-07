@@ -8,13 +8,7 @@ import {
     useState,
 } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import {
-    ChevronLeft,
-    Pencil,
-    Plus,
-    Trash2,
-} from "lucide-react";
-import { createPortal } from "react-dom";
+import { Plus } from "lucide-react";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { FreeMode } from "swiper/modules";
 
@@ -69,222 +63,6 @@ const getRelationId = (
     return String(value);
 };
 
-interface StageHeaderProps {
-    stage: Stage;
-    index: number;
-    tasksCount: number;
-    isLast: boolean;
-    hasDependencies: boolean;
-    dependencyMessage: string;
-    onEdit?: () => void;
-    onDelete?: () => void;
-}
-
-function StageHeader({
-    stage,
-    index,
-    tasksCount,
-    isLast,
-    hasDependencies,
-    dependencyMessage,
-    onEdit,
-    onDelete,
-}: StageHeaderProps) {
-    const stageColor = stage.color || "#6366f1";
-
-    const [tooltipVisible, setTooltipVisible] =
-        useState(false);
-
-    const [tooltipPosition, setTooltipPosition] =
-        useState({
-            top: 0,
-            left: 0,
-        });
-
-    const showDependencyTooltip = (
-        event: React.MouseEvent<HTMLButtonElement>
-    ) => {
-        if (!hasDependencies) {
-            return;
-        }
-
-        const rect =
-            event.currentTarget.getBoundingClientRect();
-
-        setTooltipPosition({
-            top: rect.top - 10,
-            left: rect.left + rect.width / 2,
-        });
-
-        setTooltipVisible(true);
-    };
-
-    const hideDependencyTooltip = () => {
-        setTooltipVisible(false);
-    };
-
-    const tooltip =
-        tooltipVisible &&
-            hasDependencies &&
-            typeof document !== "undefined"
-            ? createPortal(
-                <AnimatePresence>
-                    <motion.div
-                        initial={{
-                            opacity: 0,
-                            y: 5,
-                            scale: 0.95,
-                        }}
-                        animate={{
-                            opacity: 1,
-                            y: 0,
-                            scale: 1,
-                        }}
-                        exit={{
-                            opacity: 0,
-                            y: 5,
-                            scale: 0.95,
-                        }}
-                        transition={{
-                            duration: 0.15,
-                            ease: "easeOut",
-                        }}
-                        className="pointer-events-none fixed z-[999999] -translate-x-1/2 -translate-y-full whitespace-nowrap"
-                        style={{
-                            top: tooltipPosition.top,
-                            left: tooltipPosition.left,
-                        }}
-                        dir="rtl"
-                    >
-                        <div
-                            className="flex flex-col items-center gap-1 rounded-2xl px-3 py-2 text-center shadow-2xl"
-                            style={{
-                                background: "#1e293b",
-                                border: "1px solid rgba(255,255,255,0.08)",
-                            }}
-                        >
-                            <span className="text-[11px] font-bold text-white">
-                                {dependencyMessage}
-                            </span>
-
-                            <span className="text-[10px] text-slate-400">
-                                برای حذف آن ابتدا وظایف این فرآیند را حذف کنید
-                            </span>
-                        </div>
-                    </motion.div>
-                </AnimatePresence>,
-                document.body
-            )
-            : null;
-
-    return (
-        <>
-            <div className="relative">
-                {!isLast && (
-                    <div
-                        className="pointer-events-none absolute top-[19px] z-10 flex h-6 w-6 items-center justify-center rounded-full border bg-white shadow-sm dark:bg-[#0f172a]"
-                        style={{
-                            insetInlineEnd: "-13px",
-                            borderColor: `${stageColor}40`,
-                            color: stageColor,
-                        }}
-                    >
-                        <ChevronLeft
-                            size={12}
-                            strokeWidth={2.5}
-                        />
-                    </div>
-                )}
-
-                <div
-                    className="flex min-h-[66px] items-center justify-between gap-2 rounded-[1.35rem] border bg-white/75 px-3.5 py-2 dark:bg-white/[0.03]"
-                    style={{
-                        borderColor: `${stageColor}35`,
-                    }}
-                >
-                    <div className="flex min-w-0 items-center gap-2.5">
-                        <span
-                            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-[11px] font-extrabold text-white"
-                            style={{
-                                backgroundColor: stageColor,
-                            }}
-                        >
-                            {index + 1}
-                        </span>
-
-                        <div className="min-w-0">
-                            <h4 className="truncate text-[12px] font-extrabold text-gray-800 dark:text-gray-100">
-                                {stage.name}
-                            </h4>
-
-                            {stage.description && (
-                                <p className="mt-0.5 truncate text-[10px] font-medium text-gray-400 dark:text-gray-500">
-                                    {stage.description}
-                                </p>
-                            )}
-
-                            <p className="mt-0.5 text-[10px] font-bold text-gray-400 dark:text-gray-500">
-                                {tasksCount} وظیفه
-                            </p>
-                        </div>
-                    </div>
-
-                    <div className="flex shrink-0 items-center gap-1">
-                        {onEdit && (
-                            <button
-                                type="button"
-                                onClick={onEdit}
-                                className="rounded-lg p-1.5 transition"
-                                style={{
-                                    color: stageColor,
-                                    backgroundColor: `${stageColor}14`,
-                                }}
-                            >
-                                <Pencil size={13} />
-                            </button>
-                        )}
-
-                        {onDelete && (
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    if (hasDependencies) {
-                                        return;
-                                    }
-
-                                    onDelete();
-                                }}
-                                onMouseEnter={
-                                    showDependencyTooltip
-                                }
-                                onMouseLeave={
-                                    hideDependencyTooltip
-                                }
-                                className="rounded-lg p-1.5 transition"
-                                style={{
-                                    background: hasDependencies
-                                        ? "rgba(0,0,0,0.04)"
-                                        : undefined,
-                                    color: hasDependencies
-                                        ? "#9ca3af"
-                                        : undefined,
-                                    cursor: hasDependencies
-                                        ? "not-allowed"
-                                        : "pointer",
-                                }}
-                            >
-                                <Trash2 size={13} />
-                            </button>
-                        )}
-                    </div>
-                </div>
-            </div>
-
-            {tooltip}
-        </>
-    );
-}
-
 export default function StagesPanel({
     department,
     tasks = [],
@@ -299,18 +77,16 @@ export default function StagesPanel({
     const [activeStageKey, setActiveStageKey] =
         useState<string | null>(null);
 
-    const [localStages, setLocalStages] =
-        useState<Stage[]>(
-            () =>
-                [...(department.stages || [])].sort(
-                    (a, b) => a.order - b.order
-                )
-        );
+    const [localStages, setLocalStages] = useState<Stage[]>(
+        () =>
+            [...(department.stages || [])].sort(
+                (a, b) => a.order - b.order
+            )
+    );
 
-    const prevServerStagesRef =
-        useRef<Stage[]>(
-            department.stages || []
-        );
+    const prevServerStagesRef = useRef<Stage[]>(
+        department.stages || []
+    );
 
     const keyMapRef = useRef(
         new WeakMap<Stage, string>()
@@ -319,20 +95,17 @@ export default function StagesPanel({
     const keyCounterRef = useRef(0);
 
     useEffect(() => {
-        const nextStages =
-            department.stages || [];
+        const nextStages = department.stages || [];
 
-        const prevIds =
-            prevServerStagesRef.current
-                .map((stage) => stage.id)
-                .sort()
-                .join(",");
+        const prevIds = prevServerStagesRef.current
+            .map((stage) => stage.id)
+            .sort()
+            .join(",");
 
-        const nextIds =
-            nextStages
-                .map((stage) => stage.id)
-                .sort()
-                .join(",");
+        const nextIds = nextStages
+            .map((stage) => stage.id)
+            .sort()
+            .join(",");
 
         if (
             prevIds !== nextIds ||
@@ -341,14 +114,12 @@ export default function StagesPanel({
         ) {
             setLocalStages(
                 [...nextStages].sort(
-                    (a, b) =>
-                        a.order - b.order
+                    (a, b) => a.order - b.order
                 )
             );
         }
 
-        prevServerStagesRef.current =
-            nextStages;
+        prevServerStagesRef.current = nextStages;
     }, [department.stages]);
 
     const getStageKey = useCallback(
@@ -360,15 +131,11 @@ export default function StagesPanel({
                 return String(stage.id);
             }
 
-            let key =
-                keyMapRef.current.get(stage);
+            let key = keyMapRef.current.get(stage);
 
             if (!key) {
                 key = `temp-${keyCounterRef.current++}`;
-                keyMapRef.current.set(
-                    stage,
-                    key
-                );
+                keyMapRef.current.set(stage, key);
             }
 
             return key;
@@ -385,8 +152,7 @@ export default function StagesPanel({
         }[] = [];
 
         for (const stage of localStages) {
-            const key =
-                getStageKey(stage);
+            const key = getStageKey(stage);
 
             if (seen.has(key)) {
                 continue;
@@ -404,17 +170,14 @@ export default function StagesPanel({
     }, [getStageKey, localStages]);
 
     useEffect(() => {
-        if (
-            uniqueLocalStages.length === 0
-        ) {
+        if (uniqueLocalStages.length === 0) {
             setActiveStageKey(null);
             return;
         }
 
         const activeStageExists =
             uniqueLocalStages.some(
-                ({ key }) =>
-                    key === activeStageKey
+                ({ key }) => key === activeStageKey
             );
 
         if (!activeStageExists) {
@@ -440,11 +203,8 @@ export default function StagesPanel({
                 return;
             }
 
-            const oldOrder =
-                targetStage.order;
-
-            const newOrder =
-                values.order;
+            const oldOrder = targetStage.order;
+            const newOrder = values.order;
 
             if (oldOrder === newOrder) {
                 await onEditStage(
@@ -457,68 +217,55 @@ export default function StagesPanel({
             const conflictingStage =
                 localStages.find(
                     (stage) =>
-                        stage.id !==
-                        targetStage.id &&
+                        stage.id !== targetStage.id &&
                         stage.order === newOrder
                 );
 
-            const snapshot =
-                [...localStages];
+            const snapshot = [...localStages];
 
-            setLocalStages(
-                (previousStages) => {
-                    const updatedStages =
-                        previousStages.map(
-                            (stage) => {
-                                if (
-                                    stage.id ===
-                                    targetStage.id
-                                ) {
-                                    return {
-                                        ...stage,
-                                        order: newOrder,
-                                    };
-                                }
+            setLocalStages((previousStages) => {
+                const updatedStages =
+                    previousStages.map((stage) => {
+                        if (
+                            stage.id ===
+                            targetStage.id
+                        ) {
+                            return {
+                                ...stage,
+                                order: newOrder,
+                            };
+                        }
 
-                                if (
-                                    conflictingStage &&
-                                    stage.id ===
-                                    conflictingStage.id
-                                ) {
-                                    return {
-                                        ...stage,
-                                        order: oldOrder,
-                                    };
-                                }
+                        if (
+                            conflictingStage &&
+                            stage.id ===
+                            conflictingStage.id
+                        ) {
+                            return {
+                                ...stage,
+                                order: oldOrder,
+                            };
+                        }
 
-                                return stage;
-                            }
-                        );
+                        return stage;
+                    });
 
-                    return [
-                        ...updatedStages,
-                    ].sort(
-                        (
-                            firstStage,
-                            secondStage
-                        ) =>
-                            firstStage.order -
-                            secondStage.order
-                    );
-                }
-            );
+                return [...updatedStages].sort(
+                    (firstStage, secondStage) =>
+                        firstStage.order -
+                        secondStage.order
+                );
+            });
 
             try {
-                if (
-                    conflictingStage
-                ) {
+                if (conflictingStage) {
                     await onEditStage(
                         conflictingStage,
                         {
-                            name:
-                                conflictingStage.name,
+                            name: conflictingStage.name,
                             description:
-                                conflictingStage.description ?? "",
+                                conflictingStage.description ??
+                                "",
                             order: oldOrder,
                         }
                     );
@@ -529,9 +276,7 @@ export default function StagesPanel({
                     values
                 );
             } catch (error) {
-                setLocalStages(
-                    snapshot
-                );
+                setLocalStages(snapshot);
                 throw error;
             }
         },
@@ -549,39 +294,32 @@ export default function StagesPanel({
         [tasks]
     );
 
-    const handleDeleteStage =
-        useCallback(
-            (stage: Stage) => {
-                if (!onDeleteStage) {
-                    return;
-                }
+    const handleDeleteStage = useCallback(
+        (stage: Stage) => {
+            if (!onDeleteStage) {
+                return;
+            }
 
-                const stageTasks =
-                    getStageTasks(stage);
+            const stageTasks =
+                getStageTasks(stage);
 
-                if (
-                    stageTasks.length > 0
-                ) {
-                    return;
-                }
+            if (stageTasks.length > 0) {
+                return;
+            }
 
-                onDeleteStage(stage);
-            },
-            [
-                getStageTasks,
-                onDeleteStage,
-            ]
-        );
+            onDeleteStage(stage);
+        },
+        [
+            getStageTasks,
+            onDeleteStage,
+        ]
+    );
 
     const renderStageCard = (
         stage: Stage,
         key: string,
         index: number,
-        options?: {
-            isMobile?: boolean;
-            showHeader?: boolean;
-            showConnector?: boolean;
-        }
+        isMobile = false
     ) => {
         const stageTasks =
             getStageTasks(stage);
@@ -595,25 +333,15 @@ export default function StagesPanel({
                 stage={stage}
                 index={index}
                 isLast={
-                    options?.isMobile
-                        ? true
-                        : index ===
-                        uniqueLocalStages.length -
-                        1
+                    isMobile ||
+                    index ===
+                    uniqueLocalStages.length - 1
                 }
                 tasks={stageTasks}
-                tasksLoading={
-                    tasksLoading
-                }
-                showHeader={
-                    options?.showHeader
-                }
-                showConnector={
-                    options?.showConnector
-                }
-                hasDependencies={
-                    hasDependencies
-                }
+                tasksLoading={tasksLoading}
+                showHeader
+                showConnector={!isMobile}
+                hasDependencies={hasDependencies}
                 dependencyMessage="این فرآیند وظیفه دارد"
                 onEditStage={
                     onEditStage
@@ -642,68 +370,82 @@ export default function StagesPanel({
         ) ??
         uniqueLocalStages[0];
 
-    const activeStageIndex =
-        activeStage
-            ? uniqueLocalStages.findIndex(
-                ({ key }) =>
-                    key ===
-                    activeStage.key
-            )
-            : -1;
+    const activeStageIndex = activeStage
+        ? uniqueLocalStages.findIndex(
+            ({ key }) =>
+                key === activeStage.key
+        )
+        : -1;
 
     return (
-        <div className="flex flex-col gap-4 overflow-hidden">
+        <div
+            className="flex flex-col gap-3.5 p-4"
+            dir="rtl"
+        >
             <div className="flex items-center justify-between gap-3">
                 <div className="flex min-w-0 items-center gap-2">
-                    <h3 className="truncate text-[13.5px] font-extrabold text-gray-900 dark:text-white">
-                        فرآیندهای دپارتمان
-                    </h3>
+                    <div>
+                        <h3 className="text-[13px] font-extrabold text-gray-900 dark:text-white">
+                            فرآیندهای دپارتمان
+                        </h3>
 
-                    <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[10.5px] font-bold text-gray-500 dark:bg-white/[0.06] dark:text-gray-400">
-                        {
-                            uniqueLocalStages.length
-                        }
+                        <p className="mt-0.5 text-[9.5px] font-medium text-gray-400 dark:text-gray-500">
+                            مراحل و وظایف فعال
+                        </p>
+                    </div>
+
+                    <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-gray-100 px-1.5 text-[9px] font-extrabold text-gray-500 dark:bg-white/[0.06] dark:text-gray-400">
+                        {uniqueLocalStages.length}
                     </span>
                 </div>
 
                 {onAddStage && (
                     <button
                         type="button"
-                        onClick={
-                            onAddStage
-                        }
-                        className="flex shrink-0 items-center gap-1.5 rounded-xl bg-indigo-50 px-3 py-1.5 text-[11.5px] font-bold text-indigo-600 transition hover:bg-indigo-100 dark:bg-indigo-500/10 dark:text-indigo-400 dark:hover:bg-indigo-500/20"
+                        onClick={onAddStage}
+                        className="flex h-7 shrink-0 items-center gap-1.5 rounded-xl px-2.5 text-[10.5px] font-extrabold transition-all active:scale-95"
+                        style={{
+                            background:
+                                "rgba(99,102,241,0.10)",
+                            color: "#6366f1",
+                            border:
+                                "1px solid rgba(99,102,241,0.18)",
+                        }}
                     >
-                        <Plus size={13} />
-
-                        <span className="sm:hidden">
-                            افزودن
-                        </span>
-
+                        <Plus
+                            size={11}
+                            strokeWidth={2.7}
+                        />
                         <span className="hidden sm:inline">
                             افزودن فرآیند
+                        </span>
+                        <span className="sm:hidden">
+                            افزودن
                         </span>
                     </button>
                 )}
             </div>
 
-            {uniqueLocalStages.length ===
-                0 ? (
-                <div className="flex flex-col items-center justify-center gap-2 rounded-[1.5rem] border border-dashed border-gray-200 py-10 dark:border-white/[0.07]">
-                    <p className="text-[12px] text-gray-400">
+            {uniqueLocalStages.length === 0 ? (
+                <div className="flex flex-col items-center justify-center gap-2 rounded-[1.4rem] border border-dashed border-gray-200 py-10 dark:border-white/[0.07]">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gray-100 dark:bg-white/[0.05]">
+                        <Plus
+                            size={15}
+                            className="text-gray-400"
+                        />
+                    </div>
+
+                    <p className="text-[11px] font-medium text-gray-400">
                         فرآیندی تعریف نشده است
                     </p>
                 </div>
             ) : (
                 <>
                     <div className="md:hidden">
-                        <div className="scrollbar-none flex w-full gap-2 overflow-x-auto pb-1">
+                        <div className="scrollbar-none flex w-full gap-1.5 overflow-x-auto pb-1">
                             {uniqueLocalStages.map(
                                 (
-                                    {
-                                        stage,
-                                        key,
-                                    },
+                                    { stage, key },
                                     index
                                 ) => {
                                     const isActive =
@@ -723,39 +465,36 @@ export default function StagesPanel({
                                                     key
                                                 )
                                             }
-                                            className={`flex min-w-[118px] shrink-0 items-center gap-2 rounded-2xl border px-3 py-2 text-right transition ${isActive
-                                                ? "border-transparent shadow-sm"
-                                                : "border-gray-200/70 bg-white/60 dark:border-white/[0.07] dark:bg-white/[0.03]"
+                                            className={`flex min-w-[112px] shrink-0 items-center gap-1.5 rounded-xl border px-2.5 py-1.5 text-right transition-all ${isActive
+                                                    ? "shadow-sm"
+                                                    : "border-gray-200/70 bg-white/60 dark:border-white/[0.07] dark:bg-white/[0.03]"
                                                 }`}
                                             style={
                                                 isActive
                                                     ? {
-                                                        borderColor: `${stageColor}45`,
-                                                        backgroundColor: `${stageColor}12`,
+                                                        borderColor: `${stageColor}35`,
+                                                        backgroundColor: `${stageColor}10`,
                                                     }
                                                     : undefined
                                             }
                                         >
                                             <span
-                                                className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-[10px] font-extrabold text-white"
+                                                className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-[9px] font-extrabold text-white"
                                                 style={{
                                                     backgroundColor:
                                                         stageColor,
                                                 }}
                                             >
-                                                {index +
-                                                    1}
+                                                {index + 1}
                                             </span>
 
                                             <span
-                                                className={`min-w-0 truncate text-[11px] font-extrabold ${isActive
-                                                    ? "text-gray-800 dark:text-gray-100"
-                                                    : "text-gray-500 dark:text-gray-400"
+                                                className={`min-w-0 truncate text-[10px] font-extrabold ${isActive
+                                                        ? "text-gray-800 dark:text-gray-100"
+                                                        : "text-gray-500 dark:text-gray-400"
                                                     }`}
                                             >
-                                                {
-                                                    stage.name
-                                                }
+                                                {stage.name}
                                             </span>
                                         </button>
                                     );
@@ -766,146 +505,64 @@ export default function StagesPanel({
                         <div className="mt-2">
                             <AnimatePresence
                                 mode="wait"
-                                initial={
-                                    false
-                                }
+                                initial={false}
                             >
                                 {activeStage &&
                                     activeStageIndex >=
                                     0 && (
-                                        <div
+                                        <motion.div
                                             key={
                                                 activeStage.key
                                             }
+                                            initial={{
+                                                opacity: 0,
+                                                y: 5,
+                                            }}
+                                            animate={{
+                                                opacity: 1,
+                                                y: 0,
+                                            }}
+                                            exit={{
+                                                opacity: 0,
+                                                y: -5,
+                                            }}
+                                            transition={{
+                                                duration: 0.18,
+                                            }}
                                         >
                                             {renderStageCard(
                                                 activeStage.stage,
                                                 activeStage.key,
                                                 activeStageIndex,
-                                                {
-                                                    isMobile:
-                                                        true,
-                                                    showHeader:
-                                                        true,
-                                                    showConnector:
-                                                        false,
-                                                }
+                                                true
                                             )}
-                                        </div>
+                                        </motion.div>
                                     )}
                             </AnimatePresence>
                         </div>
                     </div>
 
-                    <div className="hidden md:flex md:flex-col md:gap-3">
+                    <div className="hidden md:block">
                         <Swiper
-                            modules={[
-                                FreeMode,
-                            ]}
+                            modules={[FreeMode]}
                             freeMode
                             slidesPerView="auto"
-                            spaceBetween={26}
-                            className="!w-full !overflow-visible !px-1"
+                            spaceBetween={14}
+                            className="!w-full !overflow-hidden !px-0.5"
                         >
                             {uniqueLocalStages.map(
                                 (
-                                    {
-                                        stage,
-                                        key,
-                                    },
-                                    index
-                                ) => {
-                                    const stageTasks =
-                                        getStageTasks(
-                                            stage
-                                        );
-
-                                    const hasDependencies =
-                                        stageTasks.length >
-                                        0;
-
-                                    return (
-                                        <SwiperSlide
-                                            key={
-                                                key
-                                            }
-                                            className="!w-[290px] shrink-0 !overflow-visible"
-                                        >
-                                            <StageHeader
-                                                stage={
-                                                    stage
-                                                }
-                                                index={
-                                                    index
-                                                }
-                                                tasksCount={
-                                                    stageTasks.length
-                                                }
-                                                isLast={
-                                                    index ===
-                                                    uniqueLocalStages.length -
-                                                    1
-                                                }
-                                                hasDependencies={
-                                                    hasDependencies
-                                                }
-                                                dependencyMessage="این فرآیند وظیفه دارد"
-                                                onEdit={
-                                                    onEditStage
-                                                        ? () =>
-                                                            setEditingStage(
-                                                                stage
-                                                            )
-                                                        : undefined
-                                                }
-                                                onDelete={
-                                                    onDeleteStage
-                                                        ? () =>
-                                                            handleDeleteStage(
-                                                                stage
-                                                            )
-                                                        : undefined
-                                                }
-                                            />
-                                        </SwiperSlide>
-                                    );
-                                }
-                            )}
-                        </Swiper>
-
-                        <Swiper
-                            modules={[
-                                FreeMode,
-                            ]}
-                            freeMode
-                            slidesPerView="auto"
-                            spaceBetween={26}
-                            className="!w-full !overflow-visible !px-1"
-                        >
-                            {uniqueLocalStages.map(
-                                (
-                                    {
-                                        stage,
-                                        key,
-                                    },
+                                    { stage, key },
                                     index
                                 ) => (
                                     <SwiperSlide
-                                        key={
-                                            key
-                                        }
+                                        key={key}
                                         className="!w-[290px] shrink-0 !overflow-visible"
                                     >
                                         {renderStageCard(
                                             stage,
                                             key,
-                                            index,
-                                            {
-                                                showHeader:
-                                                    false,
-                                                showConnector:
-                                                    false,
-                                            }
+                                            index
                                         )}
                                     </SwiperSlide>
                                 )
@@ -918,20 +575,12 @@ export default function StagesPanel({
             <EditStageModal
                 open={!!editingStage}
                 stage={editingStage}
-                accent={
-                    department.accent
-                }
+                accent={department.accent}
                 onClose={() =>
-                    setEditingStage(
-                        null
-                    )
+                    setEditingStage(null)
                 }
-                onSubmit={async (
-                    values
-                ) => {
-                    if (
-                        !editingStage
-                    ) {
+                onSubmit={async (values) => {
+                    if (!editingStage) {
                         return;
                     }
 
@@ -940,9 +589,7 @@ export default function StagesPanel({
                         values
                     );
 
-                    setEditingStage(
-                        null
-                    );
+                    setEditingStage(null);
                 }}
             />
         </div>

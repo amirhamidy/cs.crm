@@ -1,7 +1,13 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { ChevronLeft, Loader, Pencil, Plus, Trash2 } from "lucide-react";
+import {
+    ChevronLeft,
+    Loader,
+    Pencil,
+    Plus,
+    Trash2,
+} from "lucide-react";
 import { useState } from "react";
 import { createPortal } from "react-dom";
 import type { TaskStatus } from "@/types/task";
@@ -23,7 +29,14 @@ interface StageCardProps {
     dependencyMessage?: string;
 }
 
-const STATUS_SUMMARY_CONFIG: Record<TaskStatus, { label: string; dot: string; text: string }> = {
+const STATUS_SUMMARY_CONFIG: Record<
+    TaskStatus,
+    {
+        label: string;
+        dot: string;
+        text: string;
+    }
+> = {
     sold: {
         label: "فروش",
         dot: "bg-emerald-500",
@@ -60,33 +73,50 @@ export default function StageCard({
     hasDependencies = false,
     dependencyMessage = "این فرآیند وابستگی دارد",
 }: StageCardProps) {
-    const stageColor = stage.color ?? "#6366f1";
+    const stageColor =
+        stage.color ?? "#6366f1";
 
-    const [tooltipVisible, setTooltipVisible] = useState(false);
+    const [tooltipVisible, setTooltipVisible] =
+        useState(false);
 
-    const [tooltipPosition, setTooltipPosition] = useState({
-        top: 0,
-        left: 0,
-    });
+    const [tooltipPosition, setTooltipPosition] =
+        useState({
+            top: 0,
+            left: 0,
+        });
 
-    const statusCounts = (tasks ?? []).reduce<Record<string, number>>((acc, task) => {
-        if (task.status && typeof task.status === "string") {
-            acc[task.status] = (acc[task.status] ?? 0) + 1;
-        }
+    const statusCounts = (
+        tasks ?? []
+    ).reduce<Record<string, number>>(
+        (acc, task) => {
+            if (
+                task.status &&
+                typeof task.status === "string"
+            ) {
+                acc[task.status] =
+                    (acc[task.status] ?? 0) + 1;
+            }
 
-        return acc;
-    }, {});
+            return acc;
+        },
+        {}
+    );
 
-    const showDependencyTooltip = (event: React.MouseEvent<HTMLButtonElement>) => {
+    const showDependencyTooltip = (
+        event: React.MouseEvent<HTMLButtonElement>
+    ) => {
         if (!hasDependencies) {
             return;
         }
 
-        const rect = event.currentTarget.getBoundingClientRect();
+        const rect =
+            event.currentTarget.getBoundingClientRect();
 
         setTooltipPosition({
             top: rect.top - 10,
-            left: rect.left + rect.width / 2,
+            left:
+                rect.left +
+                rect.width / 2,
         });
 
         setTooltipVisible(true);
@@ -97,7 +127,9 @@ export default function StageCard({
     };
 
     const tooltip =
-        tooltipVisible && hasDependencies && typeof document !== "undefined"
+        tooltipVisible &&
+            hasDependencies &&
+            typeof document !== "undefined"
             ? createPortal(
                 <AnimatePresence>
                     <motion.div
@@ -127,19 +159,13 @@ export default function StageCard({
                         }}
                         dir="rtl"
                     >
-                        <div
-                            className="flex flex-col items-center gap-1 rounded-2xl px-3 py-2 text-center shadow-2xl"
-                            style={{
-                                background: "#1e293b",
-                                border: "1px solid rgba(255,255,255,0.08)",
-                            }}
-                        >
-                            <span className="text-[11px] font-bold text-white">
+                        <div className="flex flex-col items-center gap-0.5 rounded-xl border border-white/[0.08] bg-slate-800 px-3 py-2 text-center shadow-2xl">
+                            <span className="text-[11px] font-extrabold text-white">
                                 {dependencyMessage}
                             </span>
 
                             <span className="text-[10px] text-slate-400">
-                                برای حذف آن ابتدا وظایف این فرآیند را حذف کنید
+                                برای حذف، ابتدا وظایف این فرآیند را حذف کنید
                             </span>
                         </div>
                     </motion.div>
@@ -154,7 +180,7 @@ export default function StageCard({
                 layout
                 initial={{
                     opacity: 0,
-                    y: 10,
+                    y: 8,
                 }}
                 animate={{
                     opacity: 1,
@@ -162,7 +188,7 @@ export default function StageCard({
                 }}
                 exit={{
                     opacity: 0,
-                    scale: 0.96,
+                    scale: 0.97,
                 }}
                 transition={{
                     layout: {
@@ -174,104 +200,161 @@ export default function StageCard({
                         duration: 0.2,
                     },
                 }}
-                className="relative flex min-w-0 flex-col rounded-[1.7rem] border border-gray-200/60 bg-white/70 dark:border-white/[0.06] dark:bg-white/[0.02]"
+                className="relative flex min-w-0 flex-col rounded-[1.45rem] border shadow-[0_6px_22px_rgba(15,23,42,0.025)] dark:bg-white/[0.025] dark:shadow-none"
+                style={{
+                    borderColor: `${stageColor}25`,
+                }}
             >
                 {showConnector && !isLast && (
                     <div
-                        className="pointer-events-none absolute top-9 z-10 flex h-6 w-6 items-center justify-center rounded-full border bg-white shadow-sm dark:bg-[#0f172a]"
+                        className="pointer-events-none absolute top-[28px] z-20 flex h-5 w-5 items-center justify-center rounded-full border bg-white shadow-sm dark:bg-[#0f172a]"
                         style={{
-                            insetInlineEnd: "-13px",
-                            borderColor: `${stageColor}40`,
+                            insetInlineEnd: "-10px",
+                            borderColor: `${stageColor}35`,
                             color: stageColor,
                         }}
                     >
-                        <ChevronLeft size={12} strokeWidth={2.5} />
+                        <ChevronLeft
+                            size={10}
+                            strokeWidth={2.5}
+                        />
                     </div>
                 )}
 
                 {showHeader && (
-                    <>
-                        <div className="flex items-start justify-between gap-2 px-3.5 pb-3 pt-3.5 sm:px-4 sm:pb-3 sm:pt-4">
+                    <div
+                        className="relative px-3 py-2.5"
+                    >
+                        <div className="flex items-center justify-between gap-2.5">
                             <div className="flex min-w-0 items-center gap-2">
                                 <span
-                                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-xl text-[11px] font-extrabold text-white sm:h-8 sm:w-8 sm:text-[12px]"
+                                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-[11px] font-extrabold text-white shadow-sm"
                                     style={{
-                                        backgroundColor: stageColor,
+                                        backgroundColor:
+                                            stageColor,
                                     }}
                                 >
                                     {index + 1}
                                 </span>
 
-                                <div className="min-w-0">
-                                    <h4 className="truncate text-[12px] font-extrabold text-gray-800 dark:text-gray-100 sm:text-[13px]">
-                                        {stage.name}
-                                    </h4>
+                                <div className="min-w-0 ">
+                                    <div className="flex min-w-0 items-center gap-1.5">
+                                        <h4 className="truncate text-[12px] font-extrabold text-gray-800 dark:text-gray-100">
+                                            {stage.name}
+                                        </h4>
+
+                                        <span
+                                            className="shrink-0 rounded-full px-1.5 py-0.5 text-[10.5px] font-extrabold"
+                                            style={{
+                                                background:
+                                                    `${stageColor}12`,
+                                                color:
+                                                    stageColor,
+                                            }}
+                                        >
+                                            {tasks?.length ??
+                                                0}
+                                        </span>
+                                    </div>
 
                                     {stage.description && (
-                                        <p className="mt-0.5 line-clamp-1 text-[10px] font-medium text-gray-400 dark:text-gray-500">
-                                            {stage.description}
+                                        <p className="mt-0.5 line-clamp-1 text-[11px] font-medium text-gray-400 dark:text-gray-500">
+                                            {
+                                                stage.description
+                                            }
                                         </p>
                                     )}
 
                                     <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
-                                        <p className="text-[10px] font-bold text-gray-400 dark:text-gray-500 sm:text-[10.5px]">
-                                            {tasks?.length ?? 0} وظیفه
-                                        </p>
+                                        <span className="text-[11px] font-bold text-gray-400 dark:text-gray-500">
+                                            وظیفه
+                                        </span>
 
-                                        {Object.entries(statusCounts).map(([status, count]) => {
-                                            const config = STATUS_SUMMARY_CONFIG[status as TaskStatus];
+                                        {Object.entries(
+                                            statusCounts
+                                        ).map(
+                                            ([
+                                                status,
+                                                count,
+                                            ]) => {
+                                                const config =
+                                                    STATUS_SUMMARY_CONFIG[
+                                                    status as TaskStatus
+                                                    ];
 
-                                            if (!config || count === 0) {
-                                                return null;
-                                            }
+                                                if (
+                                                    !config ||
+                                                    count ===
+                                                    0
+                                                ) {
+                                                    return null;
+                                                }
 
-                                            return (
-                                                <span
-                                                    key={status}
-                                                    className={`flex items-center gap-1 text-[10px] font-bold ${config.text}`}
-                                                >
-                                                    <span className="relative flex h-1.5 w-1.5">
-                                                        {status === "in_progress" && (
+                                                return (
+                                                    <span
+                                                        key={
+                                                            status
+                                                        }
+                                                        className={`flex items-center gap-1 text-[11px] font-bold ${config.text}`}
+                                                    >
+                                                        <span className="relative flex h-1.5 w-1.5">
+                                                            {status ===
+                                                                "in_progress" && (
+                                                                    <span
+                                                                        className={`absolute inline-flex h-full w-full animate-ping rounded-full ${config.dot} opacity-60`}
+                                                                    />
+                                                                )}
+
                                                             <span
-                                                                className={`absolute inline-flex h-full w-full animate-ping rounded-full ${config.dot} opacity-60`}
+                                                                className={`relative inline-flex h-1.5 w-1.5 rounded-full ${config.dot}`}
                                                             />
-                                                        )}
+                                                        </span>
 
-                                                        <span
-                                                            className={`relative inline-flex h-1.5 w-1.5 rounded-full ${config.dot}`}
-                                                        />
+                                                        {count}
                                                     </span>
-
-                                                    {count}
-                                                </span>
-                                            );
-                                        })}
+                                                );
+                                            }
+                                        )}
                                     </div>
                                 </div>
                             </div>
 
-                            <div className="flex shrink-0 items-center gap-0.5 sm:gap-1">
+                            <div className="flex shrink-0 items-center gap-1 ">
                                 {onAddTask && (
                                     <button
                                         type="button"
-                                        onClick={() => onAddTask(stage)}
-                                        className="rounded-lg p-1.5 text-gray-400 transition hover:bg-black/5 hover:text-gray-700 dark:hover:bg-white/10 dark:hover:text-white"
+                                        onClick={() =>
+                                            onAddTask(
+                                                stage
+                                            )
+                                        }
+                                        className="flex h-7 w-7 items-center justify-center rounded-lg text-gray-400 transition hover:bg-black/5 hover:text-gray-700 dark:hover:bg-white/10 dark:hover:text-white"
                                     >
-                                        <Plus size={13} />
+                                        <Plus
+                                            size={12}
+                                        />
                                     </button>
                                 )}
 
                                 {onEditStage && (
                                     <button
                                         type="button"
-                                        onClick={() => onEditStage(stage)}
-                                        className="rounded-lg p-1.5 transition"
+                                        onClick={() =>
+                                            onEditStage(
+                                                stage
+                                            )
+                                        }
+                                        className="flex h-7 w-7 items-center justify-center rounded-lg transition"
                                         style={{
-                                            color: stageColor,
-                                            backgroundColor: `${stageColor}14`,
+                                            color:
+                                                stageColor,
+                                            backgroundColor:
+                                                `${stageColor}12`,
                                         }}
                                     >
-                                        <Pencil size={13} />
+                                        <Pencil
+                                            size={12}
+                                        />
                                     </button>
                                 )}
 
@@ -279,60 +362,118 @@ export default function StageCard({
                                     <button
                                         type="button"
                                         onClick={() => {
-                                            if (hasDependencies) {
+                                            if (
+                                                hasDependencies
+                                            ) {
                                                 return;
                                             }
 
-                                            onDeleteStage(stage);
+                                            onDeleteStage(
+                                                stage
+                                            );
                                         }}
-                                        onMouseEnter={showDependencyTooltip}
-                                        onMouseLeave={hideDependencyTooltip}
-                                        className="rounded-lg p-1.5 transition"
+                                        onMouseEnter={
+                                            showDependencyTooltip
+                                        }
+                                        onMouseLeave={
+                                            hideDependencyTooltip
+                                        }
+                                        className="flex h-7 w-7 items-center justify-center rounded-lg transition"
                                         style={{
-                                            background: hasDependencies ? "rgba(0,0,0,0.04)" : undefined,
-                                            color: hasDependencies ? "#9ca3af" : undefined,
-                                            cursor: hasDependencies ? "not-allowed" : "pointer",
+                                            background:
+                                                hasDependencies
+                                                    ? "rgba(0,0,0,0.035)"
+                                                    : undefined,
+                                            color:
+                                                hasDependencies
+                                                    ? "#9ca3af"
+                                                    : "#94a3b8",
+                                            cursor:
+                                                hasDependencies
+                                                    ? "not-allowed"
+                                                    : "pointer",
                                         }}
                                     >
-                                        <Trash2 size={13} />
+                                        <Trash2
+                                            size={12}
+                                        />
                                     </button>
                                 )}
                             </div>
                         </div>
-
-                        <div className="h-px bg-gray-100 dark:bg-white/[0.05]" />
-                    </>
+                    </div>
                 )}
 
+                <div
+                    className="h-px"
+                    style={{
+                        background: `${stageColor}12`,
+                    }}
+                />
+
                 {tasksLoading ? (
-                    <div className="flex h-32 items-center justify-center sm:h-40">
-                        <Loader size={18} className="animate-spin text-indigo-500" />
+                    <div className="flex h-28 items-center justify-center">
+                        <Loader
+                            size={17}
+                            className="animate-spin text-indigo-500"
+                        />
                     </div>
-                ) : !tasks || tasks.length === 0 ? (
-                    <div className="flex h-32 flex-col items-center justify-center gap-1.5 px-4 text-center sm:h-40">
-                        <p className="text-[11px] text-gray-400">وظیفه‌ای در این مرحله نیست</p>
+                ) : !tasks ||
+                    tasks.length === 0 ? (
+                    <div className="flex h-28 flex-col items-center justify-center gap-1.5 px-4 text-center">
+                        <div
+                            className="flex h-7 w-7 items-center justify-center rounded-lg"
+                            style={{
+                                background:
+                                    `${stageColor}0c`,
+                            }}
+                        >
+                            <Plus
+                                size={11}
+                                style={{
+                                    color: `${stageColor}80`,
+                                }}
+                            />
+                        </div>
+
+                        <p className="text-[11px] font-medium text-gray-400">
+                            وظیفه‌ای در این مرحله نیست
+                        </p>
                     </div>
                 ) : (
-                    <div className="scrollbar-thin flex max-h-[420px] flex-col gap-2 overflow-y-auto p-2.5 sm:gap-2.5 sm:p-3">
-                        {tasks.map((task, taskIndex) => (
-                            <motion.div
-                                key={task.id}
-                                initial={{
-                                    opacity: 0,
-                                    y: 6,
-                                }}
-                                animate={{
-                                    opacity: 1,
-                                    y: 0,
-                                }}
-                                transition={{
-                                    delay: Math.min(taskIndex, 6) * 0.03,
-                                    duration: 0.2,
-                                }}
-                            >
-                                <TaskCard task={task} accent={stageColor} />
-                            </motion.div>
-                        ))}
+                    <div className="scrollbar-thin flex max-h-[420px] flex-col gap-2 overflow-y-auto p-2">
+                        {tasks.map(
+                            (
+                                task,
+                                taskIndex
+                            ) => (
+                                <motion.div
+                                    key={task.id}
+                                    initial={{
+                                        opacity: 0,
+                                        y: 5,
+                                    }}
+                                    animate={{
+                                        opacity: 1,
+                                        y: 0,
+                                    }}
+                                    transition={{
+                                        delay: Math.min(
+                                            taskIndex,
+                                            6
+                                        ) * 0.025,
+                                        duration: 0.18,
+                                    }}
+                                >
+                                    <TaskCard
+                                        task={task}
+                                        accent={
+                                            stageColor
+                                        }
+                                    />
+                                </motion.div>
+                            )
+                        )}
                     </div>
                 )}
             </motion.div>

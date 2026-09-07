@@ -14,6 +14,8 @@ import {
   BriefcaseBusiness,
   BarChart3,
   Boxes,
+  ShoppingCart,
+  ShieldCheck,
 } from "lucide-react";
 
 import { LucideIcon } from "lucide-react";
@@ -44,6 +46,16 @@ export const adminMenuItems: MenuItem[] = [
     icon: Boxes,
     label: "انبار",
     href: "/admin/warehouse",
+  },
+  {
+    icon: ShoppingCart,
+    label: "خرید",
+    href: "/admin/purchasing",
+  },
+  {
+    icon: ShieldCheck,
+    label: "کنترل کیفی",
+    href: "/admin/qualityControl",
   },
   {
     icon: FolderKanban,
