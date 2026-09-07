@@ -2,7 +2,16 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Loader2, Pencil, Phone, Star, Trash2, X } from "lucide-react";
+import {
+    Check,
+    Loader2,
+    Pencil,
+    Phone,
+    Power,
+    Star,
+    Trash2,
+    X,
+} from "lucide-react";
 import { useTheme } from "next-themes";
 
 import axiosInstance from "@/lib/axiosInstance";
@@ -11,6 +20,8 @@ import EditUserModal from "@/components/admin/users/EditUserModal";
 
 interface UserCardProps {
     employee: ApiEmployee;
+    departmentName?: string | null;
+    activeTaskTitles?: string[];
     index: number;
     hasActiveTasks?: boolean;
     onDelete: (id: number) => void;
@@ -32,9 +43,19 @@ function getErrorMessage(error: unknown, fallback: string) {
         "response" in error &&
         typeof (error as { response?: unknown }).response === "object"
     ) {
-        const response = (error as { response?: { data?: { detail?: string; message?: string } } })
-            .response;
+        const response = (
+            error as {
+                response?: {
+                    data?: {
+                        detail?: string;
+                        message?: string;
+                    };
+                };
+            }
+        ).response;
+
         const detail = response?.data?.detail || response?.data?.message;
+
         if (detail) return detail;
     }
 
@@ -51,9 +72,17 @@ function extractUserList(data: unknown): ApiUser[] {
     if (data && typeof data === "object") {
         const record = data as Record<string, unknown>;
 
-        if (Array.isArray(record.results)) return record.results as ApiUser[];
-        if (Array.isArray(record.data)) return record.data as ApiUser[];
-        if (Array.isArray(record.users)) return record.users as ApiUser[];
+        if (Array.isArray(record.results)) {
+            return record.results as ApiUser[];
+        }
+
+        if (Array.isArray(record.data)) {
+            return record.data as ApiUser[];
+        }
+
+        if (Array.isArray(record.users)) {
+            return record.users as ApiUser[];
+        }
     }
 
     return [];
@@ -65,9 +94,17 @@ function extractEmployeeList(data: unknown): ApiEmployee[] {
     if (data && typeof data === "object") {
         const record = data as Record<string, unknown>;
 
-        if (Array.isArray(record.results)) return record.results as ApiEmployee[];
-        if (Array.isArray(record.data)) return record.data as ApiEmployee[];
-        if (Array.isArray(record.employees)) return record.employees as ApiEmployee[];
+        if (Array.isArray(record.results)) {
+            return record.results as ApiEmployee[];
+        }
+
+        if (Array.isArray(record.data)) {
+            return record.data as ApiEmployee[];
+        }
+
+        if (Array.isArray(record.employees)) {
+            return record.employees as ApiEmployee[];
+        }
     }
 
     return [];
@@ -75,6 +112,8 @@ function extractEmployeeList(data: unknown): ApiEmployee[] {
 
 export default function UserCard({
     employee,
+    departmentName = null,
+    activeTaskTitles = [],
     index,
     hasActiveTasks = false,
     onDelete,
@@ -85,6 +124,7 @@ export default function UserCard({
 
     const [hovered, setHovered] = useState(false);
     const [tooltipVisible, setTooltipVisible] = useState(false);
+    const [taskTooltipVisible, setTaskTooltipVisible] = useState(false);
     const [showConfirm, setShowConfirm] = useState(false);
     const [showEditModal, setShowEditModal] = useState(false);
     const [deleting, setDeleting] = useState(false);
@@ -92,6 +132,9 @@ export default function UserCard({
     const [score, setScore] = useState<number | null>(null);
     const [scoreLoading, setScoreLoading] = useState(true);
     const [phoneNumber, setPhoneNumber] = useState<string | null>(null);
+    const [userId, setUserId] = useState<number | null>(null);
+    const [isActive, setIsActive] = useState(true);
+    const [statusLoading, setStatusLoading] = useState(true);
 
     useEffect(() => {
         let mounted = true;
@@ -102,7 +145,10 @@ export default function UserCard({
             setScoreLoading(true);
 
             try {
-                const { data } = await axiosInstance.get(`/score/api/v1/employees/${employee.id}/`);
+                const { data } = await axiosInstance.get(
+                    `/score/api/v1/employees/${employee.id}/`,
+                );
+
                 if (!mounted) return;
 
                 const value =
@@ -127,14 +173,30 @@ export default function UserCard({
         const fetchPhoneNumber = async () => {
             if (!employee?.username) return;
 
+            setStatusLoading(true);
+
             try {
-                const { data } = await axiosInstance.get("/accounts/api/v1/user/list/");
+                const { data } = await axiosInstance.get(
+                    "/accounts/api/v1/user/list/",
+                );
+
                 if (!mounted) return;
 
                 const users = extractUserList(data);
+
                 const matched = users.find(
-                    (u) => u.username?.trim().toLowerCase() === employee.username?.trim().toLowerCase()
+                    (u) =>
+                        u.username?.trim().toLowerCase() ===
+                        employee.username?.trim().toLowerCase(),
                 );
+
+                if (matched?.id) {
+                    setUserId(matched.id);
+                }
+
+                if (typeof matched?.is_active === "boolean") {
+                    setIsActive(matched.is_active);
+                }
 
                 if (matched?.phone_number) {
                     setPhoneNumber(matched.phone_number);
@@ -142,6 +204,11 @@ export default function UserCard({
             } catch {
                 if (mounted) {
                     setPhoneNumber(null);
+                    setUserId(null);
+                }
+            } finally {
+                if (mounted) {
+                    setStatusLoading(false);
                 }
             }
         };
@@ -154,14 +221,39 @@ export default function UserCard({
         };
     }, [employee?.id, employee?.username]);
 
+    const handleToggleActive = async () => {
+        if (!userId || statusLoading) return;
+
+        const nextStatus = !isActive;
+
+        setStatusLoading(true);
+
+        try {
+            await axiosInstance.patch(
+                `/accounts/api/v1/user/${userId}/update/`,
+                {
+                    is_active: nextStatus,
+                },
+            );
+
+            setIsActive(nextStatus);
+        } catch {
+            setIsActive((prev) => prev);
+        } finally {
+            setStatusLoading(false);
+        }
+    };
+
     const loggedUserId = useMemo(() => {
         if (typeof window === "undefined") return null;
 
         try {
             const raw = localStorage.getItem("user");
+
             if (!raw) return null;
 
             const parsed = JSON.parse(raw);
+
             return typeof parsed?.id === "number" ? parsed.id : null;
         } catch {
             return null;
@@ -190,7 +282,8 @@ export default function UserCard({
         if (hasActiveTasks) {
             return {
                 title: "این کاربر تسک دارد",
-                subtitle: "برای حذف، اول باید تسک‌های مربوط به این کاربر حذف شوند",
+                subtitle:
+                    "برای حذف، اول باید تسک‌های مربوط به این کاربر حذف شوند",
             };
         }
 
@@ -199,18 +292,22 @@ export default function UserCard({
 
     const employeeName = employee.full_name?.trim() || "بدون نام";
     const username = employee.username?.trim() || "unknown";
-    const [start, end] = AVATAR_GRADIENTS[employee.id % AVATAR_GRADIENTS.length];
+    const department = departmentName?.trim() || "بدون دپارتمان";
+
+    const [start, end] =
+        AVATAR_GRADIENTS[employee.id % AVATAR_GRADIENTS.length];
 
     const joinedDate = employee.created_at
         ? new Date(employee.created_at).toLocaleDateString("fa-IR", {
-              year: "numeric",
-              month: "2-digit",
-              day: "2-digit",
-          })
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit",
+        })
         : "نامشخص";
 
     const handleCloseConfirm = () => {
         if (deleting) return;
+
         setShowConfirm(false);
         setDeleteError("");
     };
@@ -223,22 +320,34 @@ export default function UserCard({
 
         try {
             const [usersRes, employeesRes] = await Promise.all([
-                axiosInstance.get("/accounts/api/v1/user/list/").catch(() => null),
-                axiosInstance.get("/accounts/api/v1/employee/").catch(() => null),
+                axiosInstance
+                    .get("/accounts/api/v1/user/list/")
+                    .catch(() => null),
+                axiosInstance
+                    .get("/accounts/api/v1/employee/")
+                    .catch(() => null),
             ]);
 
-            const users = usersRes ? extractUserList(usersRes.data) : [];
-            const employees = employeesRes ? extractEmployeeList(employeesRes.data) : [];
+            const users = usersRes
+                ? extractUserList(usersRes.data)
+                : [];
+
+            const employees = employeesRes
+                ? extractEmployeeList(employeesRes.data)
+                : [];
 
             const normalizedUsername = username.toLowerCase();
 
             const matchedUser = users.find(
-                (user) => user.username?.trim().toLowerCase() === normalizedUsername,
+                (user) =>
+                    user.username?.trim().toLowerCase() ===
+                    normalizedUsername,
             );
 
             const matchedEmployee = employees.find(
                 (item) =>
-                    item.username?.trim().toLowerCase() === normalizedUsername ||
+                    item.username?.trim().toLowerCase() ===
+                    normalizedUsername ||
                     item.id === employee.id,
             );
 
@@ -250,17 +359,23 @@ export default function UserCard({
             }
 
             if (employeeDeleteId) {
-                await axiosInstance.delete(`/accounts/api/v1/employee/${employeeDeleteId}/delete/`);
+                await axiosInstance.delete(
+                    `/accounts/api/v1/employee/${employeeDeleteId}/delete/`,
+                );
             }
 
             if (userDeleteId && matchedUser?.type !== 1) {
-                await axiosInstance.delete(`/accounts/api/v1/user/${userDeleteId}/delete/`);
+                await axiosInstance.delete(
+                    `/accounts/api/v1/user/${userDeleteId}/delete/`,
+                );
             }
 
             onDelete(employee.id);
             setShowConfirm(false);
         } catch (error) {
-            setDeleteError(getErrorMessage(error, "حذف کاربر با خطا مواجه شد"));
+            setDeleteError(
+                getErrorMessage(error, "حذف کاربر با خطا مواجه شد"),
+            );
         } finally {
             setDeleting(false);
         }
@@ -272,15 +387,30 @@ export default function UserCard({
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.96 }}
-                transition={{ duration: 0.2, delay: index * 0.04 }}
-                onHoverStart={() => setHovered(true)}
+                transition={{
+                    duration: 0.2,
+                    delay: index * 0.04,
+                }}
+                onHoverStart={() => {
+                    setHovered(true);
+
+                    if (
+                        hasActiveTasks &&
+                        activeTaskTitles.length > 0
+                    ) {
+                        setTaskTooltipVisible(true);
+                    }
+                }}
                 onHoverEnd={() => {
                     setHovered(false);
                     setTooltipVisible(false);
+                    setTaskTooltipVisible(false);
                 }}
                 className="relative flex min-h-[148px] flex-col justify-between overflow-visible rounded-3xl p-4"
                 style={{
-                    background: isDark ? "rgba(255,255,255,0.03)" : "#fafafa",
+                    background: isDark
+                        ? "rgba(255,255,255,0.03)"
+                        : "#fafafa",
                     border: isDark
                         ? "1px solid rgba(255,255,255,0.06)"
                         : "1px solid rgba(15,23,42,0.06)",
@@ -298,8 +428,14 @@ export default function UserCard({
                             x2="0%"
                             y2="0%"
                         >
-                            <stop offset="0%" stopColor="#6366f1" />
-                            <stop offset="100%" stopColor="#8b5cf6" />
+                            <stop
+                                offset="0%"
+                                stopColor="#6366f1"
+                            />
+                            <stop
+                                offset="100%"
+                                stopColor="#8b5cf6"
+                            />
                         </linearGradient>
                     </defs>
 
@@ -313,31 +449,87 @@ export default function UserCard({
                         fill="none"
                         stroke={`url(#card-border-${employee.id})`}
                         strokeWidth="1.4"
-                        initial={{ pathLength: 0, opacity: 0 }}
+                        initial={{
+                            pathLength: 0,
+                            opacity: 0,
+                        }}
                         animate={
-                            hovered ? { pathLength: 1, opacity: 1 } : { pathLength: 0, opacity: 0 }
+                            hovered
+                                ? {
+                                    pathLength: 1,
+                                    opacity: 1,
+                                }
+                                : {
+                                    pathLength: 0,
+                                    opacity: 0,
+                                }
                         }
-                        transition={{ duration: 0.45, ease: "easeInOut" }}
+                        transition={{
+                            duration: 0.45,
+                            ease: "easeInOut",
+                        }}
                     />
                 </svg>
 
-                <div className="absolute left-3 top-3 z-20 flex items-center gap-1.5">
-                    {!scoreLoading && score !== null && (
-                        <div
-                            className="flex h-7 items-center justify-center gap-1 rounded-xl px-2 leading-none"
-                            style={{
-                                background: isDark
-                                    ? "rgba(234,179,8,0.14)"
-                                    : "rgba(234,179,8,0.08)",
-                                color: isDark ? "#fde047" : "#ca8a04",
-                            }}
-                            title="امتیاز عملکرد"
-                        >
-                            <Star size={11} fill="currentColor" strokeWidth={0} className="shrink-0" />
-                            <span className="text-[11px] font-extrabold leading-none">{score}</span>
-                        </div>
-                    )}
+                <AnimatePresence>
+                    {taskTooltipVisible &&
+                        hasActiveTasks &&
+                        activeTaskTitles.length > 0 && (
+                            <motion.div
+                                initial={{
+                                    opacity: 0,
+                                    y: 6,
+                                    scale: 0.96,
+                                }}
+                                animate={{
+                                    opacity: 1,
+                                    y: 0,
+                                    scale: 1,
+                                }}
+                                exit={{
+                                    opacity: 0,
+                                    y: 6,
+                                    scale: 0.96,
+                                }}
+                                transition={{
+                                    duration: 0.15,
+                                }}
+                                className="pointer-events-none absolute bottom-full left-1/2 z-50 mb-2 -translate-x-1/2"
+                            >
+                                <div
+                                    className="min-w-[190px] max-w-[280px] rounded-2xl px-3 py-2.5 text-center shadow-xl"
+                                    style={{
+                                        background: isDark
+                                            ? "#0f172a"
+                                            : "#1e293b",
+                                        border:
+                                            "1px solid rgba(255,255,255,0.08)",
+                                    }}
+                                    dir="rtl"
+                                >
+                                    <p className="text-[11px] font-bold text-white">
+                                        تسک‌های فعال کاربر
+                                    </p>
 
+                                    <div className="mt-1.5 space-y-1">
+                                        {activeTaskTitles.map(
+                                            (title, taskIndex) => (
+                                                <p
+                                                    key={`${title}-${taskIndex}`}
+                                                    className="truncate text-[10px] text-slate-300"
+                                                    title={title}
+                                                >
+                                                    {title}
+                                                </p>
+                                            ),
+                                        )}
+                                    </div>
+                                </div>
+                            </motion.div>
+                        )}
+                </AnimatePresence>
+
+                <div className="absolute left-3 top-3 z-20 flex items-center gap-1.5">
                     <button
                         type="button"
                         onClick={() => setShowEditModal(true)}
@@ -346,28 +538,45 @@ export default function UserCard({
                             background: isDark
                                 ? "rgba(99,102,241,0.12)"
                                 : "rgba(99,102,241,0.08)",
-                            color: isDark ? "#a5b4fc" : "#6366f1",
+                            color: isDark
+                                ? "#a5b4fc"
+                                : "#6366f1",
                         }}
                         title="ویرایش"
                     >
                         <Pencil size={11} />
                     </button>
 
-                    <div className="relative">
+                    <div
+                        className="relative"
+                        onMouseEnter={() => {
+                            setTaskTooltipVisible(false);
+
+                            if (!canDelete) {
+                                setTooltipVisible(true);
+                            }
+                        }}
+                        onMouseLeave={() => {
+                            setTooltipVisible(false);
+
+                            if (
+                                hovered &&
+                                hasActiveTasks &&
+                                activeTaskTitles.length > 0
+                            ) {
+                                setTaskTooltipVisible(true);
+                            }
+                        }}
+                    >
                         <button
                             type="button"
                             onClick={(e) => {
                                 e.stopPropagation();
+
                                 if (canDelete) {
                                     setShowConfirm(true);
                                 }
                             }}
-                            onMouseEnter={() => {
-                                if (!canDelete) {
-                                    setTooltipVisible(true);
-                                }
-                            }}
-                            onMouseLeave={() => setTooltipVisible(false)}
                             className="flex h-7 w-7 items-center justify-center rounded-xl"
                             style={{
                                 background: canDelete
@@ -377,10 +586,20 @@ export default function UserCard({
                                     : isDark
                                         ? "rgba(255,255,255,0.05)"
                                         : "rgba(15,23,42,0.04)",
-                                color: canDelete ? "#ef4444" : isDark ? "#4b5563" : "#9ca3af",
-                                cursor: canDelete ? "pointer" : "not-allowed",
+                                color: canDelete
+                                    ? "#ef4444"
+                                    : isDark
+                                        ? "#4b5563"
+                                        : "#9ca3af",
+                                cursor: canDelete
+                                    ? "pointer"
+                                    : "not-allowed",
                             }}
-                            title={canDelete ? "حذف" : "عدم امکان حذف"}
+                            title={
+                                canDelete
+                                    ? "حذف"
+                                    : "عدم امکان حذف"
+                            }
                         >
                             <Trash2 size={11} />
                         </button>
@@ -388,22 +607,40 @@ export default function UserCard({
                         <AnimatePresence>
                             {tooltipVisible && tooltipInfo && (
                                 <motion.div
-                                    initial={{ opacity: 0, y: 6, scale: 0.96 }}
-                                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                                    exit={{ opacity: 0, y: 6, scale: 0.96 }}
-                                    transition={{ duration: 0.15 }}
+                                    initial={{
+                                        opacity: 0,
+                                        y: 6,
+                                        scale: 0.96,
+                                    }}
+                                    animate={{
+                                        opacity: 1,
+                                        y: 0,
+                                        scale: 1,
+                                    }}
+                                    exit={{
+                                        opacity: 0,
+                                        y: 6,
+                                        scale: 0.96,
+                                    }}
+                                    transition={{
+                                        duration: 0.15,
+                                    }}
                                     className="absolute bottom-full left-1/2 z-50 mb-2 -translate-x-1/2 whitespace-nowrap"
                                 >
                                     <div
                                         className="rounded-2xl px-3 py-2 text-center shadow-xl"
                                         style={{
-                                            background: isDark ? "#0f172a" : "#1e293b",
-                                            border: "1px solid rgba(255,255,255,0.08)",
+                                            background: isDark
+                                                ? "#0f172a"
+                                                : "#1e293b",
+                                            border:
+                                                "1px solid rgba(255,255,255,0.08)",
                                         }}
                                     >
                                         <p className="text-[11px] font-bold text-white">
                                             {tooltipInfo.title}
                                         </p>
+
                                         <p className="mt-1 text-[10px] text-slate-300">
                                             {tooltipInfo.subtitle}
                                         </p>
@@ -414,7 +651,7 @@ export default function UserCard({
                     </div>
                 </div>
 
-                <div className="flex my-auto mt-5 items-center gap-3">
+                <div className="flex justify-start items-center gap-2">
                     <div
                         className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-[15px] font-extrabold text-white"
                         style={{
@@ -424,50 +661,184 @@ export default function UserCard({
                         {employeeName.charAt(0)}
                     </div>
 
-                    <div className="min-w-0 flex-1">
-                        <h3 className="truncate text-[13px] font-extrabold text-gray-900 dark:text-white">
-                            {employeeName}
-                        </h3>
-                        <div className="mt-0.5 flex items-center gap-x-2 gap-y-0.5">
-                            <span className="truncate text-[11.5px] text-gray-500 dark:text-gray-400">
-                                @{username}
-                            </span>
-                             {phoneNumber && (
-                                <span className="inline-flex items-center gap-1 text-[11px] text-gray-400 dark:text-gray-500" dir="ltr">
-                                    <Phone size={10} className="shrink-0" />
-                                    {phoneNumber}
+                    <h3 className="truncate text-[13px] font-extrabold text-gray-900 dark:text-white">
+                        {employeeName}
+                    </h3>
+                </div>
+
+                <div className="my-auto mt-5 flex items-start gap-3">
+                    <div className="min-w-0 flex flex-col space-y-1.5">
+                        <div className="flex justify-around items-center gap-3">
+                            <div className="flex items-center justify-start gap-1">
+                                <span className="text-[11.5px] font-semibold dark:text-gray-500">
+                                    نام کاربری:
                                 </span>
+
+                                <span className="min-w-0 flex-1 max-w-fit truncate rounded-lg bg-indigo-50 px-2 py-1 text-[11.5px] font-medium text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-300">
+                                    @{username}
+                                </span>
+                            </div>
+
+                            {phoneNumber && (
+                                <div className="flex items-center justify-start gap-1">
+                                    <span
+                                        className="flex min-w-0 max-w-fit flex-1 items-center justify-end gap-1 rounded-lg bg-emerald-50 px-2 py-1 text-[11.5px] font-medium text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-300"
+                                        dir="ltr"
+                                    >
+                                        <Phone
+                                            size={9}
+                                            className="shrink-0"
+                                        />
+                                        {phoneNumber}
+                                    </span>
+                                </div>
                             )}
+                        </div>
+
+                        <div className="flex items-center justify-start gap-4">
+                            <div className="flex justify-start gap-1 items-center">
+                                <span className="text-[11.5px] font-semibold dark:text-gray-500">
+                                    نقش:
+                                </span>
+
+                                <span
+                                    className="inline-flex h-7 items-center rounded-xl px-2.5 text-[11px] font-bold"
+                                    style={{
+                                        background: isAdmin
+                                            ? isDark
+                                                ? "rgba(245,158,11,0.14)"
+                                                : "rgba(245,158,11,0.1)"
+                                            : isDark
+                                                ? "rgba(99,102,241,0.14)"
+                                                : "rgba(99,102,241,0.08)",
+                                        color: isAdmin
+                                            ? isDark
+                                                ? "#fbbf24"
+                                                : "#d97706"
+                                            : isDark
+                                                ? "#a5b4fc"
+                                                : "#6366f1",
+                                    }}
+                                >
+                                    {isAdmin ? "ادمین سیستم" : "کارمند"}
+                                </span>
+                            </div>
+
+                            <div className="flex justify-start gap-1 items-center">
+                                <span className="text-[11.5px] font-semibold dark:text-gray-500">
+                                    دپارتمان:
+                                </span>
+
+                                <span className="min-w-0 flex-1 max-w-fit truncate rounded-lg bg-violet-50 px-2 py-1 text-[11.5px] font-medium text-violet-600 dark:bg-violet-500/10 dark:text-violet-300">
+                                    {department}
+                                </span>
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <div className="mt-auto flex items-center justify-between gap-3">
-                    <span className="text-[11px] text-gray-500 dark:text-gray-400">
-                        {joinedDate}
-                    </span>
+                <div className="mt-3 flex items-center justify-start gap-3">
+                    <div className="flex justify-start gap-4 items-center">
+                        <div className="flex justify-start gap-1 items-center">
+                            <span className="text-[11.5px] font-semibold dark:text-gray-500">
+                                تاریخ عضویت :
+                            </span>
 
-                    <span
-                        className="inline-flex h-7 items-center rounded-xl px-2.5 text-[11px] font-bold"
-                        style={{
-                            background: isAdmin
-                                ? isDark
-                                    ? "rgba(245,158,11,0.14)"
-                                    : "rgba(245,158,11,0.1)"
-                                : isDark
-                                    ? "rgba(99,102,241,0.14)"
-                                    : "rgba(99,102,241,0.08)",
-                            color: isAdmin
-                                ? isDark
-                                    ? "#fbbf24"
-                                    : "#d97706"
-                                : isDark
-                                    ? "#a5b4fc"
-                                    : "#6366f1",
-                        }}
-                    >
-                        {isAdmin ? "ادمین سیستم" : "کارمند"}
-                    </span>
+                            <span className="text-[11px] text-gray-500 dark:text-gray-400">
+                                {joinedDate}
+                            </span>
+
+                        </div>
+                        {!scoreLoading && score !== null && (
+                            <div
+                                className="flex h-7 items-center justify-center gap-1 rounded-xl px-2 leading-none"
+                                style={{
+                                    background: isDark
+                                        ? "rgba(234,179,8,0.14)"
+                                        : "rgba(234,179,8,0.08)",
+                                    color: isDark
+                                        ? "#fde047"
+                                        : "#ca8a04",
+                                }}
+                                title="امتیاز عملکرد"
+                            >
+                                <Star
+                                    size={11}
+                                    fill="currentColor"
+                                    strokeWidth={0}
+                                    className="shrink-0"
+                                />
+
+                                <span className="text-[11px] font-extrabold leading-none">
+                                    {score}
+                                </span>
+                            </div>
+                        )}
+
+                        <button
+                            type="button"
+                            onClick={handleToggleActive}
+                            disabled={!userId || statusLoading}
+                            className="relative flex h-7 w-[42px] items-center justify-between rounded-full p-[2px] transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-70"
+                            style={{
+                                background: isActive
+                                    ? isDark
+                                        ? "rgba(16,185,129,0.22)"
+                                        : "rgba(16,185,129,0.14)"
+                                    : isDark
+                                        ? "rgba(100,116,139,0.2)"
+                                        : "rgba(100,116,139,0.12)",
+                                boxShadow: isActive
+                                    ? "inset 0 0 0 1px rgba(16,185,129,0.12)"
+                                    : "inset 0 0 0 1px rgba(100,116,139,0.1)",
+                            }}
+                            title={isActive ? "اکانت فعال است" : "اکانت غیرفعال است"}
+                        >
+                            <motion.span
+                                animate={{
+                                    x: isActive ? 0 : 15,
+                                }}
+                                transition={{
+                                    type: "spring",
+                                    stiffness: 500,
+                                    damping: 30,
+                                }}
+                                className="absolute left-[2px] top-[2px] flex h-[23px] w-[23px] items-center justify-center rounded-full shadow-md"
+                                style={{
+                                    background: isActive
+                                        ? "#10b981"
+                                        : isDark
+                                            ? "#475569"
+                                            : "#94a3b8",
+                                    color: "#ffffff",
+                                }}
+                            >
+                                <AnimatePresence mode="wait" initial={false}>
+                                    {isActive ? (
+                                        <motion.span
+                                            key="check"
+                                            initial={{ opacity: 0, scale: 0.5 }}
+                                            animate={{ opacity: 1, scale: 1 }}
+                                            exit={{ opacity: 0, scale: 0.5 }}
+                                            transition={{ duration: 0.15 }}
+                                        >
+                                            <Check size={12} strokeWidth={3.5} />
+                                        </motion.span>
+                                    ) : (
+                                        <motion.span
+                                            key="power"
+                                            initial={{ opacity: 0, scale: 0.5 }}
+                                            animate={{ opacity: 1, scale: 1 }}
+                                            exit={{ opacity: 0, scale: 0.5 }}
+                                            transition={{ duration: 0.15 }}
+                                        >
+                                            <Power size={11} strokeWidth={2.5} />
+                                        </motion.span>
+                                    )}
+                                </AnimatePresence>
+                            </motion.span>
+                        </button>
+                    </div>
                 </div>
             </motion.div>
 
@@ -485,18 +856,35 @@ export default function UserCard({
                         }}
                     >
                         <motion.div
-                            initial={{ opacity: 0, scale: 0.96, y: 16 }}
-                            animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.96, y: 16 }}
-                            transition={{ duration: 0.18 }}
+                            initial={{
+                                opacity: 0,
+                                scale: 0.96,
+                                y: 16,
+                            }}
+                            animate={{
+                                opacity: 1,
+                                scale: 1,
+                                y: 0,
+                            }}
+                            exit={{
+                                opacity: 0,
+                                scale: 0.96,
+                                y: 16,
+                            }}
+                            transition={{
+                                duration: 0.18,
+                            }}
                             onClick={(e) => e.stopPropagation()}
                             className="w-full max-w-[360px] rounded-[2rem] p-5"
                             style={{
-                                background: isDark ? "#0f172a" : "#ffffff",
+                                background: isDark
+                                    ? "#0f172a"
+                                    : "#ffffff",
                                 border: isDark
                                     ? "1px solid rgba(255,255,255,0.07)"
                                     : "1px solid rgba(15,23,42,0.07)",
-                                boxShadow: "0 24px 64px rgba(0,0,0,0.35)",
+                                boxShadow:
+                                    "0 24px 64px rgba(0,0,0,0.35)",
                             }}
                             dir="rtl"
                         >
@@ -510,8 +898,12 @@ export default function UserCard({
                                                 : "rgba(239,68,68,0.08)",
                                         }}
                                     >
-                                        <Trash2 size={15} className="text-red-500" />
+                                        <Trash2
+                                            size={15}
+                                            className="text-red-500"
+                                        />
                                     </div>
+
                                     <h3 className="text-[13.5px] font-extrabold text-gray-900 dark:text-white">
                                         حذف کاربر
                                     </h3>
@@ -556,7 +948,9 @@ export default function UserCard({
                                         background: isDark
                                             ? "rgba(255,255,255,0.05)"
                                             : "rgba(15,23,42,0.05)",
-                                        color: isDark ? "#cbd5e1" : "#475569",
+                                        color: isDark
+                                            ? "#cbd5e1"
+                                            : "#475569",
                                     }}
                                 >
                                     انصراف
@@ -568,15 +962,21 @@ export default function UserCard({
                                     disabled={deleting}
                                     className="flex flex-1 items-center justify-center gap-1.5 rounded-2xl py-2.5 text-[12.5px] font-bold text-white disabled:opacity-60"
                                     style={{
-                                        background: "linear-gradient(135deg, #ef4444, #dc2626)",
-                                        boxShadow: "0 10px 24px rgba(239,68,68,0.22)",
+                                        background:
+                                            "linear-gradient(135deg, #ef4444, #dc2626)",
+                                        boxShadow:
+                                            "0 10px 24px rgba(239,68,68,0.22)",
                                     }}
                                 >
                                     {deleting ? (
-                                        <Loader2 size={15} className="animate-spin" />
+                                        <Loader2
+                                            size={15}
+                                            className="animate-spin"
+                                        />
                                     ) : (
                                         <Trash2 size={13} />
                                     )}
+
                                     {deleting ? "" : "حذف کن"}
                                 </button>
                             </div>

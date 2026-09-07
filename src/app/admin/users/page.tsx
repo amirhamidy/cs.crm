@@ -13,6 +13,8 @@ import type { ApiEmployee } from "@/types/users";
 
 interface TaskItem {
     id: number;
+    title?: string | null;
+    status?: string | null;
     assigned_employee?:
     | number
     | string
@@ -23,6 +25,8 @@ interface TaskItem {
 
 interface InternalTaskItem {
     id: number;
+    title?: string | null;
+    status?: string | null;
     assigned_to?:
     | number
     | string
@@ -32,8 +36,21 @@ interface InternalTaskItem {
     created_by?: string | null;
 }
 
+interface DepartmentEmployeeItem {
+    id: number;
+    employee: number;
+    employee_name?: string | null;
+    department?: number | null;
+    department_name?: string | null;
+}
+
 type TasksResponse = TaskItem[] | { results?: TaskItem[] };
-type InternalTasksResponse = InternalTaskItem[] | { results?: InternalTaskItem[] };
+type InternalTasksResponse =
+    | InternalTaskItem[]
+    | { results?: InternalTaskItem[] };
+type DepartmentEmployeesResponse =
+    | DepartmentEmployeeItem[]
+    | { results?: DepartmentEmployeeItem[] };
 
 const extractEmployeeIds = (
     value:
@@ -46,12 +63,14 @@ const extractEmployeeIds = (
 ): number[] => {
     if (!value) return [];
 
+
     if (Array.isArray(value)) {
         return value
             .map((item) => {
                 if (typeof item === "object" && item !== null) {
                     return Number(item.id);
                 }
+
                 return Number(item);
             })
             .filter((id) => !Number.isNaN(id));
@@ -64,14 +83,32 @@ const extractEmployeeIds = (
 
     const id = Number(value);
     return Number.isNaN(id) ? [] : [id];
+
+
+};
+
+const extractDepartmentEmployees = (
+    data: DepartmentEmployeesResponse,
+): DepartmentEmployeeItem[] => {
+    if (Array.isArray(data)) return data;
+    return data?.results ?? [];
 };
 
 export default function UsersPage() {
     const { resolvedTheme } = useTheme();
     const isDark = resolvedTheme === "dark";
 
+
     const [employees, setEmployees] = useState<ApiEmployee[]>([]);
-    const [employeesWithTasks, setEmployeesWithTasks] = useState<Set<number>>(new Set());
+    const [departmentNames, setDepartmentNames] = useState<
+        Map<number, string>
+    >(new Map());
+    const [employeesWithTasks, setEmployeesWithTasks] = useState<
+        Set<number>
+    >(new Set());
+    const [activeTasks, setActiveTasks] = useState<
+        Map<number, string[]>
+    >(new Map());
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
     const [showAddModal, setShowAddModal] = useState(false);
@@ -81,14 +118,34 @@ export default function UsersPage() {
         setError("");
 
         try {
-            const [employeesRes, tasksRes, internalTasksRes] = await Promise.all([
-                axiosInstance.get<ApiEmployee[]>("/accounts/api/v1/employee/list/"),
+            const [
+                employeesRes,
+                tasksRes,
+                internalTasksRes,
+                departmentEmployeesRes,
+            ] = await Promise.all([
+                axiosInstance.get<ApiEmployee[]>(
+                    "/accounts/api/v1/employee/list/",
+                ),
                 axiosInstance
                     .get<TasksResponse>("/tasks/api/v1/tasks/")
-                    .catch(() => ({ data: [] as TaskItem[] })),
+                    .catch(() => ({
+                        data: [] as TaskItem[],
+                    })),
                 axiosInstance
-                    .get<InternalTasksResponse>("/tasks/api/v1/internal-tasks/")
-                    .catch(() => ({ data: [] as InternalTaskItem[] })),
+                    .get<InternalTasksResponse>(
+                        "/tasks/api/v1/internal-tasks/",
+                    )
+                    .catch(() => ({
+                        data: [] as InternalTaskItem[],
+                    })),
+                axiosInstance
+                    .get<DepartmentEmployeesResponse>(
+                        "/department/api/v1/department_employee/list/",
+                    )
+                    .catch(() => ({
+                        data: [] as DepartmentEmployeeItem[],
+                    })),
             ]);
 
             const employeeList = Array.isArray(employeesRes.data)
@@ -96,6 +153,27 @@ export default function UsersPage() {
                 : [];
 
             setEmployees(employeeList);
+
+            const departmentEmployeeList =
+                extractDepartmentEmployees(
+                    departmentEmployeesRes.data,
+                );
+
+            const departmentMap = new Map<number, string>();
+
+            for (const item of departmentEmployeeList) {
+                if (
+                    item.employee &&
+                    item.department_name?.trim()
+                ) {
+                    departmentMap.set(
+                        Number(item.employee),
+                        item.department_name.trim(),
+                    );
+                }
+            }
+
+            setDepartmentNames(departmentMap);
 
             const usernameToId = new Map<string, number>();
 
@@ -114,31 +192,59 @@ export default function UsersPage() {
                 : tasksData?.results ?? [];
 
             const internalTasksData = internalTasksRes.data;
-            const internalTasks = Array.isArray(internalTasksData)
+            const internalTasks = Array.isArray(
+                internalTasksData,
+            )
                 ? internalTasksData
                 : internalTasksData?.results ?? [];
 
             const taskOwnerIds = new Set<number>();
+            const activeTaskMap = new Map<number, string[]>();
 
             for (const task of tasks) {
-                const ids = extractEmployeeIds(task.assigned_employee);
+                const ids = extractEmployeeIds(
+                    task.assigned_employee,
+                );
 
                 for (const id of ids) {
                     taskOwnerIds.add(id);
+
+                    if (task.status === "in_progress") {
+                        const currentTitles =
+                            activeTaskMap.get(id) ?? [];
+
+                        currentTitles.push(
+                            task.title?.trim() ||
+                            "بدون عنوان",
+                        );
+
+                        activeTaskMap.set(
+                            id,
+                            currentTitles,
+                        );
+                    }
                 }
             }
 
             for (const task of internalTasks) {
-                const ids = extractEmployeeIds(task.assigned_to);
+                const ids = extractEmployeeIds(
+                    task.assigned_to,
+                );
 
                 for (const id of ids) {
                     taskOwnerIds.add(id);
                 }
 
-                const createdByUsername = task.created_by?.trim().toLowerCase();
+                const createdByUsername =
+                    task.created_by
+                        ?.trim()
+                        .toLowerCase();
 
                 if (createdByUsername) {
-                    const creatorId = usernameToId.get(createdByUsername);
+                    const creatorId =
+                        usernameToId.get(
+                            createdByUsername,
+                        );
 
                     if (creatorId !== undefined) {
                         taskOwnerIds.add(creatorId);
@@ -147,8 +253,10 @@ export default function UsersPage() {
             }
 
             setEmployeesWithTasks(taskOwnerIds);
+            setActiveTasks(activeTaskMap);
         } catch (err) {
-            const error = err as AxiosError<{ detail?: string }>;
+            const error =
+                err as AxiosError<{ detail?: string }>;
 
             setError(
                 error.response?.data?.detail ??
@@ -156,7 +264,9 @@ export default function UsersPage() {
             );
 
             setEmployees([]);
+            setDepartmentNames(new Map());
             setEmployeesWithTasks(new Set());
+            setActiveTasks(new Map());
         } finally {
             setLoading(false);
         }
@@ -167,7 +277,10 @@ export default function UsersPage() {
     }, [fetchData]);
 
     return (
-        <div className="flex flex-col gap-5 p-3 sm:p-4 md:p-6" dir="rtl">
+        <div
+            className="flex flex-col gap-5 p-3 sm:p-4 md:p-6"
+            dir="rtl"
+        >
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-start gap-3">
                     <div
@@ -178,7 +291,10 @@ export default function UsersPage() {
                                 : "rgba(99,102,241,0.08)",
                         }}
                     >
-                        <Users size={18} className="text-indigo-500" />
+                        <Users
+                            size={18}
+                            className="text-indigo-500"
+                        />
                     </div>
 
                     <div className="min-w-0">
@@ -204,19 +320,27 @@ export default function UsersPage() {
                             background: isDark
                                 ? "rgba(255,255,255,0.05)"
                                 : "rgba(15,23,42,0.05)",
-                            color: isDark ? "#cbd5e1" : "#475569",
+                            color: isDark
+                                ? "#cbd5e1"
+                                : "#475569",
                         }}
                         title="بارگذاری مجدد"
                     >
                         <RefreshCw
                             size={15}
-                            className={loading ? "animate-spin" : ""}
+                            className={
+                                loading
+                                    ? "animate-spin"
+                                    : ""
+                            }
                         />
                     </button>
 
                     <button
                         type="button"
-                        onClick={() => setShowAddModal(true)}
+                        onClick={() =>
+                            setShowAddModal(true)
+                        }
                         className="flex h-10 items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-4 text-[12.5px] font-bold text-white transition-colors hover:bg-indigo-700"
                     >
                         <UserPlus size={15} />
@@ -264,65 +388,132 @@ export default function UsersPage() {
                 </div>
             )}
 
-            {!loading && !error && employees.length === 0 && (
-                <div className="flex flex-col items-center justify-center gap-2 py-16">
-                    <Users
-                        size={28}
-                        className="text-gray-300 dark:text-gray-700"
-                    />
+            {!loading &&
+                !error &&
+                employees.length === 0 && (
+                    <div className="flex flex-col items-center justify-center gap-2 py-16">
+                        <Users
+                            size={28}
+                            className="text-gray-300 dark:text-gray-700"
+                        />
 
-                    <p className="text-[12.5px] text-gray-500 dark:text-gray-400">
-                        هنوز کاربری ثبت نشده
-                    </p>
-                </div>
-            )}
+                        <p className="text-[12.5px] text-gray-500 dark:text-gray-400">
+                            هنوز کاربری ثبت نشده
+                        </p>
+                    </div>
+                )}
 
-            {!loading && !error && employees.length > 0 && (
-                <motion.div
-                    layout
-                    className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4"
-                >
-                    <AnimatePresence mode="popLayout">
-                        {employees.map((employee, index) => (
-                            <UserCard
-                                key={employee.id}
-                                employee={employee}
-                                index={index}
-                                hasActiveTasks={employeesWithTasks.has(
-                                    employee.id,
-                                )}
-                                onDelete={(id) => {
-                                    setEmployees((prev) =>
-                                        prev.filter(
-                                            (item) => item.id !== id,
-                                        ),
-                                    );
+            {!loading &&
+                !error &&
+                employees.length > 0 && (
+                    <motion.div
+                        layout
+                        className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4"
+                    >
+                        <AnimatePresence mode="popLayout">
+                            {employees.map(
+                                (employee, index) => (
+                                    <UserCard
+                                        key={employee.id}
+                                        employee={employee}
+                                        departmentName={
+                                            departmentNames.get(
+                                                employee.id,
+                                            ) ?? null
+                                        }
+                                        activeTaskTitles={
+                                            activeTasks.get(
+                                                employee.id,
+                                            ) ?? []
+                                        }
+                                        index={index}
+                                        hasActiveTasks={employeesWithTasks.has(
+                                            employee.id,
+                                        )}
+                                        onDelete={(id) => {
+                                            setEmployees(
+                                                (prev) =>
+                                                    prev.filter(
+                                                        (item) =>
+                                                            item.id !==
+                                                            id,
+                                                    ),
+                                            );
 
-                                    setEmployeesWithTasks((prev) => {
-                                        const next = new Set(prev);
-                                        next.delete(id);
-                                        return next;
-                                    });
-                                }}
-                                onUpdated={(updatedEmployee) => {
-                                    setEmployees((prev) =>
-                                        prev.map((item) =>
-                                            item.id === updatedEmployee.id
-                                                ? updatedEmployee
-                                                : item,
-                                        ),
-                                    );
-                                }}
-                            />
-                        ))}
-                    </AnimatePresence>
-                </motion.div>
-            )}
+                                            setDepartmentNames(
+                                                (prev) => {
+                                                    const next =
+                                                        new Map(
+                                                            prev,
+                                                        );
+
+                                                    next.delete(
+                                                        id,
+                                                    );
+
+                                                    return next;
+                                                },
+                                            );
+
+                                            setActiveTasks(
+                                                (prev) => {
+                                                    const next =
+                                                        new Map(
+                                                            prev,
+                                                        );
+
+                                                    next.delete(
+                                                        id,
+                                                    );
+
+                                                    return next;
+                                                },
+                                            );
+
+                                            setEmployeesWithTasks(
+                                                (prev) => {
+                                                    const next =
+                                                        new Set(
+                                                            prev,
+                                                        );
+
+                                                    next.delete(
+                                                        id,
+                                                    );
+
+                                                    return next;
+                                                },
+                                            );
+                                        }}
+                                        onUpdated={(
+                                            updatedEmployee,
+                                        ) => {
+                                            setEmployees(
+                                                (prev) =>
+                                                    prev.map(
+                                                        (
+                                                            item,
+                                                        ) =>
+                                                            item.id ===
+                                                                updatedEmployee.id
+                                                                ? updatedEmployee
+                                                                : item,
+                                                    ),
+                                            );
+                                        }}
+                                    />
+                                ),
+                            )}
+                        </AnimatePresence>
+                    </motion.div>
+                )}
 
             <AnimatePresence>
                 {showAddModal && (
                     <AddUserModal
-                        onClose={() => setShowAddModal(false)}
+                        onClose={() =>
+                            setShowAddModal(false)
+                        }
                         onSuccess={() => {
                             setShowAddModal(false);
                             fetchData();
@@ -332,4 +523,5 @@ export default function UsersPage() {
             </AnimatePresence>
         </div>
     );
+
 }

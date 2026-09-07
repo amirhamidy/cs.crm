@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { Building2, Pencil, Trash2 } from "lucide-react";
+import { Building2, Pencil, Trash2, UserRound } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Department } from "./types";
 import { useState } from "react";
@@ -16,6 +16,21 @@ interface Props {
     dependencyMessage?: string;
 }
 
+const AVATAR_GRADIENTS = [
+    ["#6366f1", "#8b5cf6"],
+    ["#3b82f6", "#6366f1"],
+    ["#8b5cf6", "#ec4899"],
+    ["#06b6d4", "#6366f1"],
+    ["#f59e0b", "#ef4444"],
+    ["#10b981", "#3b82f6"],
+    ["#f472b6", "#ec4899"],
+    ["#8b5cf6", "#f59e0b"],
+];
+
+function gradientFor(id: number) {
+    return AVATAR_GRADIENTS[Math.abs(id) % AVATAR_GRADIENTS.length];
+}
+
 export default function DepartmentCard({
     department,
     index,
@@ -28,6 +43,12 @@ export default function DepartmentCard({
     const router = useRouter();
     const [tooltipVisible, setTooltipVisible] = useState(false);
 
+    const accent = department.accent || "#6366f1";
+    const stages = [...(department.stages || [])].sort(
+        (a: any, b: any) => (a.order ?? 0) - (b.order ?? 0)
+    );
+    const employees = department.employees || [];
+
     return (
         <motion.div
             initial={{ opacity: 0, y: 8 }}
@@ -37,8 +58,8 @@ export default function DepartmentCard({
                 router.push(`/admin/departments/${department.id}`)
             }
             className={`relative cursor-pointer rounded-2xl border p-4 transition-all duration-200 ${isSelected
-                    ? "border-indigo-200 bg-indigo-50/60 dark:border-indigo-500/30 dark:bg-indigo-500/10"
-                    : "border-gray-100 bg-white hover:border-gray-200 hover:bg-gray-50/60 dark:border-white/[0.06] dark:bg-white/[0.02] dark:hover:bg-white/[0.04]"
+                ? "border-indigo-200 bg-indigo-50/60 dark:border-indigo-500/30 dark:bg-indigo-500/10"
+                : "border-gray-100 bg-white hover:border-gray-200 hover:bg-gray-50/60 dark:border-white/[0.06] dark:bg-white/[0.02] dark:hover:bg-white/[0.04]"
                 }`}
         >
             <div className="flex items-center justify-between gap-3">
@@ -46,16 +67,11 @@ export default function DepartmentCard({
                     <div
                         className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl"
                         style={{
-                            backgroundColor: `${department.accent || "#6366f1"}18`,
-                            border: `1px solid ${department.accent || "#6366f1"}30`,
+                            backgroundColor: `${accent}18`,
+                            border: `1px solid ${accent}30`,
                         }}
                     >
-                        <Building2
-                            size={16}
-                            style={{
-                                color: department.accent || "#6366f1",
-                            }}
-                        />
+                        <Building2 size={16} style={{ color: accent }} />
                     </div>
 
                     <div className="min-w-0">
@@ -64,8 +80,7 @@ export default function DepartmentCard({
                         </p>
 
                         <p className="text-[11px] text-gray-400">
-                            {department.employees.length} عضو ·{" "}
-                            {department.stages.length} فرآیند
+                            {employees.length} عضو · {stages.length} فرآیند
                         </p>
                     </div>
                 </div>
@@ -145,6 +160,54 @@ export default function DepartmentCard({
                     </div>
                 </div>
             </div>
+
+            {stages.length > 0 && (
+                <div className="mt-4 grid grid-cols-2 gap-x-3 gap-y-2.5">
+                    {stages.map((stage: any, i: number) => (
+                        <div
+                            key={stage.id}
+                            className="flex items-center gap-2.5 rounded-xl border border-gray-100 bg-gray-50/60 px-3 py-2.5 dark:border-white/[0.06] dark:bg-white/[0.02]"
+                        >
+                            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-gray-300 bg-white text-[10px] font-extrabold text-gray-500 dark:border-white/15 dark:bg-[#0f172a] dark:text-gray-400">
+                                {i + 1}
+                            </span>
+
+                            <p className="min-w-0 flex-1 truncate text-[11.5px] font-bold leading-5 text-gray-600 dark:text-gray-300">
+                                {stage.name}
+                            </p>
+                        </div>
+                    ))}
+                </div>
+            )}
+
+            {employees.length > 0 && (
+                <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-gray-100 pt-3 dark:border-white/[0.05]">
+                    {employees.map((emp: any) => {
+                        const empId = emp.id ?? emp.employee ?? 0;
+                        const gradient = gradientFor(empId);
+                        const name = emp.employee_name || emp.name;
+
+                        return (
+                            <div
+                                key={emp.id}
+                                className="flex items-center gap-1.5 rounded-full border border-gray-100 bg-gray-50 py-0.5 pl-2 pr-0.5 dark:border-white/[0.06] dark:bg-white/[0.04]"
+                            >
+                                <span
+                                    className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full text-[9px] font-extrabold text-white"
+                                    style={{
+                                        background: `linear-gradient(135deg, ${gradient[0]}, ${gradient[1]})`,
+                                    }}
+                                >
+                                    <UserRound size={11} />
+                                </span>
+                                <span className="text-[10.5px] font-bold text-gray-600 dark:text-gray-300">
+                                    {name}
+                                </span>
+                            </div>
+                        );
+                    })}
+                </div>
+            )}
         </motion.div>
     );
 }

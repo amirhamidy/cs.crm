@@ -3,7 +3,13 @@
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "next-themes";
-import { Users, Plus, Loader, RefreshCw, Filter } from "lucide-react";
+import {
+    Users,
+    Plus,
+    Loader,
+    RefreshCw,
+    Filter,
+} from "lucide-react";
 import CustomerCard from "./CustomerCard";
 import AddCustomerModal from "./AddCustomerModal";
 import { Customer } from "@/types/customer";
@@ -18,7 +24,15 @@ type FilterType = "all" | "potential" | "active";
 
 export default function CustomersPage() {
     const { resolvedTheme } = useTheme();
-    const isDark = resolvedTheme === "dark";
+
+    // جلوگیری از hydration mismatch: تا زمانی که کامپوننت روی کلاینت mount نشده،
+    // isDark را همیشه false در نظر می‌گیریم (دقیقاً مثل رندر سرور).
+    const [mounted, setMounted] = useState(false);
+    useEffect(() => {
+        setMounted(true);
+    }, []);
+    const isDark = mounted && resolvedTheme === "dark";
+
 
     const [customers, setCustomers] = useState<Customer[]>([]);
     const [customersWithCase, setCustomersWithCase] = useState<Set<number>>(
@@ -37,12 +51,17 @@ export default function CustomersPage() {
                 axiosInstance.get<Customer[]>(
                     "/customers/api/v1/customers/"
                 ),
-                axiosInstance.get<CaseItem[]>("/tasks/api/v1/cases/"),
+                axiosInstance.get<CaseItem[]>(
+                    "/tasks/api/v1/cases/"
+                ),
             ]);
 
             setCustomers(customersRes.data);
 
-            const ids = new Set(casesRes.data.map((c) => c.customer));
+            const ids = new Set(
+                casesRes.data.map((c) => c.customer)
+            );
+
             setCustomersWithCase(ids);
         } catch {
             setCustomers([]);
@@ -57,7 +76,9 @@ export default function CustomersPage() {
     }, [fetchData]);
 
     const handleDeleted = useCallback((id: number) => {
-        setCustomers((prev) => prev.filter((c) => c.id !== id));
+        setCustomers((prev) =>
+            prev.filter((c) => c.id !== id)
+        );
     }, []);
 
     const handleAdded = useCallback(() => {
@@ -66,7 +87,9 @@ export default function CustomersPage() {
 
     const handleEdited = useCallback((updated: Customer) => {
         setCustomers((prev) =>
-            prev.map((c) => (c.id === updated.id ? updated : c))
+            prev.map((c) =>
+                c.id === updated.id ? updated : c
+            )
         );
     }, []);
 
@@ -84,8 +107,10 @@ export default function CustomersPage() {
     const filteredCustomers = customers.filter((customer) => {
         return (
             filter === "all" ||
-            (filter === "potential" && customer.status === 1) ||
-            (filter === "active" && customer.status === 2)
+            (filter === "potential" &&
+                customer.status === 1) ||
+            (filter === "active" &&
+                customer.status === 2)
         );
     });
 
@@ -170,7 +195,9 @@ export default function CustomersPage() {
                         <RefreshCw
                             size={15}
                             className={
-                                isLoading ? "animate-spin" : ""
+                                isLoading
+                                    ? "animate-spin"
+                                    : ""
                             }
                         />
                     </button>
@@ -259,9 +286,18 @@ export default function CustomersPage() {
                     {filteredCustomers.length === 0 ? (
                         <motion.div
                             key="empty"
-                            initial={{ opacity: 0, y: 8 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: 8 }}
+                            initial={{
+                                opacity: 0,
+                                y: 8,
+                            }}
+                            animate={{
+                                opacity: 1,
+                                y: 0,
+                            }}
+                            exit={{
+                                opacity: 0,
+                                y: 8,
+                            }}
                             className="flex flex-col items-center justify-center gap-2 py-16"
                         >
                             <Users
@@ -311,4 +347,6 @@ export default function CustomersPage() {
             />
         </div>
     );
+
+
 }

@@ -14,6 +14,7 @@ import {
     UNIT_TYPE_LABELS,
     unitDetailKey,
 } from "@/types/warehouse";
+import { useCurrentEmployee } from "@/hooks/usecurrentemployee";
 import ProductEditModal from "./ProductEditModal";
 import StockModal from "./StockModal";
 import StockInitialModal from "./Stockinitialmodal";
@@ -67,6 +68,13 @@ export default function ProductCard({
     const [showConfirm, setShowConfirm] = useState(false);
     const [deleting, setDeleting] = useState(false);
     const [deleteError, setDeleteError] = useState("");
+    const [tooltipVisible, setTooltipVisible] = useState(false);
+
+    const { employee, loading: employeeLoading } = useCurrentEmployee();
+
+    const isWarehouseStaff = !employeeLoading && !!employee && staff.some(
+        (s) => (s.employee_id === employee.id || (s as unknown as { employee: number }).employee === employee.id) && s.is_active
+    );
 
     const [start, end] = AVATAR_GRADIENTS[product.id % AVATAR_GRADIENTS.length];
     const unitDetail = product[unitDetailKey(product.unit_type)] as { quantity_per_unit: number } | null | undefined;
@@ -74,6 +82,7 @@ export default function ProductCard({
     const isCritical = stockInfo ? stockInfo.current_quantity <= stockInfo.minimum_stock : false;
 
     async function handleDelete() {
+        if (!isWarehouseStaff) return;
         setDeleting(true);
         setDeleteError("");
         try {
@@ -117,7 +126,7 @@ export default function ProductCard({
                         <button
                             type="button"
                             onClick={() => setShowStock(true)}
-                            className="flex h-7 w-7 items-center justify-center rounded-xl"
+                            className="flex h-7 w-7 items-center justify-center rounded-xl transition-colors"
                             style={{
                                 background: isDark ? "rgba(16,185,129,0.12)" : "rgba(16,185,129,0.08)",
                                 color: "#10b981",
@@ -130,7 +139,7 @@ export default function ProductCard({
                         <button
                             type="button"
                             onClick={() => setShowInitialStock(true)}
-                            className="flex h-7 w-7 items-center justify-center rounded-xl"
+                            className="flex h-7 w-7 items-center justify-center rounded-xl transition-colors"
                             style={{
                                 background: isDark ? "rgba(59,130,246,0.12)" : "rgba(59,130,246,0.08)",
                                 color: "#3b82f6",
@@ -144,7 +153,7 @@ export default function ProductCard({
                     <button
                         type="button"
                         onClick={() => setShowEdit(true)}
-                        className="flex h-7 w-7 items-center justify-center rounded-xl"
+                        className="flex h-7 w-7 items-center justify-center rounded-xl transition-colors"
                         style={{
                             background: isDark ? "rgba(99,102,241,0.12)" : "rgba(99,102,241,0.08)",
                             color: isDark ? "#a5b4fc" : "#6366f1",
@@ -154,18 +163,67 @@ export default function ProductCard({
                         <Pencil size={11} />
                     </button>
 
-                    <button
-                        type="button"
-                        onClick={() => setShowConfirm(true)}
-                        className="flex h-7 w-7 items-center justify-center rounded-xl"
-                        style={{
-                            background: isDark ? "rgba(239,68,68,0.12)" : "rgba(239,68,68,0.08)",
-                            color: "#ef4444",
-                        }}
-                        title="حذف"
-                    >
-                        <Trash2 size={11} />
-                    </button>
+                    <div className="relative">
+                        <button
+                            type="button"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                if (!isWarehouseStaff) return;
+                                setShowConfirm(true);
+                            }}
+                            onMouseEnter={() => !isWarehouseStaff && setTooltipVisible(true)}
+                            onMouseLeave={() => setTooltipVisible(false)}
+                            className="flex h-7 w-7 items-center justify-center rounded-xl transition-colors"
+                            style={{
+                                background: !isWarehouseStaff
+                                    ? isDark
+                                        ? "rgba(255,255,255,0.04)"
+                                        : "rgba(0,0,0,0.04)"
+                                    : isDark
+                                        ? "rgba(239,68,68,0.12)"
+                                        : "rgba(239,68,68,0.08)",
+                                color: !isWarehouseStaff
+                                    ? isDark
+                                        ? "#4b5563"
+                                        : "#9ca3af"
+                                    : "#ef4444",
+                                cursor: !isWarehouseStaff ? "not-allowed" : "pointer",
+                            }}
+                            title={isWarehouseStaff ? "حذف" : undefined}
+                        >
+                            <Trash2 size={11} />
+                        </button>
+
+                        <AnimatePresence>
+                            {tooltipVisible && (
+                                <motion.div
+                                    initial={{ opacity: 0, y: 4, scale: 0.95 }}
+                                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                                    exit={{ opacity: 0, y: 4, scale: 0.95 }}
+                                    transition={{ duration: 0.15, ease: "easeOut" }}
+                                    className="absolute bottom-full left-1/2 z-50 mb-2 -translate-x-1/2 whitespace-nowrap"
+                                    dir="rtl"
+                                >
+                                    <div
+                                        className="flex flex-col items-center gap-1 rounded-2xl px-3 py-2 text-center shadow-xl"
+                                        style={{
+                                            background: isDark ? "#0f172a" : "#1e293b",
+                                            border: isDark
+                                                ? "1px solid rgba(255,255,255,0.08)"
+                                                : "1px solid rgba(0,0,0,0.12)",
+                                        }}
+                                    >
+                                        <span className="text-[11px] font-bold text-white">
+                                            عدم دسترسی به حذف
+                                        </span>
+                                        <span className="text-[10px] text-slate-400">
+                                            شما جزو پرسنل مجاز انبار نیستید
+                                        </span>
+                                    </div>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+                    </div>
                 </div>
 
                 <div className="mt-5 flex items-center gap-3">

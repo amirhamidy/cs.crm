@@ -120,7 +120,12 @@ function extractTasks(data: unknown): TaskDependency[] {
 
 export default function DepartmentsPage() {
     const { resolvedTheme } = useTheme();
-    const isDark = resolvedTheme === "dark";
+    const [mounted, setMounted] = useState(false);
+    const isDark = mounted && resolvedTheme === "dark";
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
 
     const {
         departments,
@@ -505,11 +510,15 @@ export default function DepartmentsPage() {
                     <div className="flex items-start gap-3">
                         <div
                             className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl"
-                            style={{
-                                background: isDark
-                                    ? "rgba(99,102,241,0.14)"
-                                    : "rgba(99,102,241,0.08)",
-                            }}
+                            style={
+                                mounted
+                                    ? {
+                                        background: isDark
+                                            ? "rgba(99,102,241,0.14)"
+                                            : "rgba(99,102,241,0.08)",
+                                    }
+                                    : undefined
+                            }
                         >
                             <Building2
                                 size={18}
@@ -538,14 +547,18 @@ export default function DepartmentsPage() {
                             }}
                             disabled={loading}
                             className="flex h-10 w-10 items-center justify-center rounded-2xl transition-colors disabled:opacity-50"
-                            style={{
-                                background: isDark
-                                    ? "rgba(255,255,255,0.05)"
-                                    : "rgba(15,23,42,0.05)",
-                                color: isDark
-                                    ? "#cbd5e1"
-                                    : "#475569",
-                            }}
+                            style={
+                                mounted
+                                    ? {
+                                        background: isDark
+                                            ? "rgba(255,255,255,0.05)"
+                                            : "rgba(15,23,42,0.05)",
+                                        color: isDark
+                                            ? "#cbd5e1"
+                                            : "#475569",
+                                    }
+                                    : undefined
+                            }
                             title="بارگذاری مجدد"
                             type="button"
                         >
