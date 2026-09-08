@@ -1,21 +1,29 @@
 "use client";
 
 import {
-    BellRing,
-    Boxes,
     ClipboardList,
-    LayoutDashboard,
-    PackageSearch,
-    ReceiptText,
+    Clock3,
+    History,
+    Package,
+    ShoppingCart,
+    Boxes,
 } from "lucide-react";
-import {
-    WarehouseTab,
-} from "@/utils/warehouseEmployee";
+import { motion } from "framer-motion";
 
-interface Props {
-    activeTab: WarehouseTab;
-    onChange: (tab: WarehouseTab) => void;
+export type WarehouseEmployeeTab =
+    | "products"
+    | "overview"
+    | "tasks"
+    | "stock"
+    | "transactions"
+    | "orders"
+    | "deadlines";
+
+interface WarehouseEmployeeTabsProps {
+    activeTab: WarehouseEmployeeTab;
+    onChange: (tab: WarehouseEmployeeTab) => void;
     counts?: {
+        products?: number;
         tasks?: number;
         stock?: number;
         transactions?: number;
@@ -27,81 +35,116 @@ interface Props {
 export default function WarehouseEmployeeTabs({
     activeTab,
     onChange,
-    counts,
-}: Props) {
+    counts = {},
+}: WarehouseEmployeeTabsProps) {
     const tabs = [
         {
-            id: "overview" as WarehouseTab,
+            id: "products" as const,
+            label: "محصولات",
+            icon: Package,
+            count: counts.products,
+        },
+        {
+            id: "overview" as const,
             label: "نمای کلی",
-            icon: LayoutDashboard,
+            icon: Boxes,
         },
         {
-            id: "tasks" as WarehouseTab,
-            label: "وظایف من",
+            id: "tasks" as const,
+            label: "وظایف",
             icon: ClipboardList,
-            count: counts?.tasks,
+            count: counts.tasks,
         },
         {
-            id: "stock" as WarehouseTab,
+            id: "stock" as const,
             label: "موجودی",
             icon: Boxes,
-            count: counts?.stock,
+            count: counts.stock,
         },
         {
-            id: "transactions" as WarehouseTab,
+            id: "transactions" as const,
             label: "تراکنش‌ها",
-            icon: ReceiptText,
-            count: counts?.transactions,
+            icon: History,
+            count: counts.transactions,
         },
         {
-            id: "orders" as WarehouseTab,
+            id: "orders" as const,
             label: "سفارش‌ها",
-            icon: PackageSearch,
-            count: counts?.orders,
+            icon: ShoppingCart,
+            count: counts.orders,
         },
         {
-            id: "deadlines" as WarehouseTab,
+            id: "deadlines" as const,
             label: "مهلت‌ها",
-            icon: BellRing,
-            count: counts?.deadlines,
+            icon: Clock3,
+            count: counts.deadlines,
         },
     ];
 
     return (
-        <div className="overflow-x-auto rounded-2xl border border-white/[0.07] bg-[#101114] p-1.5">
-            <div className="flex min-w-max gap-1">
-                {tabs.map((tab) => {
-                    const Icon = tab.icon;
-                    const active = activeTab === tab.id;
+        <div
+            dir="rtl"
+            className="flex w-full gap-2 overflow-x-auto pb-1 scrollbar-none"
+        >
+            {tabs.map(tab => {
+                const Icon = tab.icon;
+                const active = activeTab === tab.id;
 
-                    return (
-                        <button
-                            key={tab.id}
-                            type="button"
-                            onClick={() => onChange(tab.id)}
-                            className={`flex h-11 items-center gap-2 rounded-xl px-3.5 text-sm font-medium transition ${active
-                                    ? "bg-white text-black shadow-lg shadow-white/5"
-                                    : "text-white/45 hover:bg-white/[0.045] hover:text-white"
-                                }`}
-                        >
-                            <Icon className="h-4 w-4" />
+                return (
+                    <button
+                        key={tab.id}
+                        type="button"
+                        onClick={() => onChange(tab.id)}
+                        className="relative flex shrink-0 items-center gap-2 rounded-2xl px-4 py-2.5 text-[12px] font-bold transition"
+                        style={{
+                            color: active ? "#fff" : undefined,
+                        }}
+                    >
+                        {active && (
+                            <motion.div
+                                layoutId="warehouse-employee-active-tab"
+                                className="absolute inset-0 rounded-2xl bg-gradient-to-r from-indigo-500 to-violet-500 shadow-lg shadow-indigo-500/10"
+                                transition={{
+                                    type: "spring",
+                                    stiffness: 400,
+                                    damping: 30,
+                                }}
+                            />
+                        )}
 
-                            <span>{tab.label}</span>
+                        <span className="relative z-10 flex items-center gap-2 text-slate-600 dark:text-slate-300">
+                            <Icon
+                                size={15}
+                                className={
+                                    active
+                                        ? "text-white"
+                                        : "text-slate-400"
+                                }
+                            />
 
-                            {typeof tab.count === "number" && (
+                            <span className={active ? "text-white" : ""}>
+                                {tab.label}
+                            </span>
+
+                            {tab.count !== undefined && (
                                 <span
-                                    className={`rounded-full px-2 py-0.5 text-[10px] ${active
-                                            ? "bg-black/10 text-black/60"
-                                            : "bg-white/[0.06] text-white/35"
-                                        }`}
+                                    className="rounded-full px-2 py-0.5 text-[9px] font-extrabold"
+                                    style={{
+                                        background: active
+                                            ? "rgba(255,255,255,.16)"
+                                            : "rgba(99,102,241,.08)",
+                                        color: active
+                                            ? "#fff"
+                                            : "#6366f1",
+                                    }}
                                 >
-                                    {tab.count.toLocaleString("fa-IR")}
+                                    {tab.count}
                                 </span>
                             )}
-                        </button>
-                    );
-                })}
-            </div>
+                        </span>
+                    </button>
+                );
+            })}
         </div>
     );
 }

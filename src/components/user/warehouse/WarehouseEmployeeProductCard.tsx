@@ -1,0 +1,563 @@
+"use client";
+
+import { useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import { useTheme } from "next-themes";
+import {
+    ArrowDownUp,
+    Boxes,
+    Loader2,
+    Pencil,
+    Tag,
+    Trash2,
+    X,
+} from "lucide-react";
+import type { AxiosError } from "axios";
+import axiosInstance from "@/lib/axiosInstance";
+import {
+    ApiCategory,
+    ApiProduct,
+    ApiStockInfo,
+    ApiWarehouseStaff,
+    UNIT_TYPE_LABELS,
+    unitDetailKey,
+} from "@/types/warehouse";
+import WarehouseEmployeeProductEditModal from "./WarehouseEmployeeProductEditModal";
+import WarehouseEmployeeStockModal from "./WarehouseEmployeeStockModal";
+import WarehouseEmployeeInitialStockModal from "./WarehouseEmployeeInitialStockModal";
+
+interface ProductCardProps {
+    product: ApiProduct;
+    stockInfo: ApiStockInfo | null;
+    index: number;
+    categories: ApiCategory[];
+    staff: ApiWarehouseStaff[];
+    performedById: number | string;
+    onUpdated: (product: ApiProduct) => void;
+    onStockChanged: () => void;
+    onDeleted: (id: number) => void;
+}
+
+const AVATAR_GRADIENTS = [
+    ["#6366f1", "#8b5cf6"],
+    ["#ec4899", "#8b5cf6"],
+    ["#06b6d4", "#3b82f6"],
+    ["#10b981", "#14b8a6"],
+    ["#f59e0b", "#ef4444"],
+] as const;
+
+function getErrorMessage(err: unknown, fallback: string) {
+    const error = err as AxiosError<Record<string, unknown>>;
+    const data = error.response?.data;
+
+    if (!data) return fallback;
+
+    for (const key of [
+        "detail",
+        "message",
+        "error",
+        "non_field_errors",
+    ]) {
+        const value = data[key];
+
+        if (typeof value === "string") return value;
+
+        if (Array.isArray(value) && typeof value[0] === "string") {
+            return value[0];
+        }
+    }
+
+    return fallback;
+}
+
+export default function WarehouseEmployeeProductCard({
+    product,
+    stockInfo,
+    index,
+    categories,
+    staff,
+    performedById,
+    onUpdated,
+    onStockChanged,
+    onDeleted,
+}: ProductCardProps) {
+    const { resolvedTheme } = useTheme();
+    const isDark = resolvedTheme === "dark";
+
+    const [showEdit, setShowEdit] = useState(false);
+    const [showStock, setShowStock] = useState(false);
+    const [showInitialStock, setShowInitialStock] = useState(false);
+    const [showConfirm, setShowConfirm] = useState(false);
+    const [deleting, setDeleting] = useState(false);
+    const [deleteError, setDeleteError] = useState("");
+    const [tooltipVisible, setTooltipVisible] = useState(false);
+
+    const [start, end] =
+        AVATAR_GRADIENTS[product.id % AVATAR_GRADIENTS.length];
+
+    const unitDetail = product[
+        unitDetailKey(product.unit_type)
+    ] as { quantity_per_unit: number } | null | undefined;
+
+    const isCritical = stockInfo
+        ? stockInfo.current_quantity <= stockInfo.minimum_stock
+        : false;
+
+    async function handleDelete() {
+        setDeleting(true);
+        setDeleteError("");
+
+        try {
+            await axiosInstance.delete(
+                `/warehouse/api/v1/products/${product.id}/delete/`
+            );
+
+            setShowConfirm(false);
+            onDeleted(product.id);
+        } catch (err) {
+            setDeleteError(
+                getErrorMessage(err, "خطا در حذف محصول")
+            );
+        } finally {
+            setDeleting(false);
+        }
+    }
+
+    return (
+        <>
+            <motion.div
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.96 }}
+                transition={{
+                    duration: 0.2,
+                    delay: index * 0.04,
+                }}
+                className="relative flex min-h-[188px] flex-col justify-between rounded-3xl p-4"
+                style={{
+                    background: isDark
+                        ? "rgba(255,255,255,0.03)"
+                        : "#fafafa",
+                    border: isDark
+                        ? "1px solid rgba(255,255,255,0.06)"
+                        : "1px solid rgba(15,23,42,0.06)",
+                    boxShadow: isDark
+                        ? "0 8px 30px rgba(0,0,0,0.22)"
+                        : "0 8px 24px rgba(15,23,42,0.05)",
+                }}
+            >
+                <svg className="pointer-events-none absolute inset-0 h-full w-full">
+                    <defs>
+                        <linearGradient
+                            id={`employee-card-border-${product.id}`}
+                            x1="100%"
+                            y1="100%"
+                            x2="0%"
+                            y2="0%"
+                        >
+                            <stop
+                                offset="0%"
+                                stopColor="#6366f1"
+                            />
+                            <stop
+                                offset="100%"
+                                stopColor="#8b5cf6"
+                            />
+                        </linearGradient>
+                    </defs>
+
+                    <motion.rect
+                        x="1"
+                        y="1"
+                        width="calc(100% - 2px)"
+                        height="calc(100% - 2px)"
+                        rx="23"
+                        fill="none"
+                        stroke={`url(#employee-card-border-${product.id})`}
+                        strokeWidth="1.4"
+                        initial={{
+                            pathLength: 0,
+                            opacity: 0,
+                        }}
+                        whileHover={{
+                            pathLength: 1,
+                            opacity: 1,
+                        }}
+                        transition={{
+                            duration: 0.45,
+                            ease: "easeInOut",
+                        }}
+                    />
+                </svg>
+
+                <div className="absolute left-3 top-3 z-10 flex items-center gap-1.5">
+                    {stockInfo && (
+                        <span
+                            className="rounded-xl px-2 py-1 text-[12px] font-extrabold"
+                            style={{
+                                background: isCritical
+                                    ? "rgba(239,68,68,0.1)"
+                                    : "rgba(16,185,129,0.1)",
+                                color: isCritical
+                                    ? "#ef4444"
+                                    : "#10b981",
+                            }}
+                        >
+                            {isCritical
+                                ? "نیاز به تامین"
+                                : "موجودی مناسب"}
+                        </span>
+                    )}
+
+                    {stockInfo ? (
+                        <button
+                            type="button"
+                            onClick={() => setShowStock(true)}
+                            className="flex h-8 w-8 items-center justify-center rounded-xl transition-transform active:scale-90"
+                            style={{
+                                background: isDark
+                                    ? "rgba(16,185,129,0.12)"
+                                    : "rgba(16,185,129,0.08)",
+                                color: "#10b981",
+                            }}
+                            title="ثبت تراکنش انبار"
+                        >
+                            <ArrowDownUp size={13} />
+                        </button>
+                    ) : (
+                        <button
+                            type="button"
+                            onClick={() =>
+                                setShowInitialStock(true)
+                            }
+                            className="flex h-8 w-8 items-center justify-center rounded-xl transition-transform active:scale-90"
+                            style={{
+                                background: isDark
+                                    ? "rgba(59,130,246,0.12)"
+                                    : "rgba(59,130,246,0.08)",
+                                color: "#3b82f6",
+                            }}
+                            title="ثبت موجودی اولیه"
+                        >
+                            <Boxes size={13} />
+                        </button>
+                    )}
+
+                    <button
+                        type="button"
+                        onClick={() => setShowEdit(true)}
+                        className="flex h-8 w-8 items-center justify-center rounded-xl transition-transform active:scale-90"
+                        style={{
+                            background: isDark
+                                ? "rgba(99,102,241,0.12)"
+                                : "rgba(99,102,241,0.08)",
+                            color: isDark
+                                ? "#a5b4fc"
+                                : "#6366f1",
+                        }}
+                        title="ویرایش"
+                    >
+                        <Pencil size={13} />
+                    </button>
+
+                    <div className="relative">
+                        <button
+                            type="button"
+                            onClick={(event) => {
+                                event.stopPropagation();
+                                setShowConfirm(true);
+                            }}
+                            onMouseEnter={() =>
+                                setTooltipVisible(false)
+                            }
+                            onMouseLeave={() =>
+                                setTooltipVisible(false)
+                            }
+                            className="flex h-8 w-8 items-center justify-center rounded-xl transition-transform active:scale-90"
+                            style={{
+                                background: isDark
+                                    ? "rgba(239,68,68,0.12)"
+                                    : "rgba(239,68,68,0.08)",
+                                color: "#ef4444",
+                                cursor: "pointer",
+                            }}
+                            title="حذف"
+                        >
+                            <Trash2 size={13} />
+                        </button>
+
+                        <AnimatePresence>
+                            {tooltipVisible && (
+                                <motion.div
+                                    initial={{
+                                        opacity: 0,
+                                        y: 4,
+                                        scale: 0.95,
+                                    }}
+                                    animate={{
+                                        opacity: 1,
+                                        y: 0,
+                                        scale: 1,
+                                    }}
+                                    exit={{
+                                        opacity: 0,
+                                        y: 4,
+                                        scale: 0.95,
+                                    }}
+                                    className="absolute bottom-full left-1/2 z-50 mb-2 -translate-x-1/2 whitespace-nowrap"
+                                    dir="rtl"
+                                >
+                                    <div
+                                        className="rounded-2xl px-3 py-2 text-center shadow-xl"
+                                        style={{
+                                            background: isDark
+                                                ? "#0f172a"
+                                                : "#1e293b",
+                                        }}
+                                    >
+                                        <span className="text-[12px] font-bold text-white">
+                                            حذف محصول
+                                        </span>
+                                    </div>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+                    </div>
+                </div>
+
+                <div className="mt-6 flex items-center gap-3">
+                    <div
+                        className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-[15px] font-extrabold text-white"
+                        style={{
+                            background: `linear-gradient(135deg, ${start}, ${end})`,
+                        }}
+                    >
+                        {product.name.charAt(0)}
+                    </div>
+
+                    <div className="min-w-0 flex-1">
+                        <h3 className="truncate text-[13px] font-extrabold text-gray-900 dark:text-white">
+                            {product.name}
+                        </h3>
+
+                        <div className="mt-0.5 flex items-center gap-1.5 text-[12px] font-semibold text-gray-400 dark:text-gray-500">
+                            <Tag size={11} />
+                            {product.category_detail?.name ??
+                                "بدون دسته‌بندی"}
+                        </div>
+                    </div>
+                </div>
+
+                <div className="mt-3 flex flex-col gap-1.5 rounded-2xl bg-gray-50 px-3 py-2.5 dark:bg-white/[0.035]">
+                    <div className="flex items-center justify-between text-[12px]">
+                        <span className="font-semibold text-gray-400 dark:text-white/40">
+                            قیمت فروش
+                        </span>
+
+                        <span className="font-extrabold text-gray-700 dark:text-white/85">
+                            {Number(
+                                product.sale_price
+                            ).toLocaleString("fa-IR")}{" "}
+                            تومان
+                        </span>
+                    </div>
+
+                    <div className="flex items-center justify-between text-[12px]">
+                        <span className="font-semibold text-gray-400 dark:text-white/40">
+                            واحد شمارش
+                        </span>
+
+                        <span className="font-extrabold text-gray-700 dark:text-white/85">
+                            {stockInfo?.unit_label ??
+                                UNIT_TYPE_LABELS[
+                                product.unit_type
+                                ]}
+                            {unitDetail
+                                ? ` · ${unitDetail.quantity_per_unit} در هر بسته`
+                                : ""}
+                        </span>
+                    </div>
+
+                    {stockInfo ? (
+                        <div className="flex items-center justify-between text-[12px]">
+                            <span className="font-semibold text-gray-400 dark:text-white/40">
+                                موجودی فعلی
+                            </span>
+
+                            <span
+                                className="font-extrabold"
+                                style={{
+                                    color: isCritical
+                                        ? "#ef4444"
+                                        : undefined,
+                                }}
+                            >
+                                {stockInfo.current_quantity} از حداکثر{" "}
+                                {stockInfo.maximum_stock}
+                            </span>
+                        </div>
+                    ) : (
+                        <p className="text-center text-[12px] font-semibold text-amber-500">
+                            موجودی اولیه ثبت نشده است
+                        </p>
+                    )}
+                </div>
+
+                {deleteError && (
+                    <p className="mt-1.5 text-center text-[12px] font-semibold text-red-500">
+                        {deleteError}
+                    </p>
+                )}
+            </motion.div>
+
+            <WarehouseEmployeeProductEditModal
+                isOpen={showEdit}
+                onClose={() => setShowEdit(false)}
+                product={product}
+                categories={categories}
+                onUpdated={(updated) => {
+                    onUpdated(updated);
+                    setShowEdit(false);
+                }}
+            />
+
+            {stockInfo && (
+                <WarehouseEmployeeStockModal
+                    isOpen={showStock}
+                    onClose={() => setShowStock(false)}
+                    product={product}
+                    performedById={performedById}
+                    onCompleted={() => {
+                        onStockChanged();
+                        setShowStock(false);
+                    }}
+                />
+            )}
+
+            <WarehouseEmployeeInitialStockModal
+                isOpen={showInitialStock}
+                onClose={() =>
+                    setShowInitialStock(false)
+                }
+                product={product}
+                staff={staff}
+                performedById={performedById}
+                onCompleted={() => {
+                    onStockChanged();
+                    setShowInitialStock(false);
+                }}
+            />
+
+            <AnimatePresence>
+                {showConfirm && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        onClick={() =>
+                            !deleting &&
+                            setShowConfirm(false)
+                        }
+                        className="fixed inset-0 z-50 flex items-center justify-center px-4"
+                        style={{
+                            background: "rgba(0,0,0,0.5)",
+                            backdropFilter: "blur(4px)",
+                        }}
+                    >
+                        <motion.div
+                            initial={{
+                                opacity: 0,
+                                scale: 0.96,
+                                y: 16,
+                            }}
+                            animate={{
+                                opacity: 1,
+                                scale: 1,
+                                y: 0,
+                            }}
+                            exit={{
+                                opacity: 0,
+                                scale: 0.96,
+                                y: 16,
+                            }}
+                            onClick={(e) =>
+                                e.stopPropagation()
+                            }
+                            className="w-full max-w-[360px] rounded-[2rem] bg-white p-5 dark:bg-[#0f172a]"
+                            dir="rtl"
+                        >
+                            <div className="mb-4 flex items-center justify-between">
+                                <div className="flex items-center gap-2.5">
+                                    <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-red-50 dark:bg-red-500/10">
+                                        <Trash2
+                                            size={15}
+                                            className="text-red-500"
+                                        />
+                                    </div>
+
+                                    <h3 className="text-[13.5px] font-extrabold text-gray-900 dark:text-white">
+                                        حذف محصول
+                                    </h3>
+                                </div>
+
+                                <button
+                                    type="button"
+                                    onClick={() =>
+                                        setShowConfirm(false)
+                                    }
+                                    disabled={deleting}
+                                    className="flex h-8 w-8 items-center justify-center rounded-xl bg-gray-100 text-gray-400 dark:bg-white/[0.05]"
+                                >
+                                    <X size={14} />
+                                </button>
+                            </div>
+
+                            <p className="text-[12.5px] leading-6 text-gray-600 dark:text-gray-400">
+                                محصول{" "}
+                                <span className="font-extrabold text-gray-900 dark:text-white">
+                                    {product.name}
+                                </span>{" "}
+                                به طور کامل از انبار حذف خواهد شد.
+                            </p>
+
+                            {deleteError && (
+                                <p className="mt-3 text-center text-[12px] font-semibold leading-5 text-red-500">
+                                    {deleteError}
+                                </p>
+                            )}
+
+                            <div className="mt-5 flex gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() =>
+                                        setShowConfirm(false)
+                                    }
+                                    disabled={deleting}
+                                    className="flex-1 rounded-2xl bg-gray-100 py-2.5 text-[12.5px] font-bold text-gray-600 dark:bg-white/[0.05] dark:text-gray-300"
+                                >
+                                    انصراف
+                                </button>
+
+                                <button
+                                    type="button"
+                                    onClick={handleDelete}
+                                    disabled={deleting}
+                                    className="flex flex-1 items-center justify-center gap-1.5 rounded-2xl bg-red-600 py-2.5 text-[12.5px] font-bold text-white disabled:opacity-60"
+                                >
+                                    {deleting ? (
+                                        <Loader2
+                                            size={14}
+                                            className="animate-spin"
+                                        />
+                                    ) : (
+                                        "حذف کن"
+                                    )}
+                                </button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+        </>
+    );
+}

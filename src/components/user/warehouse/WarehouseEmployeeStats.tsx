@@ -1,13 +1,8 @@
 "use client";
 
-import {
-    AlertTriangle,
-    CheckCircle2,
-    ClipboardList,
-    Clock3,
-    PackageCheck,
-} from "lucide-react";
+import { AlertTriangle, CheckCircle2, ClipboardList, Clock3, PackageCheck } from "lucide-react";
 import { motion } from "framer-motion";
+import { useTheme } from "next-themes";
 
 interface Props {
     pending: number;
@@ -24,40 +19,43 @@ export default function WarehouseEmployeeStats({
     criticalStock,
     totalTasks,
 }: Props) {
+    const { resolvedTheme } = useTheme();
+    const isDark = resolvedTheme === "dark";
+
     const items = [
         {
             title: "کل وظایف",
             value: totalTasks,
             icon: ClipboardList,
-            tone: "text-white",
-            bg: "bg-white/[0.06]",
+            tone: isDark ? "text-white" : "text-gray-900",
+            bg: isDark ? "bg-white/[0.06]" : "bg-gray-100",
         },
         {
             title: "در انتظار",
             value: pending,
             icon: Clock3,
-            tone: "text-amber-300",
+            tone: "text-amber-400",
             bg: "bg-amber-400/10",
         },
         {
             title: "در حال انجام",
             value: active,
             icon: PackageCheck,
-            tone: "text-blue-300",
-            bg: "bg-blue-400/10",
+            tone: "text-indigo-400",
+            bg: "bg-indigo-400/10",
         },
         {
             title: "تکمیل شده",
             value: completed,
             icon: CheckCircle2,
-            tone: "text-emerald-300",
+            tone: "text-emerald-400",
             bg: "bg-emerald-400/10",
         },
         {
             title: "موجودی بحرانی",
             value: criticalStock,
             icon: AlertTriangle,
-            tone: "text-red-300",
+            tone: "text-red-400",
             bg: "bg-red-400/10",
         },
     ];
@@ -73,15 +71,17 @@ export default function WarehouseEmployeeStats({
                         initial={{ opacity: 0, y: 12 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: index * 0.04 }}
-                        className="rounded-2xl border border-white/[0.07] bg-[#101114] p-4"
+                        className="rounded-2xl border p-4"
+                        style={{
+                            borderColor: isDark ? "rgba(255,255,255,0.07)" : "rgba(15,23,42,0.07)",
+                            background: isDark ? "#101114" : "#f8fafc",
+                        }}
                     >
-                        <div
-                            className={`mb-4 flex h-10 w-10 items-center justify-center rounded-xl ${item.bg}`}
-                        >
+                        <div className={`mb-4 flex h-10 w-10 items-center justify-center rounded-xl ${item.bg}`}>
                             <Icon className={`h-5 w-5 ${item.tone}`} />
                         </div>
 
-                        <p className="text-xs text-white/40">
+                        <p className="text-xs" style={{ color: isDark ? "rgba(255,255,255,0.4)" : "#94a3b8" }}>
                             {item.title}
                         </p>
 
