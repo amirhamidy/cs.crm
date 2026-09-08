@@ -74,7 +74,7 @@ function StatCard({
                 <Icon size={18} style={{ color }} />
             </div>
             <div className="min-w-0">
-                <p className="text-[11px] font-semibold text-gray-400 dark:text-white/40">{label}</p>
+                <p className="text-[12px] font-semibold text-gray-400 dark:text-white/45">{label}</p>
                 <p className="mt-0.5 text-[16px] font-extrabold text-gray-900 dark:text-white">{value}</p>
             </div>
         </motion.div>
@@ -164,7 +164,7 @@ export default function WarehouseOverview({
                     </div>
 
                     {criticalProducts.length === 0 ? (
-                        <p className="py-6 text-center text-[11.5px] text-gray-400">
+                        <p className="py-6 text-center text-[12.5px] font-medium text-gray-400">
                             همه محصولات موجودی مناسبی دارند
                         </p>
                     ) : (
@@ -176,10 +176,10 @@ export default function WarehouseOverview({
                                         key={product.id}
                                         className="flex items-center justify-between rounded-2xl bg-red-50 px-3 py-2.5 dark:bg-red-500/10"
                                     >
-                                        <span className="text-[12px] font-bold text-gray-800 dark:text-white">
+                                        <span className="text-[12.5px] font-bold text-gray-800 dark:text-white">
                                             {product.name}
                                         </span>
-                                        <span className="text-[11px] font-extrabold text-red-500">
+                                        <span className="text-[12px] font-extrabold text-red-500">
                                             {s?.current_quantity} از حداقل {s?.minimum_stock}
                                         </span>
                                     </div>
@@ -204,7 +204,7 @@ export default function WarehouseOverview({
                     </div>
 
                     {recentTransactions.length === 0 ? (
-                        <p className="py-6 text-center text-[11.5px] text-gray-400">
+                        <p className="py-6 text-center text-[12.5px] font-medium text-gray-400">
                             هنوز تراکنشی ثبت نشده است
                         </p>
                     ) : (
@@ -223,16 +223,16 @@ export default function WarehouseOverview({
                                                 className={isIn ? "text-emerald-500" : "text-red-500"}
                                             />
                                             <div className="min-w-0">
-                                                <p className="truncate text-[11.5px] font-bold text-gray-800 dark:text-white">
+                                                <p className="truncate text-[12.5px] font-bold text-gray-800 dark:text-white">
                                                     {tx.product_name}
                                                 </p>
-                                                <p className="text-[10px] text-gray-400">
+                                                <p className="text-[12px] font-medium text-gray-400">
                                                     {tx.transaction_type_display} · {formatJalaliShort(tx.created_at)}
                                                 </p>
                                             </div>
                                         </div>
                                         <span
-                                            className={`text-[11px] font-extrabold ${isIn ? "text-emerald-500" : "text-red-500"
+                                            className={`text-[12px] font-extrabold ${isIn ? "text-emerald-500" : "text-red-500"
                                                 }`}
                                         >
                                             {isIn ? "+" : "-"}

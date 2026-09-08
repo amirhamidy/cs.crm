@@ -4,20 +4,17 @@ import {
   ClipboardList,
   Building2,
   FolderKanban,
-  ChartColumn,
   CalendarCheck2,
   Ticket,
   Archive,
   MessageSquareText,
   UserRound,
   ListTodo,
-  BriefcaseBusiness,
   BarChart3,
   Boxes,
   ShoppingCart,
   ShieldCheck,
 } from "lucide-react";
-
 import { LucideIcon } from "lucide-react";
 
 export interface MenuItem {
@@ -104,6 +101,11 @@ export const userMenuItems: MenuItem[] = [
     icon: ListTodo,
     label: "وظایف",
     href: "/user/processes",
+  },
+  {
+    icon: Boxes,
+    label: "انبارداری",
+    href: "/user/warehouse",
   },
   {
     icon: Archive,

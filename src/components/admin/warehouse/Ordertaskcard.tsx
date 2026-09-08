@@ -52,79 +52,131 @@ function statusMeta(status: string) {
 export default function OrderTaskCard({ orderTask, deadline, index }: OrderTaskCardProps) {
     const { resolvedTheme } = useTheme();
     const isDark = resolvedTheme === "dark";
+
     const meta = statusMeta(orderTask.status);
     const dState = deadlineState(deadline?.deadline ?? orderTask.deadline);
+
+    const cardBg = isDark ? "rgba(255,255,255,0.03)" : "#fafafa";
+    const borderColor = isDark ? "rgba(255,255,255,0.06)" : "rgba(15,23,42,0.06)";
+    const textColor = isDark ? "#f1f5f9" : "#1e293b";
+    const mutedText = isDark ? "#94a3b8" : "#64748b";
 
     return (
         <motion.div
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.2, delay: index * 0.04 }}
-            className="flex flex-col gap-3 rounded-3xl p-4"
+            className="relative flex flex-col gap-3 rounded-3xl p-4 transition-all hover:border-indigo-200/50"
             style={{
-                background: isDark ? "rgba(255,255,255,0.03)" : "#fafafa",
-                border: isDark ? "1px solid rgba(255,255,255,0.06)" : "1px solid rgba(15,23,42,0.06)",
+                background: cardBg,
+                border: `1px solid ${borderColor}`,
             }}
         >
+            {/* Animated border - ایندیگو/بنفش */}
+            <svg className="pointer-events-none absolute inset-0 h-full w-full">
+                <defs>
+                    <linearGradient
+                        id={`order-border-${orderTask.id}`}
+                        x1="100%"
+                        y1="100%"
+                        x2="0%"
+                        y2="0%"
+                    >
+                        <stop offset="0%" stopColor="#6366f1" />
+                        <stop offset="100%" stopColor="#8b5cf6" />
+                    </linearGradient>
+                </defs>
+                <motion.rect
+                    x="1"
+                    y="1"
+                    width="calc(100% - 2px)"
+                    height="calc(100% - 2px)"
+                    rx="23"
+                    ry="23"
+                    fill="none"
+                    stroke="url(#order-border-${orderTask.id})"
+                    strokeWidth="1.4"
+                    initial={{ pathLength: 0, opacity: 0 }}
+                    whileHover={{ pathLength: 1, opacity: 1 }}
+                    transition={{ duration: 0.45, ease: "easeInOut" }}
+                />
+            </svg>
+
             <div className="flex flex-wrap items-center gap-1.5">
                 <span
-                    className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-extrabold"
+                    className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[12px] font-extrabold"
                     style={{ background: meta.bg, color: meta.color }}
                 >
                     {meta.label}
                 </span>
                 <span
-                    className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-extrabold"
+                    className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[12px] font-extrabold"
                     style={{ background: dState.bg, color: dState.color }}
                 >
-                    <AlarmClock size={10} />
+                    <AlarmClock size={11} />
                     {dState.label}
                 </span>
             </div>
 
-            <h3 className="line-clamp-2 text-[13.5px] font-extrabold text-gray-900 dark:text-white">
+            <h3
+                className="line-clamp-2 text-[13.5px] font-extrabold"
+                style={{ color: textColor }}
+            >
                 {orderTask.title}
             </h3>
 
             {orderTask.case && (
-                <p className="text-[11px] text-gray-400 dark:text-gray-500">
+                <p className="text-[12px] font-medium" style={{ color: mutedText }}>
                     پرونده: {orderTask.case.title}
                 </p>
             )}
 
-            <div className="flex flex-col gap-1.5 rounded-2xl bg-gray-50 px-3 py-2.5 dark:bg-white/[0.035]">
+            <div
+                className="flex flex-col gap-1.5 rounded-2xl px-3 py-2.5"
+                style={{
+                    background: isDark ? "rgba(255,255,255,0.04)" : "rgba(15,23,42,0.04)",
+                }}
+            >
                 {orderTask.department && (
-                    <div className="flex items-center gap-1.5 text-[11px]">
-                        <Building2 size={11} className="text-gray-400" />
-                        <span className="font-semibold text-gray-400 dark:text-white/35">دپارتمان:</span>
-                        <span className="font-bold text-gray-700 dark:text-white/80">
+                    <div className="flex items-center gap-1.5 text-[12px]">
+                        <Building2 size={12} style={{ color: mutedText }} />
+                        <span className="font-semibold" style={{ color: mutedText }}>
+                            دپارتمان:
+                        </span>
+                        <span className="font-bold" style={{ color: textColor }}>
                             {orderTask.department.name}
                         </span>
                     </div>
                 )}
                 {orderTask.created_by && (
-                    <div className="flex items-center gap-1.5 text-[11px]">
-                        <User size={11} className="text-gray-400" />
-                        <span className="font-semibold text-gray-400 dark:text-white/35">درخواست‌دهنده:</span>
-                        <span className="font-bold text-gray-700 dark:text-white/80">
+                    <div className="flex items-center gap-1.5 text-[12px]">
+                        <User size={12} style={{ color: mutedText }} />
+                        <span className="font-semibold" style={{ color: mutedText }}>
+                            درخواست‌دهنده:
+                        </span>
+                        <span className="font-bold" style={{ color: textColor }}>
                             {orderTask.created_by.username}
                         </span>
                     </div>
                 )}
                 {orderTask.performed_by && (
-                    <div className="flex items-center gap-1.5 text-[11px]">
-                        <UserCog size={11} className="text-gray-400" />
-                        <span className="font-semibold text-gray-400 dark:text-white/35">انبار‌دار:</span>
-                        <span className="font-bold text-gray-700 dark:text-white/80">
+                    <div className="flex items-center gap-1.5 text-[12px]">
+                        <UserCog size={12} style={{ color: mutedText }} />
+                        <span className="font-semibold" style={{ color: mutedText }}>
+                            انبار‌دار:
+                        </span>
+                        <span className="font-bold" style={{ color: textColor }}>
                             {orderTask.performed_by.full_name}
                         </span>
                     </div>
                 )}
                 {deadline?.deadline && (
-                    <div className="flex items-center gap-1.5 text-[11px]">
-                        <CalendarDays size={11} className="text-gray-400" />
-                        <span className="font-semibold text-gray-400 dark:text-white/35">مهلت:</span>
-                        <span className="font-bold text-gray-700 dark:text-white/80">
+                    <div className="flex items-center gap-1.5 text-[12px]">
+                        <CalendarDays size={12} style={{ color: mutedText }} />
+                        <span className="font-semibold" style={{ color: mutedText }}>
+                            مهلت:
+                        </span>
+                        <span className="font-bold" style={{ color: textColor }}>
                             {formatJalali(deadline.deadline)}
                         </span>
                     </div>
@@ -132,7 +184,13 @@ export default function OrderTaskCard({ orderTask, deadline, index }: OrderTaskC
             </div>
 
             {orderTask.note && (
-                <p className="rounded-2xl bg-gray-50 px-3 py-2 text-[11px] font-medium text-gray-600 dark:bg-white/[0.03] dark:text-gray-300">
+                <p
+                    className="rounded-2xl px-3 py-2 text-[12px] font-medium"
+                    style={{
+                        background: isDark ? "rgba(255,255,255,0.04)" : "rgba(15,23,42,0.04)",
+                        color: mutedText,
+                    }}
+                >
                     {orderTask.note}
                 </p>
             )}
@@ -142,9 +200,12 @@ export default function OrderTaskCard({ orderTask, deadline, index }: OrderTaskC
                     href={orderTask.file}
                     target="_blank"
                     rel="noreferrer"
-                    className="flex items-center justify-center gap-1.5 rounded-2xl bg-indigo-50 py-2 text-[11px] font-bold text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-300"
+                    className="flex items-center justify-center gap-1.5 rounded-2xl py-2 text-[12.5px] font-bold text-white transition-colors hover:bg-indigo-500"
+                    style={{
+                        background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
+                    }}
                 >
-                    <FileText size={12} />
+                    <FileText size={13} />
                     مشاهده پیوست
                 </a>
             )}

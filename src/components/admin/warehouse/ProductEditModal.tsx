@@ -113,11 +113,11 @@ export default function ProductEditModal({
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: 16 }}
                         transition={{ duration: 0.35, ease: "easeOut" }}
-                        className="w-full max-w-sm rounded-[2rem] border border-gray-100 bg-white p-8 shadow-sm dark:border-white/[0.06] dark:bg-[#0f172a]"
+                        className="w-full max-w-sm overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-sm dark:border-white/[0.06] dark:bg-[#0f172a]"
                         onClick={(e) => e.stopPropagation()}
                         dir="rtl"
                     >
-                        <div className="mb-6 flex items-center justify-between">
+                        <div className="flex items-center justify-between px-8 pb-6 pt-8">
                             <div className="flex items-center gap-2.5">
                                 <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-50 dark:bg-blue-500/10">
                                     <Pencil size={15} className="text-blue-500" />
@@ -126,7 +126,7 @@ export default function ProductEditModal({
                                     <h3 className="text-[14px] font-extrabold text-gray-900 dark:text-white">
                                         ویرایش محصول
                                     </h3>
-                                    <p className="mt-0.5 text-[11px] text-gray-400">
+                                    <p className="mt-0.5 text-[12px] text-gray-400">
                                         بروزرسانی اطلاعات محصول
                                     </p>
                                 </div>
@@ -141,7 +141,7 @@ export default function ProductEditModal({
                             </button>
                         </div>
 
-                        <form onSubmit={handleSubmit} autoComplete="off" className="flex flex-col gap-5">
+                        <form onSubmit={handleSubmit} autoComplete="off" className="flex flex-col gap-4 px-8 pb-8">
                             <FloatingInput
                                 label="نام محصول"
                                 id="edit_product_name"
@@ -193,7 +193,7 @@ export default function ProductEditModal({
                             />
 
                             {error && (
-                                <p className="text-center text-[11.5px] font-semibold text-red-500 -mt-2">
+                                <p className="-mt-1 text-center text-[12px] font-semibold text-red-500">
                                     {error}
                                 </p>
                             )}
@@ -202,7 +202,7 @@ export default function ProductEditModal({
                                 type="submit"
                                 disabled={loading}
                                 whileTap={{ scale: 0.97 }}
-                                className="flex items-center justify-center rounded-full bg-blue-600 py-3 text-sm font-bold text-white transition-colors hover:bg-blue-500 disabled:opacity-50"
+                                className="flex items-center justify-center rounded-full bg-blue-600 py-3 text-[13px] font-bold text-white transition-colors hover:bg-blue-500 disabled:opacity-50"
                             >
                                 {loading ? <Loader size={18} className="animate-spin" /> : "ذخیره تغییرات"}
                             </motion.button>

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { CheckCircle2, Loader, Package, X } from "lucide-react";
+import { useTheme } from "next-themes";
 import axiosInstance from "@/lib/axiosInstance";
 import type { AxiosError } from "axios";
 import {
@@ -27,6 +28,8 @@ interface ProductWizardModalProps {
 
 type Step = "basic" | "unit" | "stock" | "done";
 
+const STEP_ORDER: Step[] = ["basic", "unit", "stock", "done"];
+
 function getErrorMessage(err: unknown, fallback: string) {
     const error = err as AxiosError<Record<string, unknown>>;
     const data = error.response?.data;
@@ -47,6 +50,9 @@ export default function ProductWizardModal({
     staff,
     onCreated,
 }: ProductWizardModalProps) {
+    const { resolvedTheme } = useTheme();
+    const isDark = resolvedTheme === "dark";
+
     const [step, setStep] = useState<Step>("basic");
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
@@ -179,6 +185,13 @@ export default function ProductWizardModal({
         onClose();
     }
 
+    const stepIndex = STEP_ORDER.indexOf(step);
+
+    const cardBg = isDark ? "#0f172a" : "#ffffff";
+    const borderColor = isDark ? "rgba(255,255,255,0.06)" : "rgba(15,23,42,0.06)";
+    const textColor = isDark ? "#f1f5f9" : "#1e293b";
+    const mutedText = isDark ? "#94a3b8" : "#64748b";
+
     return (
         <AnimatePresence>
             {isOpen && (
@@ -187,7 +200,10 @@ export default function ProductWizardModal({
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                     className="fixed inset-0 z-50 flex items-center justify-center px-4"
-                    style={{ background: "rgba(0,0,0,0.45)", backdropFilter: "blur(3px)" }}
+                    style={{
+                        background: "rgba(15,23,42,0.5)",
+                        backdropFilter: "blur(4px)",
+                    }}
                     onClick={handleClose}
                 >
                     <motion.div
@@ -195,20 +211,32 @@ export default function ProductWizardModal({
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: 16 }}
                         transition={{ duration: 0.35, ease: "easeOut" }}
-                        className="w-full max-w-sm rounded-[2rem] border border-gray-100 bg-white p-8 shadow-sm dark:border-white/[0.06] dark:bg-[#0f172a]"
+                        className="w-full max-w-sm overflow-hidden rounded-[2rem] p-0"
+                        style={{
+                            background: cardBg,
+                            border: `1px solid ${borderColor}`,
+                        }}
                         onClick={(e) => e.stopPropagation()}
                         dir="rtl"
                     >
-                        <div className="mb-6 flex items-center justify-between">
+                        <div className="flex items-center justify-between px-8 pb-4 pt-8">
                             <div className="flex items-center gap-2.5">
-                                <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-50 dark:bg-blue-500/10">
-                                    <Package size={15} className="text-blue-500" />
+                                <div
+                                    className="flex h-8 w-8 items-center justify-center rounded-xl"
+                                    style={{
+                                        background: isDark ? "rgba(99,102,241,0.12)" : "rgba(99,102,241,0.08)",
+                                    }}
+                                >
+                                    <Package size={15} className="text-indigo-500" />
                                 </div>
                                 <div>
-                                    <h3 className="text-[14px] font-extrabold text-gray-900 dark:text-white">
+                                    <h3
+                                        className="text-[14px] font-extrabold"
+                                        style={{ color: textColor }}
+                                    >
                                         محصول جدید
                                     </h3>
-                                    <p className="mt-0.5 text-[11px] text-gray-400">
+                                    <p className="mt-0.5 text-[12px]" style={{ color: mutedText }}>
                                         {step === "basic" && "اطلاعات پایه محصول"}
                                         {step === "unit" && "واحد شمارش محصول"}
                                         {step === "stock" && "موجودی اولیه انبار"}
@@ -220,29 +248,47 @@ export default function ProductWizardModal({
                                 type="button"
                                 onClick={handleClose}
                                 disabled={loading}
-                                className="flex h-8 w-8 items-center justify-center rounded-xl bg-gray-100 text-gray-400 transition-colors hover:text-gray-600 disabled:opacity-40 dark:bg-white/[0.05] dark:hover:text-gray-300"
+                                className="flex h-8 w-8 items-center justify-center rounded-xl transition-colors disabled:opacity-40"
+                                style={{
+                                    background: isDark ? "rgba(255,255,255,0.05)" : "rgba(15,23,42,0.05)",
+                                    color: mutedText,
+                                }}
                             >
                                 <X size={15} />
                             </button>
                         </div>
 
-                        <div className="mb-6 flex items-center gap-1.5">
-                            {(["basic", "unit", "stock"] as Step[]).map((s) => (
+                        {/* Progress Bar - ایندیگو/بنفش */}
+                        <div className="flex items-center gap-1.5 px-8 pb-6">
+                            {(["basic", "unit", "stock"] as Step[]).map((s, i) => (
                                 <div
                                     key={s}
-                                    className={`h-1 flex-1 rounded-full transition-colors ${step === s || (step === "done" && s !== "basic") ||
-                                            (step === "unit" && s === "basic") ||
-                                            (step === "stock" && (s === "basic" || s === "unit")) ||
-                                            (step === "done")
-                                            ? "bg-blue-500"
-                                            : "bg-gray-100 dark:bg-white/[0.08]"
-                                        }`}
-                                />
+                                    className="h-1 flex-1 rounded-full transition-colors duration-300"
+                                    style={{
+                                        background:
+                                            stepIndex >= i
+                                                ? "linear-gradient(90deg, #6366f1, #8b5cf6)"
+                                                : isDark
+                                                    ? "rgba(255,255,255,0.08)"
+                                                    : "rgba(15,23,42,0.08)",
+                                    }}
+                                >
+                                    <div
+                                        className="h-1 w-full rounded-full"
+                                        style={{
+                                            background:
+                                                stepIndex >= i
+                                                    ? "linear-gradient(90deg, #6366f1, #8b5cf6)"
+                                                    : "transparent",
+                                        }}
+                                    />
+                                </div>
                             ))}
                         </div>
 
+                        {/* Step: Basic */}
                         {step === "basic" && (
-                            <form onSubmit={handleBasicSubmit} autoComplete="off" className="flex flex-col gap-5">
+                            <form onSubmit={handleBasicSubmit} autoComplete="off" className="flex flex-col gap-4 px-8 pb-8">
                                 <FloatingInput
                                     label="نام محصول"
                                     id="wizard_name"
@@ -299,7 +345,7 @@ export default function ProductWizardModal({
                                 </FloatingSelect>
 
                                 {error && (
-                                    <p className="text-center text-[11.5px] font-semibold text-red-500 -mt-2">
+                                    <p className="-mt-1 text-center text-[12px] font-semibold text-red-500">
                                         {error}
                                     </p>
                                 )}
@@ -308,15 +354,19 @@ export default function ProductWizardModal({
                                     type="submit"
                                     disabled={loading}
                                     whileTap={{ scale: 0.97 }}
-                                    className="flex items-center justify-center rounded-full bg-blue-600 py-3 text-sm font-bold text-white transition-colors hover:bg-blue-500 disabled:opacity-50"
+                                    className="flex items-center justify-center rounded-full py-3 text-[13px] font-bold text-white transition-colors hover:bg-indigo-500 disabled:opacity-50"
+                                    style={{
+                                        background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
+                                    }}
                                 >
                                     {loading ? <Loader size={18} className="animate-spin" /> : "مرحله بعد"}
                                 </motion.button>
                             </form>
                         )}
 
+                        {/* Step: Unit */}
                         {step === "unit" && (
-                            <form onSubmit={handleUnitSubmit} autoComplete="off" className="flex flex-col gap-5">
+                            <form onSubmit={handleUnitSubmit} autoComplete="off" className="flex flex-col gap-4 px-8 pb-8">
                                 <FloatingInput
                                     label="تعداد در هر بسته"
                                     id="wizard_quantity_per_unit"
@@ -330,7 +380,7 @@ export default function ProductWizardModal({
                                 />
 
                                 {error && (
-                                    <p className="text-center text-[11.5px] font-semibold text-red-500 -mt-2">
+                                    <p className="-mt-1 text-center text-[12px] font-semibold text-red-500">
                                         {error}
                                     </p>
                                 )}
@@ -339,15 +389,19 @@ export default function ProductWizardModal({
                                     type="submit"
                                     disabled={loading}
                                     whileTap={{ scale: 0.97 }}
-                                    className="flex items-center justify-center rounded-full bg-blue-600 py-3 text-sm font-bold text-white transition-colors hover:bg-blue-500 disabled:opacity-50"
+                                    className="flex items-center justify-center rounded-full py-3 text-[13px] font-bold text-white transition-colors hover:bg-indigo-500 disabled:opacity-50"
+                                    style={{
+                                        background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
+                                    }}
                                 >
                                     {loading ? <Loader size={18} className="animate-spin" /> : "ثبت محصول"}
                                 </motion.button>
                             </form>
                         )}
 
+                        {/* Step: Stock */}
                         {step === "stock" && (
-                            <form onSubmit={handleStockSubmit} autoComplete="off" className="flex flex-col gap-5">
+                            <form onSubmit={handleStockSubmit} autoComplete="off" className="flex flex-col gap-4 px-8 pb-8">
                                 <FloatingSelect
                                     label="ثبت‌کننده"
                                     id="wizard_performed_by"
@@ -406,7 +460,7 @@ export default function ProductWizardModal({
                                 </div>
 
                                 {error && (
-                                    <p className="text-center text-[11.5px] font-semibold text-red-500 -mt-2">
+                                    <p className="-mt-1 text-center text-[12px] font-semibold text-red-500">
                                         {error}
                                     </p>
                                 )}
@@ -415,26 +469,38 @@ export default function ProductWizardModal({
                                     type="submit"
                                     disabled={loading}
                                     whileTap={{ scale: 0.97 }}
-                                    className="flex items-center justify-center rounded-full bg-blue-600 py-3 text-sm font-bold text-white transition-colors hover:bg-blue-500 disabled:opacity-50"
+                                    className="flex items-center justify-center rounded-full py-3 text-[13px] font-bold text-white transition-colors hover:bg-indigo-500 disabled:opacity-50"
+                                    style={{
+                                        background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
+                                    }}
                                 >
                                     {loading ? <Loader size={18} className="animate-spin" /> : "ثبت موجودی اولیه"}
                                 </motion.button>
                             </form>
                         )}
 
+                        {/* Step: Done */}
                         {step === "done" && (
-                            <div className="flex flex-col items-center gap-5 py-4">
-                                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-emerald-50 dark:bg-emerald-500/10">
+                            <div className="flex flex-col items-center gap-5 px-8 pb-8 pt-2">
+                                <div
+                                    className="flex h-14 w-14 items-center justify-center rounded-full"
+                                    style={{
+                                        background: isDark ? "rgba(16,185,129,0.12)" : "rgba(16,185,129,0.08)",
+                                    }}
+                                >
                                     <CheckCircle2 size={26} className="text-emerald-500" />
                                 </div>
-                                <p className="text-center text-[12.5px] font-semibold text-gray-600 dark:text-gray-300">
+                                <p
+                                    className="text-center text-[13px] font-semibold"
+                                    style={{ color: mutedText }}
+                                >
                                     محصول «{name}» با موفقیت به انبار اضافه شد
                                 </p>
                                 <motion.button
                                     type="button"
                                     onClick={handleFinish}
                                     whileTap={{ scale: 0.97 }}
-                                    className="flex w-full items-center justify-center rounded-full bg-emerald-600 py-3 text-sm font-bold text-white transition-colors hover:bg-emerald-500"
+                                    className="flex w-full items-center justify-center rounded-full bg-emerald-600 py-3 text-[13px] font-bold text-white transition-colors hover:bg-emerald-500"
                                 >
                                     بستن
                                 </motion.button>

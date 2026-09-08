@@ -102,17 +102,47 @@ export default function ProductCard({
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.96 }}
                 transition={{ duration: 0.2, delay: index * 0.04 }}
-                className="relative flex min-h-[178px] flex-col justify-between rounded-3xl p-4"
+                className="relative flex min-h-[188px] flex-col justify-between rounded-3xl p-4"
                 style={{
                     background: isDark ? "rgba(255,255,255,0.03)" : "#fafafa",
                     border: isDark ? "1px solid rgba(255,255,255,0.06)" : "1px solid rgba(15,23,42,0.06)",
                     boxShadow: isDark ? "0 8px 30px rgba(0,0,0,0.22)" : "0 8px 24px rgba(15,23,42,0.05)",
                 }}
             >
+                {/* Animated border - ایندیگو/بنفش */}
+                <svg className="pointer-events-none absolute inset-0 h-full w-full">
+                    <defs>
+                        <linearGradient
+                            id={`card-border-${product.id}`}
+                            x1="100%"
+                            y1="100%"
+                            x2="0%"
+                            y2="0%"
+                        >
+                            <stop offset="0%" stopColor="#6366f1" />
+                            <stop offset="100%" stopColor="#8b5cf6" />
+                        </linearGradient>
+                    </defs>
+                    <motion.rect
+                        x="1"
+                        y="1"
+                        width="calc(100% - 2px)"
+                        height="calc(100% - 2px)"
+                        rx="23"
+                        ry="23"
+                        fill="none"
+                        stroke="url(#card-border-${product.id})"
+                        strokeWidth="1.4"
+                        initial={{ pathLength: 0, opacity: 0 }}
+                        whileHover={{ pathLength: 1, opacity: 1 }}
+                        transition={{ duration: 0.45, ease: "easeInOut" }}
+                    />
+                </svg>
+
                 <div className="absolute left-3 top-3 z-10 flex items-center gap-1.5">
                     {stockInfo && (
                         <span
-                            className="rounded-xl px-2 py-1 text-[10px] font-extrabold"
+                            className="rounded-xl px-2 py-1 text-[12px] font-extrabold"
                             style={{
                                 background: isCritical ? "rgba(239,68,68,0.1)" : "rgba(16,185,129,0.1)",
                                 color: isCritical ? "#ef4444" : "#10b981",
@@ -126,41 +156,41 @@ export default function ProductCard({
                         <button
                             type="button"
                             onClick={() => setShowStock(true)}
-                            className="flex h-7 w-7 items-center justify-center rounded-xl transition-colors"
+                            className="flex h-8 w-8 items-center justify-center rounded-xl transition-transform active:scale-90"
                             style={{
                                 background: isDark ? "rgba(16,185,129,0.12)" : "rgba(16,185,129,0.08)",
                                 color: "#10b981",
                             }}
                             title="ثبت تراکنش انبار"
                         >
-                            <ArrowDownUp size={11} />
+                            <ArrowDownUp size={13} />
                         </button>
                     ) : (
                         <button
                             type="button"
                             onClick={() => setShowInitialStock(true)}
-                            className="flex h-7 w-7 items-center justify-center rounded-xl transition-colors"
+                            className="flex h-8 w-8 items-center justify-center rounded-xl transition-transform active:scale-90"
                             style={{
                                 background: isDark ? "rgba(59,130,246,0.12)" : "rgba(59,130,246,0.08)",
                                 color: "#3b82f6",
                             }}
                             title="ثبت موجودی اولیه"
                         >
-                            <Boxes size={11} />
+                            <Boxes size={13} />
                         </button>
                     )}
 
                     <button
                         type="button"
                         onClick={() => setShowEdit(true)}
-                        className="flex h-7 w-7 items-center justify-center rounded-xl transition-colors"
+                        className="flex h-8 w-8 items-center justify-center rounded-xl transition-transform active:scale-90"
                         style={{
                             background: isDark ? "rgba(99,102,241,0.12)" : "rgba(99,102,241,0.08)",
                             color: isDark ? "#a5b4fc" : "#6366f1",
                         }}
                         title="ویرایش"
                     >
-                        <Pencil size={11} />
+                        <Pencil size={13} />
                     </button>
 
                     <div className="relative">
@@ -173,25 +203,19 @@ export default function ProductCard({
                             }}
                             onMouseEnter={() => !isWarehouseStaff && setTooltipVisible(true)}
                             onMouseLeave={() => setTooltipVisible(false)}
-                            className="flex h-7 w-7 items-center justify-center rounded-xl transition-colors"
+                            className="flex h-8 w-8 items-center justify-center rounded-xl transition-transform active:scale-90"
                             style={{
                                 background: !isWarehouseStaff
-                                    ? isDark
-                                        ? "rgba(255,255,255,0.04)"
-                                        : "rgba(0,0,0,0.04)"
-                                    : isDark
-                                        ? "rgba(239,68,68,0.12)"
-                                        : "rgba(239,68,68,0.08)",
+                                    ? isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.04)"
+                                    : isDark ? "rgba(239,68,68,0.12)" : "rgba(239,68,68,0.08)",
                                 color: !isWarehouseStaff
-                                    ? isDark
-                                        ? "#4b5563"
-                                        : "#9ca3af"
+                                    ? isDark ? "#4b5563" : "#9ca3af"
                                     : "#ef4444",
                                 cursor: !isWarehouseStaff ? "not-allowed" : "pointer",
                             }}
                             title={isWarehouseStaff ? "حذف" : undefined}
                         >
-                            <Trash2 size={11} />
+                            <Trash2 size={13} />
                         </button>
 
                         <AnimatePresence>
@@ -213,10 +237,10 @@ export default function ProductCard({
                                                 : "1px solid rgba(0,0,0,0.12)",
                                         }}
                                     >
-                                        <span className="text-[11px] font-bold text-white">
+                                        <span className="text-[12px] font-bold text-white">
                                             عدم دسترسی به حذف
                                         </span>
-                                        <span className="text-[10px] text-slate-400">
+                                        <span className="text-[12px] text-slate-400">
                                             شما جزو پرسنل مجاز انبار نیستید
                                         </span>
                                     </div>
@@ -226,7 +250,7 @@ export default function ProductCard({
                     </div>
                 </div>
 
-                <div className="mt-5 flex items-center gap-3">
+                <div className="mt-6 flex items-center gap-3">
                     <div
                         className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-[15px] font-extrabold text-white"
                         style={{ background: `linear-gradient(135deg, ${start}, ${end})` }}
@@ -237,30 +261,30 @@ export default function ProductCard({
                         <h3 className="truncate text-[13px] font-extrabold text-gray-900 dark:text-white">
                             {product.name}
                         </h3>
-                        <div className="mt-0.5 flex items-center gap-1.5 text-[11px] text-gray-400 dark:text-gray-500">
-                            <Tag size={10} />
+                        <div className="mt-0.5 flex items-center gap-1.5 text-[12px] font-semibold text-gray-400 dark:text-gray-500">
+                            <Tag size={11} />
                             {product.category_detail?.name ?? "بدون دسته‌بندی"}
                         </div>
                     </div>
                 </div>
 
                 <div className="mt-3 flex flex-col gap-1.5 rounded-2xl bg-gray-50 px-3 py-2.5 dark:bg-white/[0.035]">
-                    <div className="flex items-center justify-between text-[11px]">
-                        <span className="font-semibold text-gray-400 dark:text-white/35">قیمت فروش</span>
-                        <span className="font-extrabold text-gray-700 dark:text-white/80">
+                    <div className="flex items-center justify-between text-[12px]">
+                        <span className="font-semibold text-gray-400 dark:text-white/40">قیمت فروش</span>
+                        <span className="font-extrabold text-gray-700 dark:text-white/85">
                             {Number(product.sale_price).toLocaleString("fa-IR")} تومان
                         </span>
                     </div>
-                    <div className="flex items-center justify-between text-[11px]">
-                        <span className="font-semibold text-gray-400 dark:text-white/35">واحد شمارش</span>
-                        <span className="font-extrabold text-gray-700 dark:text-white/80">
+                    <div className="flex items-center justify-between text-[12px]">
+                        <span className="font-semibold text-gray-400 dark:text-white/40">واحد شمارش</span>
+                        <span className="font-extrabold text-gray-700 dark:text-white/85">
                             {stockInfo?.unit_label ?? UNIT_TYPE_LABELS[product.unit_type]}
                             {unitDetail ? ` · ${unitDetail.quantity_per_unit} در هر بسته` : ""}
                         </span>
                     </div>
                     {stockInfo ? (
-                        <div className="flex items-center justify-between text-[11px]">
-                            <span className="font-semibold text-gray-400 dark:text-white/35">موجودی فعلی</span>
+                        <div className="flex items-center justify-between text-[12px]">
+                            <span className="font-semibold text-gray-400 dark:text-white/40">موجودی فعلی</span>
                             <span
                                 className="font-extrabold"
                                 style={{ color: isCritical ? "#ef4444" : undefined }}
@@ -269,14 +293,14 @@ export default function ProductCard({
                             </span>
                         </div>
                     ) : (
-                        <p className="text-center text-[10.5px] font-semibold text-amber-500">
+                        <p className="text-center text-[12px] font-semibold text-amber-500">
                             موجودی اولیه ثبت نشده است
                         </p>
                     )}
                 </div>
 
                 {deleteError && (
-                    <p className="mt-1.5 text-center text-[10.5px] font-semibold text-red-500">
+                    <p className="mt-1.5 text-center text-[12px] font-semibold text-red-500">
                         {deleteError}
                     </p>
                 )}
@@ -336,9 +360,14 @@ export default function ProductCard({
                             dir="rtl"
                         >
                             <div className="mb-4 flex items-center justify-between">
-                                <h3 className="text-[13.5px] font-extrabold text-gray-900 dark:text-white">
-                                    حذف محصول
-                                </h3>
+                                <div className="flex items-center gap-2.5">
+                                    <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-red-50 dark:bg-red-500/10">
+                                        <Trash2 size={15} className="text-red-500" />
+                                    </div>
+                                    <h3 className="text-[13.5px] font-extrabold text-gray-900 dark:text-white">
+                                        حذف محصول
+                                    </h3>
+                                </div>
                                 <button
                                     type="button"
                                     onClick={() => setShowConfirm(false)}

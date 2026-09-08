@@ -1,8 +1,20 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { motion } from "framer-motion";
-import { Boxes, LayoutGrid, Loader2, PackageSearch, Plus, Send, Tags, UserCog } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+    Boxes,
+    LayoutGrid,
+    Loader2,
+    PackageSearch,
+    Plus,
+    Send,
+    Tags,
+    UserCog,
+    ChevronLeft,
+    ChevronRight,
+} from "lucide-react";
+import { useTheme } from "next-themes";
 import axiosInstance from "@/lib/axiosInstance";
 import {
     ApiCategory,
@@ -35,6 +47,8 @@ const TABS: { id: Tab; label: string; icon: typeof Boxes }[] = [
     { id: "orders", label: "درخواست‌های داخلی", icon: Send },
 ];
 
+const ITEMS_PER_PAGE = 8;
+
 function extractList<T>(data: unknown): T[] {
     if (Array.isArray(data)) return data as T[];
     if (data && typeof data === "object") {
@@ -45,8 +59,86 @@ function extractList<T>(data: unknown): T[] {
     return [];
 }
 
+function Pagination({
+    currentPage,
+    totalPages,
+    onPageChange,
+    isDark,
+}: {
+    currentPage: number;
+    totalPages: number;
+    onPageChange: (page: number) => void;
+    isDark: boolean;
+}) {
+    if (totalPages <= 1) return null;
+
+    const pages = Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+        if (totalPages <= 5) return i + 1;
+        if (currentPage <= 3) return i + 1;
+        if (currentPage >= totalPages - 2) return totalPages - 4 + i;
+        return currentPage - 2 + i;
+    });
+
+    return (
+        <div className="flex items-center justify-center gap-1.5 mt-4">
+            <button
+                type="button"
+                onClick={() => onPageChange(currentPage - 1)}
+                disabled={currentPage === 1}
+                className="flex h-9 w-9 items-center justify-center rounded-xl transition-colors disabled:opacity-40"
+                style={{
+                    background: isDark ? "rgba(255,255,255,0.04)" : "rgba(15,23,42,0.04)",
+                    color: isDark ? "#94a3b8" : "#475569",
+                }}
+            >
+                <ChevronRight size={15} />
+            </button>
+
+            {pages.map((page) => {
+                const isActive = page === currentPage;
+                return (
+                    <button
+                        key={page}
+                        type="button"
+                        onClick={() => onPageChange(page)}
+                        className="flex h-9 w-9 items-center justify-center rounded-xl text-[12px] font-extrabold transition-all"
+                        style={{
+                            background: isActive
+                                ? "linear-gradient(135deg, #6366f1, #8b5cf6)"
+                                : isDark
+                                    ? "rgba(255,255,255,0.04)"
+                                    : "rgba(15,23,42,0.04)",
+                            color: isActive ? "#ffffff" : isDark ? "#94a3b8" : "#475569",
+                            boxShadow: isActive ? "0 4px 12px rgba(99,102,241,0.25)" : "none",
+                        }}
+                    >
+                        {page}
+                    </button>
+                );
+            })}
+
+            <button
+                type="button"
+                onClick={() => onPageChange(currentPage + 1)}
+                disabled={currentPage === totalPages}
+                className="flex h-9 w-9 items-center justify-center rounded-xl transition-colors disabled:opacity-40"
+                style={{
+                    background: isDark ? "rgba(255,255,255,0.04)" : "rgba(15,23,42,0.04)",
+                    color: isDark ? "#94a3b8" : "#475569",
+                }}
+            >
+                <ChevronLeft size={15} />
+            </button>
+        </div>
+    );
+}
+
 export default function WarehousePage() {
+    const { resolvedTheme } = useTheme();
+    const isDark = resolvedTheme === "dark";
+
     const [tab, setTab] = useState<Tab>("overview");
+    const [currentPage, setCurrentPage] = useState(1);
 
     const [categories, setCategories] = useState<ApiCategory[]>([]);
     const [staff, setStaff] = useState<ApiWarehouseStaff[]>([]);
@@ -103,6 +195,10 @@ export default function WarehousePage() {
         loadAll();
     }, [loadAll]);
 
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [tab]);
+
     const stockByProduct = useMemo(
         () => new Map(stockInfos.map((s) => [s.product, s])),
         [stockInfos]
@@ -129,9 +225,56 @@ export default function WarehousePage() {
         else if (tab === "products") setShowProductWizard(true);
     }
 
+    // Pagination logic
+    const getPaginatedData = useCallback(
+        <T,>(data: T[]) => {
+            const totalPages = Math.ceil(data.length / ITEMS_PER_PAGE);
+            const start = (currentPage - 1) * ITEMS_PER_PAGE;
+            const end = start + ITEMS_PER_PAGE;
+            return {
+                items: data.slice(start, end),
+                totalPages,
+            };
+        },
+        [currentPage]
+    );
+
+    const paginatedProducts = useMemo(
+        () => getPaginatedData(products),
+        [products, getPaginatedData]
+    );
+
+    const paginatedCategories = useMemo(
+        () => getPaginatedData(categories),
+        [categories, getPaginatedData]
+    );
+
+    const paginatedStaff = useMemo(
+        () => getPaginatedData(staff),
+        [staff, getPaginatedData]
+    );
+
+    const paginatedTasks = useMemo(
+        () => getPaginatedData(tasks),
+        [tasks, getPaginatedData]
+    );
+
+    const paginatedOrderTasks = useMemo(
+        () => getPaginatedData(orderTasks),
+        [orderTasks, getPaginatedData]
+    );
+
     return (
-        <div dir="rtl" className="flex flex-col gap-6 p-6">
-            <div className="flex items-center justify-between">
+        <div
+            dir="rtl"
+            className="flex flex-col gap-6 p-6"
+            style={{
+                background: isDark ? "#0f172a" : "#f8fafc",
+                minHeight: "100vh",
+            }}
+        >
+            {/* Header */}
+            <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                     <h1 className="text-[18px] font-extrabold text-gray-900 dark:text-white">انبار</h1>
                     <p className="mt-1 text-[12px] text-gray-400">
@@ -144,7 +287,8 @@ export default function WarehousePage() {
                         type="button"
                         whileTap={{ scale: 0.96 }}
                         onClick={handleAddClick}
-                        className="flex items-center gap-1.5 rounded-2xl bg-blue-600 px-4 py-2.5 text-[12.5px] font-bold text-white transition-colors hover:bg-blue-500"
+                        className="flex items-center gap-1.5 rounded-2xl px-4 py-2.5 text-[12.5px] font-bold text-white transition-colors hover:bg-indigo-500"
+                        style={{ background: "#6366f1" }}
                     >
                         <Plus size={15} />
                         {tab === "categories" && "دسته‌بندی جدید"}
@@ -154,176 +298,243 @@ export default function WarehousePage() {
                 )}
             </div>
 
-            <div className="flex flex-wrap gap-2 rounded-2xl bg-gray-100 p-1.5 dark:bg-white/[0.05]">
-                {TABS.map((t) => (
-                    <button
-                        key={t.id}
-                        type="button"
-                        onClick={() => setTab(t.id)}
-                        className={`relative flex items-center gap-1.5 rounded-xl px-4 py-2 text-[12px] font-extrabold transition-colors ${tab === t.id
-                                ? "bg-white text-blue-600 shadow-sm dark:bg-[#1e293b]"
-                                : "text-gray-400 dark:text-gray-500"
-                            }`}
-                    >
-                        <t.icon size={14} />
-                        {t.label}
-                        {t.id === "tasks" && pendingTasksCount > 0 && (
-                            <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-extrabold text-white">
-                                {pendingTasksCount}
-                            </span>
-                        )}
-                        {t.id === "orders" && pendingOrderTasksCount > 0 && (
-                            <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-extrabold text-white">
-                                {pendingOrderTasksCount}
-                            </span>
-                        )}
-                    </button>
-                ))}
+            {/* Tabs */}
+            <div
+                className="flex flex-wrap gap-2 rounded-2xl p-1.5"
+                style={{
+                    background: isDark ? "rgba(255,255,255,0.04)" : "rgba(15,23,42,0.04)",
+                }}
+            >
+                {TABS.map((t) => {
+                    const isActive = tab === t.id;
+                    return (
+                        <button
+                            key={t.id}
+                            type="button"
+                            onClick={() => setTab(t.id)}
+                            className="relative flex items-center gap-1.5 rounded-xl px-4 py-2 text-[12px] font-extrabold transition-all"
+                            style={{
+                                background: isActive
+                                    ? "linear-gradient(135deg, #6366f1, #8b5cf6)"
+                                    : "transparent",
+                                color: isActive
+                                    ? "#ffffff"
+                                    : isDark
+                                        ? "#94a3b8"
+                                        : "#475569",
+                                boxShadow: isActive ? "0 4px 12px rgba(99,102,241,0.25)" : "none",
+                            }}
+                        >
+                            <t.icon size={14} />
+                            {t.label}
+                            {t.id === "tasks" && pendingTasksCount > 0 && (
+                                <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-extrabold text-white">
+                                    {pendingTasksCount}
+                                </span>
+                            )}
+                            {t.id === "orders" && pendingOrderTasksCount > 0 && (
+                                <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-extrabold text-white">
+                                    {pendingOrderTasksCount}
+                                </span>
+                            )}
+                        </button>
+                    );
+                })}
             </div>
 
+            {/* Content */}
             {loading ? (
-                <div className="flex items-center justify-center py-20 text-gray-400">
-                    <Loader2 size={22} className="animate-spin" />
+                <div className="flex items-center justify-center py-20">
+                    <Loader2 size={22} className="animate-spin" style={{ color: "#6366f1" }} />
                 </div>
             ) : (
-                <>
-                    {tab === "overview" && (
-                        <WarehouseOverview
-                            products={products}
-                            stockInfos={stockInfos}
-                            transactions={transactions}
-                            tasks={tasks}
-                            orderTasks={orderTasks}
-                        />
-                    )}
+                <AnimatePresence mode="wait">
+                    <motion.div
+                        key={tab + currentPage}
+                        initial={{ opacity: 0, y: 8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -8 }}
+                        transition={{ duration: 0.2 }}
+                    >
+                        {tab === "overview" && (
+                            <WarehouseOverview
+                                products={products}
+                                stockInfos={stockInfos}
+                                transactions={transactions}
+                                tasks={tasks}
+                                orderTasks={orderTasks}
+                            />
+                        )}
 
-                    {tab === "products" && (
-                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                            {products.length === 0 ? (
-                                <p className="col-span-full py-16 text-center text-[12.5px] text-gray-400">
-                                    هنوز محصولی ثبت نشده است
-                                </p>
-                            ) : (
-                                products.map((product, index) => (
-                                    <ProductCard
-                                        key={product.id}
-                                        product={product}
-                                        stockInfo={stockByProduct.get(product.id) ?? null}
-                                        index={index}
-                                        categories={categories}
-                                        staff={staff}
-                                        onUpdated={(updated) =>
-                                            setProducts((prev) =>
-                                                prev.map((p) => (p.id === updated.id ? updated : p))
-                                            )
-                                        }
-                                        onStockChanged={() => loadAll()}
-                                        onDeleted={(id) =>
-                                            setProducts((prev) => prev.filter((p) => p.id !== id))
-                                        }
-                                    />
-                                ))
-                            )}
-                        </div>
-                    )}
+                        {tab === "products" && (
+                            <>
+                                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                                    {paginatedProducts.items.length === 0 ? (
+                                        <p className="col-span-full py-16 text-center text-[12.5px] text-gray-400">
+                                            هنوز محصولی ثبت نشده است
+                                        </p>
+                                    ) : (
+                                        paginatedProducts.items.map((product, index) => (
+                                            <ProductCard
+                                                key={product.id}
+                                                product={product}
+                                                stockInfo={stockByProduct.get(product.id) ?? null}
+                                                index={index}
+                                                categories={categories}
+                                                staff={staff}
+                                                onUpdated={(updated) =>
+                                                    setProducts((prev) =>
+                                                        prev.map((p) => (p.id === updated.id ? updated : p))
+                                                    )
+                                                }
+                                                onStockChanged={() => loadAll()}
+                                                onDeleted={(id) =>
+                                                    setProducts((prev) => prev.filter((p) => p.id !== id))
+                                                }
+                                            />
+                                        ))
+                                    )}
+                                </div>
+                                <Pagination
+                                    currentPage={currentPage}
+                                    totalPages={paginatedProducts.totalPages}
+                                    onPageChange={setCurrentPage}
+                                    isDark={isDark}
+                                />
+                            </>
+                        )}
 
-                    {tab === "categories" && (
-                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                            {categories.length === 0 ? (
-                                <p className="col-span-full py-16 text-center text-[12.5px] text-gray-400">
-                                    هنوز دسته‌بندی‌ای ثبت نشده است
-                                </p>
-                            ) : (
-                                categories.map((category, index) => (
-                                    <CategoryCard
-                                        key={category.id}
-                                        category={category}
-                                        index={index}
-                                        onUpdated={(updated) =>
-                                            setCategories((prev) =>
-                                                prev.map((c) => (c.id === updated.id ? updated : c))
-                                            )
-                                        }
-                                        onDeleted={(id) =>
-                                            setCategories((prev) => prev.filter((c) => c.id !== id))
-                                        }
-                                    />
-                                ))
-                            )}
-                        </div>
-                    )}
+                        {tab === "categories" && (
+                            <>
+                                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                                    {paginatedCategories.items.length === 0 ? (
+                                        <p className="col-span-full py-16 text-center text-[12.5px] text-gray-400">
+                                            هنوز دسته‌بندی‌ای ثبت نشده است
+                                        </p>
+                                    ) : (
+                                        paginatedCategories.items.map((category, index) => (
+                                            <CategoryCard
+                                                key={category.id}
+                                                category={category}
+                                                index={index}
+                                                onUpdated={(updated) =>
+                                                    setCategories((prev) =>
+                                                        prev.map((c) => (c.id === updated.id ? updated : c))
+                                                    )
+                                                }
+                                                onDeleted={(id) =>
+                                                    setCategories((prev) => prev.filter((c) => c.id !== id))
+                                                }
+                                            />
+                                        ))
+                                    )}
+                                </div>
+                                <Pagination
+                                    currentPage={currentPage}
+                                    totalPages={paginatedCategories.totalPages}
+                                    onPageChange={setCurrentPage}
+                                    isDark={isDark}
+                                />
+                            </>
+                        )}
 
-                    {tab === "staff" && (
-                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                            {staff.length === 0 ? (
-                                <p className="col-span-full py-16 text-center text-[12.5px] text-gray-400">
-                                    هنوز کارمندی به انبار اضافه نشده است
-                                </p>
-                            ) : (
-                                staff.map((member, index) => (
-                                    <StaffCard
-                                        key={member.id}
-                                        staff={member}
-                                        index={index}
-                                        onUpdated={(updated) =>
-                                            setStaff((prev) =>
-                                                prev.map((s) => (s.id === updated.id ? updated : s))
-                                            )
-                                        }
-                                        onDeleted={(id) =>
-                                            setStaff((prev) => prev.filter((s) => s.id !== id))
-                                        }
-                                    />
-                                ))
-                            )}
-                        </div>
-                    )}
+                        {tab === "staff" && (
+                            <>
+                                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                                    {paginatedStaff.items.length === 0 ? (
+                                        <p className="col-span-full py-16 text-center text-[12.5px] text-gray-400">
+                                            هنوز کارمندی به انبار اضافه نشده است
+                                        </p>
+                                    ) : (
+                                        paginatedStaff.items.map((member, index) => (
+                                            <StaffCard
+                                                key={member.id}
+                                                staff={member}
+                                                index={index}
+                                                onUpdated={(updated) =>
+                                                    setStaff((prev) =>
+                                                        prev.map((s) => (s.id === updated.id ? updated : s))
+                                                    )
+                                                }
+                                                onDeleted={(id) =>
+                                                    setStaff((prev) => prev.filter((s) => s.id !== id))
+                                                }
+                                            />
+                                        ))
+                                    )}
+                                </div>
+                                <Pagination
+                                    currentPage={currentPage}
+                                    totalPages={paginatedStaff.totalPages}
+                                    onPageChange={setCurrentPage}
+                                    isDark={isDark}
+                                />
+                            </>
+                        )}
 
-                    {tab === "tasks" && (
-                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                            {tasks.length === 0 ? (
-                                <p className="col-span-full py-16 text-center text-[12.5px] text-gray-400">
-                                    وظیفه‌ای برای دریافت کالا وجود ندارد
-                                </p>
-                            ) : (
-                                tasks.map((task, index) => (
-                                    <WarehouseTaskCard
-                                        key={task.id}
-                                        task={task}
-                                        index={index}
-                                        staff={staff}
-                                        onUpdated={(updated) =>
-                                            setTasks((prev) =>
-                                                prev.map((t) => (t.id === updated.id ? updated : t))
-                                            )
-                                        }
-                                    />
-                                ))
-                            )}
-                        </div>
-                    )}
+                        {tab === "tasks" && (
+                            <>
+                                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                                    {paginatedTasks.items.length === 0 ? (
+                                        <p className="col-span-full py-16 text-center text-[12.5px] text-gray-400">
+                                            وظیفه‌ای برای دریافت کالا وجود ندارد
+                                        </p>
+                                    ) : (
+                                        paginatedTasks.items.map((task, index) => (
+                                            <WarehouseTaskCard
+                                                key={task.id}
+                                                task={task}
+                                                index={index}
+                                                staff={staff}
+                                                onUpdated={(updated) =>
+                                                    setTasks((prev) =>
+                                                        prev.map((t) => (t.id === updated.id ? updated : t))
+                                                    )
+                                                }
+                                            />
+                                        ))
+                                    )}
+                                </div>
+                                <Pagination
+                                    currentPage={currentPage}
+                                    totalPages={paginatedTasks.totalPages}
+                                    onPageChange={setCurrentPage}
+                                    isDark={isDark}
+                                />
+                            </>
+                        )}
 
-                    {tab === "orders" && (
-                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                            {orderTasks.length === 0 ? (
-                                <p className="col-span-full py-16 text-center text-[12.5px] text-gray-400">
-                                    درخواست داخلی‌ای برای انبار ثبت نشده است
-                                </p>
-                            ) : (
-                                orderTasks.map((orderTask, index) => (
-                                    <OrderTaskCard
-                                        key={orderTask.id}
-                                        orderTask={orderTask}
-                                        deadline={deadlineByOrderTask.get(orderTask.id) ?? null}
-                                        index={index}
-                                    />
-                                ))
-                            )}
-                        </div>
-                    )}
-                </>
+                        {tab === "orders" && (
+                            <>
+                                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                                    {paginatedOrderTasks.items.length === 0 ? (
+                                        <p className="col-span-full py-16 text-center text-[12.5px] text-gray-400">
+                                            درخواست داخلی‌ای برای انبار ثبت نشده است
+                                        </p>
+                                    ) : (
+                                        paginatedOrderTasks.items.map((orderTask, index) => (
+                                            <OrderTaskCard
+                                                key={orderTask.id}
+                                                orderTask={orderTask}
+                                                deadline={deadlineByOrderTask.get(orderTask.id) ?? null}
+                                                index={index}
+                                            />
+                                        ))
+                                    )}
+                                </div>
+                                <Pagination
+                                    currentPage={currentPage}
+                                    totalPages={paginatedOrderTasks.totalPages}
+                                    onPageChange={setCurrentPage}
+                                    isDark={isDark}
+                                />
+                            </>
+                        )}
+                    </motion.div>
+                </AnimatePresence>
             )}
 
+            {/* Modals */}
             <CategoryModal
                 isOpen={showCategoryModal}
                 onClose={() => setShowCategoryModal(false)}
