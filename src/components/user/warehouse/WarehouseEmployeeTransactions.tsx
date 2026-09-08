@@ -5,13 +5,15 @@ import { ArrowDownLeft, ArrowUpRight, ReceiptText, Search } from "lucide-react";
 import { useTheme } from "next-themes";
 import { motion } from "framer-motion";
 import { ApiStockTransaction } from "@/types/warehouse";
-import { formatDate, formatNumber, getTransactionProductName, getTransactionQuantity, getTransactionTypeLabel, matchesSearch } from "@/utils/warehouseEmployee";
+import { formatDate, formatNumber, matchesSearch } from "@/utils/warehouseEmployee";
 
-interface Props {
+interface WarehouseEmployeeTransactionsProps {
     transactions: ApiStockTransaction[];
 }
 
-export default function WarehouseEmployeeTransactions({ transactions }: Props) {
+export default function WarehouseEmployeeTransactions({
+    transactions,
+}: WarehouseEmployeeTransactionsProps) {
     const { resolvedTheme } = useTheme();
     const isDark = resolvedTheme === "dark";
 
@@ -19,13 +21,20 @@ export default function WarehouseEmployeeTransactions({ transactions }: Props) {
 
     const filtered = useMemo(
         () =>
-            transactions.filter((transaction) => {
-                const data = transaction as unknown as Record<string, unknown>;
-                return matchesSearch(
-                    [data.id, data.type, data.transaction_type, data.operation_type, data.reason, data.note, data.performed_by, data.performed_by_name, getTransactionProductName(transaction)],
+            transactions.filter((tx) =>
+                matchesSearch(
+                    [
+                        tx.id,
+                        tx.product_name,
+                        tx.performed_by_name,
+                        tx.transaction_type,
+                        tx.transaction_type_display,
+                        tx.note,
+                        tx.stock_out_reason,
+                    ],
                     search
-                );
-            }),
+                )
+            ),
         [transactions, search]
     );
 
@@ -49,9 +58,7 @@ export default function WarehouseEmployeeTransactions({ transactions }: Props) {
                     <Search className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2" style={{ color: mutedText }} />
                     <input
                         value={search}
-                        onChange={(event) => {
-                            setSearch(event.target.value);
-                        }}
+                        onChange={(e) => setSearch(e.target.value)}
                         placeholder="جستجو در تراکنش‌ها..."
                         className="h-11 w-full rounded-xl border pr-10 pl-3 text-sm outline-none"
                         style={{
@@ -65,15 +72,12 @@ export default function WarehouseEmployeeTransactions({ transactions }: Props) {
 
             {filtered.length ? (
                 <div className="grid gap-3">
-                    {filtered.map((transaction, index) => {
-                        const data = transaction as unknown as Record<string, unknown>;
-                        const type = String(data.type ?? data.transaction_type ?? data.operation_type ?? "").toLowerCase();
-                        const incoming = ["in", "inbound", "receive", "received"].includes(type);
-                        const quantity = Number(getTransactionQuantity(transaction));
+                    {filtered.map((tx, index) => {
+                        const incoming = tx.transaction_type === "stock_in";
 
                         return (
                             <motion.div
-                                key={String(data.id)}
+                                key={tx.id}
                                 initial={{ opacity: 0, y: 10 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ duration: 0.2, delay: index * 0.04 }}
@@ -95,47 +99,57 @@ export default function WarehouseEmployeeTransactions({ transactions }: Props) {
                                         <div className="flex items-start justify-between gap-2">
                                             <div>
                                                 <p className="text-sm font-bold" style={{ color: textColor }}>
-                                                    {getTransactionProductName(transaction)}
+                                                    {tx.product_name}
                                                 </p>
                                                 <p className="mt-1 text-xs" style={{ color: mutedText }}>
-                                                    {getTransactionTypeLabel(type)}
+                                                    {tx.transaction_type_display}
                                                 </p>
                                             </div>
 
                                             <div className={`text-left text-base font-bold ${incoming ? "text-emerald-400" : "text-red-400"}`}>
                                                 {incoming ? "+" : "-"}
-                                                {formatNumber(quantity)}
+                                                {formatNumber(tx.quantity_changed)}
                                             </div>
                                         </div>
 
-                                        <div className="mt-4 grid grid-cols-2 gap-2">
-                                            <div className="rounded-xl p-2.5" style={{ background: isDark ? "rgba(255,255,255,0.025)" : "rgba(15,23,42,0.025)" }}>
-                                                <p className="text-[10px]" style={{ color: mutedText }}>
-                                                    تاریخ
-                                                </p>
-                                                <p className="mt-1 text-[11px]" style={{ color: isDark ? "rgba(255,255,255,0.55)" : "#64748b" }}>
-                                                    {formatDate(data.created_at ?? data.performed_at ?? data.date)}
+                                        <div className="mt-4 grid grid-cols-3 gap-2">
+                                            <div className="rounded-xl p-2" style={{ background: isDark ? "rgba(255,255,255,0.025)" : "rgba(15,23,42,0.025)" }}>
+                                                <p className="text-[9px]" style={{ color: mutedText }}>قبل</p>
+                                                <p className="text-[11px] font-semibold" style={{ color: isDark ? "rgba(255,255,255,0.6)" : "#64748b" }}>
+                                                    {formatNumber(tx.quantity_before)}
                                                 </p>
                                             </div>
-
-                                            <div className="rounded-xl p-2.5" style={{ background: isDark ? "rgba(255,255,255,0.025)" : "rgba(15,23,42,0.025)" }}>
-                                                <p className="text-[10px]" style={{ color: mutedText }}>
-                                                    انجام‌دهنده
+                                            <div className="rounded-xl p-2" style={{ background: isDark ? "rgba(255,255,255,0.025)" : "rgba(15,23,42,0.025)" }}>
+                                                <p className="text-[9px]" style={{ color: mutedText }}>بعد</p>
+                                                <p className="text-[11px] font-semibold" style={{ color: isDark ? "rgba(255,255,255,0.6)" : "#64748b" }}>
+                                                    {formatNumber(tx.quantity_after)}
                                                 </p>
-                                                <p className="mt-1 truncate text-[11px]" style={{ color: isDark ? "rgba(255,255,255,0.55)" : "#64748b" }}>
-                                                    {String(data.performed_by_name ?? data.performed_by ?? data.employee_name ?? "—")}
+                                            </div>
+                                            <div className="rounded-xl p-2" style={{ background: isDark ? "rgba(255,255,255,0.025)" : "rgba(15,23,42,0.025)" }}>
+                                                <p className="text-[9px]" style={{ color: mutedText }}>حد مجاز</p>
+                                                <p className="text-[11px] font-semibold" style={{ color: isDark ? "rgba(255,255,255,0.6)" : "#64748b" }}>
+                                                    {formatNumber(tx.minimum_stock)} / {formatNumber(tx.maximum_stock)}
                                                 </p>
                                             </div>
                                         </div>
 
-                                        {data.reason || data.note ? (
-                                            <div className="mt-2 flex items-start gap-2 rounded-xl p-2.5" style={{ background: isDark ? "rgba(255,255,255,0.025)" : "rgba(15,23,42,0.025)" }}>
-                                                <ReceiptText className="mt-0.5 h-3.5 w-3.5 shrink-0" style={{ color: mutedText }} />
-                                                <p className="text-[11px] leading-5" style={{ color: isDark ? "rgba(255,255,255,0.45)" : "#94a3b8" }}>
-                                                    {String(data.reason ?? data.note ?? "")}
-                                                </p>
-                                            </div>
-                                        ) : null}
+                                        <div className="mt-2 flex flex-wrap items-center gap-2 text-[10px]" style={{ color: mutedText }}>
+                                            <span>انجام‌دهنده: {tx.performed_by_name}</span>
+                                            <span className="h-1 w-1 rounded-full" style={{ background: mutedText }} />
+                                            <span>{formatDate(tx.transaction_date)}</span>
+                                            {tx.stock_out_reason_display && (
+                                                <>
+                                                    <span className="h-1 w-1 rounded-full" style={{ background: mutedText }} />
+                                                    <span>دلیل: {tx.stock_out_reason_display}</span>
+                                                </>
+                                            )}
+                                            {tx.note && (
+                                                <>
+                                                    <span className="h-1 w-1 rounded-full" style={{ background: mutedText }} />
+                                                    <span className="line-clamp-1">{tx.note}</span>
+                                                </>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
                             </motion.div>

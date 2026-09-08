@@ -10,6 +10,16 @@ interface Props {
     deadlines: ApiOrderTaskDeadline[];
 }
 
+function isDeadlineOverdue(deadline: ApiOrderTaskDeadline) {
+    const deadlineDate = new Date(deadline.deadline);
+
+    if (Number.isNaN(deadlineDate.getTime())) {
+        return false;
+    }
+
+    return deadlineDate.getTime() < Date.now();
+}
+
 export default function WarehouseEmployeeDeadlines({ deadlines }: Props) {
     const { resolvedTheme } = useTheme();
     const isDark = resolvedTheme === "dark";
@@ -20,11 +30,18 @@ export default function WarehouseEmployeeDeadlines({ deadlines }: Props) {
     return (
         <section className="space-y-4">
             <div>
-                <h2 className="flex items-center gap-2 text-base font-bold" style={{ color: textColor }}>
+                <h2
+                    className="flex items-center gap-2 text-base font-bold"
+                    style={{ color: textColor }}
+                >
                     <BellRing className="h-5 w-5 text-amber-400" />
                     مهلت‌های سفارش
                 </h2>
-                <p className="mt-1 text-xs" style={{ color: mutedText }}>
+
+                <p
+                    className="mt-1 text-xs"
+                    style={{ color: mutedText }}
+                >
                     زمان‌بندی و مهلت‌های ثبت‌شده برای عملیات انبار
                 </p>
             </div>
@@ -32,17 +49,18 @@ export default function WarehouseEmployeeDeadlines({ deadlines }: Props) {
             {deadlines.length ? (
                 <div className="grid gap-3 sm:grid-cols-2">
                     {deadlines.map((deadline, index) => {
-                        const data = deadline as unknown as Record<string, unknown>;
                         const deadlineDate = getDeadlineDate(deadline);
-                        const status = String(data.status ?? "").toLowerCase();
-                        const danger = ["overdue", "expired", "late"].includes(status);
+                        const danger = isDeadlineOverdue(deadline);
 
                         return (
                             <motion.div
-                                key={String(data.id)}
+                                key={deadline.id}
                                 initial={{ opacity: 0, y: 10 }}
                                 animate={{ opacity: 1, y: 0 }}
-                                transition={{ duration: 0.2, delay: index * 0.04 }}
+                                transition={{
+                                    duration: 0.2,
+                                    delay: index * 0.04,
+                                }}
                                 className={`relative rounded-2xl border p-4 transition ${danger
                                         ? "border-red-400/15 bg-red-400/[0.035]"
                                         : "hover:border-indigo-200/50"
@@ -50,27 +68,37 @@ export default function WarehouseEmployeeDeadlines({ deadlines }: Props) {
                                 style={{
                                     borderColor: danger
                                         ? undefined
-                                        : isDark ? "rgba(255,255,255,0.07)" : "rgba(15,23,42,0.07)",
+                                        : isDark
+                                            ? "rgba(255,255,255,0.07)"
+                                            : "rgba(15,23,42,0.07)",
                                     background: danger
                                         ? undefined
-                                        : isDark ? "#0f172a" : "#f8fafc",
+                                        : isDark
+                                            ? "#0f172a"
+                                            : "#f8fafc",
                                 }}
                             >
-                                {/* Animated border - ایندیگو/بنفش */}
                                 {!danger && (
                                     <svg className="pointer-events-none absolute inset-0 h-full w-full">
                                         <defs>
                                             <linearGradient
-                                                id={`deadline-border-${String(data.id)}`}
+                                                id={`deadline-border-${deadline.id}`}
                                                 x1="100%"
                                                 y1="100%"
                                                 x2="0%"
                                                 y2="0%"
                                             >
-                                                <stop offset="0%" stopColor="#6366f1" />
-                                                <stop offset="100%" stopColor="#8b5cf6" />
+                                                <stop
+                                                    offset="0%"
+                                                    stopColor="#6366f1"
+                                                />
+                                                <stop
+                                                    offset="100%"
+                                                    stopColor="#8b5cf6"
+                                                />
                                             </linearGradient>
                                         </defs>
+
                                         <motion.rect
                                             x="1"
                                             y="1"
@@ -79,31 +107,53 @@ export default function WarehouseEmployeeDeadlines({ deadlines }: Props) {
                                             rx="23"
                                             ry="23"
                                             fill="none"
-                                            stroke="url(#deadline-border-${String(data.id)})"
+                                            stroke={`url(#deadline-border-${deadline.id})`}
                                             strokeWidth="1.4"
-                                            initial={{ pathLength: 0, opacity: 0 }}
-                                            whileHover={{ pathLength: 1, opacity: 1 }}
-                                            transition={{ duration: 0.45, ease: "easeInOut" }}
+                                            initial={{
+                                                pathLength: 0,
+                                                opacity: 0,
+                                            }}
+                                            whileHover={{
+                                                pathLength: 1,
+                                                opacity: 1,
+                                            }}
+                                            transition={{
+                                                duration: 0.45,
+                                                ease: "easeInOut",
+                                            }}
                                         />
                                     </svg>
                                 )}
 
                                 <div className="flex items-start gap-3">
                                     <div
-                                        className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${danger ? "bg-red-400/10 text-red-300" : "bg-amber-400/10 text-amber-300"
+                                        className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${danger
+                                                ? "bg-red-400/10 text-red-300"
+                                                : "bg-amber-400/10 text-amber-300"
                                             }`}
                                     >
-                                        {danger ? <AlertCircle className="h-5 w-5" /> : <CalendarClock className="h-5 w-5" />}
+                                        {danger ? (
+                                            <AlertCircle className="h-5 w-5" />
+                                        ) : (
+                                            <CalendarClock className="h-5 w-5" />
+                                        )}
                                     </div>
 
                                     <div className="min-w-0 flex-1">
                                         <div className="flex items-start justify-between gap-2">
                                             <div>
-                                                <p className="text-sm font-bold" style={{ color: textColor }}>
-                                                    مهلت سفارش #{String(data.order_task_id ?? data.order_id ?? data.id ?? "—")}
+                                                <p
+                                                    className="text-sm font-bold"
+                                                    style={{ color: textColor }}
+                                                >
+                                                    مهلت سفارش #{deadline.order_task}
                                                 </p>
-                                                <p className="mt-1 text-xs" style={{ color: mutedText }}>
-                                                    {String(data.title ?? data.name ?? "مهلت عملیاتی")}
+
+                                                <p
+                                                    className="mt-1 text-xs"
+                                                    style={{ color: mutedText }}
+                                                >
+                                                    مهلت عملیاتی
                                                 </p>
                                             </div>
 
@@ -113,15 +163,33 @@ export default function WarehouseEmployeeDeadlines({ deadlines }: Props) {
                                                         : "bg-amber-400/10 text-amber-300"
                                                     }`}
                                             >
-                                                {danger ? "تاخیر" : String(data.status ?? "فعال")}
+                                                {danger ? "تاخیر" : "فعال"}
                                             </span>
                                         </div>
 
-                                        <div className="mt-4 rounded-xl p-3" style={{ background: isDark ? "rgba(255,255,255,0.025)" : "rgba(15,23,42,0.025)" }}>
-                                            <p className="text-[10px]" style={{ color: mutedText }}>
+                                        <div
+                                            className="mt-4 rounded-xl p-3"
+                                            style={{
+                                                background: isDark
+                                                    ? "rgba(255,255,255,0.025)"
+                                                    : "rgba(15,23,42,0.025)",
+                                            }}
+                                        >
+                                            <p
+                                                className="text-[10px]"
+                                                style={{ color: mutedText }}
+                                            >
                                                 موعد
                                             </p>
-                                            <p className="mt-1 text-sm font-semibold" style={{ color: isDark ? "rgba(255,255,255,0.7)" : "#64748b" }}>
+
+                                            <p
+                                                className="mt-1 text-sm font-semibold"
+                                                style={{
+                                                    color: isDark
+                                                        ? "rgba(255,255,255,0.7)"
+                                                        : "#64748b",
+                                                }}
+                                            >
                                                 {formatDate(deadlineDate)}
                                             </p>
                                         </div>
@@ -135,12 +203,25 @@ export default function WarehouseEmployeeDeadlines({ deadlines }: Props) {
                 <div
                     className="rounded-2xl border border-dashed px-6 py-14 text-center"
                     style={{
-                        borderColor: isDark ? "rgba(255,255,255,0.08)" : "rgba(15,23,42,0.08)",
+                        borderColor: isDark
+                            ? "rgba(255,255,255,0.08)"
+                            : "rgba(15,23,42,0.08)",
                         background: isDark ? "#0f172a" : "#f8fafc",
                     }}
                 >
-                    <BellRing className="mx-auto h-9 w-9" style={{ color: mutedText }} />
-                    <p className="mt-3 text-sm" style={{ color: isDark ? "rgba(255,255,255,0.45)" : "#94a3b8" }}>
+                    <BellRing
+                        className="mx-auto h-9 w-9"
+                        style={{ color: mutedText }}
+                    />
+
+                    <p
+                        className="mt-3 text-sm"
+                        style={{
+                            color: isDark
+                                ? "rgba(255,255,255,0.45)"
+                                : "#94a3b8",
+                        }}
+                    >
                         مهلتی برای نمایش وجود ندارد
                     </p>
                 </div>

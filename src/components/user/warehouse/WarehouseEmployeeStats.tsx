@@ -1,6 +1,12 @@
 "use client";
 
-import { AlertTriangle, CheckCircle2, ClipboardList, Clock3, PackageCheck } from "lucide-react";
+import {
+    AlertTriangle,
+    CheckCircle2,
+    ClipboardList,
+    Clock3,
+    PackageCheck,
+} from "lucide-react";
 import { motion } from "framer-motion";
 import { useTheme } from "next-themes";
 
@@ -73,15 +79,26 @@ export default function WarehouseEmployeeStats({
                         transition={{ delay: index * 0.04 }}
                         className="rounded-2xl border p-4"
                         style={{
-                            borderColor: isDark ? "rgba(255,255,255,0.07)" : "rgba(15,23,42,0.07)",
+                            borderColor: isDark
+                                ? "rgba(255,255,255,0.07)"
+                                : "rgba(15,23,42,0.07)",
                             background: isDark ? "#101114" : "#f8fafc",
                         }}
                     >
-                        <div className={`mb-4 flex h-10 w-10 items-center justify-center rounded-xl ${item.bg}`}>
+                        <div
+                            className={`mb-4 flex h-10 w-10 items-center justify-center rounded-xl ${item.bg}`}
+                        >
                             <Icon className={`h-5 w-5 ${item.tone}`} />
                         </div>
 
-                        <p className="text-xs" style={{ color: isDark ? "rgba(255,255,255,0.4)" : "#94a3b8" }}>
+                        <p
+                            className="text-xs"
+                            style={{
+                                color: isDark
+                                    ? "rgba(255,255,255,0.4)"
+                                    : "#94a3b8",
+                            }}
+                        >
                             {item.title}
                         </p>
 

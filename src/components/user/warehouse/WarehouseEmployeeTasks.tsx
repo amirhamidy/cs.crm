@@ -70,7 +70,6 @@ export default function WarehouseEmployeeTasks({ tasks, onSelectTask }: Props) {
                         <WarehouseEmployeeTaskCard
                             key={String((task as unknown as Record<string, unknown>).id)}
                             task={task}
-                            onSelect={onSelectTask}
                         />
                     ))}
                 </div>

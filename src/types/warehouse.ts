@@ -28,6 +28,10 @@ export const STOCK_OUT_REASON_OPTIONS: {
   { value: "other", label: "سایر" },
 ];
 
+export type WarehouseTaskStatus = "pending" | "in_progress" | "completed";
+
+export type OrderTaskStatus = "in_progress" | "completed" | "cancelled";
+
 export interface ApiCategory {
   id: number;
   name: string;
@@ -39,29 +43,14 @@ export interface ApiUnitData {
 
 export interface ApiWarehouseStaff {
   id: number;
-  employee: number;
+  employee?: number;
   employee_id: number;
   full_name: string;
-  is_active: boolean;
-  joined_at: string;
+  is_active?: boolean;
+  joined_at?: string;
+  code?: string | number;
 }
 
-export interface ApiProduct {
-  id: number;
-  name: string;
-  sale_price: string | number;
-  category: number;
-  category_detail?: ApiCategory | null;
-  unit_type: UnitType;
-  count_unit?: number | null;
-  count_unit_detail?: (ApiUnitData & { id: number }) | null;
-  weight_unit_detail?: (ApiUnitData & { id: number }) | null;
-  volume_unit_detail?: (ApiUnitData & { id: number }) | null;
-  area_unit_detail?: (ApiUnitData & { id: number }) | null;
-  dimension_unit_detail?: (ApiUnitData & { id: number }) | null;
-  created_at: string;
-  updated_at: string;
-}
 
 export interface ApiProductInitDraft {
   name: string;
@@ -75,19 +64,6 @@ export interface ApiProductInitDraft {
   dimension_unit_data?: ApiUnitData;
 }
 
-export interface ApiStockInfo {
-  id: number;
-  product: number;
-  product_name: string;
-  initial_quantity: number;
-  current_quantity: number;
-  minimum_stock: number;
-  maximum_stock: number;
-  unit_label: string;
-  performed_by: { id: number; full_name: string } | null;
-  created_at: string;
-  updated_at: string;
-}
 
 export interface ApiStockTransaction {
   id: number;
@@ -110,28 +86,41 @@ export interface ApiStockTransaction {
 }
 
 export interface ApiWarehouseTask {
-  id: number;
-  purchase_task_id: number;
-  quality_control_id: number;
-  product: number;
-  product_name: string;
-  expected_quantity: number;
-  received_quantity: number | null;
-  assigned_to: number | null;
-  assigned_to_name: string | null;
-  status: "pending" | "in_progress" | "completed";
-  status_display: string;
-  note: string | null;
-  file: string | null;
-  created_at: string;
-  completed_at: string | null;
-  updated_at: string;
+    id: number;
+    purchase_task_id: number | null;
+    quality_control_id: number | null;
+    product: number | null;
+    product_name: string | null;
+    expected_quantity: number;
+    received_quantity: number | null;
+    assigned_to: number | null;
+    assigned_to_name: string | null;
+    status: "pending" | "in_progress" | "completed" | "cancelled";
+    status_display: string;
+    note: string | null;
+    file: string | null;
+    created_at: string;
+    completed_at: string | null;
+    updated_at: string;
 }
 
 export interface ApiWarehouseTaskCompleteResponse {
   detail: string;
   warehouse_task: ApiWarehouseTask;
   stock_transaction_id: number;
+}
+
+export interface ApiTask {
+  id: number;
+  title: string;
+  case: number;
+  department: number;
+  department_name: string;
+  current_step: number;
+  current_step_name: string;
+  assigned_employee: number[];
+  status: string;
+  created_at: string;
 }
 
 export interface ApiOrderTaskCase {
@@ -165,12 +154,28 @@ export interface ApiOrderTaskPerformer {
   full_name: string;
 }
 
+export interface ApiOrderTaskAttachment {
+  id: number;
+  performed_by: ApiOrderTaskPerformer;
+  note: string;
+  file: string;
+  created_at: string;
+}
+
 export interface ApiOrderTask {
   id: number;
   task: number;
+  product: number;
+  quantity: number;
+  completed_quantity: number;
+  product_sale_price: string;
   title: string;
   description: string;
   case: ApiOrderTaskCase | null;
+  customer: {
+    id: number;
+    full_name: string;
+  } | null;
   department: ApiOrderTaskDepartment | null;
   current_step: ApiOrderTaskStep | null;
   assigned_employee: ApiOrderTaskEmployeeRef[];
@@ -178,10 +183,10 @@ export interface ApiOrderTask {
   note: string | null;
   file: string | null;
   performed_by: ApiOrderTaskPerformer | null;
-  status: string;
+  status: OrderTaskStatus;
   status_display: string;
   deadline: string | null;
-  attachments: unknown[];
+  attachments: ApiOrderTaskAttachment[];
   created_at: string;
 }
 
@@ -192,6 +197,24 @@ export interface ApiOrderTaskDeadline {
   deadline: string;
 }
 
+export interface CreateOrderTaskPayload {
+  task_id: number;
+  product_id: number;
+  quantity: number;
+  note?: string;
+  file?: File;
+  started_at?: string;
+  deadline?: string;
+}
+
+export interface UpdateOrderTaskPayload {
+  performed_by: number;
+  status: OrderTaskStatus;
+  completed_quantity?: number;
+  note?: string;
+  file?: File;
+}
+
 export function unitDataKey(unitType: UnitType): keyof ApiProductInitDraft {
   return `${unitType}_unit_data` as keyof ApiProductInitDraft;
 }
@@ -199,3 +222,47 @@ export function unitDataKey(unitType: UnitType): keyof ApiProductInitDraft {
 export function unitDetailKey(unitType: UnitType): keyof ApiProduct {
   return `${unitType}_unit_detail` as keyof ApiProduct;
 }
+export interface ApiUnitDetail {
+    id: number;
+    quantity_per_unit: number;
+}
+
+export interface ApiCategory {
+    id: number;
+    name: string;
+}
+
+export interface ApiProduct {
+    id: number;
+    name: string;
+    sale_price: string | number;
+    category: number;
+    category_detail?: ApiCategory | null;
+    unit_type: "dimension" | "weight" | "volume" | "area" | "count";
+    count_unit?: number | null;
+    count_unit_detail?: ApiUnitDetail | null;
+    weight_unit_detail?: ApiUnitDetail | null;
+    volume_unit_detail?: ApiUnitDetail | null;
+    area_unit_detail?: ApiUnitDetail | null;
+    dimension_unit_detail?: ApiUnitDetail | null;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface ApiStockInfo {
+    id: number;
+    product: number;
+    product_name: string;
+    initial_quantity: number;
+    current_quantity: number;
+    minimum_stock: number;
+    maximum_stock: number;
+    unit_label: string;
+    performed_by: {
+        id: number;
+        full_name: string;
+    } | null;
+    created_at: string;
+    updated_at: string;
+}
+

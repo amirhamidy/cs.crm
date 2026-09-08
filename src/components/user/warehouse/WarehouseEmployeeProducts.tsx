@@ -2,11 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import {
-    PackagePlus,
-    Search,
-    SlidersHorizontal,
-} from "lucide-react";
+import { PackagePlus, Search, SlidersHorizontal } from "lucide-react";
 import type {
     ApiCategory,
     ApiProduct,
@@ -46,144 +42,146 @@ export default function WarehouseEmployeeProducts({
     const [category, setCategory] = useState("");
     const [wizardOpen, setWizardOpen] = useState(false);
 
+    const stockByProduct = useMemo(
+        () =>
+            new Map(
+                stockInfos.map(stock => [stock.product, stock])
+            ),
+        [stockInfos]
+    );
+
     const filteredProducts = useMemo(() => {
         const value = search.trim().toLowerCase();
 
         return products.filter(product => {
+            const item = product as ApiProduct & {
+                code?: string | number | null;
+                sku?: string | number | null;
+                category_id?: number | null;
+            };
+
             const matchesSearch =
                 !value ||
                 [
                     product.name,
-                    product.code,
-                    product.sku,
                     product.id,
-                ]
-                    .filter(Boolean)
-                    .some(item =>
-                        String(item).toLowerCase().includes(value)
-                    );
+                    item.code,
+                    item.sku,
+                ].some(field =>
+                    String(field ?? "")
+                        .toLowerCase()
+                        .includes(value)
+                );
+
+            const productCategory = String(
+                item.category_id ?? product.category ?? ""
+            );
 
             const matchesCategory =
-                !category ||
-                String(product.category?.id ?? product.category_id ?? "") ===
-                category;
+                !category || productCategory === category;
 
             return matchesSearch && matchesCategory;
         });
     }, [products, search, category]);
 
-    function handleCreated(
-        product: ApiProduct,
-        stockInfo?: ApiStockInfo
-    ) {
-        setWizardOpen(false);
-        onProductCreated?.(product, stockInfo);
-
-        if (stockInfo) {
-            onStockChanged?.(stockInfo);
-        }
-    }
-
     return (
-        <div dir="rtl" className="space-y-5">
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                <div>
-                    <h2 className="text-[16px] font-extrabold text-slate-900 dark:text-white">
-                        محصولات انبار
-                    </h2>
+        <>
+            <div className="space-y-5">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                        <h2 className="text-[16px] font-extrabold">
+                            محصولات انبار
+                        </h2>
 
-                    <p className="mt-1 text-[12px] font-medium text-slate-500 dark:text-slate-400">
-                        مدیریت محصولات، موجودی و عملیات انبار
-                    </p>
-                </div>
+                        <p className="mt-1 text-[11.5px] text-slate-400">
+                            مدیریت محصولات و عملیات مربوط به موجودی
+                        </p>
+                    </div>
 
-                <motion.button
-                    type="button"
-                    whileTap={{ scale: .97 }}
-                    onClick={() => setWizardOpen(true)}
-                    className="flex h-11 items-center justify-center gap-2 rounded-full bg-gradient-to-r from-indigo-500 to-violet-500 px-5 text-[12px] font-bold text-white shadow-lg shadow-indigo-500/10"
-                >
-                    <PackagePlus size={17} />
-                    افزودن محصول
-                </motion.button>
-            </div>
-
-            <div className="flex flex-col gap-3 lg:flex-row">
-                <div className="relative flex-1">
-                    <Search
-                        size={16}
-                        className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-slate-400"
-                    />
-
-                    <input
-                        value={search}
-                        onChange={e => setSearch(e.target.value)}
-                        placeholder="جستجوی محصول، کد یا شناسه..."
-                        className="h-11 w-full rounded-2xl border border-slate-200 bg-white pr-11 pl-4 text-[12px] font-medium outline-none transition focus:border-indigo-400 dark:border-white/[.07] dark:bg-white/[.03] dark:text-white"
-                    />
-                </div>
-
-                <div className="relative lg:w-56">
-                    <SlidersHorizontal
-                        size={15}
-                        className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-slate-400"
-                    />
-
-                    <select
-                        value={category}
-                        onChange={e => setCategory(e.target.value)}
-                        className="h-11 w-full appearance-none rounded-2xl border border-slate-200 bg-white pr-11 pl-4 text-[12px] font-medium outline-none dark:border-white/[.07] dark:bg-white/[.03] dark:text-white"
+                    <motion.button
+                        type="button"
+                        whileTap={{ scale: 0.96 }}
+                        onClick={() => setWizardOpen(true)}
+                        className="flex items-center justify-center gap-2 rounded-2xl px-5 py-3 text-[12px] font-extrabold text-white"
+                        style={{
+                            background:
+                                "linear-gradient(135deg,#6366f1,#8b5cf6)",
+                        }}
                     >
-                        <option value="">همه دسته‌بندی‌ها</option>
-
-                        {categories.map(item => (
-                            <option key={item.id} value={item.id}>
-                                {item.name}
-                            </option>
-                        ))}
-                    </select>
+                        <PackagePlus size={16} />
+                        افزودن محصول
+                    </motion.button>
                 </div>
-            </div>
 
-            <div className="flex items-center justify-between">
-                <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
-                    {filteredProducts.length} محصول
-                </span>
-            </div>
+                <div className="flex flex-col gap-2 sm:flex-row">
+                    <div className="relative flex-1">
+                        <Search
+                            size={15}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
+                        />
 
-            {filteredProducts.length === 0 ? (
-                <div className="rounded-[2rem] border border-dashed border-slate-200 px-6 py-16 text-center dark:border-white/[.08]">
-                    <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-indigo-500/10">
-                        <PackagePlus
-                            size={23}
-                            className="text-indigo-500"
+                        <input
+                            value={search}
+                            onChange={event =>
+                                setSearch(event.target.value)
+                            }
+                            placeholder="جستجوی محصول، کد یا شناسه..."
+                            className="h-11 w-full rounded-xl border bg-transparent pr-9 pl-3 text-[12px] outline-none"
                         />
                     </div>
 
-                    <h3 className="mt-4 text-[13px] font-extrabold text-slate-800 dark:text-white">
-                        محصولی پیدا نشد
-                    </h3>
-
-                    <p className="mt-2 text-[11px] text-slate-500 dark:text-slate-400">
-                        برای ایجاد محصول جدید از دکمه افزودن محصول استفاده کنید.
-                    </p>
-                </div>
-            ) : (
-                <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-                    {filteredProducts.map(product => (
-                        <WarehouseEmployeeProductCard
-                            key={product.id}
-                            product={product}
-                            staff={staff}
-                            stockInfos={stockInfos}
-                            performedById={performedById}
-                            onUpdated={onProductUpdated}
-                            onStockChanged={onStockChanged}
-                            onDeleted={onProductDeleted}
+                    <div className="relative sm:w-56">
+                        <SlidersHorizontal
+                            size={15}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
                         />
-                    ))}
+
+                        <select
+                            value={category}
+                            onChange={event =>
+                                setCategory(event.target.value)
+                            }
+                            className="h-11 w-full appearance-none rounded-xl border bg-transparent px-9 text-[12px] outline-none"
+                        >
+                            <option value="">همه دسته‌بندی‌ها</option>
+
+                            {categories.map(item => (
+                                <option
+                                    key={item.id}
+                                    value={item.id}
+                                >
+                                    {item.name}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
                 </div>
-            )}
+
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    {filteredProducts.length === 0 ? (
+                        <p className="col-span-full py-16 text-center text-[12.5px] text-slate-400">
+                            محصولی برای نمایش وجود ندارد
+                        </p>
+                    ) : (
+                        filteredProducts.map((product, index) => (
+                            <WarehouseEmployeeProductCard
+                                key={product.id}
+                                product={product}
+                                stockInfo={
+                                    stockByProduct.get(product.id) ??
+                                    null
+                                }
+                                index={index}
+                                categories={categories}
+                                staff={staff}
+                                performedById={performedById}
+                                onUpdated={onProductUpdated}
+                                onDeleted={onProductDeleted}
+                            />
+                        ))
+                    )}
+                </div>
+            </div>
 
             <WarehouseEmployeeProductWizardModal
                 isOpen={wizardOpen}
@@ -191,8 +189,11 @@ export default function WarehouseEmployeeProducts({
                 categories={categories}
                 staff={staff}
                 performedById={performedById}
-                onCreated={handleCreated}
+                onCreated={(product, stockInfo) => {
+                    onProductCreated?.(product, stockInfo);
+                    setWizardOpen(false);
+                }}
             />
-        </div>
+        </>
     );
 }

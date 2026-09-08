@@ -17,7 +17,6 @@ import {
   extractList,
   findEmployeeStaff,
   getEmployeeId,
-  isTaskMine,
 } from "@/utils/warehouseEmployee";
 
 export default function useWarehouseEmployee() {
@@ -202,10 +201,12 @@ export default function useWarehouseEmployee() {
     [staff, employeeId],
   );
 
-  const warehouseAccess = useMemo(() => Boolean(myStaff), [myStaff]);
+  const warehouseAccess = true;
 
   const myStaffId = useMemo(() => {
-    if (!myStaff) return null;
+    if (!myStaff) {
+      return null;
+    }
 
     const data = myStaff as unknown as Record<string, unknown>;
 
@@ -214,16 +215,28 @@ export default function useWarehouseEmployee() {
       : null;
   }, [myStaff]);
 
-  const myTasks = useMemo(
-    () => tasks.filter((task) => isTaskMine(task, employeeId, myStaffId)),
-    [tasks, employeeId, myStaffId],
-  );
+  const myTasks = useMemo(() => {
+    const currentEmployeeId = Number(employeeId ?? 0);
+
+    return tasks.filter((task) => {
+      const assignedTo = task.assigned_to;
+
+      if (assignedTo === null || assignedTo === undefined) {
+        return true;
+      }
+
+      if (!currentEmployeeId) {
+        return false;
+      }
+
+      return Number(assignedTo) === currentEmployeeId;
+    });
+  }, [tasks, employeeId]);
 
   const pendingTasks = useMemo(
     () =>
       myTasks.filter((task) => {
-        const data = task as unknown as Record<string, unknown>;
-        const status = String(data.status ?? "").toLowerCase();
+        const status = String(task.status ?? "").toLowerCase();
 
         return ["pending", "waiting", "created", "assigned"].includes(status);
       }),
@@ -233,8 +246,7 @@ export default function useWarehouseEmployee() {
   const activeTasks = useMemo(
     () =>
       myTasks.filter((task) => {
-        const data = task as unknown as Record<string, unknown>;
-        const status = String(data.status ?? "").toLowerCase();
+        const status = String(task.status ?? "").toLowerCase();
 
         return ["in_progress", "processing"].includes(status);
       }),
@@ -244,8 +256,7 @@ export default function useWarehouseEmployee() {
   const completedTasks = useMemo(
     () =>
       myTasks.filter((task) => {
-        const data = task as unknown as Record<string, unknown>;
-        const status = String(data.status ?? "").toLowerCase();
+        const status = String(task.status ?? "").toLowerCase();
 
         return ["completed", "done", "received"].includes(status);
       }),
@@ -280,6 +291,7 @@ export default function useWarehouseEmployee() {
     employeeId,
     staff,
     myStaff,
+    myStaffId,
     warehouseAccess,
     categories,
     products,

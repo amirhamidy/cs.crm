@@ -43,8 +43,14 @@ type FormState = {
     maximumStock: string;
 };
 
-function extractError(error: any, fallback: string) {
-    const data = error?.response?.data;
+function extractError(error: unknown, fallback: string) {
+    const data = (
+        error as {
+            response?: {
+                data?: Record<string, unknown> | string;
+            };
+        }
+    )?.response?.data;
 
     if (!data) return fallback;
 
@@ -79,19 +85,35 @@ function extractError(error: any, fallback: string) {
 function getUnitDataKey(unitType: string) {
     const normalized = unitType.trim().toLowerCase();
 
-    if (normalized === "weight" || normalized === "kg" || normalized === "gram") {
+    if (
+        normalized === "weight" ||
+        normalized === "kg" ||
+        normalized === "gram"
+    ) {
         return "weight_unit_data";
     }
 
-    if (normalized === "length" || normalized === "meter" || normalized === "metre") {
+    if (
+        normalized === "length" ||
+        normalized === "meter" ||
+        normalized === "metre"
+    ) {
         return "length_unit_data";
     }
 
-    if (normalized === "volume" || normalized === "liter" || normalized === "litre") {
+    if (
+        normalized === "volume" ||
+        normalized === "liter" ||
+        normalized === "litre"
+    ) {
         return "volume_unit_data";
     }
 
-    if (normalized === "count" || normalized === "piece" || normalized === "unit") {
+    if (
+        normalized === "count" ||
+        normalized === "piece" ||
+        normalized === "unit"
+    ) {
         return "count_unit_data";
     }
 
@@ -118,8 +140,12 @@ export default function WarehouseEmployeeProductWizardModal({
     const [step, setStep] = useState<Step>(1);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
-    const [createdProduct, setCreatedProduct] = useState<ApiProduct | null>(null);
-    const [createdStock, setCreatedStock] = useState<ApiStockInfo | undefined>();
+    const [createdProduct, setCreatedProduct] = useState<ApiProduct | null>(
+        null
+    );
+    const [createdStock, setCreatedStock] = useState<
+        ApiStockInfo | undefined
+    >();
     const [selectedStaff, setSelectedStaff] = useState("");
 
     const [form, setForm] = useState<FormState>({
@@ -166,7 +192,7 @@ export default function WarehouseEmployeeProductWizardModal({
         field: K,
         value: FormState[K]
     ) {
-        setForm(prev => ({
+        setForm((prev) => ({
             ...prev,
             [field]: value,
         }));
@@ -188,8 +214,10 @@ export default function WarehouseEmployeeProductWizardModal({
             return false;
         }
 
-        if (Number(form.salePrice) < 0) {
-            setError("قیمت فروش نمی‌تواند منفی باشد");
+        const salePrice = Number(form.salePrice);
+
+        if (!Number.isFinite(salePrice) || salePrice < 0) {
+            setError("قیمت فروش معتبر نیست");
             return false;
         }
 
@@ -275,15 +303,19 @@ export default function WarehouseEmployeeProductWizardModal({
     }
 
     async function createProduct() {
+        if (!validateStepTwo()) return;
+
         setLoading(true);
         setError("");
 
         try {
+            const unitType = form.unitType as ApiProduct["unit_type"];
+
             const initPayload: ApiProductInitDraft = {
                 name: form.name.trim(),
                 sale_price: Number(form.salePrice),
                 category: Number(form.category),
-                unit_type: form.unitType,
+                unit_type: unitType,
             };
 
             const initResponse = await axiosInstance.post<ApiProduct>(
@@ -292,18 +324,17 @@ export default function WarehouseEmployeeProductWizardModal({
             );
 
             const product = initResponse.data;
-
             const unitKey = getUnitDataKey(form.unitType);
 
             const unitData: ApiUnitData = {
                 quantity_per_unit: Number(form.quantityPerUnit),
             };
 
-            const createPayload = {
+            const createPayload: Record<string, unknown> = {
                 name: form.name.trim(),
                 sale_price: Number(form.salePrice),
                 category: Number(form.category),
-                unit_type: form.unitType,
+                unit_type: unitType,
                 [unitKey]: unitData,
             };
 
@@ -312,9 +343,10 @@ export default function WarehouseEmployeeProductWizardModal({
                 createPayload
             );
 
-            const finalProduct = createResponse.data?.id
-                ? createResponse.data
-                : product;
+            const finalProduct =
+                createResponse.data?.id != null
+                    ? createResponse.data
+                    : product;
 
             setCreatedProduct(finalProduct);
             setStep(3);
@@ -366,7 +398,6 @@ export default function WarehouseEmployeeProductWizardModal({
         }
 
         if (step === 2) {
-            if (!validateStepTwo()) return;
             void createProduct();
             return;
         }
@@ -376,16 +407,19 @@ export default function WarehouseEmployeeProductWizardModal({
         }
     }
 
-    const bg = isOpen ? "#ffffff" : "#ffffff";
     const isDark =
         typeof document !== "undefined" &&
         document.documentElement.classList.contains("dark");
 
     const surface = isDark ? "#0f172a" : "#ffffff";
-    const border = isDark ? "rgba(255,255,255,.07)" : "rgba(15,23,42,.07)";
+    const border = isDark
+        ? "rgba(255,255,255,.07)"
+        : "rgba(15,23,42,.07)";
     const text = isDark ? "#f8fafc" : "#172033";
     const muted = isDark ? "#94a3b8" : "#64748b";
-    const input = isDark ? "rgba(255,255,255,.04)" : "rgba(15,23,42,.025)";
+    const input = isDark
+        ? "rgba(255,255,255,.04)"
+        : "rgba(15,23,42,.025)";
 
     const steps = [
         { number: 1, label: "اطلاعات پایه" },
@@ -405,11 +439,11 @@ export default function WarehouseEmployeeProductWizardModal({
                     className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/50 px-4 py-6 backdrop-blur-md"
                 >
                     <motion.div
-                        initial={{ opacity: 0, y: 24, scale: .98 }}
+                        initial={{ opacity: 0, y: 24, scale: 0.98 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
-                        exit={{ opacity: 0, y: 24, scale: .98 }}
-                        transition={{ duration: .25 }}
-                        onClick={e => e.stopPropagation()}
+                        exit={{ opacity: 0, y: 24, scale: 0.98 }}
+                        transition={{ duration: 0.25 }}
+                        onClick={(e) => e.stopPropagation()}
                         dir="rtl"
                         className="w-full max-w-xl overflow-hidden rounded-[2rem] border shadow-2xl"
                         style={{
@@ -427,9 +461,15 @@ export default function WarehouseEmployeeProductWizardModal({
                                     }}
                                 >
                                     {step === 4 ? (
-                                        <Check size={21} className="text-indigo-500" />
+                                        <Check
+                                            size={21}
+                                            className="text-indigo-500"
+                                        />
                                     ) : (
-                                        <PackagePlus size={21} className="text-indigo-500" />
+                                        <PackagePlus
+                                            size={21}
+                                            className="text-indigo-500"
+                                        />
                                     )}
                                 </div>
 
@@ -539,8 +579,11 @@ export default function WarehouseEmployeeProductWizardModal({
                                 >
                                     <input
                                         value={form.name}
-                                        onChange={e =>
-                                            updateField("name", e.target.value)
+                                        onChange={(e) =>
+                                            updateField(
+                                                "name",
+                                                e.target.value
+                                            )
                                         }
                                         placeholder="نام محصول"
                                         disabled={loading}
@@ -558,7 +601,7 @@ export default function WarehouseEmployeeProductWizardModal({
                                             min="0"
                                             step="any"
                                             value={form.salePrice}
-                                            onChange={e =>
+                                            onChange={(e) =>
                                                 updateField(
                                                     "salePrice",
                                                     e.target.value
@@ -577,7 +620,7 @@ export default function WarehouseEmployeeProductWizardModal({
 
                                         <select
                                             value={form.category}
-                                            onChange={e =>
+                                            onChange={(e) =>
                                                 updateField(
                                                     "category",
                                                     e.target.value
@@ -597,7 +640,7 @@ export default function WarehouseEmployeeProductWizardModal({
                                                 انتخاب دسته‌بندی
                                             </option>
 
-                                            {categories.map(category => (
+                                            {categories.map((category) => (
                                                 <option
                                                     key={category.id}
                                                     value={category.id}
@@ -637,9 +680,10 @@ export default function WarehouseEmployeeProductWizardModal({
                                         </div>
 
                                         <div className="grid grid-cols-2 gap-3">
-                                            {getUnitOptions().map(unit => {
+                                            {getUnitOptions().map((unit) => {
                                                 const active =
-                                                    form.unitType === unit.value;
+                                                    form.unitType ===
+                                                    unit.value;
 
                                                 return (
                                                     <button
@@ -688,7 +732,7 @@ export default function WarehouseEmployeeProductWizardModal({
                                         min="0.0001"
                                         step="any"
                                         value={form.quantityPerUnit}
-                                        onChange={e =>
+                                        onChange={(e) =>
                                             updateField(
                                                 "quantityPerUnit",
                                                 e.target.value
@@ -715,10 +759,12 @@ export default function WarehouseEmployeeProductWizardModal({
                                 >
                                     <select
                                         value={selectedStaff}
-                                        onChange={e =>
+                                        onChange={(e) =>
                                             setSelectedStaff(e.target.value)
                                         }
-                                        disabled={loading || Boolean(performedById)}
+                                        disabled={
+                                            loading || Boolean(performedById)
+                                        }
                                         className="h-12 w-full appearance-none rounded-2xl border px-4 text-[13px] font-medium outline-none disabled:opacity-60"
                                         style={{
                                             background: input,
@@ -730,7 +776,7 @@ export default function WarehouseEmployeeProductWizardModal({
                                             انتخاب ثبت‌کننده موجودی
                                         </option>
 
-                                        {staff.map(item => (
+                                        {staff.map((item) => (
                                             <option
                                                 key={item.id}
                                                 value={item.id}
@@ -745,7 +791,7 @@ export default function WarehouseEmployeeProductWizardModal({
                                         min="0"
                                         step="any"
                                         value={form.quantity}
-                                        onChange={e =>
+                                        onChange={(e) =>
                                             updateField(
                                                 "quantity",
                                                 e.target.value
@@ -768,7 +814,7 @@ export default function WarehouseEmployeeProductWizardModal({
                                             min="0"
                                             step="any"
                                             value={form.minimumStock}
-                                            onChange={e =>
+                                            onChange={(e) =>
                                                 updateField(
                                                     "minimumStock",
                                                     e.target.value
@@ -790,7 +836,7 @@ export default function WarehouseEmployeeProductWizardModal({
                                             min="0"
                                             step="any"
                                             value={form.maximumStock}
-                                            onChange={e =>
+                                            onChange={(e) =>
                                                 updateField(
                                                     "maximumStock",
                                                     e.target.value
@@ -812,7 +858,7 @@ export default function WarehouseEmployeeProductWizardModal({
 
                             {step === 4 && (
                                 <motion.div
-                                    initial={{ opacity: 0, scale: .97 }}
+                                    initial={{ opacity: 0, scale: 0.97 }}
                                     animate={{ opacity: 1, scale: 1 }}
                                     className="flex flex-col items-center py-8 text-center"
                                 >
@@ -848,10 +894,7 @@ export default function WarehouseEmployeeProductWizardModal({
                                             }}
                                         >
                                             موجودی اولیه:{" "}
-                                            {createdStock.current_quantity ??
-                                                createdStock.quantity ??
-                                                createdStock.stock ??
-                                                form.quantity}
+                                            {createdStock.current_quantity}
                                         </div>
                                     )}
                                 </motion.div>
@@ -869,7 +912,9 @@ export default function WarehouseEmployeeProductWizardModal({
                                         type="button"
                                         onClick={() => {
                                             setError("");
-                                            setStep(prev => (prev - 1) as Step);
+                                            setStep(
+                                                (prev) => (prev - 1) as Step
+                                            );
                                         }}
                                         disabled={loading}
                                         className="flex h-12 flex-1 items-center justify-center gap-2 rounded-full border text-[12px] font-bold disabled:opacity-50"
@@ -888,7 +933,7 @@ export default function WarehouseEmployeeProductWizardModal({
                                         type="button"
                                         onClick={handleNext}
                                         disabled={loading}
-                                        whileTap={{ scale: .97 }}
+                                        whileTap={{ scale: 0.97 }}
                                         className="flex h-12 flex-[1.4] items-center justify-center gap-2 rounded-full text-[12px] font-bold text-white disabled:opacity-50"
                                         style={{
                                             background:
@@ -917,7 +962,7 @@ export default function WarehouseEmployeeProductWizardModal({
                                     <motion.button
                                         type="button"
                                         onClick={onClose}
-                                        whileTap={{ scale: .97 }}
+                                        whileTap={{ scale: 0.97 }}
                                         className="flex h-12 w-full items-center justify-center rounded-full text-[12px] font-bold text-white"
                                         style={{
                                             background:
