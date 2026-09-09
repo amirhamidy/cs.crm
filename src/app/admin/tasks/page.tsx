@@ -9,6 +9,7 @@ import axiosInstance from "@/lib/axiosInstance";
 import { apiRoutes } from "@/lib/apiRoutes";
 import { Task, TaskStatus } from "@/types/task";
 import { Department } from "@/types/department";
+import SuspenseWrapper from "@/components/SuspenseWrapper";
 import TaskCard from "@/components/customcomponents/tasks/TaskCard";
 import CreateTaskModal from "@/components/customcomponents/tasks/CreateTaskModal";
 import EditTaskModal from "@/components/customcomponents/tasks/EditTaskModal";
@@ -28,7 +29,7 @@ function extractList<T>(data: ListResponse<T>): T[] {
     return [];
 }
 
-export default function AdminTasksPage() {
+function AdminTasksPageContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const { resolvedTheme } = useTheme();
@@ -278,5 +279,13 @@ export default function AdminTasksPage() {
                 )}
             </AnimatePresence>
         </div>
+    );
+}
+
+export default function AdminTasksPage() {
+    return (
+        <SuspenseWrapper>
+            <AdminTasksPageContent />
+        </SuspenseWrapper>
     );
 }

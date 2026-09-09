@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
 import type { ApiPurchasingEmployee } from "@/types/purchasing";
-import { FloatingSelect } from "./FormControls";
+import { FloatingSelect, OPTION_CLASS } from "./FormControls";
 
 interface Employee {
     id: number;
@@ -106,7 +106,7 @@ export default function PurchasingEmployeeModal({
     return (
         <AnimatePresence>
             {open && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/45 p-4 backdrop-blur-sm">
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#050B18]/55 p-4 backdrop-blur-sm">
                     <motion.div
                         initial={{
                             opacity: 0,
@@ -123,21 +123,21 @@ export default function PurchasingEmployeeModal({
                             scale: 0.96,
                             y: 12,
                         }}
-                        className="w-full max-w-[420px] rounded-[2rem] border border-gray-100 bg-white p-5 shadow-2xl dark:border-white/[0.07] dark:bg-[#0f172a]"
+                        className="w-full max-w-[420px] rounded-[2rem] border border-[#DCEAFB] bg-white p-5 shadow-2xl dark:border-[rgba(96,165,250,0.14)] dark:bg-[#0A1930]"
                         dir="rtl"
                     >
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-3">
-                                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-500">
+                                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-[#2563EB]/15 to-[#06B6D4]/15 text-[#2563EB] dark:text-[#38BDF8]">
                                     <UserPlus size={16} />
                                 </div>
 
                                 <div>
-                                    <h3 className="text-[13px] font-extrabold text-gray-900 dark:text-white">
+                                    <h3 className="text-[13px] font-extrabold text-[#0F2647] dark:text-white">
                                         افزودن کارمند
                                     </h3>
 
-                                    <p className="mt-0.5 text-[9.5px] text-gray-400">
+                                    <p className="mt-0.5 text-[9.5px] text-[#5D7595] dark:text-[#8FAAD1]">
                                         افزودن عضو جدید به خرید
                                     </p>
                                 </div>
@@ -147,7 +147,7 @@ export default function PurchasingEmployeeModal({
                                 type="button"
                                 onClick={onClose}
                                 disabled={loading}
-                                className="flex h-8 w-8 items-center justify-center rounded-xl bg-gray-100 text-gray-400 dark:bg-white/[0.05]"
+                                className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#F3F8FF] text-[#5D7595] dark:bg-[rgba(96,165,250,0.08)] dark:text-[#8FAAD1]"
                             >
                                 <X size={14} />
                             </button>
@@ -164,7 +164,7 @@ export default function PurchasingEmployeeModal({
                                 }
                                 disabled={fetching}
                             >
-                                <option value="">
+                                <option value="" className={OPTION_CLASS}>
                                     {fetching
                                         ? "در حال دریافت..."
                                         : "انتخاب کارمند"}
@@ -174,6 +174,7 @@ export default function PurchasingEmployeeModal({
                                     <option
                                         key={employee.id}
                                         value={employee.id}
+                                        className={OPTION_CLASS}
                                     >
                                         {employee.full_name ||
                                             employee.username ||
@@ -184,7 +185,7 @@ export default function PurchasingEmployeeModal({
                         </div>
 
                         {error && (
-                            <div className="mt-3 rounded-2xl bg-red-500/10 px-3 py-2.5 text-[10px] font-semibold text-red-500">
+                            <div className="mt-3 rounded-2xl bg-rose-500/10 px-3 py-2.5 text-[10px] font-semibold text-rose-500">
                                 {error}
                             </div>
                         )}
@@ -194,7 +195,7 @@ export default function PurchasingEmployeeModal({
                                 type="button"
                                 onClick={onClose}
                                 disabled={loading}
-                                className="flex-1 rounded-2xl bg-gray-100 py-3 text-[10.5px] font-bold text-gray-600 dark:bg-white/[0.06] dark:text-white/70"
+                                className="flex-1 rounded-2xl bg-[#F3F8FF] py-3 text-[10.5px] font-bold text-[#3D5B82] dark:bg-[rgba(96,165,250,0.08)] dark:text-[#8FAAD1]"
                             >
                                 انصراف
                             </button>
@@ -207,7 +208,7 @@ export default function PurchasingEmployeeModal({
                                     fetching ||
                                     !employeeId
                                 }
-                                className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-indigo-600 py-3 text-[10.5px] font-bold text-white disabled:opacity-50"
+                                className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-[#2563EB] to-[#0EA5E9] py-3 text-[10.5px] font-bold text-white shadow-lg shadow-[#2563EB]/25 transition hover:brightness-110 disabled:opacity-50 disabled:shadow-none"
                             >
                                 {loading ? (
                                     <Loader2

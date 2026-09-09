@@ -1,6 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import {
+    useEffect,
+    useState,
+    type InputHTMLAttributes,
+    type TextareaHTMLAttributes,
+} from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
     Check,
@@ -14,14 +19,50 @@ import type {
     ApiPurchasingEmployee,
     ApiPurchasingStep,
 } from "@/types/purchasing";
-import {
-    FloatingInput,
-    FloatingTextarea,
-} from "./FormControls";
+
+/**
+ * Static-label field variants used only in this modal: the label sits
+ * fixed above the field instead of floating/animating on focus.
+ */
+const FIELD_CLASS =
+    "w-full rounded-2xl border border-[#DCEAFB] bg-white px-4 py-3 text-[11.5px] font-semibold text-[#0F2647] outline-none transition-all focus:border-[#2563EB] focus:ring-4 focus:ring-[#2563EB]/10 dark:border-[rgba(96,165,250,0.18)] dark:bg-[#0E1F38] dark:text-[#EAF2FF] dark:focus:border-[#38BDF8] dark:focus:ring-[#38BDF8]/10";
+
+const LABEL_CLASS =
+    "px-1 text-[10.5px] font-bold text-[#3D5B82] dark:text-[#C7D9F2]";
+
+function LabeledInput({
+    label,
+    className = "",
+    ...props
+}: InputHTMLAttributes<HTMLInputElement> & { label: string }) {
+    return (
+        <div className="flex flex-col gap-1.5">
+            <label className={LABEL_CLASS}>{label}</label>
+            <input {...props} className={`${FIELD_CLASS} ${className}`} />
+        </div>
+    );
+}
+
+function LabeledTextarea({
+    label,
+    className = "",
+    ...props
+}: TextareaHTMLAttributes<HTMLTextAreaElement> & { label: string }) {
+    return (
+        <div className="flex flex-col gap-1.5">
+            <label className={LABEL_CLASS}>{label}</label>
+            <textarea
+                {...props}
+                className={`min-h-[110px] resize-none leading-6 ${FIELD_CLASS} ${className}`}
+            />
+        </div>
+    );
+}
 
 interface Props {
     open: boolean;
     step?: ApiPurchasingStep | null;
+    steps: ApiPurchasingStep[];
     employees: ApiPurchasingEmployee[];
     onClose: () => void;
     onSaved: () => void;
@@ -30,13 +71,13 @@ interface Props {
 export default function StepModal({
     open,
     step,
+    steps,
     employees,
     onClose,
     onSaved,
 }: Props) {
     const [title, setTitle] = useState("");
     const [description, setDescription] = useState("");
-    const [order, setOrder] = useState("");
     const [selected, setSelected] = useState<number[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
@@ -48,7 +89,6 @@ export default function StepModal({
 
         setTitle(step?.title ?? "");
         setDescription(step?.description ?? "");
-        setOrder(step?.order ? String(step.order) : "");
         setSelected(step?.employees ?? []);
         setError("");
     }, [open, step]);
@@ -67,11 +107,6 @@ export default function StepModal({
             return;
         }
 
-        if (!order || Number(order) < 1) {
-            setError("ترتیب مرحله را وارد کنید.");
-            return;
-        }
-
         try {
             setLoading(true);
             setError("");
@@ -79,8 +114,14 @@ export default function StepModal({
             const payload = {
                 title: title.trim(),
                 description: description.trim(),
-                order: Number(order),
                 employees: selected,
+                order:
+                    step?.order ??
+                    (steps.length
+                        ? Math.max(
+                            ...steps.map((item) => item.order)
+                        ) + 1
+                        : 1),
             };
 
             if (edit) {
@@ -113,7 +154,7 @@ export default function StepModal({
         <AnimatePresence>
             {open && (
                 <div
-                    className="fixed inset-0 z-[100] flex items-center justify-center bg-black/45 p-4 backdrop-blur-sm"
+                    className="fixed inset-0 z-[100] flex items-center justify-center bg-[#050B18]/55 p-4 backdrop-blur-sm"
                     dir="rtl"
                 >
                     <motion.div
@@ -133,22 +174,22 @@ export default function StepModal({
                             y: 12,
                         }}
                         transition={{ duration: 0.2 }}
-                        className="max-h-[88vh] w-full max-w-[470px] overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-2xl dark:border-white/[0.07] dark:bg-[#0f172a]"
+                        className="max-h-[88vh] w-full max-w-[470px] overflow-hidden rounded-[2rem] border border-[#DCEAFB] bg-white shadow-2xl dark:border-[rgba(96,165,250,0.14)] dark:bg-[#0A1930]"
                     >
-                        <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4 dark:border-white/[0.06]">
+                        <div className="flex items-center justify-between border-b border-[#DCEAFB] px-5 py-4 dark:border-[rgba(96,165,250,0.12)]">
                             <div className="flex items-center gap-3">
-                                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-500">
+                                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-[#2563EB]/15 to-[#06B6D4]/15 text-[#2563EB] dark:text-[#38BDF8]">
                                     <Layers3 size={16} />
                                 </div>
 
                                 <div>
-                                    <h3 className="text-[13px] font-extrabold text-gray-900 dark:text-white">
+                                    <h3 className="text-[13px] font-extrabold text-[#0F2647] dark:text-white">
                                         {edit
                                             ? "ویرایش مرحله"
                                             : "افزودن مرحله"}
                                     </h3>
 
-                                    <p className="mt-0.5 text-[9.5px] text-gray-400">
+                                    <p className="mt-0.5 text-[9.5px] text-[#5D7595] dark:text-[#8FAAD1]">
                                         تنظیم روند فرآیند خرید
                                     </p>
                                 </div>
@@ -158,7 +199,7 @@ export default function StepModal({
                                 type="button"
                                 onClick={onClose}
                                 disabled={loading}
-                                className="flex h-8 w-8 items-center justify-center rounded-xl bg-gray-100 text-gray-400 dark:bg-white/[0.05]"
+                                className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#F3F8FF] text-[#5D7595] dark:bg-[rgba(96,165,250,0.08)] dark:text-[#8FAAD1]"
                             >
                                 <X size={14} />
                             </button>
@@ -166,7 +207,7 @@ export default function StepModal({
 
                         <div className="max-h-[calc(88vh-74px)] overflow-y-auto p-5">
                             <div className="flex flex-col gap-4">
-                                <FloatingInput
+                                <LabeledInput
                                     label="عنوان مرحله"
                                     value={title}
                                     onChange={(e) =>
@@ -174,25 +215,7 @@ export default function StepModal({
                                     }
                                 />
 
-                                <div className="grid grid-cols-2 gap-3">
-                                    <FloatingInput
-                                        label="ترتیب"
-                                        type="number"
-                                        min={1}
-                                        value={order}
-                                        onChange={(e) =>
-                                            setOrder(e.target.value)
-                                        }
-                                    />
-
-                                    <div className="flex items-center gap-2 rounded-[1.35rem] bg-indigo-500/10 px-3 text-[10px] font-bold text-indigo-500">
-                                        <Layers3 size={14} />
-                                        مرحله{" "}
-                                        {order || "-"}
-                                    </div>
-                                </div>
-
-                                <FloatingTextarea
+                                <LabeledTextarea
                                     label="توضیحات"
                                     value={description}
                                     onChange={(e) =>
@@ -206,14 +229,14 @@ export default function StepModal({
                                     <div className="mb-2.5 flex items-center gap-2">
                                         <Users
                                             size={14}
-                                            className="text-gray-400"
+                                            className="text-[#5D7595] dark:text-[#8FAAD1]"
                                         />
 
-                                        <span className="text-[10.5px] font-extrabold text-gray-700 dark:text-white/75">
+                                        <span className="text-[10.5px] font-extrabold text-[#0F2647] dark:text-white">
                                             مسئولان مرحله
                                         </span>
 
-                                        <span className="rounded-lg bg-indigo-500/10 px-2 py-1 text-[8.5px] font-bold text-indigo-500">
+                                        <span className="rounded-lg bg-[#2563EB]/10 px-2 py-1 text-[8.5px] font-bold text-[#2563EB] dark:text-[#38BDF8]">
                                             {selected.length}
                                         </span>
                                     </div>
@@ -235,11 +258,11 @@ export default function StepModal({
                                                         )
                                                     }
                                                     className={`flex items-center justify-between rounded-2xl border px-3 py-2.5 text-right transition-all ${checked
-                                                            ? "border-indigo-500/20 bg-indigo-500/10"
-                                                            : "border-gray-100 bg-gray-50 dark:border-white/[0.06] dark:bg-white/[0.025]"
+                                                        ? "border-[#2563EB]/30 bg-[#2563EB]/10"
+                                                        : "border-[#DCEAFB] bg-[#F3F8FF] dark:border-[rgba(96,165,250,0.12)] dark:bg-[rgba(96,165,250,0.04)]"
                                                         }`}
                                                 >
-                                                    <span className="text-[10px] font-bold text-gray-700 dark:text-white/75">
+                                                    <span className="text-[10px] font-bold text-[#3D5B82] dark:text-[#C7D9F2]">
                                                         {
                                                             employee.employee_name
                                                         }
@@ -247,8 +270,8 @@ export default function StepModal({
 
                                                     <span
                                                         className={`flex h-5 w-5 items-center justify-center rounded-lg ${checked
-                                                                ? "bg-indigo-500 text-white"
-                                                                : "bg-gray-200 text-transparent dark:bg-white/10"
+                                                            ? "bg-gradient-to-r from-[#2563EB] to-[#0EA5E9] text-white"
+                                                            : "bg-[#DCEAFB] text-transparent dark:bg-[rgba(96,165,250,0.12)]"
                                                             }`}
                                                     >
                                                         <Check size={11} />
@@ -260,7 +283,7 @@ export default function StepModal({
                                 </div>
 
                                 {error && (
-                                    <div className="rounded-2xl bg-red-500/10 px-3 py-2.5 text-[10px] font-semibold text-red-500">
+                                    <div className="rounded-2xl bg-rose-500/10 px-3 py-2.5 text-[10px] font-semibold text-rose-500">
                                         {error}
                                     </div>
                                 )}
@@ -270,7 +293,7 @@ export default function StepModal({
                                         type="button"
                                         onClick={onClose}
                                         disabled={loading}
-                                        className="flex-1 rounded-2xl bg-gray-100 py-3 text-[10.5px] font-bold text-gray-600 dark:bg-white/[0.06] dark:text-white/70"
+                                        className="flex-1 rounded-2xl bg-[#F3F8FF] py-3 text-[10.5px] font-bold text-[#3D5B82] dark:bg-[rgba(96,165,250,0.08)] dark:text-[#8FAAD1]"
                                     >
                                         انصراف
                                     </button>
@@ -279,7 +302,7 @@ export default function StepModal({
                                         type="button"
                                         onClick={submit}
                                         disabled={loading}
-                                        className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-indigo-600 py-3 text-[10.5px] font-bold text-white transition hover:bg-indigo-500 disabled:opacity-50"
+                                        className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-[#2563EB] to-[#0EA5E9] py-3 text-[10.5px] font-bold text-white shadow-lg shadow-[#2563EB]/25 transition hover:brightness-110 disabled:opacity-50 disabled:shadow-none"
                                     >
                                         {loading ? (
                                             <Loader2

@@ -53,8 +53,8 @@ export default function PurchasingOverview({
             title: "کل تسک‌ها",
             value: tasks.length,
             icon: ClipboardList,
-            color: "#6366f1",
-            bg: "rgba(99,102,241,0.10)",
+            color: "#2563EB",
+            bg: "rgba(37,99,235,0.10)",
         },
         {
             title: "در انتظار",
@@ -81,8 +81,8 @@ export default function PurchasingOverview({
             title: "کارمندان فعال",
             value: activeEmployees,
             icon: UserCog,
-            color: "#8b5cf6",
-            bg: "rgba(139,92,246,0.10)",
+            color: "#06B6D4",
+            bg: "rgba(6,182,212,0.10)",
         },
     ];
 
@@ -93,6 +93,12 @@ export default function PurchasingOverview({
                 new Date(a.created_at).getTime()
         )
         .slice(0, 6);
+
+    const panelBg = isDark ? "rgba(96,165,250,0.05)" : "#F5F9FF";
+    const panelBorder = isDark
+        ? "rgba(96,165,250,0.14)"
+        : "rgba(37,99,235,0.10)";
+    const rowBg = isDark ? "rgba(96,165,250,0.07)" : "#EEF5FF";
 
     return (
         <div dir="rtl" className="flex flex-col gap-4">
@@ -105,12 +111,8 @@ export default function PurchasingOverview({
                             key={item.title}
                             className="rounded-[1.8rem] border p-3.5 transition-all duration-200 hover:-translate-y-0.5"
                             style={{
-                                background: isDark
-                                    ? "rgba(255,255,255,0.025)"
-                                    : "#fafafa",
-                                borderColor: isDark
-                                    ? "rgba(255,255,255,0.06)"
-                                    : "rgba(15,23,42,0.06)",
+                                background: panelBg,
+                                borderColor: panelBorder,
                             }}
                         >
                             <div className="flex items-center justify-between gap-2">
@@ -132,7 +134,7 @@ export default function PurchasingOverview({
                                 </span>
                             </div>
 
-                            <p className="mt-2.5 text-[10px] font-bold text-gray-400">
+                            <p className="mt-2.5 text-[10px] font-bold text-[#5D7595] dark:text-[#8FAAD1]">
                                 {item.title}
                             </p>
                         </div>
@@ -144,33 +146,32 @@ export default function PurchasingOverview({
                 <div
                     className="rounded-[1.8rem] border p-4"
                     style={{
-                        background: isDark
-                            ? "rgba(255,255,255,0.025)"
-                            : "#fafafa",
-                        borderColor: isDark
-                            ? "rgba(255,255,255,0.06)"
-                            : "rgba(15,23,42,0.06)",
+                        background: panelBg,
+                        borderColor: panelBorder,
                     }}
                 >
                     <div className="flex items-center justify-between">
                         <div>
-                            <h3 className="text-[12.5px] font-extrabold text-gray-900 dark:text-white">
+                            <h3 className="text-[12.5px] font-extrabold text-[#0F2647] dark:text-white">
                                 فعالیت‌های اخیر
                             </h3>
 
-                            <p className="mt-0.5 text-[9.5px] text-gray-400">
+                            <p className="mt-0.5 text-[9.5px] text-[#5D7595] dark:text-[#8FAAD1]">
                                 آخرین تغییرات فرآیند خرید
                             </p>
                         </div>
 
-                        <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-500">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#2563EB]/10 text-[#2563EB] dark:text-[#38BDF8]">
                             <History size={14} />
                         </div>
                     </div>
 
                     {recentActivities.length === 0 ? (
-                        <div className="mt-4 flex items-center justify-center rounded-2xl bg-gray-50 py-8 dark:bg-white/[0.025]">
-                            <span className="text-[10.5px] font-semibold text-gray-400">
+                        <div
+                            className="mt-4 flex items-center justify-center rounded-2xl py-8"
+                            style={{ background: rowBg }}
+                        >
+                            <span className="text-[10.5px] font-semibold text-[#5D7595] dark:text-[#8FAAD1]">
                                 هنوز فعالیتی ثبت نشده است
                             </span>
                         </div>
@@ -179,25 +180,26 @@ export default function PurchasingOverview({
                             {recentActivities.map((item) => (
                                 <div
                                     key={item.id}
-                                    className="flex items-center gap-3 rounded-2xl bg-gray-50 px-3 py-2.5 dark:bg-white/[0.035]"
+                                    className="flex items-center gap-3 rounded-2xl px-3 py-2.5"
+                                    style={{ background: rowBg }}
                                 >
-                                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-500">
+                                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[#2563EB]/10 text-[#2563EB] dark:text-[#38BDF8]">
                                         <History size={13} />
                                     </div>
 
                                     <div className="min-w-0 flex-1">
                                         <div className="flex items-center gap-2">
-                                            <span className="rounded-lg bg-indigo-500/10 px-2 py-1 text-[9px] font-bold text-indigo-500">
+                                            <span className="rounded-lg bg-[#2563EB]/10 px-2 py-1 text-[9px] font-bold text-[#2563EB] dark:text-[#38BDF8]">
                                                 {item.type_display}
                                             </span>
 
-                                            <span className="truncate text-[10px] font-bold text-gray-500 dark:text-white/55">
+                                            <span className="truncate text-[10px] font-bold text-[#3D5B82] dark:text-[#8FAAD1]">
                                                 {item.created_by_name}
                                             </span>
                                         </div>
 
                                         {item.note && (
-                                            <p className="mt-1 truncate text-[9.5px] text-gray-400">
+                                            <p className="mt-1 truncate text-[9.5px] text-[#5D7595] dark:text-[#7C93B8]">
                                                 {item.note}
                                             </p>
                                         )}
@@ -211,26 +213,22 @@ export default function PurchasingOverview({
                 <div
                     className="rounded-[1.8rem] border p-4"
                     style={{
-                        background: isDark
-                            ? "rgba(255,255,255,0.025)"
-                            : "#fafafa",
-                        borderColor: isDark
-                            ? "rgba(255,255,255,0.06)"
-                            : "rgba(15,23,42,0.06)",
+                        background: panelBg,
+                        borderColor: panelBorder,
                     }}
                 >
                     <div className="flex items-center justify-between">
                         <div>
-                            <h3 className="text-[12.5px] font-extrabold text-gray-900 dark:text-white">
+                            <h3 className="text-[12.5px] font-extrabold text-[#0F2647] dark:text-white">
                                 وضعیت فرآیند
                             </h3>
 
-                            <p className="mt-0.5 text-[9.5px] text-gray-400">
+                            <p className="mt-0.5 text-[9.5px] text-[#5D7595] dark:text-[#8FAAD1]">
                                 ساختار فعلی خرید
                             </p>
                         </div>
 
-                        <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-violet-500/10 text-violet-500">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#06B6D4]/10 text-[#06B6D4]">
                             <ListOrdered size={14} />
                         </div>
                     </div>
@@ -239,21 +237,25 @@ export default function PurchasingOverview({
                         <OverviewRow
                             label="مراحل تعریف شده"
                             value={steps.length}
+                            rowBg={rowBg}
                         />
 
                         <OverviewRow
                             label="کارمندان خرید"
                             value={employees.length}
+                            rowBg={rowBg}
                         />
 
                         <OverviewRow
                             label="کارمندان فعال"
                             value={activeEmployees}
+                            rowBg={rowBg}
                         />
 
                         <OverviewRow
                             label="فایل‌های ثبت شده"
                             value={attachments.length}
+                            rowBg={rowBg}
                         />
                     </div>
                 </div>
@@ -265,17 +267,22 @@ export default function PurchasingOverview({
 function OverviewRow({
     label,
     value,
+    rowBg,
 }: {
     label: string;
     value: number;
+    rowBg: string;
 }) {
     return (
-        <div className="flex items-center justify-between gap-3 rounded-2xl bg-gray-50 px-3 py-2.5 dark:bg-white/[0.035]">
-            <span className="text-[10px] font-semibold text-gray-400">
+        <div
+            className="flex items-center justify-between gap-3 rounded-2xl px-3 py-2.5"
+            style={{ background: rowBg }}
+        >
+            <span className="text-[10px] font-semibold text-[#5D7595] dark:text-[#8FAAD1]">
                 {label}
             </span>
 
-            <span className="rounded-xl bg-indigo-500/10 px-2.5 py-1 text-[10px] font-extrabold text-indigo-500">
+            <span className="rounded-xl bg-[#2563EB]/10 px-2.5 py-1 text-[10px] font-extrabold text-[#2563EB] dark:text-[#38BDF8]">
                 {value}
             </span>
         </div>

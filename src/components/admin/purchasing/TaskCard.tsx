@@ -113,7 +113,7 @@ export default function TaskCard({
                     duration: 0.2,
                     delay: index * 0.025,
                 }}
-                className="group relative overflow-hidden rounded-[1.8rem] border border-gray-100 bg-white shadow-[0_8px_28px_rgba(15,23,42,0.035)] transition-all hover:shadow-[0_12px_36px_rgba(15,23,42,0.08)] dark:border-white/[0.07] dark:bg-[#111a2d]"
+                className="group relative overflow-hidden rounded-[1.8rem] border border-[#DCEAFB] bg-white shadow-[0_8px_28px_rgba(37,99,235,0.06)] transition-all hover:shadow-[0_16px_40px_rgba(37,99,235,0.12)] dark:border-[rgba(96,165,250,0.14)] dark:bg-[#0E1F38]"
             >
                 <div
                     className="absolute right-0 top-0 h-full w-1"
@@ -127,13 +127,13 @@ export default function TaskCard({
                     onClick={() => setOpen((v) => !v)}
                     className="flex w-full items-center gap-3 p-4 text-right"
                 >
-                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-indigo-500/10 text-indigo-500">
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#2563EB]/12 to-[#06B6D4]/12 text-[#2563EB] dark:text-[#38BDF8]">
                         <Package size={18} />
                     </div>
 
                     <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2">
-                            <h3 className="truncate text-[13px] font-extrabold text-gray-900 dark:text-white">
+                            <h3 className="truncate text-[13px] font-extrabold text-[#0F2647] dark:text-white">
                                 {task.product_name}
                             </h3>
 
@@ -149,7 +149,7 @@ export default function TaskCard({
                             </span>
                         </div>
 
-                        <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-[9.5px] text-gray-400">
+                        <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-[9.5px] text-[#5D7595] dark:text-[#8FAAD1]">
                             <span>
                                 مرحله{" "}
                                 {task.process_step_order}:{" "}
@@ -165,7 +165,7 @@ export default function TaskCard({
 
                     <ChevronDown
                         size={16}
-                        className={`shrink-0 text-gray-400 transition-transform ${open ? "rotate-180" : ""
+                        className={`shrink-0 text-[#5D7595] transition-transform dark:text-[#8FAAD1] ${open ? "rotate-180" : ""
                             }`}
                     />
                 </button>
@@ -186,7 +186,7 @@ export default function TaskCard({
                                 opacity: 0,
                             }}
                         >
-                            <div className="border-t border-gray-100 px-4 pb-4 pt-4 dark:border-white/[0.05]">
+                            <div className="border-t border-[#DCEAFB] px-4 pb-4 pt-4 dark:border-[rgba(96,165,250,0.1)]">
                                 <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                                     <InfoItem
                                         label="مرحله فعلی"
@@ -218,7 +218,7 @@ export default function TaskCard({
                                 </div>
 
                                 {error && (
-                                    <div className="mt-3 rounded-2xl bg-red-500/10 px-3 py-2.5 text-[10px] font-semibold text-red-500">
+                                    <div className="mt-3 rounded-2xl bg-rose-500/10 px-3 py-2.5 text-[10px] font-semibold text-rose-500">
                                         {error}
                                     </div>
                                 )}
@@ -239,7 +239,7 @@ export default function TaskCard({
                                                             "advance"
                                                         )
                                                     }
-                                                    className="flex items-center justify-center gap-1.5 rounded-2xl bg-indigo-600 px-3 py-2.5 text-[10px] font-bold text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-40"
+                                                    className="flex items-center justify-center gap-1.5 rounded-2xl bg-gradient-to-r from-[#2563EB] to-[#0EA5E9] px-3 py-2.5 text-[10px] font-bold text-white shadow-md shadow-[#2563EB]/20 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none"
                                                 >
                                                     <ArrowLeft
                                                         size={13}
@@ -259,7 +259,7 @@ export default function TaskCard({
                                                             "revert"
                                                         )
                                                     }
-                                                    className="flex items-center justify-center gap-1.5 rounded-2xl bg-pink-500/10 px-3 py-2.5 text-[10px] font-bold text-pink-500 transition hover:bg-pink-500/15 disabled:cursor-not-allowed disabled:opacity-40"
+                                                    className="flex items-center justify-center gap-1.5 rounded-2xl bg-[#F43F5E]/10 px-3 py-2.5 text-[10px] font-bold text-[#F43F5E] transition hover:bg-[#F43F5E]/15 disabled:cursor-not-allowed disabled:opacity-40"
                                                 >
                                                     <ArrowRight
                                                         size={13}
@@ -275,7 +275,7 @@ export default function TaskCard({
                                                     onClick={
                                                         complete
                                                     }
-                                                    className="col-span-2 flex items-center justify-center gap-1.5 rounded-2xl bg-emerald-500/10 px-3 py-2.5 text-[10px] font-bold text-emerald-500 transition hover:bg-emerald-500/15 disabled:opacity-40 sm:col-span-1"
+                                                    className="col-span-2 flex items-center justify-center gap-1.5 rounded-2xl bg-[#06B6D4]/10 px-3 py-2.5 text-[10px] font-bold text-[#0891B2] transition hover:bg-[#06B6D4]/15 disabled:opacity-40 dark:text-[#22D3EE] sm:col-span-1"
                                                 >
                                                     <CheckCircle2
                                                         size={13}
@@ -302,10 +302,10 @@ export default function TaskCard({
                                         <div className="mb-2.5 flex items-center gap-2">
                                             <FileText
                                                 size={13}
-                                                className="text-gray-400"
+                                                className="text-[#5D7595] dark:text-[#8FAAD1]"
                                             />
 
-                                            <span className="text-[10.5px] font-extrabold text-gray-700 dark:text-white/75">
+                                            <span className="text-[10.5px] font-extrabold text-[#0F2647] dark:text-white">
                                                 آخرین فعالیت‌ها
                                             </span>
                                         </div>
@@ -335,24 +335,24 @@ export default function TaskCard({
                                                             key={
                                                                 item.id
                                                             }
-                                                            className="rounded-2xl bg-gray-50 p-3 dark:bg-white/[0.035]"
+                                                            className="rounded-2xl bg-[#F3F8FF] p-3 dark:bg-[rgba(96,165,250,0.06)]"
                                                         >
                                                             <div className="flex items-center justify-between gap-2">
                                                                 <div className="flex min-w-0 items-center gap-2">
-                                                                    <span className="rounded-xl bg-indigo-500/10 px-2 py-1 text-[8.5px] font-bold text-indigo-500">
+                                                                    <span className="rounded-xl bg-[#2563EB]/10 px-2 py-1 text-[8.5px] font-bold text-[#2563EB] dark:text-[#38BDF8]">
                                                                         {
                                                                             item.type_display
                                                                         }
                                                                     </span>
 
-                                                                    <span className="truncate text-[9.5px] font-bold text-gray-500 dark:text-white/55">
+                                                                    <span className="truncate text-[9.5px] font-bold text-[#3D5B82] dark:text-[#8FAAD1]">
                                                                         {
                                                                             item.created_by_name
                                                                         }
                                                                     </span>
                                                                 </div>
 
-                                                                <span className="text-[8.5px] text-gray-400">
+                                                                <span className="text-[8.5px] text-[#5D7595] dark:text-[#7C93B8]">
                                                                     مرحله{" "}
                                                                     {item.process_step_order ??
                                                                         "-"}
@@ -360,7 +360,7 @@ export default function TaskCard({
                                                             </div>
 
                                                             {item.note && (
-                                                                <p className="mt-2 text-[9.5px] leading-5 text-gray-500 dark:text-white/45">
+                                                                <p className="mt-2 text-[9.5px] leading-5 text-[#5D7595] dark:text-[#7C93B8]">
                                                                     {
                                                                         item.note
                                                                     }
@@ -374,7 +374,7 @@ export default function TaskCard({
                                                                     }
                                                                     target="_blank"
                                                                     rel="noreferrer"
-                                                                    className="mt-2 inline-flex items-center gap-1 text-[9px] font-bold text-indigo-500"
+                                                                    className="mt-2 inline-flex items-center gap-1 text-[9px] font-bold text-[#2563EB] dark:text-[#38BDF8]"
                                                                 >
                                                                     <FileText
                                                                         size={
@@ -420,12 +420,12 @@ function InfoItem({
     value: string | number;
 }) {
     return (
-        <div className="rounded-2xl bg-gray-50 px-3 py-2.5 dark:bg-white/[0.035]">
-            <p className="text-[8.5px] font-semibold text-gray-400">
+        <div className="rounded-2xl bg-[#F3F8FF] px-3 py-2.5 dark:bg-[rgba(96,165,250,0.06)]">
+            <p className="text-[8.5px] font-semibold text-[#5D7595] dark:text-[#8FAAD1]">
                 {label}
             </p>
 
-            <p className="mt-1 truncate text-[10px] font-extrabold text-gray-700 dark:text-white/75">
+            <p className="mt-1 truncate text-[10px] font-extrabold text-[#0F2647] dark:text-[#EAF2FF]">
                 {value}
             </p>
         </div>

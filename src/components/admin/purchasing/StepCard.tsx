@@ -4,7 +4,6 @@ import { AnimatePresence, motion } from "framer-motion";
 import {
     Edit3,
     Layers3,
-    MoreHorizontal,
     Trash2,
     UserRound,
     Users,
@@ -54,28 +53,28 @@ export default function StepCard({
                     duration: 0.2,
                     delay: index * 0.03,
                 }}
-                className="group relative h-full overflow-hidden rounded-[1.8rem] border border-gray-100 bg-white p-4 shadow-[0_8px_28px_rgba(15,23,42,0.035)] transition-all hover:shadow-[0_12px_36px_rgba(15,23,42,0.08)] dark:border-white/[0.07] dark:bg-[#111a2d]"
+                className="group relative h-full overflow-hidden rounded-[1.8rem] border border-[#DCEAFB] bg-white p-4 shadow-[0_8px_28px_rgba(37,99,235,0.06)] transition-all hover:-translate-y-0.5 hover:shadow-[0_16px_40px_rgba(37,99,235,0.14)] dark:border-[rgba(96,165,250,0.14)] dark:bg-[#0E1F38]"
             >
-                <div className="absolute right-0 top-0 h-full w-1 bg-gradient-to-b from-indigo-500 to-violet-500" />
+                <div className="absolute right-0 top-0 h-full w-1 bg-gradient-to-b from-[#2563EB] to-[#06B6D4]" />
 
                 <div className="flex items-start justify-between gap-3">
                     <div className="flex min-w-0 items-center gap-3">
-                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-indigo-500/10 text-indigo-500">
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#2563EB]/12 to-[#06B6D4]/12 text-[#2563EB] dark:text-[#38BDF8]">
                             <Layers3 size={17} />
                         </div>
 
                         <div className="min-w-0">
                             <div className="flex items-center gap-1.5">
-                                <span className="rounded-lg bg-indigo-500/10 px-2 py-1 text-[8px] font-extrabold text-indigo-500">
+                                <span className="rounded-lg bg-[#2563EB]/10 px-2 py-1 text-[8px] font-extrabold text-[#2563EB] dark:text-[#38BDF8]">
                                     {step.order}
                                 </span>
 
-                                <h3 className="truncate text-[12px] font-extrabold text-gray-900 dark:text-white">
+                                <h3 className="truncate text-[12px] font-extrabold text-[#0F2647] dark:text-white">
                                     {step.title}
                                 </h3>
                             </div>
 
-                            <p className="mt-1 truncate text-[9.5px] text-gray-400">
+                            <p className="mt-1 truncate text-[9.5px] text-[#5D7595] dark:text-[#8FAAD1]">
                                 {step.description ||
                                     "بدون توضیحات"}
                             </p>
@@ -86,7 +85,7 @@ export default function StepCard({
                         <button
                             type="button"
                             onClick={onEdit}
-                            className="flex h-7 w-7 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-500"
+                            className="flex h-7 w-7 items-center justify-center rounded-xl bg-[#2563EB]/10 text-[#2563EB] dark:text-[#38BDF8]"
                         >
                             <Edit3 size={11} />
                         </button>
@@ -96,21 +95,21 @@ export default function StepCard({
                             onClick={() =>
                                 setConfirmDelete(true)
                             }
-                            className="flex h-7 w-7 items-center justify-center rounded-xl bg-red-500/10 text-red-500"
+                            className="flex h-7 w-7 items-center justify-center rounded-xl bg-rose-500/10 text-rose-500"
                         >
                             <Trash2 size={11} />
                         </button>
                     </div>
                 </div>
 
-                <div className="mt-4 rounded-2xl bg-gray-50 p-3 dark:bg-white/[0.035]">
+                <div className="mt-4 rounded-2xl bg-[#F3F8FF] p-3 dark:bg-[rgba(96,165,250,0.06)]">
                     <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-1.5 text-[9.5px] font-bold text-gray-400">
+                        <div className="flex items-center gap-1.5 text-[9.5px] font-bold text-[#5D7595] dark:text-[#8FAAD1]">
                             <Users size={11} />
                             مسئولان مرحله
                         </div>
 
-                        <span className="rounded-lg bg-indigo-500/10 px-2 py-1 text-[8px] font-extrabold text-indigo-500">
+                        <span className="rounded-lg bg-[#2563EB]/10 px-2 py-1 text-[8px] font-extrabold text-[#2563EB] dark:text-[#38BDF8]">
                             {step.employees_detail.length}
                         </span>
                     </div>
@@ -121,7 +120,7 @@ export default function StepCard({
                                 (employee) => (
                                     <span
                                         key={employee.id}
-                                        className="inline-flex items-center gap-1 rounded-xl bg-white px-2 py-1.5 text-[9px] font-bold text-gray-600 shadow-sm dark:bg-white/[0.05] dark:text-white/60"
+                                        className="inline-flex items-center gap-1 rounded-xl bg-white px-2 py-1.5 text-[9px] font-bold text-[#3D5B82] shadow-sm dark:bg-[rgba(96,165,250,0.1)] dark:text-[#C7D9F2]"
                                     >
                                         <UserRound
                                             size={9}
@@ -133,7 +132,7 @@ export default function StepCard({
                                 )
                             )
                         ) : (
-                            <span className="text-[9px] text-gray-400">
+                            <span className="text-[9px] text-[#5D7595] dark:text-[#8FAAD1]">
                                 مسئول تعیین نشده
                             </span>
                         )}
@@ -143,7 +142,7 @@ export default function StepCard({
 
             <AnimatePresence>
                 {confirmDelete && (
-                    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#050B18]/50 p-4 backdrop-blur-sm">
                         <motion.div
                             initial={{
                                 opacity: 0,
@@ -157,16 +156,16 @@ export default function StepCard({
                                 opacity: 0,
                                 scale: 0.95,
                             }}
-                            className="w-full max-w-[360px] rounded-[2rem] bg-white p-5 shadow-2xl dark:bg-[#111827]"
+                            className="w-full max-w-[360px] rounded-[2rem] bg-white p-5 shadow-2xl dark:bg-[#0E1F38]"
                             dir="rtl"
                         >
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <h3 className="text-[13px] font-extrabold text-gray-900 dark:text-white">
+                                    <h3 className="text-[13px] font-extrabold text-[#0F2647] dark:text-white">
                                         حذف مرحله
                                     </h3>
 
-                                    <p className="mt-1 text-[10px] text-gray-400">
+                                    <p className="mt-1 text-[10px] text-[#5D7595] dark:text-[#8FAAD1]">
                                         این عملیات قابل بازگشت نیست.
                                     </p>
                                 </div>
@@ -176,13 +175,13 @@ export default function StepCard({
                                     onClick={() =>
                                         setConfirmDelete(false)
                                     }
-                                    className="flex h-8 w-8 items-center justify-center rounded-xl bg-gray-100 text-gray-400 dark:bg-white/[0.05]"
+                                    className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#F3F8FF] text-[#5D7595] dark:bg-[rgba(96,165,250,0.08)] dark:text-[#8FAAD1]"
                                 >
                                     <X size={14} />
                                 </button>
                             </div>
 
-                            <div className="mt-4 rounded-2xl bg-red-500/10 px-3 py-3 text-[10.5px] font-semibold leading-6 text-red-500">
+                            <div className="mt-4 rounded-2xl bg-rose-500/10 px-3 py-3 text-[10.5px] font-semibold leading-6 text-rose-500">
                                 آیا از حذف مرحله{" "}
                                 <span className="font-extrabold">
                                     {step.title}
@@ -196,7 +195,7 @@ export default function StepCard({
                                     onClick={() =>
                                         setConfirmDelete(false)
                                     }
-                                    className="flex-1 rounded-2xl bg-gray-100 py-2.5 text-[10.5px] font-bold text-gray-600 dark:bg-white/[0.06] dark:text-white/70"
+                                    className="flex-1 rounded-2xl bg-[#F3F8FF] py-2.5 text-[10.5px] font-bold text-[#3D5B82] dark:bg-[rgba(96,165,250,0.08)] dark:text-[#8FAAD1]"
                                 >
                                     انصراف
                                 </button>
@@ -205,7 +204,7 @@ export default function StepCard({
                                     type="button"
                                     onClick={remove}
                                     disabled={loading}
-                                    className="flex-1 rounded-2xl bg-red-500 py-2.5 text-[10.5px] font-bold text-white disabled:opacity-50"
+                                    className="flex-1 rounded-2xl bg-rose-500 py-2.5 text-[10.5px] font-bold text-white transition hover:bg-rose-600 disabled:opacity-50"
                                 >
                                     حذف
                                 </button>

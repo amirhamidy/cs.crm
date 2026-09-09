@@ -46,7 +46,7 @@ export const adminMenuItems: MenuItem[] = [
   },
   {
     icon: ShoppingCart,
-    label: "خرید",
+    label: "فرآیند خرید",
     href: "/admin/purchasing",
   },
   {
@@ -116,6 +116,16 @@ export const userMenuItems: MenuItem[] = [
     icon: UserRound,
     label: "مشتری",
     href: "/user/customer",
+  },
+    {
+    icon: ShoppingCart,
+    label: "فرآیند خرید",
+    href: "/user/purchasing",
+  },
+  {
+    icon: ShieldCheck,
+    label: "کنترل کیفی",
+    href: "/user/qualityControl",
   },
   {
     icon: FolderKanban,

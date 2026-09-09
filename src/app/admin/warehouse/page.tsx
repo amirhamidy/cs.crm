@@ -1,63 +1,74 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import {
+    BellRing,
     Boxes,
-    LayoutGrid,
-    Loader2,
-    PackageSearch,
-    Plus,
-    Send,
-    Tags,
-    UserCog,
     ChevronLeft,
     ChevronRight,
+    ClipboardList,
+    LayoutGrid,
+    Loader2,
+    PackagePlus,
+    PackageSearch,
+    ReceiptText,
+    ShieldCheck,
+    ShoppingBag,
 } from "lucide-react";
 import { useTheme } from "next-themes";
-import axiosInstance from "@/lib/axiosInstance";
+import WarehouseOverview from "@/components/admin/warehouse/Warehouseoverview";
+import OrderTaskCard from "@/components/admin/warehouse/Ordertaskcard";
+import WarehouseEmployeeTransactionCard from "@/components/user/warehouse/WarehouseEmployeeTransactionCard";
+import WarehouseEmployeeProductCard from "@/components/user/warehouse/WarehouseEmployeeProductCard";
+import WarehouseEmployeeProductWizardModal from "@/components/user/warehouse/WarehouseEmployeeProductWizardModal";
+import WarehouseEmployeeTaskCard from "@/components/user/warehouse/WarehouseEmployeeTaskCard";
 import {
-    ApiCategory,
-    ApiOrderTask,
+    formatDate,
+    formatNumber,
+    getDeadlineDate,
+    getOrderTaskTitle,
+    getStatusLabel,
+    getStatusTone,
+    getQuantityFromStock,
+    getStockProductName,
+    getStockStatus,
+    PAGE_SIZE,
+    paginate,
+} from "@/utils/warehouseEmployee";
+import useWarehouseEmployee from "@/hooks/useWarehouseEmployee";
+import type {
     ApiOrderTaskDeadline,
-    ApiProduct,
     ApiStockInfo,
-    ApiStockTransaction,
-    ApiWarehouseStaff,
     ApiWarehouseTask,
 } from "@/types/warehouse";
-import CategoryModal from "@/components/admin/warehouse/CategoryModal";
-import CategoryCard from "@/components/admin/warehouse/Categorycard";
-import StaffModal from "@/components/admin/warehouse/StaffModal";
-import StaffCard from "@/components/admin/warehouse/StaffCard";
-import ProductWizardModal from "@/components/admin/warehouse/ProductWizardModal";
-import ProductCard from "@/components/admin/warehouse/ProductCard";
-import WarehouseTaskCard from "@/components/admin/warehouse/WarehouseTaskCard";
-import OrderTaskCard from "@/components/admin/warehouse/Ordertaskcard";
-import WarehouseOverview from "@/components/admin/warehouse/Warehouseoverview";
 
-type Tab = "overview" | "products" | "categories" | "staff" | "tasks" | "orders";
+type Tab =
+    | "overview"
+    | "products"
+    | "tasks"
+    | "stock"
+    | "transactions"
+    | "orders"
+    | "deadlines";
 
-const TABS: { id: Tab; label: string; icon: typeof Boxes }[] = [
-    { id: "overview", label: "نمای کلی", icon: LayoutGrid },
-    { id: "products", label: "محصولات", icon: Boxes },
-    { id: "categories", label: "دسته‌بندی‌ها", icon: Tags },
-    { id: "staff", label: "کارمندان انبار", icon: UserCog },
-    { id: "tasks", label: "وظایف دریافت کالا", icon: PackageSearch },
-    { id: "orders", label: "درخواست‌های داخلی", icon: Send },
-];
+const TABS = [
+    ["overview", "نمای کلی", LayoutGrid],
+    ["products", "محصولات", ShoppingBag],
+    ["tasks", "وظایف انبار", ClipboardList],
+    ["stock", "موجودی انبار", Boxes],
+    ["transactions", "تراکنش‌ها", ReceiptText],
+    ["orders", "درخواست‌های داخلی", PackageSearch],
+    ["deadlines", "مهلت‌ها", BellRing],
+] as const;
 
-const ITEMS_PER_PAGE = 8;
+const cardBg = (dark: boolean) => (dark ? "#111c31" : "#fff");
 
-function extractList<T>(data: unknown): T[] {
-    if (Array.isArray(data)) return data as T[];
-    if (data && typeof data === "object") {
-        const record = data as Record<string, unknown>;
-        if (Array.isArray(record.results)) return record.results as T[];
-        if (Array.isArray(record.data)) return record.data as T[];
-    }
-    return [];
-}
+const cardBorder = (dark: boolean) =>
+    dark ? "rgba(255,255,255,.07)" : "rgba(15,23,42,.07)";
+
+const muted = (dark: boolean) =>
+    dark ? "#64748b" : "#94a3b8";
 
 function Pagination({
     currentPage,
@@ -72,44 +83,62 @@ function Pagination({
 }) {
     if (totalPages <= 1) return null;
 
-    const pages = Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-        if (totalPages <= 5) return i + 1;
-        if (currentPage <= 3) return i + 1;
-        if (currentPage >= totalPages - 2) return totalPages - 4 + i;
-        return currentPage - 2 + i;
-    });
+    const pages = Array.from(
+        {
+            length: Math.min(5, totalPages),
+        },
+        (_, i) =>
+            totalPages <= 5
+                ? i + 1
+                : currentPage <= 3
+                    ? i + 1
+                    : currentPage >= totalPages - 2
+                        ? totalPages - 4 + i
+                        : currentPage - 2 + i
+    );
+
+    const buttonStyle = {
+        background: isDark
+            ? "rgba(255,255,255,.04)"
+            : "rgba(15,23,42,.04)",
+        color: isDark ? "#94a3b8" : "#475569",
+    };
 
     return (
-        <div className="flex items-center justify-center gap-1.5 mt-4">
+        <div className="mt-5 flex items-center justify-center gap-1.5">
             <button
                 type="button"
-                onClick={() => onPageChange(currentPage - 1)}
                 disabled={currentPage === 1}
-                className="flex h-9 w-9 items-center justify-center rounded-xl transition-colors disabled:opacity-40"
-                style={{
-                    background: isDark ? "rgba(255,255,255,0.04)" : "rgba(15,23,42,0.04)",
-                    color: isDark ? "#94a3b8" : "#475569",
-                }}
+                onClick={() =>
+                    onPageChange(currentPage - 1)
+                }
+                className="flex h-9 w-9 items-center justify-center rounded-xl disabled:opacity-40"
+                style={buttonStyle}
             >
                 <ChevronRight size={15} />
             </button>
 
-            {pages.map((page) => {
-                const isActive = page === currentPage;
+            {pages.map(page => {
+                const active = page === currentPage;
+
                 return (
                     <button
                         key={page}
                         type="button"
-                        onClick={() => onPageChange(page)}
-                        className="flex h-9 w-9 items-center justify-center rounded-xl text-[12px] font-extrabold transition-all"
+                        onClick={() =>
+                            onPageChange(page)
+                        }
+                        className="flex h-9 w-9 items-center justify-center rounded-xl text-[12px] font-extrabold"
                         style={{
-                            background: isActive
-                                ? "linear-gradient(135deg, #6366f1, #8b5cf6)"
-                                : isDark
-                                    ? "rgba(255,255,255,0.04)"
-                                    : "rgba(15,23,42,0.04)",
-                            color: isActive ? "#ffffff" : isDark ? "#94a3b8" : "#475569",
-                            boxShadow: isActive ? "0 4px 12px rgba(99,102,241,0.25)" : "none",
+                            background: active
+                                ? "linear-gradient(135deg,#6366f1,#8b5cf6)"
+                                : buttonStyle.background,
+                            color: active
+                                ? "#fff"
+                                : buttonStyle.color,
+                            boxShadow: active
+                                ? "0 4px 12px rgba(99,102,241,.25)"
+                                : "none",
                         }}
                     >
                         {page}
@@ -119,13 +148,14 @@ function Pagination({
 
             <button
                 type="button"
-                onClick={() => onPageChange(currentPage + 1)}
-                disabled={currentPage === totalPages}
-                className="flex h-9 w-9 items-center justify-center rounded-xl transition-colors disabled:opacity-40"
-                style={{
-                    background: isDark ? "rgba(255,255,255,0.04)" : "rgba(15,23,42,0.04)",
-                    color: isDark ? "#94a3b8" : "#475569",
-                }}
+                disabled={
+                    currentPage === totalPages
+                }
+                onClick={() =>
+                    onPageChange(currentPage + 1)
+                }
+                className="flex h-9 w-9 items-center justify-center rounded-xl disabled:opacity-40"
+                style={buttonStyle}
             >
                 <ChevronLeft size={15} />
             </button>
@@ -133,427 +163,1457 @@ function Pagination({
     );
 }
 
-export default function WarehousePage() {
+function StatusBadge({
+    status,
+    isDark,
+}: {
+    status: unknown;
+    isDark: boolean;
+}) {
+    const tone = getStatusTone(status);
+
+    const styles = {
+        success: [
+            "rgba(34,197,94,.1)",
+            "#22c55e",
+        ],
+        warning: [
+            "rgba(245,158,11,.1)",
+            "#f59e0b",
+        ],
+        danger: [
+            "rgba(239,68,68,.1)",
+            "#ef4444",
+        ],
+        neutral: [
+            isDark
+                ? "rgba(148,163,184,.12)"
+                : "rgba(15,23,42,.06)",
+            isDark ? "#94a3b8" : "#64748b",
+        ],
+    } as const;
+
+    const [background, color] = styles[tone];
+
+    return (
+        <span
+            className="inline-flex rounded-full px-2.5 py-1 text-[10.5px] font-extrabold"
+            style={{
+                background,
+                color,
+            }}
+        >
+            {getStatusLabel(status)}
+        </span>
+    );
+}
+
+function StockCard({
+    stock,
+    index,
+    isDark,
+}: {
+    stock: ApiStockInfo;
+    index: number;
+    isDark: boolean;
+}) {
+    const current = Number(
+        stock.current_quantity ??
+        getQuantityFromStock(stock) ??
+        0
+    );
+
+    const maximum = Number(
+        stock.maximum_stock ?? 0
+    );
+
+    const minimum = Number(
+        stock.minimum_stock ?? 0
+    );
+
+    const initial = Number(
+        stock.initial_quantity ?? 0
+    );
+
+    const percentage =
+        maximum > 0
+            ? Math.min(
+                100,
+                Math.max(
+                    0,
+                    (current / maximum) * 100
+                )
+            )
+            : 0;
+
+    const status = getStockStatus(stock);
+    const mutedColor = muted(isDark);
+
+    const statusBackground =
+        status.tone === "danger"
+            ? "rgba(239,68,68,.1)"
+            : status.tone === "warning"
+                ? "rgba(245,158,11,.1)"
+                : "rgba(34,197,94,.1)";
+
+    const statusColor =
+        status.tone === "danger"
+            ? "#ef4444"
+            : status.tone === "warning"
+                ? "#f59e0b"
+                : "#22c55e";
+
+    const progressColor =
+        status.tone === "danger"
+            ? "#ef4444"
+            : status.tone === "warning"
+                ? "#f59e0b"
+                : "linear-gradient(90deg,#6366f1,#8b5cf6)";
+
+    return (
+        <motion.div
+            initial={{
+                opacity: 0,
+                y: 10,
+            }}
+            animate={{
+                opacity: 1,
+                y: 0,
+            }}
+            transition={{
+                duration: 0.2,
+                delay: index * 0.035,
+            }}
+            className="relative overflow-hidden rounded-2xl border p-4"
+            style={{
+                background: cardBg(isDark),
+                borderColor: cardBorder(isDark),
+                boxShadow: isDark
+                    ? "0 10px 30px rgba(0,0,0,.12)"
+                    : "0 10px 30px rgba(15,23,42,.04)",
+            }}
+        >
+            <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                    <p
+                        className="truncate text-[13px] font-extrabold"
+                        style={{
+                            color: isDark
+                                ? "#f8fafc"
+                                : "#0f172a",
+                        }}
+                    >
+                        {getStockProductName(stock)}
+                    </p>
+
+                    <p
+                        className="mt-1 text-[10.5px]"
+                        style={{
+                            color: mutedColor,
+                        }}
+                    >
+                        موجودی #{stock.id}
+                        {stock.unit_label
+                            ? ` · ${stock.unit_label}`
+                            : ""}
+                    </p>
+                </div>
+
+                <span
+                    className="shrink-0 rounded-full px-2.5 py-1 text-[10px] font-extrabold"
+                    style={{
+                        background: statusBackground,
+                        color: statusColor,
+                    }}
+                >
+                    {status.label}
+                </span>
+            </div>
+
+            <div className="mt-5 flex items-end justify-between gap-3">
+                <div>
+                    <p
+                        className="text-[10.5px]"
+                        style={{
+                            color: mutedColor,
+                        }}
+                    >
+                        موجودی فعلی
+                    </p>
+
+                    <p
+                        className="mt-1 text-[20px] font-black"
+                        style={{
+                            color: isDark
+                                ? "#fff"
+                                : "#0f172a",
+                        }}
+                    >
+                        {formatNumber(current)}
+                    </p>
+                </div>
+
+                <div className="text-left">
+                    <p
+                        className="text-[10.5px]"
+                        style={{
+                            color: mutedColor,
+                        }}
+                    >
+                        ظرفیت
+                    </p>
+
+                    <p
+                        className="mt-1 text-[12px] font-bold"
+                        style={{
+                            color: isDark
+                                ? "#cbd5e1"
+                                : "#475569",
+                        }}
+                    >
+                        {maximum > 0
+                            ? formatNumber(maximum)
+                            : "—"}
+                    </p>
+                </div>
+            </div>
+
+            <div
+                className="mt-4 h-1.5 overflow-hidden rounded-full"
+                style={{
+                    background: isDark
+                        ? "rgba(255,255,255,.06)"
+                        : "rgba(15,23,42,.06)",
+                }}
+            >
+                <motion.div
+                    initial={{
+                        width: 0,
+                    }}
+                    animate={{
+                        width: `${percentage}%`,
+                    }}
+                    transition={{
+                        duration: 0.6,
+                        delay: index * 0.035,
+                    }}
+                    className="h-full rounded-full"
+                    style={{
+                        background:
+                            progressColor,
+                    }}
+                />
+            </div>
+
+            <div className="mt-3 grid grid-cols-3 gap-2">
+                <div>
+                    <p
+                        className="text-[10px]"
+                        style={{
+                            color: mutedColor,
+                        }}
+                    >
+                        حداقل
+                    </p>
+
+                    <p
+                        className="mt-1 text-[10.5px] font-bold"
+                        style={{
+                            color: isDark
+                                ? "#cbd5e1"
+                                : "#475569",
+                        }}
+                    >
+                        {formatNumber(minimum)}
+                    </p>
+                </div>
+
+                <div className="text-center">
+                    <p
+                        className="text-[10px]"
+                        style={{
+                            color: mutedColor,
+                        }}
+                    >
+                        اولیه
+                    </p>
+
+                    <p
+                        className="mt-1 text-[10.5px] font-bold"
+                        style={{
+                            color: isDark
+                                ? "#cbd5e1"
+                                : "#475569",
+                        }}
+                    >
+                        {formatNumber(initial)}
+                    </p>
+                </div>
+
+                <div className="text-left">
+                    <p
+                        className="text-[10px]"
+                        style={{
+                            color: mutedColor,
+                        }}
+                    >
+                        واحد
+                    </p>
+
+                    <p
+                        className="mt-1 truncate text-[10.5px] font-bold"
+                        style={{
+                            color: isDark
+                                ? "#cbd5e1"
+                                : "#475569",
+                        }}
+                    >
+                        {stock.unit_label || "—"}
+                    </p>
+                </div>
+            </div>
+        </motion.div>
+    );
+}
+
+function DeadlineCard({
+    deadline,
+    orderTitle,
+    index,
+    isDark,
+}: {
+    deadline: ApiOrderTaskDeadline;
+    orderTitle: string;
+    index: number;
+    isDark: boolean;
+}) {
+    return (
+        <motion.div
+            initial={{
+                opacity: 0,
+                y: 8,
+            }}
+            animate={{
+                opacity: 1,
+                y: 0,
+            }}
+            transition={{
+                duration: 0.2,
+                delay: index * 0.035,
+            }}
+            className="rounded-2xl border p-4"
+            style={{
+                background: cardBg(isDark),
+                borderColor: cardBorder(isDark),
+                boxShadow: isDark
+                    ? "0 10px 30px rgba(0,0,0,.12)"
+                    : "0 10px 30px rgba(15,23,42,.04)",
+            }}
+        >
+            <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                    <p
+                        className="truncate text-[13px] font-extrabold"
+                        style={{
+                            color: isDark
+                                ? "#f8fafc"
+                                : "#0f172a",
+                        }}
+                    >
+                        {orderTitle}
+                    </p>
+
+                    <p
+                        className="mt-1 text-[10.5px]"
+                        style={{
+                            color: muted(isDark),
+                        }}
+                    >
+                        سفارش داخلی #
+                        {deadline.order_task ?? "—"}
+                    </p>
+                </div>
+
+                <div
+                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl"
+                    style={{
+                        background:
+                            "rgba(99,102,241,.1)",
+                        color: "#6366f1",
+                    }}
+                >
+                    <BellRing size={16} />
+                </div>
+            </div>
+
+            <div
+                className="mt-4 rounded-xl p-3"
+                style={{
+                    background: isDark
+                        ? "rgba(255,255,255,.035)"
+                        : "rgba(15,23,42,.035)",
+                }}
+            >
+                <p
+                    className="text-[10px]"
+                    style={{
+                        color: muted(isDark),
+                    }}
+                >
+                    مهلت انجام
+                </p>
+
+                <p
+                    className="mt-1 text-[12px] font-extrabold"
+                    style={{
+                        color: isDark
+                            ? "#e2e8f0"
+                            : "#334155",
+                    }}
+                >
+                    {formatDate(
+                        getDeadlineDate(deadline)
+                    )}
+                </p>
+            </div>
+        </motion.div>
+    );
+}
+
+export default function WarehouseEmployeePage() {
     const { resolvedTheme } = useTheme();
     const isDark = resolvedTheme === "dark";
 
-    const [tab, setTab] = useState<Tab>("overview");
-    const [currentPage, setCurrentPage] = useState(1);
+    const {
+        employeeLoading,
+        myStaff,
+        warehouseAccess,
+        products,
+        categories,
+        stockInfos,
+        transactions,
+        myTasks,
+        pendingTasks,
+        activeTasks,
+        completedTasks,
+        criticalStock,
+        orderTasks,
+        orderTaskDeadlines,
+        loading,
+        refreshing,
+        error,
+        refresh,
+    } = useWarehouseEmployee();
 
-    const [categories, setCategories] = useState<ApiCategory[]>([]);
-    const [staff, setStaff] = useState<ApiWarehouseStaff[]>([]);
-    const [products, setProducts] = useState<ApiProduct[]>([]);
-    const [stockInfos, setStockInfos] = useState<ApiStockInfo[]>([]);
-    const [transactions, setTransactions] = useState<ApiStockTransaction[]>([]);
-    const [tasks, setTasks] = useState<ApiWarehouseTask[]>([]);
-    const [orderTasks, setOrderTasks] = useState<ApiOrderTask[]>([]);
-    const [orderTaskDeadlines, setOrderTaskDeadlines] = useState<ApiOrderTaskDeadline[]>([]);
+    const [tab, setTab] =
+        useState<Tab>("overview");
 
-    const [loading, setLoading] = useState(true);
+    const [currentPage, setCurrentPage] =
+        useState(1);
 
-    const [showCategoryModal, setShowCategoryModal] = useState(false);
-    const [showStaffModal, setShowStaffModal] = useState(false);
-    const [showProductWizard, setShowProductWizard] = useState(false);
+    const [taskItems, setTaskItems] =
+        useState<ApiWarehouseTask[]>(myTasks);
 
-    const loadAll = useCallback(async () => {
-        setLoading(true);
-        try {
-            const [
-                categoriesRes,
-                staffRes,
-                productsRes,
-                stockRes,
-                transactionsRes,
-                tasksRes,
-                orderTasksRes,
-                deadlinesRes,
-            ] = await Promise.all([
-                axiosInstance.get("/warehouse/api/v1/products/categories/").catch(() => null),
-                axiosInstance.get("/warehouse/api/v1/staff/").catch(() => null),
-                axiosInstance.get("/warehouse/api/v1/products/").catch(() => null),
-                axiosInstance.get("/warehouse/api/v1/process/stock/").catch(() => null),
-                axiosInstance.get("/warehouse/api/v1/process/transactions/").catch(() => null),
-                axiosInstance.get("/warehouse/api/v1/task/").catch(() => null),
-                axiosInstance.get("/warehouse/api/v1/order_task/").catch(() => null),
-                axiosInstance.get("/warehouse/api/v1/order_task/deadlines/").catch(() => null),
-            ]);
-
-            setCategories(categoriesRes ? extractList<ApiCategory>(categoriesRes.data) : []);
-            setStaff(staffRes ? extractList<ApiWarehouseStaff>(staffRes.data) : []);
-            setProducts(productsRes ? extractList<ApiProduct>(productsRes.data) : []);
-            setStockInfos(stockRes ? extractList<ApiStockInfo>(stockRes.data) : []);
-            setTransactions(transactionsRes ? extractList<ApiStockTransaction>(transactionsRes.data) : []);
-            setTasks(tasksRes ? extractList<ApiWarehouseTask>(tasksRes.data) : []);
-            setOrderTasks(orderTasksRes ? extractList<ApiOrderTask>(orderTasksRes.data) : []);
-            setOrderTaskDeadlines(deadlinesRes ? extractList<ApiOrderTaskDeadline>(deadlinesRes.data) : []);
-        } finally {
-            setLoading(false);
-        }
-    }, []);
+    const [productWizardOpen, setProductWizardOpen] =
+        useState(false);
 
     useEffect(() => {
-        loadAll();
-    }, [loadAll]);
+        setTaskItems(myTasks);
+    }, [myTasks]);
 
     useEffect(() => {
         setCurrentPage(1);
     }, [tab]);
 
     const stockByProduct = useMemo(
-        () => new Map(stockInfos.map((s) => [s.product, s])),
+        () =>
+            new Map(
+                stockInfos.map(item => [
+                    item.product,
+                    item,
+                ])
+            ),
         [stockInfos]
     );
 
     const deadlineByOrderTask = useMemo(
-        () => new Map(orderTaskDeadlines.map((d) => [d.order_task, d])),
+        () =>
+            new Map(
+                orderTaskDeadlines.map(item => [
+                    item.order_task,
+                    item,
+                ])
+            ),
         [orderTaskDeadlines]
     );
 
-    const pendingTasksCount = useMemo(
-        () => tasks.filter((t) => t.status !== "completed").length,
-        [tasks]
-    );
-
-    const pendingOrderTasksCount = useMemo(
-        () => orderTasks.filter((t) => t.status !== "completed").length,
+    const pendingOrderTasks = useMemo(
+        () =>
+            orderTasks.filter(
+                task =>
+                    String(
+                        task.status ?? ""
+                    ).toLowerCase() !==
+                    "completed"
+            ),
         [orderTasks]
     );
 
-    function handleAddClick() {
-        if (tab === "categories") setShowCategoryModal(true);
-        else if (tab === "staff") setShowStaffModal(true);
-        else if (tab === "products") setShowProductWizard(true);
-    }
+    const qualityTasks = useMemo(
+        () =>
+            taskItems.filter(
+                task =>
+                    task.quality_control_id !== null
+            ),
+        [taskItems]
+    );
 
-    // Pagination logic
-    const getPaginatedData = useCallback(
-        <T,>(data: T[]) => {
-            const totalPages = Math.ceil(data.length / ITEMS_PER_PAGE);
-            const start = (currentPage - 1) * ITEMS_PER_PAGE;
-            const end = start + ITEMS_PER_PAGE;
-            return {
-                items: data.slice(start, end),
-                totalPages,
-            };
-        },
-        [currentPage]
+    const pendingQualityTasks = useMemo(
+        () =>
+            qualityTasks.filter(
+                task => task.status === "pending"
+            ),
+        [qualityTasks]
     );
 
     const paginatedProducts = useMemo(
-        () => getPaginatedData(products),
-        [products, getPaginatedData]
-    );
-
-    const paginatedCategories = useMemo(
-        () => getPaginatedData(categories),
-        [categories, getPaginatedData]
-    );
-
-    const paginatedStaff = useMemo(
-        () => getPaginatedData(staff),
-        [staff, getPaginatedData]
+        () =>
+            paginate(
+                products,
+                currentPage,
+                PAGE_SIZE
+            ),
+        [products, currentPage]
     );
 
     const paginatedTasks = useMemo(
-        () => getPaginatedData(tasks),
-        [tasks, getPaginatedData]
+        () =>
+            paginate(
+                taskItems,
+                currentPage,
+                PAGE_SIZE
+            ),
+        [taskItems, currentPage]
     );
 
-    const paginatedOrderTasks = useMemo(
-        () => getPaginatedData(orderTasks),
-        [orderTasks, getPaginatedData]
+    const paginatedStock = useMemo(
+        () =>
+            paginate(
+                stockInfos,
+                currentPage,
+                PAGE_SIZE
+            ),
+        [stockInfos, currentPage]
     );
+
+    const paginatedTransactions = useMemo(
+        () =>
+            paginate(
+                transactions,
+                currentPage,
+                PAGE_SIZE
+            ),
+        [transactions, currentPage]
+    );
+
+    const paginatedOrders = useMemo(
+        () =>
+            paginate(
+                orderTasks,
+                currentPage,
+                PAGE_SIZE
+            ),
+        [orderTasks, currentPage]
+    );
+
+    const paginatedDeadlines = useMemo(
+        () =>
+            paginate(
+                orderTaskDeadlines,
+                currentPage,
+                PAGE_SIZE
+            ),
+        [orderTaskDeadlines, currentPage]
+    );
+
+    const handleTaskUpdated = useCallback(
+        (updatedTask: ApiWarehouseTask) => {
+            setTaskItems(current =>
+                current.map(task =>
+                    task.id === updatedTask.id
+                        ? updatedTask
+                        : task
+                )
+            );
+        },
+        []
+    );
+
+    const handleProductCreated =
+        useCallback(async () => {
+            setProductWizardOpen(false);
+            setTab("products");
+            setCurrentPage(1);
+            await refresh();
+        }, [refresh]);
+
+    const renderEmpty = useCallback(
+        (text: string) => (
+            <p
+                className="col-span-full py-16 text-center text-[12.5px]"
+                style={{
+                    color: muted(isDark),
+                }}
+            >
+                {text}
+            </p>
+        ),
+        [isDark]
+    );
+
+    if (employeeLoading || loading) {
+        return (
+            <div
+                dir="rtl"
+                className="flex min-h-screen items-center justify-center"
+                style={{
+                    background: isDark
+                        ? "#0f172a"
+                        : "#f8fafc",
+                }}
+            >
+                <Loader2
+                    size={24}
+                    className="animate-spin"
+                    style={{
+                        color: "#6366f1",
+                    }}
+                />
+            </div>
+        );
+    }
+
+    if (!warehouseAccess) {
+        return (
+            <div
+                dir="rtl"
+                className="flex min-h-screen items-center justify-center p-6"
+                style={{
+                    background: isDark
+                        ? "#0f172a"
+                        : "#f8fafc",
+                }}
+            >
+                <div
+                    className="w-full max-w-md rounded-3xl border p-8 text-center"
+                    style={{
+                        background:
+                            cardBg(isDark),
+                        borderColor:
+                            cardBorder(isDark),
+                    }}
+                >
+                    <Boxes
+                        className="mx-auto"
+                        size={30}
+                        style={{
+                            color: "#6366f1",
+                        }}
+                    />
+
+                    <h2
+                        className="mt-5 text-[17px] font-extrabold"
+                        style={{
+                            color: isDark
+                                ? "#fff"
+                                : "#0f172a",
+                        }}
+                    >
+                        دسترسی به انبار ندارید
+                    </h2>
+
+                    <p
+                        className="mt-2 text-[12px] leading-7"
+                        style={{
+                            color: muted(isDark),
+                        }}
+                    >
+                        حساب کاربری شما در حال حاضر
+                        به عنوان کارمند فعال انبار
+                        ثبت نشده است.
+                    </p>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div
             dir="rtl"
-            className="flex flex-col gap-6 p-6"
+            className="flex min-h-screen flex-col gap-6 p-6"
             style={{
-                background: isDark ? "#0f172a" : "#f8fafc",
-                minHeight: "100vh",
+                background: isDark
+                    ? "#0f172a"
+                    : "#f8fafc",
             }}
         >
-            {/* Header */}
             <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                    <h1 className="text-[18px] font-extrabold text-gray-900 dark:text-white">انبار</h1>
-                    <p className="mt-1 text-[12px] text-gray-400">
-                        مدیریت محصولات، موجودی و فرآیندهای ورود و خروج کالا
+                    <h1
+                        className="text-[18px] font-extrabold"
+                        style={{
+                            color: isDark
+                                ? "#fff"
+                                : "#111827",
+                        }}
+                    >
+                        انبار
+                    </h1>
+
+                    <p
+                        className="mt-1 text-[12px]"
+                        style={{
+                            color: muted(isDark),
+                        }}
+                    >
+                        مدیریت وظایف، محصولات،
+                        موجودی و فرآیندهای ورود و
+                        خروج کالا
                     </p>
                 </div>
 
-                {(tab === "categories" || tab === "staff" || tab === "products") && (
-                    <motion.button
-                        type="button"
-                        whileTap={{ scale: 0.96 }}
-                        onClick={handleAddClick}
-                        className="flex items-center gap-1.5 rounded-2xl px-4 py-2.5 text-[12.5px] font-bold text-white transition-colors hover:bg-indigo-500"
-                        style={{ background: "#6366f1" }}
-                    >
-                        <Plus size={15} />
-                        {tab === "categories" && "دسته‌بندی جدید"}
-                        {tab === "staff" && "افزودن کارمند"}
-                        {tab === "products" && "محصول جدید"}
-                    </motion.button>
-                )}
+                <motion.button
+                    type="button"
+                    whileTap={{
+                        scale: 0.96,
+                    }}
+                    onClick={refresh}
+                    disabled={refreshing}
+                    className="flex items-center gap-1.5 rounded-2xl px-4 py-2.5 text-[12px] font-bold text-white disabled:opacity-60"
+                    style={{
+                        background: "#6366f1",
+                    }}
+                >
+                    <Loader2
+                        size={15}
+                        className={
+                            refreshing
+                                ? "animate-spin"
+                                : ""
+                        }
+                    />
+                    بروزرسانی
+                </motion.button>
             </div>
 
-            {/* Tabs */}
             <div
                 className="flex flex-wrap gap-2 rounded-2xl p-1.5"
                 style={{
-                    background: isDark ? "rgba(255,255,255,0.04)" : "rgba(15,23,42,0.04)",
+                    background: isDark
+                        ? "rgba(255,255,255,.04)"
+                        : "rgba(15,23,42,.04)",
                 }}
             >
-                {TABS.map((t) => {
-                    const isActive = tab === t.id;
-                    return (
-                        <button
-                            key={t.id}
-                            type="button"
-                            onClick={() => setTab(t.id)}
-                            className="relative flex items-center gap-1.5 rounded-xl px-4 py-2 text-[12px] font-extrabold transition-all"
-                            style={{
-                                background: isActive
-                                    ? "linear-gradient(135deg, #6366f1, #8b5cf6)"
-                                    : "transparent",
-                                color: isActive
-                                    ? "#ffffff"
-                                    : isDark
-                                        ? "#94a3b8"
-                                        : "#475569",
-                                boxShadow: isActive ? "0 4px 12px rgba(99,102,241,0.25)" : "none",
-                            }}
-                        >
-                            <t.icon size={14} />
-                            {t.label}
-                            {t.id === "tasks" && pendingTasksCount > 0 && (
-                                <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-extrabold text-white">
-                                    {pendingTasksCount}
-                                </span>
-                            )}
-                            {t.id === "orders" && pendingOrderTasksCount > 0 && (
-                                <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-extrabold text-white">
-                                    {pendingOrderTasksCount}
-                                </span>
-                            )}
-                        </button>
-                    );
-                })}
+                {TABS.map(
+                    ([id, label, Icon]) => {
+                        const active = tab === id;
+
+                        const count =
+                            id === "products"
+                                ? products.length
+                                : id === "tasks"
+                                    ? pendingTasks.length
+                                    : id === "orders"
+                                        ? pendingOrderTasks.length
+                                        : id === "deadlines"
+                                            ? orderTaskDeadlines.length
+                                            : 0;
+
+                        return (
+                            <button
+                                key={id}
+                                type="button"
+                                onClick={() =>
+                                    setTab(id)
+                                }
+                                className="relative flex items-center gap-1.5 rounded-xl px-4 py-2 text-[12px] font-extrabold"
+                                style={{
+                                    background: active
+                                        ? "linear-gradient(135deg,#6366f1,#8b5cf6)"
+                                        : "transparent",
+                                    color: active
+                                        ? "#fff"
+                                        : isDark
+                                            ? "#94a3b8"
+                                            : "#475569",
+                                    boxShadow: active
+                                        ? "0 4px 12px rgba(99,102,241,.25)"
+                                        : "none",
+                                }}
+                            >
+                                <Icon size={14} />
+                                {label}
+
+                                {count > 0 && (
+                                    <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[9px] text-white">
+                                        {count}
+                                    </span>
+                                )}
+
+                                {id ===
+                                    "tasks" &&
+                                    pendingQualityTasks.length >
+                                    0 && (
+                                        <span
+                                            className="flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[9px] text-white"
+                                            style={{
+                                                background:
+                                                    "#8b5cf6",
+                                            }}
+                                        >
+                                            {
+                                                pendingQualityTasks.length
+                                            }
+                                        </span>
+                                    )}
+                            </button>
+                        );
+                    }
+                )}
             </div>
 
-            {/* Content */}
-            {loading ? (
-                <div className="flex items-center justify-center py-20">
-                    <Loader2 size={22} className="animate-spin" style={{ color: "#6366f1" }} />
+            {error && (
+                <div
+                    className="rounded-2xl border px-4 py-3 text-[12px] font-bold"
+                    style={{
+                        background: isDark
+                            ? "rgba(239,68,68,.08)"
+                            : "rgba(239,68,68,.05)",
+                        borderColor:
+                            "rgba(239,68,68,.15)",
+                        color: "#ef4444",
+                    }}
+                >
+                    {error}
                 </div>
-            ) : (
-                <AnimatePresence mode="wait">
-                    <motion.div
-                        key={tab + currentPage}
-                        initial={{ opacity: 0, y: 8 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -8 }}
-                        transition={{ duration: 0.2 }}
-                    >
-                        {tab === "overview" && (
-                            <WarehouseOverview
-                                products={products}
-                                stockInfos={stockInfos}
-                                transactions={transactions}
-                                tasks={tasks}
-                                orderTasks={orderTasks}
-                            />
-                        )}
-
-                        {tab === "products" && (
-                            <>
-                                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                                    {paginatedProducts.items.length === 0 ? (
-                                        <p className="col-span-full py-16 text-center text-[12.5px] text-gray-400">
-                                            هنوز محصولی ثبت نشده است
-                                        </p>
-                                    ) : (
-                                        paginatedProducts.items.map((product, index) => (
-                                            <ProductCard
-                                                key={product.id}
-                                                product={product}
-                                                stockInfo={stockByProduct.get(product.id) ?? null}
-                                                index={index}
-                                                categories={categories}
-                                                staff={staff}
-                                                onUpdated={(updated) =>
-                                                    setProducts((prev) =>
-                                                        prev.map((p) => (p.id === updated.id ? updated : p))
-                                                    )
-                                                }
-                                                onStockChanged={() => loadAll()}
-                                                onDeleted={(id) =>
-                                                    setProducts((prev) => prev.filter((p) => p.id !== id))
-                                                }
-                                            />
-                                        ))
-                                    )}
-                                </div>
-                                <Pagination
-                                    currentPage={currentPage}
-                                    totalPages={paginatedProducts.totalPages}
-                                    onPageChange={setCurrentPage}
-                                    isDark={isDark}
-                                />
-                            </>
-                        )}
-
-                        {tab === "categories" && (
-                            <>
-                                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                                    {paginatedCategories.items.length === 0 ? (
-                                        <p className="col-span-full py-16 text-center text-[12.5px] text-gray-400">
-                                            هنوز دسته‌بندی‌ای ثبت نشده است
-                                        </p>
-                                    ) : (
-                                        paginatedCategories.items.map((category, index) => (
-                                            <CategoryCard
-                                                key={category.id}
-                                                category={category}
-                                                index={index}
-                                                onUpdated={(updated) =>
-                                                    setCategories((prev) =>
-                                                        prev.map((c) => (c.id === updated.id ? updated : c))
-                                                    )
-                                                }
-                                                onDeleted={(id) =>
-                                                    setCategories((prev) => prev.filter((c) => c.id !== id))
-                                                }
-                                            />
-                                        ))
-                                    )}
-                                </div>
-                                <Pagination
-                                    currentPage={currentPage}
-                                    totalPages={paginatedCategories.totalPages}
-                                    onPageChange={setCurrentPage}
-                                    isDark={isDark}
-                                />
-                            </>
-                        )}
-
-                        {tab === "staff" && (
-                            <>
-                                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                                    {paginatedStaff.items.length === 0 ? (
-                                        <p className="col-span-full py-16 text-center text-[12.5px] text-gray-400">
-                                            هنوز کارمندی به انبار اضافه نشده است
-                                        </p>
-                                    ) : (
-                                        paginatedStaff.items.map((member, index) => (
-                                            <StaffCard
-                                                key={member.id}
-                                                staff={member}
-                                                index={index}
-                                                onUpdated={(updated) =>
-                                                    setStaff((prev) =>
-                                                        prev.map((s) => (s.id === updated.id ? updated : s))
-                                                    )
-                                                }
-                                                onDeleted={(id) =>
-                                                    setStaff((prev) => prev.filter((s) => s.id !== id))
-                                                }
-                                            />
-                                        ))
-                                    )}
-                                </div>
-                                <Pagination
-                                    currentPage={currentPage}
-                                    totalPages={paginatedStaff.totalPages}
-                                    onPageChange={setCurrentPage}
-                                    isDark={isDark}
-                                />
-                            </>
-                        )}
-
-                        {tab === "tasks" && (
-                            <>
-                                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                                    {paginatedTasks.items.length === 0 ? (
-                                        <p className="col-span-full py-16 text-center text-[12.5px] text-gray-400">
-                                            وظیفه‌ای برای دریافت کالا وجود ندارد
-                                        </p>
-                                    ) : (
-                                        paginatedTasks.items.map((task, index) => (
-                                            <WarehouseTaskCard
-                                                key={task.id}
-                                                task={task}
-                                                index={index}
-                                                staff={staff}
-                                                onUpdated={(updated) =>
-                                                    setTasks((prev) =>
-                                                        prev.map((t) => (t.id === updated.id ? updated : t))
-                                                    )
-                                                }
-                                            />
-                                        ))
-                                    )}
-                                </div>
-                                <Pagination
-                                    currentPage={currentPage}
-                                    totalPages={paginatedTasks.totalPages}
-                                    onPageChange={setCurrentPage}
-                                    isDark={isDark}
-                                />
-                            </>
-                        )}
-
-                        {tab === "orders" && (
-                            <>
-                                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                                    {paginatedOrderTasks.items.length === 0 ? (
-                                        <p className="col-span-full py-16 text-center text-[12.5px] text-gray-400">
-                                            درخواست داخلی‌ای برای انبار ثبت نشده است
-                                        </p>
-                                    ) : (
-                                        paginatedOrderTasks.items.map((orderTask, index) => (
-                                            <OrderTaskCard
-                                                key={orderTask.id}
-                                                orderTask={orderTask}
-                                                deadline={deadlineByOrderTask.get(orderTask.id) ?? null}
-                                                index={index}
-                                            />
-                                        ))
-                                    )}
-                                </div>
-                                <Pagination
-                                    currentPage={currentPage}
-                                    totalPages={paginatedOrderTasks.totalPages}
-                                    onPageChange={setCurrentPage}
-                                    isDark={isDark}
-                                />
-                            </>
-                        )}
-                    </motion.div>
-                </AnimatePresence>
             )}
 
-            {/* Modals */}
-            <CategoryModal
-                isOpen={showCategoryModal}
-                onClose={() => setShowCategoryModal(false)}
-                onSaved={(category) => setCategories((prev) => [...prev, category])}
-            />
+            <AnimatePresence mode="wait">
+                <motion.div
+                    key={`${tab}-${currentPage}`}
+                    initial={{
+                        opacity: 0,
+                        y: 8,
+                    }}
+                    animate={{
+                        opacity: 1,
+                        y: 0,
+                    }}
+                    exit={{
+                        opacity: 0,
+                        y: -8,
+                    }}
+                    transition={{
+                        duration: 0.2,
+                    }}
+                >
+                    {tab === "overview" && (
+                        <div className="space-y-6">
+                            <WarehouseOverview
+                                products={products}
+                                stockInfos={
+                                    stockInfos
+                                }
+                                transactions={
+                                    transactions
+                                }
+                                tasks={taskItems}
+                                orderTasks={
+                                    orderTasks
+                                }
+                            />
 
-            <StaffModal
-                isOpen={showStaffModal}
-                onClose={() => setShowStaffModal(false)}
-                existingStaff={staff}
-                onCreated={(member) => setStaff((prev) => [...prev, member])}
-            />
+                            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                                {[
+                                    [
+                                        "وظایف در انتظار",
+                                        pendingTasks.length,
+                                    ],
+                                    [
+                                        "وظایف فعال",
+                                        activeTasks.length,
+                                    ],
+                                    [
+                                        "وظایف تکمیل شده",
+                                        completedTasks.length,
+                                    ],
+                                    [
+                                        "موجودی‌های بحرانی",
+                                        criticalStock.length,
+                                    ],
+                                ].map(
+                                    ([label, value]) => (
+                                        <div
+                                            key={String(
+                                                label
+                                            )}
+                                            className="rounded-2xl border p-4"
+                                            style={{
+                                                background:
+                                                    cardBg(
+                                                        isDark
+                                                    ),
+                                                borderColor:
+                                                    cardBorder(
+                                                        isDark
+                                                    ),
+                                            }}
+                                        >
+                                            <p
+                                                className="text-[10.5px]"
+                                                style={{
+                                                    color: muted(
+                                                        isDark
+                                                    ),
+                                                }}
+                                            >
+                                                {label}
+                                            </p>
 
-            <ProductWizardModal
-                isOpen={showProductWizard}
-                onClose={() => setShowProductWizard(false)}
+                                            <p
+                                                className="mt-2 text-[22px] font-black"
+                                                style={{
+                                                    color:
+                                                        label ===
+                                                            "موجودی‌های بحرانی" &&
+                                                            Number(
+                                                                value
+                                                            ) >
+                                                            0
+                                                            ? "#ef4444"
+                                                            : isDark
+                                                                ? "#fff"
+                                                                : "#0f172a",
+                                                }}
+                                            >
+                                                {formatNumber(
+                                                    Number(
+                                                        value
+                                                    )
+                                                )}
+                                            </p>
+                                        </div>
+                                    )
+                                )}
+                            </div>
+
+                            {pendingQualityTasks.length >
+                                0 && (
+                                    <div
+                                        className="rounded-2xl border p-4"
+                                        style={{
+                                            background:
+                                                isDark
+                                                    ? "rgba(139,92,246,.06)"
+                                                    : "rgba(139,92,246,.04)",
+                                            borderColor:
+                                                "rgba(139,92,246,.12)",
+                                        }}
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            <div
+                                                className="flex h-10 w-10 items-center justify-center rounded-xl"
+                                                style={{
+                                                    background:
+                                                        "rgba(139,92,246,.1)",
+                                                    color:
+                                                        "#8b5cf6",
+                                                }}
+                                            >
+                                                <ShieldCheck
+                                                    size={18}
+                                                />
+                                            </div>
+
+                                            <div>
+                                                <p
+                                                    className="text-[12px] font-extrabold"
+                                                    style={{
+                                                        color: isDark
+                                                            ? "#fff"
+                                                            : "#0f172a",
+                                                    }}
+                                                >
+                                                    وظایف کنترل
+                                                    کیفیت
+                                                </p>
+
+                                                <p
+                                                    className="mt-1 text-[10.5px]"
+                                                    style={{
+                                                        color: muted(
+                                                            isDark
+                                                        ),
+                                                    }}
+                                                >
+                                                    {
+                                                        pendingQualityTasks.length
+                                                    }{" "}
+                                                    وظیفه کنترل
+                                                    کیفیت در
+                                                    انتظار انجام
+                                                    است
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                        </div>
+                    )}
+
+                    {tab === "products" && (
+                        <div className="space-y-5">
+                            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                                <div>
+                                    <h2
+                                        className="text-[16px] font-extrabold"
+                                        style={{
+                                            color: isDark
+                                                ? "#fff"
+                                                : "#111827",
+                                        }}
+                                    >
+                                        محصولات انبار
+                                    </h2>
+
+                                    <p
+                                        className="mt-1 text-[11.5px]"
+                                        style={{
+                                            color: muted(
+                                                isDark
+                                            ),
+                                        }}
+                                    >
+                                        مدیریت محصولات و
+                                        عملیات مربوط به
+                                        موجودی
+                                    </p>
+                                </div>
+
+                                <motion.button
+                                    type="button"
+                                    whileTap={{
+                                        scale: 0.96,
+                                    }}
+                                    onClick={() =>
+                                        setProductWizardOpen(
+                                            true
+                                        )
+                                    }
+                                    className="flex items-center justify-center gap-2 rounded-2xl px-5 py-3 text-[12px] font-extrabold text-white shadow-lg shadow-indigo-500/10"
+                                    style={{
+                                        background:
+                                            "linear-gradient(135deg,#6366f1,#8b5cf6)",
+                                    }}
+                                >
+                                    <PackagePlus size={16} />
+                                    افزودن محصول
+                                </motion.button>
+                            </div>
+
+                            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                                {paginatedProducts.items
+                                    .length
+                                    ? paginatedProducts.items.map(
+                                        (
+                                            product,
+                                            index
+                                        ) => (
+                                            <WarehouseEmployeeProductCard
+                                                key={
+                                                    product.id
+                                                }
+                                                product={
+                                                    product
+                                                }
+                                                stockInfo={
+                                                    stockByProduct.get(
+                                                        product.id
+                                                    ) ??
+                                                    null
+                                                }
+                                                index={
+                                                    index
+                                                }
+                                                categories={
+                                                    categories
+                                                }
+                                                staff={
+                                                    myStaff
+                                                        ? [
+                                                            myStaff,
+                                                        ]
+                                                        : []
+                                                }
+                                                performedById={
+                                                    myStaff?.id ??
+                                                    null
+                                                }
+                                                onUpdated={
+                                                    refresh
+                                                }
+                                                onStockChanged={
+                                                    refresh
+                                                }
+                                                onDeleted={
+                                                    refresh
+                                                }
+                                            />
+                                        )
+                                    )
+                                    : renderEmpty(
+                                        "محصولی برای نمایش وجود ندارد"
+                                    )}
+                            </div>
+
+                            <Pagination
+                                currentPage={
+                                    currentPage
+                                }
+                                totalPages={
+                                    paginatedProducts.totalPages
+                                }
+                                onPageChange={
+                                    setCurrentPage
+                                }
+                                isDark={isDark}
+                            />
+                        </div>
+                    )}
+
+                    {tab === "tasks" && (
+                        <div className="space-y-5">
+                            <div className="flex flex-wrap items-center justify-between gap-3">
+                                <div>
+                                    <h2
+                                        className="text-[16px] font-extrabold"
+                                        style={{
+                                            color: isDark
+                                                ? "#fff"
+                                                : "#111827",
+                                        }}
+                                    >
+                                        وظایف انبار
+                                    </h2>
+
+                                    <p
+                                        className="mt-1 text-[11.5px]"
+                                        style={{
+                                            color: muted(
+                                                isDark
+                                            ),
+                                        }}
+                                    >
+                                        وظایف دریافت کالا و
+                                        درخواست‌های کنترل
+                                        کیفیت
+                                    </p>
+                                </div>
+
+                                {qualityTasks.length >
+                                    0 && (
+                                        <div
+                                            className="flex items-center gap-2 rounded-2xl px-3 py-2"
+                                            style={{
+                                                background:
+                                                    isDark
+                                                        ? "rgba(139,92,246,.08)"
+                                                        : "rgba(139,92,246,.06)",
+                                                color:
+                                                    "#8b5cf6",
+                                            }}
+                                        >
+                                            <ShieldCheck
+                                                size={15}
+                                            />
+
+                                            <span className="text-[10.5px] font-extrabold">
+                                                {
+                                                    qualityTasks.length
+                                                }{" "}
+                                                وظیفه کنترل
+                                                کیفیت
+                                            </span>
+                                        </div>
+                                    )}
+                            </div>
+
+                            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                                {paginatedTasks.items
+                                    .length
+                                    ? paginatedTasks.items.map(
+                                        (
+                                            task,
+                                            index
+                                        ) => (
+                                            <WarehouseEmployeeTaskCard
+                                                key={
+                                                    task.id
+                                                }
+                                                task={
+                                                    task
+                                                }
+                                                index={
+                                                    index
+                                                }
+                                                employeeId={
+                                                    myStaff?.employee_id ??
+                                                    myStaff?.employee ??
+                                                    null
+                                                }
+                                                onUpdated={
+                                                    handleTaskUpdated
+                                                }
+                                            />
+                                        )
+                                    )
+                                    : renderEmpty(
+                                        "وظیفه‌ای برای شما وجود ندارد"
+                                    )}
+                            </div>
+
+                            <Pagination
+                                currentPage={
+                                    currentPage
+                                }
+                                totalPages={
+                                    paginatedTasks.totalPages
+                                }
+                                onPageChange={
+                                    setCurrentPage
+                                }
+                                isDark={isDark}
+                            />
+                        </div>
+                    )}
+
+                    {tab === "stock" && (
+                        <>
+                            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                                {paginatedStock.items
+                                    .length
+                                    ? paginatedStock.items.map(
+                                        (
+                                            stock,
+                                            index
+                                        ) => (
+                                            <StockCard
+                                                key={
+                                                    stock.id
+                                                }
+                                                stock={
+                                                    stock
+                                                }
+                                                index={
+                                                    index
+                                                }
+                                                isDark={
+                                                    isDark
+                                                }
+                                            />
+                                        )
+                                    )
+                                    : renderEmpty(
+                                        "موجودی‌ای برای نمایش وجود ندارد"
+                                    )}
+                            </div>
+
+                            <Pagination
+                                currentPage={
+                                    currentPage
+                                }
+                                totalPages={
+                                    paginatedStock.totalPages
+                                }
+                                onPageChange={
+                                    setCurrentPage
+                                }
+                                isDark={isDark}
+                            />
+                        </>
+                    )}
+
+                    {tab === "transactions" && (
+                        <>
+                            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                                {paginatedTransactions
+                                    .items.length
+                                    ? paginatedTransactions.items.map(
+                                        transaction => (
+                                            <WarehouseEmployeeTransactionCard
+                                                key={
+                                                    transaction.id
+                                                }
+                                                transaction={
+                                                    transaction
+                                                }
+                                            />
+                                        )
+                                    )
+                                    : renderEmpty(
+                                        "تراکنشی برای نمایش وجود ندارد"
+                                    )}
+                            </div>
+
+                            <Pagination
+                                currentPage={
+                                    currentPage
+                                }
+                                totalPages={
+                                    paginatedTransactions.totalPages
+                                }
+                                onPageChange={
+                                    setCurrentPage
+                                }
+                                isDark={isDark}
+                            />
+                        </>
+                    )}
+
+                    {tab === "orders" && (
+                        <>
+                            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                                {paginatedOrders.items
+                                    .length
+                                    ? paginatedOrders.items.map(
+                                        (
+                                            orderTask,
+                                            index
+                                        ) => (
+                                            <OrderTaskCard
+                                                key={
+                                                    orderTask.id
+                                                }
+                                                orderTask={
+                                                    orderTask
+                                                }
+                                                deadline={
+                                                    deadlineByOrderTask.get(
+                                                        orderTask.id
+                                                    ) ??
+                                                    null
+                                                }
+                                                index={
+                                                    index
+                                                }
+                                            />
+                                        )
+                                    )
+                                    : renderEmpty(
+                                        "درخواست داخلی‌ای برای انبار ثبت نشده است"
+                                    )}
+                            </div>
+
+                            <Pagination
+                                currentPage={
+                                    currentPage
+                                }
+                                totalPages={
+                                    paginatedOrders.totalPages
+                                }
+                                onPageChange={
+                                    setCurrentPage
+                                }
+                                isDark={isDark}
+                            />
+                        </>
+                    )}
+
+                    {tab === "deadlines" && (
+                        <>
+                            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                                {paginatedDeadlines
+                                    .items.length
+                                    ? paginatedDeadlines.items.map(
+                                        (
+                                            deadline,
+                                            index
+                                        ) => {
+                                            const order =
+                                                orderTasks.find(
+                                                    item =>
+                                                        item.id ===
+                                                        deadline.order_task
+                                                );
+
+                                            return (
+                                                <DeadlineCard
+                                                    key={
+                                                        deadline.id
+                                                    }
+                                                    deadline={
+                                                        deadline
+                                                    }
+                                                    orderTitle={
+                                                        order
+                                                            ? getOrderTaskTitle(
+                                                                order
+                                                            )
+                                                            : `سفارش #${deadline.order_task ??
+                                                            "—"
+                                                            }`
+                                                    }
+                                                    index={
+                                                        index
+                                                    }
+                                                    isDark={
+                                                        isDark
+                                                    }
+                                                />
+                                            );
+                                        }
+                                    )
+                                    : renderEmpty(
+                                        "مهلتی برای نمایش وجود ندارد"
+                                    )}
+                            </div>
+
+                            <Pagination
+                                currentPage={
+                                    currentPage
+                                }
+                                totalPages={
+                                    paginatedDeadlines.totalPages
+                                }
+                                onPageChange={
+                                    setCurrentPage
+                                }
+                                isDark={isDark}
+                            />
+                        </>
+                    )}
+                </motion.div>
+            </AnimatePresence>
+
+            <WarehouseEmployeeProductWizardModal
+                isOpen={
+                    productWizardOpen
+                }
+                onClose={() =>
+                    setProductWizardOpen(false)
+                }
                 categories={categories}
-                staff={staff}
-                onCreated={() => loadAll()}
+                staff={
+                    myStaff
+                        ? [myStaff]
+                        : []
+                }
+                performedById={
+                    myStaff?.id ?? null
+                }
+                onCreated={
+                    handleProductCreated
+                }
             />
         </div>
     );

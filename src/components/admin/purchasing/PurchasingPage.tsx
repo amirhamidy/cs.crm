@@ -149,17 +149,25 @@ export default function PurchasingPage() {
     return (
         <div
             dir="rtl"
-            className="min-h-screen bg-[#f8fafc] text-slate-900 dark:bg-[#0b1120] dark:text-white"
+            className="min-h-screen bg-[#F3F8FF] text-[#0F2647] dark:bg-[#050B18] dark:text-[#EAF2FF]"
         >
             <div className="mx-auto w-full max-w-[1500px] px-3 py-4 sm:px-5 lg:px-7">
                 <motion.div
                     initial={{ opacity: 0, y: -8 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="mb-4 flex flex-col gap-3"
+                    className="relative mb-4 flex flex-col gap-3 overflow-hidden rounded-[2rem] border border-[#DCEAFB] bg-white p-4 dark:border-[rgba(96,165,250,0.14)] dark:bg-[#0A1930]"
                 >
-                    <div className="flex items-center justify-between gap-3">
+                    <div
+                        className="pointer-events-none absolute -left-16 -top-24 h-56 w-56 rounded-full opacity-70 blur-3xl"
+                        style={{
+                            background:
+                                "radial-gradient(circle, rgba(14,165,233,0.35), transparent 70%)",
+                        }}
+                    />
+
+                    <div className="relative flex items-center justify-between gap-3">
                         <div className="flex min-w-0 items-center gap-3">
-                            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-indigo-500/10 text-indigo-500 dark:bg-indigo-500/15">
+                            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#2563EB] to-[#06B6D4] text-white shadow-lg shadow-[#2563EB]/25">
                                 <ClipboardList size={20} />
                             </div>
 
@@ -168,7 +176,7 @@ export default function PurchasingPage() {
                                     مدیریت خرید
                                 </h1>
 
-                                <p className="mt-0.5 text-[11px] font-medium text-slate-400 sm:text-[12px]">
+                                <p className="mt-0.5 text-[11px] font-medium text-[#5D7595] dark:text-[#8FAAD1] sm:text-[12px]">
                                     مدیریت مراحل، کارمندان و فرآیندهای خرید
                                 </p>
                             </div>
@@ -178,7 +186,7 @@ export default function PurchasingPage() {
                             type="button"
                             onClick={() => loadAll(true)}
                             disabled={loading || refreshing}
-                            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-500 transition hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-500 disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/10 dark:bg-white/[0.03] dark:text-slate-400 dark:hover:border-indigo-500/30 dark:hover:bg-indigo-500/10 dark:hover:text-indigo-400"
+                            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-[#DCEAFB] bg-white text-[#2563EB] transition hover:border-[#2563EB]/40 hover:bg-[#EEF5FF] disabled:cursor-not-allowed disabled:opacity-50 dark:border-[rgba(96,165,250,0.16)] dark:bg-[rgba(96,165,250,0.06)] dark:text-[#38BDF8] dark:hover:border-[#38BDF8]/40 dark:hover:bg-[rgba(96,165,250,0.12)]"
                         >
                             <RefreshCw
                                 size={16}
@@ -187,7 +195,7 @@ export default function PurchasingPage() {
                         </button>
                     </div>
 
-                    <div className="flex w-full overflow-x-auto rounded-2xl border border-slate-200 bg-white p-1 shadow-sm dark:border-white/[0.06] dark:bg-white/[0.025]">
+                    <div className="relative flex w-full overflow-x-auto rounded-2xl border border-[#DCEAFB] bg-[#F3F8FF] p-1 dark:border-[rgba(96,165,250,0.14)] dark:bg-[rgba(96,165,250,0.05)]">
                         {tabs.map((tab) => {
                             const Icon = tab.icon;
                             const active = activeTab === tab.id;
@@ -198,14 +206,14 @@ export default function PurchasingPage() {
                                     type="button"
                                     onClick={() => setActiveTab(tab.id)}
                                     className={`relative flex min-w-[105px] flex-1 items-center justify-center gap-1.5 rounded-xl px-3 py-2.5 text-[11px] font-bold transition sm:text-[12px] ${active
-                                        ? "text-indigo-600 dark:text-indigo-400"
-                                        : "text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                                        ? "text-white"
+                                        : "text-[#5D7595] hover:text-[#2563EB] dark:text-[#8FAAD1] dark:hover:text-[#38BDF8]"
                                         }`}
                                 >
                                     {active && (
                                         <motion.div
                                             layoutId="purchasing-tab"
-                                            className="absolute inset-0 rounded-xl bg-indigo-500/10 dark:bg-indigo-500/10"
+                                            className="absolute inset-0 rounded-xl bg-gradient-to-r from-[#2563EB] to-[#0EA5E9] shadow-md shadow-[#2563EB]/25"
                                             transition={{
                                                 type: "spring",
                                                 stiffness: 400,
@@ -237,7 +245,7 @@ export default function PurchasingPage() {
                             {Array.from({ length: 6 }).map((_, index) => (
                                 <div
                                     key={index}
-                                    className="h-40 animate-pulse rounded-3xl border border-slate-200 bg-white dark:border-white/[0.06] dark:bg-white/[0.025]"
+                                    className="h-40 animate-pulse rounded-3xl border border-[#DCEAFB] bg-white dark:border-[rgba(96,165,250,0.1)] dark:bg-[rgba(96,165,250,0.04)]"
                                 />
                             ))}
                         </motion.div>
@@ -259,9 +267,9 @@ export default function PurchasingPage() {
 
                             {activeTab === "tasks" && (
                                 <div className="space-y-3">
-                                    <div className="flex items-center justify-between rounded-3xl border border-slate-200 bg-white px-4 py-3 dark:border-white/[0.06] dark:bg-white/[0.025]">
+                                    <div className="flex items-center justify-between rounded-3xl border border-[#DCEAFB] bg-white px-4 py-3 dark:border-[rgba(96,165,250,0.14)] dark:bg-[#0A1930]">
                                         <div className="flex items-center gap-2">
-                                            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-500">
+                                            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#2563EB]/10 text-[#2563EB] dark:text-[#38BDF8]">
                                                 <ClipboardList size={16} />
                                             </div>
 
@@ -270,7 +278,7 @@ export default function PurchasingPage() {
                                                     تسک‌های خرید
                                                 </h2>
 
-                                                <p className="text-[10px] font-medium text-slate-400">
+                                                <p className="text-[10px] font-medium text-[#5D7595] dark:text-[#8FAAD1]">
                                                     {safeTasks.length} تسک
                                                 </p>
                                             </div>
@@ -278,16 +286,16 @@ export default function PurchasingPage() {
                                     </div>
 
                                     {safeTasks.length === 0 ? (
-                                        <div className="flex min-h-[260px] flex-col items-center justify-center rounded-3xl border border-dashed border-slate-200 bg-white dark:border-white/[0.08] dark:bg-white/[0.025]">
-                                            <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 text-slate-400 dark:bg-white/[0.05]">
+                                        <div className="flex min-h-[260px] flex-col items-center justify-center rounded-3xl border border-dashed border-[#BFD9FA] bg-white dark:border-[rgba(96,165,250,0.2)] dark:bg-[rgba(96,165,250,0.03)]">
+                                            <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-[#EEF5FF] text-[#2563EB] dark:bg-[rgba(96,165,250,0.08)] dark:text-[#38BDF8]">
                                                 <ClipboardList size={21} />
                                             </div>
 
-                                            <span className="text-[13px] font-bold text-slate-500 dark:text-slate-300">
+                                            <span className="text-[13px] font-bold text-[#3D5B82] dark:text-[#C7D9F2]">
                                                 تسکی وجود ندارد
                                             </span>
 
-                                            <span className="mt-1 text-[10px] text-slate-400">
+                                            <span className="mt-1 text-[10px] text-[#5D7595] dark:text-[#8FAAD1]">
                                                 در حال حاضر هیچ تسک خریدی ثبت نشده است
                                             </span>
                                         </div>
@@ -317,9 +325,9 @@ export default function PurchasingPage() {
 
                             {activeTab === "steps" && (
                                 <div className="space-y-3">
-                                    <div className="flex items-center justify-between rounded-3xl border border-slate-200 bg-white px-4 py-3 dark:border-white/[0.06] dark:bg-white/[0.025]">
+                                    <div className="flex items-center justify-between rounded-3xl border border-[#DCEAFB] bg-white px-4 py-3 dark:border-[rgba(96,165,250,0.14)] dark:bg-[#0A1930]">
                                         <div className="flex items-center gap-2">
-                                            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-500">
+                                            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#2563EB]/10 text-[#2563EB] dark:text-[#38BDF8]">
                                                 <ListOrdered size={16} />
                                             </div>
 
@@ -328,7 +336,7 @@ export default function PurchasingPage() {
                                                     مراحل خرید
                                                 </h2>
 
-                                                <p className="text-[10px] font-medium text-slate-400">
+                                                <p className="text-[10px] font-medium text-[#5D7595] dark:text-[#8FAAD1]">
                                                     {safeSteps.length} مرحله
                                                 </p>
                                             </div>
@@ -340,7 +348,7 @@ export default function PurchasingPage() {
                                                 setEditingStep(null);
                                                 setStepModalOpen(true);
                                             }}
-                                            className="flex h-9 items-center gap-1.5 rounded-xl bg-indigo-500 px-3 text-[11px] font-bold text-white shadow-lg shadow-indigo-500/20 transition hover:bg-indigo-600"
+                                            className="flex h-9 items-center gap-1.5 rounded-xl bg-gradient-to-r from-[#2563EB] to-[#0EA5E9] px-3 text-[11px] font-bold text-white shadow-lg shadow-[#2563EB]/25 transition hover:brightness-110"
                                         >
                                             <Plus size={15} />
                                             <span>مرحله جدید</span>
@@ -348,16 +356,16 @@ export default function PurchasingPage() {
                                     </div>
 
                                     {safeSteps.length === 0 ? (
-                                        <div className="flex min-h-[260px] flex-col items-center justify-center rounded-3xl border border-dashed border-slate-200 bg-white dark:border-white/[0.08] dark:bg-white/[0.025]">
-                                            <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 text-slate-400 dark:bg-white/[0.05]">
+                                        <div className="flex min-h-[260px] flex-col items-center justify-center rounded-3xl border border-dashed border-[#BFD9FA] bg-white dark:border-[rgba(96,165,250,0.2)] dark:bg-[rgba(96,165,250,0.03)]">
+                                            <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-[#EEF5FF] text-[#2563EB] dark:bg-[rgba(96,165,250,0.08)] dark:text-[#38BDF8]">
                                                 <ListOrdered size={21} />
                                             </div>
 
-                                            <span className="text-[13px] font-bold text-slate-500 dark:text-slate-300">
+                                            <span className="text-[13px] font-bold text-[#3D5B82] dark:text-[#C7D9F2]">
                                                 مرحله‌ای وجود ندارد
                                             </span>
 
-                                            <span className="mt-1 text-[10px] text-slate-400">
+                                            <span className="mt-1 text-[10px] text-[#5D7595] dark:text-[#8FAAD1]">
                                                 اولین مرحله فرآیند خرید را ایجاد کنید
                                             </span>
                                         </div>
@@ -383,9 +391,9 @@ export default function PurchasingPage() {
 
                             {activeTab === "employees" && (
                                 <div className="space-y-3">
-                                    <div className="flex items-center justify-between rounded-3xl border border-slate-200 bg-white px-4 py-3 dark:border-white/[0.06] dark:bg-white/[0.025]">
+                                    <div className="flex items-center justify-between rounded-3xl border border-[#DCEAFB] bg-white px-4 py-3 dark:border-[rgba(96,165,250,0.14)] dark:bg-[#0A1930]">
                                         <div className="flex items-center gap-2">
-                                            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-500">
+                                            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#2563EB]/10 text-[#2563EB] dark:text-[#38BDF8]">
                                                 <Users size={16} />
                                             </div>
 
@@ -394,7 +402,7 @@ export default function PurchasingPage() {
                                                     کارمندان خرید
                                                 </h2>
 
-                                                <p className="text-[10px] font-medium text-slate-400">
+                                                <p className="text-[10px] font-medium text-[#5D7595] dark:text-[#8FAAD1]">
                                                     {safeEmployees.length} کارمند
                                                 </p>
                                             </div>
@@ -405,7 +413,7 @@ export default function PurchasingPage() {
                                             onClick={() =>
                                                 setEmployeeModalOpen(true)
                                             }
-                                            className="flex h-9 items-center gap-1.5 rounded-xl bg-indigo-500 px-3 text-[11px] font-bold text-white shadow-lg shadow-indigo-500/20 transition hover:bg-indigo-600"
+                                            className="flex h-9 items-center gap-1.5 rounded-xl bg-gradient-to-r from-[#2563EB] to-[#0EA5E9] px-3 text-[11px] font-bold text-white shadow-lg shadow-[#2563EB]/25 transition hover:brightness-110"
                                         >
                                             <Plus size={15} />
                                             <span>افزودن کارمند</span>
@@ -413,16 +421,16 @@ export default function PurchasingPage() {
                                     </div>
 
                                     {safeEmployees.length === 0 ? (
-                                        <div className="flex min-h-[260px] flex-col items-center justify-center rounded-3xl border border-dashed border-slate-200 bg-white dark:border-white/[0.08] dark:bg-white/[0.025]">
-                                            <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 text-slate-400 dark:bg-white/[0.05]">
+                                        <div className="flex min-h-[260px] flex-col items-center justify-center rounded-3xl border border-dashed border-[#BFD9FA] bg-white dark:border-[rgba(96,165,250,0.2)] dark:bg-[rgba(96,165,250,0.03)]">
+                                            <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-[#EEF5FF] text-[#2563EB] dark:bg-[rgba(96,165,250,0.08)] dark:text-[#38BDF8]">
                                                 <Users size={21} />
                                             </div>
 
-                                            <span className="text-[13px] font-bold text-slate-500 dark:text-slate-300">
+                                            <span className="text-[13px] font-bold text-[#3D5B82] dark:text-[#C7D9F2]">
                                                 کارمندی اضافه نشده است
                                             </span>
 
-                                            <span className="mt-1 text-[10px] text-slate-400">
+                                            <span className="mt-1 text-[10px] text-[#5D7595] dark:text-[#8FAAD1]">
                                                 برای فرآیند خرید کارمند اضافه کنید
                                             </span>
                                         </div>
@@ -466,6 +474,7 @@ export default function PurchasingPage() {
                 open={stepModalOpen}
                 onClose={handleStepModalClose}
                 step={editingStep}
+                steps={safeSteps}
                 employees={safeEmployees}
                 onSaved={() => {
                     handleStepModalClose();

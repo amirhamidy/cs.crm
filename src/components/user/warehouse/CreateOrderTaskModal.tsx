@@ -15,7 +15,7 @@ import {
 import { useTheme } from "next-themes";
 import type { AxiosError } from "axios";
 import axiosInstance from "@/lib/axiosInstance";
-import { useOrderTaskLookups } from "@/hooks/useOrderTaskLookups";
+import { ApiOrderTaskStockProduct, useOrderTaskLookups } from "@/hooks/useOrderTaskLookups";
 import TimeRangeModal from "./TimeRangeModal";
 import { ApiOrderTask, ApiProduct, ApiTask } from "@/types/warehouse";
 
@@ -347,13 +347,15 @@ export default function CreateOrderTaskModal({
                                 <label className="mb-1.5 block text-[11.5px] font-bold" style={{ color: muted }}>
                                     محصول *
                                 </label>
-                                <SearchableCombobox<ApiProduct>
+                                <SearchableCombobox<ApiOrderTaskStockProduct>
                                     items={products}
                                     value={productId}
                                     onChange={setProductId}
-                                    getId={(item) => item.id}
-                                    getLabel={(item) => item.name}
-                                    getSubLabel={(item) => item.category_detail?.name ?? ""}
+                                    getId={(item) => item.product}
+                                    getLabel={(item) => item.product_name}
+                                    getSubLabel={(item) =>
+                                        `${item.current_quantity} ${item.unit_label} موجود`
+                                    }
                                     placeholder={lookupsLoading ? "در حال بارگذاری..." : "انتخاب محصول"}
                                     isDark={isDark}
                                     disabled={loading || lookupsLoading}

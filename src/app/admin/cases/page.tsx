@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useTheme } from "next-themes";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import SuspenseWrapper from "@/components/SuspenseWrapper";
 import {
     ClipboardList,
     Layers,
@@ -39,7 +40,7 @@ function extractList<T>(data: ListResponse<T> | undefined | null): T[] {
     return [];
 }
 
-export default function AdminCasesPage() {
+function AdminCasesPageContent() {
     const { resolvedTheme } = useTheme();
     const isDark = resolvedTheme === "dark";
 
@@ -510,5 +511,12 @@ export default function AdminCasesPage() {
                 deletingTaskId={deletingTaskId}
             />
         </div>
+    );
+}
+export default function AdminCasesPage() {
+    return (
+        <SuspenseWrapper>
+            <AdminCasesPageContent />
+        </SuspenseWrapper>
     );
 }

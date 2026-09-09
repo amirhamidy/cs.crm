@@ -7,7 +7,6 @@ import {
     ArrowRight,
     FileUp,
     Loader2,
-    MessageSquare,
     Upload,
     X,
 } from "lucide-react";
@@ -19,6 +18,7 @@ import type {
 import {
     FloatingSelect,
     FloatingTextarea,
+    OPTION_CLASS,
 } from "./FormControls";
 
 interface Props {
@@ -102,7 +102,7 @@ export default function TaskActionModal({
         <AnimatePresence>
             {isOpen && (
                 <div
-                    className="fixed inset-0 z-[100] flex items-center justify-center bg-black/45 p-4 backdrop-blur-sm"
+                    className="fixed inset-0 z-[100] flex items-center justify-center bg-[#050B18]/55 p-4 backdrop-blur-sm"
                     dir="rtl"
                 >
                     <motion.div
@@ -121,14 +121,14 @@ export default function TaskActionModal({
                             scale: 0.96,
                             y: 12,
                         }}
-                        className="w-full max-w-[430px] overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-2xl dark:border-white/[0.07] dark:bg-[#0f172a]"
+                        className="w-full max-w-[430px] overflow-hidden rounded-[2rem] border border-[#DCEAFB] bg-white shadow-2xl dark:border-[rgba(96,165,250,0.14)] dark:bg-[#0A1930]"
                     >
-                        <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4 dark:border-white/[0.06]">
+                        <div className="flex items-center justify-between border-b border-[#DCEAFB] px-5 py-4 dark:border-[rgba(96,165,250,0.12)]">
                             <div className="flex items-center gap-3">
                                 <div
                                     className={`flex h-9 w-9 items-center justify-center rounded-xl ${mode === "advance"
-                                            ? "bg-indigo-500/10 text-indigo-500"
-                                            : "bg-pink-500/10 text-pink-500"
+                                        ? "bg-[#2563EB]/10 text-[#2563EB] dark:text-[#38BDF8]"
+                                        : "bg-[#F43F5E]/10 text-[#F43F5E]"
                                         }`}
                                 >
                                     {mode === "advance" ? (
@@ -139,13 +139,13 @@ export default function TaskActionModal({
                                 </div>
 
                                 <div>
-                                    <h3 className="text-[13px] font-extrabold text-gray-900 dark:text-white">
+                                    <h3 className="text-[13px] font-extrabold text-[#0F2647] dark:text-white">
                                         {mode === "advance"
                                             ? "انتقال به مرحله بعد"
                                             : "بازگشت به مرحله قبل"}
                                     </h3>
 
-                                    <p className="mt-0.5 max-w-[230px] truncate text-[9.5px] text-gray-400">
+                                    <p className="mt-0.5 max-w-[230px] truncate text-[9.5px] text-[#5D7595] dark:text-[#8FAAD1]">
                                         {task.product_name}
                                     </p>
                                 </div>
@@ -155,7 +155,7 @@ export default function TaskActionModal({
                                 type="button"
                                 onClick={onClose}
                                 disabled={loading}
-                                className="flex h-8 w-8 items-center justify-center rounded-xl bg-gray-100 text-gray-400 dark:bg-white/[0.05]"
+                                className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#F3F8FF] text-[#5D7595] dark:bg-[rgba(96,165,250,0.08)] dark:text-[#8FAAD1]"
                             >
                                 <X size={14} />
                             </button>
@@ -172,7 +172,7 @@ export default function TaskActionModal({
                                         )
                                     }
                                 >
-                                    <option value="">
+                                    <option value="" className={OPTION_CLASS}>
                                         انتخاب کارمند
                                     </option>
 
@@ -185,6 +185,7 @@ export default function TaskActionModal({
                                                 value={
                                                     employee.employee
                                                 }
+                                                className={OPTION_CLASS}
                                             >
                                                 {
                                                     employee.employee_name
@@ -208,7 +209,7 @@ export default function TaskActionModal({
                                     rows={4}
                                 />
 
-                                <label className="group flex cursor-pointer flex-col items-center justify-center rounded-[1.5rem] border border-dashed border-gray-200 bg-gray-50 px-4 py-6 transition hover:border-indigo-300 hover:bg-indigo-50/50 dark:border-white/[0.08] dark:bg-white/[0.025]">
+                                <label className="group flex cursor-pointer flex-col items-center justify-center rounded-[1.5rem] border border-dashed border-[#BFD9FA] bg-[#F3F8FF] px-4 py-6 transition hover:border-[#2563EB]/50 hover:bg-[#EAF3FF] dark:border-[rgba(96,165,250,0.22)] dark:bg-[rgba(96,165,250,0.04)] dark:hover:bg-[rgba(96,165,250,0.08)]">
                                     <input
                                         type="file"
                                         className="hidden"
@@ -225,10 +226,10 @@ export default function TaskActionModal({
                                         <>
                                             <FileUp
                                                 size={19}
-                                                className="text-indigo-500"
+                                                className="text-[#2563EB] dark:text-[#38BDF8]"
                                             />
 
-                                            <span className="mt-2 max-w-full truncate text-[10px] font-bold text-gray-600 dark:text-white/70">
+                                            <span className="mt-2 max-w-full truncate text-[10px] font-bold text-[#3D5B82] dark:text-[#C7D9F2]">
                                                 {file.name}
                                             </span>
                                         </>
@@ -236,14 +237,14 @@ export default function TaskActionModal({
                                         <>
                                             <Upload
                                                 size={19}
-                                                className="text-gray-400 group-hover:text-indigo-500"
+                                                className="text-[#5D7595] group-hover:text-[#2563EB] dark:text-[#8FAAD1] dark:group-hover:text-[#38BDF8]"
                                             />
 
-                                            <span className="mt-2 text-[10px] font-bold text-gray-500 dark:text-white/50">
+                                            <span className="mt-2 text-[10px] font-bold text-[#5D7595] dark:text-[#8FAAD1]">
                                                 افزودن فایل
                                             </span>
 
-                                            <span className="mt-1 text-[8.5px] text-gray-400">
+                                            <span className="mt-1 text-[8.5px] text-[#5D7595] dark:text-[#7C93B8]">
                                                 اختیاری
                                             </span>
                                         </>
@@ -251,7 +252,7 @@ export default function TaskActionModal({
                                 </label>
 
                                 {error && (
-                                    <div className="rounded-2xl bg-red-500/10 px-3 py-2.5 text-[10px] font-semibold text-red-500">
+                                    <div className="rounded-2xl bg-rose-500/10 px-3 py-2.5 text-[10px] font-semibold text-rose-500">
                                         {error}
                                     </div>
                                 )}
@@ -261,7 +262,7 @@ export default function TaskActionModal({
                                         type="button"
                                         onClick={onClose}
                                         disabled={loading}
-                                        className="flex-1 rounded-2xl bg-gray-100 py-3 text-[10.5px] font-bold text-gray-600 dark:bg-white/[0.06] dark:text-white/70"
+                                        className="flex-1 rounded-2xl bg-[#F3F8FF] py-3 text-[10.5px] font-bold text-[#3D5B82] dark:bg-[rgba(96,165,250,0.08)] dark:text-[#8FAAD1]"
                                     >
                                         انصراف
                                     </button>
@@ -273,9 +274,9 @@ export default function TaskActionModal({
                                             loading ||
                                             !employees.length
                                         }
-                                        className={`flex flex-1 items-center justify-center gap-2 rounded-2xl py-3 text-[10.5px] font-bold text-white disabled:opacity-50 ${mode === "advance"
-                                                ? "bg-indigo-600"
-                                                : "bg-pink-500"
+                                        className={`flex flex-1 items-center justify-center gap-2 rounded-2xl py-3 text-[10.5px] font-bold text-white shadow-lg disabled:opacity-50 disabled:shadow-none ${mode === "advance"
+                                            ? "bg-gradient-to-r from-[#2563EB] to-[#0EA5E9] shadow-[#2563EB]/25 hover:brightness-110"
+                                            : "bg-[#F43F5E] shadow-[#F43F5E]/25 hover:bg-rose-600"
                                             }`}
                                     >
                                         {loading ? (
