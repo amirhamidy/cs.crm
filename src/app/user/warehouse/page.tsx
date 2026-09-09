@@ -597,6 +597,7 @@ export default function WarehouseEmployeePage() {
         refreshing,
         error,
         refresh,
+        refreshOrderTasks,
     } = useWarehouseEmployee();
 
     const [tab, setTab] =
@@ -646,13 +647,16 @@ export default function WarehouseEmployeePage() {
 
     const pendingOrderTasks = useMemo(
         () =>
-            orderTasks.filter(
-                (task) =>
-                    String(
-                        task.status ?? ""
-                    ).toLowerCase() !==
-                    "completed"
-            ),
+            orderTasks.filter((task) => {
+                const status = String(
+                    task.status ?? ""
+                ).toLowerCase();
+
+                return (
+                    status !== "completed" &&
+                    status !== "cancelled"
+                );
+            }),
         [orderTasks]
     );
 
@@ -1504,26 +1508,36 @@ export default function WarehouseEmployeePage() {
                     {tab === "orders" && (
                         <>
                             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                                {paginatedOrders.items.length
-                                    ? paginatedOrders.items.map((orderTask, index) => (
-                                        <WarehouseEmployeeOrderTaskCard
-                                            key={orderTask.id}
-                                            orderTask={orderTask}
-                                            index={index}
-                                            isStaff={!!myStaff}
-                                            staffId={myStaff?.id ?? null}
-                                            canChangeStatus={true}
-                                            onUpdate={() => refresh()}
-                                        />
-                                    ))
-                                    : renderEmpty(
+                                {paginatedOrders.items.length ? (
+                                    paginatedOrders.items.map(
+                                        (orderTask, index) => (
+                                            <WarehouseEmployeeOrderTaskCard
+                                                key={orderTask.id}
+                                                orderTask={orderTask}
+                                                index={index}
+                                                isStaff={!!myStaff}
+                                                staffId={
+                                                    myStaff?.id ?? null
+                                                }
+                                                canChangeStatus={true}
+                                                onRefresh={
+                                                    refreshOrderTasks
+                                                }
+                                            />
+                                        )
+                                    )
+                                ) : (
+                                    renderEmpty(
                                         "درخواست داخلی‌ای برای انبار ثبت نشده است"
-                                    )}
+                                    )
+                                )}
                             </div>
 
                             <Pagination
                                 currentPage={currentPage}
-                                totalPages={paginatedOrders.totalPages}
+                                totalPages={
+                                    paginatedOrders.totalPages
+                                }
                                 onPageChange={setCurrentPage}
                                 isDark={isDark}
                             />

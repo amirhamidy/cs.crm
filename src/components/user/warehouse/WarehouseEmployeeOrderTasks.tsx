@@ -10,6 +10,7 @@ import { matchesSearch } from "@/utils/warehouseEmployee";
 interface WarehouseEmployeeOrderTasksProps {
     orderTasks: ApiOrderTask[];
     isStaff: boolean;
+    staffId: number | string | null;
     canChangeStatus?: boolean;
     onUpdate: (orderTask: ApiOrderTask) => void;
 }
@@ -17,6 +18,7 @@ interface WarehouseEmployeeOrderTasksProps {
 export default function WarehouseEmployeeOrderTasks({
     orderTasks,
     isStaff,
+    staffId,
     canChangeStatus = false,
     onUpdate,
 }: WarehouseEmployeeOrderTasksProps) {
@@ -100,6 +102,7 @@ export default function WarehouseEmployeeOrderTasks({
                             orderTask={task}
                             index={index}
                             isStaff={isStaff}
+                            staffId={staffId}
                             canChangeStatus={canChangeStatus}
                             onUpdate={onUpdate}
                         />

@@ -18,15 +18,11 @@ export type InternalTaskDeadlineResponse = {
 };
 
 export type UpdateInternalTaskPayload = {
-  title: string;
-  description: string;
   status: InternalTaskStatus;
-  assigned_to: number[];
-  created_by: number;
 };
 
 export function fetchInternalTasks() {
-  return axiosInstance.get<InternalTask[]>("/tasks/api/v1/internal-tasks/");
+  return axiosInstance.get<InternalTask[]>("/tasks/api/v1/internal_task/");
 }
 
 export function fetchEmployeeList() {
@@ -42,7 +38,7 @@ export function createInternalTask(data: {
   created_by: number;
 }) {
   return axiosInstance.post<InternalTask>(
-    "/tasks/api/v1/internal-tasks/create/",
+    "/tasks/api/v1/internal_task/create/",
     {
       title: data.title,
       description: data.description,
@@ -58,13 +54,9 @@ export function updateInternalTaskStatus(
   payload: UpdateInternalTaskPayload,
 ) {
   return axiosInstance.patch<InternalTask>(
-    `/tasks/api/v1/internal-tasks/${id}/update/`,
+    `/tasks/api/v1/internal_task/${id}/update/`,
     {
-      title: payload.title,
-      description: payload.description,
       status: payload.status,
-      assigned_to: payload.assigned_to,
-      created_by: payload.created_by,
     },
   );
 }
@@ -74,7 +66,7 @@ export function patchInternalTaskDeadline(
   payload: InternalTaskDeadlinePayload,
 ) {
   return axiosInstance.patch<InternalTaskDeadlineResponse>(
-    `/tasks/api/v1/internal-tasks/${id}/deadline/patch/`,
+    `/tasks/api/v1/internal_task/${id}/deadline/patch/`,
     {
       started_at: payload.started_at,
       deadline: payload.deadline,
@@ -98,7 +90,7 @@ export function uploadInternalTaskAttachments(
   }
 
   return axiosInstance.post<InternalTaskAttachment[]>(
-    `/tasks/api/v1/internal-tasks/${id}/attachments/`,
+    `/tasks/api/v1/internal_task/${id}/attachments/`,
     formData,
   );
 }
@@ -107,11 +99,11 @@ export function getInternalTaskAttachmentUrl(
   taskId: number,
   attachmentId: number,
 ) {
-  return `/tasks/api/v1/internal-tasks/${taskId}/attachments/${attachmentId}/`;
+  return `/tasks/api/v1/internal_task/${taskId}/attachments/${attachmentId}/`;
 }
 
 export function deleteInternalTask(id: number) {
   return axiosInstance.delete<void>(
-    `/tasks/api/v1/internal-tasks/${id}/delete/`,
+    `/tasks/api/v1/internal_task/${id}/delete/`,
   );
 }

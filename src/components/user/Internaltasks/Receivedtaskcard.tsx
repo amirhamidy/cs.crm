@@ -18,6 +18,7 @@ import {
     toPersianDigits,
 } from "@/lib/jalali";
 import type {
+    EmployeeListItem,
     InternalTask,
     InternalTaskStatus,
 } from "./types";
@@ -27,23 +28,18 @@ import {
 import InternalTaskChatModal from "./InternalTaskChatModal";
 import api from "@/lib/axiosInstance";
 
-interface UserListItem {
-    id: number;
-    username: string;
-    phone_number: string;
-    type: number;
-    is_active: boolean;
-    created_at: string;
-    updated_at: string;
-}
-
 interface ReceivedTaskCardProps {
     task: InternalTask;
+    employees: EmployeeListItem[];
     onUpdated: (task: InternalTask) => void;
 }
 
-function formatJalali(value?: string | null): string | null {
-    if (!value) return null;
+function formatJalali(
+    value?: string | null,
+): string | null {
+    if (!value) {
+        return null;
+    }
 
     const date = new Date(value);
 
@@ -60,37 +56,48 @@ function formatJalali(value?: string | null): string | null {
     return `${toPersianDigits(jd)} ${JALALI_MONTHS[jm - 1]
         } ${toPersianDigits(jy)} - ${toPersianDigits(
             pad2(date.getHours()),
-        )}:${toPersianDigits(pad2(date.getMinutes()))}`;
+        )}:${toPersianDigits(
+            pad2(date.getMinutes()),
+        )}`;
 }
 
-function getDeadlineState(deadline?: string | null) {
+function getDeadlineState(
+    deadline?: string | null,
+) {
     if (!deadline) {
         return {
             label: "بدون مهلت",
-            color: "text-gray-400 dark:text-gray-500",
+            color:
+                "text-gray-400 dark:text-gray-500",
             background:
                 "bg-gray-50 dark:bg-white/[0.03]",
         };
     }
 
-    const deadlineTime = new Date(deadline).getTime();
+    const deadlineTime =
+        new Date(deadline).getTime();
 
     if (Number.isNaN(deadlineTime)) {
         return {
             label: "بدون مهلت",
-            color: "text-gray-400 dark:text-gray-500",
+            color:
+                "text-gray-400 dark:text-gray-500",
             background:
                 "bg-gray-50 dark:bg-white/[0.03]",
         };
     }
 
-    const diff = deadlineTime - Date.now();
-    const hours = diff / (1000 * 60 * 60);
+    const diff =
+        deadlineTime - Date.now();
+
+    const hours =
+        diff / (1000 * 60 * 60);
 
     if (diff < 0) {
         return {
             label: "منقضی شده",
-            color: "text-red-500 dark:text-red-400",
+            color:
+                "text-red-500 dark:text-red-400",
             background:
                 "bg-red-50 dark:bg-red-500/10",
         };
@@ -115,21 +122,95 @@ function getDeadlineState(deadline?: string | null) {
     };
 }
 
+function extractBackendError(
+    error: any,
+): string {
+    const responseData =
+        error?.response?.data;
+
+    if (
+        typeof responseData ===
+        "string"
+    ) {
+        return responseData;
+    }
+
+    if (responseData?.detail) {
+        return String(
+            responseData.detail,
+        );
+    }
+
+    if (responseData?.message) {
+        return String(
+            responseData.message,
+        );
+    }
+
+    if (responseData?.error) {
+        return String(
+            responseData.error,
+        );
+    }
+
+    if (
+        responseData &&
+        typeof responseData ===
+        "object"
+    ) {
+        const values =
+            Object.values(
+                responseData,
+            );
+
+        for (const value of values) {
+            if (Array.isArray(value)) {
+                if (value.length > 0) {
+                    return String(
+                        value[0],
+                    );
+                }
+            }
+
+            if (
+                value !== null &&
+                value !== undefined
+            ) {
+                return String(value);
+            }
+        }
+    }
+
+    switch (
+    error?.response?.status
+    ) {
+        case 400:
+            return "اطلاعات ارسالی برای تغییر وضعیت صحیح نیست.";
+
+        case 403:
+            return "شما اجازه تغییر وضعیت این تسک را ندارید.";
+
+        case 404:
+            return "مسیر تغییر وضعیت تسک پیدا نشد.";
+
+        case 500:
+            return "خطای داخلی سرور هنگام تغییر وضعیت تسک رخ داد.";
+
+        default:
+            return "خطا در تغییر وضعیت تسک.";
+    }
+}
+
 export default function ReceivedTaskCard({
     task,
+    employees,
     onUpdated,
 }: ReceivedTaskCardProps) {
     const [currentTask, setCurrentTask] =
         useState<InternalTask>(task);
 
-    const [createdById, setCreatedById] =
-        useState<number | null>(null);
-
     const [submitting, setSubmitting] =
         useState(false);
-
-    const [loadingCreator, setLoadingCreator] =
-        useState(true);
 
     const [error, setError] =
         useState<string | null>(null);
@@ -153,54 +234,14 @@ export default function ReceivedTaskCard({
 
     useEffect(() => {
         setCurrentTask(task);
+
+        setDeadlineData({
+            started_at:
+                task.started_at ?? null,
+            deadline:
+                task.deadline ?? null,
+        });
     }, [task]);
-
-    useEffect(() => {
-        let cancelled = false;
-
-        async function resolveCreator() {
-            setLoadingCreator(true);
-
-            try {
-                const response =
-                    await api.get<UserListItem[]>(
-                        "/accounts/api/v1/user/list/",
-                    );
-
-                if (cancelled) return;
-
-                const users =
-                    Array.isArray(response.data)
-                        ? response.data
-                        : [];
-
-                const creator =
-                    users.find(
-                        (user) =>
-                            user.username ===
-                            task.created_by,
-                    );
-
-                setCreatedById(
-                    creator?.id ?? null,
-                );
-            } catch {
-                if (!cancelled) {
-                    setCreatedById(null);
-                }
-            } finally {
-                if (!cancelled) {
-                    setLoadingCreator(false);
-                }
-            }
-        }
-
-        resolveCreator();
-
-        return () => {
-            cancelled = true;
-        };
-    }, [task.created_by]);
 
     useEffect(() => {
         let cancelled = false;
@@ -208,13 +249,16 @@ export default function ReceivedTaskCard({
         setLoadingDeadline(true);
 
         api.get(
-            `/tasks/api/v1/internal-tasks/${task.id}/deadline/`,
+            `/tasks/api/v1/internal_task/${task.id}/deadline/`,
         )
-            .then((res) => {
-                if (cancelled) return;
+            .then((response) => {
+                if (cancelled) {
+                    return;
+                }
 
                 const data =
-                    res.data?.data ?? res.data;
+                    response.data?.data ??
+                    response.data;
 
                 setDeadlineData({
                     started_at:
@@ -254,11 +298,29 @@ export default function ReceivedTaskCard({
         task.deadline,
     ]);
 
+    const creator =
+        employees.find(
+            (employee) =>
+                employee.username
+                    .trim()
+                    .toLowerCase() ===
+                currentTask.created_by
+                    .trim()
+                    .toLowerCase(),
+        );
+
+    const creatorName =
+        creator?.full_name ||
+        currentTask.created_by ||
+        "نامشخص";
+
     const isCompleted =
-        currentTask.status === "completed";
+        currentTask.status ===
+        "completed";
 
     const isCancelled =
-        currentTask.status === "cancelled";
+        currentTask.status ===
+        "cancelled";
 
     const deadlineState =
         getDeadlineState(
@@ -283,162 +345,135 @@ export default function ReceivedTaskCard({
     async function changeStatus(
         nextStatus: InternalTaskStatus,
     ) {
-        if (submitting) return;
-
-        if (
-            !createdById ||
-            !Number.isFinite(createdById) ||
-            createdById <= 0
-        ) {
-            setError(
-                "شناسه کاربر ایجادکننده تسک پیدا نشد.",
-            );
+        if (submitting) {
             return;
         }
 
-        const assignedToIds =
-            currentTask.assigned_to
-                .map((employee) =>
-                    Number(employee.id),
-                )
-                .filter(
-                    (id) =>
-                        Number.isFinite(id) &&
-                        id > 0,
-                );
-
-        if (!assignedToIds.length) {
-            setError(
-                "شناسه کارمند گیرنده تسک پیدا نشد.",
-            );
-            return;
-        }
-
-        setSubmitting(true);
         setError(null);
+        setSubmitting(true);
 
-        const payload = {
-            title: currentTask.title,
-            description:
-                currentTask.description,
+        const previousTask =
+            currentTask;
+
+        const optimisticTask: InternalTask =
+        {
+            ...previousTask,
             status: nextStatus,
-            assigned_to: assignedToIds,
-            created_by: createdById,
+            updated_at:
+                new Date().toISOString(),
+            completed_at:
+                nextStatus === "completed"
+                    ? new Date().toISOString()
+                    : nextStatus === "in_progress"
+                        ? null
+                        : previousTask.completed_at,
         };
+
+        setCurrentTask(
+            optimisticTask,
+        );
+
+        onUpdated(
+            optimisticTask,
+        );
 
         try {
             const response =
                 await updateInternalTaskStatus(
-                    currentTask.id,
-                    payload,
+                    previousTask.id,
+                    {
+                        status: nextStatus,
+                    },
                 );
 
             const responseData =
                 response.data;
 
-            const updatedTask: InternalTask = {
-                ...currentTask,
+            const serverStatus =
+                responseData?.status ??
+                nextStatus;
+
+            const updatedTask: InternalTask =
+            {
+                ...previousTask,
                 ...responseData,
-                id:
-                    responseData?.id ??
-                    currentTask.id,
+                id: previousTask.id,
                 title:
                     responseData?.title ??
-                    currentTask.title,
+                    previousTask.title,
                 description:
                     responseData?.description ??
-                    currentTask.description,
-                status:
-                    responseData?.status ??
-                    nextStatus,
+                    previousTask.description,
+                status: serverStatus,
                 assigned_to:
-                    responseData?.assigned_to ??
-                    currentTask.assigned_to,
-                deadline:
-                    responseData?.deadline ??
-                    currentTask.deadline,
-                started_at:
-                    responseData?.started_at ??
-                    currentTask.started_at,
+                    Array.isArray(
+                        responseData?.assigned_to,
+                    ) &&
+                        responseData.assigned_to
+                            .length > 0
+                        ? responseData.assigned_to
+                        : previousTask.assigned_to,
                 created_by:
-                    typeof responseData?.created_by ===
-                        "string"
-                        ? responseData.created_by
-                        : currentTask.created_by,
+                    responseData?.created_by ??
+                    previousTask.created_by,
                 created_at:
                     responseData?.created_at ??
-                    currentTask.created_at,
+                    previousTask.created_at,
                 updated_at:
                     responseData?.updated_at ??
-                    currentTask.updated_at,
+                    new Date().toISOString(),
+                started_at:
+                    responseData?.started_at ??
+                    previousTask.started_at,
+                deadline:
+                    responseData?.deadline ??
+                    previousTask.deadline,
                 completed_at:
                     responseData?.completed_at ??
-                    currentTask.completed_at,
+                    (serverStatus === "completed"
+                        ? new Date().toISOString()
+                        : serverStatus ===
+                            "in_progress"
+                            ? null
+                            : previousTask.completed_at),
                 attachments:
-                    responseData?.attachments ??
-                    currentTask.attachments,
+                    Array.isArray(
+                        responseData?.attachments,
+                    )
+                        ? responseData.attachments
+                        : previousTask.attachments,
             };
 
-            setCurrentTask(updatedTask);
-            onUpdated(updatedTask);
+            setCurrentTask(
+                updatedTask,
+            );
+
+            setDeadlineData({
+                started_at:
+                    updatedTask.started_at ??
+                    deadlineData.started_at ??
+                    null,
+                deadline:
+                    updatedTask.deadline ??
+                    deadlineData.deadline ??
+                    null,
+            });
+
+            onUpdated(
+                updatedTask,
+            );
         } catch (err: any) {
-            const responseData =
-                err?.response?.data;
+            setCurrentTask(
+                previousTask,
+            );
 
-            let backendMessage =
-                "خطا در تغییر وضعیت تسک.";
+            onUpdated(
+                previousTask,
+            );
 
-            if (
-                typeof responseData ===
-                "string"
-            ) {
-                backendMessage =
-                    responseData;
-            } else if (
-                responseData?.detail
-            ) {
-                backendMessage =
-                    responseData.detail;
-            } else if (
-                responseData?.message
-            ) {
-                backendMessage =
-                    responseData.message;
-            } else if (
-                responseData?.error
-            ) {
-                backendMessage =
-                    responseData.error;
-            } else if (
-                responseData &&
-                typeof responseData ===
-                "object"
-            ) {
-                const firstError =
-                    Object.values(
-                        responseData,
-                    )[0];
-
-                if (
-                    Array.isArray(
-                        firstError,
-                    )
-                ) {
-                    backendMessage =
-                        String(
-                            firstError[0],
-                        );
-                } else if (
-                    firstError
-                ) {
-                    backendMessage =
-                        String(
-                            firstError,
-                        );
-                }
-            }
-
-            setError(backendMessage);
+            setError(
+                extractBackendError(err),
+            );
         } finally {
             setSubmitting(false);
         }
@@ -511,7 +546,9 @@ export default function ReceivedTaskCard({
                         <span
                             className={`h-1.5 w-1.5 rounded-full ${statusBadge.dot}`}
                         />
-                        {statusBadge.label}
+                        {
+                            statusBadge.label
+                        }
                     </span>
 
                     <button
@@ -533,7 +570,9 @@ export default function ReceivedTaskCard({
                 </div>
 
                 <h3 className="line-clamp-2 text-[14px] font-extrabold leading-snug text-gray-900 dark:text-white">
-                    {currentTask.title}
+                    {
+                        currentTask.title
+                    }
                 </h3>
 
                 {currentTask.description && (
@@ -545,17 +584,19 @@ export default function ReceivedTaskCard({
                 )}
 
                 <div className="flex items-center gap-1.5 text-[11px] text-gray-400 dark:text-gray-600">
-                    <UserRound size={12} />
+                    <UserRound
+                        size={12}
+                    />
                     <span>
                         ارسال کننده:{" "}
-                        {
-                            currentTask.created_by
-                        }
+                        {creatorName}
                     </span>
                 </div>
 
                 <div className="flex items-center gap-1.5 text-[11px] text-gray-400 dark:text-gray-600">
-                    <History size={12} />
+                    <History
+                        size={12}
+                    />
                     <span>
                         ایجاد:{" "}
                         {createdDate}
@@ -568,6 +609,7 @@ export default function ReceivedTaskCard({
                             size={13}
                             className="text-gray-400"
                         />
+
                         <span className="text-[11px] font-semibold text-gray-400">
                             در حال دریافت زمان‌بندی...
                         </span>
@@ -626,12 +668,6 @@ export default function ReceivedTaskCard({
                     </>
                 )}
 
-                {loadingCreator && (
-                    <div className="rounded-xl bg-gray-50 px-3 py-2 text-center text-[10px] font-bold text-gray-400 dark:bg-white/[0.03]">
-                        در حال بررسی اطلاعات ارسال‌کننده...
-                    </div>
-                )}
-
                 {error && (
                     <p className="rounded-xl bg-red-500/10 px-3 py-2 text-center text-[11px] font-bold text-red-500">
                         {error}
@@ -648,8 +684,7 @@ export default function ReceivedTaskCard({
                                         completeTask
                                     }
                                     disabled={
-                                        submitting ||
-                                        loadingCreator
+                                        submitting
                                     }
                                     className="flex h-9 flex-1 items-center justify-center gap-1.5 rounded-xl bg-emerald-500 text-[10.5px] font-extrabold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
                                 >
@@ -665,8 +700,7 @@ export default function ReceivedTaskCard({
                                         cancelTask
                                     }
                                     disabled={
-                                        submitting ||
-                                        loadingCreator
+                                        submitting
                                     }
                                     className="flex h-9 flex-1 items-center justify-center gap-1.5 rounded-xl bg-red-500 text-[10.5px] font-extrabold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
                                 >
@@ -686,8 +720,7 @@ export default function ReceivedTaskCard({
                                     reopenTask
                                 }
                                 disabled={
-                                    submitting ||
-                                    loadingCreator
+                                    submitting
                                 }
                                 className="flex h-9 w-full items-center justify-center gap-1.5 rounded-xl bg-amber-500 text-[10.5px] font-extrabold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
                             >
@@ -719,7 +752,9 @@ export default function ReceivedTaskCard({
                 onClose={() =>
                     setChatOpen(false)
                 }
-                onUpdated={(updatedTask) => {
+                onUpdated={(
+                    updatedTask,
+                ) => {
                     setCurrentTask(
                         updatedTask,
                     );
@@ -731,4 +766,3 @@ export default function ReceivedTaskCard({
         </>
     );
 }
-

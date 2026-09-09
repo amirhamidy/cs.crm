@@ -7,19 +7,23 @@ import {
     Loader,
 } from "lucide-react";
 import { useCurrentEmployee } from "@/hooks/usecurrentemployee";
-import { fetchInternalTasks } from "./Api";
+import {
+    fetchEmployeeList,
+    fetchInternalTasks,
+} from "./Api";
 import type {
     EmployeeListItem,
     InternalTask,
     InternalTaskStatus,
 } from "./types";
 import ReceivedTaskCard from "./Receivedtaskcard";
-import api from "@/lib/axiosInstance";
 
 function normalizeDateValue(
     value: unknown,
 ): string | null {
-    if (!value) return null;
+    if (!value) {
+        return null;
+    }
 
     if (typeof value === "string") {
         return value.trim() || null;
@@ -30,6 +34,27 @@ function normalizeDateValue(
         !Number.isNaN(value.getTime())
     ) {
         return value.toISOString();
+    }
+
+    if (
+        typeof value === "object" &&
+        value !== null
+    ) {
+        const dateValue =
+            value as {
+                started_at?: unknown;
+                deadline?: unknown;
+            };
+
+        if (
+            typeof dateValue.deadline ===
+            "string"
+        ) {
+            return (
+                dateValue.deadline.trim() ||
+                null
+            );
+        }
     }
 
     return null;
@@ -46,7 +71,9 @@ function normalizeTask(
     }
 
     const task =
-        item as Partial<InternalTask>;
+        item as Partial<InternalTask> & {
+            deadline?: unknown;
+        };
 
     const id = Number(task.id);
 
@@ -59,8 +86,8 @@ function normalizeTask(
 
     const status: InternalTaskStatus =
         task.status === "in_progress" ||
-        task.status === "completed" ||
-        task.status === "cancelled"
+            task.status === "completed" ||
+            task.status === "cancelled"
             ? task.status
             : "in_progress";
 
@@ -68,29 +95,29 @@ function normalizeTask(
         id,
         title:
             typeof task.title ===
-            "string"
+                "string"
                 ? task.title
                 : "",
         description:
             typeof task.description ===
-            "string"
+                "string"
                 ? task.description
                 : "",
         status,
         created_by:
             typeof task.created_by ===
-            "string"
+                "string"
                 ? task.created_by.trim()
                 : "",
         created_at:
             typeof task.created_at ===
                 "string" &&
-            task.created_at.trim()
+                task.created_at.trim()
                 ? task.created_at
                 : new Date().toISOString(),
         updated_at:
             typeof task.updated_at ===
-            "string"
+                "string"
                 ? task.updated_at
                 : new Date().toISOString(),
         started_at:
@@ -104,7 +131,7 @@ function normalizeTask(
         completed_at:
             typeof task.completed_at ===
                 "string" ||
-            task.completed_at === null
+                task.completed_at === null
                 ? task.completed_at
                 : null,
         assigned_to:
@@ -130,10 +157,7 @@ function normalizeTasks(
     }
 
     const map =
-        new Map<
-            number,
-            InternalTask
-        >();
+        new Map<number, InternalTask>();
 
     data.forEach((item) => {
         const task =
@@ -154,8 +178,7 @@ function getEmployeeId(
 ) {
     if (
         !employee ||
-        typeof employee !==
-            "object"
+        typeof employee !== "object"
     ) {
         return null;
     }
@@ -181,22 +204,16 @@ export default function ReceivedTicketsBoard() {
     } = useCurrentEmployee();
 
     const [tasks, setTasks] =
-        useState<InternalTask[]>(
-            [],
-        );
+        useState<InternalTask[]>([]);
 
     const [employees, setEmployees] =
-        useState<
-            EmployeeListItem[]
-        >([]);
+        useState<EmployeeListItem[]>([]);
 
     const [loading, setLoading] =
         useState(true);
 
     const [error, setError] =
-        useState<string | null>(
-            null,
-        );
+        useState<string | null>(null);
 
     const currentEmployeeId =
         getEmployeeId(employee);
@@ -211,9 +228,7 @@ export default function ReceivedTicketsBoard() {
                 employeesResponse,
             ] = await Promise.all([
                 fetchInternalTasks(),
-                api.get(
-                    "/accounts/api/v1/employee/list/",
-                ),
+                fetchEmployeeList(),
             ]);
 
             setTasks(
@@ -223,7 +238,6 @@ export default function ReceivedTicketsBoard() {
             );
 
             const employeeData =
-                employeesResponse.data?.data ??
                 employeesResponse.data;
 
             setEmployees(
@@ -231,20 +245,20 @@ export default function ReceivedTicketsBoard() {
                     employeeData,
                 )
                     ? employeeData.filter(
-                          (
-                              item,
-                          ): item is EmployeeListItem =>
-                              Boolean(
-                                  item &&
-                                  typeof item.id ===
-                                      "number" &&
-                                  typeof item.username ===
-                                      "string" &&
-                                  typeof item.full_name ===
-                                      "string" &&
-                                  item.full_name.trim(),
-                              ),
-                      )
+                        (
+                            item,
+                        ): item is EmployeeListItem =>
+                            Boolean(
+                                item &&
+                                typeof item.id ===
+                                "number" &&
+                                typeof item.username ===
+                                "string" &&
+                                typeof item.full_name ===
+                                "string" &&
+                                item.full_name.trim(),
+                            ),
+                    )
                     : [],
             );
         } catch {
@@ -261,20 +275,6 @@ export default function ReceivedTicketsBoard() {
     useEffect(() => {
         void loadTasks();
     }, []);
-
-    const employeeByUsername =
-        useMemo(
-            () =>
-                new Map(
-                    employees.map(
-                        (employee) => [
-                            employee.username.trim(),
-                            employee.full_name.trim(),
-                        ],
-                    ),
-                ),
-            [employees],
-        );
 
     const employeeById =
         useMemo(
@@ -294,107 +294,145 @@ export default function ReceivedTicketsBoard() {
 
     const receivedTasks =
         useMemo(() => {
-            if (
-                !currentEmployeeId
-            ) {
+            if (!currentEmployeeId) {
                 return [];
             }
 
             return tasks
-                .filter(
-                    (task) =>
-                        Array.isArray(
+                .filter((task) => {
+                    if (
+                        !Array.isArray(
                             task.assigned_to,
-                        ) &&
-                        task.assigned_to.some(
-                            (
-                                assignedUser,
-                            ) =>
-                                Number(
-                                    assignedUser?.id,
-                                ) ===
-                                currentEmployeeId,
-                        ),
-                )
-                .map(
-                    (task) => ({
-                        ...task,
-                        created_by:
-                            employeeByUsername.get(
-                                task.created_by.trim(),
-                            ) || "",
-                        assigned_to:
-                            task.assigned_to
-                                .map(
-                                    (
-                                        assignedUser,
-                                    ) => {
-                                        const fullName =
-                                            employeeById.get(
-                                                Number(
-                                                    assignedUser.id,
-                                                ),
-                                            );
+                        )
+                    ) {
+                        return false;
+                    }
 
-                                        if (
-                                            !fullName
-                                        ) {
-                                            return null;
-                                        }
+                    return task.assigned_to.some(
+                        (assignedUser) =>
+                            Number(
+                                assignedUser?.id,
+                            ) ===
+                            currentEmployeeId,
+                    );
+                })
+                .map((task) => ({
+                    ...task,
+                    created_by:
+                        task.created_by.trim(),
+                    assigned_to:
+                        task.assigned_to
+                            .map(
+                                (
+                                    assignedUser,
+                                ) => {
+                                    const id =
+                                        Number(
+                                            assignedUser.id,
+                                        );
 
-                                        return {
-                                            id: Number(
-                                                assignedUser.id,
-                                            ),
-                                            full_name:
-                                                fullName,
-                                        };
-                                    },
-                                )
-                                .filter(
-                                    (
-                                        item,
-                                    ): item is {
-                                        id: number;
-                                        full_name: string;
-                                    } =>
-                                        item !==
-                                        null,
-                                ),
-                    }),
-                );
+                                    const fullName =
+                                        employeeById.get(
+                                            id,
+                                        );
+
+                                    if (
+                                        !fullName
+                                    ) {
+                                        return null;
+                                    }
+
+                                    return {
+                                        id,
+                                        full_name:
+                                            fullName,
+                                    };
+                                },
+                            )
+                            .filter(
+                                (
+                                    item,
+                                ): item is {
+                                    id: number;
+                                    full_name: string;
+                                } =>
+                                    item !== null,
+                            ),
+                }));
         }, [
             tasks,
             currentEmployeeId,
-            employeeByUsername,
             employeeById,
         ]);
 
     const handleUpdated = (
         updatedTask: InternalTask,
     ) => {
-        const normalized =
-            normalizeTask(
-                updatedTask,
-            );
-
-        if (!normalized) return;
-
-        setTasks(
-            (previous) =>
-                previous.map(
+        setTasks((previous) => {
+            const existingTask =
+                previous.find(
                     (task) =>
                         task.id ===
-                        normalized.id
-                            ? {
-                                  ...task,
-                                  ...normalized,
-                                  created_at:
-                                      task.created_at,
-                              }
-                            : task,
-                ),
-        );
+                        updatedTask.id,
+                );
+
+            if (!existingTask) {
+                return previous;
+            }
+
+            const mergedTask: InternalTask =
+            {
+                ...existingTask,
+                ...updatedTask,
+                id: existingTask.id,
+                assigned_to:
+                    Array.isArray(
+                        updatedTask.assigned_to,
+                    ) &&
+                        updatedTask.assigned_to
+                            .length > 0
+                        ? updatedTask.assigned_to
+                        : existingTask.assigned_to,
+                created_by:
+                    updatedTask.created_by ||
+                    existingTask.created_by,
+                title:
+                    updatedTask.title ||
+                    existingTask.title,
+                description:
+                    updatedTask.description ??
+                    existingTask.description,
+                created_at:
+                    updatedTask.created_at ||
+                    existingTask.created_at,
+                updated_at:
+                    updatedTask.updated_at ||
+                    existingTask.updated_at,
+                started_at:
+                    updatedTask.started_at ??
+                    existingTask.started_at,
+                deadline:
+                    updatedTask.deadline ??
+                    existingTask.deadline,
+                completed_at:
+                    updatedTask.completed_at ??
+                    existingTask.completed_at,
+                attachments:
+                    Array.isArray(
+                        updatedTask.attachments,
+                    )
+                        ? updatedTask.attachments
+                        : existingTask.attachments,
+            };
+
+            return previous.map(
+                (task) =>
+                    task.id ===
+                        updatedTask.id
+                        ? mergedTask
+                        : task,
+            );
+        });
     };
 
     if (
@@ -457,7 +495,7 @@ export default function ReceivedTicketsBoard() {
             )}
 
             {receivedTasks.length ===
-            0 ? (
+                0 ? (
                 <div className="flex h-64 flex-col items-center justify-center gap-3 rounded-3xl border border-dashed border-gray-200 dark:border-white/[0.07]">
                     <LayoutGrid
                         size={28}
@@ -473,11 +511,10 @@ export default function ReceivedTicketsBoard() {
                     {receivedTasks.map(
                         (task) => (
                             <ReceivedTaskCard
-                                key={
-                                    task.id
-                                }
-                                task={
-                                    task
+                                key={task.id}
+                                task={task}
+                                employees={
+                                    employees
                                 }
                                 onUpdated={
                                     handleUpdated

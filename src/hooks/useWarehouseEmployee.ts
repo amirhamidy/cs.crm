@@ -188,6 +188,14 @@ export default function useWarehouseEmployee() {
     }
   }, []);
 
+  const refreshOrderTasks = useCallback(async () => {
+    try {
+      const response = await axiosInstance.get("/warehouse/api/v1/order_task/");
+
+      setOrderTasks(extractList<ApiOrderTask>(response.data));
+    } catch {}
+  }, []);
+
   useEffect(() => {
     if (!employeeLoading) {
       loadAll();
@@ -310,5 +318,6 @@ export default function useWarehouseEmployee() {
     error,
     loadAll,
     refresh,
+    refreshOrderTasks,
   };
 }
