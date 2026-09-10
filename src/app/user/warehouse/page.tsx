@@ -50,6 +50,7 @@ import type {
     ApiStockInfo,
     ApiWarehouseTask,
 } from "@/types/warehouse";
+import WarehouseEmployeeStockLedger from "@/components/user/warehouse/Warehouseemployeestockledger";
 
 type Tab =
     | "overview"
@@ -58,7 +59,8 @@ type Tab =
     | "stock"
     | "transactions"
     | "orders"
-    | "deadlines";
+    | "deadlines"
+    | "ledger";
 
 const TABS: Array<[Tab, string, React.ComponentType<{ size?: number }>]> = [
     ["overview", "نمای کلی", LayoutGrid],
@@ -68,6 +70,7 @@ const TABS: Array<[Tab, string, React.ComponentType<{ size?: number }>]> = [
     ["transactions", "تراکنش‌ها", ReceiptText],
     ["orders", "درخواست‌های داخلی", PackageSearch],
     ["deadlines", "مهلت‌ها", BellRing],
+    ["ledger", "گردش محصول", BellRing],
 ];
 
 const AVATAR_GRADIENTS = [
@@ -214,10 +217,12 @@ function StockCard({
     stock,
     index,
     isDark,
+    onViewLedger,
 }: {
     stock: ApiStockInfo;
     index: number;
     isDark: boolean;
+    onViewLedger?: (productId: number) => void;
 }) {
     const [hovered, setHovered] = useState(false);
 
@@ -468,6 +473,16 @@ function StockCard({
                     </p>
                 </div>
             </div>
+
+            {onViewLedger && (
+                <button
+                    type="button"
+                    onClick={() => onViewLedger(stock.product)}
+                    className="relative z-[1] mt-3 flex items-center justify-center gap-1.5 rounded-2xl py-2 text-[11px] font-extrabold text-indigo-500 transition-colors hover:bg-indigo-500/10"
+                >
+                    مشاهده گردش کالا
+                </button>
+            )}
         </motion.div>
     );
 }
@@ -649,6 +664,7 @@ export default function WarehouseEmployeePage() {
     const [taskItems, setTaskItems] = useState<ApiWarehouseTask[]>(myTasks);
     const [productWizardOpen, setProductWizardOpen] = useState(false);
     const [createOrderTaskOpen, setCreateOrderTaskOpen] = useState(false);
+    const [ledgerProductId, setLedgerProductId] = useState<number | null>(null);
 
     useEffect(() => setTaskItems(myTasks), [myTasks]);
     useEffect(() => setCurrentPage(1), [tab]);
@@ -721,6 +737,12 @@ export default function WarehouseEmployeePage() {
         await refresh();
     }, [refresh]);
 
+    const handleViewLedger = useCallback((productId: number) => {
+        setLedgerProductId(productId);
+        setTab("ledger");
+        setCurrentPage(1);
+    }, []);
+
     const renderEmpty = useCallback(
         (text: string) => (
             <p
@@ -792,7 +814,6 @@ export default function WarehouseEmployeePage() {
         <div
             dir="rtl"
             className="flex min-h-screen flex-col gap-6 p-6"
-            style={{ background: isDark ? "#0f172a" : "#f8fafc" }}
         >
             <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-start gap-3">
@@ -1131,6 +1152,7 @@ export default function WarehouseEmployeePage() {
                                             stock={stock}
                                             index={index}
                                             isDark={isDark}
+                                            onViewLedger={handleViewLedger}
                                         />
                                     ))
                                     : renderEmpty("موجودی‌ای برای نمایش وجود ندارد")}
@@ -1222,6 +1244,15 @@ export default function WarehouseEmployeePage() {
                                 isDark={isDark}
                             />
                         </>
+                    )}
+
+                    {tab === "ledger" && (
+                        <WarehouseEmployeeStockLedger
+                            products={products}
+                            stockInfos={stockInfos}
+                            transactions={transactions}
+                            defaultProductId={ledgerProductId}
+                        />
                     )}
                 </motion.div>
             </AnimatePresence>

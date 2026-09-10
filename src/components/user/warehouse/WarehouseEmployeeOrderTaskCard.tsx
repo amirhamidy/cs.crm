@@ -1,9 +1,12 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { useTheme } from "next-themes";
 import {
     AlertCircle,
-    CalendarDays,
+    ArrowRight,
+    Building2,
     CheckCircle2,
     ClipboardList,
     Clock3,
@@ -12,19 +15,18 @@ import {
     User,
     XCircle,
 } from "lucide-react";
-import { useTheme } from "next-themes";
-import { ApiOrderTask } from "@/types/warehouse";
+import { ApiOrderTask, ApiProduct } from "@/types/warehouse";
 import WarehouseEmployeeOrderTaskStatusModal from "./WarehouseEmployeeOrderTaskStatusModal";
 import {
     formatDate,
     formatNumber,
     getStatusLabel,
     getStatusTone,
-    getTaskProductName,
 } from "@/utils/warehouseEmployee";
 
 interface Props {
     orderTask: ApiOrderTask;
+    products: ApiProduct[];
     index: number;
     isStaff: boolean;
     staffId: number | string | null;
@@ -33,24 +35,17 @@ interface Props {
     onRefresh?: () => Promise<void> | void;
 }
 
-function getObjectValue(
-    value: unknown,
-    key: string
-) {
-    if (
-        value &&
-        typeof value === "object"
-    ) {
-        return String(
-            (value as Record<string, unknown>)[key] ?? ""
-        );
-    }
-
-    return "";
-}
+const AVATAR_GRADIENTS = [
+    ["#6366f1", "#3b82f6"],
+    ["#06b6d4", "#3b82f6"],
+    ["#10b981", "#059669"],
+    ["#8b5cf6", "#6366f1"],
+    ["#f43f5e", "#e11d48"],
+] as const;
 
 export default function WarehouseEmployeeOrderTaskCard({
     orderTask,
+    products,
     index,
     isStaff,
     staffId,
@@ -60,15 +55,13 @@ export default function WarehouseEmployeeOrderTaskCard({
 }: Props) {
     const { resolvedTheme } = useTheme();
     const isDark = resolvedTheme === "dark";
-
+    const [hovered, setHovered] = useState(false);
     const [modalOpen, setModalOpen] = useState(false);
 
     const assignedEmployee = Array.isArray(orderTask.assigned_employee)
         ? orderTask.assigned_employee[0]
         : null;
-
-    const assignedEmployeeName =
-        assignedEmployee?.full_name ?? "";
+    const assignedEmployeeName = assignedEmployee?.full_name ?? "";
 
     const orderData = orderTask as ApiOrderTask & {
         product?: unknown;
@@ -78,524 +71,305 @@ export default function WarehouseEmployeeOrderTaskCard({
     };
 
     const productName = useMemo(() => {
-        return (
-            getObjectValue(orderData.product, "title") ||
-            getObjectValue(orderData.product, "name") ||
-            orderData.product_name ||
-            orderData.product_title ||
-            (typeof orderData.product === "string"
-                ? orderData.product
-                : "") ||
-            "محصول نامشخص"
-        );
-    }, [
-        orderData.product,
-        orderData.product_name,
-        orderData.product_title,
-    ]);
+        const rawProduct = orderData.product;
+
+        if (typeof rawProduct === "number") {
+            const found = (products ?? []).find((p) => p.id === rawProduct);
+            if (found) return found.name;
+        }
+
+        if (rawProduct && typeof rawProduct === "object") {
+            const obj = rawProduct as Record<string, unknown>;
+            if (obj.title) return String(obj.title);
+            if (obj.name) return String(obj.name);
+        }
+
+        if (orderData.product_name) return orderData.product_name;
+        if (orderData.product_title) return orderData.product_title;
+
+        return "محصول نامشخص";
+    }, [orderData.product, orderData.product_name, orderData.product_title, products ?? []]);
 
     const statusTone = getStatusTone(orderTask.status);
+    const statusLabel = getStatusLabel(orderTask.status);
 
-    const statusStyles = {
+    const statusConfig = {
         completed: {
-            bg: isDark
-                ? "rgba(34,197,94,0.12)"
-                : "rgba(34,197,94,0.08)",
-            border: isDark
-                ? "rgba(34,197,94,0.22)"
-                : "rgba(34,197,94,0.16)",
-            text: "#22c55e",
+            bg: isDark ? "rgba(16,185,129,0.12)" : "rgba(16,185,129,0.08)",
+            text: isDark ? "#6ee7b7" : "#059669",
+            icon: CheckCircle2,
+            gradient: ["#10b981", "#059669"],
         },
         cancelled: {
-            bg: isDark
-                ? "rgba(239,68,68,0.12)"
-                : "rgba(239,68,68,0.08)",
-            border: isDark
-                ? "rgba(239,68,68,0.22)"
-                : "rgba(239,68,68,0.16)",
-            text: "#ef4444",
+            bg: isDark ? "rgba(244,63,94,0.12)" : "rgba(244,63,94,0.08)",
+            text: isDark ? "#fda4af" : "#e11d48",
+            icon: XCircle,
+            gradient: ["#f43f5e", "#e11d48"],
         },
         in_progress: {
-            bg: isDark
-                ? "rgba(99,102,241,0.14)"
-                : "rgba(99,102,241,0.08)",
-            border: isDark
-                ? "rgba(99,102,241,0.24)"
-                : "rgba(99,102,241,0.16)",
-            text: "#818cf8",
+            bg: isDark ? "rgba(99,102,241,0.12)" : "rgba(99,102,241,0.08)",
+            text: isDark ? "#a5b4fc" : "#4f46e5",
+            icon: Clock3,
+            gradient: ["#6366f1", "#3b82f6"],
+        },
+        pending: {
+            bg: isDark ? "rgba(59,130,246,0.12)" : "rgba(59,130,246,0.08)",
+            text: isDark ? "#93c5fd" : "#2563eb",
+            icon: AlertCircle,
+            gradient: ["#3b82f6", "#2563eb"],
         },
     };
 
-    const currentStatusStyle =
-        statusStyles[
-        orderTask.status as keyof typeof statusStyles
-        ] ?? statusStyles.in_progress;
+    const currentStatus = statusConfig[statusTone as keyof typeof statusConfig] || statusConfig.pending;
+    const StatusIcon = currentStatus.icon;
+    const [start, end] = AVATAR_GRADIENTS[orderTask.id % AVATAR_GRADIENTS.length];
+
+    const qty = Number(orderTask.quantity ?? 0);
+    const completed = Number(orderTask.completed_quantity ?? 0);
+    const progress = qty > 0 ? Math.min(100, Math.round((completed / qty) * 100)) : 0;
 
     const refresh = async () => {
         if (onRefresh) {
             await onRefresh();
             return;
         }
-
         if (onUpdate) {
             onUpdate(orderTask);
         }
     };
 
-    const canComplete =
-        canChangeStatus &&
-        orderTask.status !== "completed" &&
-        orderTask.status !== "cancelled";
+    const canComplete = canChangeStatus && orderTask.status !== "completed" && orderTask.status !== "cancelled";
+    const canCancel = canChangeStatus && orderTask.status !== "completed" && orderTask.status !== "cancelled";
 
-    const canCancel =
-        canChangeStatus &&
-        orderTask.status !== "completed" &&
-        orderTask.status !== "cancelled";
-
-    const cardBackground = isDark
-        ? "rgba(15,23,42,0.88)"
-        : "#ffffff";
-
-    const borderColor = isDark
-        ? "rgba(255,255,255,0.07)"
-        : "rgba(15,23,42,0.07)";
-
-    const primaryText = isDark
-        ? "#ffffff"
-        : "#0f172a";
-
-    const secondaryText = isDark
-        ? "rgba(255,255,255,0.55)"
-        : "#64748b";
-
-    const softBackground = isDark
-        ? "rgba(255,255,255,0.035)"
-        : "#f8fafc";
+    const customerName = orderTask.customer?.full_name || "نامشخص";
+    const departmentName = orderTask.department?.name || "نامشخص";
+    const responsibleName = assignedEmployeeName || orderTask.performed_by?.full_name || "تعیین نشده";
+    const stepName = orderTask.current_step?.name || orderData.task_title || "نامشخص";
 
     return (
         <>
-            <article
-                className="group relative overflow-hidden rounded-[24px] border p-4 transition-all duration-200 hover:-translate-y-[1px] sm:p-5"
+            <motion.article
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.96 }}
+                transition={{ duration: 0.2, delay: index * 0.04 }}
+                onHoverStart={() => setHovered(true)}
+                onHoverEnd={() => setHovered(false)}
+                className="relative flex min-h-[160px] flex-col justify-between overflow-visible rounded-3xl p-3.5"
                 style={{
-                    background: cardBackground,
-                    borderColor,
+                    background: isDark ? "rgba(255,255,255,0.03)" : "#ffffff",
+                    border: isDark
+                        ? "1px solid rgba(255,255,255,0.06)"
+                        : "1px solid rgba(15,23,42,0.06)",
                     boxShadow: isDark
-                        ? "0 18px 50px rgba(0,0,0,0.18)"
-                        : "0 12px 35px rgba(15,23,42,0.06)",
+                        ? "0 8px 30px rgba(0,0,0,0.22)"
+                        : "0 8px 24px rgba(15,23,42,0.05)",
                 }}
             >
-                <div
-                    className="absolute inset-x-0 top-0 h-[2px]"
-                    style={{
-                        background:
-                            "linear-gradient(90deg, #6366f1, #8b5cf6, #3b82f6)",
-                    }}
-                />
+                <svg className="pointer-events-none absolute inset-0 h-full w-full">
+                    <defs>
+                        <linearGradient
+                            id={`order-border-${orderTask.id}`}
+                            x1="100%"
+                            y1="100%"
+                            x2="0%"
+                            y2="0%"
+                        >
+                            <stop offset="0%" stopColor={currentStatus.gradient[0]} />
+                            <stop offset="100%" stopColor={currentStatus.gradient[1]} />
+                        </linearGradient>
+                    </defs>
+                    <motion.rect
+                        x="1"
+                        y="1"
+                        width="calc(100% - 2px)"
+                        height="calc(100% - 2px)"
+                        rx="23"
+                        ry="23"
+                        fill="none"
+                        stroke={`url(#order-border-${orderTask.id})`}
+                        strokeWidth="1.4"
+                        initial={{ pathLength: 0, opacity: 0 }}
+                        animate={hovered ? { pathLength: 1, opacity: 1 } : { pathLength: 0, opacity: 0 }}
+                        transition={{ duration: 0.45, ease: "easeInOut" }}
+                    />
+                </svg>
 
-                <div className="flex flex-col gap-4">
-                    <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0 flex-1">
-                            <div className="mb-2 flex flex-wrap items-center gap-2">
-                                <span
-                                    className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-[9px] font-bold"
-                                    style={{
-                                        color: "#818cf8",
-                                        background: isDark
-                                            ? "rgba(99,102,241,0.12)"
-                                            : "rgba(99,102,241,0.08)",
-                                    }}
-                                >
-                                    <ClipboardList className="h-3 w-3" />
-                                    تسک #{orderTask.id}
-                                </span>
-
-                                <span
-                                    className="inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-[9px] font-semibold"
-                                    style={{
-                                        color: currentStatusStyle.text,
-                                        background: currentStatusStyle.bg,
-                                        borderColor:
-                                            currentStatusStyle.border,
-                                    }}
-                                >
-                                    {orderTask.status === "completed" ? (
-                                        <CheckCircle2 className="h-3 w-3" />
-                                    ) : orderTask.status === "cancelled" ? (
-                                        <XCircle className="h-3 w-3" />
-                                    ) : (
-                                        <Clock3 className="h-3 w-3" />
-                                    )}
-
-                                    {getStatusLabel(orderTask.status)}
-                                </span>
-                            </div>
-
-                            <h3
-                                className="truncate text-[14px] font-extrabold sm:text-[16px]"
-                                style={{ color: primaryText }}
-                            >
-                                {orderTask.title || "بدون عنوان"}
-                            </h3>
-
-                            {orderData.task_title &&
-                                orderData.task_title !==
-                                orderTask.title && (
-                                    <p
-                                        className="mt-1 truncate text-[10px]"
-                                        style={{
-                                            color: secondaryText,
-                                        }}
-                                    >
-                                        {orderData.task_title}
-                                    </p>
-                                )}
-                        </div>
-
+                <div className="relative z-[1] flex items-start justify-between gap-2.5">
+                    <div className="flex min-w-0 items-center gap-2.5">
                         <div
-                            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl"
+                            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl text-[13px] font-extrabold text-white shadow-lg"
                             style={{
-                                background: isDark
-                                    ? "rgba(99,102,241,0.1)"
-                                    : "rgba(99,102,241,0.07)",
-                                color: "#818cf8",
+                                background: `linear-gradient(135deg, ${start}, ${end})`,
                             }}
                         >
-                            <Package className="h-5 w-5" />
+                            <Package size={16} strokeWidth={2.5} />
                         </div>
-                    </div>
-
-                    <div
-                        className="rounded-2xl border p-3.5 sm:p-4"
-                        style={{
-                            borderColor: isDark
-                                ? "rgba(99,102,241,0.16)"
-                                : "rgba(99,102,241,0.12)",
-                            background: isDark
-                                ? "linear-gradient(135deg, rgba(99,102,241,0.09), rgba(139,92,246,0.05))"
-                                : "linear-gradient(135deg, rgba(99,102,241,0.06), rgba(139,92,246,0.035))",
-                        }}
-                    >
-                        <div className="flex items-center justify-between gap-3">
-                            <div className="min-w-0">
-                                <p
-                                    className="mb-1 text-[8px] font-bold"
-                                    style={{
-                                        color: "#818cf8",
-                                    }}
+                        <div className="min-w-0 flex-1">
+                            <h3 className="truncate text-[12.5px] font-extrabold text-gray-900 dark:text-white">
+                                {orderTask.title || "بدون عنوان"}
+                            </h3>
+                            <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                                <span
+                                    className="inline-flex items-center gap-1 rounded-xl px-2 py-0.5 text-[10px] font-extrabold"
+                                    style={{ background: currentStatus.bg, color: currentStatus.text }}
                                 >
-                                    درخواست محصول
-                                </p>
-
-                                <p
-                                    className="truncate text-[12px] font-extrabold"
-                                    style={{
-                                        color: primaryText,
-                                    }}
-                                >
-                                    {productName}
-                                </p>
-                            </div>
-
-                            <div className="shrink-0 text-left">
-                                <p
-                                    className="text-[8px]"
-                                    style={{
-                                        color: secondaryText,
-                                    }}
-                                >
-                                    تعداد
-                                </p>
-
-                                <p
-                                    className="mt-0.5 text-[14px] font-extrabold"
-                                    style={{
-                                        color: primaryText,
-                                    }}
-                                >
-                                    {formatNumber(
-                                        orderTask.quantity ?? 0
-                                    )}
-                                </p>
+                                    <StatusIcon size={9} />
+                                    {statusLabel}
+                                </span>
+                                <span className="text-[10px] font-semibold text-gray-500 dark:text-gray-400">
+                                    سفارش #{formatNumber(orderTask.id)}
+                                </span>
                             </div>
                         </div>
-
-                        {orderTask.completed_quantity !== null &&
-                            orderTask.completed_quantity !== undefined && (
-                                <div className="mt-3 flex items-center justify-between border-t pt-3"
-                                    style={{
-                                        borderColor: isDark
-                                            ? "rgba(255,255,255,0.07)"
-                                            : "rgba(15,23,42,0.06)",
-                                    }}
-                                >
-                                    <span
-                                        className="text-[9px]"
-                                        style={{
-                                            color: secondaryText,
-                                        }}
-                                    >
-                                        تعداد انجام‌شده
-                                    </span>
-
-                                    <span
-                                        className="text-[12px] font-bold"
-                                        style={{
-                                            color: "#22c55e",
-                                        }}
-                                    >
-                                        {formatNumber(
-                                            orderTask.completed_quantity
-                                        )}
-                                    </span>
-                                </div>
-                            )}
-                    </div>
-
-                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
-                        {orderTask.case?.title && (
-                            <div
-                                className="flex min-w-0 items-center gap-2.5 rounded-xl px-3 py-2.5"
-                                style={{
-                                    background: softBackground,
-                                }}
-                            >
-                                <ClipboardList
-                                    className="h-4 w-4 shrink-0"
-                                    style={{
-                                        color: "#818cf8",
-                                    }}
-                                />
-
-                                <div className="min-w-0">
-                                    <p
-                                        className="text-[7px]"
-                                        style={{
-                                            color: secondaryText,
-                                        }}
-                                    >
-                                        پرونده
-                                    </p>
-
-                                    <p
-                                        className="truncate text-[10px] font-semibold"
-                                        style={{
-                                            color: primaryText,
-                                        }}
-                                    >
-                                        {orderTask.case.title}
-                                    </p>
-                                </div>
-                            </div>
-                        )}
-
-                        {orderTask.customer?.full_name && (
-                            <div
-                                className="flex min-w-0 items-center gap-2.5 rounded-xl px-3 py-2.5"
-                                style={{
-                                    background: softBackground,
-                                }}
-                            >
-                                <User
-                                    className="h-4 w-4 shrink-0"
-                                    style={{
-                                        color: "#8b5cf6",
-                                    }}
-                                />
-
-                                <div className="min-w-0">
-                                    <p
-                                        className="text-[7px]"
-                                        style={{
-                                            color: secondaryText,
-                                        }}
-                                    >
-                                        مشتری
-                                    </p>
-
-                                    <p
-                                        className="truncate text-[10px] font-semibold"
-                                        style={{
-                                            color: primaryText,
-                                        }}
-                                    >
-                                        {orderTask.customer.full_name}
-                                    </p>
-                                </div>
-                            </div>
-                        )}
-
-                        {orderTask.department?.name && (
-                            <div
-                                className="flex min-w-0 items-center gap-2.5 rounded-xl px-3 py-2.5"
-                                style={{
-                                    background: softBackground,
-                                }}
-                            >
-                                <Package
-                                    className="h-4 w-4 shrink-0"
-                                    style={{
-                                        color: "#3b82f6",
-                                    }}
-                                />
-
-                                <div className="min-w-0">
-                                    <p
-                                        className="text-[7px]"
-                                        style={{
-                                            color: secondaryText,
-                                        }}
-                                    >
-                                        واحد
-                                    </p>
-
-                                    <p
-                                        className="truncate text-[10px] font-semibold"
-                                        style={{
-                                            color: primaryText,
-                                        }}
-                                    >
-                                        {orderTask.department.name}
-                                    </p>
-                                </div>
-                            </div>
-                        )}
-
-                        {assignedEmployeeName && (
-                            <div
-                                className="flex min-w-0 items-center gap-2.5 rounded-xl px-3 py-2.5"
-                                style={{
-                                    background: softBackground,
-                                }}
-                            >
-                                <User
-                                    className="h-4 w-4 shrink-0"
-                                    style={{
-                                        color: "#6366f1",
-                                    }}
-                                />
-
-                                <div className="min-w-0">
-                                    <p
-                                        className="text-[7px]"
-                                        style={{
-                                            color: secondaryText,
-                                        }}
-                                    >
-                                        انباردار
-                                    </p>
-
-                                    <p
-                                        className="truncate text-[10px] font-semibold"
-                                        style={{
-                                            color: primaryText,
-                                        }}
-                                    >
-                                        {assignedEmployeeName}
-                                    </p>
-                                </div>
-                            </div>
-                        )}
-                    </div>
-
-                    <div className="flex flex-col gap-3 border-t pt-3 sm:flex-row sm:items-center sm:justify-between"
-                        style={{
-                            borderColor: isDark
-                                ? "rgba(255,255,255,0.06)"
-                                : "rgba(15,23,42,0.06)",
-                        }}
-                    >
-                        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-                            {orderTask.current_step?.name && (
-                                <div className="flex max-w-full items-center gap-1.5">
-                                    <AlertCircle
-                                        className="h-3 w-3 shrink-0"
-                                        style={{
-                                            color: "#818cf8",
-                                        }}
-                                    />
-
-                                    <span
-                                        className="truncate text-[9px]"
-                                        style={{
-                                            color: secondaryText,
-                                        }}
-                                    >
-                                        {orderTask.current_step.name}
-                                    </span>
-                                </div>
-                            )}
-
-                            {orderTask.created_at && (
-                                <div className="flex items-center gap-1.5">
-                                    <CalendarDays
-                                        className="h-3 w-3 shrink-0"
-                                        style={{
-                                            color: secondaryText,
-                                        }}
-                                    />
-
-                                    <span
-                                        className="text-[9px]"
-                                        style={{
-                                            color: secondaryText,
-                                        }}
-                                    >
-                                        {formatDate(
-                                            orderTask.created_at
-                                        )}
-                                    </span>
-                                </div>
-                            )}
-
-                            {orderTask.note && (
-                                <div className="flex max-w-full items-center gap-1.5">
-                                    <FileText
-                                        className="h-3 w-3 shrink-0"
-                                        style={{
-                                            color: secondaryText,
-                                        }}
-                                    />
-
-                                    <span
-                                        className="max-w-[260px] truncate text-[9px]"
-                                        style={{
-                                            color: secondaryText,
-                                        }}
-                                    >
-                                        {orderTask.note}
-                                    </span>
-                                </div>
-                            )}
-                        </div>
-
-                        {(canComplete || canCancel) && (
-                            <button
-                                type="button"
-                                onClick={() => setModalOpen(true)}
-                                className="inline-flex h-10 w-full shrink-0 items-center justify-center gap-2 rounded-xl px-4 text-[10px] font-bold text-white transition hover:opacity-90 sm:w-auto"
-                                style={{
-                                    background:
-                                        "linear-gradient(135deg, #6366f1, #7c3aed)",
-                                    boxShadow:
-                                        "0 8px 20px rgba(99,102,241,0.2)",
-                                }}
-                            >
-                                <ClipboardList className="h-4 w-4" />
-                                تغییر وضعیت
-                            </button>
-                        )}
                     </div>
                 </div>
-            </article>
 
-            <WarehouseEmployeeOrderTaskStatusModal
-                open={modalOpen}
-                orderTask={orderTask}
-                performedBy={staffId}
-                initialStatus="completed"
-                onClose={() => setModalOpen(false)}
-                onSuccess={refresh}
-            />
+                <div className="relative z-[1] mt-3 rounded-2xl bg-gray-50 p-2.5 dark:bg-white/[0.03]">
+                    <div className="flex items-center justify-between gap-2">
+                        <div className="min-w-0 flex-1">
+                            <p className="text-[9.5px] font-bold text-gray-400 dark:text-white/40">
+                                محصول درخواستی
+                            </p>
+                            <p className="mt-0.5 truncate text-[12px] font-black text-gray-800 dark:text-gray-100">
+                                {productName}
+                            </p>
+                        </div>
+                        <div className="shrink-0 text-left">
+                            <p className="text-[9.5px] font-bold text-gray-400 dark:text-white/40">
+                                تعداد
+                            </p>
+                            <p className="mt-0.5 text-[13px] font-black text-gray-900 dark:text-white">
+                                {formatNumber(qty)}
+                            </p>
+                        </div>
+                    </div>
+
+                    {orderTask.completed_quantity !== null && orderTask.completed_quantity !== undefined && (
+                        <div className="mt-2.5">
+                            <div className="mb-1 flex items-center justify-between">
+                                <span className="text-[9.5px] font-bold text-gray-400 dark:text-white/40">
+                                    پیشرفت انجام
+                                </span>
+                                <span className="text-[10.5px] font-black" style={{ color: currentStatus.text }}>
+                                    {formatNumber(completed)} از {formatNumber(qty)} ({progress}٪)
+                                </span>
+                            </div>
+                            <div className="h-1.5 overflow-hidden rounded-full bg-gray-200 dark:bg-white/10">
+                                <motion.div
+                                    initial={{ width: 0 }}
+                                    animate={{ width: `${progress}%` }}
+                                    transition={{ duration: 0.6, delay: index * 0.04 }}
+                                    className="h-full rounded-full"
+                                    style={{
+                                        background: `linear-gradient(90deg, ${currentStatus.gradient[0]}, ${currentStatus.gradient[1]})`,
+                                    }}
+                                />
+                            </div>
+                        </div>
+                    )}
+                </div>
+
+                <div className="relative z-[1] mt-3 grid grid-cols-2 gap-1.5">
+                    <div className="flex items-center gap-1.5 rounded-xl bg-gray-50 px-2 py-1.5 dark:bg-white/[0.03]">
+                        <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-indigo-100 dark:bg-indigo-500/10">
+                            <User size={10} className="text-indigo-600 dark:text-indigo-400" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                            <p className="text-[8.5px] font-bold text-gray-400 dark:text-white/40">مشتری</p>
+                            <p className="truncate text-[10.5px] font-black text-gray-700 dark:text-gray-200">
+                                {customerName}
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 rounded-xl bg-gray-50 px-2 py-1.5 dark:bg-white/[0.03]">
+                        <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-violet-100 dark:bg-violet-500/10">
+                            <Building2 size={10} className="text-violet-600 dark:text-violet-400" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                            <p className="text-[8.5px] font-bold text-gray-400 dark:text-white/40">واحد</p>
+                            <p className="truncate text-[10.5px] font-black text-gray-700 dark:text-gray-200">
+                                {departmentName}
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 rounded-xl bg-gray-50 px-2 py-1.5 dark:bg-white/[0.03]">
+                        <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-emerald-100 dark:bg-emerald-500/10">
+                            <ClipboardList size={10} className="text-emerald-600 dark:text-emerald-400" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                            <p className="text-[8.5px] font-bold text-gray-400 dark:text-white/40">مسئول</p>
+                            <p className="truncate text-[10.5px] font-black text-gray-700 dark:text-gray-200">
+                                {responsibleName}
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 rounded-xl bg-gray-50 px-2 py-1.5 dark:bg-white/[0.03]">
+                        <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-blue-100 dark:bg-blue-500/10">
+                            <Clock3 size={10} className="text-blue-600 dark:text-blue-400" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                            <p className="text-[8.5px] font-bold text-gray-400 dark:text-white/40">مرحله</p>
+                            <p className="truncate text-[10.5px] font-black text-gray-700 dark:text-gray-200">
+                                {stepName}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="relative z-[1] mt-3 flex items-center justify-between border-t border-gray-100 pt-2.5 dark:border-white/[0.06]">
+                    <div className="flex items-center gap-2">
+                        <Clock3 size={10} className="text-gray-400" />
+                        <span className="text-[10px] font-semibold text-gray-500 dark:text-gray-400">
+                            {formatDate(orderTask.created_at)}
+                        </span>
+                        {orderTask.note && (
+                            <div className="group/note relative flex items-center gap-1">
+                                <FileText size={10} className="text-gray-400" />
+                                <span className="text-[10px] font-semibold text-gray-500 dark:text-gray-400">
+                                    یادداشت
+                                </span>
+                                <div className="pointer-events-none absolute bottom-full right-0 mb-2 hidden w-48 rounded-xl bg-gray-900 p-2 text-[10px] text-white shadow-xl group-hover/note:block dark:bg-gray-800">
+                                    {orderTask.note}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    {(canComplete || canCancel) && (
+                        <motion.button
+                            type="button"
+                            whileTap={{ scale: 0.96 }}
+                            onClick={() => setModalOpen(true)}
+                            className="flex items-center gap-1 rounded-xl px-2.5 py-1.5 text-[10.5px] font-extrabold text-white transition-shadow"
+                            style={{
+                                background: `linear-gradient(135deg, ${currentStatus.gradient[0]}, ${currentStatus.gradient[1]})`,
+                                boxShadow: `0 4px 12px -2px ${currentStatus.gradient[1]}60`,
+                            }}
+                        >
+                            <ArrowRight size={11} />
+                            تغییر وضعیت
+                        </motion.button>
+                    )}
+                </div>
+            </motion.article>
+
+            <AnimatePresence>
+                {modalOpen && (
+                    <WarehouseEmployeeOrderTaskStatusModal
+                        open={modalOpen}
+                        orderTask={orderTask}
+                        products={products}
+                        performedBy={staffId}
+                        initialStatus="completed"
+                        onClose={() => setModalOpen(false)}
+                        onSuccess={refresh}
+                    />
+                )}
+            </AnimatePresence>
         </>
     );
 }
