@@ -4,14 +4,17 @@ import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useTheme } from "next-themes";
 import {
+    AlertTriangle,
     ArrowDownUp,
     Boxes,
     CalendarDays,
     Loader2,
     Package,
     Pencil,
+    Scale,
     Tag,
     Trash2,
+    Wallet,
     X,
 } from "lucide-react";
 import type { AxiosError } from "axios";
@@ -105,6 +108,7 @@ export default function WarehouseEmployeeProductCard({
 }: ProductCardProps) {
     const { resolvedTheme } = useTheme();
     const isDark = resolvedTheme === "dark";
+    const [hovered, setHovered] = useState(false);
     const [showEdit, setShowEdit] = useState(false);
     const [showStock, setShowStock] = useState(false);
     const [showInitialStock, setShowInitialStock] = useState(false);
@@ -120,12 +124,23 @@ export default function WarehouseEmployeeProductCard({
 
     const stockPercentage = stockInfo?.maximum_stock
         ? Math.min(
-              100,
-              Math.max(
-                  0,
-                  (stockInfo.current_quantity / stockInfo.maximum_stock) * 100
-              )
-          )
+            100,
+            Math.max(
+                0,
+                (stockInfo.current_quantity / stockInfo.maximum_stock) * 100
+            )
+        )
+        : 0;
+
+    // موقعیت marker حداقل روی progress bar (درصد)
+    const minimumMarkerPosition = stockInfo?.maximum_stock
+        ? Math.min(
+            100,
+            Math.max(
+                0,
+                (stockInfo.minimum_stock / stockInfo.maximum_stock) * 100
+            )
+        )
         : 0;
 
     const unitText = getUnitText(product, stockInfo);
@@ -160,17 +175,20 @@ export default function WarehouseEmployeeProductCard({
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.96 }}
                 transition={{ duration: 0.2, delay: index * 0.04 }}
-                className="group relative flex min-h-[245px] flex-col justify-between overflow-hidden rounded-3xl p-4"
+                onHoverStart={() => setHovered(true)}
+                onHoverEnd={() => setHovered(false)}
+                className="relative flex min-h-[260px] flex-col justify-between overflow-visible rounded-3xl p-4"
                 style={{
-                    background: isDark ? "rgba(255,255,255,0.03)" : "#fff",
+                    background: isDark ? "rgba(255,255,255,0.03)" : "#fafafa",
                     border: isDark
-                        ? "1px solid rgba(255,255,255,.06)"
-                        : "1px solid rgba(15,23,42,.06)",
+                        ? "1px solid rgba(255,255,255,0.06)"
+                        : "1px solid rgba(15,23,42,0.06)",
                     boxShadow: isDark
-                        ? "0 8px 30px rgba(0,0,0,.22)"
-                        : "0 8px 24px rgba(15,23,42,.05)",
+                        ? "0 8px 30px rgba(0,0,0,0.22)"
+                        : "0 8px 24px rgba(15,23,42,0.05)",
                 }}
             >
+                {/* SVG border gradient animation */}
                 <svg className="pointer-events-none absolute inset-0 h-full w-full">
                     <defs>
                         <linearGradient
@@ -190,15 +208,21 @@ export default function WarehouseEmployeeProductCard({
                         width="calc(100% - 2px)"
                         height="calc(100% - 2px)"
                         rx="23"
+                        ry="23"
                         fill="none"
                         stroke={`url(#employee-card-border-${product.id})`}
                         strokeWidth="1.4"
                         initial={{ pathLength: 0, opacity: 0 }}
-                        whileHover={{ pathLength: 1, opacity: 1 }}
+                        animate={
+                            hovered
+                                ? { pathLength: 1, opacity: 1 }
+                                : { pathLength: 0, opacity: 0 }
+                        }
                         transition={{ duration: 0.45, ease: "easeInOut" }}
                     />
                 </svg>
 
+                {/* Top Actions */}
                 <div className="absolute left-3 top-3 z-10 flex items-center gap-1.5">
                     {stockInfo && (
                         <span
@@ -221,26 +245,26 @@ export default function WarehouseEmployeeProductCard({
                                 ? setShowStock(true)
                                 : setShowInitialStock(true)
                         }
-                        className="flex h-8 w-8 items-center justify-center rounded-xl transition-transform active:scale-90"
+                        className="flex h-7 w-7 items-center justify-center rounded-xl transition-transform active:scale-90"
                         style={{
                             background: isDark
                                 ? stockInfo
                                     ? "rgba(16,185,129,.12)"
                                     : "rgba(59,130,246,.12)"
                                 : stockInfo
-                                  ? "rgba(16,185,129,.08)"
-                                  : "rgba(59,130,246,.08)",
+                                    ? "rgba(16,185,129,.08)"
+                                    : "rgba(59,130,246,.08)",
                             color: stockInfo ? "#10b981" : "#3b82f6",
                         }}
                         title={stockInfo ? "ثبت تراکنش انبار" : "ثبت موجودی اولیه"}
                     >
-                        {stockInfo ? <ArrowDownUp size={13} /> : <Boxes size={13} />}
+                        {stockInfo ? <ArrowDownUp size={12} /> : <Boxes size={12} />}
                     </button>
 
                     <button
                         type="button"
                         onClick={() => setShowEdit(true)}
-                        className="flex h-8 w-8 items-center justify-center rounded-xl transition-transform active:scale-90"
+                        className="flex h-7 w-7 items-center justify-center rounded-xl transition-transform active:scale-90"
                         style={{
                             background: isDark
                                 ? "rgba(99,102,241,.12)"
@@ -249,13 +273,13 @@ export default function WarehouseEmployeeProductCard({
                         }}
                         title="ویرایش"
                     >
-                        <Pencil size={13} />
+                        <Pencil size={12} />
                     </button>
 
                     <button
                         type="button"
                         onClick={() => setShowConfirm(true)}
-                        className="flex h-8 w-8 items-center justify-center rounded-xl transition-transform active:scale-90"
+                        className="flex h-7 w-7 items-center justify-center rounded-xl transition-transform active:scale-90"
                         style={{
                             background: isDark
                                 ? "rgba(239,68,68,.12)"
@@ -264,10 +288,11 @@ export default function WarehouseEmployeeProductCard({
                         }}
                         title="حذف"
                     >
-                        <Trash2 size={13} />
+                        <Trash2 size={12} />
                     </button>
                 </div>
 
+                {/* Product Header */}
                 <div className="relative z-[1] mt-7 flex items-center gap-3">
                     <div
                         className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-[15px] font-extrabold text-white shadow-lg"
@@ -283,93 +308,276 @@ export default function WarehouseEmployeeProductCard({
                             {product.name}
                         </h3>
 
-                        <div className="mt-1 flex items-center gap-1.5 text-[11px] font-semibold text-gray-400 dark:text-gray-500">
-                            <Tag size={11} />
-                            {product.category_detail?.name ?? "بدون دسته‌بندی"}
+                        <div className="mt-1 flex items-center gap-1.5 text-[10.5px] font-semibold text-gray-400 dark:text-gray-500">
+                            <Tag size={10} />
+                            <span className="truncate">
+                                {product.category_detail?.name ?? "بدون دسته‌بندی"}
+                            </span>
                         </div>
 
-                        <div className="mt-1 flex items-center gap-1.5 text-[10px] text-gray-400 dark:text-gray-600">
-                            <Package size={10} />
+                        <div className="mt-0.5 flex items-center gap-1.5 text-[10px] text-gray-400 dark:text-gray-600">
+                            <Package size={9} />
                             شناسه کالا #{product.id}
                         </div>
                     </div>
                 </div>
 
-                <div className="relative z-[1] mt-3 rounded-2xl bg-gray-50 px-3 py-2.5 dark:bg-white/[0.035]">
-                    <div className="flex items-center justify-between text-[11.5px]">
-                        <span className="font-semibold text-gray-400 dark:text-white/40">
-                            قیمت فروش
-                        </span>
-                        <span className="font-extrabold text-gray-700 dark:text-white/85">
-                            {formatPrice(product.sale_price)} تومان
-                        </span>
-                    </div>
-
-                    <div className="mt-2 flex items-center justify-between gap-3 text-[11.5px]">
-                        <span className="font-semibold text-gray-400 dark:text-white/40">
-                            واحد
-                        </span>
-                        <span className="text-left font-extrabold text-gray-700 dark:text-white/85">
-                            {unitText}
-                        </span>
-                    </div>
-
-                    {stockInfo ? (
-                        <div className="mt-3">
-                            <div className="mb-1.5 flex items-center justify-between text-[10.5px]">
-                                <span className="font-semibold text-gray-400 dark:text-white/40">
-                                    موجودی
-                                </span>
-                                <span
-                                    className="font-extrabold"
-                                    style={{
-                                        color: isCritical
-                                            ? "#ef4444"
-                                            : isDark
-                                              ? "#e2e8f0"
-                                              : "#334155",
-                                    }}
-                                >
-                                    {formatQuantity(stockInfo.current_quantity)} /{" "}
-                                    {formatQuantity(stockInfo.maximum_stock)}
-                                </span>
-                            </div>
-
-                            <div className="h-1.5 overflow-hidden rounded-full bg-gray-200 dark:bg-white/[0.06]">
-                                <motion.div
-                                    initial={{ width: 0 }}
-                                    animate={{ width: `${stockPercentage}%` }}
-                                    transition={{ duration: 0.6 }}
-                                    className="h-full rounded-full"
-                                    style={{
-                                        background: isCritical
-                                            ? "#ef4444"
-                                            : "linear-gradient(90deg,#6366f1,#8b5cf6)",
-                                    }}
-                                />
-                            </div>
-
-                            <div className="mt-2 flex items-center justify-between text-[10px]">
-                                <span className="text-gray-400 dark:text-white/35">
-                                    اولیه: {formatQuantity(stockInfo.initial_quantity)}
-                                </span>
-                                <span className="text-gray-400 dark:text-white/35">
-                                    حداقل: {formatQuantity(stockInfo.minimum_stock)}
-                                </span>
-                            </div>
+                {/* Price & Unit Row */}
+                <div className="relative z-[1] mt-3 grid grid-cols-2 gap-2">
+                    <div
+                        className="flex items-center gap-2 rounded-2xl px-3 py-2"
+                        style={{
+                            background: isDark
+                                ? "rgba(16,185,129,.06)"
+                                : "rgba(16,185,129,.05)",
+                        }}
+                    >
+                        <div
+                            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg"
+                            style={{
+                                background: isDark
+                                    ? "rgba(16,185,129,.14)"
+                                    : "rgba(16,185,129,.1)",
+                            }}
+                        >
+                            <Wallet size={12} className="text-emerald-500" />
                         </div>
+                        <div className="min-w-0 flex-1">
+                            <p className="text-[9.5px] font-semibold text-gray-400 dark:text-white/40">
+                                قیمت فروش
+                            </p>
+                            <p className="truncate text-[11.5px] font-extrabold text-gray-700 dark:text-white/85">
+                                {formatPrice(product.sale_price)}{" "}
+                                <span className="text-[9.5px] font-bold text-gray-400 dark:text-white/40">
+                                    تومان
+                                </span>
+                            </p>
+                        </div>
+                    </div>
+
+                    <div
+                        className="flex items-center gap-2 rounded-2xl px-3 py-2"
+                        style={{
+                            background: isDark
+                                ? "rgba(99,102,241,.06)"
+                                : "rgba(99,102,241,.05)",
+                        }}
+                    >
+                        <div
+                            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg"
+                            style={{
+                                background: isDark
+                                    ? "rgba(99,102,241,.14)"
+                                    : "rgba(99,102,241,.1)",
+                            }}
+                        >
+                            <Scale size={12} className="text-indigo-500" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                            <p className="text-[9.5px] font-semibold text-gray-400 dark:text-white/40">
+                                واحد
+                            </p>
+                            <p className="truncate text-[11px] font-extrabold text-gray-700 dark:text-white/85">
+                                {unitText}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Stock Section */}
+                <div className="relative z-[1] mt-3">
+                    {stockInfo ? (
+                        <>
+                            {/* Three-Column Stock Info */}
+                            <div
+                                className="rounded-2xl px-3 py-3"
+                                style={{
+                                    background: isDark
+                                        ? "rgba(255,255,255,0.025)"
+                                        : "rgba(15,23,42,0.025)",
+                                }}
+                            >
+                                <div className="grid grid-cols-3 gap-2">
+                                    {/* Minimum Required */}
+                                    <div className="text-center">
+                                        <div
+                                            className="mx-auto flex h-7 w-7 items-center justify-center rounded-lg"
+                                            style={{
+                                                background: isDark
+                                                    ? "rgba(245,158,11,.14)"
+                                                    : "rgba(245,158,11,.1)",
+                                            }}
+                                        >
+                                            <AlertTriangle
+                                                size={12}
+                                                className="text-amber-500"
+                                            />
+                                        </div>
+                                        <p className="mt-1.5 text-[9px] font-bold text-gray-400 dark:text-white/40">
+                                            حداقل مورد نیاز
+                                        </p>
+                                        <p className="mt-0.5 text-[12px] font-black text-gray-700 dark:text-white/85">
+                                            {formatQuantity(stockInfo.minimum_stock)}
+                                        </p>
+                                    </div>
+
+                                    {/* Current Stock - Highlighted */}
+                                    <div className="text-center">
+                                        <div
+                                            className="mx-auto flex h-7 w-7 items-center justify-center rounded-lg"
+                                            style={{
+                                                background: isCritical
+                                                    ? isDark
+                                                        ? "rgba(239,68,68,.14)"
+                                                        : "rgba(239,68,68,.1)"
+                                                    : isDark
+                                                        ? "rgba(16,185,129,.14)"
+                                                        : "rgba(16,185,129,.1)",
+                                            }}
+                                        >
+                                            <Package
+                                                size={12}
+                                                className={
+                                                    isCritical
+                                                        ? "text-red-500"
+                                                        : "text-emerald-500"
+                                                }
+                                            />
+                                        </div>
+                                        <p className="mt-1.5 text-[9px] font-bold text-gray-400 dark:text-white/40">
+                                            موجودی فعلی
+                                        </p>
+                                        <p
+                                            className="mt-0.5 text-[13px] font-black"
+                                            style={{
+                                                color: isCritical
+                                                    ? "#ef4444"
+                                                    : isDark
+                                                        ? "#fff"
+                                                        : "#0f172a",
+                                            }}
+                                        >
+                                            {formatQuantity(stockInfo.current_quantity)}
+                                        </p>
+                                    </div>
+
+                                    {/* Maximum Capacity */}
+                                    <div className="text-center">
+                                        <div
+                                            className="mx-auto flex h-7 w-7 items-center justify-center rounded-lg"
+                                            style={{
+                                                background: isDark
+                                                    ? "rgba(99,102,241,.14)"
+                                                    : "rgba(99,102,241,.1)",
+                                            }}
+                                        >
+                                            <Boxes size={12} className="text-indigo-500" />
+                                        </div>
+                                        <p className="mt-1.5 text-[9px] font-bold text-gray-400 dark:text-white/40">
+                                            حداکثر ظرفیت
+                                        </p>
+                                        <p className="mt-0.5 text-[12px] font-black text-gray-700 dark:text-white/85">
+                                            {formatQuantity(stockInfo.maximum_stock)}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                {/* Progress Bar with Minimum Marker */}
+                                <div className="relative mt-3">
+                                    <div
+                                        className="h-1.5 overflow-hidden rounded-full"
+                                        style={{
+                                            background: isDark
+                                                ? "rgba(255,255,255,.06)"
+                                                : "rgba(15,23,42,.06)",
+                                        }}
+                                    >
+                                        <motion.div
+                                            initial={{ width: 0 }}
+                                            animate={{ width: `${stockPercentage}%` }}
+                                            transition={{ duration: 0.6 }}
+                                            className="h-full rounded-full"
+                                            style={{
+                                                background: isCritical
+                                                    ? "#ef4444"
+                                                    : "linear-gradient(90deg,#6366f1,#8b5cf6)",
+                                            }}
+                                        />
+                                    </div>
+
+                                    {/* Minimum Marker */}
+                                    <div
+                                        className="absolute top-1/2 -translate-y-1/2"
+                                        style={{
+                                            right: `${100 - minimumMarkerPosition}%`,
+                                        }}
+                                    >
+                                        <div
+                                            className="h-3 w-0.5 rounded-full"
+                                            style={{
+                                                background: "#f59e0b",
+                                                boxShadow:
+                                                    "0 0 4px rgba(245,158,11,0.6)",
+                                            }}
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Percentage Label */}
+                                <div className="mt-2 flex items-center justify-between text-[10px]">
+                                    <span className="font-semibold text-gray-400 dark:text-white/40">
+                                        پرشدگی انبار
+                                    </span>
+                                    <span
+                                        className="font-extrabold"
+                                        style={{
+                                            color: isCritical
+                                                ? "#ef4444"
+                                                : isDark
+                                                    ? "#e2e8f0"
+                                                    : "#334155",
+                                        }}
+                                    >
+                                        {Math.round(stockPercentage).toLocaleString("fa-IR")}٪
+                                    </span>
+                                </div>
+                            </div>
+                        </>
                     ) : (
-                        <div className="mt-2 text-center text-[11px] font-semibold text-amber-500">
-                            موجودی اولیه ثبت نشده است
+                        <div
+                            className="flex items-center justify-center gap-2 rounded-2xl border border-dashed px-3 py-4"
+                            style={{
+                                borderColor: isDark
+                                    ? "rgba(245,158,11,.2)"
+                                    : "rgba(245,158,11,.25)",
+                                background: isDark
+                                    ? "rgba(245,158,11,.04)"
+                                    : "rgba(245,158,11,.03)",
+                            }}
+                        >
+                            <AlertTriangle size={13} className="text-amber-500" />
+                            <span className="text-[11.5px] font-bold text-amber-500">
+                                موجودی اولیه ثبت نشده است
+                            </span>
                         </div>
                     )}
                 </div>
 
+                {/* Last Updated */}
                 {stockInfo?.updated_at && (
-                    <div className="relative z-[1] mt-2 flex items-center justify-end gap-1 text-[9.5px] text-gray-400 dark:text-gray-600">
-                        <CalendarDays size={10} />
-                        آخرین بروزرسانی:{" "}
-                        {new Date(stockInfo.updated_at).toLocaleDateString("fa-IR")}
+                    <div className="relative z-[1] mt-2 flex items-center justify-end gap-1">
+                        <span
+                            className="inline-flex items-center gap-1 rounded-lg px-2 py-0.5 text-[9.5px] font-semibold"
+                            style={{
+                                background: isDark
+                                    ? "rgba(255,255,255,.04)"
+                                    : "rgba(15,23,42,.04)",
+                                color: isDark ? "#94a3b8" : "#64748b",
+                            }}
+                        >
+                            <CalendarDays size={9} />
+                            {new Date(stockInfo.updated_at).toLocaleDateString("fa-IR")}
+                        </span>
                     </div>
                 )}
 
@@ -385,7 +593,7 @@ export default function WarehouseEmployeeProductCard({
                 onClose={() => setShowEdit(false)}
                 product={product}
                 categories={categories}
-                onUpdated={updated => {
+                onUpdated={(updated) => {
                     onUpdated?.(updated);
                     setShowEdit(false);
                 }}
@@ -427,7 +635,7 @@ export default function WarehouseEmployeeProductCard({
                             initial={{ opacity: 0, scale: 0.96, y: 16 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.96, y: 16 }}
-                            onClick={e => e.stopPropagation()}
+                            onClick={(e) => e.stopPropagation()}
                             className="w-full max-w-[360px] rounded-[2rem] bg-white p-5 dark:bg-[#0f172a]"
                             dir="rtl"
                         >

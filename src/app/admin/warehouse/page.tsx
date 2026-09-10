@@ -58,7 +58,7 @@ const TABS = [
     ["tasks", "وظایف انبار", ClipboardList],
     ["stock", "موجودی انبار", Boxes],
     ["transactions", "تراکنش‌ها", ReceiptText],
-    ["orders", "درخواست‌های داخلی", PackageSearch],
+    ["orders", "درخواست‌های همکاران", PackageSearch],
     ["deadlines", "مهلت‌ها", BellRing],
 ] as const;
 
