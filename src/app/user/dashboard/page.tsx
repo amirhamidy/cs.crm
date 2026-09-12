@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import CompanyNews from "@/components/user/dashboard/CompanyNews";
 import ScoreCard from "@/components/user/dashboard/ScoreCard";
 import TodayEventCards from "@/components/user/dashboard/TodayEventCards";
@@ -47,46 +47,49 @@ export default function EmployeeDashboardPage() {
         }
     }, []);
 
-    useEffect(() => {
-        const fetchCalendarEvents = async () => {
-            try {
-                const today = new Date();
+    const fetchCalendarEvents = useCallback(async () => {
+        try {
+            const today = new Date();
 
-                const yesterday = new Date(today);
-                yesterday.setDate(today.getDate() - 1);
+            const yesterday = new Date(today);
+            yesterday.setDate(today.getDate() - 1);
 
-                const tomorrow = new Date(today);
-                tomorrow.setDate(today.getDate() + 1);
+            const tomorrow = new Date(today);
+            tomorrow.setDate(today.getDate() + 1);
 
-                const start = getLocalISODate(yesterday);
-                const end = getLocalISODate(tomorrow);
+            const start = getLocalISODate(yesterday);
+            const end = getLocalISODate(tomorrow);
 
-                const response = await axiosInstance.get<CalendarResponse>(
-                    "/appraisal/api/v1/calendar/",
-                    {
-                        params: {
-                            start,
-                            end,
-                        },
-                    }
-                );
+            const response = await axiosInstance.get<CalendarResponse>(
+                "/appraisal/api/v1/calendar/",
+                {
+                    params: {
+                        start,
+                        end,
+                    },
+                }
+            );
 
-                const calendarEvents = Array.isArray(response.data?.events)
-                    ? response.data.events
-                    : [];
+            const calendarEvents = Array.isArray(response.data?.events)
+                ? response.data.events
+                : [];
 
-                setEvents(calendarEvents);
-            } catch (error) {
-                console.error("Calendar API Error:", error);
-                setEvents([]);
-            }
-        };
-
-        fetchCalendarEvents();
+            setEvents(calendarEvents);
+        } catch (error) {
+            console.error("Calendar API Error:", error);
+            setEvents([]);
+        }
     }, []);
 
+    useEffect(() => {
+        fetchCalendarEvents();
+    }, [fetchCalendarEvents]);
+
     return (
-        <div className="min-h-screen w-full" dir="rtl">
+        <div
+            className="min-h-screen w-full"
+            dir="rtl"
+        >
             <div className="w-full space-y-6">
                 <div className="grid w-full grid-cols-1 gap-6 lg:grid-cols-3">
                     <div className="space-y-6 lg:col-span-2">
@@ -112,7 +115,9 @@ export default function EmployeeDashboardPage() {
                     </div>
 
                     <div className="space-y-6">
-                        <CompanyNews />
+                        <CompanyNews
+                            onNoteCreated={fetchCalendarEvents}
+                        />
 
                         {employeeId !== null && <ScoreCard />}
                     </div>

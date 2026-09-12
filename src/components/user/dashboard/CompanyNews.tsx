@@ -5,7 +5,13 @@ import { Loader2, Send } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
 import { useAuthStore } from "@/store/authStore";
 
-export default function CompanyNews() {
+interface CompanyNewsProps {
+    onNoteCreated?: () => Promise<void> | void;
+}
+
+export default function CompanyNews({
+    onNoteCreated,
+}: CompanyNewsProps) {
     const { userId } = useAuthStore();
 
     const [description, setDescription] = useState("");
@@ -27,6 +33,8 @@ export default function CompanyNews() {
             });
 
             setDescription("");
+
+            await onNoteCreated?.();
         } catch (error) {
             console.error("Failed to create note:", error);
         } finally {
