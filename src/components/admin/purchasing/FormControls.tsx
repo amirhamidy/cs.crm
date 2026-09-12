@@ -64,11 +64,7 @@ export const FloatingSelect = forwardRef<
             <select
                 ref={ref}
                 {...props}
-                // `color-scheme` tells the browser which palette to paint the
-                // native option popup with. Without this, dark mode keeps the
-                // OS light popup (white text on white bg). Declaring both
-                // schemes and letting the dark: variant win fixes it for
-                // Chrome, Edge and Firefox.
+              
                 style={{ colorScheme: "light", ...props.style }}
                 className={`peer ${FIELD_BASE} appearance-none px-4 py-3.5 pl-10 dark:[color-scheme:dark] ${className}`}
             >

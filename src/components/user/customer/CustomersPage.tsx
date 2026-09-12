@@ -25,8 +25,6 @@ type FilterType = "all" | "potential" | "active";
 export default function CustomersPage() {
     const { resolvedTheme } = useTheme();
 
-    // جلوگیری از hydration mismatch: تا زمانی که کامپوننت روی کلاینت mount نشده،
-    // isDark را همیشه false در نظر می‌گیریم (دقیقاً مثل رندر سرور).
     const [mounted, setMounted] = useState(false);
     useEffect(() => {
         setMounted(true);

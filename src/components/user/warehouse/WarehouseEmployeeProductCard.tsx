@@ -132,7 +132,6 @@ export default function WarehouseEmployeeProductCard({
         )
         : 0;
 
-    // موقعیت marker حداقل روی progress bar (درصد)
     const minimumMarkerPosition = stockInfo?.maximum_stock
         ? Math.min(
             100,

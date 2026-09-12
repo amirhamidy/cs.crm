@@ -24,7 +24,7 @@ interface CaseCardProps {
     customers?: Customer[];
     departments?: Department[];
     isDeleting?: boolean;
-    hasActiveTasks?: boolean; // 👈 این رو اضافه کن
+    hasActiveTasks?: boolean;
     onEdit?: (item: CaseItem) => void;
     onDelete?: (item: CaseItem) => void;
     onClick?: (item: CaseItem) => void;
@@ -108,7 +108,7 @@ export default function CaseCard({
     departments,
     users,
     isDeleting = false,
-    hasActiveTasks = false, // 👈 مقدار پیش‌فرض
+    hasActiveTasks = false, 
     onEdit,
     onDelete,
     onClick,

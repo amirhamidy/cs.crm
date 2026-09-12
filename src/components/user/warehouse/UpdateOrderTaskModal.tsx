@@ -88,14 +88,6 @@ export default function UpdateOrderTaskModal({
             return;
         }
 
-        // پیدا کردن staff مربوط به این employee
-        // در اینجا فرض می‌کنیم که employee.id برابر با employee_id در staff است
-        // و performed_by باید id پرسنل انبار باشد، نه employee.id
-
-        // توجه: در API واقعی، performed_by باید id کارمند انبار (ApiWarehouseStaff.id) باشد
-        // اما چون از هدر token استفاده می‌شود، ممکن است سرور خودش تشخیص دهد
-        // ما همون employee.id رو می‌فرستیم و سرور تطابق رو انجام میده
-
         setLoading(true);
         setError("");
 
