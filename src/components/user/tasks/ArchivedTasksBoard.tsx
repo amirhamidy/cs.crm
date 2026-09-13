@@ -15,12 +15,34 @@ import {
 import axiosInstance from "@/lib/axiosInstance";
 import UserTaskCard from "./UserTaskCard";
 import type { UserTask } from "./types";
-import { useCurrentEmployee } from "@/hooks/usecurrentemployee";
+import ArchivedTaskCard from "./ArchivedTaskCard";
+
+interface ArchiveTask {
+    id: number;
+    task_id: number;
+    title: string;
+    status: "completed" | "cancelled" | "sold";
+    case_id: number | null;
+    case_title: string;
+    customer_id: number | null;
+    customer_full_name: string;
+    department_id: number;
+    department_name: string;
+    created_by_id: number | null;
+    created_by_username: string;
+    created_by_full_name: string;
+    final_action_by_id: number | null;
+    final_action_by_username: string;
+    final_action_by_full_name: string;
+    task_created_at: string;
+    completed_at: string | null;
+    archived_at: string;
+}
 
 interface DepartmentGroup {
     id: number;
     name: string;
-    tasks: UserTask[];
+    tasks: ArchiveTask[];
 }
 
 type ArchiveStatusFilter = "all" | "completed" | "sold" | "cancelled";
@@ -67,94 +89,50 @@ const statusFilters: {
         },
     ];
 
-function extractDeptId(task: UserTask): number {
-    const raw = (task as any).department;
-
-    if (raw && typeof raw === "object" && "id" in raw) {
-        return Number(raw.id);
-    }
-
-    if (raw !== undefined && raw !== null && raw !== "") {
-        return Number(raw);
-    }
-
-    return -1;
+function archiveToUserTask(task: ArchiveTask): UserTask {
+    return {
+        id: task.task_id,
+        title: task.title,
+        description: "",
+        case: task.case_id,
+        department: task.department_id,
+        department_name: task.department_name,
+        current_step: 0,
+        current_step_name: "",
+        assigned_employee: [],
+        status: task.status,
+        created_at: task.task_created_at,
+        completed_at: task.completed_at,
+        updated_at: task.archived_at,
+        attachments: [],
+    } as UserTask;
 }
-
-function extractDeptName(task: UserTask): string {
-    const direct = (task as any).department_name;
-
-    if (typeof direct === "string" && direct.trim()) {
-        return direct.trim();
-    }
-
-    const raw = (task as any).department;
-
-    if (raw && typeof raw === "object" && "name" in raw) {
-        return String(raw.name);
-    }
-
-    return "بدون دپارتمان";
-}
-
-function extractAssignedEmployeeIds(task: UserTask): number[] {
-    const raw = (task as any).assigned_employee;
-
-    if (Array.isArray(raw)) {
-        return raw.map((value) => Number(value));
-    }
-
-    return [];
-}
-
-const ARCHIVED_STATUSES = ["completed", "cancelled", "sold"];
 
 export default function ArchivedTasksBoard() {
-    const { employee, loading: employeeLoading } = useCurrentEmployee();
-
-    const [tasks, setTasks] = useState<UserTask[]>([]);
+    const [tasks, setTasks] = useState<ArchiveTask[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [activeDeptId, setActiveDeptId] = useState<number | null>(null);
-    const [statusFilter, setStatusFilter] = useState<ArchiveStatusFilter>("all");
+    const [statusFilter, setStatusFilter] =
+        useState<ArchiveStatusFilter>("all");
 
     useEffect(() => {
-        if (employeeLoading) {
-            return;
-        }
-
-        if (!employee) {
-            setTasks([]);
-            setLoading(false);
-            return;
-        }
-
         let cancelled = false;
 
         setLoading(true);
+        setError(null);
 
         axiosInstance
-            .get<UserTask[] | { results: UserTask[] }>("/tasks/api/v1/tasks/")
+            .get<ArchiveTask[]>("/tasks/api/v1/task_archive/")
             .then((res) => {
-                if (cancelled) {
-                    return;
-                }
+                if (cancelled) return;
 
-                const data = Array.isArray(res.data)
-                    ? res.data
-                    : res.data.results ?? [];
-
-                const myArchivedTasks = data.filter(
-                    (task) =>
-                        extractAssignedEmployeeIds(task).includes(employee.id) &&
-                        ARCHIVED_STATUSES.includes(task.status)
-                );
-
-                setTasks(myArchivedTasks);
+                const data = Array.isArray(res.data) ? res.data : [];
+                setTasks(data);
             })
             .catch(() => {
                 if (!cancelled) {
-                    setError("دریافت تسک‌ها با خطا مواجه شد");
+                    setError("دریافت آرشیو تسک‌ها با خطا مواجه شد");
                 }
             })
             .finally(() => {
@@ -166,31 +144,32 @@ export default function ArchivedTasksBoard() {
         return () => {
             cancelled = true;
         };
-    }, [employeeLoading, employee]);
+    }, []);
 
     const departmentGroups = useMemo<DepartmentGroup[]>(() => {
         const map = new Map<number, DepartmentGroup>();
 
         tasks.forEach((task) => {
-            const deptId = extractDeptId(task);
-            const deptName = extractDeptName(task);
+            const id = Number(task.department_id);
+            const name =
+                task.department_name?.trim() || "بدون دپارتمان";
 
-            if (!map.has(deptId)) {
-                map.set(deptId, {
-                    id: deptId,
-                    name: deptName,
+            if (!map.has(id)) {
+                map.set(id, {
+                    id,
+                    name,
                     tasks: [],
                 });
             }
 
-            map.get(deptId)!.tasks.push(task);
+            map.get(id)!.tasks.push(task);
         });
 
         return Array.from(map.values());
     }, [tasks]);
 
     useEffect(() => {
-        if (departmentGroups.length === 0) {
+        if (!departmentGroups.length) {
             setActiveDeptId(null);
             return;
         }
@@ -213,7 +192,9 @@ export default function ArchivedTasksBoard() {
             return activeTasks;
         }
 
-        return activeTasks.filter((task) => task.status === statusFilter);
+        return activeTasks.filter(
+            (task) => task.status === statusFilter
+        );
     }, [activeGroup, statusFilter]);
 
     const getStatusCount = (status: ArchiveStatusFilter) => {
@@ -223,24 +204,59 @@ export default function ArchivedTasksBoard() {
             return activeTasks.length;
         }
 
-        return activeTasks.filter((task) => task.status === status).length;
+        return activeTasks.filter(
+            (task) => task.status === status
+        ).length;
     };
 
-    function handleUpdated(updated: UserTask) {
+    const handleReopen = async (task: ArchiveTask) => {
+        try {
+            const res = await axiosInstance.post<UserTask>(
+                `/tasks/api/v1/tasks/${task.task_id}/reopen/`
+            );
+
+            setTasks((prev) =>
+                prev.filter(
+                    (item) => item.task_id !== task.task_id
+                )
+            );
+
+            return res.data;
+        } catch {
+            throw new Error("بازگردانی تسک با خطا مواجه شد");
+        }
+    };
+
+    const handleUpdated = async (updated: UserTask) => {
         if (updated.status === "in_progress") {
-            setTasks((prev) => prev.filter((task) => task.id !== updated.id));
+            setTasks((prev) =>
+                prev.filter(
+                    (task) => task.task_id !== updated.id
+                )
+            );
             return;
         }
 
         setTasks((prev) =>
-            prev.map((task) => (task.id === updated.id ? updated : task))
+            prev.map((task) =>
+                task.task_id === updated.id
+                    ? {
+                        ...task,
+                        status: updated.status as ArchiveTask["status"],
+                        title: updated.title,
+                    }
+                    : task
+            )
         );
-    }
+    };
 
-    if (loading || employeeLoading) {
+    if (loading) {
         return (
             <div className="flex h-64 items-center justify-center">
-                <Loader size={22} className="animate-spin text-indigo-500" />
+                <Loader
+                    size={22}
+                    className="animate-spin text-indigo-500"
+                />
             </div>
         );
     }
@@ -248,16 +264,23 @@ export default function ArchivedTasksBoard() {
     if (error) {
         return (
             <div className="flex h-64 flex-col items-center justify-center gap-3 rounded-3xl border border-red-500/20 bg-red-500/5">
-                <p className="text-sm font-semibold text-red-500">{error}</p>
+                <p className="text-sm font-semibold text-red-500">
+                    {error}
+                </p>
             </div>
         );
     }
 
-    if (tasks.length === 0) {
+    if (!tasks.length) {
         return (
             <div className="flex h-64 flex-col items-center justify-center gap-3 rounded-3xl border border-dashed border-gray-200 dark:border-white/[0.07]">
-                <Archive size={28} className="text-gray-300 dark:text-gray-700" />
-                <p className="text-[12px] text-gray-400">تسک بایگانی‌شده‌ای وجود ندارد</p>
+                <Archive
+                    size={28}
+                    className="text-gray-300 dark:text-gray-700"
+                />
+                <p className="text-[12px] text-gray-400">
+                    تسک بایگانی‌شده‌ای وجود ندارد
+                </p>
             </div>
         );
     }
@@ -267,7 +290,10 @@ export default function ArchivedTasksBoard() {
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
                     <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-indigo-500/10">
-                        <Archive size={17} className="text-indigo-500" />
+                        <Archive
+                            size={17}
+                            className="text-indigo-500"
+                        />
                     </div>
 
                     <div>
@@ -288,13 +314,16 @@ export default function ArchivedTasksBoard() {
 
             <div className="flex gap-2 overflow-x-auto pb-1">
                 {departmentGroups.map((group) => {
-                    const isActive = group.id === activeDeptId;
+                    const isActive =
+                        group.id === activeDeptId;
 
                     return (
                         <button
                             key={group.id}
                             type="button"
-                            onClick={() => setActiveDeptId(group.id)}
+                            onClick={() =>
+                                setActiveDeptId(group.id)
+                            }
                             className={`flex shrink-0 items-center gap-2 rounded-2xl px-3.5 py-2 text-[11.5px] font-bold transition-colors ${isActive
                                 ? "bg-indigo-600 text-white"
                                 : "bg-gray-100 text-gray-500 hover:bg-gray-200 dark:bg-white/[0.05] dark:text-gray-400 dark:hover:bg-white/[0.08]"
@@ -319,18 +348,24 @@ export default function ArchivedTasksBoard() {
 
             <div className="flex gap-2 overflow-x-auto pb-1">
                 {statusFilters.map((filter) => {
-                    const isActive = statusFilter === filter.id;
+                    const isActive =
+                        statusFilter === filter.id;
                     const Icon = filter.icon;
-                    const count = getStatusCount(filter.id);
+                    const count =
+                        getStatusCount(filter.id);
 
                     return (
                         <button
                             key={filter.id}
                             type="button"
-                            onClick={() => setStatusFilter(filter.id)}
+                            onClick={() =>
+                                setStatusFilter(filter.id)
+                            }
                             className="flex shrink-0 items-center gap-2 rounded-2xl border px-3.5 py-2 text-[11px] font-bold transition-all duration-200"
                             style={{
-                                color: isActive ? filter.color : undefined,
+                                color: isActive
+                                    ? filter.color
+                                    : undefined,
                                 backgroundColor: isActive
                                     ? filter.activeBg
                                     : "rgba(255,255,255,0.025)",
@@ -345,12 +380,18 @@ export default function ArchivedTasksBoard() {
                             <Icon
                                 size={13}
                                 style={{
-                                    color: isActive ? filter.color : "rgb(148 163 184)",
+                                    color: isActive
+                                        ? filter.color
+                                        : "rgb(148 163 184)",
                                 }}
                             />
 
                             <span
-                                className={isActive ? "" : "text-gray-500 dark:text-gray-400"}
+                                className={
+                                    isActive
+                                        ? ""
+                                        : "text-gray-500 dark:text-gray-400"
+                                }
                             >
                                 {filter.label}
                             </span>
@@ -371,8 +412,14 @@ export default function ArchivedTasksBoard() {
 
             {filteredTasks.length === 0 ? (
                 <div className="flex h-64 flex-col items-center justify-center gap-3 rounded-3xl border border-dashed border-gray-200 dark:border-white/[0.07]">
-                    <LayoutGrid size={28} className="text-gray-300 dark:text-gray-700" />
-                    <p className="text-[12px] text-gray-400">تسکی در این وضعیت وجود ندارد</p>
+                    <LayoutGrid
+                        size={28}
+                        className="text-gray-300 dark:text-gray-700"
+                    />
+
+                    <p className="text-[12px] text-gray-400">
+                        تسکی در این وضعیت وجود ندارد
+                    </p>
                 </div>
             ) : (
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
@@ -381,15 +428,29 @@ export default function ArchivedTasksBoard() {
                             <motion.div
                                 key={task.id}
                                 layout
-                                initial={{ opacity: 0, y: 10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, y: -8 }}
-                                transition={{ duration: 0.2 }}
+                                initial={{
+                                    opacity: 0,
+                                    y: 10,
+                                }}
+                                animate={{
+                                    opacity: 1,
+                                    y: 0,
+                                }}
+                                exit={{
+                                    opacity: 0,
+                                    y: -8,
+                                }}
+                                transition={{
+                                    duration: 0.2,
+                                }}
                             >
-                                <UserTaskCard
+                                <ArchivedTaskCard
                                     task={task}
-                                    accent="#94a3b8"
-                                    onUpdated={handleUpdated}
+                                    onReopened={(taskId) => {
+                                        setTasks((prev) =>
+                                            prev.filter((item) => item.task_id !== taskId)
+                                        );
+                                    }}
                                 />
                             </motion.div>
                         ))}

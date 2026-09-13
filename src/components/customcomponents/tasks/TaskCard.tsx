@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import {
-    AlertTriangle,
     Building2,
     CalendarDays,
     ClipboardX,
@@ -17,11 +17,11 @@ import {
     Trash2,
     UserRound,
     X,
+    MessageSquareText,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import type { Task, TaskStatus, TaskEmployeeRef } from "@/types/task";
 import { toJalali, toPersianDigits, JALALI_MONTHS, pad2 } from "@/lib/jalali";
-import { MessageSquareText } from "lucide-react";
 import AdminTaskNotesModal from "./AdminTaskNotesModal";
 import TimeRangeModal from "./TimeRangeModal";
 import api from "@/lib/axiosInstance";
@@ -29,19 +29,12 @@ import { useEmployeeInfo } from "@/hooks/useEmployeeInfo";
 import type { Employee } from "@/types/employee";
 
 const AVATAR_GRADIENTS = [
-    ["#6366f1", "#8b5cf6"],
-    ["#3b82f6", "#6366f1"],
-    ["#8b5cf6", "#ec4899"],
-    ["#06b6d4", "#6366f1"],
-    ["#f59e0b", "#ef4444"],
-    ["#10b981", "#3b82f6"],
-    ["#f472b6", "#ec4899"],
-    ["#8b5cf6", "#f59e0b"],
-    ["#3b82f6", "#06b6d4"],
-    ["#ef4444", "#f59e0b"],
+    ["#6366f1", "#8b5cf6"], ["#3b82f6", "#6366f1"],
+    ["#8b5cf6", "#ec4899"], ["#06b6d4", "#6366f1"],
+    ["#f59e0b", "#ef4444"], ["#10b981", "#3b82f6"],
+    ["#f472b6", "#ec4899"], ["#8b5cf6", "#f59e0b"],
+    ["#3b82f6", "#06b6d4"], ["#ef4444", "#f59e0b"],
 ];
-
-
 
 const STATUS_CONFIG: Record<TaskStatus, { label: string; className: string }> = {
     sold: { label: "فروش", className: "border-emerald-500/20 bg-emerald-500/10 text-emerald-400" },
@@ -52,23 +45,23 @@ const STATUS_CONFIG: Record<TaskStatus, { label: string; className: string }> = 
 
 type DeadlineUrgency = "overdue" | "critical" | "soon" | "normal" | null;
 
-function getDeadlineUrgency(deadline: string | null | undefined): DeadlineUrgency {
+function getDeadlineUrgency(deadline?: string | null): DeadlineUrgency {
     if (!deadline) return null;
     const diff = new Date(deadline).getTime() - Date.now();
-    const hours = diff / (1000 * 60 * 60);
+    const hours = diff / 3600000;
     if (diff < 0) return "overdue";
     if (hours <= 6) return "critical";
     if (hours <= 24) return "soon";
     return "normal";
 }
 
-const URGENCY_ACCENT: Record<Exclude<DeadlineUrgency, null | "normal">, string> = {
+const URGENCY_ACCENT = {
     overdue: "#ef4444",
     critical: "#f97316",
     soon: "#eab308",
 };
 
-const URGENCY_LABEL: Record<Exclude<DeadlineUrgency, null | "normal">, string> = {
+const URGENCY_LABEL = {
     overdue: "منقضی شده",
     critical: "فوری",
     soon: "امروز",
@@ -88,9 +81,7 @@ function formatJalaliDate(iso?: string | null) {
     if (!iso) return null;
     const d = new Date(iso);
     const [jy, jm, jd] = toJalali(d.getFullYear(), d.getMonth() + 1, d.getDate());
-    return `${toPersianDigits(jd)} ${JALALI_MONTHS[jm - 1]} ${toPersianDigits(jy)} ساعت ${toPersianDigits(
-        pad2(d.getHours())
-    )}:${toPersianDigits(pad2(d.getMinutes()))}`;
+    return `${toPersianDigits(jd)} ${JALALI_MONTHS[jm - 1]} ${toPersianDigits(jy)} ساعت ${toPersianDigits(pad2(d.getHours()))}:${toPersianDigits(pad2(d.getMinutes()))}`;
 }
 
 function getGradient(id: number) {
@@ -98,46 +89,32 @@ function getGradient(id: number) {
 }
 
 function extractId(value: unknown): number | null {
-    if (value === null || value === undefined) return null;
     if (typeof value === "number") return value;
-    if (typeof value === "string") {
-        const n = Number(value);
-        return Number.isFinite(n) ? n : null;
-    }
-    if (
-        typeof value === "object" &&
-        !Array.isArray(value) &&
-        "id" in (value as Record<string, unknown>)
-    ) {
+    if (typeof value === "string" && Number.isFinite(Number(value))) return Number(value);
+    if (value && typeof value === "object" && !Array.isArray(value) && "id" in value) {
         const id = (value as { id?: unknown }).id;
-        return typeof id === "number"
-            ? id
-            : Number.isFinite(Number(id))
-                ? Number(id)
-                : null;
+        return Number.isFinite(Number(id)) ? Number(id) : null;
     }
     return null;
 }
 
-function extractEmployeeIds(value: TaskWithStep["assigned_employee"]): number[] {
-    if (value === null || value === undefined) return [];
-    const arr = Array.isArray(value) ? value : [value];
-    return arr.map((item) => extractId(item)).filter((id): id is number => id !== null);
+function extractEmployeeIds(value: TaskWithStep["assigned_employee"]) {
+    if (value == null) return [];
+    return (Array.isArray(value) ? value : [value])
+        .map(extractId)
+        .filter((id): id is number => id !== null);
 }
 
-function extractDepartmentName(value: unknown): string | null {
+function extractDepartmentName(value: unknown) {
     if (!value || typeof value !== "object" || Array.isArray(value)) return null;
-    const dep = value as { name?: string };
-    return dep.name ?? null;
+    return (value as { name?: string }).name ?? null;
 }
 
 function toTask(task: TaskWithStep): Task {
-    const emp = task.assigned_employee;
-    const assignedEmployee = Array.isArray(emp) ? (emp[0] ?? null) : (emp ?? null);
-    return {
-        ...task,
-        assigned_employee: assignedEmployee as Task["assigned_employee"],
-    } as Task;
+    const employee = Array.isArray(task.assigned_employee)
+        ? task.assigned_employee[0] ?? null
+        : task.assigned_employee ?? null;
+    return { ...task, assigned_employee: employee as Task["assigned_employee"] } as Task;
 }
 
 function Chip({ isDark, children }: { isDark: boolean; children: React.ReactNode }) {
@@ -145,8 +122,8 @@ function Chip({ isDark, children }: { isDark: boolean; children: React.ReactNode
         <div
             className="flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10.5px] font-bold"
             style={{
-                border: isDark ? "1px solid rgba(255,255,255,0.06)" : "1px solid rgba(0,0,0,0.06)",
-                background: isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)",
+                border: `1px solid ${isDark ? "rgba(255,255,255,.06)" : "rgba(0,0,0,.06)"}`,
+                background: isDark ? "rgba(255,255,255,.04)" : "rgba(0,0,0,.03)",
                 color: isDark ? "#94a3b8" : "#64748b",
             }}
         >
@@ -158,27 +135,23 @@ function Chip({ isDark, children }: { isDark: boolean; children: React.ReactNode
 function EmployeeChip({ id, isDark }: { id: number; isDark: boolean }) {
     const { data, loading } = useEmployeeInfo(id);
     const gradient = getGradient(id);
-    const name = loading ? "..." : (data?.full_name ?? data?.username ?? `کارمند ${id}`);
 
     return (
         <div
             className="flex items-center gap-1.5 rounded-full py-0.5 pl-2 pr-0.5"
             style={{
-                border: isDark ? "1px solid rgba(255,255,255,0.06)" : "1px solid rgba(0,0,0,0.06)",
-                background: isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)",
+                border: `1px solid ${isDark ? "rgba(255,255,255,.06)" : "rgba(0,0,0,.06)"}`,
+                background: isDark ? "rgba(255,255,255,.04)" : "rgba(0,0,0,.03)",
             }}
         >
             <span
-                className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full text-[9px] font-extrabold text-white"
-                style={{ background: `linear-gradient(135deg, ${gradient[0]}, ${gradient[1]})` }}
+                className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-white"
+                style={{ background: `linear-gradient(135deg,${gradient[0]},${gradient[1]})` }}
             >
                 <UserRound size={11} />
             </span>
-            <span
-                className="text-[10.5px] font-bold"
-                style={{ color: isDark ? "#cbd5e1" : "#475569" }}
-            >
-                {name}
+            <span className="text-[10.5px] font-bold" style={{ color: isDark ? "#cbd5e1" : "#475569" }}>
+                {loading ? "..." : data?.full_name ?? data?.username ?? `کارمند ${id}`}
             </span>
         </div>
     );
@@ -202,7 +175,6 @@ export default function TaskCard({
     onEdit,
     onDelete,
     onUpdated,
-    canManageDeadline = true,
 }: TaskCardProps) {
     const { resolvedTheme } = useTheme();
     const isDark = resolvedTheme === "dark";
@@ -233,40 +205,32 @@ export default function TaskCard({
         className: "border-slate-500/20 bg-slate-500/10 text-slate-400",
     };
 
-    const isActiveTask =
-        status !== "completed" && status !== "cancelled" && status !== "sold";
+    const isActiveTask = !["completed", "cancelled", "sold"].includes(status);
     const urgency = isActiveTask ? getDeadlineUrgency(stepDeadline?.deadline) : null;
-    const accent =
-        urgency && urgency !== "normal" ? URGENCY_ACCENT[urgency] : null;
+    const accent = urgency && urgency !== "normal" ? URGENCY_ACCENT[urgency] : null;
 
     useEffect(() => {
         if (!stepId) return;
         let cancelled = false;
         setLoadingDeadline(true);
-        api
-            .get(`/tasks/api/v1/tasks/${task.id}/steps/${stepId}/deadline/`)
-            .then((res) => {
-                if (cancelled) return;
-                setStepDeadline({
-                    started_at: res.data?.started_at ?? null,
-                    deadline: res.data?.deadline ?? null,
+
+        api.get(`/tasks/api/v1/tasks/${task.id}/steps/${stepId}/deadline/`)
+            .then(({ data }) => {
+                if (!cancelled) setStepDeadline({
+                    started_at: data?.started_at ?? null,
+                    deadline: data?.deadline ?? null,
                 });
             })
-            .catch(() => {
-                if (!cancelled) setStepDeadline(null);
-            })
-            .finally(() => {
-                if (!cancelled) setLoadingDeadline(false);
-            });
-        return () => {
-            cancelled = true;
-        };
+            .catch(() => !cancelled && setStepDeadline(null))
+            .finally(() => !cancelled && setLoadingDeadline(false));
+
+        return () => { cancelled = true; };
     }, [task.id, stepId]);
 
     useEffect(() => {
         if (!stepDeadline?.deadline || !isActiveTask) return;
-        const interval = setInterval(() => forceTick((t) => t + 1), 60000);
-        return () => clearInterval(interval);
+        const timer = setInterval(() => forceTick((v) => v + 1), 60000);
+        return () => clearInterval(timer);
     }, [stepDeadline?.deadline, isActiveTask]);
 
     const startedAtLabel = formatJalaliDate(stepDeadline?.started_at);
@@ -286,12 +250,11 @@ export default function TaskCard({
     }
 
     async function handleTimeSubmit(startedAt: string, deadline: string) {
-        if (!stepId) {
-            setTimeError("مرحله فعلی این وظیفه مشخص نیست");
-            return;
-        }
+        if (!stepId) return setTimeError("مرحله فعلی این وظیفه مشخص نیست");
+
         setSavingTime(true);
         setTimeError(null);
+
         try {
             const { data } = await api.patch(
                 `/tasks/api/v1/tasks/${task.id}/steps/${stepId}/deadline/patch/`,
@@ -310,7 +273,7 @@ export default function TaskCard({
         }
     }
 
-    function handleCloseConfirm() {
+    function closeConfirm() {
         if (deleting) return;
         setShowConfirm(false);
         setDeleteError(null);
@@ -326,425 +289,189 @@ export default function TaskCard({
                 transition={{ duration: 0.2, delay: index * 0.05 }}
                 onHoverStart={() => setHovered(true)}
                 onHoverEnd={() => setHovered(false)}
-                className="relative flex flex-col gap-3 overflow-hidden rounded-2xl p-4"
+                className="relative flex min-h-[130px] flex-col gap-3 overflow-hidden rounded-2xl p-4"
                 style={{
-                    border: accent
-                        ? `1px solid color-mix(in srgb, ${accent} 40%, transparent)`
-                        : isDark
-                            ? "1px solid rgba(255,255,255,0.06)"
-                            : "1px solid rgba(0,0,0,0.06)",
+                    border: accent ? `1px solid color-mix(in srgb,${accent} 40%,transparent)` : `1px solid ${isDark ? "rgba(255,255,255,.06)" : "rgba(0,0,0,.06)"}`,
                     background: accent
-                        ? `color-mix(in srgb, ${accent} ${urgency === "overdue" ? 7 : urgency === "critical" ? 5 : 4
-                        }%, ${isDark ? "#0f172a" : "#fafafa"})`
-                        : isDark
-                            ? "rgba(255,255,255,0.02)"
-                            : "#fafafa",
-                    minHeight: "130px",
+                        ? `color-mix(in srgb,${accent} ${urgency === "overdue" ? 7 : urgency === "critical" ? 5 : 4}%,${isDark ? "#0f172a" : "#fafafa"})`
+                        : isDark ? "rgba(255,255,255,.02)" : "#fafafa",
                     opacity: deleting ? 0.45 : 1,
-                    pointerEvents: deleting ? "none" : undefined,
-                    boxShadow: accent
-                        ? `0 0 0 1px color-mix(in srgb, ${accent} 15%, transparent), 0 4px 24px color-mix(in srgb, ${accent} 12%, transparent)`
-                        : isDark
-                            ? "0 2px 24px rgba(0,0,0,0.2)"
-                            : "0 2px 16px rgba(0,0,0,0.04)",
-                    transition:
-                        "border-color 0.4s ease, background 0.4s ease, box-shadow 0.4s ease",
+                    boxShadow: accent ? `0 0 0 1px color-mix(in srgb,${accent} 15%,transparent),0 4px 24px color-mix(in srgb,${accent} 12%,transparent)` : isDark ? "0 2px 24px rgba(0,0,0,.2)" : "0 2px 16px rgba(0,0,0,.04)",
                 }}
             >
                 {urgency === "overdue" && (
                     <motion.div
                         className="pointer-events-none absolute inset-x-0 top-0 h-[2px]"
-                        style={{
-                            background: `linear-gradient(90deg, transparent, ${accent}, transparent)`,
-                        }}
+                        style={{ background: `linear-gradient(90deg,transparent,${accent},transparent)` }}
                         animate={{ opacity: [0.4, 1, 0.4] }}
-                        transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }}
+                        transition={{ duration: 2.2, repeat: Infinity }}
                     />
                 )}
 
-                <svg
-                    className="pointer-events-none absolute inset-0 h-full w-full"
-                    style={{ borderRadius: "1rem" }}
-                >
+                <svg className="pointer-events-none absolute inset-0 h-full w-full">
                     <defs>
-                        <linearGradient
-                            id={`borderGrad-${task.id}`}
-                            x1="100%"
-                            y1="100%"
-                            x2="0%"
-                            y2="0%"
-                        >
+                        <linearGradient id={`border-${task.id}`}>
                             <stop offset="0%" stopColor="#6366f1" />
                             <stop offset="100%" stopColor="#8b5cf6" />
                         </linearGradient>
                     </defs>
                     <motion.rect
-                        x="1"
-                        y="1"
+                        x="1" y="1"
                         width="calc(100% - 2px)"
                         height="calc(100% - 2px)"
                         rx="15"
-                        ry="15"
                         fill="none"
-                        stroke={`url(#borderGrad-${task.id})`}
+                        stroke={`url(#border-${task.id})`}
                         strokeWidth="1.5"
                         pathLength="1"
                         initial={{ pathLength: 0, opacity: 0 }}
-                        animate={
-                            hovered
-                                ? { pathLength: 1, opacity: 1 }
-                                : { pathLength: 0, opacity: 0 }
-                        }
-                        transition={{ duration: 0.55, ease: "easeInOut" }}
+                        animate={hovered ? { pathLength: 1, opacity: 1 } : { pathLength: 0, opacity: 0 }}
+                        transition={{ duration: 0.55 }}
                     />
                 </svg>
 
                 <div className="flex items-start justify-between gap-3">
                     <div className="flex items-center gap-2">
-                        <span
-                            className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[10.5px] font-bold ${statusConfig.className}`}
-                        >
-                            <span
-                                className={`h-1.5 w-1.5 rounded-full bg-current ${status === "in_progress" ? "animate-pulse" : ""
-                                    }`}
-                            />
+                        <span className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[10.5px] font-bold ${statusConfig.className}`}>
+                            <span className={`h-1.5 w-1.5 rounded-full bg-current ${status === "in_progress" ? "animate-pulse" : ""}`} />
                             {statusConfig.label}
                         </span>
+
                         {accent && (
                             <span
                                 className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold"
                                 style={{
                                     color: accent,
-                                    background: `color-mix(in srgb, ${accent} 12%, transparent)`,
-                                    border: `1px solid color-mix(in srgb, ${accent} 30%, transparent)`,
+                                    background: `color-mix(in srgb,${accent} 12%,transparent)`,
+                                    border: `1px solid color-mix(in srgb,${accent} 30%,transparent)`,
                                 }}
                             >
-                                <motion.span
-                                    className="h-1.5 w-1.5 rounded-full"
-                                    style={{ background: accent }}
-                                    animate={
-                                        urgency !== "soon"
-                                            ? { opacity: [1, 0.3, 1] }
-                                            : undefined
-                                    }
-                                    transition={{
-                                        duration: 1.6,
-                                        repeat: Infinity,
-                                        ease: "easeInOut",
-                                    }}
-                                />
-                                {URGENCY_LABEL[urgency as Exclude<DeadlineUrgency, null | "normal">]}
+                                <span className="h-1.5 w-1.5 rounded-full" style={{ background: accent }} />
+                                {URGENCY_LABEL[urgency]}
                             </span>
                         )}
                     </div>
 
                     <div className="flex items-center gap-1.5">
-                        <button
-                            type="button"
-                            onClick={() => setNotesModalOpen(true)}
-                            className="flex h-8 w-8 items-center justify-center rounded-xl transition-colors"
-                            style={{
-                                background: isDark
-                                    ? "rgba(255,255,255,0.05)"
-                                    : "rgba(0,0,0,0.04)",
-                            }}
-                            title="یادداشت‌ها"
-                        >
-                            <MessageSquareText size={14} className="text-indigo-400" />
+                        <button onClick={() => setNotesModalOpen(true)} className="flex h-8 w-8 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-400" title="یادداشت‌ها">
+                            <MessageSquareText size={14} />
                         </button>
-                        <button
-                            type="button"
-                            onClick={() => setTimeModalOpen(true)}
-                            className="flex h-7 w-7 items-center justify-center rounded-xl transition-colors"
-                            style={{
-                                background: isDark
-                                    ? "rgba(99,102,241,0.1)"
-                                    : "rgba(99,102,241,0.07)",
-                                color: isDark ? "#a5b4fc" : "#6366f1",
-                            }}
-                            title="تعیین بازه زمانی"
-                        >
+                        <button onClick={() => setTimeModalOpen(true)} className="flex h-7 w-7 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-400" title="تعیین بازه زمانی">
                             <Clock size={11} />
                         </button>
-                        <button
-                            type="button"
-                            onClick={() => onEdit(toTask(task))}
-                            className="flex h-7 w-7 items-center justify-center rounded-xl transition-colors"
-                            style={{
-                                background: isDark
-                                    ? "rgba(99,102,241,0.1)"
-                                    : "rgba(99,102,241,0.07)",
-                                color: isDark ? "#a5b4fc" : "#6366f1",
-                            }}
-                            title="ویرایش تسک"
-                        >
+                        <button onClick={() => onEdit(toTask(task))} className="flex h-7 w-7 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-400" title="ویرایش تسک">
                             <Pencil size={11} />
                         </button>
-                        <button
-                            type="button"
-                            onClick={() => setShowConfirm(true)}
-                            disabled={deleting}
-                            className="flex h-7 w-7 items-center justify-center rounded-xl transition-colors disabled:opacity-40"
-                            style={{
-                                background: isDark
-                                    ? "rgba(239,68,68,0.1)"
-                                    : "rgba(239,68,68,0.07)",
-                                color: "#ef4444",
-                            }}
-                            title="حذف تسک"
-                        >
-                            {deleting ? (
-                                <Loader2 size={11} className="animate-spin" />
-                            ) : (
-                                <Trash2 size={11} />
-                            )}
+                        <button onClick={() => setShowConfirm(true)} disabled={deleting} className="flex h-7 w-7 items-center justify-center rounded-xl bg-red-500/10 text-red-500 disabled:opacity-40" title="حذف تسک">
+                            {deleting ? <Loader2 size={11} className="animate-spin" /> : <Trash2 size={11} />}
                         </button>
                     </div>
                 </div>
 
                 <div className="flex flex-col gap-1">
-                    <h3
-                        className="text-[13.5px] font-extrabold leading-tight"
-                        style={{ color: isDark ? "#f1f5f9" : "#1e293b" }}
-                    >
+                    <h3 className="text-[13.5px] font-extrabold leading-tight" style={{ color: isDark ? "#f1f5f9" : "#1e293b" }}>
                         {task.title}
                     </h3>
-                    {task.description ? (
-                        <p
-                            className="line-clamp-2 text-[12px] leading-6"
-                            style={{ color: isDark ? "#94a3b8" : "#64748b" }}
-                        >
+                    {task.description && (
+                        <p className="line-clamp-2 text-[12px] leading-6" style={{ color: isDark ? "#94a3b8" : "#64748b" }}>
                             {task.description}
                         </p>
-                    ) : null}
+                    )}
                 </div>
 
-                <div
-                    className="mt-auto flex flex-wrap items-center gap-2 border-t pt-2.5"
-                    style={{
-                        borderColor: isDark
-                            ? "rgba(255,255,255,0.05)"
-                            : "rgba(0,0,0,0.05)",
-                    }}
-                >
-                    {employeeIds.length > 0 ? (
-                        employeeIds.map((id) => (
-                            <EmployeeChip key={id} id={id} isDark={isDark} />
-                        ))
-                    ) : (
-                        <div
-                            className="flex items-center gap-1.5 rounded-full py-0.5 pl-2 pr-0.5"
-                            style={{
-                                border: isDark
-                                    ? "1px solid rgba(255,255,255,0.06)"
-                                    : "1px solid rgba(0,0,0,0.06)",
-                                background: isDark
-                                    ? "rgba(255,255,255,0.04)"
-                                    : "rgba(0,0,0,0.03)",
-                            }}
-                        >
-                            <span
-                                className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full text-[9px] font-extrabold text-white"
-                                style={{
-                                    background: `linear-gradient(135deg, #6366f1, #8b5cf6)`,
-                                }}
-                            >
-                                <UserRound size={11} />
-                            </span>
-                            <span
-                                className="text-[10.5px] font-bold"
-                                style={{ color: isDark ? "#cbd5e1" : "#475569" }}
-                            >
-                                بدون مسئول
-                            </span>
-                        </div>
+                <div className="mt-auto flex flex-wrap items-center gap-2 border-t pt-2.5" style={{ borderColor: isDark ? "rgba(255,255,255,.05)" : "rgba(0,0,0,.05)" }}>
+                    {employeeIds.length ? employeeIds.map((id) => <EmployeeChip key={id} id={id} isDark={isDark} />) : (
+                        <Chip isDark={isDark}><UserRound size={11} />بدون مسئول</Chip>
                     )}
-
-                    {departmentName ? (
-                        <Chip isDark={isDark}>
-                            <Building2 size={11} />
-                            {departmentName}
-                        </Chip>
-                    ) : null}
-
-                    {caseTitle ? (
-                        <Chip isDark={isDark}>
-                            <FolderKanban size={11} />
-                            {caseTitle}
-                        </Chip>
-                    ) : null}
-
-                    {task.files && task.files.length > 0 ? (
-                        <Chip isDark={isDark}>
-                            <Paperclip size={11} />
-                            {task.files.length}
-                        </Chip>
-                    ) : null}
+                    {departmentName && <Chip isDark={isDark}><Building2 size={11} />{departmentName}</Chip>}
+                    {caseTitle && <Chip isDark={isDark}><FolderKanban size={11} />{caseTitle}</Chip>}
+                    {task.files?.length ? <Chip isDark={isDark}><Paperclip size={11} />{task.files.length}</Chip> : null}
                 </div>
 
                 <div
                     className="flex flex-col gap-1.5 rounded-2xl px-3 py-2.5"
                     style={{
-                        background: accent
-                            ? `color-mix(in srgb, ${accent} 8%, transparent)`
-                            : isDark
-                                ? "rgba(99,102,241,0.06)"
-                                : "rgba(99,102,241,0.05)",
-                        border: accent
-                            ? `1px solid color-mix(in srgb, ${accent} 25%, transparent)`
-                            : isDark
-                                ? "1px solid rgba(99,102,241,0.12)"
-                                : "1px solid rgba(99,102,241,0.1)",
-                        transition: "background 0.4s ease, border-color 0.4s ease",
+                        background: accent ? `color-mix(in srgb,${accent} 8%,transparent)` : isDark ? "rgba(99,102,241,.06)" : "rgba(99,102,241,.05)",
+                        border: `1px solid ${accent ? `color-mix(in srgb,${accent} 25%,transparent)` : isDark ? "rgba(99,102,241,.12)" : "rgba(99,102,241,.1)"}`,
                     }}
                 >
                     {loadingDeadline ? (
-                        <div
-                            className="flex items-center gap-2 text-[10.5px] font-semibold"
-                            style={{ color: isDark ? "#94a3b8" : "#64748b" }}
-                        >
-                            <Loader2 size={12} className="animate-spin" />
-                            در حال دریافت زمان‌بندی...
+                        <div className="flex items-center gap-2 text-[10.5px] text-slate-400">
+                            <Loader2 size={12} className="animate-spin" />در حال دریافت زمان‌بندی...
                         </div>
                     ) : startedAtLabel || deadlineLabel ? (
                         <>
-                            {startedAtLabel && (
-                                <div
-                                    className="flex items-center gap-2 text-[11px] font-bold"
-                                    style={{
-                                        color: accent ?? (isDark ? "#a5b4fc" : "#6366f1"),
-                                    }}
-                                >
-                                    <CalendarDays size={13} />
-                                    <span>شروع: {startedAtLabel}</span>
-                                </div>
-                            )}
-                            {deadlineLabel && (
-                                <div
-                                    className="flex items-center gap-2 text-[11px] font-bold"
-                                    style={{ color: accent ?? "#ef4444" }}
-                                >
-                                    <Clock size={13} />
-                                    <span>مهلت: {deadlineLabel}</span>
-                                </div>
-                            )}
+                            {startedAtLabel && <div className="flex items-center gap-2 text-[11px] font-bold text-indigo-400"><CalendarDays size={13} />شروع: {startedAtLabel}</div>}
+                            {deadlineLabel && <div className="flex items-center gap-2 text-[11px] font-bold" style={{ color: accent ?? "#ef4444" }}><Clock size={13} />مهلت: {deadlineLabel}</div>}
                         </>
                     ) : (
-                        <div
-                            className="flex items-center gap-2 text-[10.5px] font-semibold"
-                            style={{ color: isDark ? "#64748b" : "#94a3b8" }}
-                        >
-                            <Clock size={12} />
-                            زمان‌بندی تعیین نشده
-                        </div>
+                        <div className="flex items-center gap-2 text-[10.5px] text-slate-400"><Clock size={12} />زمان‌بندی تعیین نشده</div>
                     )}
                 </div>
             </motion.div>
 
-            <AnimatePresence>
-                {showConfirm && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-50 flex items-center justify-center px-4"
-                        style={{
-                            background: "rgba(0,0,0,0.45)",
-                            backdropFilter: "blur(3px)",
-                        }}
-                        onClick={handleCloseConfirm}
-                    >
+            {typeof document !== "undefined" && createPortal(
+                <AnimatePresence>
+                    {showConfirm && (
                         <motion.div
-                            initial={{ opacity: 0, y: 16 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: 16 }}
-                            transition={{ duration: 0.35, ease: "easeOut" }}
-                            onClick={(e) => e.stopPropagation()}
-                            dir="rtl"
-                            className="flex w-full max-w-md flex-col overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-sm dark:border-white/[0.06] dark:bg-[#0f172a]"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="fixed inset-0 z-[2147483647] flex items-center justify-center bg-slate-950/45 px-4"
+                            style={{ backdropFilter: "blur(5px)", WebkitBackdropFilter: "blur(5px)" }}
+                            onClick={closeConfirm}
                         >
-                            <div className="flex shrink-0 items-center justify-between px-8 pb-6 pt-8">
-                                <div className="flex items-center gap-2.5">
-                                    <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-red-50 dark:bg-red-500/10">
-                                        <Trash2 size={15} className="text-red-500" />
+                            <motion.div
+                                initial={{ opacity: 0, scale: 0.96, y: 12 }}
+                                animate={{ opacity: 1, scale: 1, y: 0 }}
+                                exit={{ opacity: 0, scale: 0.96, y: 12 }}
+                                transition={{ duration: 0.2 }}
+                                onClick={(e) => e.stopPropagation()}
+                                dir="rtl"
+                                className="w-full max-w-md overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-2xl dark:border-white/[0.06] dark:bg-[#0f172a]"
+                            >
+                                <div className="flex items-center justify-between px-8 pb-6 pt-8">
+                                    <div className="flex items-center gap-2.5">
+                                        <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-red-50 dark:bg-red-500/10">
+                                            <Trash2 size={15} className="text-red-500" />
+                                        </div>
+                                        <div>
+                                            <h3 className="text-[14px] font-extrabold text-gray-900 dark:text-white">حذف وظیفه</h3>
+                                            <p className="mt-0.5 text-[11px] text-gray-400">این عملیات قابل بازگشت نیست</p>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <h3 className="text-[14px] font-extrabold text-gray-900 dark:text-white">
-                                            حذف وظیفه
-                                        </h3>
-                                        <p className="mt-0.5 text-[11px] text-gray-400">
-                                            این عملیات قابل بازگشت نیست
-                                        </p>
-                                    </div>
+                                    <button onClick={closeConfirm} disabled={deleting} className="flex h-8 w-8 items-center justify-center rounded-xl bg-gray-100 text-gray-400 dark:bg-white/[0.05]">
+                                        <X size={15} />
+                                    </button>
                                 </div>
-                                <button
-                                    type="button"
-                                    onClick={handleCloseConfirm}
-                                    disabled={deleting}
-                                    className="flex h-8 w-8 items-center justify-center rounded-xl bg-gray-100 text-gray-400 transition-colors hover:text-gray-600 disabled:opacity-40 dark:bg-white/[0.05] dark:hover:text-gray-300"
-                                >
-                                    <X size={15} />
-                                </button>
-                            </div>
 
-                            <div className="flex-1 px-8 pb-2">
-                                <p className="text-[12.5px] font-semibold leading-6 text-gray-500 dark:text-gray-400">
-                                    تسک{" "}
-                                    <span className="font-extrabold text-gray-900 dark:text-white">
-                                        {task.title}
-                                    </span>{" "}
-                                    برای همیشه حذف خواهد شد.
-                                </p>
+                                <div className="px-8">
+                                    <p className="text-[12.5px] font-semibold leading-6 text-gray-500 dark:text-gray-400">
+                                        تسک <span className="font-extrabold text-gray-900 dark:text-white">{task.title}</span> برای همیشه حذف خواهد شد.
+                                    </p>
 
-                                <AnimatePresence>
                                     {deleteError && (
-                                        <motion.div
-                                            initial={{ opacity: 0, y: 6 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            exit={{ opacity: 0, y: 4 }}
-                                            className="mt-4 flex items-start gap-2.5 rounded-2xl bg-red-50 px-3.5 py-3 dark:bg-red-500/10"
-                                        >
-                                            <ClipboardX
-                                                size={14}
-                                                className="mt-0.5 shrink-0 text-red-500"
-                                            />
-                                            <p className="flex-1 text-[11.5px] font-semibold leading-5 text-red-500 dark:text-red-400">
-                                                {deleteError}
-                                            </p>
-                                        </motion.div>
+                                        <div className="mt-4 flex gap-2.5 rounded-2xl bg-red-50 px-3.5 py-3 dark:bg-red-500/10">
+                                            <ClipboardX size={14} className="shrink-0 text-red-500" />
+                                            <p className="text-[11.5px] font-semibold text-red-500">{deleteError}</p>
+                                        </div>
                                     )}
-                                </AnimatePresence>
-                            </div>
+                                </div>
 
-                            <div className="flex shrink-0 items-center gap-2 px-8 pb-8 pt-5">
-                                <button
-                                    type="button"
-                                    onClick={handleCloseConfirm}
-                                    disabled={deleting}
-                                    className="flex h-11 flex-1 items-center justify-center rounded-full bg-gray-100 text-[13px] font-bold text-gray-600 transition-colors hover:bg-gray-200 disabled:opacity-40 dark:bg-white/[0.05] dark:text-gray-300 dark:hover:bg-white/[0.08]"
-                                >
-                                    انصراف
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={handleDelete}
-                                    disabled={deleting}
-                                    className="flex h-11 flex-1 items-center justify-center gap-2 rounded-full bg-red-600 text-[13px] font-bold text-white transition-colors hover:bg-red-500 disabled:opacity-40"
-                                >
-                                    {deleting ? (
-                                        <Loader size={14} className="animate-spin" />
-                                    ) : (
-                                        <>
-                                            <Trash2 size={13} strokeWidth={2.5} />
-                                            حذف کن
-                                        </>
-                                    )}
-                                </button>
-                            </div>
+                                <div className="flex gap-2 px-8 pb-8 pt-6">
+                                    <button onClick={closeConfirm} disabled={deleting} className="h-11 flex-1 rounded-full bg-gray-100 text-[13px] font-bold text-gray-600 dark:bg-white/[0.05] dark:text-gray-300">
+                                        انصراف
+                                    </button>
+                                    <button onClick={handleDelete} disabled={deleting} className="flex h-11 flex-1 items-center justify-center gap-2 rounded-full bg-red-600 text-[13px] font-bold text-white">
+                                        {deleting ? <Loader size={14} className="animate-spin" /> : <><Trash2 size={13} />حذف کن</>}
+                                    </button>
+                                </div>
+                            </motion.div>
                         </motion.div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
+                    )}
+                </AnimatePresence>,
+                document.body
+            )}
 
             <TimeRangeModal
                 open={timeModalOpen}
@@ -755,6 +482,7 @@ export default function TaskCard({
                 onClose={() => setTimeModalOpen(false)}
                 onSubmit={handleTimeSubmit}
             />
+
             <AdminTaskNotesModal
                 isOpen={notesModalOpen}
                 onClose={() => setNotesModalOpen(false)}
