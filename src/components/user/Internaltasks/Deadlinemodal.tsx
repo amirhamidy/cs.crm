@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
     CalendarDays,
     Check,
+    ChevronDown,
     ChevronLeft,
     ChevronRight,
     Clock,
@@ -40,6 +41,85 @@ interface DeadlineModalProps {
     ) => void;
 }
 
+interface NiceSelectOption {
+    value: number;
+    label: string;
+}
+
+interface NiceSelectProps {
+    value: number;
+    onChange: (value: number) => void;
+    options: NiceSelectOption[];
+    label: string;
+}
+
+function NiceSelect({ value, onChange, options, label }: NiceSelectProps) {
+    const [isOpen, setIsOpen] = useState(false);
+    const ref = useRef<HTMLDivElement>(null);
+    const selectedOption = options.find((o) => o.value === value) || options[0];
+
+    useEffect(() => {
+        function handleClick(e: MouseEvent) {
+            if (ref.current && !ref.current.contains(e.target as Node)) {
+                setIsOpen(false);
+            }
+        }
+        document.addEventListener("mousedown", handleClick);
+        return () => document.removeEventListener("mousedown", handleClick);
+    }, []);
+
+    return (
+        <div className="relative flex-1" ref={ref}>
+            <button
+                type="button"
+                onClick={() => setIsOpen(!isOpen)}
+                className="peer flex w-full items-center justify-between rounded-2xl border border-gray-200 bg-white px-5 py-3 text-sm text-black outline-none transition-all duration-200 focus:border-gray-400 dark:border-white/[0.08] dark:bg-white/[0.04] dark:text-white dark:focus:border-blue-500"
+            >
+                <span className={selectedOption ? "text-black dark:text-white" : "text-gray-400"}>
+                    {selectedOption ? selectedOption.label : label}
+                </span>
+                <ChevronDown size={16} className={`text-gray-400 transition-transform ${isOpen ? "rotate-180" : ""}`} />
+            </button>
+            <label
+                className={`pointer-events-none absolute right-5 rounded bg-white px-1.5 text-sm text-gray-400 transition-all duration-200 dark:bg-[#0f172a] ${isOpen || selectedOption ? "top-0 text-xs text-gray-500 dark:text-gray-400" : "top-1/2 -translate-y-1/2"
+                    }`}
+            >
+                {label}
+            </label>
+            <AnimatePresence>
+                {isOpen && (
+                    <motion.div
+                        initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                        transition={{ duration: 0.15 }}
+                        className="absolute z-50 mt-2 max-h-60 w-full overflow-y-auto rounded-2xl border border-gray-100 bg-white p-1.5 shadow-[0_8px_30px_rgb(0,0,0,0.12)] dark:border-white/[0.06] dark:bg-[#0f172a]"
+                        style={{ scrollbarWidth: "thin" }}
+                    >
+                        {options.map((option) => (
+                            <button
+                                key={option.value}
+                                type="button"
+                                onClick={() => {
+                                    onChange(option.value);
+                                    setIsOpen(false);
+                                }}
+                                className={`flex w-full items-center justify-between rounded-xl px-4 py-2.5 text-[13px] font-bold transition-colors ${option.value === value
+                                        ? "bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400"
+                                        : "text-gray-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-white/[0.04]"
+                                    }`}
+                            >
+                                {option.label}
+                                {option.value === value && <Check size={14} />}
+                            </button>
+                        ))}
+                    </motion.div>
+                )}
+            </AnimatePresence>
+        </div>
+    );
+}
+
 function getSafeNumber(value: number, fallback: number) {
     return Number.isFinite(value) ? value : fallback;
 }
@@ -47,16 +127,13 @@ function getSafeNumber(value: number, fallback: number) {
 function getMonthDays(year: number, month: number) {
     if (month <= 6) return 31;
     if (month <= 11) return 30;
-
     const [gy, gm, gd] = toGregorian(year, 12, 30);
     const date = new Date(gy, gm - 1, gd);
-
     const [jalaliYear, jalaliMonth, jalaliDay] = toJalali(
         date.getFullYear(),
         date.getMonth() + 1,
         date.getDate()
     );
-
     return jalaliYear === year && jalaliMonth === 12 && jalaliDay === 30
         ? 30
         : 29;
@@ -66,13 +143,11 @@ function parseIsoToField(value?: string | null): DateField {
     const fallback = new Date();
     const date = value ? new Date(value) : fallback;
     const safeDate = Number.isNaN(date.getTime()) ? fallback : date;
-
     const [year, month, day] = toJalali(
         safeDate.getFullYear(),
         safeDate.getMonth() + 1,
         safeDate.getDate()
     );
-
     return {
         year: getSafeNumber(year, 1404),
         month: getSafeNumber(month, 1),
@@ -102,11 +177,10 @@ function getTimestamp(field: DateField) {
 }
 
 function formatField(field: DateField) {
-    return `${toPersianDigits(field.day)} ${
-        JALALI_MONTHS[field.month - 1]
-    } ${toPersianDigits(field.year)}، ساعت ${toPersianDigits(
-        pad2(field.hour)
-    )}:${toPersianDigits(pad2(field.minute))}`;
+    return `${toPersianDigits(field.day)} ${JALALI_MONTHS[field.month - 1]
+        } ${toPersianDigits(field.year)}، ساعت ${toPersianDigits(
+            pad2(field.hour)
+        )}:${toPersianDigits(pad2(field.minute))}`;
 }
 
 export default function DeadlineModal({
@@ -133,10 +207,8 @@ export default function DeadlineModal({
 
     useEffect(() => {
         if (!isOpen) return;
-
         const nextStartedAt = parseIsoToField(task.started_at);
         const nextDeadline = parseIsoToField(task.deadline);
-
         setStartedAt(nextStartedAt);
         setDeadline(nextDeadline);
         setActiveTab("started_at");
@@ -146,23 +218,19 @@ export default function DeadlineModal({
     }, [isOpen, task.id, task.started_at, task.deadline]);
 
     const selectedField = activeTab === "started_at" ? startedAt : deadline;
-
     const monthDays = useMemo(
         () => getMonthDays(calendarYear, calendarMonth),
         [calendarYear, calendarMonth]
     );
-
     const firstDayGregorian = useMemo(
         () => toGregorian(calendarYear, calendarMonth, 1),
         [calendarYear, calendarMonth]
     );
-
     const firstDayWeekIndex = useMemo(() => {
         const [gy, gm, gd] = firstDayGregorian;
         const date = new Date(gy, gm - 1, gd);
         return (date.getDay() + 1) % 7;
     }, [firstDayGregorian]);
-
     const calendarCells = useMemo(
         () => [
             ...Array.from({ length: firstDayWeekIndex }, () => null),
@@ -173,7 +241,6 @@ export default function DeadlineModal({
 
     function updateSelectedField(partial: Partial<DateField>) {
         setError(null);
-
         if (activeTab === "started_at") {
             setStartedAt((previous) => ({
                 ...previous,
@@ -181,7 +248,6 @@ export default function DeadlineModal({
             }));
             return;
         }
-
         setDeadline((previous) => ({
             ...previous,
             ...partial,
@@ -202,7 +268,6 @@ export default function DeadlineModal({
             setCalendarMonth(12);
             return;
         }
-
         setCalendarMonth((previous) => previous - 1);
     }
 
@@ -212,14 +277,12 @@ export default function DeadlineModal({
             setCalendarMonth(1);
             return;
         }
-
         setCalendarMonth((previous) => previous + 1);
     }
 
     function changeTab(tab: ActiveTab) {
         setActiveTab(tab);
         setError(null);
-
         const field = tab === "started_at" ? startedAt : deadline;
         setCalendarYear(field.year);
         setCalendarMonth(field.month);
@@ -230,54 +293,56 @@ export default function DeadlineModal({
             setError("مهلت انجام باید بعد از زمان شروع باشد.");
             return;
         }
-
         setIsSubmitting(true);
         setError(null);
-
         try {
             const startedIso = fieldToIso(startedAt);
             const deadlineIso = fieldToIso(deadline);
-
             const { data } = await patchInternalTaskDeadline(task.id, {
                 started_at: startedIso,
                 deadline: deadlineIso,
             });
-
             onUpdated({
                 started_at: data.started_at ?? startedIso,
                 deadline: data.deadline ?? deadlineIso,
             });
-
             onClose();
         } catch (requestError: unknown) {
             const errorData =
                 typeof requestError === "object" &&
-                requestError !== null &&
-                "response" in requestError
+                    requestError !== null &&
+                    "response" in requestError
                     ? (
-                          requestError as {
-                              response?: {
-                                  data?: {
-                                      detail?: string;
-                                      started_at?: string[];
-                                      deadline?: string[];
-                                  };
-                              };
-                          }
-                      ).response?.data
+                        requestError as {
+                            response?: {
+                                data?: {
+                                    detail?: string;
+                                    started_at?: string[];
+                                    deadline?: string[];
+                                };
+                            };
+                        }
+                    ).response?.data
                     : undefined;
-
             const errorMsg =
                 errorData?.detail ||
                 errorData?.started_at?.[0] ||
                 errorData?.deadline?.[0] ||
                 "خطا در ثبت بازه زمانی.";
-
             setError(errorMsg);
         } finally {
             setIsSubmitting(false);
         }
     }
+
+    const hoursOptions = Array.from({ length: 24 }, (_, i) => ({
+        value: i,
+        label: toPersianDigits(pad2(i)),
+    }));
+    const minutesOptions = Array.from({ length: 60 }, (_, i) => ({
+        value: i,
+        label: toPersianDigits(pad2(i)),
+    }));
 
     return (
         <AnimatePresence>
@@ -309,18 +374,15 @@ export default function DeadlineModal({
                                 <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-indigo-500/10 text-indigo-500">
                                     <CalendarDays size={18} />
                                 </div>
-
                                 <div>
                                     <h2 className="text-[15px] font-extrabold text-slate-900 dark:text-white">
                                         تعیین بازه زمانی
                                     </h2>
-
                                     <p className="mt-1 line-clamp-1 max-w-[235px] text-[11px] font-medium text-slate-400">
                                         {task.title}
                                     </p>
                                 </div>
                             </div>
-
                             <button
                                 type="button"
                                 onClick={onClose}
@@ -330,36 +392,31 @@ export default function DeadlineModal({
                                 <X size={17} />
                             </button>
                         </div>
-
                         <div className="px-6">
                             <div className="grid grid-cols-2 rounded-2xl bg-slate-100 p-1 dark:bg-white/[0.05]">
                                 <button
                                     type="button"
                                     onClick={() => changeTab("started_at")}
-                                    className={`flex h-10 items-center justify-center gap-2 rounded-xl text-[12px] font-bold transition-all ${
-                                        activeTab === "started_at"
+                                    className={`flex h-10 items-center justify-center gap-2 rounded-xl text-[12px] font-bold transition-all ${activeTab === "started_at"
                                             ? "bg-white text-indigo-600 shadow-sm dark:bg-[#172033] dark:text-indigo-300"
                                             : "text-slate-400"
-                                    }`}
+                                        }`}
                                 >
                                     <Clock size={14} />
                                     زمان شروع
                                 </button>
-
                                 <button
                                     type="button"
                                     onClick={() => changeTab("deadline")}
-                                    className={`flex h-10 items-center justify-center gap-2 rounded-xl text-[12px] font-bold transition-all ${
-                                        activeTab === "deadline"
+                                    className={`flex h-10 items-center justify-center gap-2 rounded-xl text-[12px] font-bold transition-all ${activeTab === "deadline"
                                             ? "bg-white text-indigo-600 shadow-sm dark:bg-[#172033] dark:text-indigo-300"
                                             : "text-slate-400"
-                                    }`}
+                                        }`}
                                 >
                                     <CalendarDays size={14} />
                                     مهلت انجام
                                 </button>
                             </div>
-
                             <div className="mt-4 rounded-2xl border border-slate-100 p-3 dark:border-white/[0.06]">
                                 <div className="mb-4 flex items-center justify-between">
                                     <button
@@ -369,12 +426,10 @@ export default function DeadlineModal({
                                     >
                                         <ChevronRight size={16} />
                                     </button>
-
                                     <span className="text-[13px] font-extrabold text-slate-800 dark:text-slate-100">
                                         {JALALI_MONTHS[calendarMonth - 1]}{" "}
                                         {toPersianDigits(calendarYear)}
                                     </span>
-
                                     <button
                                         type="button"
                                         onClick={goToPreviousMonth}
@@ -383,17 +438,8 @@ export default function DeadlineModal({
                                         <ChevronLeft size={16} />
                                     </button>
                                 </div>
-
                                 <div className="grid grid-cols-7 gap-1">
-                                    {[
-                                        "ش",
-                                        "ی",
-                                        "د",
-                                        "س",
-                                        "چ",
-                                        "پ",
-                                        "ج",
-                                    ].map((day, index) => (
+                                    {["ش", "ی", "د", "س", "چ", "پ", "ج"].map((day, index) => (
                                         <span
                                             key={`weekday-${index}`}
                                             className="flex h-8 items-center justify-center text-[10px] font-bold text-slate-400"
@@ -401,16 +447,12 @@ export default function DeadlineModal({
                                             {day}
                                         </span>
                                     ))}
-
                                     {calendarCells.map((day, index) => {
                                         const isSelected =
                                             day !== null &&
-                                            selectedField.year ===
-                                                calendarYear &&
-                                            selectedField.month ===
-                                                calendarMonth &&
+                                            selectedField.year === calendarYear &&
+                                            selectedField.month === calendarMonth &&
                                             selectedField.day === day;
-
                                         return (
                                             <div
                                                 key={`calendar-${calendarYear}-${calendarMonth}-${day ?? "empty"}-${index}`}
@@ -419,14 +461,11 @@ export default function DeadlineModal({
                                                 {day !== null && (
                                                     <button
                                                         type="button"
-                                                        onClick={() =>
-                                                            selectDay(day)
-                                                        }
-                                                        className={`flex h-8 w-8 items-center justify-center rounded-xl text-[11px] font-bold transition-all ${
-                                                            isSelected
+                                                        onClick={() => selectDay(day)}
+                                                        className={`flex h-8 w-8 items-center justify-center rounded-xl text-[11px] font-bold transition-all ${isSelected
                                                                 ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/25"
                                                                 : "text-slate-600 hover:bg-indigo-50 hover:text-indigo-600 dark:text-slate-300 dark:hover:bg-indigo-500/10 dark:hover:text-indigo-300"
-                                                        }`}
+                                                            }`}
                                                     >
                                                         {toPersianDigits(day)}
                                                     </button>
@@ -436,71 +475,20 @@ export default function DeadlineModal({
                                     })}
                                 </div>
                             </div>
-
                             <div className="mt-4 grid grid-cols-2 gap-3">
-                                <label className="rounded-2xl border border-slate-100 px-3 py-2.5 dark:border-white/[0.06]">
-                                    <span className="mb-1.5 block text-[10px] font-bold text-slate-400">
-                                        ساعت
-                                    </span>
-
-                                    <select
-                                        value={selectedField.hour}
-                                        onChange={(event) =>
-                                            updateSelectedField({
-                                                hour: Number(
-                                                    event.target.value
-                                                ),
-                                            })
-                                        }
-                                        className="w-full bg-transparent text-center text-[13px] font-extrabold text-slate-700 outline-none dark:text-slate-200"
-                                    >
-                                        {Array.from(
-                                            { length: 24 },
-                                            (_, hour) => (
-                                                <option
-                                                    key={`hour-${hour}`}
-                                                    value={hour}
-                                                >
-                                                    {toPersianDigits(pad2(hour))}
-                                                </option>
-                                            )
-                                        )}
-                                    </select>
-                                </label>
-
-                                <label className="rounded-2xl border border-slate-100 px-3 py-2.5 dark:border-white/[0.06]">
-                                    <span className="mb-1.5 block text-[10px] font-bold text-slate-400">
-                                        دقیقه
-                                    </span>
-
-                                    <select
-                                        value={selectedField.minute}
-                                        onChange={(event) =>
-                                            updateSelectedField({
-                                                minute: Number(
-                                                    event.target.value
-                                                ),
-                                            })
-                                        }
-                                        className="w-full bg-transparent text-center text-[13px] font-extrabold text-slate-700 outline-none dark:text-slate-200"
-                                    >
-                                        {Array.from(
-                                            { length: 60 },
-                                            (_, minute) => (
-                                                <option
-                                                    key={`minute-${minute}`}
-                                                    value={minute}
-                                                >
-                                                    {toPersianDigits(
-                                                        pad2(minute)
-                                                    )}
-                                                </option>
-                                            )
-                                        )}
-                                    </select>
-                                </label>
+                                <NiceSelect
+                                    label="ساعت"
+                                    value={selectedField.hour}
+                                    onChange={(hour) => updateSelectedField({ hour })}
+                                    options={hoursOptions}
+                                />
+                                <NiceSelect
+                                    label="دقیقه"
+                                    value={selectedField.minute}
+                                    onChange={(minute) => updateSelectedField({ minute })}
+                                    options={minutesOptions}
+                                />
                             </div>
-
                             <div className="mt-4 rounded-2xl bg-indigo-50 px-3.5 py-3 dark:bg-indigo-500/[0.08]">
                                 <div className="flex items-center gap-2 text-[10px] font-bold text-indigo-500 dark:text-indigo-300">
                                     <Clock size={13} />
@@ -508,19 +496,16 @@ export default function DeadlineModal({
                                         ? "زمان شروع انتخاب‌شده"
                                         : "مهلت انجام انتخاب‌شده"}
                                 </div>
-
                                 <p className="mt-1.5 text-[11px] font-bold leading-6 text-indigo-700 dark:text-indigo-200">
                                     {formatField(selectedField)}
                                 </p>
                             </div>
-
                             {error && (
                                 <div className="mt-3 rounded-2xl bg-red-50 px-3.5 py-3 text-[11px] font-bold text-red-500 dark:bg-red-500/10 dark:text-red-400">
                                     {error}
                                 </div>
                             )}
                         </div>
-
                         <div className="mt-5 flex items-center gap-3 px-6 pb-6">
                             <button
                                 type="button"
@@ -530,7 +515,6 @@ export default function DeadlineModal({
                             >
                                 انصراف
                             </button>
-
                             <button
                                 type="button"
                                 onClick={handleSubmit}
@@ -538,10 +522,7 @@ export default function DeadlineModal({
                                 className="flex h-11 flex-1 items-center justify-center gap-2 rounded-full bg-indigo-600 text-[12px] font-bold text-white transition-colors hover:bg-indigo-500 disabled:opacity-50"
                             >
                                 {isSubmitting ? (
-                                    <Loader2
-                                        size={15}
-                                        className="animate-spin"
-                                    />
+                                    <Loader2 size={15} className="animate-spin" />
                                 ) : (
                                     <>
                                         <Check size={15} strokeWidth={2.7} />

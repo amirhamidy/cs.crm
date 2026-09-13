@@ -80,17 +80,42 @@ export function uploadInternalTaskAttachments(
   note: string,
 ) {
   const formData = new FormData();
-
   files.forEach((file) => {
     formData.append("files", file);
   });
-
   if (note.trim()) {
     formData.append("note", note.trim());
   }
-
   return axiosInstance.post<InternalTaskAttachment[]>(
     `/tasks/api/v1/internal_task/${id}/attachments/`,
+    formData,
+  );
+}
+
+export function completeInternalTask(id: number, files: File[], note: string) {
+  const formData = new FormData();
+  files.forEach((file) => {
+    formData.append("files", file);
+  });
+  if (note.trim()) {
+    formData.append("note", note.trim());
+  }
+  return axiosInstance.post<InternalTask>(
+    `/tasks/api/v1/internal_task/${id}/complete/`,
+    formData,
+  );
+}
+
+export function cancelInternalTask(id: number, files: File[], note: string) {
+  const formData = new FormData();
+  files.forEach((file) => {
+    formData.append("files", file);
+  });
+  if (note.trim()) {
+    formData.append("note", note.trim());
+  }
+  return axiosInstance.post<InternalTask>(
+    `/tasks/api/v1/internal_task/${id}/cancel/`,
     formData,
   );
 }

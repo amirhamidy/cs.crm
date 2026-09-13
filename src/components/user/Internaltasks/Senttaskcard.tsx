@@ -69,17 +69,13 @@ function getDeadlineUrgency(
     deadline: string | null | undefined,
 ): DeadlineUrgency {
     if (!deadline) return null;
-
     const diff =
         new Date(deadline).getTime() - Date.now();
-
     const hours =
         diff / (1000 * 60 * 60);
-
     if (diff < 0) return "overdue";
     if (hours <= 6) return "critical";
     if (hours <= 24) return "soon";
-
     return "normal";
 }
 
@@ -116,19 +112,15 @@ function formatJalaliDate(
     iso?: string | null,
 ) {
     if (!iso) return null;
-
     const d = new Date(iso);
-
     if (Number.isNaN(d.getTime())) {
         return null;
     }
-
     const [jy, jm, jd] = toJalali(
         d.getFullYear(),
         d.getMonth() + 1,
         d.getDate(),
     );
-
     return `${toPersianDigits(jd)} ${JALALI_MONTHS[jm - 1]
         } ${toPersianDigits(jy)} ساعت ${toPersianDigits(
             pad2(d.getHours()),
@@ -154,10 +146,8 @@ function EmployeeChip({
     if (!employee.full_name?.trim()) {
         return null;
     }
-
     const gradient =
         getGradient(employee.id);
-
     return (
         <div
             className="flex items-center gap-1.5 rounded-full py-0.5 pl-2 pr-0.5"
@@ -178,7 +168,6 @@ function EmployeeChip({
             >
                 <UserRound size={11} />
             </span>
-
             <span
                 className="text-[10.5px] font-bold"
                 style={{
@@ -218,7 +207,6 @@ export default function SentTaskCard({
     const { resolvedTheme } = useTheme();
     const isDark =
         resolvedTheme === "dark";
-
     const [hovered, setHovered] =
         useState(false);
     const [timeModalOpen, setTimeModalOpen] =
@@ -289,19 +277,15 @@ export default function SentTaskCard({
 
     useEffect(() => {
         let cancelled = false;
-
         setLoadingDeadline(true);
-
         api.get(
-            `/tasks/api/v1/internal-tasks/${task.id}/deadline/`,
+            `/tasks/api/v1/internal_task/${task.id}/deadline/`,
         )
             .then((res) => {
                 if (cancelled) return;
-
                 const data =
                     res.data?.data ??
                     res.data;
-
                 setStepDeadline({
                     started_at:
                         data?.started_at ??
@@ -330,7 +314,6 @@ export default function SentTaskCard({
                     setLoadingDeadline(false);
                 }
             });
-
         return () => {
             cancelled = true;
         };
@@ -347,7 +330,6 @@ export default function SentTaskCard({
         ) {
             return;
         }
-
         const interval = setInterval(
             () =>
                 forceTick(
@@ -355,7 +337,6 @@ export default function SentTaskCard({
                 ),
             60000,
         );
-
         return () =>
             clearInterval(interval);
     }, [
@@ -375,10 +356,8 @@ export default function SentTaskCard({
 
     async function handleDelete() {
         if (!onDelete) return;
-
         setDeleting(true);
         setDeleteError(null);
-
         try {
             await onDelete(task.id);
             setShowConfirm(false);
@@ -397,36 +376,30 @@ export default function SentTaskCard({
     ) {
         setSavingTime(true);
         setTimeError(null);
-
         try {
             const res = await api.patch(
-                `/tasks/api/v1/internal-tasks/${task.id}/deadline/patch/`,
+                `/tasks/api/v1/internal_task/${task.id}/deadline/patch/`,
                 {
                     started_at:
                         startedAt,
                     deadline,
                 },
             );
-
             const data =
                 res.data?.data ??
                 res.data;
-
             const updatedStartedAt =
                 data?.started_at ??
                 startedAt;
-
             const updatedDeadline =
                 data?.deadline ??
                 deadline;
-
             setStepDeadline({
                 started_at:
                     updatedStartedAt,
                 deadline:
                     updatedDeadline,
             });
-
             onUpdated?.({
                 ...task,
                 started_at:
@@ -434,7 +407,6 @@ export default function SentTaskCard({
                 deadline:
                     updatedDeadline,
             });
-
             setTimeModalOpen(false);
         } catch {
             setTimeError(
@@ -447,7 +419,6 @@ export default function SentTaskCard({
 
     function handleCloseConfirm() {
         if (deleting) return;
-
         setShowConfirm(false);
         setDeleteError(null);
     }
@@ -543,7 +514,6 @@ export default function SentTaskCard({
                             }}
                         />
                     )}
-
                 <svg
                     className="pointer-events-none absolute inset-0 h-full w-full"
                     style={{
@@ -569,7 +539,6 @@ export default function SentTaskCard({
                             />
                         </linearGradient>
                     </defs>
-
                     <motion.rect
                         x="1"
                         y="1"
@@ -602,7 +571,6 @@ export default function SentTaskCard({
                         }}
                     />
                 </svg>
-
                 <div className="flex items-start justify-between gap-3">
                     <div className="flex items-center gap-2">
                         <span
@@ -610,17 +578,15 @@ export default function SentTaskCard({
                         >
                             <span
                                 className={`h-1.5 w-1.5 rounded-full bg-current ${status ===
-                                        "in_progress"
-                                        ? "animate-pulse"
-                                        : ""
+                                    "in_progress"
+                                    ? "animate-pulse"
+                                    : ""
                                     }`}
                             />
-
                             {
                                 statusConfig.label
                             }
                         </span>
-
                         {accent && (
                             <span
                                 className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold"
@@ -654,7 +620,6 @@ export default function SentTaskCard({
                                         ease: "easeInOut",
                                     }}
                                 />
-
                                 {
                                     URGENCY_LABEL[
                                     urgency as Exclude<
@@ -667,7 +632,6 @@ export default function SentTaskCard({
                             </span>
                         )}
                     </div>
-
                     <div className="flex items-center gap-1.5">
                         <button
                             type="button"
@@ -692,7 +656,6 @@ export default function SentTaskCard({
                                 size={11}
                             />
                         </button>
-
                         <button
                             type="button"
                             onClick={() =>
@@ -714,7 +677,6 @@ export default function SentTaskCard({
                         >
                             <Clock size={11} />
                         </button>
-
                         {onDelete && (
                             <button
                                 type="button"
@@ -750,7 +712,6 @@ export default function SentTaskCard({
                         )}
                     </div>
                 </div>
-
                 <div className="flex flex-col gap-1">
                     <h3
                         className="text-[13.5px] font-extrabold leading-tight"
@@ -762,7 +723,6 @@ export default function SentTaskCard({
                     >
                         {task.title}
                     </h3>
-
                     {task.description ? (
                         <p
                             className="line-clamp-2 text-[12px] leading-6"
@@ -778,7 +738,6 @@ export default function SentTaskCard({
                         </p>
                     ) : null}
                 </div>
-
                 <div
                     className="mt-auto flex flex-wrap items-center gap-2 border-t pt-2.5"
                     style={{
@@ -830,7 +789,6 @@ export default function SentTaskCard({
                                     size={11}
                                 />
                             </span>
-
                             <span
                                 className="text-[10.5px] font-bold"
                                 style={{
@@ -844,7 +802,6 @@ export default function SentTaskCard({
                         </div>
                     )}
                 </div>
-
                 <div
                     className="flex flex-col gap-1.5 rounded-[1.25rem] px-3 py-2.5"
                     style={{
@@ -900,7 +857,6 @@ export default function SentTaskCard({
                                     </span>
                                 </div>
                             )}
-
                             {deadlineLabel && (
                                 <div
                                     className="flex items-center gap-2 text-[11px] font-bold"
@@ -939,7 +895,6 @@ export default function SentTaskCard({
                     )}
                 </div>
             </motion.div>
-
             <AnimatePresence>
                 {showConfirm && (
                     <motion.div
@@ -994,18 +949,15 @@ export default function SentTaskCard({
                                             className="text-red-500"
                                         />
                                     </div>
-
                                     <div>
                                         <h3 className="text-[14px] font-extrabold text-gray-900 dark:text-white">
                                             حذف تیکت
                                         </h3>
-
                                         <p className="mt-0.5 text-[11px] text-gray-400">
                                             این عملیات قابل بازگشت نیست
                                         </p>
                                     </div>
                                 </div>
-
                                 <button
                                     type="button"
                                     onClick={
@@ -1021,7 +973,6 @@ export default function SentTaskCard({
                                     />
                                 </button>
                             </div>
-
                             <div className="flex-1 px-8 pb-2">
                                 <p className="text-[12.5px] font-semibold leading-6 text-gray-500 dark:text-gray-400">
                                     تیکت{" "}
@@ -1032,7 +983,6 @@ export default function SentTaskCard({
                                     </span>{" "}
                                     برای همیشه حذف خواهد شد.
                                 </p>
-
                                 <AnimatePresence>
                                     {deleteError && (
                                         <motion.div
@@ -1054,7 +1004,6 @@ export default function SentTaskCard({
                                                 size={14}
                                                 className="mt-0.5 shrink-0 text-red-500"
                                             />
-
                                             <p className="flex-1 text-[11.5px] font-semibold leading-5 text-red-500 dark:text-red-400">
                                                 {
                                                     deleteError
@@ -1064,7 +1013,6 @@ export default function SentTaskCard({
                                     )}
                                 </AnimatePresence>
                             </div>
-
                             <div className="flex shrink-0 items-center gap-2 px-8 pb-8 pt-5">
                                 <button
                                     type="button"
@@ -1078,7 +1026,6 @@ export default function SentTaskCard({
                                 >
                                     انصراف
                                 </button>
-
                                 <button
                                     type="button"
                                     onClick={
@@ -1111,7 +1058,6 @@ export default function SentTaskCard({
                     </motion.div>
                 )}
             </AnimatePresence>
-
             <InternalTimeRangeModal
                 open={
                     timeModalOpen
@@ -1135,7 +1081,6 @@ export default function SentTaskCard({
                     handleTimeSubmit
                 }
             />
-
             <InternalTaskChatModal
                 open={chatOpen}
                 task={task}

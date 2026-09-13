@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { X, ChevronLeft, ChevronRight, Clock, Check, Loader, CalendarDays } from "lucide-react";
+import { X, ChevronLeft, ChevronRight, Clock, Check, Loader, CalendarDays, ChevronDown } from "lucide-react";
 import {
     toJalali,
     toGregorian,
@@ -33,6 +33,85 @@ interface InternalTimeRangeModalProps {
     error?: string | null;
 }
 
+interface NiceSelectOption {
+    value: number;
+    label: string;
+}
+
+interface NiceSelectProps {
+    value: number;
+    onChange: (value: number) => void;
+    options: NiceSelectOption[];
+    label: string;
+}
+
+function NiceSelect({ value, onChange, options, label }: NiceSelectProps) {
+    const [isOpen, setIsOpen] = useState(false);
+    const ref = useRef<HTMLDivElement>(null);
+    const selectedOption = options.find((o) => o.value === value) || options[0];
+
+    useEffect(() => {
+        function handleClick(e: MouseEvent) {
+            if (ref.current && !ref.current.contains(e.target as Node)) {
+                setIsOpen(false);
+            }
+        }
+        document.addEventListener("mousedown", handleClick);
+        return () => document.removeEventListener("mousedown", handleClick);
+    }, []);
+
+    return (
+        <div className="relative flex-1" ref={ref}>
+            <button
+                type="button"
+                onClick={() => setIsOpen(!isOpen)}
+                className="peer flex w-full items-center justify-between rounded-2xl border border-gray-200 bg-white px-5 py-3 text-sm text-black outline-none transition-all duration-200 focus:border-gray-400 dark:border-white/[0.08] dark:bg-white/[0.04] dark:text-white dark:focus:border-blue-500"
+            >
+                <span className={selectedOption ? "text-black dark:text-white" : "text-gray-400"}>
+                    {selectedOption ? selectedOption.label : label}
+                </span>
+                <ChevronDown size={16} className={`text-gray-400 transition-transform ${isOpen ? "rotate-180" : ""}`} />
+            </button>
+            <label
+                className={`pointer-events-none absolute right-5 rounded bg-white px-1.5 text-sm text-gray-400 transition-all duration-200 dark:bg-[#0f172a] ${isOpen || selectedOption ? "top-0 text-xs text-gray-500 dark:text-gray-400" : "top-1/2 -translate-y-1/2"
+                    }`}
+            >
+                {label}
+            </label>
+            <AnimatePresence>
+                {isOpen && (
+                    <motion.div
+                        initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                        transition={{ duration: 0.15 }}
+                        className="absolute z-50 mt-2 max-h-60 w-full overflow-y-auto rounded-2xl border border-gray-100 bg-white p-1.5 shadow-[0_8px_30px_rgb(0,0,0,0.12)] dark:border-white/[0.06] dark:bg-[#0f172a]"
+                        style={{ scrollbarWidth: "thin" }}
+                    >
+                        {options.map((option) => (
+                            <button
+                                key={option.value}
+                                type="button"
+                                onClick={() => {
+                                    onChange(option.value);
+                                    setIsOpen(false);
+                                }}
+                                className={`flex w-full items-center justify-between rounded-xl px-4 py-2.5 text-[13px] font-bold transition-colors ${option.value === value
+                                        ? "bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400"
+                                        : "text-gray-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-white/[0.04]"
+                                    }`}
+                            >
+                                {option.label}
+                                {option.value === value && <Check size={14} />}
+                            </button>
+                        ))}
+                    </motion.div>
+                )}
+            </AnimatePresence>
+        </div>
+    );
+}
+
 function parseIsoToField(iso?: string | null): FieldState {
     const d = iso ? new Date(iso) : new Date();
     const validDate = Number.isNaN(d.getTime()) ? new Date() : d;
@@ -55,8 +134,11 @@ function fieldToIso(f: FieldState) {
     return new Date(gy, gm - 1, gd, f.hour, f.minute, 0).toISOString();
 }
 
-const HOURS = Array.from({ length: 24 }, (_, i) => i);
-const MINUTES = Array.from({ length: 12 }, (_, i) => i * 5);
+const HOURS = Array.from({ length: 24 }, (_, i) => ({ value: i, label: toPersianDigits(pad2(i)) }));
+const MINUTES = Array.from({ length: 12 }, (_, i) => {
+    const m = i * 5;
+    return { value: m, label: toPersianDigits(pad2(m)) };
+});
 
 export default function InternalTimeRangeModal({
     open,
@@ -95,6 +177,7 @@ export default function InternalTimeRangeModal({
 
     const weekdayOffset = jalaliWeekday(viewJy, viewJm, 1);
     const daysInMonth = jalaliMonthLength(viewJy, viewJm);
+
     const cells: (number | null)[] = [
         ...Array(weekdayOffset).fill(null),
         ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
@@ -170,7 +253,6 @@ export default function InternalTimeRangeModal({
                             <X size={15} />
                         </button>
                     </div>
-
                     <div className="flex-1 overflow-y-auto px-8 pb-2">
                         <div className="flex flex-col gap-4">
                             <div className="grid grid-cols-2 gap-2">
@@ -183,8 +265,8 @@ export default function InternalTimeRangeModal({
                                             type="button"
                                             onClick={() => setActiveField(field)}
                                             className={`rounded-2xl border px-3 py-2.5 text-right transition-all duration-200 ${active
-                                                ? "border-blue-500 bg-blue-50/50 dark:border-blue-500/50 dark:bg-blue-500/[0.06]"
-                                                : "border-gray-100 bg-gray-50 hover:border-gray-200 dark:border-white/[0.06] dark:bg-white/[0.03] dark:hover:border-white/[0.12]"
+                                                    ? "border-blue-500 bg-blue-50/50 dark:border-blue-500/50 dark:bg-blue-500/[0.06]"
+                                                    : "border-gray-100 bg-gray-50 hover:border-gray-200 dark:border-white/[0.06] dark:bg-white/[0.03] dark:hover:border-white/[0.12]"
                                                 }`}
                                         >
                                             <div
@@ -195,8 +277,8 @@ export default function InternalTimeRangeModal({
                                             </div>
                                             <div
                                                 className={`text-[12.5px] font-bold ${active
-                                                    ? "text-blue-600 dark:text-blue-400"
-                                                    : "text-gray-900 dark:text-white"
+                                                        ? "text-blue-600 dark:text-blue-400"
+                                                        : "text-gray-900 dark:text-white"
                                                     }`}
                                             >
                                                 {toPersianDigits(f.jd)} {JALALI_MONTHS[f.jm - 1]} —{" "}
@@ -206,7 +288,6 @@ export default function InternalTimeRangeModal({
                                     );
                                 })}
                             </div>
-
                             <div className="rounded-[1.5rem] border border-gray-100 bg-gray-50/60 p-4 dark:border-white/[0.06] dark:bg-white/[0.03]">
                                 <div className="mb-4 flex items-center justify-between">
                                     <button
@@ -229,7 +310,6 @@ export default function InternalTimeRangeModal({
                                         <ChevronLeft size={15} />
                                     </button>
                                 </div>
-
                                 <div className="mb-2 grid grid-cols-7 gap-1">
                                     {JALALI_WEEKDAYS.map((w) => (
                                         <div
@@ -240,7 +320,6 @@ export default function InternalTimeRangeModal({
                                         </div>
                                     ))}
                                 </div>
-
                                 <div className="grid grid-cols-7 gap-1">
                                     {cells.map((day, idx) => {
                                         const isSelected =
@@ -265,12 +344,12 @@ export default function InternalTimeRangeModal({
                                                     }))
                                                 }
                                                 className={`aspect-square rounded-xl text-[12.5px] font-bold transition-colors ${day === null
-                                                    ? "invisible"
-                                                    : isSelected
-                                                        ? "bg-blue-600 text-white"
-                                                        : isToday
-                                                            ? "border border-blue-400 bg-blue-50 text-blue-600 dark:border-blue-500/40 dark:bg-blue-500/10 dark:text-blue-300"
-                                                            : "text-gray-500 hover:bg-gray-100 dark:text-white/60 dark:hover:bg-white/[0.06] dark:hover:text-white"
+                                                        ? "invisible"
+                                                        : isSelected
+                                                            ? "bg-blue-600 text-white"
+                                                            : isToday
+                                                                ? "border border-blue-400 bg-blue-50 text-blue-600 dark:border-blue-500/40 dark:bg-blue-500/10 dark:text-blue-300"
+                                                                : "text-gray-500 hover:bg-gray-100 dark:text-white/60 dark:hover:bg-white/[0.06] dark:hover:text-white"
                                                     }`}
                                             >
                                                 {day !== null ? toPersianDigits(day) : ""}
@@ -279,36 +358,20 @@ export default function InternalTimeRangeModal({
                                     })}
                                 </div>
                             </div>
-
                             <div className="grid grid-cols-2 gap-3">
-                                {[
-                                    { label: "ساعت", key: "hour" as const, options: HOURS },
-                                    { label: "دقیقه", key: "minute" as const, options: MINUTES },
-                                ].map(({ label, key, options }) => (
-                                    <div key={key}>
-                                        <label className="mb-2 block text-[11.5px] font-bold text-gray-400">
-                                            {label}
-                                        </label>
-                                        <select
-                                            value={current[key]}
-                                            onChange={(e) =>
-                                                setCurrent((p) => ({
-                                                    ...p,
-                                                    [key]: Number(e.target.value),
-                                                }))
-                                            }
-                                            className="h-[52px] w-full rounded-2xl border border-gray-100 bg-gray-50 px-3 text-[12.5px] font-bold text-gray-900 outline-none transition-colors focus:border-blue-500 dark:border-white/[0.06] dark:bg-white/[0.03] dark:text-white dark:focus:border-blue-500/50"
-                                        >
-                                            {options.map((v) => (
-                                                <option key={v} value={v}>
-                                                    {toPersianDigits(pad2(v))}
-                                                </option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                ))}
+                                <NiceSelect
+                                    label="ساعت"
+                                    value={current.hour}
+                                    onChange={(hour) => setCurrent((p) => ({ ...p, hour }))}
+                                    options={HOURS}
+                                />
+                                <NiceSelect
+                                    label="دقیقه"
+                                    value={current.minute}
+                                    onChange={(minute) => setCurrent((p) => ({ ...p, minute }))}
+                                    options={MINUTES}
+                                />
                             </div>
-
                             <AnimatePresence>
                                 {(error || externalError) && (
                                     <motion.div
@@ -323,7 +386,6 @@ export default function InternalTimeRangeModal({
                             </AnimatePresence>
                         </div>
                     </div>
-
                     <div className="flex shrink-0 items-center gap-2 px-8 pb-8 pt-5">
                         <button
                             type="button"

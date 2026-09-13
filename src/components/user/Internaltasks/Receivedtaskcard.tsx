@@ -26,6 +26,7 @@ import {
     updateInternalTaskStatus,
 } from "./Api";
 import InternalTaskChatModal from "./InternalTaskChatModal";
+import InternalTaskActionModal from "./InternalTaskActionModal";
 import api from "@/lib/axiosInstance";
 
 interface ReceivedTaskCardProps {
@@ -40,19 +41,15 @@ function formatJalali(
     if (!value) {
         return null;
     }
-
     const date = new Date(value);
-
     if (Number.isNaN(date.getTime())) {
         return null;
     }
-
     const [jy, jm, jd] = toJalali(
         date.getFullYear(),
         date.getMonth() + 1,
         date.getDate(),
     ) as [number, number, number];
-
     return `${toPersianDigits(jd)} ${JALALI_MONTHS[jm - 1]
         } ${toPersianDigits(jy)} - ${toPersianDigits(
             pad2(date.getHours()),
@@ -73,10 +70,8 @@ function getDeadlineState(
                 "bg-gray-50 dark:bg-white/[0.03]",
         };
     }
-
     const deadlineTime =
         new Date(deadline).getTime();
-
     if (Number.isNaN(deadlineTime)) {
         return {
             label: "بدون مهلت",
@@ -86,13 +81,10 @@ function getDeadlineState(
                 "bg-gray-50 dark:bg-white/[0.03]",
         };
     }
-
     const diff =
         deadlineTime - Date.now();
-
     const hours =
         diff / (1000 * 60 * 60);
-
     if (diff < 0) {
         return {
             label: "منقضی شده",
@@ -102,7 +94,6 @@ function getDeadlineState(
                 "bg-red-50 dark:bg-red-500/10",
         };
     }
-
     if (hours <= 24) {
         return {
             label: "فوری",
@@ -112,7 +103,6 @@ function getDeadlineState(
                 "bg-amber-50 dark:bg-amber-500/10",
         };
     }
-
     return {
         label: "در زمانبندی",
         color:
@@ -127,32 +117,27 @@ function extractBackendError(
 ): string {
     const responseData =
         error?.response?.data;
-
     if (
         typeof responseData ===
         "string"
     ) {
         return responseData;
     }
-
     if (responseData?.detail) {
         return String(
             responseData.detail,
         );
     }
-
     if (responseData?.message) {
         return String(
             responseData.message,
         );
     }
-
     if (responseData?.error) {
         return String(
             responseData.error,
         );
     }
-
     if (
         responseData &&
         typeof responseData ===
@@ -162,7 +147,6 @@ function extractBackendError(
             Object.values(
                 responseData,
             );
-
         for (const value of values) {
             if (Array.isArray(value)) {
                 if (value.length > 0) {
@@ -171,7 +155,6 @@ function extractBackendError(
                     );
                 }
             }
-
             if (
                 value !== null &&
                 value !== undefined
@@ -180,22 +163,17 @@ function extractBackendError(
             }
         }
     }
-
     switch (
     error?.response?.status
     ) {
         case 400:
             return "اطلاعات ارسالی برای تغییر وضعیت صحیح نیست.";
-
         case 403:
             return "شما اجازه تغییر وضعیت این تسک را ندارید.";
-
         case 404:
             return "مسیر تغییر وضعیت تسک پیدا نشد.";
-
         case 500:
             return "خطای داخلی سرور هنگام تغییر وضعیت تسک رخ داد.";
-
         default:
             return "خطا در تغییر وضعیت تسک.";
     }
@@ -208,16 +186,14 @@ export default function ReceivedTaskCard({
 }: ReceivedTaskCardProps) {
     const [currentTask, setCurrentTask] =
         useState<InternalTask>(task);
-
     const [submitting, setSubmitting] =
         useState(false);
-
     const [error, setError] =
         useState<string | null>(null);
-
     const [chatOpen, setChatOpen] =
         useState(false);
-
+    const [actionModal, setActionModal] =
+        useState<"complete" | "cancel" | null>(null);
     const [deadlineData, setDeadlineData] =
         useState<{
             started_at: string | null;
@@ -228,13 +204,11 @@ export default function ReceivedTaskCard({
             deadline:
                 task.deadline ?? null,
         });
-
     const [loadingDeadline, setLoadingDeadline] =
         useState(false);
 
     useEffect(() => {
         setCurrentTask(task);
-
         setDeadlineData({
             started_at:
                 task.started_at ?? null,
@@ -245,9 +219,7 @@ export default function ReceivedTaskCard({
 
     useEffect(() => {
         let cancelled = false;
-
         setLoadingDeadline(true);
-
         api.get(
             `/tasks/api/v1/internal_task/${task.id}/deadline/`,
         )
@@ -255,11 +227,9 @@ export default function ReceivedTaskCard({
                 if (cancelled) {
                     return;
                 }
-
                 const data =
                     response.data?.data ??
                     response.data;
-
                 setDeadlineData({
                     started_at:
                         data?.started_at ??
@@ -288,7 +258,6 @@ export default function ReceivedTaskCard({
                     setLoadingDeadline(false);
                 }
             });
-
         return () => {
             cancelled = true;
         };
@@ -308,7 +277,6 @@ export default function ReceivedTaskCard({
                     .trim()
                     .toLowerCase(),
         );
-
     const creatorName =
         creator?.full_name ||
         currentTask.created_by ||
@@ -317,26 +285,21 @@ export default function ReceivedTaskCard({
     const isCompleted =
         currentTask.status ===
         "completed";
-
     const isCancelled =
         currentTask.status ===
         "cancelled";
-
     const deadlineState =
         getDeadlineState(
             deadlineData.deadline,
         );
-
     const deadlineDate =
         formatJalali(
             deadlineData.deadline,
         );
-
     const startedAtDate =
         formatJalali(
             deadlineData.started_at,
         );
-
     const createdDate =
         formatJalali(
             currentTask.created_at,
@@ -348,13 +311,10 @@ export default function ReceivedTaskCard({
         if (submitting) {
             return;
         }
-
         setError(null);
         setSubmitting(true);
-
         const previousTask =
             currentTask;
-
         const optimisticTask: InternalTask =
         {
             ...previousTask,
@@ -368,15 +328,12 @@ export default function ReceivedTaskCard({
                         ? null
                         : previousTask.completed_at,
         };
-
         setCurrentTask(
             optimisticTask,
         );
-
         onUpdated(
             optimisticTask,
         );
-
         try {
             const response =
                 await updateInternalTaskStatus(
@@ -385,14 +342,11 @@ export default function ReceivedTaskCard({
                         status: nextStatus,
                     },
                 );
-
             const responseData =
                 response.data;
-
             const serverStatus =
                 responseData?.status ??
                 nextStatus;
-
             const updatedTask: InternalTask =
             {
                 ...previousTask,
@@ -443,11 +397,9 @@ export default function ReceivedTaskCard({
                         ? responseData.attachments
                         : previousTask.attachments,
             };
-
             setCurrentTask(
                 updatedTask,
             );
-
             setDeadlineData({
                 started_at:
                     updatedTask.started_at ??
@@ -458,7 +410,6 @@ export default function ReceivedTaskCard({
                     deadlineData.deadline ??
                     null,
             });
-
             onUpdated(
                 updatedTask,
             );
@@ -466,11 +417,9 @@ export default function ReceivedTaskCard({
             setCurrentTask(
                 previousTask,
             );
-
             onUpdated(
                 previousTask,
             );
-
             setError(
                 extractBackendError(err),
             );
@@ -479,16 +428,24 @@ export default function ReceivedTaskCard({
         }
     }
 
-    async function completeTask() {
-        await changeStatus("completed");
+    function completeTask() {
+        setError(null);
+        setActionModal("complete");
     }
 
     async function reopenTask() {
         await changeStatus("in_progress");
     }
 
-    async function cancelTask() {
-        await changeStatus("cancelled");
+    function cancelTask() {
+        setError(null);
+        setActionModal("cancel");
+    }
+
+    function handleActionDone(updatedTask: InternalTask) {
+        setCurrentTask(updatedTask);
+        onUpdated(updatedTask);
+        setActionModal(null);
     }
 
     function getStatusBadge() {
@@ -500,7 +457,6 @@ export default function ReceivedTaskCard({
                     "bg-emerald-500/10 text-emerald-500",
             };
         }
-
         if (isCancelled) {
             return {
                 label: "لغو شده",
@@ -509,7 +465,6 @@ export default function ReceivedTaskCard({
                     "bg-red-500/10 text-red-500",
             };
         }
-
         return {
             label: "در حال انجام",
             dot: "bg-indigo-500",
@@ -550,7 +505,6 @@ export default function ReceivedTaskCard({
                             statusBadge.label
                         }
                     </span>
-
                     <button
                         type="button"
                         onClick={() =>
@@ -568,13 +522,11 @@ export default function ReceivedTaskCard({
                         }
                     </button>
                 </div>
-
                 <h3 className="line-clamp-2 text-[14px] font-extrabold leading-snug text-gray-900 dark:text-white">
                     {
                         currentTask.title
                     }
                 </h3>
-
                 {currentTask.description && (
                     <p className="line-clamp-3 text-[12px] font-medium leading-relaxed text-gray-500 dark:text-white/40">
                         {
@@ -582,7 +534,6 @@ export default function ReceivedTaskCard({
                         }
                     </p>
                 )}
-
                 <div className="flex items-center gap-1.5 text-[11px] text-gray-400 dark:text-gray-600">
                     <UserRound
                         size={12}
@@ -592,7 +543,6 @@ export default function ReceivedTaskCard({
                         {creatorName}
                     </span>
                 </div>
-
                 <div className="flex items-center gap-1.5 text-[11px] text-gray-400 dark:text-gray-600">
                     <History
                         size={12}
@@ -602,14 +552,12 @@ export default function ReceivedTaskCard({
                         {createdDate}
                     </span>
                 </div>
-
                 {loadingDeadline ? (
                     <div className="flex items-center gap-2 rounded-2xl bg-gray-50 px-3 py-2.5 dark:bg-white/[0.03]">
                         <Clock3
                             size={13}
                             className="text-gray-400"
                         />
-
                         <span className="text-[11px] font-semibold text-gray-400">
                             در حال دریافت زمان‌بندی...
                         </span>
@@ -622,12 +570,10 @@ export default function ReceivedTaskCard({
                                     size={13}
                                     className="text-indigo-500 dark:text-indigo-400"
                                 />
-
                                 <div>
                                     <p className="text-[11px] font-extrabold text-indigo-500 dark:text-indigo-400">
                                         زمان شروع
                                     </p>
-
                                     <p className="mt-0.5 text-[10px] font-bold text-gray-500 dark:text-gray-400">
                                         {
                                             startedAtDate
@@ -636,7 +582,6 @@ export default function ReceivedTaskCard({
                                 </div>
                             </div>
                         )}
-
                         <div
                             className={`flex items-center gap-2 rounded-2xl px-3 py-2.5 ${deadlineState.background}`}
                         >
@@ -646,7 +591,6 @@ export default function ReceivedTaskCard({
                                     deadlineState.color
                                 }
                             />
-
                             <div>
                                 <p
                                     className={`text-[11px] font-extrabold ${deadlineState.color}`}
@@ -655,7 +599,6 @@ export default function ReceivedTaskCard({
                                         deadlineState.label
                                     }
                                 </p>
-
                                 {deadlineDate && (
                                     <p className="mt-0.5 text-[10px] font-bold text-gray-500 dark:text-gray-400">
                                         {
@@ -667,13 +610,11 @@ export default function ReceivedTaskCard({
                         </div>
                     </>
                 )}
-
                 {error && (
                     <p className="rounded-xl bg-red-500/10 px-3 py-2 text-center text-[11px] font-bold text-red-500">
                         {error}
                     </p>
                 )}
-
                 <div className="relative z-10 flex flex-col gap-2 border-t border-black/5 pt-2.5 dark:border-white/[0.05]">
                     {!isCompleted &&
                         !isCancelled && (
@@ -693,7 +634,6 @@ export default function ReceivedTaskCard({
                                     />
                                     انجام شد
                                 </button>
-
                                 <button
                                     type="button"
                                     onClick={
@@ -711,7 +651,6 @@ export default function ReceivedTaskCard({
                                 </button>
                             </div>
                         )}
-
                     {(isCompleted ||
                         isCancelled) && (
                             <button
@@ -730,7 +669,6 @@ export default function ReceivedTaskCard({
                                 بازگشایی تیکت
                             </button>
                         )}
-
                     <button
                         type="button"
                         onClick={() =>
@@ -745,7 +683,6 @@ export default function ReceivedTaskCard({
                     </button>
                 </div>
             </motion.div>
-
             <InternalTaskChatModal
                 open={chatOpen}
                 task={currentTask}
@@ -763,6 +700,17 @@ export default function ReceivedTaskCard({
                     );
                 }}
             />
+            {actionModal && (
+                <InternalTaskActionModal
+                    isOpen={true}
+                    action={actionModal}
+                    task={currentTask}
+                    onClose={() =>
+                        setActionModal(null)
+                    }
+                    onDone={handleActionDone}
+                />
+            )}
         </>
     );
 }

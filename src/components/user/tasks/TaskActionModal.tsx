@@ -1,282 +1,178 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
-import { X, Check, Loader, FileUp, MessageSquare } from "lucide-react";
-import { useTheme } from "next-themes";
+import { Check, FileText, Loader2, Paperclip, Star, X } from "lucide-react";
 
-type ActionDirection =
-    | "next"
-    | "prev"
-    | "sold"
-    | "cancel"
-    | "unsold"
-    | "uncancel"
-    | "uncomplete"
-    | "complete";
-
-interface TaskActionModalProps {
+interface Props {
     isOpen: boolean;
     onClose: () => void;
-    onSubmit: (data: { note: string; files: File[] }) => Promise<void>;
+    direction: string;
     title: string;
     description: string;
-    direction: ActionDirection;
-    submitting?: boolean;
+    onSubmit: (data: { note: string; files: File[]; score: number; score_reason: string }) => Promise<void>;
+    submitting: boolean;
 }
-
-const directionStyle: Record<ActionDirection, { gradient: string; shadow: string; iconColor: string; iconBg: string }> = {
-    next: {
-        gradient: "linear-gradient(135deg, #6366f1, #8b5cf6)",
-        shadow: "0 4px 14px rgba(99,102,241,0.3)",
-        iconColor: "text-indigo-500",
-        iconBg: "rgba(99,102,241,0.10)",
-    },
-    prev: {
-        gradient: "linear-gradient(135deg, #ec4899, #db2777)",
-        shadow: "0 4px 14px rgba(236,72,153,0.3)",
-        iconColor: "text-pink-500",
-        iconBg: "rgba(236,72,153,0.10)",
-    },
-    sold: {
-        gradient: "linear-gradient(135deg, #f59e0b, #d97706)",
-        shadow: "0 4px 14px rgba(245,158,11,0.3)",
-        iconColor: "text-amber-500",
-        iconBg: "rgba(245,158,11,0.10)",
-    },
-    unsold: {
-        gradient: "linear-gradient(135deg, #64748b, #475569)",
-        shadow: "0 4px 14px rgba(100,116,139,0.3)",
-        iconColor: "text-slate-500",
-        iconBg: "rgba(100,116,139,0.10)",
-    },
-    cancel: {
-        gradient: "linear-gradient(135deg, #ef4444, #dc2626)",
-        shadow: "0 4px 14px rgba(239,68,68,0.3)",
-        iconColor: "text-red-500",
-        iconBg: "rgba(239,68,68,0.10)",
-    },
-    uncancel: {
-        gradient: "linear-gradient(135deg, #f87171, #ef4444)",
-        shadow: "0 4px 14px rgba(248,113,113,0.3)",
-        iconColor: "text-red-400",
-        iconBg: "rgba(248,113,113,0.10)",
-    },
-    uncomplete: {
-        gradient: "linear-gradient(135deg, #34d399, #10b981)",
-        shadow: "0 4px 14px rgba(52,211,153,0.3)",
-        iconColor: "text-emerald-400",
-        iconBg: "rgba(52,211,153,0.10)",
-    },
-    complete: {
-        gradient: "linear-gradient(135deg, #22c55e, #16a34a)",
-        shadow: "0 4px 14px rgba(34,197,94,0.3)",
-        iconColor: "text-green-500",
-        iconBg: "rgba(34,197,94,0.10)",
-    },
-};
-
-const SIMPLE_DIRECTIONS: ActionDirection[] = ["sold", "unsold", "uncancel", "uncomplete"];
-
-const NOTE_COPY: Partial<Record<ActionDirection, { label: string; placeholder: string }>> = {
-    next: { label: "یادداشت انتقال", placeholder: "توضیحی درباره این مرحله بنویس..." },
-    prev: { label: "دلیل بازگشت", placeholder: "چرا این تسک باید به مرحله قبل برگردد؟" },
-    cancel: { label: "دلیل لغو", placeholder: "دلیل لغو این تسک را بنویس..." },
-};
 
 export default function TaskActionModal({
     isOpen,
     onClose,
-    onSubmit,
+    direction,
     title,
     description,
-    direction,
-}: TaskActionModalProps) {
-    const { resolvedTheme } = useTheme();
-    const isDark = resolvedTheme === "dark";
-
+    onSubmit,
+    submitting,
+}: Props) {
     const [note, setNote] = useState("");
+    const [reason, setReason] = useState("");
+    const [score, setScore] = useState(0);
     const [files, setFiles] = useState<File[]>([]);
-    const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
 
-    const style = directionStyle[direction];
-    const isSimple = SIMPLE_DIRECTIONS.includes(direction);
-    const noteCopy = NOTE_COPY[direction] ?? { label: "یادداشت", placeholder: "یادداشت اختیاری..." };
-
     useEffect(() => {
-        if (isOpen) {
+        if (!isOpen) {
             setNote("");
+            setReason("");
+            setScore(0);
             setFiles([]);
             setError("");
-            setLoading(false);
         }
     }, [isOpen]);
 
-    if (!isOpen) return null;
+    if (typeof document === "undefined") return null;
 
-    async function handleSubmit(e: React.FormEvent) {
-        e.preventDefault();
-        setLoading(true);
-        setError("");
-        try {
-            await onSubmit({ note, files });
-        } catch {
-            setError("خطا در ثبت تغییرات");
-        } finally {
-            setLoading(false);
+    const isFinal = direction === "next" && title.includes("تکمیل");
+    const needsReview = ["next", "prev", "cancel", "sold"].includes(direction);
+
+    async function submit() {
+        if (needsReview && score < 1) {
+            setError("لطفاً امتیاز مشتری را از ۱ تا ۵ انتخاب کنید");
+            return;
         }
+
+        if (needsReview && !reason.trim()) {
+            setError("لطفاً نظر خود درباره مشتری را وارد کنید");
+            return;
+        }
+
+        setError("");
+
+        await onSubmit({
+            note,
+            files,
+            score,
+            score_reason: reason.trim(),
+        });
     }
 
-    return (
+    return createPortal(
         <AnimatePresence>
-            <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="fixed inset-0 z-50 flex items-center justify-center px-4"
-                style={{ background: "rgba(0,0,0,0.5)", backdropFilter: "blur(3px)" }}
-                onClick={onClose}
-            >
+            {isOpen && (
                 <motion.div
-                    initial={{ scale: 0.94, y: 18 }}
-                    animate={{ scale: 1, y: 0 }}
-                    exit={{ scale: 0.94, y: 18 }}
-                    transition={{ duration: 0.22, ease: "easeOut" }}
-                    className="w-full max-w-[430px] overflow-hidden rounded-3xl border"
-                    style={{
-                        background: isDark ? "#0f172a" : "#ffffff",
-                        borderColor: isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.06)",
-                        boxShadow: "0 24px 64px rgba(0,0,0,0.28)",
-                    }}
-                    onClick={(e) => e.stopPropagation()}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="fixed inset-0 z-[99999] flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-md"
                     dir="rtl"
+                    onMouseDown={(e) => {
+                        if (e.target === e.currentTarget && !submitting) onClose();
+                    }}
                 >
-                    <div
-                        className="flex items-center justify-between border-b px-5 py-4"
-                        style={{ borderColor: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.06)" }}
+                    <motion.div
+                        initial={{ opacity: 0, y: 18, scale: .97 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: 12, scale: .98 }}
+                        transition={{ duration: .2 }}
+                        className="w-full max-w-lg overflow-hidden rounded-[1.7rem] border border-white/10 bg-white shadow-2xl dark:bg-[#101827]"
                     >
-                        <div className="flex items-center gap-3">
-                            <div
-                                className="flex h-9 w-9 items-center justify-center rounded-xl"
-                                style={{ background: style.iconBg }}
-                            >
-                                <MessageSquare size={15} className={style.iconColor} />
-                            </div>
+                        <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4 dark:border-white/[.06]">
                             <div>
-                                <h3 className="text-[14px] font-extrabold text-gray-900 dark:text-white">
-                                    {title}
-                                </h3>
-                                <p className="mt-0.5 text-[11px] text-gray-400 dark:text-gray-500">
-                                    {description}
-                                </p>
+                                <h3 className="text-[15px] font-extrabold text-gray-900 dark:text-white">{title}</h3>
+                                <p className="mt-1 text-[10.5px] text-gray-400">{description}</p>
                             </div>
+                            <button type="button" disabled={submitting} onClick={onClose} className="flex h-9 w-9 items-center justify-center rounded-xl bg-gray-100 text-gray-400 dark:bg-white/[.05]">
+                                <X size={16} />
+                            </button>
                         </div>
-                        <button
-                            type="button"
-                            onClick={onClose}
-                            disabled={loading}
-                            className="flex h-8 w-8 items-center justify-center rounded-xl text-gray-400 transition-colors hover:text-gray-600 disabled:opacity-40 dark:hover:text-gray-300"
-                            style={{ background: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.04)" }}
-                        >
-                            <X size={15} />
-                        </button>
-                    </div>
 
-                    <form onSubmit={handleSubmit} className="space-y-4 p-5">
-                        {isSimple ? (
-                            <p
-                                className="rounded-2xl px-4 py-3 text-center text-[13px] font-semibold"
-                                style={{
-                                    background: isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)",
-                                    color: isDark ? "#94a3b8" : "#64748b",
-                                }}
-                            >
-                                {description}
-                            </p>
-                        ) : (
-                            <>
-                                <div className="space-y-2">
-                                    <label className="text-[12px] font-bold text-gray-500 dark:text-gray-400">
-                                        {noteCopy.label}
-                                    </label>
-                                    <textarea
-                                        value={note}
-                                        onChange={(e) => setNote(e.target.value)}
-                                        rows={4}
-                                        placeholder={noteCopy.placeholder}
-                                        className="w-full resize-none rounded-2xl border bg-white px-4 py-3 text-sm text-black outline-none transition-all duration-200 focus:border-indigo-500 dark:bg-white/[0.04] dark:border-white/[0.08] dark:text-white dark:focus:border-violet-500"
-                                    />
-                                </div>
-
-                                <div className="space-y-2">
-                                    <label className="flex items-center gap-2 text-[12px] font-bold text-gray-500 dark:text-gray-400">
-                                        <FileUp size={14} />
-                                        فایل‌ها
-                                    </label>
-                                    <input
-                                        type="file"
-                                        multiple
-                                        onChange={(e) => setFiles(Array.from(e.target.files || []))}
-                                        className="w-full text-sm text-gray-500 dark:text-gray-400 file:ml-3 file:rounded-xl file:border-0 file:px-4 file:py-2 file:text-sm file:font-bold file:bg-indigo-50 file:text-indigo-600 dark:file:bg-indigo-500/10 dark:file:text-indigo-300"
-                                    />
-                                    {files.length > 0 && (
-                                        <div className="flex flex-wrap gap-2">
-                                            {files.map((file, i) => (
-                                                <span
-                                                    key={`${file.name}-${i}`}
-                                                    className="rounded-lg bg-gray-100 px-2.5 py-1 text-[11px] text-gray-600 dark:bg-white/5 dark:text-gray-300"
-                                                >
-                                                    {file.name}
-                                                </span>
-                                            ))}
+                        <div className="max-h-[72vh] overflow-y-auto px-5 py-5">
+                            {needsReview && (
+                                <div className="mb-5 rounded-2xl border border-amber-500/15 bg-amber-500/[.05] p-4">
+                                    <div className="mb-3 flex items-center justify-between">
+                                        <div>
+                                            <p className="text-[12px] font-extrabold text-gray-800 dark:text-white">ارزیابی مشتری</p>
+                                            <p className="mt-1 text-[10px] text-gray-400">
+                                                {isFinal ? "این امتیاز قبل از تکمیل تسک الزامی است" : "نظر خودت درباره این مشتری را ثبت کن"}
+                                            </p>
                                         </div>
-                                    )}
+                                        <span className="text-[12px] font-extrabold text-amber-500">{score || "—"} / ۵</span>
+                                    </div>
+
+                                    <div className="flex flex-row-reverse justify-end gap-1.5">
+                                        {[5, 4, 3, 2, 1].map((value) => (
+                                            <button
+                                                key={value}
+                                                type="button"
+                                                disabled={submitting}
+                                                onClick={() => setScore(value)}
+                                                className="transition-transform hover:scale-110"
+                                            >
+                                                <Star
+                                                    size={28}
+                                                    fill={score >= value ? "#f59e0b" : "transparent"}
+                                                    className={score >= value ? "text-amber-500" : "text-gray-300 dark:text-white/15"}
+                                                />
+                                            </button>
+                                        ))}
+                                    </div>
+
+                                    <textarea
+                                        value={reason}
+                                        onChange={(e) => setReason(e.target.value)}
+                                        placeholder="مثلاً: مشتری پیگیر بود و احتمال خرید بالاست..."
+                                        rows={3}
+                                        className="mt-4 w-full resize-none rounded-2xl border border-gray-200 bg-white px-3.5 py-3 text-[11px] font-medium outline-none transition focus:border-amber-400 dark:border-white/[.08] dark:bg-white/[.03] dark:text-white"
+                                    />
                                 </div>
-                            </>
-                        )}
+                            )}
 
-                        {error && (
-                            <p className="text-center text-[11.5px] font-semibold text-red-500 dark:text-red-400">
-                                {error}
-                            </p>
-                        )}
+                            <div>
+                                <div className="mb-2 flex items-center gap-1.5 text-[11px] font-extrabold text-gray-600 dark:text-gray-300">
+                                    <FileText size={13} />
+                                    یادداشت
+                                </div>
+                                <textarea
+                                    value={note}
+                                    onChange={(e) => setNote(e.target.value)}
+                                    rows={3}
+                                    placeholder="یادداشت اختیاری..."
+                                    className="w-full resize-none rounded-2xl border border-gray-200 bg-gray-50 px-3.5 py-3 text-[11px] outline-none focus:border-indigo-400 dark:border-white/[.08] dark:bg-white/[.03] dark:text-white"
+                                />
+                            </div>
 
-                        <div className="flex gap-2 pt-1">
-                            <button
-                                type="button"
-                                onClick={onClose}
-                                disabled={loading}
-                                className="flex-1 rounded-xl py-2.5 text-[12.5px] font-bold transition-colors disabled:opacity-40"
-                                style={{
-                                    background: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.04)",
-                                    color: isDark ? "#94a3b8" : "#64748b",
-                                }}
-                            >
+                            <label className="mt-3 flex cursor-pointer items-center justify-center gap-2 rounded-2xl border border-dashed border-gray-200 bg-gray-50 py-3 text-[10.5px] font-bold text-gray-500 dark:border-white/[.08] dark:bg-white/[.025] dark:text-gray-400">
+                                <Paperclip size={13} />
+                                {files.length ? `${files.length} فایل انتخاب شده` : "افزودن فایل"}
+                                <input type="file" multiple hidden onChange={(e) => setFiles(Array.from(e.target.files ?? []))} />
+                            </label>
+
+                            {error && <p className="mt-3 rounded-xl bg-red-500/10 px-3 py-2 text-center text-[10.5px] font-bold text-red-500">{error}</p>}
+                        </div>
+
+                        <div className="flex gap-2 border-t border-gray-100 px-5 py-4 dark:border-white/[.06]">
+                            <button type="button" disabled={submitting} onClick={onClose} className="h-11 flex-1 rounded-xl bg-gray-100 text-[11px] font-extrabold text-gray-500 dark:bg-white/[.05] dark:text-gray-400">
                                 انصراف
                             </button>
-                            <button
-                                type="submit"
-                                disabled={loading}
-                                className="flex flex-1 items-center justify-center gap-2 rounded-xl py-2.5 text-[12.5px] font-bold text-white transition-opacity disabled:cursor-not-allowed disabled:opacity-40"
-                                style={{ background: style.gradient, boxShadow: style.shadow }}
-                            >
-                                {loading ? (
-                                    <>
-                                        <Loader className="h-3.5 w-3.5 animate-spin" />
-                                        در حال ثبت...
-                                    </>
-                                ) : (
-                                    <>
-                                        <Check size={13} />
-                                        تایید
-                                    </>
-                                )}
+                            <button type="button" disabled={submitting} onClick={submit} className="flex h-11 flex-[1.5] items-center justify-center gap-2 rounded-xl bg-indigo-600 text-[11px] font-extrabold text-white shadow-lg shadow-indigo-500/20 disabled:opacity-60">
+                                {submitting ? <Loader2 size={15} className="animate-spin" /> : <Check size={15} />}
+                                {isFinal ? "ثبت نظر و تکمیل تسک" : "ثبت و ادامه"}
                             </button>
                         </div>
-                    </form>
+                    </motion.div>
                 </motion.div>
-            </motion.div>
-        </AnimatePresence>
+            )}
+        </AnimatePresence>,
+        document.body
     );
 }

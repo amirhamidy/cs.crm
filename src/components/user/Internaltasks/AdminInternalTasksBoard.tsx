@@ -3,6 +3,8 @@
 import { JSX, useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
+    Ban,
+    CheckCircle2,
     ClipboardX,
     Inbox,
     LayoutGrid,
@@ -11,6 +13,7 @@ import {
     MessageSquareText,
     Plus,
     RefreshCw,
+    RotateCcw,
     Ticket,
     Trash2,
     Users,
@@ -21,7 +24,9 @@ import {
     deleteInternalTask,
     fetchEmployeeList,
     fetchInternalTasks,
+    updateInternalTaskStatus,
 } from "./Api";
+import InternalTaskActionModal from "./InternalTaskActionModal";
 import type {
     EmployeeListItem,
     InternalTask,
@@ -236,6 +241,7 @@ function AdminInternalTaskCard({
     employees,
     onOpen,
     onDelete,
+    onStatusChange,
     isDeleting = false,
 }: {
     task: InternalTask;
@@ -243,6 +249,7 @@ function AdminInternalTaskCard({
     employees: AdminEmployee[];
     onOpen: (task: InternalTask) => void;
     onDelete?: (taskId: number) => Promise<void> | void;
+    onStatusChange: (task: InternalTask) => void;
     isDeleting?: boolean;
 }) {
     const { resolvedTheme } = useTheme();
@@ -251,8 +258,44 @@ function AdminInternalTaskCard({
     const [hovered, setHovered] = useState(false);
     const [showConfirm, setShowConfirm] = useState(false);
     const [deleteError, setDeleteError] = useState<string | null>(null);
+    const [actionModal, setActionModal] =
+        useState<"complete" | "cancel" | null>(null);
+    const [reopening, setReopening] = useState(false);
+    const [statusError, setStatusError] = useState<string | null>(null);
 
     const statusConfig = getStatusConfig(task.status);
+
+    const isCompleted = task.status === "completed";
+    const isCancelled = task.status === "cancelled";
+
+    async function handleReopen(event: React.MouseEvent) {
+        event.stopPropagation();
+
+        if (reopening) return;
+
+        setStatusError(null);
+        setReopening(true);
+
+        try {
+            const { data } = await updateInternalTaskStatus(task.id, {
+                status: "in_progress",
+            });
+
+            onStatusChange({
+                ...task,
+                ...data,
+            });
+        } catch {
+            setStatusError("بازگشایی تیکت با خطا مواجه شد.");
+        } finally {
+            setReopening(false);
+        }
+    }
+
+    function handleActionDone(updatedTask: InternalTask) {
+        onStatusChange(updatedTask);
+        setActionModal(null);
+    }
 
     const assignedEmployees = resolveAssignedTo(
         task.assigned_to,
@@ -558,6 +601,78 @@ function AdminInternalTaskCard({
                     )}
                 </span>
             </div>
+
+            {statusError && (
+                <p
+                    onClick={(event) => event.stopPropagation()}
+                    className="relative z-10 rounded-xl bg-red-500/10 px-3 py-2 text-center text-[10px] font-bold text-red-500"
+                >
+                    {statusError}
+                </p>
+            )}
+
+            <div
+                className="relative z-10 flex items-center gap-2"
+                onClick={(event) => event.stopPropagation()}
+            >
+                {!isCompleted && !isCancelled && (
+                    <>
+                        <button
+                            type="button"
+                            onClick={(event) => {
+                                event.stopPropagation();
+                                setStatusError(null);
+                                setActionModal("complete");
+                            }}
+                            className="flex h-8 flex-1 items-center justify-center gap-1.5 rounded-xl bg-emerald-500 text-[10px] font-extrabold text-white transition-opacity hover:opacity-90"
+                        >
+                            <CheckCircle2 size={12} />
+                            انجام شد
+                        </button>
+
+                        <button
+                            type="button"
+                            onClick={(event) => {
+                                event.stopPropagation();
+                                setStatusError(null);
+                                setActionModal("cancel");
+                            }}
+                            className="flex h-8 flex-1 items-center justify-center gap-1.5 rounded-xl bg-red-500 text-[10px] font-extrabold text-white transition-opacity hover:opacity-90"
+                        >
+                            <Ban size={12} />
+                            لغو تیکت
+                        </button>
+                    </>
+                )}
+
+                {(isCompleted || isCancelled) && (
+                    <button
+                        type="button"
+                        onClick={handleReopen}
+                        disabled={reopening}
+                        className="flex h-8 flex-1 items-center justify-center gap-1.5 rounded-xl bg-amber-500 text-[10px] font-extrabold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+                    >
+                        {reopening ? (
+                            <Loader2 size={12} className="animate-spin" />
+                        ) : (
+                            <RotateCcw size={12} />
+                        )}
+                        بازگشایی تیکت
+                    </button>
+                )}
+            </div>
+
+            {actionModal && (
+                <div onClick={(event) => event.stopPropagation()}>
+                    <InternalTaskActionModal
+                        isOpen={true}
+                        action={actionModal}
+                        task={task}
+                        onClose={() => setActionModal(null)}
+                        onDone={handleActionDone}
+                    />
+                </div>
+            )}
 
             <AnimatePresence>
                 {showConfirm && (
@@ -969,6 +1084,7 @@ export default function AdminInternalTasksBoard(): JSX.Element {
                                 employees={employees}
                                 onOpen={setSelectedTask}
                                 onDelete={handleDelete}
+                                onStatusChange={handleUpdated}
                                 isDeleting={
                                     deleteLoadingId === task.id
                                 }

@@ -98,15 +98,16 @@ function getCreatorName(
     employees: EmployeeListItem[]
 ) {
     if (!task.created_by) return "کاربر";
-    const createdBy = task.created_by.trim();
+    const createdBy = String(task.created_by).trim();
     const employee = employees.find(
         (employee) =>
-            (employee as EmployeeRecord).username?.trim() === createdBy
+            (employee as EmployeeRecord).username?.trim() === createdBy ||
+            String((employee as EmployeeRecord).id) === createdBy
     ) as EmployeeRecord | undefined;
     return (
         employee?.full_name ||
         employee?.username ||
-        task.created_by
+        createdBy
     );
 }
 
@@ -118,15 +119,12 @@ function getSenderName(
     const user = users.find((item) => Number(item.id) === uploadedById);
     if (!user) return "کاربر";
     const username = user.username.trim();
+
     const employee = employees.find(
-        (item) =>
-            (item as EmployeeRecord).username?.trim() === username
-    ) as EmployeeRecord | undefined;
-    return (
-        employee?.full_name ||
-        employee?.username ||
-        username
+        (e) => e.username?.trim() === username
     );
+
+    return employee?.full_name || employee?.username || username;
 }
 
 export default function AdminInternalTaskChatModal({
@@ -192,28 +190,23 @@ export default function AdminInternalTaskChatModal({
     }, [attachments]);
 
     const currentUser = useMemo(
-        () => users.find((u) => u.id === userId),
+        () => users.find((u) => Number(u.id) === Number(userId)),
         [users, userId]
     );
 
     const currentUsername = currentUser?.username?.trim();
 
     const isCreator = Boolean(
-        currentUsername && currentUsername === task.created_by.trim()
-    );
-
-    const currentEmployee = useMemo(
-        () =>
-            currentUsername
-                ? employees.find((e) => e.username?.trim() === currentUsername)
-                : undefined,
-        [employees, currentUsername]
+        currentUser &&
+        task.created_by &&
+        (String(currentUser.id) === String(task.created_by) ||
+            currentUsername === String(task.created_by).trim())
     );
 
     const isAssignee = Boolean(
-        currentEmployee &&
+        currentUser &&
         Array.isArray(task.assigned_to) &&
-        task.assigned_to.some((a) => a.id === currentEmployee.id)
+        task.assigned_to.some((a) => Number(a.id) === Number(currentUser.id))
     );
 
     const canParticipate = users.length === 0 || isCreator || isAssignee;
