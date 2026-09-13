@@ -35,3 +35,29 @@ export interface UserDepartment {
   accent?: string;
   stages: UserStage[];
 }
+
+export interface EmployeeAPIItem {
+  id: number;
+  full_name: string;
+  username: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface DepartmentAPIItem {
+  id: number;
+  name: string;
+  order: number;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface DepartmentEmployeeAPIItem {
+  id: number;
+  employee: number;
+  employee_name: string;
+  department: number;
+  department_name: string;
+  created_at?: string;
+  updated_at?: string;
+}

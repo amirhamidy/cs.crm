@@ -2,7 +2,15 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { ClipboardList, Loader, Plus, RefreshCw } from "lucide-react";
+import {
+    ClipboardList,
+    Layers,
+    Loader,
+    Pencil,
+    Plus,
+    RefreshCw,
+} from "lucide-react";
+import { useTheme } from "next-themes";
 import axiosInstance from "@/lib/axiosInstance";
 import { apiRoutes } from "@/lib/apiRoutes";
 import type { Department } from "@/types/department";
@@ -13,8 +21,8 @@ import type { CaseItem } from "@/types/case";
 import type { Customer } from "@/types/customer";
 import EditCaseModal from "@/components/user/cases/EditCaseModal";
 import CaseCard from "@/components/user/cases/CaseCard";
-import TaskCard from "@/components/customcomponents/tasks/TaskCard";
 import EditTaskModal from "@/components/customcomponents/tasks/EditTaskModal";
+import CaseTasksModal from "@/components/customcomponents/cases/CaseTasksModal";
 
 type ListResponse<T> = T[] | { results?: T[]; data?: T[] };
 
@@ -45,6 +53,9 @@ function extractCaseId(task: TaskItem): string | null {
 }
 
 export default function UserCasesPage() {
+    const { resolvedTheme } = useTheme();
+    const isDark = resolvedTheme === "dark";
+
     const [cases, setCases] = useState<CaseItem[]>([]);
     const [customers, setCustomers] = useState<Customer[]>([]);
     const [departments, setDepartments] = useState<Department[]>([]);
@@ -52,26 +63,31 @@ export default function UserCasesPage() {
     const [tasks, setTasks] = useState<TaskItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
-    const [query, setQuery] = useState("");
     const [caseModalOpen, setCaseModalOpen] = useState(false);
     const [editingCase, setEditingCase] = useState<CaseItem | null>(null);
     const [editCaseModalOpen, setEditCaseModalOpen] = useState(false);
     const [deletingId, setDeletingId] = useState<number | null>(null);
     const [editingTask, setEditingTask] = useState<TaskItem | null>(null);
-    const [editModalOpen, setEditModalOpen] = useState(false);
+    const [editTaskModalOpen, setEditTaskModalOpen] = useState(false);
     const [deletingTaskId, setDeletingTaskId] = useState<number | null>(null);
+    const [tasksModalOpen, setTasksModalOpen] = useState(false);
+    const [selectedCaseForTasks, setSelectedCaseForTasks] =
+        useState<CaseItem | null>(null);
 
     const fetchData = useCallback(async () => {
         try {
             setLoading(true);
             setError("");
-            const [casesRes, customersRes, departmentsRes, employeesRes, tasksRes] = await Promise.all([
-                axiosInstance.get<ListResponse<CaseItem>>(apiRoutes.cases),
-                axiosInstance.get<ListResponse<Customer>>(apiRoutes.customers),
-                axiosInstance.get<ListResponse<Department>>(apiRoutes.departments),
-                axiosInstance.get<ListResponse<Employee>>("/accounts/api/v1/employee/list/"),
-                axiosInstance.get<ListResponse<TaskItem>>(apiRoutes.tasks),
-            ]);
+            const [casesRes, customersRes, departmentsRes, employeesRes, tasksRes] =
+                await Promise.all([
+                    axiosInstance.get<ListResponse<CaseItem>>(apiRoutes.cases),
+                    axiosInstance.get<ListResponse<Customer>>(apiRoutes.customers),
+                    axiosInstance.get<ListResponse<Department>>(apiRoutes.departments),
+                    axiosInstance.get<ListResponse<Employee>>(
+                        "/accounts/api/v1/employee/list/"
+                    ),
+                    axiosInstance.get<ListResponse<TaskItem>>(apiRoutes.tasks),
+                ]);
 
             const caseList = extractList<CaseItem>(casesRes.data);
 
@@ -118,6 +134,11 @@ export default function UserCasesPage() {
         return map;
     }, [tasks]);
 
+    const selectedCaseTasks = useMemo(() => {
+        if (!selectedCaseForTasks) return [];
+        return tasksByCase.get(String(selectedCaseForTasks.id)) || [];
+    }, [selectedCaseForTasks, tasksByCase]);
+
     const handleDeleteCase = useCallback(
         async (item: CaseItem) => {
             const id = Number(item.id);
@@ -151,69 +172,48 @@ export default function UserCasesPage() {
         setEditingCase(null);
     }, [fetchData]);
 
-    const handleDeleteTask = useCallback(
-        async (taskId: number) => {
-            try {
-                setDeletingTaskId(taskId);
-                await axiosInstance.delete(`/tasks/api/v1/tasks/${taskId}/delete/`);
-                setTasks((prev) => prev.filter((t) => t.id !== taskId));
-                return Promise.resolve();
-            } catch {
-                throw new Error("خطا در حذف وظیفه");
-            } finally {
-                setDeletingTaskId(null);
-            }
-        },
-        []
-    );
+    const handleDeleteTask = useCallback(async (taskId: number) => {
+        try {
+            setDeletingTaskId(taskId);
+            await axiosInstance.delete(`/tasks/api/v1/tasks/${taskId}/delete/`);
+            setTasks((prev) => prev.filter((t) => t.id !== taskId));
+            return Promise.resolve();
+        } catch {
+            throw new Error("خطا در حذف وظیفه");
+        } finally {
+            setDeletingTaskId(null);
+        }
+    }, []);
 
     const handleEditTask = useCallback((task: TaskItem) => {
         setEditingTask(task);
-        setEditModalOpen(true);
+        setEditTaskModalOpen(true);
     }, []);
 
     const handleTaskUpdate = useCallback(() => {
         fetchData();
-        setEditModalOpen(false);
+        setEditTaskModalOpen(false);
         setEditingTask(null);
     }, [fetchData]);
 
-    const filteredCases = useMemo(() => {
-        const q = query.trim().toLowerCase();
-        if (!q) return cases;
-        return cases.filter((item) => {
-            const customer = customers.find((c) => Number(c.id) === Number(item.customer));
-            const customerName = [
-                customer?.first_name,
-                customer?.last_name,
-                (customer as unknown as { full_name?: string })?.full_name,
-                (customer as unknown as { company_name?: string })?.company_name,
-            ]
-                .filter(Boolean)
-                .join(" ")
-                .toLowerCase();
-
-            return (
-                String(item.title ?? "").toLowerCase().includes(q) ||
-                String(item.description ?? "").toLowerCase().includes(q) ||
-                String(item.id ?? "").includes(q) ||
-                customerName.includes(q)
-            );
-        });
-    }, [cases, customers, query]);
+    const handleOpenTasksModal = useCallback((item: CaseItem) => {
+        setSelectedCaseForTasks(item);
+        setTasksModalOpen(true);
+    }, []);
 
     return (
-        <div className="flex flex-col gap-6 p-4 md:p-6" dir="rtl">
+        <div className="flex flex-col gap-5 p-3 sm:p-4 md:p-6" dir="rtl">
+            {/* Header */}
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-start gap-3">
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-indigo-50 dark:bg-indigo-500/10">
-                        <ClipboardList size={16} className="text-indigo-500 dark:text-indigo-400" />
-                    </div>
+                   
+
                     <div className="min-w-0">
-                        <h1 className="text-[14px] font-extrabold text-gray-900 dark:text-white">
+                        <h1 className="text-[15px] font-extrabold text-gray-900 dark:text-white">
                             پرونده‌ها
                         </h1>
-                        <p className="mt-0.5 text-[11.5px] text-gray-400 dark:text-gray-500">
+
+                        <p className="mt-0.5 text-[11.5px] text-gray-500 dark:text-gray-400">
                             {loading
                                 ? "در حال بارگذاری..."
                                 : `${cases.length} پرونده و ${tasks.length} وظیفه`}
@@ -221,31 +221,42 @@ export default function UserCasesPage() {
                     </div>
                 </div>
 
-                <div className="flex items-center gap-2 sm:justify-end">
+                <div className="flex items-center gap-2">
                     <button
                         onClick={fetchData}
                         disabled={loading}
                         type="button"
                         title="بارگذاری مجدد"
-                        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 disabled:opacity-40 dark:text-gray-500 dark:hover:bg-white/5 dark:hover:text-gray-300"
+                        className="flex h-10 w-10 items-center justify-center rounded-2xl transition-colors disabled:opacity-50"
+                        style={{
+                            background: isDark
+                                ? "rgba(255,255,255,0.05)"
+                                : "rgba(15,23,42,0.05)",
+                            color: isDark ? "#cbd5e1" : "#475569",
+                        }}
                     >
-                        <RefreshCw size={13} className={loading ? "animate-spin" : ""} />
+                        <RefreshCw
+                            size={15}
+                            className={loading ? "animate-spin" : ""}
+                        />
                     </button>
 
                     <button
                         onClick={() => setCaseModalOpen(true)}
                         type="button"
-                        className="flex h-9 flex-1 items-center justify-center gap-2 rounded-xl bg-indigo-600 px-3.5 text-[12.5px] font-bold text-white transition-all duration-200 hover:bg-indigo-500 active:scale-[0.98] dark:bg-indigo-500 dark:hover:bg-indigo-400 sm:flex-none"
+                        className="flex h-10 items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-4 text-[12.5px] font-bold text-white transition-colors hover:bg-indigo-700"
                     >
-                        <Plus size={13} strokeWidth={2.5} />
-                        <span className="whitespace-nowrap">پرونده جدید</span>
+                        <Plus size={15} />
+                        <span>پرونده جدید</span>
                     </button>
                 </div>
             </div>
 
+            {/* Error */}
             {error && !loading && (
                 <div className="flex flex-col items-start gap-3 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-[12.5px] text-rose-600 dark:border-rose-500/20 dark:bg-rose-500/10 dark:text-rose-300 sm:flex-row sm:items-center sm:justify-between">
                     <span>{error}</span>
+
                     <button
                         onClick={fetchData}
                         type="button"
@@ -256,74 +267,108 @@ export default function UserCasesPage() {
                 </div>
             )}
 
-            {loading ? (
+            {/* Loading */}
+            {loading && (
                 <div className="flex flex-col items-center justify-center gap-3 py-16">
-                    <Loader size={22} className="animate-spin text-indigo-500" />
-                    <p className="text-[12.5px] text-gray-400 dark:text-gray-500">
+                    <Loader size={24} className="animate-spin text-indigo-500" />
+
+                    <p className="text-[12.5px] text-gray-500 dark:text-gray-400">
                         در حال دریافت لیست پرونده‌ها...
                     </p>
                 </div>
-            ) : cases.length === 0 ? (
-                <div className="flex flex-col items-center justify-center gap-3 py-20">
-                    <div className="flex h-14 w-14 items-center justify-center rounded-3xl bg-gray-100 dark:bg-white/5">
-                        <ClipboardList size={20} className="text-gray-400 dark:text-gray-500" />
-                    </div>
-                    <p className="text-[13px] text-gray-400 dark:text-gray-500">
-                        پرونده‌ای ثبت نشده است
+            )}
+
+            {/* Empty State */}
+            {!loading && cases.length === 0 && (
+                <div className="flex flex-col items-center justify-center gap-2 py-16">
+                    <ClipboardList
+                        size={28}
+                        className="text-gray-300 dark:text-gray-700"
+                    />
+
+                    <p className="text-[12.5px] text-gray-500 dark:text-gray-400">
+                        هنوز پرونده‌ای ثبت نشده
                     </p>
-                    <button
-                        onClick={() => setCaseModalOpen(true)}
-                        type="button"
-                        className="rounded-xl bg-indigo-600 px-4 py-2.5 text-[12.5px] font-bold text-white transition-colors hover:bg-indigo-500 dark:bg-indigo-500 dark:hover:bg-indigo-400"
-                    >
-                        ایجاد اولین پرونده
-                    </button>
                 </div>
-            ) : filteredCases.length === 0 ? (
-                <div className="flex flex-col items-center justify-center gap-2 py-20">
-                    <p className="text-[13px] text-gray-400 dark:text-gray-500">
-                        نتیجه‌ای برای «{query}» پیدا نشد
-                    </p>
-                    <button
-                        onClick={() => setQuery("")}
-                        type="button"
-                        className="text-[12px] font-bold text-indigo-500 transition-colors hover:text-indigo-400"
-                    >
-                        پاک کردن جستجو
-                    </button>
-                </div>
-            ) : (
-                <motion.div layout className="grid grid-cols-1 gap-3 lg:grid-cols-2 xl:grid-cols-3">
+            )}
+
+            {/* Cases Grid */}
+            {!loading && cases.length > 0 && (
+                <motion.div
+                    layout
+                    className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3"
+                >
                     <AnimatePresence mode="popLayout">
-                        {filteredCases.map((item, i) => {
-                            const caseTasks = tasksByCase.get(String(item.id)) || [];
+                        {cases.map((item, i) => {
+                            const caseTasks =
+                                tasksByCase.get(String(item.id)) || [];
+
                             return (
-                                <div key={item.id} className="relative flex flex-col gap-2 border-2 border-[#eeeeee] p-3 rounded-4xl dark:border-white/[0.06]">
-                                    <CaseCard
-                                        item={item}
-                                        index={i}
-                                        customers={customers}
-                                        departments={departments}
-                                        hasActiveTasks={caseTasks.length > 0}
-                                        users={employees}
-                                        isDeleting={deletingId === Number(item.id)}
-                                        onEdit={handleEditCase}
-                                        onDelete={handleDeleteCase}
-                                    />
-                                    {caseTasks.length > 0 && (
-                                        <div className="pr-4 space-y-2">
-                                            {caseTasks.map((task, taskIndex) => (
-                                                <TaskCard
-                                                    key={task.id}
-                                                    task={task}
-                                                    index={taskIndex}
-                                                    onEdit={handleEditTask}
-                                                    onDelete={handleDeleteTask}
-                                                    deleting={deletingTaskId === task.id}
-                                                />
-                                            ))}
-                                        </div>
-                                    )}
+                                <div
+                                    key={item.id}
+                                    className="relative flex flex-col gap-2 rounded-4xl border-2 border-[#eeeeee] p-3 dark:border-white/[0.06]"
+                                >
+                                    <div className="relative">
+                                        <CaseCard
+                                            item={item}
+                                            index={i}
+                                            customers={customers}
+                                            departments={departments}
+                                            users={employees}
+                                            isDeleting={
+                                                deletingId === Number(item.id)
+                                            }
+                                            hasActiveTasks={
+                                                caseTasks.length > 0
+                                            }
+                                            onEdit={handleEditCase}
+                                            onDelete={() =>
+                                                handleDeleteCase(item)
+                                            }
+                                        />
+
+                                        <button
+                                            type="button"
+                                            onClick={() => handleEditCase(item)}
+                                            className="absolute left-3 top-3 flex h-7 w-7 items-center justify-center rounded-xl transition-colors"
+                                            title="ویرایش پرونده"
+                                            style={{
+                                                background:
+                                                    "rgba(99, 102, 241, 0.07)",
+                                                color: "rgb(99, 102, 241)",
+                                            }}
+                                        >
+                                            <Pencil size={11} strokeWidth={2} />
+                                        </button>
+                                    </div>
+
+                                    <button
+                                        type="button"
+                                        onClick={() =>
+                                            handleOpenTasksModal(item)
+                                        }
+                                        className="flex items-center justify-between gap-2 rounded-2xl px-3.5 py-2.5 text-[12px] font-bold transition-colors"
+                                        style={{
+                                            background:
+                                                "rgba(99, 102, 241, 0.06)",
+                                            color: "rgb(99, 102, 241)",
+                                        }}
+                                    >
+                                        <span className="flex items-center gap-2">
+                                            <Layers size={13} />
+                                            دیدن وظیفه های این پرونده
+                                        </span>
+
+                                        <span
+                                            className="rounded-full px-2 py-0.5 text-[10.5px] font-extrabold"
+                                            style={{
+                                                background:
+                                                    "rgba(99,102,241,0.14)",
+                                            }}
+                                        >
+                                            {caseTasks.length}
+                                        </span>
+                                    </button>
                                 </div>
                             );
                         })}
@@ -331,6 +376,7 @@ export default function UserCasesPage() {
                 </motion.div>
             )}
 
+            {/* Modals */}
             <CreateCaseModal
                 open={caseModalOpen}
                 onClose={() => setCaseModalOpen(false)}
@@ -353,18 +399,31 @@ export default function UserCasesPage() {
                 />
             )}
 
-            {editModalOpen && editingTask && (
+            {editTaskModalOpen && editingTask && (
                 <EditTaskModal
                     task={editingTask}
                     customers={customers}
                     departments={departments}
                     onClose={() => {
-                        setEditModalOpen(false);
+                        setEditTaskModalOpen(false);
                         setEditingTask(null);
                     }}
                     onSuccess={handleTaskUpdate}
                 />
             )}
+
+            <CaseTasksModal
+                isOpen={tasksModalOpen}
+                onClose={() => {
+                    setTasksModalOpen(false);
+                    setSelectedCaseForTasks(null);
+                }}
+                caseItem={selectedCaseForTasks}
+                tasks={selectedCaseTasks}
+                onEditTask={handleEditTask}
+                onDeleteTask={handleDeleteTask}
+                deletingTaskId={deletingTaskId}
+            />
         </div>
     );
 }

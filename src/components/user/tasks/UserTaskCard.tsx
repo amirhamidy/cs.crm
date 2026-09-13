@@ -28,8 +28,38 @@ import TaskActionModal from "./TaskActionModal";
 import TaskLogsModal from "./TaskLogsModal";
 import ActionBtn from "./ActionBtn";
 import { toJalali, toPersianDigits, JALALI_MONTHS, pad2 } from "@/lib/jalali";
-import { useEmployeeInfo } from "@/hooks/useEmployeeInfo";
 import type { UserTask } from "./types";
+
+const AVATAR_GRADIENTS: [string, string][] = [
+    ["#6366f1", "#8b5cf6"],
+    ["#3b82f6", "#6366f1"],
+    ["#8b5cf6", "#ec4899"],
+    ["#06b6d4", "#6366f1"],
+    ["#f59e0b", "#ef4444"],
+    ["#10b981", "#3b82f6"],
+    ["#f472b6", "#ec4899"],
+    ["#8b5cf6", "#f59e0b"],
+];
+
+function gradientForId(id: number): [string, string] {
+    const safeId = Number.isFinite(id) ? Math.abs(Math.trunc(id)) : 0;
+    return AVATAR_GRADIENTS[safeId % AVATAR_GRADIENTS.length];
+}
+
+function normalizeAssigneeIds(value: TaskCardProps["task"]["assigned_employee"]): number[] {
+    if (value === null || value === undefined) return [];
+    const list = Array.isArray(value) ? value : [value];
+    return list
+        .map((item) => {
+            if (item && typeof item === "object" && "id" in item) {
+                const n = Number((item as { id: unknown }).id);
+                return Number.isFinite(n) ? n : null;
+            }
+            const n = Number(item);
+            return Number.isFinite(n) ? n : null;
+        })
+        .filter((n): n is number => n !== null);
+}
 
 interface TaskWithSchedule extends UserTask {
     started_at?: string | null;
@@ -43,7 +73,7 @@ interface TaskCardProps {
     task: UserTask;
     accent?: string;
     onUpdated: (task: UserTask) => void;
-    isDragging?: boolean;
+    employeesMap?: Record<number, string>;
 }
 
 interface DeadlineResponse {
@@ -334,19 +364,19 @@ function InfoRow({
     );
 }
 
-function LatestLogAuthor({ employeeId }: { employeeId?: number }) {
-    const { data, loading } = useEmployeeInfo(employeeId ?? 0);
+function LatestLogAuthor({
+    employeeId,
+    employeesMap,
+}: {
+    employeeId?: number;
+    employeesMap: Record<number, string>;
+}) {
     if (!employeeId) {
         return <span className="font-bold">نامشخص</span>;
     }
-    if (loading) {
-        return <span className="font-bold">در حال دریافت...</span>;
-    }
     return (
         <span className="font-bold">
-            {data?.full_name ??
-                data?.username ??
-                `کارمند ${toPersianDigits(employeeId)}`}
+            {employeesMap[employeeId] ?? `کارمند ${toPersianDigits(employeeId)}`}
         </span>
     );
 }
@@ -369,9 +399,14 @@ export default function UserTaskCard({
     task,
     accent = "#6366f1",
     onUpdated,
-    isDragging,
+    employeesMap = {},
 }: TaskCardProps) {
     const taskExt = task as TaskWithSchedule;
+
+    const assigneeIds = useMemo(
+        () => normalizeAssigneeIds(task.assigned_employee),
+        [task.assigned_employee]
+    );
 
     const [openModal, setOpenModal] = useState<ModalType | null>(null);
     const [logsOpen, setLogsOpen] = useState(false);
@@ -586,14 +621,18 @@ export default function UserTaskCard({
         <>
             <motion.div
                 layout
-                className="group relative flex flex-col gap-0 overflow-hidden rounded-[1.8rem] border border-gray-100 bg-white p-4 shadow-[0_8px_28px_rgba(15,23,42,0.035)] transition-all duration-300 select-none hover:shadow-[0_12px_36px_rgba(15,23,42,0.08)] dark:border-white/[0.07] dark:bg-[#111a2d] dark:shadow-none"
-                style={{ opacity: isDragging ? 0.35 : 1 }}
+                className="group relative flex flex-col gap-0 overflow-hidden rounded-[1.8rem] border bg-white p-4 shadow-[0_8px_28px_rgba(15,23,42,0.035)] transition-all duration-300 select-none hover:shadow-[0_12px_36px_rgba(15,23,42,0.08)] dark:bg-[#111a2d] dark:shadow-none"
+                style={{ borderColor: `${accent}28` }}
             >
                 <div
                     className="absolute inset-y-0 right-0 w-1"
                     style={{
                         background: `linear-gradient(180deg, ${accent}, ${accent}45)`,
                     }}
+                />
+                <div
+                    className="pointer-events-none absolute -top-10 left-1/2 h-24 w-3/4 -translate-x-1/2 rounded-full opacity-[0.12] blur-2xl"
+                    style={{ background: accent }}
                 />
 
                 <div className="mb-3 flex items-center justify-between gap-2 pl-1">
@@ -658,7 +697,32 @@ export default function UserTaskCard({
                     />
                 </div>
 
-
+                {assigneeIds.length > 0 && (
+                    <div className="mt-3 flex flex-wrap items-center gap-1.5">
+                        {assigneeIds.map((id) => {
+                            const gradient = gradientForId(id);
+                            const name = employeesMap[id] ?? `کارمند ${toPersianDigits(id)}`;
+                            return (
+                                <div
+                                    key={id}
+                                    className="flex items-center gap-1.5 rounded-full border border-black/[0.05] bg-black/[0.02] py-0.5 pl-2.5 pr-0.5 dark:border-white/[0.06] dark:bg-white/[0.04]"
+                                >
+                                    <span
+                                        className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[9px] font-extrabold text-white"
+                                        style={{
+                                            background: `linear-gradient(135deg, ${gradient[0]}, ${gradient[1]})`,
+                                        }}
+                                    >
+                                        {name.trim().charAt(0)}
+                                    </span>
+                                    <span className="text-[10.5px] font-bold text-gray-600 dark:text-gray-300">
+                                        {name}
+                                    </span>
+                                </div>
+                            );
+                        })}
+                    </div>
+                )}
 
                 <div className="mt-3.5 flex flex-col gap-2.5">
                     {deadlineDate ? (
@@ -727,7 +791,10 @@ export default function UserTaskCard({
 
                             <p className="text-[9.5px] font-semibold text-gray-400">
                                 ثبت‌کننده:{" "}
-                                <LatestLogAuthor employeeId={latestLog.employee?.[0]} />
+                                <LatestLogAuthor
+                                    employeeId={latestLog.employee?.[0]}
+                                    employeesMap={employeesMap}
+                                />
                             </p>
                         </div>
                     ) : null}

@@ -1,9 +1,9 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { ClipboardList, X } from "lucide-react";
+import { X } from "lucide-react";
 import { useTheme } from "next-themes";
-import TaskCard from "@/components/customcomponents/tasks/TaskCard";
+import CaseTaskViewCard from "@/components/customcomponents/tasks/CaseTaskViewCard";
 import type { CaseItem } from "@/types/case";
 import type { TaskItem } from "@/types/task";
 
@@ -12,9 +12,9 @@ interface CaseTasksModalProps {
     onClose: () => void;
     caseItem: CaseItem | null;
     tasks: TaskItem[];
-    onEditTask: (task: TaskItem) => void;
-    onDeleteTask: (taskId: number) => Promise<void>;
-    deletingTaskId: number | null;
+    onEditTask?: (task: TaskItem) => void;
+    onDeleteTask?: (taskId: number) => Promise<void>;
+    deletingTaskId?: number | null;
 }
 
 export default function CaseTasksModal({
@@ -22,9 +22,6 @@ export default function CaseTasksModal({
     onClose,
     caseItem,
     tasks,
-    onEditTask,
-    onDeleteTask,
-    deletingTaskId,
 }: CaseTasksModalProps) {
     const { resolvedTheme } = useTheme();
     const isDark = resolvedTheme === "dark";
@@ -38,71 +35,65 @@ export default function CaseTasksModal({
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 className="fixed inset-0 z-50 flex items-center justify-center px-4"
-                style={{ background: "rgba(0,0,0,0.5)", backdropFilter: "blur(3px)" }}
+                style={{
+                    background: "rgba(0,0,0,0.4)",
+                    backdropFilter: "blur(8px)",
+                }}
                 onClick={onClose}
             >
                 <motion.div
-                    initial={{ scale: 0.94, y: 18 }}
-                    animate={{ scale: 1, y: 0 }}
-                    exit={{ scale: 0.94, y: 18 }}
-                    transition={{ duration: 0.22, ease: "easeOut" }}
-                    className="w-full max-w-[520px] overflow-hidden rounded-3xl border"
-                    style={{
-                        background: isDark ? "#0f172a" : "#ffffff",
-                        borderColor: isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.06)",
-                        boxShadow: "0 24px 64px rgba(0,0,0,0.28)",
+                    initial={{ scale: 0.96, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    exit={{ scale: 0.96, opacity: 0 }}
+                    transition={{
+                        duration: 0.2,
+                        ease: [0.32, 0.72, 0, 1],
                     }}
-                    onClick={(e) => e.stopPropagation()}
+                    className="w-full max-w-[560px] overflow-hidden rounded-2xl"
+                    style={{
+                        background: isDark ? "#1c1c1e" : "#ffffff",
+                        boxShadow: isDark
+                            ? "0 20px 60px rgba(0,0,0,0.5)"
+                            : "0 20px 60px rgba(0,0,0,0.15)",
+                    }}
+                    onClick={(event) => event.stopPropagation()}
                     dir="rtl"
                 >
-                    <div
-                        className="flex items-center justify-between border-b px-5 py-4"
-                        style={{ borderColor: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.06)" }}
-                    >
-                        <div className="flex items-center gap-3">
-                            <div
-                                className="flex h-9 w-9 items-center justify-center rounded-xl"
-                                style={{ background: "rgba(99,102,241,0.10)" }}
-                            >
-                                <ClipboardList size={15} className="text-indigo-500" />
-                            </div>
-                            <div>
-                                <h3 className="text-[14px] font-extrabold text-gray-900 dark:text-white">
-                                    تسک‌های پرونده
-                                </h3>
-                                <p className="mt-0.5 text-[11px] text-gray-400 dark:text-gray-500">
-                                    {caseItem.title}
-                                </p>
-                            </div>
+                    {/* Header */}
+                    <div className="flex items-center justify-between px-6 py-5">
+                        <div>
+                            <h2 className="text-[17px] font-semibold text-gray-900 dark:text-white">
+                                تسک‌های پرونده
+                            </h2>
+                            <p className="mt-1 text-[13px] text-gray-500 dark:text-gray-400">
+                                {caseItem.title}
+                            </p>
                         </div>
+
                         <button
                             type="button"
                             onClick={onClose}
-                            className="flex h-8 w-8 items-center justify-center rounded-xl text-gray-400 transition-colors hover:text-gray-600 dark:hover:text-gray-300"
-                            style={{ background: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.04)" }}
+                            className="flex h-8 w-8 items-center justify-center rounded-full transition-colors hover:bg-gray-100 dark:hover:bg-gray-800"
                         >
-                            <X size={15} />
+                            <X size={18} className="text-gray-500" />
                         </button>
                     </div>
 
-                    <div className="max-h-[480px] overflow-y-auto p-4">
+                    {/* Content */}
+                    <div className="max-h-[520px] overflow-y-auto px-4 pb-4">
                         {tasks.length === 0 ? (
-                            <div className="flex flex-col items-center justify-center gap-2 py-14">
-                                <ClipboardList size={20} className="text-gray-300 dark:text-gray-700" />
-                                <p className="text-[12px] font-semibold text-gray-400 dark:text-gray-600">
+                            <div className="flex flex-col items-center justify-center gap-3 py-20">
+                                <div className="text-[13px] font-medium text-gray-400 dark:text-gray-600">
                                     تسکی برای این پرونده ثبت نشده
-                                </p>
+                                </div>
                             </div>
                         ) : (
-                            <div className="flex flex-col gap-2">
+                            <div className="flex flex-col gap-3">
                                 {tasks.map((task, taskIndex) => (
-                                    <TaskCard
+                                    <CaseTaskViewCard
                                         key={task.id}
                                         task={task}
                                         index={taskIndex}
-                                        onEdit={onEditTask}
-                                        onDelete={onDeleteTask}
-                                        deleting={deletingTaskId === task.id}
                                     />
                                 ))}
                             </div>

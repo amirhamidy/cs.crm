@@ -21,6 +21,7 @@ import {
     RefreshCw,
 } from "lucide-react";
 import { useTheme } from "next-themes";
+import { createPortal } from "react-dom";
 import axiosInstance from "@/lib/axiosInstance";
 import { toJalali, toPersianDigits, JALALI_MONTHS, pad2 } from "@/lib/jalali";
 import { useEmployeeInfo } from "@/hooks/useEmployeeInfo";
@@ -243,7 +244,11 @@ export default function TaskLogsModal({ isOpen, onClose, taskId, taskTitle }: Pr
 
     if (!isOpen) return null;
 
-    return (
+    if (typeof document === "undefined") {
+        return null;
+    }
+
+    return createPortal(
         <AnimatePresence>
             <motion.div
                 initial={{ opacity: 0 }}
@@ -348,6 +353,7 @@ export default function TaskLogsModal({ isOpen, onClose, taskId, taskTitle }: Pr
                     </div>
                 </motion.div>
             </motion.div>
-        </AnimatePresence>
+        </AnimatePresence>,
+        document.body
     );
 }

@@ -263,9 +263,6 @@ export default function CaseCard({
                             )}
                         </div>
                     </div>
-                    <span className={`shrink-0 rounded-full border px-2.5 py-1 text-[10.5px] font-bold ${isDark ? status.dark : status.light}`}>
-                        {status.label}
-                    </span>
                 </div>
 
                 <div className="relative mt-4 flex flex-wrap items-center gap-2 border-t pt-3.5" style={{ borderColor: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)" }}>
@@ -286,22 +283,6 @@ export default function CaseCard({
                 </div>
 
                 <div className="relative mt-3 flex items-center justify-end gap-1.5">
-                    {onEdit && (
-                        <button
-                            type="button"
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                onEdit(item);
-                            }}
-                            className="flex h-7 w-7 items-center justify-center rounded-xl transition-colors"
-                            style={{
-                                background: isDark ? "rgba(99,102,241,0.1)" : "rgba(99,102,241,0.07)",
-                                color: isDark ? "#a5b4fc" : "#6366f1",
-                            }}
-                        >
-                            <Pencil size={11} />
-                        </button>
-                    )}
                     {onDelete && (
                         <div className="relative">
                             <button

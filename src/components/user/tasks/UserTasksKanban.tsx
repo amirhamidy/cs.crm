@@ -1,44 +1,29 @@
 "use client";
 
-import { useEffect, useMemo, useState, useRef } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import {
-    Kanban,
-    Loader,
-    GripVertical,
-    AlertCircle,
-    Building2,
-} from "lucide-react";
+import { Kanban, Loader, Building2, Plus, ChevronLeft, UserRound } from "lucide-react";
+import { Swiper, SwiperSlide } from "swiper/react";
+import { FreeMode } from "swiper/modules";
+import "swiper/css";
+import "swiper/css/free-mode";
 import axiosInstance from "@/lib/axiosInstance";
-import UserTaskCard from "./UserTaskCard";
-import TaskActionModal from "./TaskActionModal";
-import type { UserTask, UserStage } from "./types";
-import {
-    DndContext,
-    DragOverlay,
-    PointerSensor,
-    useSensor,
-    useSensors,
-    closestCenter,
-    type DragStartEvent,
-    type DragEndEvent,
-    type DragOverEvent,
-    useDroppable,
-    useDraggable,
-} from "@dnd-kit/core";
+import TaskCardSwiper from "./TaskCardSwiper";
+import type {
+    UserTask,
+    UserStage,
+    EmployeeAPIItem,
+    DepartmentAPIItem,
+    DepartmentEmployeeAPIItem,
+} from "./types";
 import { useCurrentEmployee } from "@/hooks/usecurrentemployee";
 
 interface DepartmentGroup {
     id: number;
     name: string;
+    accent: string;
     stages: KanbanStage[];
     tasks: UserTask[];
-}
-
-interface PendingDrop {
-    task: UserTask;
-    targetStepId: number;
-    direction: "forward" | "backward";
 }
 
 type KanbanStage = UserStage & {
@@ -47,16 +32,23 @@ type KanbanStage = UserStage & {
     department_name?: string | null;
 };
 
-const stageColors = [
+const ACCENT_PALETTE = [
     "#6366f1",
-    "#8b5cf6",
     "#ec4899",
-    "#f59e0b",
     "#10b981",
+    "#f59e0b",
     "#3b82f6",
+    "#8b5cf6",
     "#ef4444",
     "#14b8a6",
+    "#f472b6",
+    "#0ea5e9",
 ];
+
+function accentForId(id: number): string {
+    const safeId = Number.isFinite(id) ? Math.abs(Math.trunc(id)) : 0;
+    return ACCENT_PALETTE[safeId % ACCENT_PALETTE.length];
+}
 
 function useMediaQuery(query: string) {
     const [matches, setMatches] = useState(false);
@@ -93,22 +85,6 @@ function extractDeptId(task: UserTask): number {
     return -1;
 }
 
-function extractDeptName(task: UserTask): string {
-    const direct = (task as any).department_name;
-
-    if (typeof direct === "string" && direct.trim()) {
-        return direct.trim();
-    }
-
-    const raw = (task as any).department;
-
-    if (raw && typeof raw === "object" && "name" in raw) {
-        return String(raw.name);
-    }
-
-    return "بدون دپارتمان";
-}
-
 function extractStageDeptId(stage: KanbanStage): number {
     const raw = stage.department;
 
@@ -127,7 +103,11 @@ function extractAssignedEmployeeIds(task: UserTask): number[] {
     const raw = (task as any).assigned_employee;
 
     if (Array.isArray(raw)) {
-        return raw.map((value) => Number(value));
+        return raw.map((value) => Number(value?.id ?? value));
+    }
+
+    if (raw !== undefined && raw !== null) {
+        return [Number((raw as any)?.id ?? raw)];
     }
 
     return [];
@@ -147,31 +127,59 @@ function groupTasksByStep(tasks: UserTask[]): Record<number, UserTask[]> {
     }, {});
 }
 
+function unwrapList<T>(data: T[] | { results: T[] }): T[] {
+    return Array.isArray(data) ? data : data.results ?? [];
+}
+
 export default function UserTasksKanban() {
     const { employee, loading: employeeLoading } = useCurrentEmployee();
 
     const [tasks, setTasks] = useState<UserTask[]>([]);
     const [stages, setStages] = useState<KanbanStage[]>([]);
+    const [departments, setDepartments] = useState<DepartmentAPIItem[]>([]);
+    const [deptEmployees, setDeptEmployees] = useState<DepartmentEmployeeAPIItem[]>([]);
+    const [employeesMap, setEmployeesMap] = useState<Record<number, string>>({});
     const [loading, setLoading] = useState(true);
     const [stagesLoading, setStagesLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [activeTask, setActiveTask] = useState<UserTask | null>(null);
-    const [overId, setOverId] = useState<number | null>(null);
-    const [pendingDrop, setPendingDrop] = useState<PendingDrop | null>(null);
-    const [limitToast, setLimitToast] = useState(false);
     const [activeDeptId, setActiveDeptId] = useState<number | null>(null);
     const [activeMobileStageId, setActiveMobileStageId] = useState<number | null>(null);
 
-    const pendingRef = useRef<Set<number>>(new Set());
-    const limitToastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
     const isMobile = useMediaQuery("(max-width: 767px)");
 
-    const sensors = useSensors(
-        useSensor(PointerSensor, {
-            activationConstraint: { distance: 8 },
-        })
-    );
+    useEffect(() => {
+        axiosInstance
+            .get<DepartmentAPIItem[] | { results: DepartmentAPIItem[] }>(
+                "/department/api/v1/department/list/"
+            )
+            .then((res) => setDepartments(unwrapList(res.data)))
+            .catch(() => setDepartments([]));
+    }, []);
+
+    useEffect(() => {
+        axiosInstance
+            .get<EmployeeAPIItem[] | { results: EmployeeAPIItem[] }>(
+                "/accounts/api/v1/employee/list/"
+            )
+            .then((res) => {
+                const raw = unwrapList(res.data);
+                const map: Record<number, string> = {};
+                raw.forEach((emp) => {
+                    map[emp.id] = emp.full_name || emp.username;
+                });
+                setEmployeesMap(map);
+            })
+            .catch(() => setEmployeesMap({}));
+    }, []);
+
+    useEffect(() => {
+        axiosInstance
+            .get<DepartmentEmployeeAPIItem[] | { results: DepartmentEmployeeAPIItem[] }>(
+                "/department/api/v1/department_employee/list/"
+            )
+            .then((res) => setDeptEmployees(unwrapList(res.data)))
+            .catch(() => setDeptEmployees([]));
+    }, []);
 
     useEffect(() => {
         axiosInstance
@@ -179,9 +187,7 @@ export default function UserTasksKanban() {
                 "/department/api/v1/department_step/"
             )
             .then((res) => {
-                const raw = Array.isArray(res.data)
-                    ? res.data
-                    : (res.data as { results: KanbanStage[] }).results ?? [];
+                const raw = unwrapList(res.data);
 
                 const mapped: KanbanStage[] = raw
                     .map((stage) => ({
@@ -226,9 +232,7 @@ export default function UserTasksKanban() {
                     return;
                 }
 
-                const data = Array.isArray(res.data)
-                    ? res.data
-                    : res.data.results ?? [];
+                const data = unwrapList(res.data);
 
                 const myActiveTasks = data.filter(
                     (task) =>
@@ -254,54 +258,40 @@ export default function UserTasksKanban() {
         };
     }, [employeeLoading, employee]);
 
+    const departmentNameMap = useMemo(() => {
+        const map = new Map<number, string>();
+        departments.forEach((dept) => map.set(dept.id, dept.name));
+        return map;
+    }, [departments]);
+
     const departmentGroups = useMemo<DepartmentGroup[]>(() => {
         const map = new Map<number, DepartmentGroup>();
 
-        const deptNameFromTasks = new Map<number, string>();
-        tasks.forEach((task) => {
-            const id = extractDeptId(task);
-            const name = extractDeptName(task);
-            if (id !== -1 && !deptNameFromTasks.has(id)) {
-                deptNameFromTasks.set(id, name);
-            }
-        });
-
-        stages.forEach((stage) => {
-            const deptId = extractStageDeptId(stage);
-            const deptName =
-                stage.department_name ||
-                (typeof stage.department === "object" && stage.department
-                    ? String((stage.department as { name?: string }).name ?? "")
-                    : "") ||
-                deptNameFromTasks.get(deptId) ||
-                "بدون دپارتمان";
-
+        const ensureGroup = (deptId: number, fallbackName?: string | null) => {
             if (!map.has(deptId)) {
                 map.set(deptId, {
                     id: deptId,
-                    name: deptName,
+                    name:
+                        departmentNameMap.get(deptId) ||
+                        (fallbackName && fallbackName.trim()) ||
+                        "بدون دپارتمان",
+                    accent: accentForId(deptId),
                     stages: [],
                     tasks: [],
                 });
             }
 
-            map.get(deptId)!.stages.push(stage);
+            return map.get(deptId)!;
+        };
+
+        stages.forEach((stage) => {
+            const deptId = extractStageDeptId(stage);
+            ensureGroup(deptId, stage.department_name).stages.push(stage);
         });
 
         tasks.forEach((task) => {
             const deptId = extractDeptId(task);
-            const deptName = extractDeptName(task);
-
-            if (!map.has(deptId)) {
-                map.set(deptId, {
-                    id: deptId,
-                    name: deptName,
-                    stages: [],
-                    tasks: [],
-                });
-            }
-
-            map.get(deptId)!.tasks.push(task);
+            ensureGroup(deptId, (task as any).department_name).tasks.push(task);
         });
 
         map.forEach((group) => {
@@ -309,7 +299,7 @@ export default function UserTasksKanban() {
         });
 
         return Array.from(map.values());
-    }, [stages, tasks]);
+    }, [stages, tasks, departmentNameMap]);
 
     useEffect(() => {
         if (departmentGroups.length === 0) {
@@ -332,6 +322,14 @@ export default function UserTasksKanban() {
         () => groupTasksByStep(activeGroup?.tasks ?? []),
         [activeGroup]
     );
+
+    const activeDeptMembers = useMemo(() => {
+        if (activeDeptId === null) {
+            return [];
+        }
+
+        return deptEmployees.filter((item) => item.department === activeDeptId);
+    }, [deptEmployees, activeDeptId]);
 
     useEffect(() => {
         const availableStages = activeGroup?.stages ?? [];
@@ -360,154 +358,6 @@ export default function UserTasksKanban() {
         );
     }
 
-    function handleDragStart(event: DragStartEvent) {
-        const task = tasks.find((item) => item.id === event.active.id);
-
-        if (task) {
-            setActiveTask(task);
-        }
-    }
-
-    function handleDragOver(event: DragOverEvent) {
-        const id = event.over?.id;
-
-        if (id !== undefined) {
-            setOverId(Number(id));
-        }
-    }
-
-    function showLimitToast() {
-        setLimitToast(true);
-
-        if (limitToastTimer.current) {
-            clearTimeout(limitToastTimer.current);
-        }
-
-        limitToastTimer.current = setTimeout(() => {
-            setLimitToast(false);
-        }, 3500);
-    }
-
-    function handleDragEnd(event: DragEndEvent) {
-        const { active, over } = event;
-
-        setActiveTask(null);
-        setOverId(null);
-
-        if (!over || !activeGroup) {
-            return;
-        }
-
-        const task = tasks.find((item) => item.id === active.id);
-
-        if (!task) {
-            return;
-        }
-
-        const targetStepId = Number(over.id);
-
-        if (task.current_step === targetStepId) {
-            return;
-        }
-
-        if (pendingRef.current.has(task.id)) {
-            return;
-        }
-
-        const stageList = activeGroup.stages.map((stage) => stage.id);
-        const currentIdx = stageList.indexOf(task.current_step);
-        const targetIdx = stageList.indexOf(targetStepId);
-
-        if (targetIdx === -1) {
-            return;
-        }
-
-        const steps = Math.abs(targetIdx - currentIdx);
-
-        if (steps > 1) {
-            showLimitToast();
-            return;
-        }
-
-        const direction = targetIdx > currentIdx ? "forward" : "backward";
-
-        setPendingDrop({
-            task,
-            targetStepId,
-            direction,
-        });
-    }
-
-    async function handleModalSubmit({
-        note,
-        files,
-    }: {
-        note: string;
-        files: File[];
-    }) {
-        if (!pendingDrop || !activeGroup) {
-            return;
-        }
-
-        const { task, targetStepId, direction } = pendingDrop;
-        const targetStage = activeGroup.stages.find(
-            (stage) => stage.id === targetStepId
-        );
-
-        setTasks((prev) =>
-            prev.map((item) =>
-                item.id === task.id
-                    ? {
-                        ...item,
-                        current_step: targetStepId,
-                        current_step_name:
-                            targetStage?.name ?? item.current_step_name,
-                    }
-                    : item
-            )
-        );
-
-        setPendingDrop(null);
-        pendingRef.current.add(task.id);
-
-        try {
-            const endpoint =
-                direction === "forward"
-                    ? `/tasks/api/v1/tasks/${task.id}/advance/`
-                    : `/tasks/api/v1/tasks/${task.id}/revert/`;
-
-            const formData = new FormData();
-
-            if (note.trim()) {
-                formData.append("note", note.trim());
-            }
-
-            files.forEach((file) => {
-                formData.append("files", file);
-            });
-
-            const res = await axiosInstance.post<UserTask>(endpoint, formData, {
-                headers: {
-                    "Content-Type": "multipart/form-data",
-                },
-            });
-
-            handleUpdated(res.data);
-        } catch {
-            setTasks((prev) =>
-                prev.map((item) => (item.id === task.id ? task : item))
-            );
-
-            throw new Error("خطا در ثبت");
-        } finally {
-            pendingRef.current.delete(task.id);
-        }
-    }
-
-    function handleModalClose() {
-        setPendingDrop(null);
-    }
-
     if (loading || stagesLoading || employeeLoading) {
         return (
             <div className="flex h-64 items-center justify-center">
@@ -527,10 +377,7 @@ export default function UserTasksKanban() {
     if (tasks.length === 0) {
         return (
             <div className="flex h-64 flex-col items-center justify-center gap-3 rounded-3xl border border-dashed border-gray-200 dark:border-white/[0.07]">
-                <Kanban
-                    size={28}
-                    className="text-gray-300 dark:text-gray-700"
-                />
+                <Kanban size={28} className="text-gray-300 dark:text-gray-700" />
                 <p className="text-[12px] text-gray-400">تسک در حال انجامی وجود ندارد</p>
             </div>
         );
@@ -538,305 +385,203 @@ export default function UserTasksKanban() {
 
     const activeStages = activeGroup?.stages ?? [];
 
-    const activeStageIndex = activeTask
-        ? activeStages.findIndex((stage) => stage.id === activeTask.current_step)
-        : -1;
-
-    const activeColor =
-        activeStageIndex >= 0
-            ? stageColors[activeStageIndex % stageColors.length]
-            : "#6366f1";
-
-    const modalDirection = pendingDrop?.direction === "forward" ? "next" : "prev";
-
-    const targetStageName =
-        activeGroup?.stages.find(
-            (stage) => stage.id === pendingDrop?.targetStepId
-        )?.name ?? "";
-
     const mobileStage =
-        activeGroup?.stages.find(
-            (stage) => stage.id === activeMobileStageId
-        ) ?? activeGroup?.stages[0];
+        activeStages.find((stage) => stage.id === activeMobileStageId) ??
+        activeStages[0];
 
     const mobileStageIndex = mobileStage
-        ? activeGroup?.stages.findIndex((stage) => stage.id === mobileStage.id) ?? 0
+        ? activeStages.findIndex((stage) => stage.id === mobileStage.id)
         : 0;
 
     const mobileStageTasks = mobileStage ? grouped[mobileStage.id] ?? [] : [];
 
-    const mobileStageColor =
-        stageColors[mobileStageIndex % stageColors.length] ?? "#6366f1";
-
     return (
-        <>
-            <div className="flex flex-col gap-5" dir="rtl">
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2.5">
-                        <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-indigo-500/10">
-                            <Kanban size={17} className="text-indigo-500" />
-                        </div>
-
-                        <div>
-                            <h3 className="text-[14px] font-extrabold text-gray-900 dark:text-white">
-                                تسک‌های من
-                            </h3>
-
-                            <p className="text-[11px] text-gray-400 dark:text-gray-600">
-                                {departmentGroups.length} دپارتمان
-                            </p>
-                        </div>
+        <div className="flex flex-col gap-5" dir="rtl">
+            <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                    <div
+                        className="flex h-9 w-9 items-center justify-center rounded-2xl"
+                        style={{ background: "rgba(99,102,241,0.12)" }}
+                    >
+                        <Kanban size={17} className="text-indigo-500" />
                     </div>
 
-                    <span className="rounded-2xl bg-gray-100 px-3 py-1.5 text-[11px] font-bold text-gray-600 dark:bg-white/[0.06] dark:text-gray-400">
-                        {(activeGroup?.tasks ?? []).length} تسک
-                    </span>
+                    <div>
+                        <h3 className="text-[14px] font-extrabold text-gray-900 dark:text-white">
+                            تسک‌های من
+                        </h3>
+
+                        <p className="text-[11px] text-gray-400 dark:text-gray-600">
+                            {departmentGroups.length} دپارتمان
+                        </p>
+                    </div>
                 </div>
 
-                <div className="flex gap-2 overflow-x-auto pb-1">
-                    {departmentGroups.map((group) => {
-                        const isActive = group.id === activeDeptId;
-
-                        return (
-                            <button
-                                key={group.id}
-                                type="button"
-                                onClick={() => setActiveDeptId(group.id)}
-                                className={`flex shrink-0 items-center gap-2 rounded-2xl px-3.5 py-2 text-[11.5px] font-bold transition-colors ${isActive
-                                    ? "bg-indigo-600 text-white"
-                                    : "bg-gray-100 text-gray-500 hover:bg-gray-200 dark:bg-white/[0.05] dark:text-gray-400 dark:hover:bg-white/[0.08]"
-                                    }`}
-                            >
-                                <Building2 size={12} />
-
-                                {group.name}
-
-                                <span
-                                    className={`rounded-full px-1.5 py-0.5 text-[10px] font-extrabold ${isActive
-                                        ? "bg-white/20"
-                                        : "bg-black/5 dark:bg-white/10"
-                                        }`}
-                                >
-                                    {group.tasks.length}
-                                </span>
-                            </button>
-                        );
-                    })}
-                </div>
-
-                {activeGroup &&
-                    (isMobile ? (
-                        <div className="flex flex-col gap-3">
-                            <div className="flex gap-2 overflow-x-auto pb-1">
-                                {activeGroup.stages.map((stage, index) => {
-                                    const isActive = stage.id === mobileStage?.id;
-                                    const color =
-                                        stageColors[index % stageColors.length];
-                                    const count = grouped[stage.id]?.length ?? 0;
-
-                                    return (
-                                        <button
-                                            key={stage.id}
-                                            type="button"
-                                            onClick={() =>
-                                                setActiveMobileStageId(stage.id)
-                                            }
-                                            className="flex shrink-0 items-center gap-2 rounded-2xl border px-3 py-2 text-[11px] font-bold transition-all"
-                                            style={{
-                                                color: isActive ? color : undefined,
-                                                backgroundColor: isActive
-                                                    ? `${color}14`
-                                                    : undefined,
-                                                borderColor: isActive
-                                                    ? `${color}45`
-                                                    : "rgba(255,255,255,0.07)",
-                                            }}
-                                        >
-                                            <span
-                                                className="flex h-5 w-5 items-center justify-center rounded-lg text-[9px] font-extrabold"
-                                                style={{
-                                                    backgroundColor: `${color}20`,
-                                                    color,
-                                                }}
-                                            >
-                                                {index + 1}
-                                            </span>
-
-                                            <span
-                                                className={
-                                                    isActive
-                                                        ? ""
-                                                        : "text-gray-500 dark:text-gray-400"
-                                                }
-                                            >
-                                                {stage.name}
-                                            </span>
-
-                                            <span
-                                                className="rounded-full px-1.5 py-0.5 text-[9px] font-extrabold"
-                                                style={{
-                                                    backgroundColor: `${color}18`,
-                                                    color,
-                                                }}
-                                            >
-                                                {count}
-                                            </span>
-                                        </button>
-                                    );
-                                })}
-                            </div>
-
-                            {mobileStage && (
-                                <AnimatePresence mode="wait">
-                                    <motion.div
-                                        key={mobileStage.id}
-                                        initial={{ opacity: 0, y: 10 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        exit={{ opacity: 0, y: -8 }}
-                                        transition={{ duration: 0.2 }}
-                                    >
-                                        <MobileStageColumn
-                                            stage={mobileStage}
-                                            tasks={mobileStageTasks}
-                                            accent={mobileStageColor}
-                                            index={mobileStageIndex}
-                                            onUpdated={handleUpdated}
-                                        />
-                                    </motion.div>
-                                </AnimatePresence>
-                            )}
-                        </div>
-                    ) : (
-                        <DndContext
-                            sensors={sensors}
-                            collisionDetection={closestCenter}
-                            onDragStart={handleDragStart}
-                            onDragOver={handleDragOver}
-                            onDragEnd={handleDragEnd}
-                        >
-                            <div className="flex gap-3 overflow-x-auto pb-3">
-                                {activeGroup.stages.map((stage, index) => {
-                                    const stageTasks = grouped[stage.id] ?? [];
-                                    const color =
-                                        stageColors[index % stageColors.length];
-
-                                    const isOver =
-                                        overId === stage.id &&
-                                        activeTask?.current_step !== stage.id;
-
-                                    const activeIdx = activeTask
-                                        ? activeGroup.stages.findIndex(
-                                            (item) =>
-                                                item.id ===
-                                                activeTask.current_step
-                                        )
-                                        : -1;
-
-                                    const isAdjacent =
-                                        activeTask !== null &&
-                                        Math.abs(index - activeIdx) === 1;
-
-                                    const isDisabled =
-                                        activeTask !== null &&
-                                        activeTask.current_step !== stage.id &&
-                                        !isAdjacent;
-
-                                    return (
-                                        <motion.div
-                                            key={stage.id}
-                                            initial={{ opacity: 0, y: 12 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            transition={{
-                                                duration: 0.25,
-                                                delay: index * 0.04,
-                                            }}
-                                            className="w-[300px] shrink-0"
-                                        >
-                                            <StageColumn
-                                                stage={stage}
-                                                tasks={stageTasks}
-                                                accent={color}
-                                                index={index}
-                                                isOver={isOver && isAdjacent}
-                                                isDisabled={isDisabled}
-                                                onUpdated={handleUpdated}
-                                            />
-                                        </motion.div>
-                                    );
-                                })}
-                            </div>
-
-                            <DragOverlay
-                                dropAnimation={{
-                                    duration: 200,
-                                    easing: "ease",
-                                }}
-                            >
-                                {activeTask && (
-                                    <div className="rotate-[1.5deg] scale-[1.04]">
-                                        <UserTaskCard
-                                            task={activeTask}
-                                            accent={activeColor}
-                                            onUpdated={() => { }}
-                                            isDragging
-                                        />
-                                    </div>
-                                )}
-                            </DragOverlay>
-                        </DndContext>
-                    ))}
+                <span className="rounded-2xl bg-gray-100 px-3 py-1.5 text-[11px] font-bold text-gray-600 dark:bg-white/[0.06] dark:text-gray-400">
+                    {(activeGroup?.tasks ?? []).length} تسک
+                </span>
             </div>
 
-            <TaskActionModal
-                isOpen={pendingDrop !== null}
-                onClose={handleModalClose}
-                onSubmit={handleModalSubmit}
-                direction={modalDirection}
-                title={
-                    pendingDrop?.direction === "forward"
-                        ? "انتقال به مرحله بعد"
-                        : "بازگشت به مرحله قبل"
-                }
-                description={`انتقال به: ${targetStageName}`}
-            />
+            <div className="flex gap-2 overflow-x-auto pb-1">
+                {departmentGroups.map((group) => {
+                    const isActive = group.id === activeDeptId;
 
-            <AnimatePresence>
-                {limitToast && (
-                    <motion.div
-                        initial={{ opacity: 0, y: 24, scale: 0.95 }}
-                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                        exit={{ opacity: 0, y: 16, scale: 0.95 }}
-                        transition={{ duration: 0.22, ease: "easeOut" }}
-                        className="fixed bottom-6 left-1/2 z-[100] -translate-x-1/2"
-                        dir="rtl"
-                    >
-                        <div
-                            className="flex items-center gap-3 rounded-2xl border px-5 py-3.5 shadow-2xl"
+                    return (
+                        <button
+                            key={group.id}
+                            type="button"
+                            onClick={() => setActiveDeptId(group.id)}
+                            className="flex shrink-0 items-center gap-2 rounded-2xl border px-3.5 py-2 text-[11.5px] font-bold transition-all"
                             style={{
-                                background: "rgba(15,23,42,0.96)",
-                                borderColor: "rgba(239,68,68,0.25)",
-                                backdropFilter: "blur(12px)",
-                                boxShadow: "0 8px 32px rgba(239,68,68,0.15)",
+                                background: isActive ? group.accent : `${group.accent}0f`,
+                                borderColor: isActive ? group.accent : `${group.accent}30`,
+                                color: isActive ? "#ffffff" : group.accent,
                             }}
                         >
-                            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-red-500/15">
-                                <AlertCircle size={15} className="text-red-400" />
-                            </div>
+                            <Building2 size={12} />
 
-                            <div>
-                                <p className="text-[13px] font-bold text-white">
-                                    جابجایی مستقیم مجاز نیست
-                                </p>
+                            {group.name}
 
-                                <p className="mt-0.5 text-[11px] text-gray-400">
-                                    تنها می‌توانید کارت را یک گام به جلو یا عقب منتقل کنید.
-                                </p>
-                            </div>
+                            <span
+                                className="rounded-full px-1.5 py-0.5 text-[10px] font-extrabold"
+                                style={{
+                                    background: isActive
+                                        ? "rgba(255,255,255,0.25)"
+                                        : `${group.accent}18`,
+                                }}
+                            >
+                                {group.tasks.length}
+                            </span>
+                        </button>
+                    );
+                })}
+            </div>
+
+            {activeDeptMembers.length > 0 && (
+                <div className="flex flex-wrap items-center gap-1.5">
+                    {activeDeptMembers.map((member) => (
+                        <div
+                            key={member.id}
+                            className="flex items-center gap-1.5 rounded-full border border-black/[0.05] bg-black/[0.02] py-0.5 pl-2.5 pr-0.5 dark:border-white/[0.06] dark:bg-white/[0.04]"
+                        >
+                            <span
+                                className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-white"
+                                style={{
+                                    background: `linear-gradient(135deg, ${accentForId(
+                                        member.employee
+                                    )}, ${accentForId(member.employee + 1)})`,
+                                }}
+                            >
+                                <UserRound size={11} />
+                            </span>
+                            <span className="text-[10.5px] font-bold text-gray-600 dark:text-gray-300">
+                                {employeesMap[member.employee] ?? member.employee_name}
+                            </span>
                         </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-        </>
+                    ))}
+                </div>
+            )}
+
+            {activeGroup && activeStages.length === 0 && (
+                <div className="flex h-40 flex-col items-center justify-center gap-2 rounded-[1.6rem] border border-dashed border-gray-200 dark:border-white/[0.07]">
+                    <Plus size={16} className="text-gray-300 dark:text-gray-700" />
+                    <p className="text-[11px] font-medium text-gray-400">
+                        فرآیندی برای این دپارتمان تعریف نشده است
+                    </p>
+                </div>
+            )}
+
+            {activeGroup &&
+                activeStages.length > 0 &&
+                (isMobile ? (
+                    <div className="flex flex-col gap-3">
+                        <div className="flex gap-2 overflow-x-auto pb-1">
+                            {activeStages.map((stage, index) => {
+                                const isActive = stage.id === mobileStage?.id;
+                                const color = accentForId(stage.id);
+                                const count = grouped[stage.id]?.length ?? 0;
+
+                                return (
+                                    <button
+                                        key={stage.id}
+                                        type="button"
+                                        onClick={() => setActiveMobileStageId(stage.id)}
+                                        className="flex shrink-0 items-center gap-2 rounded-2xl border px-3 py-2 text-[11px] font-bold transition-all"
+                                        style={{
+                                            color: isActive ? color : "#94a3b8",
+                                            backgroundColor: isActive ? `${color}14` : undefined,
+                                            borderColor: isActive ? `${color}45` : "rgba(148,163,184,0.25)",
+                                        }}
+                                    >
+                                        <span
+                                            className="flex h-5 w-5 items-center justify-center rounded-lg text-[9px] font-extrabold text-white"
+                                            style={{ backgroundColor: color }}
+                                        >
+                                            {index + 1}
+                                        </span>
+
+                                        <span>{stage.name}</span>
+
+                                        <span
+                                            className="rounded-full px-1.5 py-0.5 text-[9px] font-extrabold"
+                                            style={{
+                                                backgroundColor: `${color}18`,
+                                                color,
+                                            }}
+                                        >
+                                            {count}
+                                        </span>
+                                    </button>
+                                );
+                            })}
+                        </div>
+
+                        {mobileStage && (
+                            <AnimatePresence mode="wait">
+                                <motion.div
+                                    key={mobileStage.id}
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0, y: -8 }}
+                                    transition={{ duration: 0.2 }}
+                                >
+                                    <StageColumn
+                                        stage={mobileStage}
+                                        tasks={mobileStageTasks}
+                                        accent={accentForId(mobileStage.id)}
+                                        index={mobileStageIndex}
+                                        isLast
+                                        onUpdated={handleUpdated}
+                                        employeesMap={employeesMap}
+                                    />
+                                </motion.div>
+                            </AnimatePresence>
+                        )}
+                    </div>
+                ) : (
+                    <Swiper
+                        modules={[FreeMode]}
+                        freeMode
+                        slidesPerView="auto"
+                        spaceBetween={14}
+                        className="!w-full !overflow-hidden !px-0.5"
+                    >
+                        {activeStages.map((stage, index) => (
+                            <SwiperSlide key={stage.id} className="!w-[320px] shrink-0 !overflow-visible">
+                                <StageColumn
+                                    stage={stage}
+                                    tasks={grouped[stage.id] ?? []}
+                                    accent={accentForId(stage.id)}
+                                    index={index}
+                                    isLast={index === activeStages.length - 1}
+                                    onUpdated={handleUpdated}
+                                    employeesMap={employeesMap}
+                                />
+                            </SwiperSlide>
+                        ))}
+                    </Swiper>
+                ))}
+        </div>
     );
 }
 
@@ -845,242 +590,92 @@ function StageColumn({
     tasks,
     accent,
     index,
-    isOver,
-    isDisabled,
+    isLast,
     onUpdated,
+    employeesMap,
 }: {
-    stage: UserStage;
+    stage: KanbanStage;
     tasks: UserTask[];
     accent: string;
     index: number;
-    isOver: boolean;
-    isDisabled: boolean;
+    isLast: boolean;
     onUpdated: (task: UserTask) => void;
-}) {
-    const { setNodeRef } = useDroppable({ id: stage.id });
-
-    return (
-        <div
-            ref={setNodeRef}
-            className="flex flex-col overflow-hidden rounded-[1.6rem] transition-all duration-200"
-            style={{
-                background: isOver
-                    ? `linear-gradient(145deg, ${accent}10, ${accent}05)`
-                    : "rgba(255,255,255,0.02)",
-                border: isOver
-                    ? `1.5px solid ${accent}50`
-                    : "1.5px solid rgba(255,255,255,0.07)",
-                boxShadow: isOver
-                    ? `0 0 0 4px ${accent}15, 0 8px 32px rgba(0,0,0,0.12)`
-                    : "0 2px 12px rgba(0,0,0,0.06)",
-                opacity: isDisabled ? 0.35 : 1,
-                pointerEvents: isDisabled ? "none" : "auto",
-            }}
-        >
-            <div
-                className="flex items-center justify-between gap-2 px-4 pb-3 pt-4"
-                style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}
-            >
-                <div className="flex min-w-0 items-center gap-2.5">
-                    <div
-                        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-xl text-[11px] font-extrabold"
-                        style={{
-                            backgroundColor: `${accent}20`,
-                            color: accent,
-                        }}
-                    >
-                        {index + 1}
-                    </div>
-
-                    <h4 className="truncate text-[12.5px] font-bold text-gray-800 dark:text-gray-100">
-                        {stage.name}
-                    </h4>
-                </div>
-
-                <div
-                    className="shrink-0 rounded-full px-2.5 py-0.5 text-[10px] font-extrabold tabular-nums"
-                    style={{
-                        backgroundColor: `${accent}18`,
-                        color: accent,
-                    }}
-                >
-                    {tasks.length}
-                </div>
-            </div>
-
-            <div
-                className="h-[2px]"
-                style={{
-                    background: `linear-gradient(90deg, ${accent}60, transparent)`,
-                }}
-            />
-
-            <div className="scrollbar-thin scrollbar-track-transparent scrollbar-thumb-white/10 flex max-h-[520px] flex-col gap-2.5 overflow-y-auto p-3">
-                {tasks.length === 0 ? (
-                    <EmptySlot accent={accent} isOver={isOver} />
-                ) : (
-                    tasks.map((task) => (
-                        <DraggableCard
-                            key={task.id}
-                            task={task}
-                            accent={accent}
-                            onUpdated={onUpdated}
-                        />
-                    ))
-                )}
-
-                {tasks.length > 0 && isOver && <DropIndicator accent={accent} />}
-            </div>
-        </div>
-    );
-}
-
-function MobileStageColumn({
-    stage,
-    tasks,
-    accent,
-    index,
-    onUpdated,
-}: {
-    stage: UserStage;
-    tasks: UserTask[];
-    accent: string;
-    index: number;
-    onUpdated: (task: UserTask) => void;
-}) {
-    return (
-        <div
-            className="flex flex-col overflow-hidden rounded-[1.6rem]"
-            style={{
-                background: "rgba(255,255,255,0.02)",
-                border: "1.5px solid rgba(255,255,255,0.07)",
-                boxShadow: "0 2px 12px rgba(0,0,0,0.06)",
-            }}
-        >
-            <div
-                className="flex items-center justify-between gap-2 px-4 pb-3 pt-4"
-                style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}
-            >
-                <div className="flex min-w-0 items-center gap-2.5">
-                    <div
-                        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-xl text-[11px] font-extrabold"
-                        style={{
-                            backgroundColor: `${accent}20`,
-                            color: accent,
-                        }}
-                    >
-                        {index + 1}
-                    </div>
-
-                    <h4 className="truncate text-[12.5px] font-bold text-gray-800 dark:text-gray-100">
-                        {stage.name}
-                    </h4>
-                </div>
-
-                <div
-                    className="shrink-0 rounded-full px-2.5 py-0.5 text-[10px] font-extrabold tabular-nums"
-                    style={{
-                        backgroundColor: `${accent}18`,
-                        color: accent,
-                    }}
-                >
-                    {tasks.length}
-                </div>
-            </div>
-
-            <div
-                className="h-[2px]"
-                style={{
-                    background: `linear-gradient(90deg, ${accent}60, transparent)`,
-                }}
-            />
-
-            <div className="flex flex-col gap-2.5 p-3">
-                {tasks.length === 0 ? (
-                    <EmptySlot accent={accent} isOver={false} />
-                ) : (
-                    tasks.map((task) => (
-                        <UserTaskCard
-                            key={task.id}
-                            task={task}
-                            accent={accent}
-                            onUpdated={onUpdated}
-                        />
-                    ))
-                )}
-            </div>
-        </div>
-    );
-}
-
-function EmptySlot({
-    accent,
-    isOver,
-}: {
-    accent: string;
-    isOver: boolean;
+    employeesMap: Record<number, string>;
 }) {
     return (
         <motion.div
-            animate={{
-                borderColor: isOver ? `${accent}60` : "rgba(255,255,255,0.08)",
-            }}
-            className="flex h-36 flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed transition-colors"
+            layout
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.22, delay: index * 0.04 }}
+            className="relative flex min-w-0 flex-col rounded-[1.45rem] border bg-white shadow-[0_6px_22px_rgba(15,23,42,0.03)] dark:bg-white/[0.025] dark:shadow-none"
+            style={{ borderColor: `${accent}28` }}
         >
-            <GripVertical size={18} className="text-gray-300 dark:text-gray-700" />
+            {!isLast && (
+                <div
+                    className="pointer-events-none absolute top-[28px] z-20 flex h-5 w-5 items-center justify-center rounded-full border bg-white shadow-sm dark:bg-[#0f172a]"
+                    style={{
+                        insetInlineEnd: "-10px",
+                        borderColor: `${accent}35`,
+                        color: accent,
+                    }}
+                >
+                    <ChevronLeft size={10} strokeWidth={2.5} />
+                </div>
+            )}
 
-            <p className="text-[11px] text-gray-400 dark:text-gray-600">
-                {isOver ? "اینجا رها کن" : "خالی"}
-            </p>
+            <div className="relative px-3 py-2.5">
+                <div className="flex items-center justify-between gap-2.5">
+                    <div className="flex min-w-0 items-center gap-2">
+                        <span
+                            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-[11px] font-extrabold text-white shadow-sm"
+                            style={{ backgroundColor: accent }}
+                        >
+                            {index + 1}
+                        </span>
+
+                        <div className="min-w-0">
+                            <h4 className="truncate text-[12.5px] font-extrabold text-gray-800 dark:text-gray-100">
+                                {stage.name}
+                            </h4>
+                        </div>
+                    </div>
+
+                    <span
+                        className="shrink-0 rounded-full px-2.5 py-0.5 text-[10.5px] font-extrabold tabular-nums"
+                        style={{
+                            backgroundColor: `${accent}18`,
+                            color: accent,
+                        }}
+                    >
+                        {tasks.length}
+                    </span>
+                </div>
+            </div>
+
+            <div className="h-px" style={{ background: `${accent}18` }} />
+
+            {tasks.length === 0 ? (
+                <div className="flex h-32 flex-col items-center justify-center gap-1.5 px-4 text-center">
+                    <div
+                        className="flex h-7 w-7 items-center justify-center rounded-lg"
+                        style={{ background: `${accent}0f` }}
+                    >
+                        <Plus size={11} style={{ color: `${accent}90` }} />
+                    </div>
+
+                    <p className="text-[11px] font-medium text-gray-400">
+                        وظیفه‌ای در این مرحله نیست
+                    </p>
+                </div>
+            ) : (
+                <TaskCardSwiper
+                    tasks={tasks}
+                    accent={accent}
+                    onUpdated={onUpdated}
+                    employeesMap={employeesMap}
+                />
+            )}
         </motion.div>
-    );
-}
-
-function DropIndicator({ accent }: { accent: string }) {
-    return (
-        <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 48 }}
-            exit={{ opacity: 0, height: 0 }}
-            className="flex items-center justify-center rounded-2xl border-2 border-dashed"
-            style={{
-                borderColor: `${accent}50`,
-                background: `${accent}08`,
-            }}
-        >
-            <p className="text-[11px] font-semibold" style={{ color: accent }}>
-                اینجا رها کن
-            </p>
-        </motion.div>
-    );
-}
-
-function DraggableCard({
-    task,
-    accent,
-    onUpdated,
-}: {
-    task: UserTask;
-    accent: string;
-    onUpdated: (task: UserTask) => void;
-}) {
-    const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
-        id: task.id,
-    });
-
-    return (
-        <div
-            ref={setNodeRef}
-            {...attributes}
-            {...listeners}
-            className="touch-none"
-        >
-            <UserTaskCard
-                task={task}
-                accent={accent}
-                onUpdated={onUpdated}
-                isDragging={isDragging}
-            />
-        </div>
     );
 }
