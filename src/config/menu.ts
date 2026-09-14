@@ -76,7 +76,7 @@ export const adminMenuItems: MenuItem[] = [
   },
   {
     icon: MessageSquareText,
-    label: "گفتگو کاربران",
+    label: "تیکت به کاربران",
     href: "/admin/staffConversation",
   },
   {

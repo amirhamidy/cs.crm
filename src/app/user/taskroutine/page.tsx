@@ -1,8 +1,9 @@
-import TaskRoutineBoard from "@/components/user/TaskRoutine/Taskroutineboard";
+import EmployeeTaskRoutineBoard from "@/components/InternalTaskRoutine/Employeetaskroutineboard";
 
-const TaskRoutine = () => {
-    return <TaskRoutineBoard />;
-};
-
-export default TaskRoutine;
-
+export default function UserTaskRoutinePage() {
+    return (
+        <div className="p-4 sm:p-6">
+            <EmployeeTaskRoutineBoard />
+        </div>
+    );
+}
