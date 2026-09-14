@@ -43,7 +43,7 @@ interface EmployeeCreateTaskRoutineModalProps {
     isOpen: boolean;
     onClose: () => void;
     tasks: InternalTask[];
-    onCreated: (routine: InternalTaskRoutine) => void;
+    onCreated: (routine: InternalTaskRoutine) => void | Promise<void>;
 }
 
 function getSafeNumber(value: number, fallback: number) {
@@ -157,8 +157,8 @@ function NiceSelect({
             </button>
             <label
                 className={`pointer-events-none absolute right-5 rounded bg-white px-1.5 text-sm text-gray-400 transition-all duration-200 dark:bg-[#0f172a] ${isOpen || selectedOption
-                        ? "top-0 text-xs text-gray-500 dark:text-gray-400"
-                        : "top-1/2 -translate-y-1/2"
+                    ? "top-0 text-xs text-gray-500 dark:text-gray-400"
+                    : "top-1/2 -translate-y-1/2"
                     }`}
             >
                 {label}
@@ -182,8 +182,8 @@ function NiceSelect({
                                     setIsOpen(false);
                                 }}
                                 className={`flex w-full items-center justify-between rounded-xl px-4 py-2.5 text-[13px] font-bold transition-colors ${option.value === value
-                                        ? "bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-400"
-                                        : "text-gray-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-white/[0.04]"
+                                    ? "bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-400"
+                                    : "text-gray-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-white/[0.04]"
                                     }`}
                             >
                                 {option.label}
@@ -243,8 +243,8 @@ function TaskPicker({
                     <ListTodo size={15} className="shrink-0 text-indigo-500" />
                     <span
                         className={`truncate font-bold ${selectedTask
-                                ? "text-gray-900 dark:text-white"
-                                : "text-gray-400"
+                            ? "text-gray-900 dark:text-white"
+                            : "text-gray-400"
                             }`}
                     >
                         {selectedTask
@@ -296,8 +296,8 @@ function TaskPicker({
                                             setQuery("");
                                         }}
                                         className={`flex w-full items-center justify-between gap-2 rounded-xl px-4 py-2.5 text-right text-[13px] font-bold transition-colors ${task.id === selectedId
-                                                ? "bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-400"
-                                                : "text-gray-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-white/[0.04]"
+                                            ? "bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-400"
+                                            : "text-gray-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-white/[0.04]"
                                             }`}
                                     >
                                         <span className="truncate">{task.title}</span>
@@ -435,7 +435,7 @@ export default function EmployeeCreateTaskRoutineModal({
                 start_at: fieldToIso(startField),
                 interval_days: effectiveIntervalDays,
             });
-            onCreated(data);
+            await onCreated(data);
             onClose();
         } catch (requestError: unknown) {
             const errorData =
@@ -597,8 +597,8 @@ export default function EmployeeCreateTaskRoutineModal({
                                                         type="button"
                                                         onClick={() => selectDay(day)}
                                                         className={`flex h-8 w-8 items-center justify-center rounded-xl text-[11px] font-bold transition-all ${isSelected
-                                                                ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/25"
-                                                                : "text-slate-600 hover:bg-indigo-50 hover:text-indigo-600 dark:text-slate-300 dark:hover:bg-indigo-500/10 dark:hover:text-indigo-300"
+                                                            ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/25"
+                                                            : "text-slate-600 hover:bg-indigo-50 hover:text-indigo-600 dark:text-slate-300 dark:hover:bg-indigo-500/10 dark:hover:text-indigo-300"
                                                             }`}
                                                     >
                                                         {toPersianDigits(day)}
@@ -647,10 +647,10 @@ export default function EmployeeCreateTaskRoutineModal({
                                             setNeverRepeat((previous) => !previous);
                                         }}
                                         className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[10.5px] font-bold transition-colors ${neverRepeat
-                                                ? "bg-red-500/10 text-red-500"
-                                                : isDark
-                                                    ? "bg-white/[0.05] text-gray-400"
-                                                    : "bg-gray-100 text-gray-500"
+                                            ? "bg-red-500/10 text-red-500"
+                                            : isDark
+                                                ? "bg-white/[0.05] text-gray-400"
+                                                : "bg-gray-100 text-gray-500"
                                             }`}
                                     >
                                         <Ban size={12} />
@@ -659,8 +659,8 @@ export default function EmployeeCreateTaskRoutineModal({
                                 </div>
                                 <div
                                     className={`flex flex-wrap gap-2 transition-opacity ${neverRepeat
-                                            ? "pointer-events-none opacity-40"
-                                            : "opacity-100"
+                                        ? "pointer-events-none opacity-40"
+                                        : "opacity-100"
                                         }`}
                                 >
                                     {INTERVAL_PRESETS.map((preset) => (
@@ -672,11 +672,11 @@ export default function EmployeeCreateTaskRoutineModal({
                                                 setCustomInterval("");
                                             }}
                                             className={`rounded-xl px-3.5 py-2 text-[11.5px] font-bold transition-colors ${!customInterval.trim() &&
-                                                    intervalDays === preset
-                                                    ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/25"
-                                                    : isDark
-                                                        ? "bg-white/[0.05] text-gray-300"
-                                                        : "bg-gray-100 text-gray-600"
+                                                intervalDays === preset
+                                                ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/25"
+                                                : isDark
+                                                    ? "bg-white/[0.05] text-gray-300"
+                                                    : "bg-gray-100 text-gray-600"
                                                 }`}
                                         >
                                             هر {toPersianDigits(preset)} روز

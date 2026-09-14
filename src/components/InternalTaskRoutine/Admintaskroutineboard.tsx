@@ -227,8 +227,30 @@ export default function AdminTaskRoutineBoard() {
         }
     }
 
+    async function silentLoad() {
+        try {
+            const [routinesResponse, tasksResponse] = await Promise.all([
+                fetchInternalTaskRoutines(),
+                fetchInternalTasks(),
+            ]);
+            setRoutines(
+                Array.isArray(routinesResponse.data) ? routinesResponse.data : [],
+            );
+            setTasks(Array.isArray(tasksResponse.data) ? tasksResponse.data : []);
+        } catch {
+        }
+    }
+
     useEffect(() => {
         void loadData(true);
+    }, []);
+
+    useEffect(() => {
+        const interval = window.setInterval(() => {
+            void silentLoad();
+        }, 20000);
+
+        return () => window.clearInterval(interval);
     }, []);
 
     const tasksById = useMemo(() => {
@@ -250,11 +272,27 @@ export default function AdminTaskRoutineBoard() {
         return tasks.filter((task) => !routinedTaskIds.has(task.id));
     }, [tasks, routines]);
 
-    function handleCreated(routine: InternalTaskRoutine) {
+    async function handleCreated(routine: InternalTaskRoutine) {
         setRoutines((previous) => [
             routine,
             ...previous.filter((item) => item.id !== routine.id),
         ]);
+
+        try {
+            const [routinesResponse, tasksResponse] = await Promise.all([
+                fetchInternalTaskRoutines(),
+                fetchInternalTasks(),
+            ]);
+
+            if (Array.isArray(routinesResponse.data)) {
+                setRoutines(routinesResponse.data);
+            }
+
+            if (Array.isArray(tasksResponse.data)) {
+                setTasks(tasksResponse.data);
+            }
+        } catch {
+        }
     }
 
     async function handleDelete(routine: InternalTaskRoutine) {
@@ -266,6 +304,13 @@ export default function AdminTaskRoutineBoard() {
             );
         } catch {
             setError("حذف تسک روتین با خطا مواجه شد.");
+            try {
+                const { data } = await fetchInternalTaskRoutines();
+                if (Array.isArray(data)) {
+                    setRoutines(data);
+                }
+            } catch {
+            }
         } finally {
             setDeletingId(null);
         }
@@ -357,20 +402,18 @@ export default function AdminTaskRoutineBoard() {
                     </p>
                 </div>
             ) : (
-                <AnimatePresence mode="popLayout">
-                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                        {sortedRoutines.map((routine, index) => (
-                            <RoutineCard
-                                key={routine.id}
-                                routine={routine}
-                                task={tasksById.get(routine.task)}
-                                index={index}
-                                onDelete={handleDelete}
-                                isDeleting={deletingId === routine.id}
-                            />
-                        ))}
-                    </div>
-                </AnimatePresence>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                    {sortedRoutines.map((routine, index) => (
+                        <RoutineCard
+                            key={`routine-${routine.id}`}
+                            routine={routine}
+                            task={tasksById.get(routine.task)}
+                            index={index}
+                            onDelete={handleDelete}
+                            isDeleting={deletingId === routine.id}
+                        />
+                    ))}
+                </div>
             )}
 
             <CreateTaskRoutineModal

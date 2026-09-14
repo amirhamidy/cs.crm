@@ -22,6 +22,57 @@ import {
 
 import { formatDate, formatNumber, paginate, PAGE_SIZE } from "@/utils/warehouseEmployee";
 
+// ---------- Types ----------
+interface Product {
+    id: number;
+    name?: string;
+}
+
+interface StockInfo {
+    id: number;
+    product: number;
+    initial_quantity?: number | string | null;
+    current_quantity?: number | string | null;
+    created_at?: string | null;
+    performed_by?: { full_name?: string | null } | null;
+    performed_by_name?: string | null;
+}
+
+interface Transaction {
+    id: number;
+    product: number;
+    transaction_date?: string | null;
+    transaction_type: "stock_in" | "stock_out" | string;
+    quantity_changed?: number | string | null;
+    quantity_before?: number | string | null;
+    quantity_after?: number | string | null;
+    stock_out_reason_display?: string | null;
+    note?: string | null;
+    performed_by_name?: string | null;
+}
+
+type EventKind = "initial" | "in" | "out";
+
+interface LedgerEvent {
+    id: string;
+    date: string | null;
+    kind: EventKind;
+    quantityChanged: number | null;
+    quantityBefore: number | null;
+    quantityAfter: number;
+    performedByName: string | null;
+    reasonLabel?: string | null;
+    note?: string | null;
+}
+
+interface WarehouseEmployeeStockLedgerProps {
+    products: Product[];
+    stockInfos: StockInfo[];
+    transactions: Transaction[];
+    defaultProductId?: number | null;
+}
+
+// ---------- Helpers ----------
 const AVATAR_GRADIENTS = [
     ["#6366f1", "#8b5cf6"],
     ["#ec4899", "#8b5cf6"],
@@ -30,7 +81,7 @@ const AVATAR_GRADIENTS = [
     ["#f59e0b", "#ef4444"],
 ];
 
-function getPerformedByName(stock) {
+function getPerformedByName(stock: StockInfo | null): string | null {
     if (!stock) return null;
     const performedBy = stock.performed_by;
     if (performedBy && typeof performedBy === "object") {
@@ -39,12 +90,12 @@ function getPerformedByName(stock) {
     return stock.performed_by_name ?? null;
 }
 
-function getStockCreatedAt(stock) {
+function getStockCreatedAt(stock: StockInfo | null): string | null {
     if (!stock) return null;
     return stock.created_at ?? null;
 }
 
-function KindBadge({ kind }) {
+function KindBadge({ kind }: { kind: EventKind }) {
     if (kind === "initial") {
         return (
             <span className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-500/10 px-2.5 py-1 text-xs font-bold text-indigo-500 dark:bg-indigo-500/15 dark:text-indigo-400">
@@ -74,13 +125,13 @@ export default function WarehouseEmployeeStockLedger({
     stockInfos,
     transactions,
     defaultProductId = null,
-}) {
+}: WarehouseEmployeeStockLedgerProps) {
     const { resolvedTheme } = useTheme();
     const isDark = resolvedTheme === "dark";
 
     const [query, setQuery] = useState("");
-    const [selectedProductId, setSelectedProductId] = useState(defaultProductId);
-    const [kindFilter, setKindFilter] = useState("all");
+    const [selectedProductId, setSelectedProductId] = useState<number | null>(defaultProductId);
+    const [kindFilter, setKindFilter] = useState<"all" | EventKind>("all");
     const [currentPage, setCurrentPage] = useState(1);
 
     useEffect(() => {
@@ -100,7 +151,7 @@ export default function WarehouseEmployeeStockLedger({
     }, [selectedProductId, kindFilter]);
 
     const stockByProduct = useMemo(
-        () => new Map(stockInfos.map((s) => [s.product, s])),
+        () => new Map<number, StockInfo>(stockInfos.map((s) => [s.product, s])),
         [stockInfos]
     );
 
@@ -119,10 +170,10 @@ export default function WarehouseEmployeeStockLedger({
         ? stockByProduct.get(selectedProductId) ?? null
         : null;
 
-    const allEvents = useMemo(() => {
+    const allEvents = useMemo<LedgerEvent[]>(() => {
         if (selectedProductId == null) return [];
 
-        const events = [];
+        const events: LedgerEvent[] = [];
 
         if (selectedStock) {
             events.push({
@@ -141,14 +192,14 @@ export default function WarehouseEmployeeStockLedger({
             .forEach((t) => {
                 events.push({
                     id: `tx-${t.id}`,
-                    date: t.transaction_date,
+                    date: t.transaction_date ?? null,
                     kind: t.transaction_type === "stock_in" ? "in" : "out",
                     quantityChanged: Number(t.quantity_changed ?? 0),
                     quantityBefore: Number(t.quantity_before ?? 0),
                     quantityAfter: Number(t.quantity_after ?? 0),
                     reasonLabel: t.stock_out_reason_display,
                     note: t.note,
-                    performedByName: t.performed_by_name,
+                    performedByName: t.performed_by_name ?? null,
                 });
             });
 
@@ -211,8 +262,8 @@ export default function WarehouseEmployeeStockLedger({
                                 type="button"
                                 onClick={() => setSelectedProductId(product.id)}
                                 className={`group flex items-center gap-3 rounded-xl p-3 text-right transition-all duration-200 ${active
-                                        ? "bg-indigo-50 shadow-sm dark:bg-indigo-500/10"
-                                        : "hover:bg-slate-50 dark:hover:bg-white/5"
+                                    ? "bg-indigo-50 shadow-sm dark:bg-indigo-500/10"
+                                    : "hover:bg-slate-50 dark:hover:bg-white/5"
                                     }`}
                             >
                                 <div
@@ -226,7 +277,7 @@ export default function WarehouseEmployeeStockLedger({
                                         {product.name}
                                     </p>
                                     <p className="mt-0.5 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
-                                        موجودی: {formatNumber(stock?.current_quantity ?? 0)}
+                                        موجودی: {formatNumber(Number(stock?.current_quantity ?? 0))}
                                     </p>
                                 </div>
                                 {active && (
@@ -255,7 +306,7 @@ export default function WarehouseEmployeeStockLedger({
                                     <span className="text-xs font-bold">موجودی فعلی</span>
                                 </div>
                                 <p className="mt-2 text-2xl font-black text-slate-900 dark:text-white">
-                                    {formatNumber(selectedStock?.current_quantity ?? 0)}
+                                    {formatNumber(Number(selectedStock?.current_quantity ?? 0))}
                                 </p>
                             </div>
                             <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-slate-950">
@@ -295,11 +346,11 @@ export default function WarehouseEmployeeStockLedger({
                                 </div>
 
                                 <div className="flex items-center gap-1.5 rounded-lg bg-slate-100 p-1 dark:bg-white/5">
-                                    {[
+                                    {([
                                         ["all", "همه"],
                                         ["in", "ورودی"],
                                         ["out", "خروجی"],
-                                    ].map(([key, label]) => {
+                                    ] as const).map(([key, label]) => {
                                         const active = kindFilter === key;
                                         return (
                                             <button
@@ -307,8 +358,8 @@ export default function WarehouseEmployeeStockLedger({
                                                 type="button"
                                                 onClick={() => setKindFilter(key)}
                                                 className={`rounded-md px-3 py-1.5 text-xs font-bold transition-all duration-200 ${active
-                                                        ? "bg-white text-indigo-600 shadow-sm dark:bg-slate-800 dark:text-indigo-400"
-                                                        : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+                                                    ? "bg-white text-indigo-600 shadow-sm dark:bg-slate-800 dark:text-indigo-400"
+                                                    : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
                                                     }`}
                                             >
                                                 {label}
@@ -340,7 +391,7 @@ export default function WarehouseEmployeeStockLedger({
                                                     </td>
                                                 </tr>
                                             ) : (
-                                                paginatedEvents.items.map((event, index) => {
+                                                paginatedEvents.items.map((event: LedgerEvent, index: number) => {
                                                     const accentColor =
                                                         event.kind === "initial"
                                                             ? "text-indigo-600 dark:text-indigo-400"
@@ -370,12 +421,12 @@ export default function WarehouseEmployeeStockLedger({
                                                                 <span className={`text-sm font-black ${accentColor}`}>
                                                                     {event.kind === "initial"
                                                                         ? formatNumber(event.quantityAfter)
-                                                                        : `${event.kind === "in" ? "+" : "-"}${formatNumber(event.quantityChanged)}`
+                                                                        : `${event.kind === "in" ? "+" : "-"}${formatNumber(event.quantityChanged ?? 0)}`
                                                                     }
                                                                 </span>
                                                             </td>
                                                             <td className="px-5 py-4 text-xs font-semibold text-slate-500 dark:text-slate-400">
-                                                                {event.kind === "initial" ? "-" : formatNumber(event.quantityBefore)}
+                                                                {event.kind === "initial" ? "-" : formatNumber(event.quantityBefore ?? 0)}
                                                             </td>
                                                             <td className="px-5 py-4 text-xs font-black text-slate-900 dark:text-white">
                                                                 {formatNumber(event.quantityAfter)}

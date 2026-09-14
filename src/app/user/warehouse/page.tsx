@@ -1195,6 +1195,7 @@ export default function WarehouseEmployeePage() {
                                         <WarehouseEmployeeOrderTaskCard
                                             key={orderTask.id}
                                             orderTask={orderTask}
+                                            products={products}
                                             index={index}
                                             isStaff={!!myStaff}
                                             staffId={myStaff?.id ?? null}

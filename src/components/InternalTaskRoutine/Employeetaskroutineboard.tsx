@@ -3,21 +3,25 @@
 import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
+    AlertTriangle,
     Ban,
     CalendarClock,
     CheckCircle2,
     History,
     Inbox,
     Loader,
+    Loader2,
     Plus,
     RefreshCw,
     Repeat,
     RotateCcw,
     Timer,
+    Trash2,
     Users,
 } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
 import {
+    deleteInternalTaskRoutine,
     fetchEmployeeList,
     fetchInternalTaskRoutines,
     fetchInternalTasks,
@@ -149,30 +153,6 @@ function getStatusBadge(status: InternalTask["status"] | undefined) {
     };
 }
 
-function formatRemaining(milliseconds: number) {
-    if (milliseconds <= 0) return "۰۰:۰۰:۰۰";
-
-    const totalSeconds = Math.floor(milliseconds / 1000);
-    const days = Math.floor(totalSeconds / 86400);
-    const hours = Math.floor((totalSeconds % 86400) / 3600);
-    const minutes = Math.floor((totalSeconds % 3600) / 60);
-    const seconds = totalSeconds % 60;
-
-    const number = (value: number) =>
-        new Intl.NumberFormat("fa-IR", {
-            minimumIntegerDigits: 2,
-            useGrouping: false,
-        }).format(value);
-
-    const time = `${number(hours)}:${number(minutes)}:${number(seconds)}`;
-
-    if (days > 0) {
-        return `${time} و ${new Intl.NumberFormat("fa-IR").format(days)} روز`;
-    }
-
-    return time;
-}
-
 function RoutineCountdown({
     nextRunAt,
     onReady,
@@ -272,24 +252,44 @@ function RoutineCard({
     employees,
     index,
     onTaskUpdated,
+    onDelete,
+    isDeleting,
 }: {
     routine: InternalTaskRoutine;
     task: InternalTask | undefined;
     employees: EmployeeListItem[];
     index: number;
     onTaskUpdated: (task: InternalTask) => void;
+    onDelete: (routine: InternalTaskRoutine) => void;
+    isDeleting: boolean;
 }) {
     const [actionModal, setActionModal] = useState<
         "complete" | "cancel" | null
     >(null);
 
-    const [isReady, setIsReady] = useState(() => {
-        if (task?.status !== "waiting") return true;
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const [isReady, setIsReady] = useState(false);
 
-        if (!routine.next_run_at) return true;
+    useEffect(() => {
+        if (task?.status !== "waiting") {
+            setIsReady(true);
+            return;
+        }
 
-        return new Date(routine.next_run_at).getTime() <= Date.now();
-    });
+        if (!routine.next_run_at) {
+            setIsReady(true);
+            return;
+        }
+
+        const target = new Date(routine.next_run_at).getTime();
+        const check = () => setIsReady(target <= Date.now());
+
+        check();
+
+        const timer = window.setInterval(check, 1000);
+
+        return () => window.clearInterval(timer);
+    }, [task?.status, routine.next_run_at]);
 
     const assignedEmployees = resolveAssignedTo(
         task?.assigned_to ?? [],
@@ -314,11 +314,12 @@ function RoutineCard({
                 layout
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95 }}
                 transition={{
                     duration: 0.22,
                     delay: index * 0.04,
                 }}
-                className="flex flex-col gap-3 rounded-[2rem] border border-gray-100 bg-white p-4 shadow-[0_8px_28px_rgba(15,23,42,0.035)] dark:border-white/[0.07] dark:bg-[#111a2d]"
+                className="relative flex flex-col gap-3 rounded-[2rem] border border-gray-100 bg-white p-4 shadow-[0_8px_28px_rgba(15,23,42,0.035)] dark:border-white/[0.07] dark:bg-[#111a2d]"
             >
                 <div className="flex items-start justify-between gap-3">
                     <span
@@ -331,9 +332,25 @@ function RoutineCard({
                         {statusBadge.label}
                     </span>
 
-                    <div className="flex items-center gap-1.5 rounded-full bg-indigo-500/[0.08] px-2.5 py-1 text-[10px] font-bold text-indigo-500">
-                        <Repeat size={11} />
-                        {intervalLabel(routine.interval_days)}
+                    <div className="flex items-center gap-1.5">
+                        <div className="flex items-center gap-1.5 rounded-full bg-indigo-500/[0.08] px-2.5 py-1 text-[10px] font-bold text-indigo-500">
+                            <Repeat size={11} />
+                            {intervalLabel(routine.interval_days)}
+                        </div>
+
+                        <button
+                            type="button"
+                            onClick={() => setShowDeleteConfirm(true)}
+                            disabled={isDeleting}
+                            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-xl bg-red-500/[0.08] text-red-500 transition-all hover:bg-red-500/[0.14] disabled:opacity-40"
+                            title="حذف تسک روتین"
+                        >
+                            {isDeleting ? (
+                                <Loader2 size={12} className="animate-spin" />
+                            ) : (
+                                <Trash2 size={12} />
+                            )}
+                        </button>
                     </div>
                 </div>
 
@@ -452,6 +469,45 @@ function RoutineCard({
                         این نوبت بسته شده است
                     </div>
                 )}
+
+                <AnimatePresence>
+                    {showDeleteConfirm && (
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 rounded-[2rem] p-5 text-center"
+                            style={{
+                                background: "rgba(15,23,42,0.96)",
+                                backdropFilter: "blur(4px)",
+                            }}
+                        >
+                            <AlertTriangle size={22} className="text-red-500" />
+                            <p className="text-[12px] font-bold text-slate-200">
+                                این تسک روتین حذف شود؟
+                            </p>
+                            <div className="flex w-full items-center gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() => setShowDeleteConfirm(false)}
+                                    className="flex-1 rounded-xl bg-white/[0.06] py-2 text-[11.5px] font-bold text-gray-300"
+                                >
+                                    انصراف
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setShowDeleteConfirm(false);
+                                        onDelete(routine);
+                                    }}
+                                    className="flex-1 rounded-xl bg-red-500 py-2 text-[11.5px] font-bold text-white"
+                                >
+                                    حذف شود
+                                </button>
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
             </motion.div>
 
             {task && actionModal && canTakeAction && (
@@ -480,6 +536,7 @@ export default function EmployeeTaskRoutineBoard() {
     const [refreshing, setRefreshing] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [createOpen, setCreateOpen] = useState(false);
+    const [deletingId, setDeletingId] = useState<number | null>(null);
 
     async function loadData(initial = false) {
         if (initial) setLoading(true);
@@ -523,8 +580,49 @@ export default function EmployeeTaskRoutineBoard() {
         }
     }
 
+    async function silentLoad() {
+        try {
+            const [
+                routinesResponse,
+                tasksResponse,
+                employeesResponse,
+            ] = await Promise.all([
+                fetchInternalTaskRoutines(),
+                fetchInternalTasks(),
+                fetchEmployeeList(),
+            ]);
+
+            setRoutines(
+                Array.isArray(routinesResponse.data)
+                    ? routinesResponse.data
+                    : [],
+            );
+
+            setTasks(
+                Array.isArray(tasksResponse.data)
+                    ? tasksResponse.data
+                    : [],
+            );
+
+            setEmployees(
+                Array.isArray(employeesResponse.data)
+                    ? employeesResponse.data
+                    : [],
+            );
+        } catch {
+        }
+    }
+
     useEffect(() => {
         void loadData(true);
+    }, []);
+
+    useEffect(() => {
+        const interval = window.setInterval(() => {
+            void silentLoad();
+        }, 20000);
+
+        return () => window.clearInterval(interval);
     }, []);
 
     const tasksById = useMemo(() => {
@@ -584,21 +682,73 @@ export default function EmployeeTaskRoutineBoard() {
         return myTasks.filter((task) => !routinedTaskIds.has(task.id));
     }, [myTasks, myRoutines]);
 
-    function handleCreated(routine: InternalTaskRoutine) {
+    async function handleCreated(routine: InternalTaskRoutine) {
         setRoutines((previous) => [
             routine,
             ...previous.filter((item) => item.id !== routine.id),
         ]);
+
+        try {
+            const [routinesResponse, tasksResponse] = await Promise.all([
+                fetchInternalTaskRoutines(),
+                fetchInternalTasks(),
+            ]);
+
+            if (Array.isArray(routinesResponse.data)) {
+                setRoutines(routinesResponse.data);
+            }
+
+            if (Array.isArray(tasksResponse.data)) {
+                setTasks(tasksResponse.data);
+            }
+        } catch {
+        }
     }
 
-    function handleTaskUpdated(updatedTask: InternalTask) {
-        setTasks((previous) =>
-            previous.map((task) =>
-                task.id === updatedTask.id
-                    ? { ...task, ...updatedTask }
-                    : task,
-            ),
-        );
+    async function handleTaskUpdated(updatedTask: InternalTask) {
+        try {
+            const [routinesResponse, tasksResponse] = await Promise.all([
+                fetchInternalTaskRoutines(),
+                fetchInternalTasks(),
+            ]);
+
+            if (Array.isArray(tasksResponse.data)) {
+                setTasks(tasksResponse.data);
+            }
+
+            if (Array.isArray(routinesResponse.data)) {
+                setRoutines(routinesResponse.data);
+            }
+        } catch {
+            setTasks((previous) =>
+                previous.map((task) =>
+                    task.id === updatedTask.id
+                        ? { ...task, ...updatedTask }
+                        : task,
+                ),
+            );
+        }
+    }
+
+    async function handleDelete(routine: InternalTaskRoutine) {
+        setDeletingId(routine.id);
+        try {
+            await deleteInternalTaskRoutine(routine.id);
+            setRoutines((previous) =>
+                previous.filter((item) => item.id !== routine.id),
+            );
+        } catch {
+            setError("حذف تسک روتین با خطا مواجه شد.");
+            try {
+                const { data } = await fetchInternalTaskRoutines();
+                if (Array.isArray(data)) {
+                    setRoutines(data);
+                }
+            } catch {
+            }
+        } finally {
+            setDeletingId(null);
+        }
     }
 
     if (loading) {
@@ -691,20 +841,20 @@ export default function EmployeeTaskRoutineBoard() {
                     </p>
                 </div>
             ) : (
-                <AnimatePresence mode="popLayout">
-                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                        {myRoutines.map((routine, index) => (
-                            <RoutineCard
-                                key={routine.id}
-                                routine={routine}
-                                task={tasksById.get(routine.task)}
-                                employees={employees}
-                                index={index}
-                                onTaskUpdated={handleTaskUpdated}
-                            />
-                        ))}
-                    </div>
-                </AnimatePresence>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                    {myRoutines.map((routine, index) => (
+                        <RoutineCard
+                            key={`routine-${routine.id}`}
+                            routine={routine}
+                            task={tasksById.get(routine.task)}
+                            employees={employees}
+                            index={index}
+                            onTaskUpdated={handleTaskUpdated}
+                            onDelete={handleDelete}
+                            isDeleting={deletingId === routine.id}
+                        />
+                    ))}
+                </div>
             )}
 
             <EmployeeCreateTaskRoutineModal

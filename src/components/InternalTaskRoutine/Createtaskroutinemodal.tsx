@@ -42,7 +42,7 @@ interface CreateTaskRoutineModalProps {
     isOpen: boolean;
     onClose: () => void;
     tasks: InternalTask[];
-    onCreated: (routine: InternalTaskRoutine) => void;
+    onCreated: (routine: InternalTaskRoutine) => void | Promise<void>;
 }
 
 function getSafeNumber(value: number, fallback: number) {
@@ -419,7 +419,7 @@ export default function CreateTaskRoutineModal({
                 start_at: fieldToIso(startField),
                 interval_days: effectiveIntervalDays,
             });
-            onCreated(data);
+            await onCreated(data);
             onClose();
         } catch (requestError: unknown) {
             const errorData =

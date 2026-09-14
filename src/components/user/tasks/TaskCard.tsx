@@ -242,7 +242,7 @@ export default function TaskCard({ task, index, onUpdated }: TaskCardProps) {
 
                 <div className="absolute top-3 left-3 w-2 h-2 rounded-full bg-indigo-500/60" />
             </motion.div>
-
+            
             <TaskActionModal
                 isOpen={openModal === "next"}
                 onClose={() => setOpenModal(null)}
@@ -250,6 +250,7 @@ export default function TaskCard({ task, index, onUpdated }: TaskCardProps) {
                 title="ارسال به مرحله بعد"
                 description="تسک را به مرحله بعدی منتقل کن"
                 onSubmit={(data) => submitAction("next", data)}
+                submitting={submitting}
             />
             <TaskActionModal
                 isOpen={openModal === "prev"}
@@ -258,6 +259,7 @@ export default function TaskCard({ task, index, onUpdated }: TaskCardProps) {
                 title="برگرداندن به مرحله قبل"
                 description="تسک را به مرحله قبلی برگردان"
                 onSubmit={(data) => submitAction("prev", data)}
+                submitting={submitting}
             />
             <TaskActionModal
                 isOpen={openModal === "sold"}
@@ -266,6 +268,7 @@ export default function TaskCard({ task, index, onUpdated }: TaskCardProps) {
                 title="ثبت فروش"
                 description="این تسک را به عنوان فروش رفته ثبت کن"
                 onSubmit={(data) => submitAction("sold", data)}
+                submitting={submitting}
             />
         </>
     );

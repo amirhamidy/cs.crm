@@ -44,6 +44,7 @@ const STATUS_CONFIG: Record<TaskStatus, { label: string; className: string }> = 
 };
 
 type DeadlineUrgency = "overdue" | "critical" | "soon" | "normal" | null;
+type ActiveUrgency = "overdue" | "critical" | "soon";
 
 function getDeadlineUrgency(deadline?: string | null): DeadlineUrgency {
     if (!deadline) return null;
@@ -55,17 +56,21 @@ function getDeadlineUrgency(deadline?: string | null): DeadlineUrgency {
     return "normal";
 }
 
-const URGENCY_ACCENT = {
+const URGENCY_ACCENT: Record<ActiveUrgency, string> = {
     overdue: "#ef4444",
     critical: "#f97316",
     soon: "#eab308",
 };
 
-const URGENCY_LABEL = {
+const URGENCY_LABEL: Record<ActiveUrgency, string> = {
     overdue: "منقضی شده",
     critical: "فوری",
     soon: "امروز",
 };
+
+function isActiveUrgency(u: DeadlineUrgency): u is ActiveUrgency {
+    return u === "overdue" || u === "critical" || u === "soon";
+}
 
 interface TaskWithStep extends Omit<Task, "assigned_employee"> {
     current_step?: number | { id: number } | string | null;
@@ -178,7 +183,6 @@ export default function TaskCard({
 }: TaskCardProps) {
     const { resolvedTheme } = useTheme();
     const isDark = resolvedTheme === "dark";
-
     const [hovered, setHovered] = useState(false);
     const [timeModalOpen, setTimeModalOpen] = useState(false);
     const [showConfirm, setShowConfirm] = useState(false);
@@ -207,7 +211,8 @@ export default function TaskCard({
 
     const isActiveTask = !["completed", "cancelled", "sold"].includes(status);
     const urgency = isActiveTask ? getDeadlineUrgency(stepDeadline?.deadline) : null;
-    const accent = urgency && urgency !== "normal" ? URGENCY_ACCENT[urgency] : null;
+    const activeUrgency = isActiveUrgency(urgency) ? urgency : null;
+    const accent = activeUrgency ? URGENCY_ACCENT[activeUrgency] : null;
 
     useEffect(() => {
         if (!stepId) return;
@@ -293,13 +298,13 @@ export default function TaskCard({
                 style={{
                     border: accent ? `1px solid color-mix(in srgb,${accent} 40%,transparent)` : `1px solid ${isDark ? "rgba(255,255,255,.06)" : "rgba(0,0,0,.06)"}`,
                     background: accent
-                        ? `color-mix(in srgb,${accent} ${urgency === "overdue" ? 7 : urgency === "critical" ? 5 : 4}%,${isDark ? "#0f172a" : "#fafafa"})`
+                        ? `color-mix(in srgb,${accent} ${activeUrgency === "overdue" ? 7 : activeUrgency === "critical" ? 5 : 4}%,${isDark ? "#0f172a" : "#fafafa"})`
                         : isDark ? "rgba(255,255,255,.02)" : "#fafafa",
                     opacity: deleting ? 0.45 : 1,
                     boxShadow: accent ? `0 0 0 1px color-mix(in srgb,${accent} 15%,transparent),0 4px 24px color-mix(in srgb,${accent} 12%,transparent)` : isDark ? "0 2px 24px rgba(0,0,0,.2)" : "0 2px 16px rgba(0,0,0,.04)",
                 }}
             >
-                {urgency === "overdue" && (
+                {activeUrgency === "overdue" && (
                     <motion.div
                         className="pointer-events-none absolute inset-x-0 top-0 h-[2px]"
                         style={{ background: `linear-gradient(90deg,transparent,${accent},transparent)` }}
@@ -337,7 +342,7 @@ export default function TaskCard({
                             {statusConfig.label}
                         </span>
 
-                        {accent && (
+                        {accent && activeUrgency && (
                             <span
                                 className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold"
                                 style={{
@@ -347,7 +352,7 @@ export default function TaskCard({
                                 }}
                             >
                                 <span className="h-1.5 w-1.5 rounded-full" style={{ background: accent }} />
-                                {URGENCY_LABEL[urgency]}
+                                {URGENCY_LABEL[activeUrgency]}
                             </span>
                         )}
                     </div>
