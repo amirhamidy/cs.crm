@@ -70,6 +70,11 @@ export const adminMenuItems: MenuItem[] = [
     href: "/admin/archive",
   },
   {
+    icon: ClipboardList,
+    label: "وظایف  تکرار شونده",
+    href: "/admin/taskroutine",
+  },
+  {
     icon: MessageSquareText,
     label: "گفتگو کاربران",
     href: "/admin/staffConversation",
@@ -117,7 +122,7 @@ export const userMenuItems: MenuItem[] = [
     label: "مشتری",
     href: "/user/customer",
   },
-    {
+  {
     icon: ShoppingCart,
     label: "فرآیند خرید",
     href: "/user/purchasing",
@@ -136,6 +141,11 @@ export const userMenuItems: MenuItem[] = [
     icon: ClipboardList,
     label: "ایجاد وظایف",
     href: "/user/tasks",
+  },
+    {
+    icon: ClipboardList,
+    label: "وظایف  تکرار شونده",
+    href: "/user/taskroutine",
   },
   {
     icon: Ticket,

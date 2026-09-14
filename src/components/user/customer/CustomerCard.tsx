@@ -1,6 +1,7 @@
+
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "next-themes";
 import {
@@ -10,11 +11,24 @@ import {
     SquarePen,
     User,
     CalendarDays,
+    Star,
+    MessageCircle,
+    Loader2,
 } from "lucide-react";
 import type { Customer } from "@/types/customer";
 import { useEmployeeDirectory } from "@/hooks/useEmployeeDirectory";
 import CustomerDeleteModal from "./DeleteModal";
 import CustomerEditModal from "./CustomerEditModal";
+import CustomerScoresModal from "./CustomerScoresModal";
+import axiosInstance from "@/lib/axiosInstance";
+
+interface ScoreItem {
+    id: number;
+    created_by: number;
+    score: number;
+    reason: string;
+    created_at: string;
+}
 
 interface Props {
     customer: Customer;
@@ -35,21 +49,35 @@ function formatDate(iso: string) {
 function Avatar({ name, id }: { name: string; id: number }) {
     const hue = (id * 47) % 360;
 
-
     return (
         <div
             className="flex h-11 w-11 shrink-0 select-none items-center justify-center rounded-2xl text-[15px] font-extrabold text-white"
             style={{
-                background: `linear-gradient(135deg,
-                oklch(55% 0.18 ${hue}),
-                oklch(45% 0.22 ${(hue + 30) % 360}))`,
+                background: `linear-gradient(135deg, oklch(55% 0.18 ${hue}), oklch(45% 0.22 ${(hue + 30) % 360}))`,
             }}
         >
-            {name?.charAt(0) ?? "?"}
+            {name?.charAt(0) ?? "؟"}
         </div>
     );
+}
 
-
+function Stars({ score }: { score: number }) {
+    return (
+        <div className="flex items-center gap-0.5" dir="ltr">
+            {[1, 2, 3, 4, 5].map((star) => (
+                <Star
+                    key={star}
+                    size={12}
+                    fill={star <= Math.round(score) ? "#FBBF24" : "none"}
+                    className={
+                        star <= Math.round(score)
+                            ? "text-amber-400"
+                            : "text-gray-300 dark:text-gray-700"
+                    }
+                />
+            ))}
+        </div>
+    );
 }
 
 export default function CustomerCard({
@@ -62,17 +90,19 @@ export default function CustomerCard({
     const { resolvedTheme } = useTheme();
 
     const [mounted, setMounted] = useState(false);
-    useEffect(() => {
-        setMounted(true);
-    }, []);
-    const isDark = mounted && resolvedTheme === "dark";
+    useEffect(() => setMounted(true), []);
 
+    const isDark = mounted && resolvedTheme === "dark";
 
     const [hovered, setHovered] = useState(false);
     const [showConfirm, setShowConfirm] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
     const [showEdit, setShowEdit] = useState(false);
+    const [showScores, setShowScores] = useState(false);
     const [tooltipVisible, setTooltipVisible] = useState(false);
+
+    const [scores, setScores] = useState<ScoreItem[]>([]);
+    const [scoresLoading, setScoresLoading] = useState(true);
 
     const { resolveName } = useEmployeeDirectory();
 
@@ -81,14 +111,42 @@ export default function CustomerCard({
         customer.created_by_username
     );
 
+    useEffect(() => {
+        let cancelled = false;
+
+        const fetchScores = async () => {
+            setScoresLoading(true);
+
+            try {
+                const { data } = await axiosInstance.get<ScoreItem[]>(
+                    `/customers/api/v1/customers/${customer.id}/scores/`
+                );
+
+                if (!cancelled) {
+                    setScores(Array.isArray(data) ? data : []);
+                }
+            } catch {
+                if (!cancelled) setScores([]);
+            } finally {
+                if (!cancelled) setScoresLoading(false);
+            }
+        };
+
+        fetchScores();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [customer.id]);
+
+    const average = scores.length
+        ? scores.reduce((sum, item) => sum + item.score, 0) / scores.length
+        : 0;
+
     const handleDelete = async () => {
         setIsDeleting(true);
 
         try {
-            const axiosInstance = (
-                await import("@/lib/axiosInstance")
-            ).default;
-
             await axiosInstance.delete(
                 `/customers/api/v1/customers/${customer.id}/delete/`
             );
@@ -104,9 +162,7 @@ export default function CustomerCard({
         ? "rgba(255,255,255,0.06)"
         : "rgba(0,0,0,0.06)";
 
-    const surfaceBg = isDark
-        ? "rgba(255,255,255,0.02)"
-        : "#fafafa";
+    const surfaceBg = isDark ? "rgba(255,255,255,0.02)" : "#fafafa";
 
     const dividerColor = isDark
         ? "rgba(255,255,255,0.05)"
@@ -118,10 +174,7 @@ export default function CustomerCard({
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95 }}
-                transition={{
-                    duration: 0.2,
-                    delay: index * 0.04,
-                }}
+                transition={{ duration: 0.2, delay: index * 0.04 }}
                 onHoverStart={() => setHovered(true)}
                 onHoverEnd={() => {
                     setHovered(false);
@@ -135,10 +188,7 @@ export default function CustomerCard({
             >
                 <svg
                     className="pointer-events-none absolute inset-0 h-full w-full"
-                    style={{
-                        borderRadius: "1rem",
-                        overflow: "visible",
-                    }}
+                    style={{ borderRadius: "1rem", overflow: "visible" }}
                 >
                     <defs>
                         <linearGradient
@@ -148,14 +198,8 @@ export default function CustomerCard({
                             x2="0%"
                             y2="0%"
                         >
-                            <stop
-                                offset="0%"
-                                stopColor="#6366f1"
-                            />
-                            <stop
-                                offset="100%"
-                                stopColor="#8b5cf6"
-                            />
+                            <stop offset="0%" stopColor="#6366f1" />
+                            <stop offset="100%" stopColor="#8b5cf6" />
                         </linearGradient>
                     </defs>
 
@@ -170,25 +214,13 @@ export default function CustomerCard({
                         stroke={`url(#cust-grad-${customer.id})`}
                         strokeWidth="1.5"
                         pathLength="1"
-                        initial={{
-                            pathLength: 0,
-                            opacity: 0,
-                        }}
+                        initial={{ pathLength: 0, opacity: 0 }}
                         animate={
                             hovered
-                                ? {
-                                    pathLength: 1,
-                                    opacity: 1,
-                                }
-                                : {
-                                    pathLength: 0,
-                                    opacity: 0,
-                                }
+                                ? { pathLength: 1, opacity: 1 }
+                                : { pathLength: 0, opacity: 0 }
                         }
-                        transition={{
-                            duration: 0.55,
-                            ease: "easeInOut",
-                        }}
+                        transition={{ duration: 0.55, ease: "easeInOut" }}
                     />
                 </svg>
 
@@ -200,9 +232,7 @@ export default function CustomerCard({
                             background: isDark
                                 ? "rgba(99,102,241,0.1)"
                                 : "rgba(99,102,241,0.07)",
-                            color: isDark
-                                ? "#a5b4fc"
-                                : "#6366f1",
+                            color: isDark ? "#a5b4fc" : "#6366f1",
                         }}
                         title="ویرایش"
                         type="button"
@@ -214,19 +244,13 @@ export default function CustomerCard({
                         <button
                             onClick={(e) => {
                                 e.stopPropagation();
-
                                 if (hasActiveCase) return;
-
                                 setShowConfirm(true);
                             }}
                             onMouseEnter={() => {
-                                if (hasActiveCase) {
-                                    setTooltipVisible(true);
-                                }
+                                if (hasActiveCase) setTooltipVisible(true);
                             }}
-                            onMouseLeave={() => {
-                                setTooltipVisible(false);
-                            }}
+                            onMouseLeave={() => setTooltipVisible(false)}
                             className="flex h-7 w-7 items-center justify-center rounded-xl transition-colors"
                             style={{
                                 background: hasActiveCase
@@ -253,25 +277,9 @@ export default function CustomerCard({
                         <AnimatePresence>
                             {tooltipVisible && (
                                 <motion.div
-                                    initial={{
-                                        opacity: 0,
-                                        y: 4,
-                                        scale: 0.95,
-                                    }}
-                                    animate={{
-                                        opacity: 1,
-                                        y: 0,
-                                        scale: 1,
-                                    }}
-                                    exit={{
-                                        opacity: 0,
-                                        y: 4,
-                                        scale: 0.95,
-                                    }}
-                                    transition={{
-                                        duration: 0.15,
-                                        ease: "easeOut",
-                                    }}
+                                    initial={{ opacity: 0, y: 4, scale: 0.95 }}
+                                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                                    exit={{ opacity: 0, y: 4, scale: 0.95 }}
                                     className="absolute bottom-full left-1/2 z-50 mb-2 -translate-x-1/2 whitespace-nowrap"
                                     dir="rtl"
                                 >
@@ -281,15 +289,12 @@ export default function CustomerCard({
                                             background: isDark
                                                 ? "#0f172a"
                                                 : "#1e293b",
-                                            border: isDark
-                                                ? "1px solid rgba(255,255,255,0.08)"
-                                                : "1px solid rgba(0,0,0,0.12)",
+                                            border: "1px solid rgba(255,255,255,0.08)",
                                         }}
                                     >
                                         <span className="text-[11px] font-bold text-white">
                                             این مشتری پرونده دارد
                                         </span>
-
                                         <span className="text-[10px] text-slate-400">
                                             برای حذف آن باید ابتدا پرونده‌هایش را حذف کنید
                                         </span>
@@ -301,16 +306,12 @@ export default function CustomerCard({
                 </div>
 
                 <div className="flex items-center gap-3 pt-1">
-                    <Avatar
-                        name={customer.full_name}
-                        id={customer.id}
-                    />
+                    <Avatar name={customer.full_name} id={customer.id} />
 
                     <div className="flex min-w-0 flex-col gap-0.5">
                         <p className="truncate text-[13.5px] font-extrabold leading-tight text-gray-800 dark:text-gray-100">
                             {customer.full_name}
                         </p>
-
                         <p className="text-[11px] text-gray-400 dark:text-gray-500">
                             #{customer.id}
                         </p>
@@ -350,22 +351,16 @@ export default function CustomerCard({
 
                 <div
                     className="flex flex-col gap-1.5 border-t pt-2.5"
-                    style={{
-                        borderColor: dividerColor,
-                    }}
+                    style={{ borderColor: dividerColor }}
                 >
                     <div className="flex items-center gap-2 text-[11.5px] text-gray-400 dark:text-gray-500">
                         <Phone className="h-3.5 w-3.5 shrink-0" />
-
-                        <span dir="ltr">
-                            {customer.phone_number}
-                        </span>
+                        <span dir="ltr">{customer.phone_number}</span>
                     </div>
 
                     {customer.company_name && (
                         <div className="flex items-center gap-2 text-[11.5px] text-gray-400 dark:text-gray-500">
                             <Building2 className="h-3.5 w-3.5 shrink-0" />
-
                             <span className="truncate">
                                 {customer.company_name}
                             </span>
@@ -375,20 +370,69 @@ export default function CustomerCard({
                     <div className="flex items-center justify-between text-[11.5px] text-gray-400 dark:text-gray-500">
                         <div className="flex min-w-0 items-center gap-1.5">
                             <User className="h-3.5 w-3.5 shrink-0" />
-
-                            <span className="truncate">
-                                {creatorName}
-                            </span>
+                            <span className="truncate">{creatorName}</span>
                         </div>
 
                         <div className="flex shrink-0 items-center gap-1.5">
                             <CalendarDays className="h-3.5 w-3.5" />
-
-                            <span>
-                                {formatDate(customer.created_at)}
-                            </span>
+                            <span>{formatDate(customer.created_at)}</span>
                         </div>
                     </div>
+                </div>
+
+                <div
+                    className="flex items-center justify-between gap-2 rounded-xl border px-3 py-2.5"
+                    style={{
+                        borderColor: isDark
+                            ? "rgba(251,191,36,0.12)"
+                            : "rgba(245,158,11,0.15)",
+                        background: isDark
+                            ? "rgba(251,191,36,0.04)"
+                            : "rgba(245,158,11,0.04)",
+                    }}
+                >
+                    <div className="flex min-w-0 items-center gap-2">
+                        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-amber-400/10">
+                            <Star
+                                size={14}
+                                fill={scores.length ? "#FBBF24" : "none"}
+                                className="text-amber-400"
+                            />
+                        </div>
+
+                        <div className="min-w-0">
+                            <p className="text-[10px] font-bold text-gray-400">
+                                امتیاز مشتری
+                            </p>
+
+                            <div className="mt-1 flex items-center gap-2">
+                                {scoresLoading ? (
+                                    <Loader2
+                                        size={13}
+                                        className="animate-spin text-amber-400"
+                                    />
+                                ) : (
+                                    <>
+                                        <span className="text-[14px] font-black text-amber-500">
+                                            {scores.length
+                                                ? average.toFixed(1)
+                                                : "—"}
+                                        </span>
+                                        <Stars score={average} />
+                                    </>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+
+                    <button
+                        type="button"
+                        onClick={() => setShowScores(true)}
+                        className="flex shrink-0 items-center gap-1.5 rounded-xl bg-amber-400/10 px-2.5 py-2 text-[10px] font-bold text-amber-600 transition-colors hover:bg-amber-400/20 dark:text-amber-400"
+                    >
+                        <MessageCircle size={12} />
+                        نظرات
+                    </button>
                 </div>
             </motion.div>
 
@@ -406,7 +450,13 @@ export default function CustomerCard({
                 onClose={() => setShowEdit(false)}
                 onEdited={onEdited}
             />
+
+            <CustomerScoresModal
+                customerId={customer.id}
+                customerName={customer.full_name}
+                isOpen={showScores}
+                onClose={() => setShowScores(false)}
+            />
         </>
     );
-
 }
