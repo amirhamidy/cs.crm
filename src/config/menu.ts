@@ -39,21 +39,21 @@ export const adminMenuItems: MenuItem[] = [
     label: "دپارتمان‌ها",
     href: "/admin/departments",
   },
-  {
-    icon: Boxes,
-    label: "انبار",
-    href: "/admin/warehouse",
-  },
-  {
-    icon: ShoppingCart,
-    label: "فرآیند خرید",
-    href: "/admin/purchasing",
-  },
-  {
-    icon: ShieldCheck,
-    label: "کنترل کیفی",
-    href: "/admin/qualityControl",
-  },
+  // {
+  //   icon: Boxes,
+  //   label: "انبار",
+  //   href: "/admin/warehouse",
+  // },
+  // {
+  //   icon: ShoppingCart,
+  //   label: "فرآیند خرید",
+  //   href: "/admin/purchasing",
+  // },
+  // {
+  //   icon: ShieldCheck,
+  //   label: "کنترل کیفی",
+  //   href: "/admin/qualityControl",
+  // },
   {
     icon: FolderKanban,
     label: "پرونده‌ها",
@@ -107,11 +107,11 @@ export const userMenuItems: MenuItem[] = [
     label: "وظایف",
     href: "/user/processes",
   },
-  {
-    icon: Boxes,
-    label: "انبارداری",
-    href: "/user/warehouse",
-  },
+  // {
+  //   icon: Boxes,
+  //   label: "انبارداری",
+  //   href: "/user/warehouse",
+  // },
   {
     icon: Archive,
     label: "بایگانی وظایف",
@@ -122,16 +122,16 @@ export const userMenuItems: MenuItem[] = [
     label: "مشتری",
     href: "/user/customer",
   },
-  {
-    icon: ShoppingCart,
-    label: "فرآیند خرید",
-    href: "/user/purchasing",
-  },
-  {
-    icon: ShieldCheck,
-    label: "کنترل کیفی",
-    href: "/user/qualityControl",
-  },
+  // {
+  //   icon: ShoppingCart,
+  //   label: "فرآیند خرید",
+  //   href: "/user/purchasing",
+  // },
+  // {
+  //   icon: ShieldCheck,
+  //   label: "کنترل کیفی",
+  //   href: "/user/qualityControl",
+  // },
   {
     icon: FolderKanban,
     label: "پرونده‌ها",

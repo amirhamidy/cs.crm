@@ -9,6 +9,8 @@ import {
     History,
     Inbox,
     Loader,
+    Plus,
+    RefreshCw,
     Repeat,
     RotateCcw,
     Timer,
@@ -21,6 +23,7 @@ import {
     fetchInternalTasks,
 } from "./Api";
 import InternalTaskActionModal from "./Internaltaskactionmodal";
+import EmployeeCreateTaskRoutineModal from "./EmployeeCreateTaskRoutineModal";
 import type {
     EmployeeListItem,
     EmployeeRef,
@@ -78,10 +81,13 @@ function resolveAssignedTo(
 
     const employeeById = new Map(
         employees
-            .map((employee) => [
-                Number(employee.id),
-                employee.full_name || employee.username,
-            ] as const)
+            .map(
+                (employee) =>
+                    [
+                        Number(employee.id),
+                        employee.full_name || employee.username,
+                    ] as const,
+            )
             .filter(([id]) => Number.isFinite(id)),
     );
 
@@ -158,11 +164,13 @@ function formatRemaining(milliseconds: number) {
             useGrouping: false,
         }).format(value);
 
+    const time = `${number(hours)}:${number(minutes)}:${number(seconds)}`;
+
     if (days > 0) {
-        return `${new Intl.NumberFormat("fa-IR").format(days)} روز و ${number(hours)}:${number(minutes)}:${number(seconds)}`;
+        return `${time} و ${new Intl.NumberFormat("fa-IR").format(days)} روز`;
     }
 
-    return `${number(hours)}:${number(minutes)}:${number(seconds)}`;
+    return time;
 }
 
 function RoutineCountdown({
@@ -208,6 +216,21 @@ function RoutineCountdown({
 
     if (remaining <= 0) return null;
 
+    const totalSeconds = Math.floor(remaining / 1000);
+    const days = Math.floor(totalSeconds / 86400);
+    const hours = Math.floor((totalSeconds % 86400) / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+
+    const number = (value: number) =>
+        new Intl.NumberFormat("fa-IR", {
+            minimumIntegerDigits: 2,
+            useGrouping: false,
+        }).format(value);
+
+    const time = `${number(hours)}:${number(minutes)}:${number(seconds)}`;
+    const dayText = new Intl.NumberFormat("fa-IR").format(days);
+
     return (
         <div className="rounded-2xl border border-amber-500/15 bg-amber-500/[0.06] p-3">
             <div className="mb-2 flex items-center gap-2">
@@ -220,11 +243,20 @@ function RoutineCountdown({
                 </span>
             </div>
 
-            <div
-                dir="ltr"
-                className="text-center text-[17px] font-black tracking-wide text-gray-800 dark:text-white"
-            >
-                {formatRemaining(remaining)}
+            <div className="flex items-center justify-center gap-1.5 text-[17px] font-black tracking-wide text-gray-800 dark:text-white">
+                <span dir="ltr">{time}</span>
+
+                {days > 0 && (
+                    <>
+                        <span dir="rtl" className="text-[13px]">
+                            و
+                        </span>
+
+                        <span dir="rtl" className="text-[13px]">
+                            {dayText} روز
+                        </span>
+                    </>
+                )}
             </div>
 
             <div className="mt-2 text-center text-[10px] font-semibold text-gray-400">
@@ -445,10 +477,14 @@ export default function EmployeeTaskRoutineBoard() {
     const [tasks, setTasks] = useState<InternalTask[]>([]);
     const [employees, setEmployees] = useState<EmployeeListItem[]>([]);
     const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [createOpen, setCreateOpen] = useState(false);
 
-    async function loadData() {
-        setLoading(true);
+    async function loadData(initial = false) {
+        if (initial) setLoading(true);
+        else setRefreshing(true);
+
         setError(null);
 
         try {
@@ -483,11 +519,12 @@ export default function EmployeeTaskRoutineBoard() {
             setError("دریافت تسک‌های روتین با خطا مواجه شد.");
         } finally {
             setLoading(false);
+            setRefreshing(false);
         }
     }
 
     useEffect(() => {
-        void loadData();
+        void loadData(true);
     }, []);
 
     const tasksById = useMemo(() => {
@@ -497,6 +534,18 @@ export default function EmployeeTaskRoutineBoard() {
 
         return map;
     }, [tasks]);
+
+    const myTasks = useMemo(() => {
+        if (!userId) return [];
+
+        return tasks.filter((task) =>
+            Array.isArray(task.assigned_to)
+                ? task.assigned_to.some(
+                    (assigned) => Number(assigned.id) === Number(userId),
+                )
+                : false,
+        );
+    }, [tasks, userId]);
 
     const myRoutines = useMemo(() => {
         if (!userId) return [];
@@ -527,6 +576,21 @@ export default function EmployeeTaskRoutineBoard() {
             });
     }, [routines, tasksById, userId]);
 
+    const availableMyTasks = useMemo(() => {
+        const routinedTaskIds = new Set(
+            myRoutines.map((routine) => routine.task),
+        );
+
+        return myTasks.filter((task) => !routinedTaskIds.has(task.id));
+    }, [myTasks, myRoutines]);
+
+    function handleCreated(routine: InternalTaskRoutine) {
+        setRoutines((previous) => [
+            routine,
+            ...previous.filter((item) => item.id !== routine.id),
+        ]);
+    }
+
     function handleTaskUpdated(updatedTask: InternalTask) {
         setTasks((previous) =>
             previous.map((task) =>
@@ -553,22 +617,49 @@ export default function EmployeeTaskRoutineBoard() {
 
     return (
         <div dir="rtl" className="flex flex-col gap-5">
-            <div className="flex items-center gap-2.5">
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-indigo-500/10">
-                    <Repeat
-                        size={17}
-                        className="text-indigo-500"
-                    />
+            <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center gap-2.5">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-indigo-500/10">
+                        <Repeat
+                            size={17}
+                            className="text-indigo-500"
+                        />
+                    </div>
+
+                    <div>
+                        <h3 className="text-[14px] font-extrabold text-gray-900 dark:text-white">
+                            تسک‌های روتین من
+                        </h3>
+
+                        <p className="text-[11px] text-gray-400 dark:text-gray-600">
+                            {myRoutines.length} تسک روتین
+                        </p>
+                    </div>
                 </div>
 
-                <div>
-                    <h3 className="text-[14px] font-extrabold text-gray-900 dark:text-white">
-                        تسک‌های روتین من
-                    </h3>
+                <div className="flex shrink-0 items-center gap-2">
+                    <button
+                        type="button"
+                        onClick={() => setCreateOpen(true)}
+                        disabled={myTasks.length === 0}
+                        className="flex items-center gap-1.5 rounded-2xl bg-indigo-600 px-3.5 py-2 text-[11.5px] font-bold text-white transition-colors hover:bg-indigo-500 disabled:opacity-40"
+                    >
+                        <Plus size={13} />
+                        روتین جدید
+                    </button>
 
-                    <p className="text-[11px] text-gray-400 dark:text-gray-600">
-                        {myRoutines.length} تسک روتین
-                    </p>
+                    <button
+                        type="button"
+                        onClick={() => void loadData()}
+                        disabled={refreshing}
+                        className="flex h-9 w-9 items-center justify-center rounded-2xl bg-gray-100 text-gray-500 transition-colors hover:bg-gray-200 disabled:opacity-40 dark:bg-white/[0.05] dark:text-gray-400 dark:hover:bg-white/[0.08]"
+                        title="به‌روزرسانی"
+                    >
+                        <RefreshCw
+                            size={14}
+                            className={refreshing ? "animate-spin" : ""}
+                        />
+                    </button>
                 </div>
             </div>
 
@@ -615,6 +706,13 @@ export default function EmployeeTaskRoutineBoard() {
                     </div>
                 </AnimatePresence>
             )}
+
+            <EmployeeCreateTaskRoutineModal
+                isOpen={createOpen}
+                onClose={() => setCreateOpen(false)}
+                tasks={availableMyTasks}
+                onCreated={handleCreated}
+            />
         </div>
     );
 }

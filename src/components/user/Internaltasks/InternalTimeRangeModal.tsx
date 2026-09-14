@@ -1,8 +1,18 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
-import { X, ChevronLeft, ChevronRight, Clock, Check, Loader, CalendarDays, ChevronDown } from "lucide-react";
+import {
+    X,
+    ChevronDown,
+    ChevronLeft,
+    ChevronRight,
+    Clock,
+    Check,
+    Loader,
+    CalendarDays,
+} from "lucide-react";
 import {
     toJalali,
     toGregorian,
@@ -23,7 +33,7 @@ interface FieldState {
     minute: number;
 }
 
-interface InternalTimeRangeModalProps {
+interface TimeRangeModalProps {
     open: boolean;
     initialStartedAt?: string | null;
     initialDeadline?: string | null;
@@ -33,26 +43,64 @@ interface InternalTimeRangeModalProps {
     error?: string | null;
 }
 
+function parseIsoToField(iso?: string | null): FieldState {
+    const d = iso ? new Date(iso) : new Date();
+
+    const [jy, jm, jd] = toJalali(
+        d.getFullYear(),
+        d.getMonth() + 1,
+        d.getDate()
+    );
+
+    return {
+        jy,
+        jm,
+        jd,
+        hour: d.getHours(),
+        minute: d.getMinutes(),
+    };
+}
+
+function fieldToIso(f: FieldState) {
+    const [gy, gm, gd] = toGregorian(f.jy, f.jm, f.jd);
+
+    return new Date(
+        gy,
+        gm - 1,
+        gd,
+        f.hour,
+        f.minute,
+        0
+    ).toISOString();
+}
+
+const HOURS = Array.from({ length: 24 }, (_, i) => i);
+const MINUTES = Array.from({ length: 12 }, (_, i) => i * 5);
+
 interface NiceSelectOption {
     value: number;
     label: string;
 }
 
-interface NiceSelectProps {
+function NiceSelect({
+    value,
+    onChange,
+    options,
+    label,
+}: {
     value: number;
     onChange: (value: number) => void;
     options: NiceSelectOption[];
     label: string;
-}
-
-function NiceSelect({ value, onChange, options, label }: NiceSelectProps) {
+}) {
     const [isOpen, setIsOpen] = useState(false);
     const ref = useRef<HTMLDivElement>(null);
-    const selectedOption = options.find((o) => o.value === value) || options[0];
+    const selectedOption =
+        options.find((option) => option.value === value) || options[0];
 
     useEffect(() => {
-        function handleClick(e: MouseEvent) {
-            if (ref.current && !ref.current.contains(e.target as Node)) {
+        function handleClick(event: MouseEvent) {
+            if (ref.current && !ref.current.contains(event.target as Node)) {
                 setIsOpen(false);
             }
         }
@@ -65,15 +113,26 @@ function NiceSelect({ value, onChange, options, label }: NiceSelectProps) {
             <button
                 type="button"
                 onClick={() => setIsOpen(!isOpen)}
-                className="peer flex w-full items-center justify-between rounded-2xl border border-gray-200 bg-white px-5 py-3 text-sm text-black outline-none transition-all duration-200 focus:border-gray-400 dark:border-white/[0.08] dark:bg-white/[0.04] dark:text-white dark:focus:border-blue-500"
+                className="flex w-full items-center justify-between rounded-2xl border border-gray-200 bg-white px-5 py-3 text-sm text-black outline-none transition-all duration-200 focus:border-gray-400 dark:border-white/[0.08] dark:bg-white/[0.04] dark:text-white dark:focus:border-indigo-500"
             >
-                <span className={selectedOption ? "text-black dark:text-white" : "text-gray-400"}>
+                <span
+                    className={
+                        selectedOption
+                            ? "text-black dark:text-white"
+                            : "text-gray-400"
+                    }
+                >
                     {selectedOption ? selectedOption.label : label}
                 </span>
-                <ChevronDown size={16} className={`text-gray-400 transition-transform ${isOpen ? "rotate-180" : ""}`} />
+                <ChevronDown
+                    size={16}
+                    className={`text-gray-400 transition-transform ${isOpen ? "rotate-180" : ""}`}
+                />
             </button>
             <label
-                className={`pointer-events-none absolute right-5 rounded bg-white px-1.5 text-sm text-gray-400 transition-all duration-200 dark:bg-[#0f172a] ${isOpen || selectedOption ? "top-0 text-xs text-gray-500 dark:text-gray-400" : "top-1/2 -translate-y-1/2"
+                className={`pointer-events-none absolute right-5 rounded bg-white px-1.5 text-sm text-gray-400 transition-all duration-200 dark:bg-[#0f172a] ${isOpen || selectedOption
+                    ? "top-0 text-xs text-gray-500 dark:text-gray-400"
+                    : "top-1/2 -translate-y-1/2"
                     }`}
             >
                 {label}
@@ -97,8 +156,8 @@ function NiceSelect({ value, onChange, options, label }: NiceSelectProps) {
                                     setIsOpen(false);
                                 }}
                                 className={`flex w-full items-center justify-between rounded-xl px-4 py-2.5 text-[13px] font-bold transition-colors ${option.value === value
-                                        ? "bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400"
-                                        : "text-gray-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-white/[0.04]"
+                                    ? "bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-400"
+                                    : "text-gray-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-white/[0.04]"
                                     }`}
                             >
                                 {option.label}
@@ -112,35 +171,7 @@ function NiceSelect({ value, onChange, options, label }: NiceSelectProps) {
     );
 }
 
-function parseIsoToField(iso?: string | null): FieldState {
-    const d = iso ? new Date(iso) : new Date();
-    const validDate = Number.isNaN(d.getTime()) ? new Date() : d;
-    const [jy, jm, jd] = toJalali(
-        validDate.getFullYear(),
-        validDate.getMonth() + 1,
-        validDate.getDate()
-    );
-    return {
-        jy,
-        jm,
-        jd,
-        hour: validDate.getHours(),
-        minute: Math.floor(validDate.getMinutes() / 5) * 5,
-    };
-}
-
-function fieldToIso(f: FieldState) {
-    const [gy, gm, gd] = toGregorian(f.jy, f.jm, f.jd);
-    return new Date(gy, gm - 1, gd, f.hour, f.minute, 0).toISOString();
-}
-
-const HOURS = Array.from({ length: 24 }, (_, i) => ({ value: i, label: toPersianDigits(pad2(i)) }));
-const MINUTES = Array.from({ length: 12 }, (_, i) => {
-    const m = i * 5;
-    return { value: m, label: toPersianDigits(pad2(m)) };
-});
-
-export default function InternalTimeRangeModal({
+export default function TimeRangeModal({
     open,
     initialStartedAt,
     initialDeadline,
@@ -148,19 +179,34 @@ export default function InternalTimeRangeModal({
     onClose,
     onSubmit,
     error: externalError,
-}: InternalTimeRangeModalProps) {
-    const [start, setStart] = useState<FieldState>(() => parseIsoToField(initialStartedAt));
-    const [deadline, setDeadline] = useState<FieldState>(() => parseIsoToField(initialDeadline));
-    const [activeField, setActiveField] = useState<"start" | "deadline">("start");
+}: TimeRangeModalProps) {
+    const [start, setStart] = useState<FieldState>(() =>
+        parseIsoToField(initialStartedAt)
+    );
+
+    const [deadline, setDeadline] = useState<FieldState>(() =>
+        parseIsoToField(initialDeadline)
+    );
+
+    const [activeField, setActiveField] = useState<
+        "start" | "deadline"
+    >("start");
+
     const [viewJy, setViewJy] = useState(start.jy);
     const [viewJm, setViewJm] = useState(start.jm);
     const [error, setError] = useState("");
 
     useEffect(() => {
         if (!open) return;
-        setStart(parseIsoToField(initialStartedAt));
-        setDeadline(parseIsoToField(initialDeadline));
+
+        const nextStart = parseIsoToField(initialStartedAt);
+        const nextDeadline = parseIsoToField(initialDeadline);
+
+        setStart(nextStart);
+        setDeadline(nextDeadline);
         setActiveField("start");
+        setViewJy(nextStart.jy);
+        setViewJm(nextStart.jm);
         setError("");
     }, [open, initialStartedAt, initialDeadline]);
 
@@ -168,9 +214,9 @@ export default function InternalTimeRangeModal({
         const cur = activeField === "start" ? start : deadline;
         setViewJy(cur.jy);
         setViewJm(cur.jm);
-    }, [activeField, start, deadline]);
+    }, [activeField]);
 
-    if (!open) return null;
+    if (!open || typeof document === "undefined") return null;
 
     const current = activeField === "start" ? start : deadline;
     const setCurrent = activeField === "start" ? setStart : setDeadline;
@@ -180,7 +226,10 @@ export default function InternalTimeRangeModal({
 
     const cells: (number | null)[] = [
         ...Array(weekdayOffset).fill(null),
-        ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
+        ...Array.from(
+            { length: daysInMonth },
+            (_, i) => i + 1
+        ),
     ];
 
     function prevMonth() {
@@ -201,218 +250,328 @@ export default function InternalTimeRangeModal({
         }
     }
 
-    async function handleSubmit() {
+    function handleSubmit() {
         const s = fieldToIso(start);
         const d = fieldToIso(deadline);
+
         if (new Date(d) <= new Date(s)) {
             setError("مهلت انجام باید بعد از زمان شروع باشد");
             return;
         }
+
         setError("");
-        await onSubmit(s, d);
+        onSubmit(s, d);
     }
 
     const [ty, tm, td] = todayJalali();
 
-    return (
-        <AnimatePresence>
-            <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="fixed inset-0 z-50 flex items-center justify-center px-4"
-                style={{ background: "rgba(0,0,0,0.45)", backdropFilter: "blur(3px)" }}
-                onClick={onClose}
-            >
+    const hoursOptions = HOURS.map((h) => ({
+        value: h,
+        label: toPersianDigits(pad2(h)),
+    }));
+
+    const minutesOptions = MINUTES.map((m) => ({
+        value: m,
+        label: toPersianDigits(pad2(m)),
+    }));
+
+    return createPortal(
+        <AnimatePresence mode="wait">
+            {open && (
                 <motion.div
-                    initial={{ opacity: 0, y: 16 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: 16 }}
-                    transition={{ duration: 0.35, ease: "easeOut" }}
-                    onClick={(e) => e.stopPropagation()}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.18, ease: "easeOut" }}
+                    className="fixed inset-0 z-[99999] flex items-center justify-center px-4"
+                    style={{
+                        isolation: "isolate",
+                    }}
+                    onClick={onClose}
                     dir="rtl"
-                    className="flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-sm dark:border-white/[0.06] dark:bg-[#0f172a]"
                 >
-                    <div className="flex shrink-0 items-center justify-between px-8 pb-6 pt-8">
-                        <div className="flex items-center gap-2.5">
-                            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-50 dark:bg-blue-500/10">
-                                <Clock size={15} className="text-blue-500" />
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.18 }}
+                        className="absolute inset-0 bg-black/45"
+                        style={{
+                            backdropFilter: "blur(5px)",
+                            WebkitBackdropFilter: "blur(5px)",
+                            pointerEvents: "none",
+                        }}
+                    />
+
+                    <motion.div
+                        initial={{ opacity: 0, y: 16, scale: 0.97 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: 16, scale: 0.97 }}
+                        transition={{
+                            duration: 0.22,
+                            ease: [0.22, 1, 0.36, 1],
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                        dir="rtl"
+                        className="relative flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-[0_24px_70px_rgba(0,0,0,0.22)] dark:border-white/[0.06] dark:bg-[#0f172a]"
+                    >
+                        <div className="flex shrink-0 items-center justify-between px-8 pb-6 pt-8">
+                            <div className="flex items-center gap-2.5">
+                                <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-50 dark:bg-blue-500/10">
+                                    <Clock
+                                        size={15}
+                                        className="text-blue-500"
+                                    />
+                                </div>
+
+                                <div>
+                                    <h3 className="text-[14px] font-extrabold text-gray-900 dark:text-white">
+                                        تعیین بازه زمانی
+                                    </h3>
+
+                                    <p className="mt-0.5 text-[11px] text-gray-400">
+                                        شروع و مهلت انجام
+                                    </p>
+                                </div>
                             </div>
-                            <div>
-                                <h3 className="text-[14px] font-extrabold text-gray-900 dark:text-white">
-                                    تعیین بازه زمانی
-                                </h3>
-                                <p className="mt-0.5 text-[11px] text-gray-400">شروع و مهلت انجام</p>
-                            </div>
+
+                            <button
+                                type="button"
+                                onClick={onClose}
+                                className="flex h-8 w-8 items-center justify-center rounded-xl bg-gray-100 text-gray-400 transition-colors hover:text-gray-600 dark:bg-white/[0.05] dark:hover:text-gray-300"
+                            >
+                                <X size={15} />
+                            </button>
                         </div>
-                        <button
-                            type="button"
-                            onClick={onClose}
-                            className="flex h-8 w-8 items-center justify-center rounded-xl bg-gray-100 text-gray-400 transition-colors hover:text-gray-600 dark:bg-white/[0.05] dark:hover:text-gray-300"
-                        >
-                            <X size={15} />
-                        </button>
-                    </div>
-                    <div className="flex-1 overflow-y-auto px-8 pb-2">
-                        <div className="flex flex-col gap-4">
-                            <div className="grid grid-cols-2 gap-2">
-                                {(["start", "deadline"] as const).map((field) => {
-                                    const f = field === "start" ? start : deadline;
-                                    const active = activeField === field;
-                                    return (
+
+                        <div className="flex-1 overflow-y-auto px-8 pb-2">
+                            <div className="flex flex-col gap-4">
+                                <div className="grid grid-cols-2 gap-2">
+                                    {(["start", "deadline"] as const).map(
+                                        (field) => {
+                                            const f =
+                                                field === "start"
+                                                    ? start
+                                                    : deadline;
+
+                                            const active =
+                                                activeField === field;
+
+                                            return (
+                                                <button
+                                                    key={field}
+                                                    type="button"
+                                                    onClick={() =>
+                                                        setActiveField(field)
+                                                    }
+                                                    className={`rounded-2xl border px-3 py-2.5 text-right transition-all duration-200 ${active
+                                                        ? "border-blue-500 bg-blue-50/50 dark:border-blue-500/50 dark:bg-blue-500/[0.06]"
+                                                        : "border-gray-100 bg-gray-50 hover:border-gray-200 dark:border-white/[0.06] dark:bg-white/[0.03] dark:hover:border-white/[0.12]"
+                                                        }`}
+                                                >
+                                                    <div
+                                                        className={`mb-1 text-[10.5px] font-bold ${active
+                                                            ? "text-blue-500"
+                                                            : "text-gray-400"
+                                                            }`}
+                                                    >
+                                                        {field === "start"
+                                                            ? "شروع"
+                                                            : "مهلت انجام"}
+                                                    </div>
+
+                                                    <div
+                                                        className={`text-[12.5px] font-bold ${active
+                                                            ? "text-blue-600 dark:text-blue-400"
+                                                            : "text-gray-900 dark:text-white"
+                                                            }`}
+                                                    >
+                                                        {toPersianDigits(f.jd)}{" "}
+                                                        {JALALI_MONTHS[
+                                                            f.jm - 1
+                                                        ]}{" "}
+                                                        —{" "}
+                                                        {toPersianDigits(
+                                                            pad2(f.hour)
+                                                        )}
+                                                        :
+                                                        {toPersianDigits(
+                                                            pad2(f.minute)
+                                                        )}
+                                                    </div>
+                                                </button>
+                                            );
+                                        }
+                                    )}
+                                </div>
+
+                                <div className="rounded-[1.5rem] border border-gray-100 bg-gray-50/60 p-4 dark:border-white/[0.06] dark:bg-white/[0.03]">
+                                    <div className="mb-4 flex items-center justify-between">
                                         <button
-                                            key={field}
                                             type="button"
-                                            onClick={() => setActiveField(field)}
-                                            className={`rounded-2xl border px-3 py-2.5 text-right transition-all duration-200 ${active
-                                                    ? "border-blue-500 bg-blue-50/50 dark:border-blue-500/50 dark:bg-blue-500/[0.06]"
-                                                    : "border-gray-100 bg-gray-50 hover:border-gray-200 dark:border-white/[0.06] dark:bg-white/[0.03] dark:hover:border-white/[0.12]"
-                                                }`}
+                                            onClick={prevMonth}
+                                            className="flex h-7 w-7 items-center justify-center rounded-xl bg-white text-gray-400 shadow-sm transition-colors hover:text-gray-600 dark:bg-white/[0.05] dark:hover:text-gray-200"
                                         >
-                                            <div
-                                                className={`mb-1 text-[10.5px] font-bold ${active ? "text-blue-500" : "text-gray-400"
-                                                    }`}
-                                            >
-                                                {field === "start" ? "شروع" : "مهلت انجام"}
-                                            </div>
-                                            <div
-                                                className={`text-[12.5px] font-bold ${active
-                                                        ? "text-blue-600 dark:text-blue-400"
-                                                        : "text-gray-900 dark:text-white"
-                                                    }`}
-                                            >
-                                                {toPersianDigits(f.jd)} {JALALI_MONTHS[f.jm - 1]} —{" "}
-                                                {toPersianDigits(pad2(f.hour))}:{toPersianDigits(pad2(f.minute))}
-                                            </div>
+                                            <ChevronRight size={15} />
                                         </button>
-                                    );
-                                })}
-                            </div>
-                            <div className="rounded-[1.5rem] border border-gray-100 bg-gray-50/60 p-4 dark:border-white/[0.06] dark:bg-white/[0.03]">
-                                <div className="mb-4 flex items-center justify-between">
-                                    <button
-                                        type="button"
-                                        onClick={prevMonth}
-                                        className="flex h-7 w-7 items-center justify-center rounded-xl bg-white text-gray-400 shadow-sm transition-colors hover:text-gray-600 dark:bg-white/[0.05] dark:hover:text-gray-200"
-                                    >
-                                        <ChevronRight size={15} />
-                                    </button>
-                                    <div className="flex items-center gap-1.5 text-[13px] font-bold text-gray-900 dark:text-white">
-                                        <CalendarDays size={14} className="text-gray-400" />
-                                        <span>{JALALI_MONTHS[viewJm - 1]}</span>
-                                        <span className="text-gray-400">{toPersianDigits(viewJy)}</span>
-                                    </div>
-                                    <button
-                                        type="button"
-                                        onClick={nextMonth}
-                                        className="flex h-7 w-7 items-center justify-center rounded-xl bg-white text-gray-400 shadow-sm transition-colors hover:text-gray-600 dark:bg-white/[0.05] dark:hover:text-gray-200"
-                                    >
-                                        <ChevronLeft size={15} />
-                                    </button>
-                                </div>
-                                <div className="mb-2 grid grid-cols-7 gap-1">
-                                    {JALALI_WEEKDAYS.map((w) => (
-                                        <div
-                                            key={w}
-                                            className="py-1 text-center text-[10.5px] font-bold text-gray-300 dark:text-white/25"
-                                        >
-                                            {w}
+
+                                        <div className="flex items-center gap-1.5 text-[13px] font-bold text-gray-900 dark:text-white">
+                                            <CalendarDays
+                                                size={14}
+                                                className="text-gray-400"
+                                            />
+
+                                            <span>
+                                                {JALALI_MONTHS[viewJm - 1]}
+                                            </span>
+
+                                            <span className="text-gray-400">
+                                                {toPersianDigits(viewJy)}
+                                            </span>
                                         </div>
-                                    ))}
-                                </div>
-                                <div className="grid grid-cols-7 gap-1">
-                                    {cells.map((day, idx) => {
-                                        const isSelected =
-                                            day !== null &&
-                                            current.jy === viewJy &&
-                                            current.jm === viewJm &&
-                                            current.jd === day;
-                                        const isToday =
-                                            day !== null && ty === viewJy && tm === viewJm && td === day;
-                                        return (
-                                            <button
-                                                key={idx}
-                                                type="button"
-                                                disabled={day === null}
-                                                onClick={() =>
-                                                    day &&
-                                                    setCurrent((p) => ({
-                                                        ...p,
-                                                        jy: viewJy,
-                                                        jm: viewJm,
-                                                        jd: day,
-                                                    }))
-                                                }
-                                                className={`aspect-square rounded-xl text-[12.5px] font-bold transition-colors ${day === null
+
+                                        <button
+                                            type="button"
+                                            onClick={nextMonth}
+                                            className="flex h-7 w-7 items-center justify-center rounded-xl bg-white text-gray-400 shadow-sm transition-colors hover:text-gray-600 dark:bg-white/[0.05] dark:hover:text-gray-200"
+                                        >
+                                            <ChevronLeft size={15} />
+                                        </button>
+                                    </div>
+
+                                    <div className="mb-2 grid grid-cols-7 gap-1">
+                                        {JALALI_WEEKDAYS.map((w) => (
+                                            <div
+                                                key={w}
+                                                className="py-1 text-center text-[10.5px] font-bold text-gray-300 dark:text-white/25"
+                                            >
+                                                {w}
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    <div className="grid grid-cols-7 gap-1">
+                                        {cells.map((day, idx) => {
+                                            const isSelected =
+                                                day !== null &&
+                                                current.jy === viewJy &&
+                                                current.jm === viewJm &&
+                                                current.jd === day;
+
+                                            const isToday =
+                                                day !== null &&
+                                                ty === viewJy &&
+                                                tm === viewJm &&
+                                                td === day;
+
+                                            return (
+                                                <button
+                                                    key={idx}
+                                                    type="button"
+                                                    disabled={day === null}
+                                                    onClick={() =>
+                                                        day &&
+                                                        setCurrent((p) => ({
+                                                            ...p,
+                                                            jy: viewJy,
+                                                            jm: viewJm,
+                                                            jd: day,
+                                                        }))
+                                                    }
+                                                    className={`aspect-square rounded-xl text-[12.5px] font-bold transition-colors ${day === null
                                                         ? "invisible"
                                                         : isSelected
                                                             ? "bg-blue-600 text-white"
                                                             : isToday
                                                                 ? "border border-blue-400 bg-blue-50 text-blue-600 dark:border-blue-500/40 dark:bg-blue-500/10 dark:text-blue-300"
                                                                 : "text-gray-500 hover:bg-gray-100 dark:text-white/60 dark:hover:bg-white/[0.06] dark:hover:text-white"
-                                                    }`}
-                                            >
-                                                {day !== null ? toPersianDigits(day) : ""}
-                                            </button>
-                                        );
-                                    })}
+                                                        }`}
+                                                >
+                                                    {day !== null
+                                                        ? toPersianDigits(day)
+                                                        : ""}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
                                 </div>
+
+                                <div className="grid grid-cols-2 gap-3">
+                                    <NiceSelect
+                                        label="ساعت"
+                                        value={current.hour}
+                                        onChange={(hour) =>
+                                            setCurrent((p) => ({ ...p, hour }))
+                                        }
+                                        options={hoursOptions}
+                                    />
+                                    <NiceSelect
+                                        label="دقیقه"
+                                        value={current.minute}
+                                        onChange={(minute) =>
+                                            setCurrent((p) => ({ ...p, minute }))
+                                        }
+                                        options={minutesOptions}
+                                    />
+                                </div>
+
+                                <AnimatePresence>
+                                    {(error || externalError) && (
+                                        <motion.div
+                                            initial={{
+                                                opacity: 0,
+                                                y: 6,
+                                            }}
+                                            animate={{
+                                                opacity: 1,
+                                                y: 0,
+                                            }}
+                                            exit={{
+                                                opacity: 0,
+                                                y: 4,
+                                            }}
+                                            className="rounded-2xl bg-red-50 px-3.5 py-3 text-center text-[11.5px] font-semibold text-red-500 dark:bg-red-500/10 dark:text-red-400"
+                                        >
+                                            {error || externalError}
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
                             </div>
-                            <div className="grid grid-cols-2 gap-3">
-                                <NiceSelect
-                                    label="ساعت"
-                                    value={current.hour}
-                                    onChange={(hour) => setCurrent((p) => ({ ...p, hour }))}
-                                    options={HOURS}
-                                />
-                                <NiceSelect
-                                    label="دقیقه"
-                                    value={current.minute}
-                                    onChange={(minute) => setCurrent((p) => ({ ...p, minute }))}
-                                    options={MINUTES}
-                                />
-                            </div>
-                            <AnimatePresence>
-                                {(error || externalError) && (
-                                    <motion.div
-                                        initial={{ opacity: 0, y: 6 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        exit={{ opacity: 0, y: 4 }}
-                                        className="rounded-2xl bg-red-50 px-3.5 py-3 text-center text-[11.5px] font-semibold text-red-500 dark:bg-red-500/10 dark:text-red-400"
-                                    >
-                                        {error || externalError}
-                                    </motion.div>
-                                )}
-                            </AnimatePresence>
                         </div>
-                    </div>
-                    <div className="flex shrink-0 items-center gap-2 px-8 pb-8 pt-5">
-                        <button
-                            type="button"
-                            onClick={onClose}
-                            className="flex h-11 flex-1 items-center justify-center rounded-full border border-gray-100 bg-gray-50 text-[13px] font-bold text-gray-500 transition-colors hover:text-gray-700 dark:border-white/[0.06] dark:bg-white/[0.03] dark:text-white/50 dark:hover:text-white/80"
-                        >
-                            انصراف
-                        </button>
-                        <motion.button
-                            type="button"
-                            whileTap={{ scale: 0.97 }}
-                            onClick={handleSubmit}
-                            disabled={loading}
-                            className="flex h-11 flex-1 items-center justify-center gap-2 rounded-full bg-blue-600 text-[13px] font-bold text-white transition-colors hover:bg-blue-500 disabled:opacity-40"
-                        >
-                            {loading ? (
-                                <Loader size={15} className="animate-spin" />
-                            ) : (
-                                <>
-                                    <Check size={14} strokeWidth={3} />
-                                    تأیید
-                                </>
-                            )}
-                        </motion.button>
-                    </div>
+
+                        <div className="flex shrink-0 items-center gap-2 px-8 pb-8 pt-5">
+                            <button
+                                type="button"
+                                onClick={onClose}
+                                className="flex h-11 flex-1 items-center justify-center rounded-full border border-gray-100 bg-gray-50 text-[13px] font-bold text-gray-500 transition-colors hover:text-gray-700 dark:border-white/[0.06] dark:bg-white/[0.03] dark:text-white/50 dark:hover:text-white/80"
+                            >
+                                انصراف
+                            </button>
+
+                            <motion.button
+                                type="button"
+                                whileTap={{ scale: 0.97 }}
+                                onClick={handleSubmit}
+                                disabled={loading}
+                                className="flex h-11 flex-1 items-center justify-center gap-2 rounded-full bg-blue-600 text-[13px] font-bold text-white transition-colors hover:bg-blue-500 disabled:opacity-40"
+                            >
+                                {loading ? (
+                                    <Loader
+                                        size={15}
+                                        className="animate-spin"
+                                    />
+                                ) : (
+                                    <>
+                                        <Check size={14} strokeWidth={3} />
+                                        تأیید
+                                    </>
+                                )}
+                            </motion.button>
+                        </div>
+                    </motion.div>
                 </motion.div>
-            </motion.div>
-        </AnimatePresence>
+            )}
+        </AnimatePresence>,
+        document.body
     );
 }
