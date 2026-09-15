@@ -39,11 +39,11 @@ export const adminMenuItems: MenuItem[] = [
     label: "دپارتمان‌ها",
     href: "/admin/departments",
   },
-  // {
-  //   icon: Boxes,
-  //   label: "انبار",
-  //   href: "/admin/warehouse",
-  // },
+  {
+    icon: Boxes,
+    label: "انبار",
+    href: "/admin/warehouse",
+  },
   // {
   //   icon: ShoppingCart,
   //   label: "فرآیند خرید",
@@ -107,11 +107,11 @@ export const userMenuItems: MenuItem[] = [
     label: "وظایف",
     href: "/user/processes",
   },
-  // {
-  //   icon: Boxes,
-  //   label: "انبارداری",
-  //   href: "/user/warehouse",
-  // },
+  {
+    icon: Boxes,
+    label: "انبارداری",
+    href: "/user/warehouse",
+  },
   {
     icon: Archive,
     label: "بایگانی وظایف",

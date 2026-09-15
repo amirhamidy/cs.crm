@@ -10,11 +10,13 @@ import {
     ClipboardList,
     LayoutGrid,
     Loader2,
+    Package,
     PackagePlus,
     PackageSearch,
     ReceiptText,
     ShieldCheck,
     ShoppingBag,
+    UserPlus,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import WarehouseOverview from "@/components/admin/warehouse/Warehouseoverview";
@@ -23,6 +25,10 @@ import WarehouseEmployeeTransactionCard from "@/components/user/warehouse/Wareho
 import WarehouseEmployeeProductCard from "@/components/user/warehouse/WarehouseEmployeeProductCard";
 import WarehouseEmployeeProductWizardModal from "@/components/user/warehouse/WarehouseEmployeeProductWizardModal";
 import WarehouseEmployeeTaskCard from "@/components/user/warehouse/WarehouseEmployeeTaskCard";
+import WarehouseStaffCard from "@/components/admin/warehouse/WarehouseStaffCard";
+import WarehouseCategoryCard from "@/components/admin/warehouse/WarehouseCategoryCard";
+import AddWarehouseStaffModal from "@/components/admin/warehouse/AddWarehouseStaffModal";
+import AddCategoryModal from "@/components/admin/warehouse/AddCategoryModal";
 import {
     formatDate,
     formatNumber,
@@ -37,11 +43,26 @@ import {
     paginate,
 } from "@/utils/warehouseEmployee";
 import useWarehouseEmployee from "@/hooks/useWarehouseEmployee";
+import axiosInstance from "@/lib/axiosInstance";
 import type {
     ApiOrderTaskDeadline,
     ApiStockInfo,
     ApiWarehouseTask,
 } from "@/types/warehouse";
+
+interface WarehouseStaff {
+    id: number;
+    employee: number;
+    employee_id: number;
+    full_name: string;
+    is_active: boolean;
+    joined_at: string;
+}
+
+interface AdminCategory {
+    id: number;
+    name: string;
+}
 
 type Tab =
     | "overview"
@@ -50,7 +71,9 @@ type Tab =
     | "stock"
     | "transactions"
     | "orders"
-    | "deadlines";
+    | "deadlines"
+    | "staff"
+    | "categories";
 
 const TABS = [
     ["overview", "نمای کلی", LayoutGrid],
@@ -60,6 +83,8 @@ const TABS = [
     ["transactions", "تراکنش‌ها", ReceiptText],
     ["orders", "درخواست‌های همکاران", PackageSearch],
     ["deadlines", "مهلت‌ها", BellRing],
+    ["staff", "انبارداران", UserPlus],
+    ["categories", "دسته‌بندی‌ها", Package],
 ] as const;
 
 const cardBg = (dark: boolean) => (dark ? "#111c31" : "#fff");
@@ -617,6 +642,21 @@ export default function WarehouseEmployeePage() {
     const [productWizardOpen, setProductWizardOpen] =
         useState(false);
 
+    const [adminStaff, setAdminStaff] =
+        useState<WarehouseStaff[]>([]);
+
+    const [adminCategories, setAdminCategories] =
+        useState<AdminCategory[]>([]);
+
+    const [adminLoading, setAdminLoading] =
+        useState(false);
+
+    const [showStaffModal, setShowStaffModal] =
+        useState(false);
+
+    const [showCategoryModal, setShowCategoryModal] =
+        useState(false);
+
     useEffect(() => {
         setTaskItems(myTasks);
     }, [myTasks]);
@@ -624,6 +664,33 @@ export default function WarehouseEmployeePage() {
     useEffect(() => {
         setCurrentPage(1);
     }, [tab]);
+
+    const fetchAdminData = useCallback(async () => {
+        try {
+            setAdminLoading(true);
+            const [staffRes, categoriesRes] = await Promise.all([
+                axiosInstance.get("/warehouse/api/v1/staff/"),
+                axiosInstance.get("/warehouse/api/v1/products/categories/"),
+            ]);
+            setAdminStaff(
+                Array.isArray(staffRes.data) ? staffRes.data : []
+            );
+            setAdminCategories(
+                Array.isArray(categoriesRes.data) ? categoriesRes.data : []
+            );
+        } catch {
+            setAdminStaff([]);
+            setAdminCategories([]);
+        } finally {
+            setAdminLoading(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        if (tab === "staff" || tab === "categories") {
+            fetchAdminData();
+        }
+    }, [tab, fetchAdminData]);
 
     const stockByProduct = useMemo(
         () =>
@@ -736,6 +803,26 @@ export default function WarehouseEmployeePage() {
         [orderTaskDeadlines, currentPage]
     );
 
+    const paginatedStaff = useMemo(
+        () =>
+            paginate(
+                adminStaff,
+                currentPage,
+                PAGE_SIZE
+            ),
+        [adminStaff, currentPage]
+    );
+
+    const paginatedCategories = useMemo(
+        () =>
+            paginate(
+                adminCategories,
+                currentPage,
+                PAGE_SIZE
+            ),
+        [adminCategories, currentPage]
+    );
+
     const handleTaskUpdated = useCallback(
         (updatedTask: ApiWarehouseTask) => {
             setTaskItems(current =>
@@ -756,6 +843,60 @@ export default function WarehouseEmployeePage() {
             setCurrentPage(1);
             await refresh();
         }, [refresh]);
+
+    const handleDeleteStaff = useCallback(
+        (id: number) => {
+            setAdminStaff(prev =>
+                prev.filter(s => s.id !== id)
+            );
+        },
+        []
+    );
+
+    const handleUpdateStaff = useCallback(
+        (updatedStaff: WarehouseStaff) => {
+            setAdminStaff(prev =>
+                prev.map(s =>
+                    s.id === updatedStaff.id
+                        ? updatedStaff
+                        : s
+                )
+            );
+        },
+        []
+    );
+
+    const handleDeleteCategory = useCallback(
+        (id: number) => {
+            setAdminCategories(prev =>
+                prev.filter(c => c.id !== id)
+            );
+        },
+        []
+    );
+
+    const handleUpdateCategory = useCallback(
+        (updatedCategory: AdminCategory) => {
+            setAdminCategories(prev =>
+                prev.map(c =>
+                    c.id === updatedCategory.id
+                        ? updatedCategory
+                        : c
+                )
+            );
+        },
+        []
+    );
+
+    const handleStaffSuccess = useCallback(() => {
+        setShowStaffModal(false);
+        fetchAdminData();
+    }, [fetchAdminData]);
+
+    const handleCategorySuccess = useCallback(() => {
+        setShowCategoryModal(false);
+        fetchAdminData();
+    }, [fetchAdminData]);
 
     const renderEmpty = useCallback(
         (text: string) => (
@@ -927,7 +1068,11 @@ export default function WarehouseEmployeePage() {
                                         ? pendingOrderTasks.length
                                         : id === "deadlines"
                                             ? orderTaskDeadlines.length
-                                            : 0;
+                                            : id === "staff"
+                                                ? adminStaff.length
+                                                : id === "categories"
+                                                    ? adminCategories.length
+                                                    : 0;
 
                         return (
                             <button
@@ -1592,6 +1737,208 @@ export default function WarehouseEmployeePage() {
                             />
                         </>
                     )}
+
+                    {tab === "staff" && (
+                        <div className="space-y-5">
+                            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                                <div>
+                                    <h2
+                                        className="text-[16px] font-extrabold"
+                                        style={{
+                                            color: isDark
+                                                ? "#fff"
+                                                : "#111827",
+                                        }}
+                                    >
+                                        انبارداران
+                                    </h2>
+
+                                    <p
+                                        className="mt-1 text-[11.5px]"
+                                        style={{
+                                            color: muted(
+                                                isDark
+                                            ),
+                                        }}
+                                    >
+                                        کارمندان دارای دسترسی انبار
+                                    </p>
+                                </div>
+
+                                <motion.button
+                                    type="button"
+                                    whileTap={{
+                                        scale: 0.96,
+                                    }}
+                                    onClick={() =>
+                                        setShowStaffModal(true)
+                                    }
+                                    className="flex items-center justify-center gap-2 rounded-2xl px-5 py-3 text-[12px] font-extrabold text-white shadow-lg shadow-indigo-500/10"
+                                    style={{
+                                        background:
+                                            "linear-gradient(135deg,#6366f1,#8b5cf6)",
+                                    }}
+                                >
+                                    <UserPlus size={16} />
+                                    افزودن انباردار
+                                </motion.button>
+                            </div>
+
+                            {adminLoading ? (
+                                <div className="flex items-center justify-center py-20">
+                                    <div className="w-6 h-6 rounded-full border-2 border-indigo-500 border-t-transparent animate-spin" />
+                                </div>
+                            ) : (
+                                <>
+                                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                                        {paginatedStaff.items
+                                            .length
+                                            ? paginatedStaff.items.map(
+                                                (
+                                                    staff,
+                                                    index
+                                                ) => (
+                                                    <WarehouseStaffCard
+                                                        key={
+                                                            staff.id
+                                                        }
+                                                        staff={
+                                                            staff
+                                                        }
+                                                        index={
+                                                            index
+                                                        }
+                                                        onDelete={
+                                                            handleDeleteStaff
+                                                        }
+                                                        onUpdated={
+                                                            handleUpdateStaff
+                                                        }
+                                                    />
+                                                )
+                                            )
+                                            : renderEmpty(
+                                                "هنوز انبارداری ثبت نشده"
+                                            )}
+                                    </div>
+
+                                    <Pagination
+                                        currentPage={
+                                            currentPage
+                                        }
+                                        totalPages={
+                                            paginatedStaff.totalPages
+                                        }
+                                        onPageChange={
+                                            setCurrentPage
+                                        }
+                                        isDark={isDark}
+                                    />
+                                </>
+                            )}
+                        </div>
+                    )}
+
+                    {tab === "categories" && (
+                        <div className="space-y-5">
+                            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                                <div>
+                                    <h2
+                                        className="text-[16px] font-extrabold"
+                                        style={{
+                                            color: isDark
+                                                ? "#fff"
+                                                : "#111827",
+                                        }}
+                                    >
+                                        دسته‌بندی محصولات
+                                    </h2>
+
+                                    <p
+                                        className="mt-1 text-[11.5px]"
+                                        style={{
+                                            color: muted(
+                                                isDark
+                                            ),
+                                        }}
+                                    >
+                                        دسته‌بندی‌های موجود در انبار
+                                    </p>
+                                </div>
+
+                                <motion.button
+                                    type="button"
+                                    whileTap={{
+                                        scale: 0.96,
+                                    }}
+                                    onClick={() =>
+                                        setShowCategoryModal(true)
+                                    }
+                                    className="flex items-center justify-center gap-2 rounded-2xl px-5 py-3 text-[12px] font-extrabold text-white shadow-lg shadow-indigo-500/10"
+                                    style={{
+                                        background:
+                                            "linear-gradient(135deg,#6366f1,#8b5cf6)",
+                                    }}
+                                >
+                                    <Package size={16} />
+                                    افزودن دسته‌بندی
+                                </motion.button>
+                            </div>
+
+                            {adminLoading ? (
+                                <div className="flex items-center justify-center py-20">
+                                    <div className="w-6 h-6 rounded-full border-2 border-indigo-500 border-t-transparent animate-spin" />
+                                </div>
+                            ) : (
+                                <>
+                                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                                        {paginatedCategories.items
+                                            .length
+                                            ? paginatedCategories.items.map(
+                                                (
+                                                    category,
+                                                    index
+                                                ) => (
+                                                    <WarehouseCategoryCard
+                                                        key={
+                                                            category.id
+                                                        }
+                                                        category={
+                                                            category
+                                                        }
+                                                        index={
+                                                            index
+                                                        }
+                                                        onDelete={
+                                                            handleDeleteCategory
+                                                        }
+                                                        onUpdated={
+                                                            handleUpdateCategory
+                                                        }
+                                                    />
+                                                )
+                                            )
+                                            : renderEmpty(
+                                                "هنوز دسته‌بندی ثبت نشده"
+                                            )}
+                                    </div>
+
+                                    <Pagination
+                                        currentPage={
+                                            currentPage
+                                        }
+                                        totalPages={
+                                            paginatedCategories.totalPages
+                                        }
+                                        onPageChange={
+                                            setCurrentPage
+                                        }
+                                        isDark={isDark}
+                                    />
+                                </>
+                            )}
+                        </div>
+                    )}
                 </motion.div>
             </AnimatePresence>
 
@@ -1615,6 +1962,26 @@ export default function WarehouseEmployeePage() {
                     handleProductCreated
                 }
             />
+
+            <AnimatePresence>
+                {showStaffModal && (
+                    <AddWarehouseStaffModal
+                        isOpen={showStaffModal}
+                        onClose={() => setShowStaffModal(false)}
+                        onSuccess={handleStaffSuccess}
+                    />
+                )}
+            </AnimatePresence>
+
+            <AnimatePresence>
+                {showCategoryModal && (
+                    <AddCategoryModal
+                        isOpen={showCategoryModal}
+                        onClose={() => setShowCategoryModal(false)}
+                        onSuccess={handleCategorySuccess}
+                    />
+                )}
+            </AnimatePresence>
         </div>
     );
 }
