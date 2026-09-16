@@ -21,8 +21,11 @@ import type { Customer } from "@/types/customer";
 interface Case { id: number; title: string; customer: number }
 interface Department { id: number; name: string }
 interface DepartmentEmployee {
-    id: number; employee: number; employee_name: string;
-    department: number; department_name: string;
+    id: number;
+    employee: number;
+    employee_name: string;
+    department: number;
+    department_name: string;
 }
 
 interface Props {

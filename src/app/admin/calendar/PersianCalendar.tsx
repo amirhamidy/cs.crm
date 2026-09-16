@@ -6,7 +6,11 @@ import {
     useState,
 } from "react";
 
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import {
+    usePathname,
+    useRouter,
+    useSearchParams,
+} from "next/navigation";
 
 import { motion } from "framer-motion";
 
@@ -37,14 +41,13 @@ import {
 
 import CalendarNoteModal, {
     CalendarNote,
+    CalendarEvent,
 } from "./CalendarNoteModal";
 
-interface CalendarEvent {
-    id: number;
-    title: string;
+interface CalendarResponse {
     start: string;
     end: string;
-    type: string;
+    events: CalendarEvent[];
 }
 
 type CalendarView = "month" | "season";
@@ -68,9 +71,9 @@ const weekDays = [
 ];
 
 const toISODate = (date: Date) =>
-    `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(
-        date.getDate()
-    )}`;
+    `${date.getFullYear()}-${pad2(
+        date.getMonth() + 1
+    )}-${pad2(date.getDate())}`;
 
 const toJalaliParts = (date: Date) =>
     toJalali(
@@ -84,7 +87,11 @@ const jalaliToDate = (
     jm: number,
     jd: number
 ): Date => {
-    const [gy, gm, gd] = toGregorian(jy, jm, jd);
+    const [gy, gm, gd] = toGregorian(
+        jy,
+        jm,
+        jd
+    );
 
     return new Date(gy, gm - 1, gd);
 };
@@ -96,8 +103,11 @@ const getNoteDate = (note: CalendarNote) =>
 
 const EVENT_TYPE_LABEL: Record<string, string> = {
     task: "تسک",
+    tasks: "تسک",
     internal_task: "تسک داخلی",
+    "internal-task": "تسک داخلی",
     note: "یادداشت",
+    notes: "یادداشت",
     meeting: "جلسه",
     reminder: "یادآور",
     deadline: "مهلت",
@@ -164,42 +174,67 @@ const EVENT_TYPE_COLOR: Record<
     },
 };
 
+function getEventType(type: string) {
+    const normalized = String(type || "").toLowerCase();
+
+    if (
+        normalized === "internal_task" ||
+        normalized === "internal-task"
+    ) {
+        return "internal_task";
+    }
+
+    if (
+        normalized === "task" ||
+        normalized === "tasks"
+    ) {
+        return "task";
+    }
+
+    if (
+        normalized === "note" ||
+        normalized === "notes"
+    ) {
+        return "note";
+    }
+
+    return normalized;
+}
+
 function getTypeStyle(type: string) {
     return (
-        EVENT_TYPE_COLOR[type] ??
+        EVENT_TYPE_COLOR[getEventType(type)] ??
         EVENT_TYPE_COLOR.default
     );
 }
 
+function getTypeLabel(type: string) {
+    const normalized = getEventType(type);
+
+    return (
+        EVENT_TYPE_LABEL[normalized] ??
+        (type || "رویداد")
+    );
+}
+
 function getSeasonName(month: number) {
-    if (month >= 1 && month <= 3) return "بهار";
-    if (month >= 4 && month <= 6) return "تابستان";
-    if (month >= 7 && month <= 9) return "پاییز";
+    if (month >= 1 && month <= 3)
+        return "بهار";
+
+    if (month >= 4 && month <= 6)
+        return "تابستان";
+
+    if (month >= 7 && month <= 9)
+        return "پاییز";
 
     return "زمستان";
 }
 
 function getSeasonStartMonth(month: number) {
-    return Math.floor((month - 1) / 3) * 3 + 1;
-}
-
-function getEventType(type: string) {
-    if (
-        type === "internal_task" ||
-        type === "internal-task"
-    ) {
-        return "internal_task";
-    }
-
-    if (type === "task" || type === "tasks") {
-        return "task";
-    }
-
-    if (type === "note" || type === "notes") {
-        return "note";
-    }
-
-    return type;
+    return (
+        Math.floor((month - 1) / 3) * 3 +
+        1
+    );
 }
 
 function isEventOnDate(
@@ -208,7 +243,8 @@ function isEventOnDate(
 ) {
     if (!event.start) return false;
 
-    const eventStart = event.start.slice(0, 10);
+    const eventStart =
+        event.start.slice(0, 10);
 
     const eventEnd = event.end
         ? event.end.slice(0, 10)
@@ -226,10 +262,15 @@ function DayEventDots({
     events: CalendarEvent[];
 }) {
     const grouped = useMemo(() => {
-        const map = new Map<string, number>();
+        const map = new Map<
+            string,
+            number
+        >();
 
         events.forEach((event) => {
-            const type = getEventType(event.type);
+            const type = getEventType(
+                event.type
+            );
 
             map.set(
                 type,
@@ -237,27 +278,37 @@ function DayEventDots({
             );
         });
 
-        return Array.from(map.entries()).slice(0, 4);
+        return Array.from(
+            map.entries()
+        ).slice(0, 4);
     }, [events]);
 
     return (
         <div className="mt-auto flex flex-wrap gap-1">
-            {grouped.map(([type, count]) => {
-                const style = getTypeStyle(type);
+            {grouped.map(
+                ([type, count]) => {
+                    const style =
+                        getTypeStyle(type);
 
-                return (
-                    <span
-                        key={type}
-                        className={`flex items-center gap-1 rounded-lg border px-1.5 py-0.5 text-[9px] font-bold ${style.bg} ${style.text} ${style.border}`}
-                    >
+                    return (
                         <span
-                            className={`h-1.5 w-1.5 rounded-full ${style.dot}`}
-                        />
+                            key={type}
+                            title={getTypeLabel(
+                                type
+                            )}
+                            className={`flex items-center gap-1 rounded-lg border px-1.5 py-0.5 text-[9px] font-bold ${style.bg} ${style.text} ${style.border}`}
+                        >
+                            <span
+                                className={`h-1.5 w-1.5 rounded-full ${style.dot}`}
+                            />
 
-                        {toPersianDigits(count)}
-                    </span>
-                );
-            })}
+                            {toPersianDigits(
+                                count
+                            )}
+                        </span>
+                    );
+                }
+            )}
         </div>
     );
 }
@@ -274,9 +325,14 @@ function CalendarMonthGrid({
         string,
         CalendarEvent[]
     >;
-    noteCountByDay: Map<string, number>;
+    noteCountByDay: Map<
+        string,
+        number
+    >;
     todayISO: string;
-    onSelectDate: (date: Date) => void;
+    onSelectDate: (
+        date: Date
+    ) => void;
 }) {
     return (
         <section className="overflow-hidden rounded-[1.5rem] border border-slate-200/80 bg-white shadow-[0_4px_24px_-12px_rgba(15,23,42,0.16)] dark:border-white/[0.07] dark:bg-[#111827] dark:shadow-none">
@@ -288,9 +344,11 @@ function CalendarMonthGrid({
 
                     <div className="flex flex-col gap-0.5">
                         <h3 className="text-[13px] font-extrabold text-slate-800 dark:text-white">
-                            {JALALI_MONTHS[
+                            {
+                                JALALI_MONTHS[
                                 month.jm - 1
-                            ]}
+                                ]
+                            }
                         </h3>
 
                         <span className="text-[10px] font-medium text-slate-400 dark:text-slate-500">
@@ -300,27 +358,34 @@ function CalendarMonthGrid({
                 </div>
 
                 <span className="rounded-lg bg-slate-100 px-2 py-1 text-[10px] font-bold text-slate-500 dark:bg-white/[0.05] dark:text-slate-400">
-                    {toPersianDigits(month.jy)}
+                    {toPersianDigits(
+                        month.jy
+                    )}
                 </span>
             </div>
 
             <div className="grid grid-cols-7 border-b border-slate-100 bg-slate-50/70 dark:border-white/[0.05] dark:bg-white/[0.02]">
-                {weekDays.map((day, index) => (
-                    <div
-                        key={day}
-                        className={`py-2.5 text-center text-[9px] font-bold ${index === 6
-                                ? "text-rose-400 dark:text-rose-300"
-                                : "text-slate-400 dark:text-slate-500"
-                            }`}
-                    >
-                        {day}
-                    </div>
-                ))}
+                {weekDays.map(
+                    (day, index) => (
+                        <div
+                            key={day}
+                            className={`py-2.5 text-center text-[9px] font-bold ${index === 6
+                                    ? "text-rose-400 dark:text-rose-300"
+                                    : "text-slate-400 dark:text-slate-500"
+                                }`}
+                        >
+                            {day}
+                        </div>
+                    )
+                )}
             </div>
 
             <div className="grid grid-cols-7 gap-px bg-slate-100 dark:bg-white/[0.045]">
                 {month.monthCells.map(
-                    (date, index) => {
+                    (
+                        date,
+                        index
+                    ) => {
                         if (!date) {
                             return (
                                 <div
@@ -331,7 +396,9 @@ function CalendarMonthGrid({
                         }
 
                         const iso =
-                            toISODate(date);
+                            toISODate(
+                                date
+                            );
 
                         const dayEvents =
                             eventsByDay.get(
@@ -344,9 +411,14 @@ function CalendarMonthGrid({
                             ) ?? 0;
 
                         const isToday =
-                            iso === todayISO;
+                            iso ===
+                            todayISO;
 
-                        const [, , jd] =
+                        const [
+                            ,
+                            ,
+                            jd,
+                        ] =
                             toJalaliParts(
                                 date
                             );
@@ -425,93 +497,140 @@ function CalendarMonthGrid({
 
 export default function PersianCalendar() {
     const router = useRouter();
-    const pathname = usePathname();
-    const searchParams = useSearchParams();
+    const pathname =
+        usePathname();
+    const searchParams =
+        useSearchParams();
 
-    const [currentMonthDate, setCurrentMonthDate] =
-        useState(() => {
-            const [jy, jm] =
-                toJalaliParts(new Date());
-
-            return jalaliToDate(
-                jy,
-                jm,
-                1
+    const [
+        currentMonthDate,
+        setCurrentMonthDate,
+    ] = useState(() => {
+        const [jy, jm] =
+            toJalaliParts(
+                new Date()
             );
-        });
+
+        return jalaliToDate(
+            jy,
+            jm,
+            1
+        );
+    });
 
     const [view, setView] =
-        useState<CalendarView>("month");
+        useState<CalendarView>(
+            "month"
+        );
 
     const [
         calendarEvents,
         setCalendarEvents,
-    ] = useState<CalendarEvent[]>([]);
+    ] = useState<CalendarEvent[]>(
+        []
+    );
+
+    const [
+        calendarRange,
+        setCalendarRange,
+    ] = useState<CalendarResponse | null>(
+        null
+    );
 
     const [notes, setNotes] =
-        useState<CalendarNote[]>([]);
+        useState<CalendarNote[]>(
+            []
+        );
 
     const [loading, setLoading] =
         useState(true);
 
-    const [selectedDate, setSelectedDate] =
-        useState<Date | null>(null);
+    const [
+        selectedDate,
+        setSelectedDate,
+    ] = useState<Date | null>(
+        null
+    );
 
-    const [isModalOpen, setIsModalOpen] =
-        useState(false);
+    const [
+        isModalOpen,
+        setIsModalOpen,
+    ] = useState(false);
 
-    const [pickerOpen, setPickerOpen] =
-        useState(false);
+    const [
+        pickerOpen,
+        setPickerOpen,
+    ] = useState(false);
 
-    const [pickerYear, setPickerYear] =
-        useState<number | null>(null);
+    const [
+        pickerYear,
+        setPickerYear,
+    ] = useState<number | null>(
+        null
+    );
 
-    const [currentJy, currentJm] =
-        useMemo(
-            () =>
-                toJalaliParts(
-                    currentMonthDate
-                ),
-            [currentMonthDate]
-        );
+    const [
+        currentJy,
+        currentJm,
+    ] = useMemo(
+        () =>
+            toJalaliParts(
+                currentMonthDate
+            ),
+        [currentMonthDate]
+    );
 
-    const [realTodayJy, realTodayJm] =
-        useMemo(
-            () =>
-                toJalaliParts(
-                    new Date()
-                ),
-            []
-        );
+    const [
+        realTodayJy,
+        realTodayJm,
+    ] = useMemo(
+        () =>
+            toJalaliParts(
+                new Date()
+            ),
+        []
+    );
 
-    const quickMonths = useMemo(() => {
-        const list: {
-            jy: number;
-            jm: number;
-        }[] = [];
+    const quickMonths =
+        useMemo(() => {
+            const list: {
+                jy: number;
+                jm: number;
+            }[] = [];
 
-        let jy = realTodayJy;
-        let jm = realTodayJm;
+            let jy =
+                realTodayJy;
+            let jm =
+                realTodayJm;
 
-        for (let i = 0; i < 12; i++) {
-            list.push({
-                jy,
-                jm,
-            });
+            for (
+                let i = 0;
+                i < 12;
+                i++
+            ) {
+                list.push({
+                    jy,
+                    jm,
+                });
 
-            jm++;
+                jm++;
 
-            if (jm > 12) {
-                jm = 1;
-                jy++;
+                if (jm > 12) {
+                    jm = 1;
+                    jy++;
+                }
             }
-        }
 
-        return list;
-    }, [realTodayJy, realTodayJm]);
+            return list;
+        }, [
+            realTodayJy,
+            realTodayJm,
+        ]);
 
     const visibleMonths =
-        useMemo<MonthData[]>(() => {
+        useMemo<
+            MonthData[]
+        >(() => {
             const seasonStart =
                 getSeasonStartMonth(
                     currentJm
@@ -545,7 +664,10 @@ export default function PersianCalendar() {
                     ];
 
             return months.map(
-                ({ jy, jm }) => {
+                ({
+                    jy,
+                    jm,
+                }) => {
                     const monthLength =
                         jalaliMonthLength(
                             jy,
@@ -560,14 +682,20 @@ export default function PersianCalendar() {
                         );
 
                     const monthCells:
-                        (Date | null)[] =
+                        (
+                            | Date
+                            | null
+                        )[] =
                         Array(
                             firstDayWeekIndex
-                        ).fill(null);
+                        ).fill(
+                            null
+                        );
 
                     for (
                         let day = 1;
-                        day <= monthLength;
+                        day <=
+                        monthLength;
                         day++
                     ) {
                         monthCells.push(
@@ -584,7 +712,9 @@ export default function PersianCalendar() {
                         7 !==
                         0
                     ) {
-                        monthCells.push(null);
+                        monthCells.push(
+                            null
+                        );
                     }
 
                     return {
@@ -610,17 +740,32 @@ export default function PersianCalendar() {
                     };
                 }
             );
-        }, [currentJy, currentJm, view]);
+        }, [
+            currentJy,
+            currentJm,
+            view,
+        ]);
 
     const startISO =
-        visibleMonths[0].startISO;
+        visibleMonths[0]
+            ?.startISO ?? "";
 
     const endISO =
         visibleMonths[
-            visibleMonths.length - 1
-        ].endISO;
+            visibleMonths.length -
+            1
+        ]?.endISO ?? "";
 
     useEffect(() => {
+        if (
+            !startISO ||
+            !endISO
+        ) {
+            return;
+        }
+
+        let cancelled = false;
+
         const fetchCalendarData =
             async () => {
                 setLoading(true);
@@ -629,62 +774,123 @@ export default function PersianCalendar() {
                     const [
                         calendarRes,
                         notesRes,
-                    ] = await Promise.all([
-                        api.get(
-                            `/appraisal/api/v1/calendar/?start=${startISO}&end=${endISO}`
-                        ),
-                        api.get(
-                            "/note/api/v1/"
-                        ),
-                    ]);
+                    ] =
+                        await Promise.all(
+                            [
+                                api.get<CalendarResponse>(
+                                    `/appraisal/api/v1/calendar/?start=${startISO}&end=${endISO}`
+                                ),
+                                api.get(
+                                    "/note/api/v1/"
+                                ),
+                            ]
+                        );
+
+                    if (
+                        cancelled
+                    ) {
+                        return;
+                    }
+
+                    const calendarData =
+                        calendarRes
+                            .data;
+
+                    const events =
+                        Array.isArray(
+                            calendarData?.events
+                        )
+                            ? calendarData.events
+                            : [];
+
+                    setCalendarRange(
+                        {
+                            start:
+                                calendarData?.start ??
+                                startISO,
+                            end:
+                                calendarData?.end ??
+                                endISO,
+                            events,
+                        }
+                    );
 
                     setCalendarEvents(
-                        Array.isArray(
-                            calendarRes
-                                .data?.events
-                        )
-                            ? calendarRes
-                                .data
-                                .events
-                            : []
+                        events
                     );
 
                     setNotes(
                         Array.isArray(
-                            notesRes.data
+                            notesRes
+                                .data
                         )
                             ? notesRes.data
                             : []
                     );
-                } catch {
+                } catch (error) {
+                    if (
+                        cancelled
+                    ) {
+                        return;
+                    }
+
+                    console.error(
+                        "Calendar fetch error:",
+                        error
+                    );
+
+                    setCalendarRange(
+                        null
+                    );
                     setCalendarEvents(
                         []
                     );
-
                     setNotes([]);
                 } finally {
-                    setLoading(false);
+                    if (
+                        !cancelled
+                    ) {
+                        setLoading(
+                            false
+                        );
+                    }
                 }
             };
 
         fetchCalendarData();
-    }, [startISO, endISO]);
+
+        return () => {
+            cancelled = true;
+        };
+    }, [
+        startISO,
+        endISO,
+    ]);
 
     useEffect(() => {
-        if (loading) return;
+        if (loading)
+            return;
 
         const eventParam =
-            searchParams.get("event");
+            searchParams.get(
+                "event"
+            );
 
         const noteParam =
-            searchParams.get("note");
+            searchParams.get(
+                "note"
+            );
 
         if (noteParam) {
             const noteId =
-                Number(noteParam);
+                Number(
+                    noteParam
+                );
 
             if (
-                !Number.isFinite(noteId)
+                !Number.isFinite(
+                    noteId
+                )
             ) {
                 return;
             }
@@ -694,16 +900,20 @@ export default function PersianCalendar() {
                     (item) =>
                         Number(
                             item.id
-                        ) === noteId
+                        ) ===
+                        noteId
                 );
 
-            if (!note?.created_at) {
+            if (
+                !note?.created_at
+            ) {
                 return;
             }
 
-            const date = new Date(
-                note.created_at
-            );
+            const date =
+                new Date(
+                    note.created_at
+                );
 
             if (
                 Number.isNaN(
@@ -716,9 +926,13 @@ export default function PersianCalendar() {
             const [
                 jy,
                 jm,
-            ] = toJalaliParts(date);
+            ] =
+                toJalaliParts(
+                    date
+                );
 
             setView("month");
+
             setCurrentMonthDate(
                 jalaliToDate(
                     jy,
@@ -726,8 +940,14 @@ export default function PersianCalendar() {
                     1
                 )
             );
-            setSelectedDate(date);
-            setIsModalOpen(true);
+
+            setSelectedDate(
+                date
+            );
+
+            setIsModalOpen(
+                true
+            );
 
             router.replace(
                 pathname,
@@ -741,10 +961,14 @@ export default function PersianCalendar() {
 
         if (eventParam) {
             const eventId =
-                Number(eventParam);
+                Number(
+                    eventParam
+                );
 
             if (
-                !Number.isFinite(eventId)
+                !Number.isFinite(
+                    eventId
+                )
             ) {
                 return;
             }
@@ -754,16 +978,20 @@ export default function PersianCalendar() {
                     (item) =>
                         Number(
                             item.id
-                        ) === eventId
+                        ) ===
+                        eventId
                 );
 
-            if (!event?.start) {
+            if (
+                !event?.start
+            ) {
                 return;
             }
 
-            const date = new Date(
-                event.start
-            );
+            const date =
+                new Date(
+                    event.start
+                );
 
             if (
                 Number.isNaN(
@@ -776,9 +1004,13 @@ export default function PersianCalendar() {
             const [
                 jy,
                 jm,
-            ] = toJalaliParts(date);
+            ] =
+                toJalaliParts(
+                    date
+                );
 
             setView("month");
+
             setCurrentMonthDate(
                 jalaliToDate(
                     jy,
@@ -786,8 +1018,14 @@ export default function PersianCalendar() {
                     1
                 )
             );
-            setSelectedDate(date);
-            setIsModalOpen(true);
+
+            setSelectedDate(
+                date
+            );
+
+            setIsModalOpen(
+                true
+            );
 
             router.replace(
                 pathname,
@@ -805,90 +1043,111 @@ export default function PersianCalendar() {
         pathname,
     ]);
 
-    const eventsByDay = useMemo(() => {
-        const map = new Map<
-            string,
-            CalendarEvent[]
-        >();
+    const eventsByDay =
+        useMemo(() => {
+            const map =
+                new Map<
+                    string,
+                    CalendarEvent[]
+                >();
 
-        const allDates =
-            visibleMonths.flatMap(
-                (month) =>
-                    month.monthCells.filter(
+            const allDates =
+                visibleMonths.flatMap(
+                    (
+                        month
+                    ) =>
+                        month.monthCells.filter(
+                            (
+                                date
+                            ): date is Date =>
+                                Boolean(
+                                    date
+                                )
+                        )
+                );
+
+            calendarEvents.forEach(
+                (event) => {
+                    if (
+                        !event.start
+                    ) {
+                        return;
+                    }
+
+                    allDates.forEach(
                         (
                             date
-                        ): date is Date =>
-                            Boolean(date)
-                    )
+                        ) => {
+                            const dateISO =
+                                toISODate(
+                                    date
+                                );
+
+                            if (
+                                !isEventOnDate(
+                                    event,
+                                    dateISO
+                                )
+                            ) {
+                                return;
+                            }
+
+                            if (
+                                !map.has(
+                                    dateISO
+                                )
+                            ) {
+                                map.set(
+                                    dateISO,
+                                    []
+                                );
+                            }
+
+                            map.get(
+                                dateISO
+                            )!.push(
+                                event
+                            );
+                        }
+                    );
+                }
             );
 
-        calendarEvents.forEach(
-            (event) => {
-                if (!event.start)
-                    return;
-
-                allDates.forEach(
-                    (date) => {
-                        const dateISO =
-                            toISODate(
-                                date
-                            );
-
-                        if (
-                            !isEventOnDate(
-                                event,
-                                dateISO
-                            )
-                        ) {
-                            return;
-                        }
-
-                        if (
-                            !map.has(
-                                dateISO
-                            )
-                        ) {
-                            map.set(
-                                dateISO,
-                                []
-                            );
-                        }
-
-                        map.get(
-                            dateISO
-                        )!.push(event);
-                    }
-                );
-            }
-        );
-
-        return map;
-    }, [
-        calendarEvents,
-        visibleMonths,
-    ]);
+            return map;
+        }, [
+            calendarEvents,
+            visibleMonths,
+        ]);
 
     const noteCountByDay =
         useMemo(() => {
-            const map = new Map<
-                string,
-                number
-            >();
+            const map =
+                new Map<
+                    string,
+                    number
+                >();
 
-            notes.forEach((note) => {
-                const targetDate =
-                    getNoteDate(note);
+            notes.forEach(
+                (note) => {
+                    const targetDate =
+                        getNoteDate(
+                            note
+                        );
 
-                if (!targetDate)
-                    return;
+                    if (
+                        !targetDate
+                    ) {
+                        return;
+                    }
 
-                map.set(
-                    targetDate,
-                    (map.get(
-                        targetDate
-                    ) || 0) + 1
-                );
-            });
+                    map.set(
+                        targetDate,
+                        (map.get(
+                            targetDate
+                        ) || 0) + 1
+                    );
+                }
+            );
 
             return map;
         }, [notes]);
@@ -896,9 +1155,12 @@ export default function PersianCalendar() {
     const changeDate = (
         delta: 1 | -1
     ) => {
-        if (view === "month") {
+        if (
+            view === "month"
+        ) {
             let nextMonth =
-                currentJm + delta;
+                currentJm +
+                delta;
 
             let nextYear =
                 currentJy;
@@ -938,14 +1200,16 @@ export default function PersianCalendar() {
             currentJy;
 
         if (
-            nextSeasonMonth > 12
+            nextSeasonMonth >
+            12
         ) {
             nextSeasonMonth = 1;
             nextYear++;
         }
 
         if (
-            nextSeasonMonth < 1
+            nextSeasonMonth <
+            1
         ) {
             nextSeasonMonth = 10;
             nextYear--;
@@ -976,24 +1240,36 @@ export default function PersianCalendar() {
     };
 
     const openPicker = () => {
-        setPickerYear(currentJy);
+        setPickerYear(
+            currentJy
+        );
+
         setPickerOpen(true);
     };
 
     const handleSelectDate = (
         date: Date
     ) => {
-        setSelectedDate(date);
-        setIsModalOpen(true);
+        setSelectedDate(
+            date
+        );
+
+        setIsModalOpen(
+            true
+        );
     };
 
     const gotoToday = () => {
-        const now = new Date();
+        const now =
+            new Date();
 
         const [
             nowYear,
             nowMonth,
-        ] = toJalaliParts(now);
+        ] =
+            toJalaliParts(
+                now
+            );
 
         setCurrentMonthDate(
             jalaliToDate(
@@ -1003,22 +1279,33 @@ export default function PersianCalendar() {
             )
         );
 
-        setSelectedDate(now);
-        setIsModalOpen(true);
+        setSelectedDate(
+            now
+        );
+
+        setIsModalOpen(
+            true
+        );
     };
 
     const todayISO =
-        toISODate(new Date());
+        toISODate(
+            new Date()
+        );
 
     const [
-        todayJy,
+        ,
         todayJm,
         todayJd,
-    ] = toJalaliParts(new Date());
+    ] =
+        toJalaliParts(
+            new Date()
+        );
 
-    const todayPersian = `${toPersianDigits(
-        todayJd
-    )} ${JALALI_MONTHS[
+    const todayPersian =
+        `${toPersianDigits(
+            todayJd
+        )} ${JALALI_MONTHS[
         todayJm - 1
         ]
         }`;
@@ -1026,7 +1313,8 @@ export default function PersianCalendar() {
     const headerTitle =
         view === "month"
             ? `${JALALI_MONTHS[
-            currentJm - 1
+            currentJm -
+            1
             ]
             } ${toPersianDigits(
                 currentJy
@@ -1055,6 +1343,45 @@ export default function PersianCalendar() {
                 "internal_task"
         ).length;
 
+    const calendarNoteCount =
+        calendarEvents.filter(
+            (event) =>
+                getEventType(
+                    event.type
+                ) === "note"
+        ).length;
+
+    const eventTypeCount =
+        useMemo(() => {
+            const map =
+                new Map<
+                    string,
+                    number
+                >();
+
+            calendarEvents.forEach(
+                (event) => {
+                    const type =
+                        getEventType(
+                            event.type
+                        );
+
+                    map.set(
+                        type,
+                        (map.get(
+                            type
+                        ) || 0) + 1
+                    );
+                }
+            );
+
+            return Array.from(
+                map.entries()
+            );
+        }, [
+            calendarEvents,
+        ]);
+
     return (
         <>
             <div
@@ -1065,7 +1392,9 @@ export default function PersianCalendar() {
                     <button
                         type="button"
                         onClick={() =>
-                            changeDate(1)
+                            changeDate(
+                                1
+                            )
                         }
                         className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-400 shadow-sm transition-all hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-600 dark:border-white/[0.07] dark:bg-white/[0.04] dark:hover:border-indigo-500/20 dark:hover:bg-indigo-500/10 dark:hover:text-indigo-300"
                     >
@@ -1315,11 +1644,9 @@ export default function PersianCalendar() {
                                 <ClipboardCheck
                                     size={11}
                                 />
-                                {
-                                    toPersianDigits(
-                                        taskCount
-                                    )
-                                }{" "}
+                                {toPersianDigits(
+                                    taskCount
+                                )}{" "}
                                 تسک
                             </span>
 
@@ -1327,10 +1654,9 @@ export default function PersianCalendar() {
                                 <Layers3
                                     size={11}
                                 />
-                                {
-                                    toPersianDigits(
-                                        internalTaskCount
-                                    )}{" "}
+                                {toPersianDigits(
+                                    internalTaskCount
+                                )}{" "}
                                 داخلی
                             </span>
 
@@ -1338,10 +1664,9 @@ export default function PersianCalendar() {
                                 <FileText
                                     size={11}
                                 />
-                                {
-                                    toPersianDigits(
-                                        notes.length
-                                    )}{" "}
+                                {toPersianDigits(
+                                    calendarNoteCount
+                                )}{" "}
                                 یادداشت
                             </span>
                         </div>
@@ -1411,16 +1736,15 @@ export default function PersianCalendar() {
 
                 {!loading && (
                     <div className="flex flex-wrap items-center gap-x-5 gap-y-2 border-b border-slate-100 px-5 py-3 sm:px-6 dark:border-white/[0.06]">
-                        {[
-                            "task",
-                            "internal_task",
-                            "note",
-                        ].map(
-                            (type) => {
+                        {eventTypeCount.map(
+                            ([
+                                type,
+                                count,
+                            ]) => {
                                 const style =
-                                    EVENT_TYPE_COLOR[
-                                    type
-                                    ];
+                                    getTypeStyle(
+                                        type
+                                    );
 
                                 return (
                                     <span
@@ -1433,11 +1757,17 @@ export default function PersianCalendar() {
                                             className={`h-1.5 w-1.5 rounded-full ${style.dot}`}
                                         />
 
-                                        {
-                                            EVENT_TYPE_LABEL[
+                                        {getTypeLabel(
                                             type
-                                            ]
-                                        }
+                                        )}
+
+                                        <span className="opacity-60">
+                                            (
+                                            {toPersianDigits(
+                                                count
+                                            )}
+                                            )
+                                        </span>
                                     </span>
                                 );
                             }
@@ -1460,8 +1790,7 @@ export default function PersianCalendar() {
                         />
 
                         <p className="text-[11px] font-semibold text-slate-400">
-                            در حال دریافت
-                            تقویم...
+                            در حال دریافت تقویم...
                         </p>
                     </div>
                 ) : (
@@ -1473,7 +1802,9 @@ export default function PersianCalendar() {
                             }`}
                     >
                         {visibleMonths.map(
-                            (month) => (
+                            (
+                                month
+                            ) => (
                                 <CalendarMonthGrid
                                     key={`${month.jy}-${month.jm}`}
                                     month={
@@ -1496,6 +1827,27 @@ export default function PersianCalendar() {
                         )}
                     </div>
                 )}
+
+                {!loading &&
+                    calendarRange && (
+                        <div className="border-t border-slate-100 px-5 py-2.5 dark:border-white/[0.06]">
+                            <div className="flex items-center justify-between gap-3 text-[9px] font-semibold text-slate-400">
+                                <span>
+                                    بازه دریافت‌شده از تقویم
+                                </span>
+
+                                <span dir="ltr">
+                                    {
+                                        calendarRange.start
+                                    }{" "}
+                                    تا{" "}
+                                    {
+                                        calendarRange.end
+                                    }
+                                </span>
+                            </div>
+                        </div>
+                    )}
             </div>
 
             <CalendarNoteModal
@@ -1510,7 +1862,9 @@ export default function PersianCalendar() {
                 selectedDate={
                     selectedDate
                 }
-                notes={notes}
+                notes={
+                    notes
+                }
                 events={
                     calendarEvents
                 }
@@ -1518,15 +1872,21 @@ export default function PersianCalendar() {
                     note
                 ) =>
                     setNotes(
-                        (prev) => [
-                            note,
-                            ...prev,
-                        ]
+                        (
+                            prev
+                        ) => [
+                                note,
+                                ...prev,
+                            ]
                     )
                 }
-                onDeleted={(id) =>
+                onDeleted={(
+                    id
+                ) =>
                     setNotes(
-                        (prev) =>
+                        (
+                            prev
+                        ) =>
                             prev.filter(
                                 (
                                     note

@@ -2,7 +2,9 @@ import axiosInstance from "@/lib/axiosInstance";
 import type {
   EmployeeListItem,
   InternalTask,
+  InternalTaskArchive,
   InternalTaskAttachment,
+  InternalTaskRoutine,
   InternalTaskStatus,
 } from "./types";
 
@@ -23,6 +25,18 @@ export type UpdateInternalTaskPayload = {
 
 export function fetchInternalTasks() {
   return axiosInstance.get<InternalTask[]>("/tasks/api/v1/internal_task/");
+}
+
+export function fetchInternalTaskArchive() {
+  return axiosInstance.get<InternalTaskArchive[]>(
+    "/tasks/api/v1/internal_task_archive/",
+  );
+}
+
+export function fetchInternalTaskRoutines() {
+  return axiosInstance.get<InternalTaskRoutine[]>(
+    "/tasks/api/v1/internal_task_routine/",
+  );
 }
 
 export function fetchEmployeeList() {
@@ -61,6 +75,12 @@ export function updateInternalTaskStatus(
   );
 }
 
+export function reopenInternalTask(id: number) {
+  return axiosInstance.post<InternalTask>(
+    `/tasks/api/v1/internal_task/${id}/reopen/`,
+  );
+}
+
 export function patchInternalTaskDeadline(
   id: number,
   payload: InternalTaskDeadlinePayload,
@@ -80,12 +100,15 @@ export function uploadInternalTaskAttachments(
   note: string,
 ) {
   const formData = new FormData();
+
   files.forEach((file) => {
     formData.append("files", file);
   });
+
   if (note.trim()) {
     formData.append("note", note.trim());
   }
+
   return axiosInstance.post<InternalTaskAttachment[]>(
     `/tasks/api/v1/internal_task/${id}/attachments/`,
     formData,
@@ -94,12 +117,15 @@ export function uploadInternalTaskAttachments(
 
 export function completeInternalTask(id: number, files: File[], note: string) {
   const formData = new FormData();
+
   files.forEach((file) => {
     formData.append("files", file);
   });
+
   if (note.trim()) {
     formData.append("note", note.trim());
   }
+
   return axiosInstance.post<InternalTask>(
     `/tasks/api/v1/internal_task/${id}/complete/`,
     formData,
@@ -108,12 +134,15 @@ export function completeInternalTask(id: number, files: File[], note: string) {
 
 export function cancelInternalTask(id: number, files: File[], note: string) {
   const formData = new FormData();
+
   files.forEach((file) => {
     formData.append("files", file);
   });
+
   if (note.trim()) {
     formData.append("note", note.trim());
   }
+
   return axiosInstance.post<InternalTask>(
     `/tasks/api/v1/internal_task/${id}/cancel/`,
     formData,

@@ -14,15 +14,14 @@ import {
     AlertCircle,
     Upload,
 } from "lucide-react";
-import { useTheme } from "next-themes";
 import type { AxiosError } from "axios";
 import axiosInstance from "@/lib/axiosInstance";
 import {
     ApiOrderTaskStockProduct,
     useOrderTaskLookups,
 } from "@/hooks/useOrderTaskLookups";
-import TimeRangeModal from "./TimeRangeModal";
 import { ApiOrderTask, ApiTask } from "@/types/warehouse";
+import TimeRangeModal from "../tasks/TimeRangeModal";
 
 interface CreateOrderTaskModalProps {
     isOpen: boolean;
@@ -31,7 +30,7 @@ interface CreateOrderTaskModalProps {
 }
 
 /* ──────────────────────────────────────────────────────────────
- *  گرادیانت‌های آواتار - دقیقاً مثل NiceSelect کاربر
+ *  Gradients + helpers
  * ────────────────────────────────────────────────────────────── */
 const GRADIENTS = [
     "from-blue-500 to-indigo-500",
@@ -46,9 +45,28 @@ const gradientOf = (seed: number) =>
     GRADIENTS[Math.abs(seed) % GRADIENTS.length];
 const initialOf = (text: string) => (text || "").trim().charAt(0) || "؟";
 
-/* ──────────────────────────────────────────────────────────────
- *  Error parser
- * ────────────────────────────────────────────────────────────── */
+function formatNumber(raw: string): string {
+    if (!raw) return "";
+    let str = String(raw).replace(/,/g, "").trim();
+    if (!str) return "";
+    const neg = str.startsWith("-");
+    if (neg) str = str.slice(1);
+    const parts = str.split(".");
+    const intPart = parts[0].replace(/[^\d]/g, "");
+    const decPart =
+        parts.length > 1 ? parts[1].replace(/[^\d]/g, "") : undefined;
+    const formattedInt = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    let out = formattedInt;
+    if (decPart !== undefined) out += "." + decPart;
+    return (neg ? "-" : "") + out;
+}
+
+function parseNumber(raw: string): number {
+    if (!raw) return NaN;
+    const cleaned = String(raw).replace(/,/g, "").trim();
+    return cleaned === "" ? NaN : Number(cleaned);
+}
+
 function getErrorMessage(err: unknown, fallback: string) {
     const error = err as AxiosError<Record<string, unknown>>;
     const data = error.response?.data;
@@ -68,43 +86,50 @@ function getErrorMessage(err: unknown, fallback: string) {
     ]) {
         const value = data[key];
         if (typeof value === "string") return value;
-        if (Array.isArray(value) && typeof value[0] === "string") return value[0];
+        if (Array.isArray(value) && typeof value[0] === "string")
+            return value[0];
     }
     return fallback;
 }
 
 /* ──────────────────────────────────────────────────────────────
- *  FloatingInput - دقیقاً مثل EditTaskModal
+ *  FloatingInput - با فرمت عددی
  * ────────────────────────────────────────────────────────────── */
 function FloatingInput({
     label,
     id,
     value,
     onChange,
-    type = "text",
+    numeric = false,
     dir,
 }: {
     label: string;
     id: string;
     value: string;
     onChange: (v: string) => void;
-    type?: string;
+    numeric?: boolean;
     dir?: "rtl" | "ltr";
 }) {
+    function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
+        const raw = e.target.value;
+        onChange(numeric ? formatNumber(raw) : raw);
+    }
+
     return (
         <div className="relative">
             <input
                 id={id}
-                type={type}
+                type="text"
+                inputMode={numeric ? "decimal" : undefined}
                 dir={dir}
                 placeholder=" "
                 value={value}
-                onChange={(e) => onChange(e.target.value)}
+                onChange={handleChange}
                 className="peer h-[52px] w-full rounded-2xl border border-gray-100 bg-gray-50 px-4 pt-4 text-[12.5px] font-bold text-gray-900 outline-none transition-colors focus:border-blue-500 dark:border-white/[0.06] dark:bg-white/[0.03] dark:text-white dark:focus:border-blue-500/50"
             />
             <label
                 htmlFor={id}
-                className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[12px] font-semibold text-gray-400 transition-all duration-200 peer-focus:top-[15px] peer-focus:text-[10px] peer-focus:text-blue-500 peer-[:not(:placeholder-shown)]:top-[15px] peer-[:not(:placeholder-shown)]:text-[10px]"
+                className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[12px] font-semibold text-gray-400 transition-all duration-200 peer-focus:top-[15px] peer-focus:text-[10px] peer-focus:text-blue-500 peer-[:not(:placeholder-shown)]:top-[15px] peer-[:not(:placeholder-shown)]:text-[10px] peer-[:not(:placeholder-shown)]:text-gray-500 dark:peer-[:not(:placeholder-shown)]:text-gray-400"
             >
                 {label}
             </label>
@@ -113,7 +138,7 @@ function FloatingInput({
 }
 
 /* ──────────────────────────────────────────────────────────────
- *  SearchableCombobox - دقیقاً مثل NiceSelect کاربر
+ *  SearchableCombobox - مثل NiceSelect کاربر
  * ────────────────────────────────────────────────────────────── */
 function SearchableCombobox<T>({
     label,
@@ -165,7 +190,9 @@ function SearchableCombobox<T>({
     const visible = useMemo(() => {
         const q = query.trim().toLowerCase();
         if (!q) return items;
-        return items.filter((item) => getLabel(item).toLowerCase().includes(q));
+        return items.filter((item) =>
+            getLabel(item).toLowerCase().includes(q)
+        );
     }, [items, query, getLabel]);
 
     return (
@@ -181,7 +208,10 @@ function SearchableCombobox<T>({
                 className={`flex h-[52px] w-full items-center gap-2.5 rounded-2xl border px-3 text-right transition-all duration-200 ${open
                         ? "border-blue-500 bg-blue-50/50 dark:border-blue-500/50 dark:bg-blue-500/[0.06]"
                         : "border-gray-100 bg-gray-50 hover:border-gray-200 dark:border-white/[0.06] dark:bg-white/[0.03] dark:hover:border-white/[0.12]"
-                    } ${disabled ? "cursor-not-allowed opacity-40" : "cursor-pointer"}`}
+                    } ${disabled
+                        ? "cursor-not-allowed opacity-40"
+                        : "cursor-pointer"
+                    }`}
             >
                 {selected ? (
                     <span
@@ -199,7 +229,9 @@ function SearchableCombobox<T>({
 
                 <span className="min-w-0 flex-1">
                     <span
-                        className={`block truncate text-[12.5px] font-bold ${selected ? "text-gray-900 dark:text-white" : "text-gray-400"
+                        className={`block truncate text-[12.5px] font-bold ${selected
+                                ? "text-gray-900 dark:text-white"
+                                : "text-gray-400"
                             }`}
                     >
                         {selected ? getLabel(selected) : placeholder}
@@ -216,7 +248,10 @@ function SearchableCombobox<T>({
                         animate={{ rotate: open ? 180 : 0 }}
                         transition={{ duration: 0.2 }}
                     >
-                        <ChevronDown size={14} className="shrink-0 text-gray-400" />
+                        <ChevronDown
+                            size={14}
+                            className="shrink-0 text-gray-400"
+                        />
                     </motion.span>
                 )}
             </button>
@@ -227,17 +262,26 @@ function SearchableCombobox<T>({
                         initial={{ opacity: 0, y: -6, scale: 0.97 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: -4, scale: 0.97 }}
-                        transition={{ type: "spring", damping: 24, stiffness: 340 }}
+                        transition={{
+                            type: "spring",
+                            damping: 24,
+                            stiffness: 340,
+                        }}
                         className="absolute z-50 mt-2 w-full origin-top overflow-hidden rounded-[1.5rem] border border-gray-100 bg-white shadow-xl shadow-black/5 dark:border-white/[0.08] dark:bg-[#0f172a] dark:shadow-black/40"
                     >
                         {items.length > 5 && (
                             <div className="border-b border-gray-100 px-3 py-2.5 dark:border-white/[0.06]">
                                 <div className="flex items-center gap-2 rounded-xl bg-gray-50 px-3 py-2 dark:bg-white/[0.04]">
-                                    <Search size={13} className="shrink-0 text-gray-400" />
+                                    <Search
+                                        size={13}
+                                        className="shrink-0 text-gray-400"
+                                    />
                                     <input
                                         autoFocus
                                         value={query}
-                                        onChange={(e) => setQuery(e.target.value)}
+                                        onChange={(e) =>
+                                            setQuery(e.target.value)
+                                        }
                                         placeholder="جستجو..."
                                         className="w-full bg-transparent text-[12px] font-semibold text-gray-900 outline-none placeholder:text-gray-400 dark:text-white"
                                     />
@@ -315,15 +359,19 @@ function SearchableCombobox<T>({
 }
 
 /* ──────────────────────────────────────────────────────────────
- *  Main Modal - دقیقاً مثل EditTaskModal / CreateTaskModal
+ *  Main Modal
  * ────────────────────────────────────────────────────────────── */
 export default function CreateOrderTaskModal({
     isOpen,
     onClose,
     onCreated,
 }: CreateOrderTaskModalProps) {
-    const { tasks, products, loading: lookupsLoading, error: lookupsError } =
-        useOrderTaskLookups(isOpen);
+    const {
+        tasks,
+        products,
+        loading: lookupsLoading,
+        error: lookupsError,
+    } = useOrderTaskLookups(isOpen);
 
     const [taskId, setTaskId] = useState<number | null>(null);
     const [productId, setProductId] = useState<number | null>(null);
@@ -359,7 +407,7 @@ export default function CreateOrderTaskModal({
             setError("تسک، محصول و تعداد الزامی هستند");
             return;
         }
-        const qty = Number(quantity);
+        const qty = parseNumber(quantity);
         if (!Number.isFinite(qty) || qty <= 0) {
             setError("تعداد وارد شده معتبر نیست");
             return;
@@ -399,7 +447,10 @@ export default function CreateOrderTaskModal({
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 className="fixed inset-0 z-50 flex items-center justify-center px-4"
-                style={{ background: "rgba(0,0,0,0.45)", backdropFilter: "blur(3px)" }}
+                style={{
+                    background: "rgba(0,0,0,0.45)",
+                    backdropFilter: "blur(3px)",
+                }}
                 onClick={handleClose}
             >
                 <motion.div
@@ -411,7 +462,7 @@ export default function CreateOrderTaskModal({
                     dir="rtl"
                     className="flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-sm dark:border-white/[0.06] dark:bg-[#0f172a]"
                 >
-                    {/* Header - دقیقاً مثل CreateTaskModal */}
+                    {/* Header */}
                     <div className="flex shrink-0 items-center justify-between px-8 pb-6 pt-8">
                         <div className="flex items-center gap-2.5">
                             <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-50 dark:bg-blue-500/10">
@@ -437,7 +488,7 @@ export default function CreateOrderTaskModal({
                         </button>
                     </div>
 
-                    {/* Form */}
+                    {/* Body */}
                     <div className="flex-1 overflow-y-auto px-8 pb-2">
                         <div className="flex flex-col gap-4">
                             <AnimatePresence>
@@ -475,7 +526,9 @@ export default function CreateOrderTaskModal({
                                 getLabel={(item) => item.title}
                                 getSubLabel={(item) => item.department_name}
                                 placeholder={
-                                    lookupsLoading ? "در حال بارگذاری..." : "انتخاب تسک"
+                                    lookupsLoading
+                                        ? "در حال بارگذاری..."
+                                        : "انتخاب تسک"
                                 }
                                 emptyText="تسکی یافت نشد"
                                 disabled={loading || lookupsLoading}
@@ -489,10 +542,14 @@ export default function CreateOrderTaskModal({
                                 getId={(item) => item.product}
                                 getLabel={(item) => item.product_name}
                                 getSubLabel={(item) =>
-                                    `${item.current_quantity} ${item.unit_label} موجود`
+                                    `${formatNumber(
+                                        String(item.current_quantity)
+                                    )} ${item.unit_label} موجود`
                                 }
                                 placeholder={
-                                    lookupsLoading ? "در حال بارگذاری..." : "انتخاب محصول"
+                                    lookupsLoading
+                                        ? "در حال بارگذاری..."
+                                        : "انتخاب محصول"
                                 }
                                 emptyText="محصولی یافت نشد"
                                 disabled={loading || lookupsLoading}
@@ -506,7 +563,7 @@ export default function CreateOrderTaskModal({
                                     setQuantity(v);
                                     setError("");
                                 }}
-                                type="number"
+                                numeric
                                 dir="ltr"
                             />
 
@@ -527,20 +584,38 @@ export default function CreateOrderTaskModal({
                                 </label>
                             </div>
 
+                            {/* زمان‌بندی + فایل */}
                             <div className="grid grid-cols-2 gap-3">
                                 <button
                                     type="button"
                                     disabled={loading}
                                     onClick={() => setTimeModalOpen(true)}
-                                    className="flex h-[52px] items-center justify-center gap-2 rounded-2xl border border-gray-100 bg-gray-50 text-[12.5px] font-bold text-gray-700 transition-colors hover:border-gray-200 disabled:opacity-40 dark:border-white/[0.06] dark:bg-white/[0.03] dark:text-gray-300 dark:hover:border-white/[0.12]"
+                                    className={`flex h-[52px] items-center justify-center gap-2 rounded-2xl border px-3 transition-all duration-200 disabled:opacity-40 ${startedAt && deadline
+                                            ? "border-blue-500/30 bg-blue-50/50 dark:border-blue-500/30 dark:bg-blue-500/[0.06]"
+                                            : "border-gray-100 bg-gray-50 hover:border-gray-200 dark:border-white/[0.06] dark:bg-white/[0.03] dark:hover:border-white/[0.12]"
+                                        }`}
                                 >
-                                    <Calendar size={14} className="text-gray-400" />
-                                    <span className="truncate px-1">
-                                        {startedAt && deadline ? "ویرایش بازه" : "بازه زمانی"}
+                                    <span
+                                        className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl ${startedAt && deadline
+                                                ? "bg-white text-blue-500 shadow-sm dark:bg-white/[0.08]"
+                                                : "bg-white text-gray-400 shadow-sm dark:bg-white/[0.06]"
+                                            }`}
+                                    >
+                                        <Calendar size={14} />
+                                    </span>
+                                    <span
+                                        className={`truncate text-[12px] font-bold ${startedAt && deadline
+                                                ? "text-blue-600 dark:text-blue-400"
+                                                : "text-gray-500 dark:text-gray-400"
+                                            }`}
+                                    >
+                                        {startedAt && deadline
+                                            ? "ویرایش بازه"
+                                            : "تعیین بازه زمانی"}
                                     </span>
                                 </button>
 
-                                <label className="flex h-[52px] cursor-pointer items-center justify-center gap-2 rounded-2xl border border-dashed border-gray-200 bg-gray-50/60 px-3.5 transition-colors hover:border-blue-400 hover:bg-blue-50/40 dark:border-white/[0.1] dark:bg-white/[0.02] dark:hover:border-blue-500/40 dark:hover:bg-blue-500/[0.05]">
+                                <label className="flex h-[52px] cursor-pointer items-center justify-center gap-2 rounded-2xl border border-dashed border-gray-200 bg-gray-50/60 px-3 transition-colors hover:border-blue-400 hover:bg-blue-50/40 dark:border-white/[0.1] dark:bg-white/[0.02] dark:hover:border-blue-500/40 dark:hover:bg-blue-500/[0.05]">
                                     <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-white text-gray-400 shadow-sm dark:bg-white/[0.06]">
                                         <Upload size={14} />
                                     </span>
@@ -552,20 +627,31 @@ export default function CreateOrderTaskModal({
                                         className="hidden"
                                         disabled={loading}
                                         onChange={(e) =>
-                                            setFile(e.target.files?.[0] ?? null)
+                                            setFile(
+                                                e.target.files?.[0] ?? null
+                                            )
                                         }
                                     />
                                 </label>
                             </div>
 
                             {startedAt && deadline && (
-                                <div className="flex items-center justify-center gap-2 rounded-2xl bg-blue-50 py-2.5 text-[11.5px] font-bold text-blue-600 dark:bg-blue-500/10 dark:text-blue-400">
+                                <motion.div
+                                    initial={{ opacity: 0, y: 6 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    className="flex items-center justify-center gap-2 rounded-2xl bg-blue-50 py-2.5 text-[11.5px] font-bold text-blue-600 dark:bg-blue-500/10 dark:text-blue-400"
+                                >
                                     <Calendar size={13} />
-                                    <span>
-                                        {new Date(startedAt).toLocaleDateString("fa-IR")} تا{" "}
-                                        {new Date(deadline).toLocaleDateString("fa-IR")}
+                                    <span dir="rtl">
+                                        {new Date(startedAt).toLocaleDateString(
+                                            "fa-IR"
+                                        )}{" "}
+                                        تا{" "}
+                                        {new Date(
+                                            deadline
+                                        ).toLocaleDateString("fa-IR")}
                                     </span>
-                                </div>
+                                </motion.div>
                             )}
 
                             {file && (
@@ -593,7 +679,7 @@ export default function CreateOrderTaskModal({
                         </div>
                     </div>
 
-                    {/* Footer - دقیقاً مثل CreateTaskModal */}
+                    {/* Footer */}
                     <div className="flex shrink-0 items-center gap-2 px-8 pb-8 pt-5">
                         <motion.button
                             type="button"
@@ -614,12 +700,13 @@ export default function CreateOrderTaskModal({
                     </div>
                 </motion.div>
 
+                {/* Time Range Modal */}
                 <TimeRangeModal
                     open={timeModalOpen}
                     initialStartedAt={startedAt}
                     initialDeadline={deadline}
                     onClose={() => setTimeModalOpen(false)}
-                    onSubmit={(start: string, end: string) => {
+                    onSubmit={async (start: string, end: string) => {
                         setStartedAt(start);
                         setDeadline(end);
                         setTimeModalOpen(false);

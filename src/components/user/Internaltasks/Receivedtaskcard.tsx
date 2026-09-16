@@ -8,6 +8,7 @@ import {
     Clock3,
     History,
     MessageSquareText,
+    Repeat,
     RotateCcw,
     UserRound,
 } from "lucide-react";
@@ -23,6 +24,7 @@ import type {
     InternalTaskStatus,
 } from "./types";
 import {
+    reopenInternalTask,
     updateInternalTaskStatus,
 } from "./Api";
 import InternalTaskChatModal from "./InternalTaskChatModal";
@@ -32,140 +34,94 @@ import api from "@/lib/axiosInstance";
 interface ReceivedTaskCardProps {
     task: InternalTask;
     employees: EmployeeListItem[];
+    isRoutine?: boolean;
     onUpdated: (task: InternalTask) => void;
 }
 
-function formatJalali(
-    value?: string | null,
-): string | null {
-    if (!value) {
-        return null;
-    }
+function formatJalali(value?: string | null) {
+    if (!value) return null;
+
     const date = new Date(value);
-    if (Number.isNaN(date.getTime())) {
-        return null;
-    }
+
+    if (Number.isNaN(date.getTime())) return null;
+
     const [jy, jm, jd] = toJalali(
         date.getFullYear(),
         date.getMonth() + 1,
         date.getDate(),
     ) as [number, number, number];
-    return `${toPersianDigits(jd)} ${JALALI_MONTHS[jm - 1]
-        } ${toPersianDigits(jy)} - ${toPersianDigits(
-            pad2(date.getHours()),
-        )}:${toPersianDigits(
-            pad2(date.getMinutes()),
-        )}`;
+
+    return `${toPersianDigits(jd)} ${JALALI_MONTHS[jm - 1]} ${toPersianDigits(jy)} - ${toPersianDigits(
+        pad2(date.getHours()),
+    )}:${toPersianDigits(pad2(date.getMinutes()))}`;
 }
 
-function getDeadlineState(
-    deadline?: string | null,
-) {
+function getDeadlineState(deadline?: string | null) {
     if (!deadline) {
         return {
             label: "بدون مهلت",
-            color:
-                "text-gray-400 dark:text-gray-500",
-            background:
-                "bg-gray-50 dark:bg-white/[0.03]",
+            color: "text-gray-400 dark:text-gray-500",
+            background: "bg-gray-50 dark:bg-white/[0.03]",
         };
     }
-    const deadlineTime =
-        new Date(deadline).getTime();
-    if (Number.isNaN(deadlineTime)) {
+
+    const time = new Date(deadline).getTime();
+
+    if (Number.isNaN(time)) {
         return {
             label: "بدون مهلت",
-            color:
-                "text-gray-400 dark:text-gray-500",
-            background:
-                "bg-gray-50 dark:bg-white/[0.03]",
+            color: "text-gray-400 dark:text-gray-500",
+            background: "bg-gray-50 dark:bg-white/[0.03]",
         };
     }
-    const diff =
-        deadlineTime - Date.now();
-    const hours =
-        diff / (1000 * 60 * 60);
+
+    const diff = time - Date.now();
+    const hours = diff / 3600000;
+
     if (diff < 0) {
         return {
             label: "منقضی شده",
-            color:
-                "text-red-500 dark:text-red-400",
-            background:
-                "bg-red-50 dark:bg-red-500/10",
+            color: "text-red-500 dark:text-red-400",
+            background: "bg-red-50 dark:bg-red-500/10",
         };
     }
+
     if (hours <= 24) {
         return {
             label: "فوری",
-            color:
-                "text-amber-600 dark:text-amber-400",
-            background:
-                "bg-amber-50 dark:bg-amber-500/10",
+            color: "text-amber-600 dark:text-amber-400",
+            background: "bg-amber-50 dark:bg-amber-500/10",
         };
     }
+
     return {
         label: "در زمانبندی",
-        color:
-            "text-emerald-600 dark:text-emerald-400",
-        background:
-            "bg-emerald-50 dark:bg-emerald-500/10",
+        color: "text-emerald-600 dark:text-emerald-400",
+        background: "bg-emerald-50 dark:bg-emerald-500/10",
     };
 }
 
-function extractBackendError(
-    error: any,
-): string {
-    const responseData =
-        error?.response?.data;
-    if (
-        typeof responseData ===
-        "string"
-    ) {
-        return responseData;
-    }
-    if (responseData?.detail) {
-        return String(
-            responseData.detail,
-        );
-    }
-    if (responseData?.message) {
-        return String(
-            responseData.message,
-        );
-    }
-    if (responseData?.error) {
-        return String(
-            responseData.error,
-        );
-    }
-    if (
-        responseData &&
-        typeof responseData ===
-        "object"
-    ) {
-        const values =
-            Object.values(
-                responseData,
-            );
-        for (const value of values) {
-            if (Array.isArray(value)) {
-                if (value.length > 0) {
-                    return String(
-                        value[0],
-                    );
-                }
+function getError(error: any) {
+    const data = error?.response?.data;
+
+    if (typeof data === "string") return data;
+    if (data?.detail) return String(data.detail);
+    if (data?.message) return String(data.message);
+    if (data?.error) return String(data.error);
+
+    if (data && typeof data === "object") {
+        for (const value of Object.values(data)) {
+            if (Array.isArray(value) && value.length) {
+                return String(value[0]);
             }
-            if (
-                value !== null &&
-                value !== undefined
-            ) {
+
+            if (value !== null && value !== undefined) {
                 return String(value);
             }
         }
     }
-    switch (
-    error?.response?.status
-    ) {
+
+    switch (error?.response?.status) {
         case 400:
             return "اطلاعات ارسالی برای تغییر وضعیت صحیح نیست.";
         case 403:
@@ -182,145 +138,110 @@ function extractBackendError(
 export default function ReceivedTaskCard({
     task,
     employees,
+    isRoutine = false,
     onUpdated,
 }: ReceivedTaskCardProps) {
-    const [currentTask, setCurrentTask] =
-        useState<InternalTask>(task);
-    const [submitting, setSubmitting] =
-        useState(false);
-    const [error, setError] =
-        useState<string | null>(null);
-    const [chatOpen, setChatOpen] =
-        useState(false);
-    const [actionModal, setActionModal] =
-        useState<"complete" | "cancel" | null>(null);
-    const [deadlineData, setDeadlineData] =
-        useState<{
-            started_at: string | null;
-            deadline: string | null;
-        }>({
-            started_at:
-                task.started_at ?? null,
-            deadline:
-                task.deadline ?? null,
-        });
-    const [loadingDeadline, setLoadingDeadline] =
-        useState(false);
+    const [currentTask, setCurrentTask] = useState(task);
+    const [submitting, setSubmitting] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const [chatOpen, setChatOpen] = useState(false);
+    const [actionModal, setActionModal] = useState<
+        "complete" | "cancel" | null
+    >(null);
+    const [deadlineData, setDeadlineData] = useState({
+        started_at: task.started_at ?? null,
+        deadline: task.deadline ?? null,
+    });
+    const [loadingDeadline, setLoadingDeadline] = useState(false);
 
     useEffect(() => {
         setCurrentTask(task);
         setDeadlineData({
-            started_at:
-                task.started_at ?? null,
-            deadline:
-                task.deadline ?? null,
+            started_at: task.started_at ?? null,
+            deadline: task.deadline ?? null,
         });
     }, [task]);
 
     useEffect(() => {
         let cancelled = false;
+
         setLoadingDeadline(true);
-        api.get(
-            `/tasks/api/v1/internal_task/${task.id}/deadline/`,
-        )
+
+        api.get(`/tasks/api/v1/internal_task/${task.id}/deadline/`)
             .then((response) => {
-                if (cancelled) {
-                    return;
-                }
-                const data =
-                    response.data?.data ??
-                    response.data;
+                if (cancelled) return;
+
+                const data = response.data?.data ?? response.data;
+
                 setDeadlineData({
-                    started_at:
-                        data?.started_at ??
-                        task.started_at ??
-                        null,
-                    deadline:
-                        data?.deadline ??
-                        task.deadline ??
-                        null,
+                    started_at: data?.started_at ?? task.started_at ?? null,
+                    deadline: data?.deadline ?? task.deadline ?? null,
                 });
             })
-            .catch(() => {
-                if (!cancelled) {
-                    setDeadlineData({
-                        started_at:
-                            task.started_at ??
-                            null,
-                        deadline:
-                            task.deadline ??
-                            null,
-                    });
-                }
-            })
+            .catch(() => { })
             .finally(() => {
-                if (!cancelled) {
-                    setLoadingDeadline(false);
-                }
+                if (!cancelled) setLoadingDeadline(false);
             });
+
         return () => {
             cancelled = true;
         };
-    }, [
-        task.id,
-        task.started_at,
-        task.deadline,
-    ]);
+    }, [task.id, task.started_at, task.deadline]);
 
-    const creator =
-        employees.find(
-            (employee) =>
-                employee.username
-                    .trim()
-                    .toLowerCase() ===
-                currentTask.created_by
-                    .trim()
-                    .toLowerCase(),
-        );
+    const creator = employees.find(
+        (employee) =>
+            employee.username.trim().toLowerCase() ===
+            currentTask.created_by.trim().toLowerCase(),
+    );
+
     const creatorName =
-        creator?.full_name ||
-        currentTask.created_by ||
-        "نامشخص";
+        creator?.full_name || currentTask.created_by || "نامشخص";
 
-    const isCompleted =
-        currentTask.status ===
-        "completed";
-    const isCancelled =
-        currentTask.status ===
-        "cancelled";
-    const deadlineState =
-        getDeadlineState(
-            deadlineData.deadline,
-        );
-    const deadlineDate =
-        formatJalali(
-            deadlineData.deadline,
-        );
-    const startedAtDate =
-        formatJalali(
-            deadlineData.started_at,
-        );
-    const createdDate =
-        formatJalali(
-            currentTask.created_at,
-        );
+    const isCompleted = currentTask.status === "completed";
+    const isCancelled = currentTask.status === "cancelled";
 
-    async function changeStatus(
-        nextStatus: InternalTaskStatus,
-    ) {
-        if (submitting) {
+    const deadlineState = getDeadlineState(deadlineData.deadline);
+    const deadlineDate = formatJalali(deadlineData.deadline);
+    const startedAtDate = formatJalali(deadlineData.started_at);
+    const createdDate = formatJalali(currentTask.created_at);
+
+    const statusBadge = isCompleted
+        ? {
+            label: "انجام شده",
+            dot: "bg-emerald-500",
+            badge: "bg-emerald-500/10 text-emerald-500",
+        }
+        : isCancelled
+            ? {
+                label: "لغو شده",
+                dot: "bg-red-500",
+                badge: "bg-red-500/10 text-red-500",
+            }
+            : {
+                label: "در حال انجام",
+                dot: "bg-indigo-500",
+                badge: "bg-indigo-500/10 text-indigo-500",
+            };
+
+    async function changeStatus(nextStatus: InternalTaskStatus) {
+        if (isRoutine || submitting) {
+            if (isRoutine) {
+                setError(
+                    "این تسک به‌صورت روتین مدیریت می‌شود. برای تغییر وضعیت، وارد بخش تسک‌های روتین شوید.",
+                );
+            }
             return;
         }
+
         setError(null);
         setSubmitting(true);
-        const previousTask =
-            currentTask;
-        const optimisticTask: InternalTask =
-        {
+
+        const previousTask = currentTask;
+
+        const optimisticTask: InternalTask = {
             ...previousTask,
             status: nextStatus,
-            updated_at:
-                new Date().toISOString(),
+            updated_at: new Date().toISOString(),
             completed_at:
                 nextStatus === "completed"
                     ? new Date().toISOString()
@@ -328,170 +249,164 @@ export default function ReceivedTaskCard({
                         ? null
                         : previousTask.completed_at,
         };
-        setCurrentTask(
-            optimisticTask,
-        );
-        onUpdated(
-            optimisticTask,
-        );
+
+        setCurrentTask(optimisticTask);
+        onUpdated(optimisticTask);
+
         try {
-            const response =
-                await updateInternalTaskStatus(
-                    previousTask.id,
-                    {
-                        status: nextStatus,
-                    },
-                );
-            const responseData =
-                response.data;
-            const serverStatus =
-                responseData?.status ??
-                nextStatus;
-            const updatedTask: InternalTask =
-            {
+            const response = await updateInternalTaskStatus(
+                previousTask.id,
+                { status: nextStatus },
+            );
+
+            const data = response.data;
+
+            const updatedTask: InternalTask = {
                 ...previousTask,
-                ...responseData,
+                ...data,
                 id: previousTask.id,
-                title:
-                    responseData?.title ??
-                    previousTask.title,
+                status: data?.status ?? nextStatus,
+                title: data?.title ?? previousTask.title,
                 description:
-                    responseData?.description ??
-                    previousTask.description,
-                status: serverStatus,
+                    data?.description ?? previousTask.description,
                 assigned_to:
-                    Array.isArray(
-                        responseData?.assigned_to,
-                    ) &&
-                        responseData.assigned_to
-                            .length > 0
-                        ? responseData.assigned_to
+                    Array.isArray(data?.assigned_to) &&
+                        data.assigned_to.length
+                        ? data.assigned_to
                         : previousTask.assigned_to,
                 created_by:
-                    responseData?.created_by ??
-                    previousTask.created_by,
+                    data?.created_by ?? previousTask.created_by,
                 created_at:
-                    responseData?.created_at ??
-                    previousTask.created_at,
+                    data?.created_at ?? previousTask.created_at,
                 updated_at:
-                    responseData?.updated_at ??
-                    new Date().toISOString(),
+                    data?.updated_at ?? new Date().toISOString(),
                 started_at:
-                    responseData?.started_at ??
-                    previousTask.started_at,
+                    data?.started_at ?? previousTask.started_at,
                 deadline:
-                    responseData?.deadline ??
-                    previousTask.deadline,
+                    data?.deadline ?? previousTask.deadline,
                 completed_at:
-                    responseData?.completed_at ??
-                    (serverStatus === "completed"
+                    data?.completed_at ??
+                    (data?.status === "completed"
                         ? new Date().toISOString()
-                        : serverStatus ===
-                            "in_progress"
+                        : data?.status === "in_progress"
                             ? null
                             : previousTask.completed_at),
-                attachments:
-                    Array.isArray(
-                        responseData?.attachments,
-                    )
-                        ? responseData.attachments
-                        : previousTask.attachments,
+                attachments: Array.isArray(data?.attachments)
+                    ? data.attachments
+                    : previousTask.attachments,
             };
-            setCurrentTask(
-                updatedTask,
-            );
-            setDeadlineData({
-                started_at:
-                    updatedTask.started_at ??
-                    deadlineData.started_at ??
-                    null,
-                deadline:
-                    updatedTask.deadline ??
-                    deadlineData.deadline ??
-                    null,
-            });
-            onUpdated(
-                updatedTask,
-            );
-        } catch (err: any) {
-            setCurrentTask(
-                previousTask,
-            );
-            onUpdated(
-                previousTask,
-            );
-            setError(
-                extractBackendError(err),
-            );
+
+            setCurrentTask(updatedTask);
+            onUpdated(updatedTask);
+        } catch (err) {
+            setCurrentTask(previousTask);
+            onUpdated(previousTask);
+            setError(getError(err));
         } finally {
             setSubmitting(false);
         }
     }
 
     function completeTask() {
+        if (isRoutine) {
+            setError(
+                "این تسک به‌صورت روتین مدیریت می‌شود. انجام آن فقط از بخش تسک‌های روتین امکان‌پذیر است.",
+            );
+            return;
+        }
+
         setError(null);
         setActionModal("complete");
     }
 
-    async function reopenTask() {
-        await changeStatus("in_progress");
-    }
-
     function cancelTask() {
+        if (isRoutine) {
+            setError(
+                "این تسک به‌صورت روتین مدیریت می‌شود. لغو آن فقط از بخش تسک‌های روتین امکان‌پذیر است.",
+            );
+            return;
+        }
+
         setError(null);
         setActionModal("cancel");
     }
 
-    function handleActionDone(updatedTask: InternalTask) {
-        setCurrentTask(updatedTask);
-        onUpdated(updatedTask);
-        setActionModal(null);
-    }
+    async function reopenTask() {
+        if (isRoutine) {
+            setError(
+                "این تسک به‌صورت روتین مدیریت می‌شود. بازگشایی آن فقط از بخش تسک‌های روتین امکان‌پذیر است.",
+            );
+            return;
+        }
 
-    function getStatusBadge() {
-        if (isCompleted) {
-            return {
-                label: "انجام شده",
-                dot: "bg-emerald-500",
-                badge:
-                    "bg-emerald-500/10 text-emerald-500",
-            };
-        }
-        if (isCancelled) {
-            return {
-                label: "لغو شده",
-                dot: "bg-red-500",
-                badge:
-                    "bg-red-500/10 text-red-500",
-            };
-        }
-        return {
-            label: "در حال انجام",
-            dot: "bg-indigo-500",
-            badge:
-                "bg-indigo-500/10 text-indigo-500",
+        if (submitting) return;
+
+        setError(null);
+        setSubmitting(true);
+
+        const previousTask = currentTask;
+
+        const optimisticTask: InternalTask = {
+            ...previousTask,
+            status: "in_progress",
+            completed_at: null,
+            updated_at: new Date().toISOString(),
         };
-    }
 
-    const statusBadge =
-        getStatusBadge();
+        setCurrentTask(optimisticTask);
+        onUpdated(optimisticTask);
+
+        try {
+            const response = await reopenInternalTask(previousTask.id);
+            const data = response.data;
+
+            const updatedTask: InternalTask = {
+                ...previousTask,
+                ...data,
+                id: previousTask.id,
+                status: data?.status ?? "in_progress",
+                completed_at: data?.completed_at ?? null,
+                title: data?.title ?? previousTask.title,
+                description:
+                    data?.description ?? previousTask.description,
+                assigned_to:
+                    Array.isArray(data?.assigned_to) &&
+                        data.assigned_to.length
+                        ? data.assigned_to
+                        : previousTask.assigned_to,
+                created_by:
+                    data?.created_by ?? previousTask.created_by,
+                created_at:
+                    data?.created_at ?? previousTask.created_at,
+                updated_at:
+                    data?.updated_at ?? new Date().toISOString(),
+                started_at:
+                    data?.started_at ?? previousTask.started_at,
+                deadline:
+                    data?.deadline ?? previousTask.deadline,
+                attachments: Array.isArray(data?.attachments)
+                    ? data.attachments
+                    : previousTask.attachments,
+            };
+
+            setCurrentTask(updatedTask);
+            onUpdated(updatedTask);
+        } catch (err) {
+            setCurrentTask(previousTask);
+            onUpdated(previousTask);
+            setError(getError(err));
+        } finally {
+            setSubmitting(false);
+        }
+    }
 
     return (
         <>
             <motion.div
                 layout
-                initial={{
-                    opacity: 0,
-                    y: 12,
-                }}
-                animate={{
-                    opacity: 1,
-                    y: 0,
-                }}
-                exit={{
-                    opacity: 0,
-                    scale: 0.95,
-                }}
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95 }}
                 className="flex flex-col gap-3 rounded-[1.8rem] border border-gray-100 bg-white p-4 shadow-[0_8px_28px_rgba(15,23,42,0.035)] dark:border-white/[0.07] dark:bg-[#111a2d]"
             >
                 <div className="flex items-center justify-between gap-2">
@@ -501,63 +416,42 @@ export default function ReceivedTaskCard({
                         <span
                             className={`h-1.5 w-1.5 rounded-full ${statusBadge.dot}`}
                         />
-                        {
-                            statusBadge.label
-                        }
+                        {statusBadge.label}
                     </span>
+
                     <button
                         type="button"
-                        onClick={() =>
-                            setChatOpen(true)
-                        }
+                        onClick={() => setChatOpen(true)}
                         className="inline-flex items-center gap-1 rounded-full bg-gray-50 px-2 py-1 text-[10px] font-extrabold text-gray-400 transition-colors hover:bg-indigo-50 hover:text-indigo-600 dark:bg-white/[0.05] dark:text-white/40 dark:hover:bg-indigo-500/10 dark:hover:text-indigo-300"
                     >
-                        <MessageSquareText
-                            size={11}
-                        />
-                        {
-                            currentTask
-                                .attachments
-                                .length
-                        }
+                        <MessageSquareText size={11} />
+                        {currentTask.attachments.length}
                     </button>
                 </div>
+
                 <h3 className="line-clamp-2 text-[14px] font-extrabold leading-snug text-gray-900 dark:text-white">
-                    {
-                        currentTask.title
-                    }
+                    {currentTask.title}
                 </h3>
+
                 {currentTask.description && (
                     <p className="line-clamp-3 text-[12px] font-medium leading-relaxed text-gray-500 dark:text-white/40">
-                        {
-                            currentTask.description
-                        }
+                        {currentTask.description}
                     </p>
                 )}
+
                 <div className="flex items-center gap-1.5 text-[11px] text-gray-400 dark:text-gray-600">
-                    <UserRound
-                        size={12}
-                    />
-                    <span>
-                        ارسال کننده:{" "}
-                        {creatorName}
-                    </span>
+                    <UserRound size={12} />
+                    <span>ارسال کننده: {creatorName}</span>
                 </div>
+
                 <div className="flex items-center gap-1.5 text-[11px] text-gray-400 dark:text-gray-600">
-                    <History
-                        size={12}
-                    />
-                    <span>
-                        ایجاد:{" "}
-                        {createdDate}
-                    </span>
+                    <History size={12} />
+                    <span>ایجاد: {createdDate}</span>
                 </div>
+
                 {loadingDeadline ? (
                     <div className="flex items-center gap-2 rounded-2xl bg-gray-50 px-3 py-2.5 dark:bg-white/[0.03]">
-                        <Clock3
-                            size={13}
-                            className="text-gray-400"
-                        />
+                        <Clock3 size={13} className="text-gray-400" />
                         <span className="text-[11px] font-semibold text-gray-400">
                             در حال دریافت زمان‌بندی...
                         </span>
@@ -575,140 +469,135 @@ export default function ReceivedTaskCard({
                                         زمان شروع
                                     </p>
                                     <p className="mt-0.5 text-[10px] font-bold text-gray-500 dark:text-gray-400">
-                                        {
-                                            startedAtDate
-                                        }
+                                        {startedAtDate}
                                     </p>
                                 </div>
                             </div>
                         )}
+
                         <div
                             className={`flex items-center gap-2 rounded-2xl px-3 py-2.5 ${deadlineState.background}`}
                         >
                             <Clock3
                                 size={13}
-                                className={
-                                    deadlineState.color
-                                }
+                                className={deadlineState.color}
                             />
                             <div>
                                 <p
                                     className={`text-[11px] font-extrabold ${deadlineState.color}`}
                                 >
-                                    {
-                                        deadlineState.label
-                                    }
+                                    {deadlineState.label}
                                 </p>
+
                                 {deadlineDate && (
                                     <p className="mt-0.5 text-[10px] font-bold text-gray-500 dark:text-gray-400">
-                                        {
-                                            deadlineDate
-                                        }
+                                        {deadlineDate}
                                     </p>
                                 )}
                             </div>
                         </div>
                     </>
                 )}
+
                 {error && (
                     <p className="rounded-xl bg-red-500/10 px-3 py-2 text-center text-[11px] font-bold text-red-500">
                         {error}
                     </p>
                 )}
+
                 <div className="relative z-10 flex flex-col gap-2 border-t border-black/5 pt-2.5 dark:border-white/[0.05]">
-                    {!isCompleted &&
+                    {isRoutine &&
+                        !isCompleted &&
+                        !isCancelled && (
+                            <div className="flex items-start gap-2 rounded-2xl border border-amber-500/15 bg-amber-500/[0.07] px-3 py-2.5">
+                                <Repeat
+                                    size={14}
+                                    className="mt-0.5 shrink-0 text-amber-500"
+                                />
+
+                                <div>
+                                    <p className="text-[11px] font-extrabold text-amber-600 dark:text-amber-400">
+                                        این تسک روتین است
+                                    </p>
+
+                                    <p className="mt-1 text-[10px] font-semibold leading-5 text-gray-500 dark:text-white/45">
+                                        انجام یا لغو این تسک فقط از بخش تسک‌های روتین امکان‌پذیر است.
+                                    </p>
+                                </div>
+                            </div>
+                        )}
+
+                    {!isRoutine &&
+                        !isCompleted &&
                         !isCancelled && (
                             <div className="flex gap-2">
                                 <button
                                     type="button"
-                                    onClick={
-                                        completeTask
-                                    }
-                                    disabled={
-                                        submitting
-                                    }
+                                    onClick={completeTask}
+                                    disabled={submitting}
                                     className="flex h-9 flex-1 items-center justify-center gap-1.5 rounded-xl bg-emerald-500 text-[10.5px] font-extrabold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
                                 >
-                                    <CheckCircle2
-                                        size={13}
-                                    />
+                                    <CheckCircle2 size={13} />
                                     انجام شد
                                 </button>
+
                                 <button
                                     type="button"
-                                    onClick={
-                                        cancelTask
-                                    }
-                                    disabled={
-                                        submitting
-                                    }
+                                    onClick={cancelTask}
+                                    disabled={submitting}
                                     className="flex h-9 flex-1 items-center justify-center gap-1.5 rounded-xl bg-red-500 text-[10.5px] font-extrabold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
                                 >
-                                    <Ban
-                                        size={13}
-                                    />
+                                    <Ban size={13} />
                                     لغو تیکت
                                 </button>
                             </div>
                         )}
-                    {(isCompleted ||
-                        isCancelled) && (
+
+                    {!isRoutine &&
+                        (isCompleted || isCancelled) && (
                             <button
                                 type="button"
-                                onClick={
-                                    reopenTask
-                                }
-                                disabled={
-                                    submitting
-                                }
+                                onClick={reopenTask}
+                                disabled={submitting}
                                 className="flex h-9 w-full items-center justify-center gap-1.5 rounded-xl bg-amber-500 text-[10.5px] font-extrabold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
                             >
-                                <RotateCcw
-                                    size={13}
-                                />
+                                <RotateCcw size={13} />
                                 بازگشایی تیکت
                             </button>
                         )}
+
                     <button
                         type="button"
-                        onClick={() =>
-                            setChatOpen(true)
-                        }
+                        onClick={() => setChatOpen(true)}
                         className="flex h-9 w-full items-center justify-center gap-1.5 rounded-xl bg-indigo-50 text-[10.5px] font-extrabold text-indigo-600 transition-colors hover:bg-indigo-100 dark:bg-indigo-500/10 dark:text-indigo-300 dark:hover:bg-indigo-500/20"
                     >
-                        <MessageSquareText
-                            size={13}
-                        />
+                        <MessageSquareText size={13} />
                         گفتگو و فایل‌ها
                     </button>
                 </div>
             </motion.div>
+
             <InternalTaskChatModal
                 open={chatOpen}
                 task={currentTask}
-                onClose={() =>
-                    setChatOpen(false)
-                }
-                onUpdated={(
-                    updatedTask,
-                ) => {
-                    setCurrentTask(
-                        updatedTask,
-                    );
-                    onUpdated(
-                        updatedTask,
-                    );
+                onClose={() => setChatOpen(false)}
+                onUpdated={(updatedTask) => {
+                    setCurrentTask(updatedTask);
+                    onUpdated(updatedTask);
                 }}
             />
+
             {actionModal && (
                 <InternalTaskActionModal
-                    isOpen={true}
+                    isOpen
                     action={actionModal}
                     task={currentTask}
-                    onClose={() =>
-                        setActionModal(null)
-                    }
-                    onDone={handleActionDone}
+                    onClose={() => setActionModal(null)}
+                    onDone={(updatedTask) => {
+                        setCurrentTask(updatedTask);
+                        onUpdated(updatedTask);
+                        setActionModal(null);
+                    }}
                 />
             )}
         </>

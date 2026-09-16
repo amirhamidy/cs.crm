@@ -54,6 +54,7 @@ export const adminMenuItems: MenuItem[] = [
   //   label: "کنترل کیفی",
   //   href: "/admin/qualityControl",
   // },
+
   {
     icon: FolderKanban,
     label: "پرونده‌ها",
@@ -93,6 +94,11 @@ export const adminMenuItems: MenuItem[] = [
     icon: CalendarCheck2,
     label: "تقویم",
     href: "/admin/calendar",
+  },
+  {
+    icon: Archive,
+    label: "بایگانی تیکت‌ها",
+    href: "/admin/Ticketarchive",
   },
 ];
 
@@ -142,7 +148,7 @@ export const userMenuItems: MenuItem[] = [
     label: "ایجاد وظایف",
     href: "/user/tasks",
   },
-    {
+  {
     icon: ClipboardList,
     label: "وظایف  تکرار شونده",
     href: "/user/taskroutine",
@@ -156,6 +162,11 @@ export const userMenuItems: MenuItem[] = [
     icon: Ticket,
     label: "تیکت دریافت شده",
     href: "/user/Ticketreceipt",
+  },
+  {
+    icon: Archive,
+    label: "بایگانی تیکت‌ها",
+    href: "/user/Ticketarchive",
   },
   {
     icon: CalendarCheck2,

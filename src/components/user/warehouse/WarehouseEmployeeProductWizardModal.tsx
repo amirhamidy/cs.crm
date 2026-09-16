@@ -1,14 +1,24 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import {
+    useEffect,
+    useMemo,
+    useRef,
+    useState,
+    forwardRef,
+    useLayoutEffect,
+    type InputHTMLAttributes,
+} from "react";
+import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import {
     ArrowLeft,
     ArrowRight,
-    Boxes,
     Check,
+    ChevronDown,
     Loader,
     PackagePlus,
+    Search,
     X,
 } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
@@ -43,19 +53,62 @@ type FormState = {
     maximumStock: string;
 };
 
+type Option = { value: string; label: string; sub?: string };
+
+/* ------------------------------ helpers ------------------------------ */
+
+const GRADIENTS = [
+    "from-blue-500 to-indigo-500",
+    "from-violet-500 to-fuchsia-500",
+    "from-emerald-500 to-teal-500",
+    "from-amber-500 to-orange-500",
+    "from-rose-500 to-pink-500",
+    "from-cyan-500 to-sky-500",
+];
+
+function gradientOf(seed: string | number) {
+    const n =
+        typeof seed === "number"
+            ? seed
+            : Array.from(String(seed)).reduce(
+                (acc, ch) => acc + ch.charCodeAt(0),
+                0
+            );
+    return GRADIENTS[Math.abs(n) % GRADIENTS.length];
+}
+
+function initialOf(text: string) {
+    const clean = (text || "").trim();
+    return clean ? clean.charAt(0) : "؟";
+}
+
+function formatNumber(raw: string): string {
+    if (!raw) return "";
+    let str = String(raw).replace(/,/g, "").trim();
+    if (!str) return "";
+    const neg = str.startsWith("-");
+    if (neg) str = str.slice(1);
+    const parts = str.split(".");
+    const intPart = parts[0].replace(/[^\d]/g, "");
+    const decPart = parts.length > 1 ? parts[1].replace(/[^\d]/g, "") : undefined;
+    const formattedInt = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    let out = formattedInt;
+    if (decPart !== undefined) out += "." + decPart;
+    return (neg ? "-" : "") + out;
+}
+
+function parseNumber(raw: string): number {
+    if (!raw) return NaN;
+    const cleaned = String(raw).replace(/,/g, "").trim();
+    return cleaned === "" ? NaN : Number(cleaned);
+}
+
 function extractError(error: unknown, fallback: string) {
     const data = (
-        error as {
-            response?: {
-                data?: Record<string, unknown> | string;
-            };
-        }
+        error as { response?: { data?: Record<string, unknown> | string } }
     )?.response?.data;
-
     if (!data) return fallback;
-
     if (typeof data === "string") return data;
-
     for (const key of [
         "detail",
         "message",
@@ -70,57 +123,23 @@ function extractError(error: unknown, fallback: string) {
         "maximum_stock",
         "non_field_errors",
     ]) {
-        const value = data[key];
-
-        if (typeof value === "string") return value;
-
-        if (Array.isArray(value) && value.length) {
-            return String(value[0]);
-        }
+        const v = data[key];
+        if (typeof v === "string") return v;
+        if (Array.isArray(v) && v.length) return String(v[0]);
     }
-
     return fallback;
 }
 
 function getUnitDataKey(unitType: string) {
-    const normalized = unitType.trim().toLowerCase();
-
-    if (
-        normalized === "weight" ||
-        normalized === "kg" ||
-        normalized === "gram"
-    ) {
-        return "weight_unit_data";
-    }
-
-    if (
-        normalized === "length" ||
-        normalized === "meter" ||
-        normalized === "metre"
-    ) {
-        return "length_unit_data";
-    }
-
-    if (
-        normalized === "volume" ||
-        normalized === "liter" ||
-        normalized === "litre"
-    ) {
-        return "volume_unit_data";
-    }
-
-    if (
-        normalized === "count" ||
-        normalized === "piece" ||
-        normalized === "unit"
-    ) {
-        return "count_unit_data";
-    }
-
-    return `${normalized}_unit_data`;
+    const n = unitType.trim().toLowerCase();
+    if (["weight", "kg", "gram"].includes(n)) return "weight_unit_data";
+    if (["length", "meter", "metre"].includes(n)) return "length_unit_data";
+    if (["volume", "liter", "litre"].includes(n)) return "volume_unit_data";
+    if (["count", "piece", "unit"].includes(n)) return "count_unit_data";
+    return `${n}_unit_data`;
 }
 
-function getUnitOptions() {
+function getUnitOptions(): Option[] {
     return [
         { value: "count", label: "عددی" },
         { value: "weight", label: "وزنی" },
@@ -128,6 +147,305 @@ function getUnitOptions() {
         { value: "volume", label: "حجمی" },
     ];
 }
+
+/* ------------------------------ FloatingInput ------------------------------ */
+
+interface FloatingInputProps
+    extends InputHTMLAttributes<HTMLInputElement> {
+    label: string;
+    id: string;
+    numeric?: boolean;
+    onValueChange?: (value: string) => void;
+}
+
+const FloatingInput = forwardRef<HTMLInputElement, FloatingInputProps>(
+    (
+        { label, id, className = "", numeric = false, onValueChange, ...props },
+        ref
+    ) => {
+        function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
+            const raw = e.target.value;
+            const next = numeric ? formatNumber(raw) : raw;
+            if (onValueChange) onValueChange(next);
+            props.onChange?.(e);
+        }
+
+        return (
+            <div className="relative mx-0">
+                <input
+                    ref={ref}
+                    id={id}
+                    placeholder=" "
+                    type="text"
+                    inputMode={numeric ? "decimal" : undefined}
+                    autoComplete="new-password"
+                    onChange={handleChange}
+                    className={`peer w-full border border-gray-200 rounded-4xl px-5 py-3.5 text-sm text-black outline-none transition-all duration-200 focus:border-gray-400 dark:border-white/[0.08] dark:bg-white/[0.04] dark:text-white dark:focus:border-blue-500 ${className}`}
+                    {...props}
+                />
+                <label
+                    htmlFor={id}
+                    className="absolute right-5 top-1/2 -translate-y-1/2 text-sm text-gray-400 pointer-events-none transition-all duration-200 bg-white px-1.5 rounded peer-focus:top-0 peer-focus:text-xs peer-focus:text-gray-500 peer-[:not(:placeholder-shown)]:top-0 peer-[:not(:placeholder-shown)]:text-xs peer-[:not(:placeholder-shown)]:text-gray-500 dark:bg-[#0f172a]"
+                >
+                    {label}
+                </label>
+            </div>
+        );
+    }
+);
+FloatingInput.displayName = "FloatingInput";
+
+/* ------------------------------ NiceSelect ------------------------------ */
+
+function NiceSelect({
+    label,
+    options,
+    value,
+    onChange,
+    disabled,
+    emptyText,
+}: {
+    label: string;
+    options: Option[];
+    value: string;
+    onChange: (value: string) => void;
+    disabled?: boolean;
+    emptyText: string;
+}) {
+    const [open, setOpen] = useState(false);
+    const [query, setQuery] = useState("");
+    const [mounted, setMounted] = useState(false);
+    const [coords, setCoords] = useState({ top: 0, left: 0, width: 0 });
+
+    const triggerRef = useRef<HTMLButtonElement>(null);
+    const panelRef = useRef<HTMLDivElement>(null);
+
+    const selected = useMemo(
+        () => options.find((o) => o.value === value),
+        [options, value]
+    );
+
+    useEffect(() => setMounted(true), []);
+
+    useLayoutEffect(() => {
+        if (!open || !triggerRef.current) return;
+        function update() {
+            const r = triggerRef.current!.getBoundingClientRect();
+            setCoords({ top: r.bottom, left: r.left, width: r.width });
+        }
+        update();
+        window.addEventListener("resize", update);
+        window.addEventListener("scroll", update, true);
+        return () => {
+            window.removeEventListener("resize", update);
+            window.removeEventListener("scroll", update, true);
+        };
+    }, [open]);
+
+    useEffect(() => {
+        if (!open) return;
+        function handler(e: MouseEvent) {
+            const t = e.target as Node;
+            if (
+                triggerRef.current?.contains(t) ||
+                panelRef.current?.contains(t)
+            )
+                return;
+            setOpen(false);
+        }
+        document.addEventListener("mousedown", handler);
+        return () => document.removeEventListener("mousedown", handler);
+    }, [open]);
+
+    useEffect(() => {
+        if (!open) setQuery("");
+    }, [open]);
+
+    useEffect(() => {
+        if (disabled) setOpen(false);
+    }, [disabled]);
+
+    const visible = useMemo(() => {
+        const q = query.trim().toLowerCase();
+        return q
+            ? options.filter((o) => o.label.toLowerCase().includes(q))
+            : options;
+    }, [options, query]);
+
+    return (
+        <div className="relative">
+            <button
+                ref={triggerRef}
+                type="button"
+                disabled={disabled}
+                onClick={() => !disabled && setOpen((v) => !v)}
+                className={`flex h-12 w-full items-center gap-2.5 rounded-4xl border px-3 text-right transition-all duration-200 ${open
+                        ? "border-blue-500 bg-blue-50/50 dark:border-blue-500/50 dark:bg-blue-500/[0.06]"
+                        : "border-gray-200 bg-white hover:border-gray-300 dark:border-white/[0.08] dark:bg-white/[0.03] dark:hover:border-white/[0.12]"
+                    } ${disabled ? "pointer-events-none opacity-40" : "cursor-pointer"}`}
+            >
+                {selected ? (
+                    <span
+                        className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br text-[12px] font-extrabold text-white ${gradientOf(
+                            selected.value
+                        )}`}
+                    >
+                        {initialOf(selected.label)}
+                    </span>
+                ) : (
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gray-100 dark:bg-white/[0.06]">
+                        <ChevronDown size={13} className="text-gray-400" />
+                    </span>
+                )}
+
+                <span className="min-w-0 flex-1">
+                    <span
+                        className={`block truncate text-[12.5px] font-bold ${selected
+                                ? "text-gray-900 dark:text-white"
+                                : "text-gray-400"
+                            }`}
+                    >
+                        {selected?.label || label}
+                    </span>
+                </span>
+
+                {!disabled && (
+                    <motion.span
+                        animate={{ rotate: open ? 180 : 0 }}
+                        transition={{ duration: 0.2 }}
+                    >
+                        <ChevronDown size={14} className="shrink-0 text-gray-400" />
+                    </motion.span>
+                )}
+            </button>
+
+            {mounted &&
+                createPortal(
+                    <AnimatePresence>
+                        {open && !disabled && (
+                            <motion.div
+                                ref={panelRef}
+                                initial={{ opacity: 0, y: -6, scale: 0.97 }}
+                                animate={{ opacity: 1, y: 0, scale: 1 }}
+                                exit={{ opacity: 0, y: -4, scale: 0.97 }}
+                                transition={{
+                                    type: "spring",
+                                    damping: 24,
+                                    stiffness: 340,
+                                }}
+                                style={{
+                                    position: "fixed",
+                                    top: coords.top + 4,
+                                    left: coords.left,
+                                    width: coords.width,
+                                    zIndex: 100,
+                                    transformOrigin: "top center",
+                                }}
+                                className="overflow-hidden rounded-[1.5rem] border border-gray-100 bg-white shadow-xl shadow-black/5 dark:border-white/[0.08] dark:bg-[#0f172a] dark:shadow-black/40"
+                            >
+                                {options.length > 5 && (
+                                    <div className="border-b border-gray-100 px-3 py-2.5 dark:border-white/[0.06]">
+                                        <div className="flex items-center gap-2 rounded-xl bg-gray-50 px-3 py-2 dark:bg-white/[0.04]">
+                                            <Search
+                                                size={13}
+                                                className="shrink-0 text-gray-400"
+                                            />
+                                            <input
+                                                autoFocus
+                                                value={query}
+                                                onChange={(e) =>
+                                                    setQuery(e.target.value)
+                                                }
+                                                placeholder="جستجو..."
+                                                className="w-full bg-transparent text-[12px] font-semibold text-gray-900 outline-none placeholder:text-gray-400 dark:text-white"
+                                            />
+                                        </div>
+                                    </div>
+                                )}
+
+                                <div
+                                    className="max-h-48 p-1.5"
+                                    style={{ scrollbarWidth: "thin" }}
+                                >
+                                    {visible.length === 0 ? (
+                                        <p className="py-6 text-center text-[12px] text-gray-400">
+                                            {emptyText}
+                                        </p>
+                                    ) : (
+                                        visible.map((o, i) => {
+                                            const active = o.value === value;
+                                            return (
+                                                <motion.button
+                                                    key={o.value}
+                                                    type="button"
+                                                    initial={{
+                                                        opacity: 0,
+                                                        x: 6,
+                                                    }}
+                                                    animate={{
+                                                        opacity: 1,
+                                                        x: 0,
+                                                    }}
+                                                    transition={{
+                                                        delay: i * 0.02,
+                                                    }}
+                                                    onClick={() => {
+                                                        onChange(o.value);
+                                                        setOpen(false);
+                                                    }}
+                                                    className={`flex w-full items-center gap-2.5 rounded-2xl px-2.5 py-2 text-right transition-colors ${active
+                                                            ? "bg-blue-50 dark:bg-blue-500/10"
+                                                            : "hover:bg-gray-50 dark:hover:bg-white/[0.04]"
+                                                        }`}
+                                                >
+                                                    <span
+                                                        className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br text-[12px] font-extrabold text-white ${gradientOf(
+                                                            o.value
+                                                        )}`}
+                                                    >
+                                                        {initialOf(o.label)}
+                                                    </span>
+
+                                                    <span className="min-w-0 flex-1">
+                                                        <span
+                                                            className={`block truncate text-[12.5px] font-bold ${active
+                                                                    ? "text-blue-600 dark:text-blue-400"
+                                                                    : "text-gray-900 dark:text-white"
+                                                                }`}
+                                                        >
+                                                            {o.label}
+                                                        </span>
+                                                        {o.sub && (
+                                                            <span className="mt-0.5 block truncate text-[10.5px] text-gray-400">
+                                                                {o.sub}
+                                                            </span>
+                                                        )}
+                                                    </span>
+
+                                                    {active && (
+                                                        <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-600">
+                                                            <Check
+                                                                size={11}
+                                                                className="text-white"
+                                                                strokeWidth={3}
+                                                            />
+                                                        </span>
+                                                    )}
+                                                </motion.button>
+                                            );
+                                        })
+                                    )}
+                                </div>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>,
+                    document.body
+                )}
+        </div>
+    );
+}
+
+/* ============================== component ============================== */
 
 export default function WarehouseEmployeeProductWizardModal({
     isOpen,
@@ -140,12 +458,8 @@ export default function WarehouseEmployeeProductWizardModal({
     const [step, setStep] = useState<Step>(1);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
-    const [createdProduct, setCreatedProduct] = useState<ApiProduct | null>(
-        null
-    );
-    const [createdStock, setCreatedStock] = useState<
-        ApiStockInfo | undefined
-    >();
+    const [createdProduct, setCreatedProduct] = useState<ApiProduct | null>(null);
+    const [createdStock, setCreatedStock] = useState<ApiStockInfo>();
     const [selectedStaff, setSelectedStaff] = useState("");
 
     const [form, setForm] = useState<FormState>({
@@ -161,13 +475,11 @@ export default function WarehouseEmployeeProductWizardModal({
 
     useEffect(() => {
         if (!isOpen) return;
-
         setStep(1);
         setLoading(false);
         setError("");
         setCreatedProduct(null);
         setCreatedStock(undefined);
-
         setSelectedStaff(
             performedById != null
                 ? String(performedById)
@@ -175,7 +487,6 @@ export default function WarehouseEmployeeProductWizardModal({
                     ? String(staff[0].id)
                     : ""
         );
-
         setForm({
             name: "",
             salePrice: "",
@@ -188,14 +499,8 @@ export default function WarehouseEmployeeProductWizardModal({
         });
     }, [isOpen, performedById, staff]);
 
-    function updateField<K extends keyof FormState>(
-        field: K,
-        value: FormState[K]
-    ) {
-        setForm((prev) => ({
-            ...prev,
-            [field]: value,
-        }));
+    function updateField<K extends keyof FormState>(field: K, value: FormState[K]) {
+        setForm((prev) => ({ ...prev, [field]: value }));
         setError("");
     }
 
@@ -204,150 +509,73 @@ export default function WarehouseEmployeeProductWizardModal({
     }
 
     function validateStepOne() {
-        if (!form.name.trim()) {
-            setError("نام محصول را وارد کنید");
-            return false;
-        }
-
-        if (!form.salePrice) {
-            setError("قیمت فروش را وارد کنید");
-            return false;
-        }
-
-        const salePrice = Number(form.salePrice);
-
-        if (!Number.isFinite(salePrice) || salePrice < 0) {
-            setError("قیمت فروش معتبر نیست");
-            return false;
-        }
-
-        if (!form.category) {
-            setError("دسته‌بندی را انتخاب کنید");
-            return false;
-        }
-
-        if (!form.unitType) {
-            setError("واحد محصول را انتخاب کنید");
-            return false;
-        }
-
+        if (!form.name.trim()) return setError("نام محصول را وارد کنید"), false;
+        if (!form.salePrice) return setError("قیمت فروش را وارد کنید"), false;
+        const salePrice = parseNumber(form.salePrice);
+        if (!Number.isFinite(salePrice) || salePrice < 0)
+            return setError("قیمت فروش معتبر نیست"), false;
+        if (!form.category) return setError("دسته‌بندی را انتخاب کنید"), false;
+        if (!form.unitType) return setError("واحد محصول را انتخاب کنید"), false;
         return true;
     }
 
     function validateStepTwo() {
-        if (!form.quantityPerUnit) {
-            setError("مقدار واحد را وارد کنید");
-            return false;
-        }
-
-        const value = Number(form.quantityPerUnit);
-
-        if (!Number.isFinite(value) || value <= 0) {
-            setError("مقدار واحد معتبر نیست");
-            return false;
-        }
-
+        if (!form.quantityPerUnit) return setError("مقدار واحد را وارد کنید"), false;
+        const value = parseNumber(form.quantityPerUnit);
+        if (!Number.isFinite(value) || value <= 0)
+            return setError("مقدار واحد معتبر نیست"), false;
         return true;
     }
 
     function validateStepThree() {
-        if (!selectedStaff) {
-            setError("ثبت‌کننده موجودی را انتخاب کنید");
-            return false;
-        }
-
-        if (!form.quantity) {
-            setError("موجودی فعلی را وارد کنید");
-            return false;
-        }
-
-        if (!form.minimumStock) {
-            setError("حداقل موجودی را وارد کنید");
-            return false;
-        }
-
-        if (!form.maximumStock) {
-            setError("حداکثر موجودی را وارد کنید");
-            return false;
-        }
-
-        const quantity = Number(form.quantity);
-        const minimum = Number(form.minimumStock);
-        const maximum = Number(form.maximumStock);
-
-        if (
-            !Number.isFinite(quantity) ||
-            !Number.isFinite(minimum) ||
-            !Number.isFinite(maximum)
-        ) {
-            setError("مقادیر موجودی معتبر نیستند");
-            return false;
-        }
-
-        if (quantity < 0 || minimum < 0 || maximum < 0) {
-            setError("مقادیر موجودی نمی‌توانند منفی باشند");
-            return false;
-        }
-
-        if (minimum > maximum) {
-            setError("حداقل موجودی نمی‌تواند بیشتر از حداکثر موجودی باشد");
-            return false;
-        }
-
-        if (quantity > maximum) {
-            setError("موجودی فعلی نمی‌تواند بیشتر از حداکثر موجودی باشد");
-            return false;
-        }
-
+        if (!selectedStaff) return setError("اطلاعات ثبت موجودی کامل نیست"), false;
+        if (!form.quantity) return setError("موجودی فعلی را وارد کنید"), false;
+        if (!form.minimumStock) return setError("حداقل موجودی را وارد کنید"), false;
+        if (!form.maximumStock) return setError("حداکثر موجودی را وارد کنید"), false;
+        const quantity = parseNumber(form.quantity);
+        const minimum = parseNumber(form.minimumStock);
+        const maximum = parseNumber(form.maximumStock);
+        if (![quantity, minimum, maximum].every(Number.isFinite))
+            return setError("مقادیر موجودی معتبر نیستند"), false;
+        if (quantity < 0 || minimum < 0 || maximum < 0)
+            return setError("مقادیر موجودی نمی‌توانند منفی باشند"), false;
+        if (minimum > maximum)
+            return setError("حداقل موجودی نمی‌تواند بیشتر از حداکثر موجودی باشد"), false;
+        if (quantity > maximum)
+            return setError("موجودی فعلی نمی‌تواند بیشتر از حداکثر موجودی باشد"), false;
         return true;
     }
 
     async function createProduct() {
         if (!validateStepTwo()) return;
-
         setLoading(true);
         setError("");
-
         try {
             const unitType = form.unitType as ApiProduct["unit_type"];
-
             const initPayload: ApiProductInitDraft = {
                 name: form.name.trim(),
-                sale_price: Number(form.salePrice),
+                sale_price: parseNumber(form.salePrice),
                 category: Number(form.category),
                 unit_type: unitType,
             };
-
             const initResponse = await axiosInstance.post<ApiProduct>(
                 "/warehouse/api/v1/products/create-Init/",
                 initPayload
             );
-
             const product = initResponse.data;
-            const unitKey = getUnitDataKey(form.unitType);
-
             const unitData: ApiUnitData = {
-                quantity_per_unit: Number(form.quantityPerUnit),
+                quantity_per_unit: parseNumber(form.quantityPerUnit),
             };
-
             const createPayload: Record<string, unknown> = {
-                name: form.name.trim(),
-                sale_price: Number(form.salePrice),
-                category: Number(form.category),
-                unit_type: unitType,
-                [unitKey]: unitData,
+                ...initPayload,
+                [getUnitDataKey(form.unitType)]: unitData,
             };
-
             const createResponse = await axiosInstance.post<ApiProduct>(
                 "/warehouse/api/v1/products/create/",
                 createPayload
             );
-
             const finalProduct =
-                createResponse.data?.id != null
-                    ? createResponse.data
-                    : product;
-
+                createResponse.data?.id != null ? createResponse.data : product;
             setCreatedProduct(finalProduct);
             setStep(3);
         } catch (err) {
@@ -358,28 +586,21 @@ export default function WarehouseEmployeeProductWizardModal({
     }
 
     async function createInitialStock() {
-        if (!createdProduct) {
-            setError("محصول ایجاد نشده است");
-            return;
-        }
-
+        if (!createdProduct) return setError("محصول ایجاد نشده است");
         if (!validateStepThree()) return;
-
         setLoading(true);
         setError("");
-
         try {
             const response = await axiosInstance.post<ApiStockInfo>(
                 "/warehouse/api/v1/process/stock/initial/",
                 {
                     product_id: createdProduct.id,
                     performed_by_id: Number(selectedStaff),
-                    quantity: Number(form.quantity),
-                    minimum_stock: Number(form.minimumStock),
-                    maximum_stock: Number(form.maximumStock),
+                    quantity: parseNumber(form.quantity),
+                    minimum_stock: parseNumber(form.minimumStock),
+                    maximum_stock: parseNumber(form.maximumStock),
                 }
             );
-
             setCreatedStock(response.data);
             setStep(4);
             onCreated(createdProduct, response.data);
@@ -394,39 +615,40 @@ export default function WarehouseEmployeeProductWizardModal({
         if (step === 1) {
             if (!validateStepOne()) return;
             setStep(2);
-            return;
-        }
-
-        if (step === 2) {
+        } else if (step === 2) {
             void createProduct();
-            return;
-        }
-
-        if (step === 3) {
+        } else if (step === 3) {
             void createInitialStock();
         }
     }
 
-    const isDark =
-        typeof document !== "undefined" &&
-        document.documentElement.classList.contains("dark");
+    const categoryOptions: Option[] = useMemo(
+        () =>
+            categories.map((item) => ({
+                value: String(item.id),
+                label: item.name,
+            })),
+        [categories]
+    );
 
-    const surface = isDark ? "#0f172a" : "#ffffff";
-    const border = isDark
-        ? "rgba(255,255,255,.07)"
-        : "rgba(15,23,42,.07)";
-    const text = isDark ? "#f8fafc" : "#172033";
-    const muted = isDark ? "#94a3b8" : "#64748b";
-    const input = isDark
-        ? "rgba(255,255,255,.04)"
-        : "rgba(15,23,42,.025)";
+    const staffOptions: Option[] = useMemo(
+        () =>
+            staff.map((s) => {
+                const a = s as unknown as {
+                    full_name?: string;
+                    username?: string;
+                    role?: string;
+                };
+                return {
+                    value: String(s.id),
+                    label: a.full_name || a.username || `کارمند ${s.id}`,
+                    sub: a.role || undefined,
+                };
+            }),
+        [staff]
+    );
 
-    const steps = [
-        { number: 1, label: "اطلاعات پایه" },
-        { number: 2, label: "واحد محصول" },
-        { number: 3, label: "موجودی" },
-        { number: 4, label: "تکمیل" },
-    ];
+    const steps = [1, 2, 3];
 
     return (
         <AnimatePresence>
@@ -436,56 +658,38 @@ export default function WarehouseEmployeeProductWizardModal({
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                     onClick={closeModal}
-                    className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/50 px-4 py-6 backdrop-blur-md"
+                    className="fixed inset-0 z-[80] flex items-center justify-center px-4"
+                    style={{
+                        background: "rgba(0,0,0,0.45)",
+                        backdropFilter: "blur(3px)",
+                    }}
                 >
                     <motion.div
-                        initial={{ opacity: 0, y: 24, scale: 0.98 }}
-                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                        exit={{ opacity: 0, y: 24, scale: 0.98 }}
-                        transition={{ duration: 0.25 }}
+                        initial={{ opacity: 0, y: 16 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 16 }}
+                        transition={{ duration: 0.35, ease: "easeOut" }}
                         onClick={(e) => e.stopPropagation()}
                         dir="rtl"
-                        className="w-full max-w-xl overflow-hidden rounded-[2rem] border shadow-2xl"
-                        style={{
-                            background: surface,
-                            borderColor: border,
-                        }}
+                        className="flex max-h-[90vh] w-full max-w-md flex-col rounded-[2rem] border border-gray-100 bg-white shadow-sm dark:border-white/[0.06] dark:bg-[#0f172a]"
                     >
-                        <div className="flex items-center justify-between px-7 pb-5 pt-7">
+                        <div className="flex shrink-0 items-center justify-between px-8 pb-5 pt-7">
                             <div className="flex items-center gap-3">
-                                <div
-                                    className="flex h-11 w-11 items-center justify-center rounded-2xl"
-                                    style={{
-                                        background:
-                                            "linear-gradient(135deg,rgba(99,102,241,.14),rgba(139,92,246,.12))",
-                                    }}
-                                >
+                                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50 dark:bg-blue-500/10">
                                     {step === 4 ? (
-                                        <Check
-                                            size={21}
-                                            className="text-indigo-500"
-                                        />
+                                        <Check size={15} className="text-blue-500" />
                                     ) : (
-                                        <PackagePlus
-                                            size={21}
-                                            className="text-indigo-500"
-                                        />
+                                        <PackagePlus size={15} className="text-blue-500" />
                                     )}
                                 </div>
-
                                 <div>
-                                    <h2
-                                        className="text-[15px] font-extrabold"
-                                        style={{ color: text }}
-                                    >
-                                        افزودن محصول جدید
-                                    </h2>
-
-                                    <p
-                                        className="mt-1 text-[12px]"
-                                        style={{ color: muted }}
-                                    >
-                                        ایجاد محصول و ثبت موجودی اولیه
+                                    <h3 className="text-[14px] font-extrabold text-gray-900 dark:text-white">
+                                        {step === 4 ? "تکمیل شد" : "افزودن محصول جدید"}
+                                    </h3>
+                                    <p className="mt-0.5 text-[11px] text-gray-400">
+                                        {step === 4
+                                            ? "محصول و موجودی اولیه ثبت شد"
+                                            : "ایجاد محصول و ثبت موجودی اولیه"}
                                     </p>
                                 </div>
                             </div>
@@ -494,485 +698,291 @@ export default function WarehouseEmployeeProductWizardModal({
                                 type="button"
                                 onClick={closeModal}
                                 disabled={loading}
-                                className="flex h-9 w-9 items-center justify-center rounded-xl transition disabled:opacity-40"
-                                style={{
-                                    background: isDark
-                                        ? "rgba(255,255,255,.05)"
-                                        : "rgba(15,23,42,.05)",
-                                    color: muted,
-                                }}
+                                className="flex h-8 w-8 items-center justify-center rounded-xl bg-gray-100 text-gray-400 transition-colors hover:text-gray-600 disabled:opacity-40 dark:bg-white/[0.05] dark:hover:text-gray-300"
                             >
-                                <X size={17} />
+                                <X size={15} />
                             </button>
                         </div>
 
-                        <div className="px-7 pb-6">
-                            <div className="flex items-center gap-2">
-                                {steps.map((item, index) => {
-                                    const active = step === item.number;
-                                    const completed = step > item.number;
-
-                                    return (
+                        {step < 4 && (
+                            <div className="shrink-0 px-8 pb-4">
+                                <div className="flex items-center gap-1.5">
+                                    {steps.map((n) => (
                                         <div
-                                            key={item.number}
-                                            className="flex min-w-0 flex-1 items-center"
-                                        >
-                                            <div className="flex min-w-0 items-center gap-2">
-                                                <div
-                                                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[11px] font-extrabold transition-all"
-                                                    style={{
-                                                        background:
-                                                            active || completed
-                                                                ? "linear-gradient(135deg,#6366f1,#8b5cf6)"
-                                                                : isDark
-                                                                    ? "rgba(255,255,255,.06)"
-                                                                    : "rgba(15,23,42,.05)",
-                                                        color:
-                                                            active || completed
-                                                                ? "#fff"
-                                                                : muted,
-                                                    }}
-                                                >
-                                                    {completed ? (
-                                                        <Check size={14} />
-                                                    ) : (
-                                                        item.number
-                                                    )}
-                                                </div>
+                                            key={n}
+                                            className="h-1 flex-1 rounded-full transition-all duration-300"
+                                            style={{
+                                                background:
+                                                    step >= n
+                                                        ? "linear-gradient(90deg,#3b82f6,#60a5fa)"
+                                                        : "rgba(0,0,0,0.07)",
+                                            }}
+                                        />
+                                    ))}
+                                </div>
+                            </div>
+                        )}
 
-                                                <span
-                                                    className="hidden truncate text-[10px] font-bold sm:block"
-                                                    style={{
-                                                        color:
-                                                            active || completed
-                                                                ? text
-                                                                : muted,
-                                                    }}
-                                                >
-                                                    {item.label}
-                                                </span>
+                        <div className="flex-1  px-8 pb-2">
+                            <div className="flex flex-col gap-3">
+                                <AnimatePresence>
+                                    {error && (
+                                        <motion.div
+                                            initial={{ opacity: 0, y: 6 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            exit={{ opacity: 0, y: 4 }}
+                                            className="flex items-start gap-2.5 rounded-2xl bg-red-50 px-3.5 py-3 dark:bg-red-500/10"
+                                        >
+                                            <X
+                                                size={14}
+                                                className="mt-0.5 shrink-0 text-red-500"
+                                            />
+                                            <p className="flex-1 text-[11.5px] font-semibold leading-5 text-red-500 dark:text-red-400">
+                                                {error}
+                                            </p>
+                                            <button
+                                                type="button"
+                                                onClick={() => setError("")}
+                                                className="shrink-0 text-red-400 transition-colors hover:text-red-600"
+                                            >
+                                                <X size={13} />
+                                            </button>
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
+
+                                <AnimatePresence mode="wait">
+                                    {step === 1 && (
+                                        <motion.div
+                                            key="step-1"
+                                            initial={{ opacity: 0, x: 12 }}
+                                            animate={{ opacity: 1, x: 0 }}
+                                            exit={{ opacity: 0, x: -12 }}
+                                            transition={{ duration: 0.2 }}
+                                            className="flex flex-col gap-3"
+                                        >
+                                            <FloatingInput
+                                                id="product-name"
+                                                label="نام محصول"
+                                                value={form.name}
+                                                onValueChange={(v) =>
+                                                    updateField("name", v)
+                                                }
+                                                disabled={loading}
+                                            />
+
+                                            <div className="grid grid-cols-2 gap-3">
+                                                <FloatingInput
+                                                    id="product-sale-price"
+                                                    label="قیمت فروش"
+                                                    numeric
+                                                    dir="ltr"
+                                                    value={form.salePrice}
+                                                    onValueChange={(v) =>
+                                                        updateField("salePrice", v)
+                                                    }
+                                                    disabled={loading}
+                                                />
+
+                                                <NiceSelect
+                                                    label="دسته‌بندی"
+                                                    emptyText="دسته‌بندی‌ای یافت نشد"
+                                                    value={form.category}
+                                                    options={categoryOptions}
+                                                    disabled={loading}
+                                                    onChange={(v) =>
+                                                        updateField("category", v)
+                                                    }
+                                                />
+                                            </div>
+                                        </motion.div>
+                                    )}
+
+                                    {step === 2 && (
+                                        <motion.div
+                                            key="step-2"
+                                            initial={{ opacity: 0, x: 12 }}
+                                            animate={{ opacity: 1, x: 0 }}
+                                            exit={{ opacity: 0, x: -12 }}
+                                            transition={{ duration: 0.2 }}
+                                            className="flex flex-col gap-3"
+                                        >
+                                            <NiceSelect
+                                                label="واحد محصول"
+                                                emptyText="واحدی یافت نشد"
+                                                value={form.unitType}
+                                                options={getUnitOptions()}
+                                                disabled={loading}
+                                                onChange={(v) =>
+                                                    updateField("unitType", v)
+                                                }
+                                            />
+
+                                            <FloatingInput
+                                                id="quantity-per-unit"
+                                                label="مقدار در هر واحد"
+                                                numeric
+                                                dir="ltr"
+                                                value={form.quantityPerUnit}
+                                                onValueChange={(v) =>
+                                                    updateField("quantityPerUnit", v)
+                                                }
+                                                disabled={loading}
+                                            />
+                                        </motion.div>
+                                    )}
+
+                                    {step === 3 && (
+                                        <motion.div
+                                            key="step-3"
+                                            initial={{ opacity: 0, x: 12 }}
+                                            animate={{ opacity: 1, x: 0 }}
+                                            exit={{ opacity: 0, x: -12 }}
+                                            transition={{ duration: 0.2 }}
+                                            className="flex flex-col gap-3"
+                                        >
+                                            <FloatingInput
+                                                id="current-stock"
+                                                label="موجودی فعلی"
+                                                numeric
+                                                dir="ltr"
+                                                value={form.quantity}
+                                                onValueChange={(v) =>
+                                                    updateField("quantity", v)
+                                                }
+                                                disabled={loading}
+                                            />
+
+                                            <div className="grid grid-cols-2 gap-3">
+                                                <FloatingInput
+                                                    id="minimum-stock"
+                                                    label="حداقل موجودی"
+                                                    numeric
+                                                    dir="ltr"
+                                                    value={form.minimumStock}
+                                                    onValueChange={(v) =>
+                                                        updateField("minimumStock", v)
+                                                    }
+                                                    disabled={loading}
+                                                />
+                                                <FloatingInput
+                                                    id="maximum-stock"
+                                                    label="حداکثر موجودی"
+                                                    numeric
+                                                    dir="ltr"
+                                                    value={form.maximumStock}
+                                                    onValueChange={(v) =>
+                                                        updateField("maximumStock", v)
+                                                    }
+                                                    disabled={loading}
+                                                />
                                             </div>
 
-                                            {index < steps.length - 1 && (
-                                                <div
-                                                    className="mx-2 h-px flex-1"
-                                                    style={{
-                                                        background:
-                                                            step > item.number
-                                                                ? "#6366f1"
-                                                                : border,
-                                                    }}
+                                            {staffOptions.length > 1 && (
+                                                <NiceSelect
+                                                    label="ثبت‌کننده"
+                                                    emptyText="کارمندی یافت نشد"
+                                                    value={selectedStaff}
+                                                    options={staffOptions}
+                                                    disabled={loading}
+                                                    onChange={(v) =>
+                                                        setSelectedStaff(v)
+                                                    }
                                                 />
                                             )}
-                                        </div>
-                                    );
-                                })}
+                                        </motion.div>
+                                    )}
+
+                                    {step === 4 && (
+                                        <motion.div
+                                            key="step-4"
+                                            initial={{ opacity: 0, scale: 0.97 }}
+                                            animate={{ opacity: 1, scale: 1 }}
+                                            className="flex flex-col items-center py-8 text-center"
+                                        >
+                                            <div className="mb-5 flex h-20 w-20 items-center justify-center rounded-[1.75rem] bg-emerald-50 dark:bg-emerald-500/10">
+                                                <Check
+                                                    size={38}
+                                                    className="text-emerald-500"
+                                                    strokeWidth={3}
+                                                />
+                                            </div>
+
+                                            <h3 className="text-[15px] font-extrabold text-gray-900 dark:text-white">
+                                                محصول با موفقیت ایجاد شد
+                                            </h3>
+
+                                            <p className="mt-2 max-w-sm text-[12px] leading-6 text-gray-400">
+                                                محصول{" "}
+                                                <span className="font-bold text-gray-700 dark:text-gray-200">
+                                                    {createdProduct?.name}
+                                                </span>{" "}
+                                                ایجاد شد و موجودی اولیه آن نیز ثبت گردید.
+                                            </p>
+
+                                            {createdStock && (
+                                                <div className="mt-5 rounded-2xl bg-gray-50 px-5 py-3 text-[12px] font-bold text-gray-700 dark:bg-white/[0.04] dark:text-gray-200">
+                                                    موجودی اولیه:{" "}
+                                                    {formatNumber(
+                                                        String(createdStock.current_quantity)
+                                                    )}
+                                                </div>
+                                            )}
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
                             </div>
                         </div>
 
-                        <div className="px-7 pb-7">
-                            {step === 1 && (
-                                <motion.div
-                                    initial={{ opacity: 0, x: 10 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    className="space-y-4"
+                        <div className="flex shrink-0 items-center gap-2 px-8 pb-7 pt-5">
+                            {step > 1 && step < 4 && (
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setError("");
+                                        setStep((prev) => (prev - 1) as Step);
+                                    }}
+                                    disabled={loading}
+                                    className="flex h-11 items-center justify-center gap-1.5 rounded-full border border-gray-100 bg-gray-50 px-5 text-[12.5px] font-bold text-gray-500 transition-colors hover:text-gray-700 disabled:opacity-40 dark:border-white/[0.06] dark:bg-white/[0.03] dark:text-white/50 dark:hover:text-white/80"
                                 >
-                                    <input
-                                        value={form.name}
-                                        onChange={(e) =>
-                                            updateField(
-                                                "name",
-                                                e.target.value
-                                            )
-                                        }
-                                        placeholder="نام محصول"
-                                        disabled={loading}
-                                        className="h-12 w-full rounded-2xl border px-4 text-[13px] font-medium outline-none"
-                                        style={{
-                                            background: input,
-                                            borderColor: border,
-                                            color: text,
-                                        }}
-                                    />
-
-                                    <div className="grid grid-cols-2 gap-3">
-                                        <input
-                                            type="number"
-                                            min="0"
-                                            step="any"
-                                            value={form.salePrice}
-                                            onChange={(e) =>
-                                                updateField(
-                                                    "salePrice",
-                                                    e.target.value
-                                                )
-                                            }
-                                            placeholder="قیمت فروش"
-                                            disabled={loading}
-                                            dir="ltr"
-                                            className="h-12 w-full rounded-2xl border px-4 text-[13px] font-medium outline-none"
-                                            style={{
-                                                background: input,
-                                                borderColor: border,
-                                                color: text,
-                                            }}
-                                        />
-
-                                        <select
-                                            value={form.category}
-                                            onChange={(e) =>
-                                                updateField(
-                                                    "category",
-                                                    e.target.value
-                                                )
-                                            }
-                                            disabled={loading}
-                                            className="h-12 w-full appearance-none rounded-2xl border px-4 text-[13px] font-medium outline-none"
-                                            style={{
-                                                background: input,
-                                                borderColor: border,
-                                                color: form.category
-                                                    ? text
-                                                    : muted,
-                                            }}
-                                        >
-                                            <option value="" disabled>
-                                                انتخاب دسته‌بندی
-                                            </option>
-
-                                            {categories.map((category) => (
-                                                <option
-                                                    key={category.id}
-                                                    value={category.id}
-                                                >
-                                                    {category.name}
-                                                </option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                </motion.div>
+                                    <ArrowRight size={14} />
+                                    قبل
+                                </button>
                             )}
 
-                            {step === 2 && (
-                                <motion.div
-                                    initial={{ opacity: 0, x: 10 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    className="space-y-4"
+                            {step < 4 && (
+                                <motion.button
+                                    type="button"
+                                    onClick={handleNext}
+                                    disabled={loading}
+                                    whileTap={{ scale: 0.97 }}
+                                    className="flex h-11 flex-1 items-center justify-center gap-2 rounded-full bg-blue-600 text-[12.5px] font-bold text-white transition-colors hover:bg-blue-500 disabled:opacity-40"
                                 >
-                                    <div
-                                        className="rounded-2xl border p-4"
-                                        style={{
-                                            background: input,
-                                            borderColor: border,
-                                        }}
-                                    >
-                                        <div className="mb-3 flex items-center gap-2">
-                                            <Boxes
-                                                size={16}
-                                                className="text-indigo-500"
-                                            />
-                                            <span
-                                                className="text-[12px] font-bold"
-                                                style={{ color: text }}
-                                            >
-                                                واحد محصول
-                                            </span>
-                                        </div>
-
-                                        <div className="grid grid-cols-2 gap-3">
-                                            {getUnitOptions().map((unit) => {
-                                                const active =
-                                                    form.unitType ===
-                                                    unit.value;
-
-                                                return (
-                                                    <button
-                                                        key={unit.value}
-                                                        type="button"
-                                                        onClick={() =>
-                                                            updateField(
-                                                                "unitType",
-                                                                unit.value
-                                                            )
-                                                        }
-                                                        disabled={loading}
-                                                        className="rounded-2xl border px-4 py-3 text-right transition"
-                                                        style={{
-                                                            background: active
-                                                                ? "rgba(99,102,241,.1)"
-                                                                : "transparent",
-                                                            borderColor: active
-                                                                ? "rgba(99,102,241,.45)"
-                                                                : border,
-                                                            color: active
-                                                                ? "#6366f1"
-                                                                : text,
-                                                        }}
-                                                    >
-                                                        <div className="text-[12px] font-bold">
-                                                            {unit.label}
-                                                        </div>
-
-                                                        <div
-                                                            className="mt-1 text-[10px]"
-                                                            style={{
-                                                                color: muted,
-                                                            }}
-                                                        >
-                                                            {unit.value}
-                                                        </div>
-                                                    </button>
-                                                );
-                                            })}
-                                        </div>
-                                    </div>
-
-                                    <input
-                                        type="number"
-                                        min="0.0001"
-                                        step="any"
-                                        value={form.quantityPerUnit}
-                                        onChange={(e) =>
-                                            updateField(
-                                                "quantityPerUnit",
-                                                e.target.value
-                                            )
-                                        }
-                                        placeholder="مقدار در هر واحد"
-                                        disabled={loading}
-                                        dir="ltr"
-                                        className="h-12 w-full rounded-2xl border px-4 text-[13px] font-medium outline-none"
-                                        style={{
-                                            background: input,
-                                            borderColor: border,
-                                            color: text,
-                                        }}
-                                    />
-                                </motion.div>
-                            )}
-
-                            {step === 3 && (
-                                <motion.div
-                                    initial={{ opacity: 0, x: 10 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    className="space-y-4"
-                                >
-                                    <select
-                                        value={selectedStaff}
-                                        onChange={(e) =>
-                                            setSelectedStaff(e.target.value)
-                                        }
-                                        disabled={
-                                            loading || Boolean(performedById)
-                                        }
-                                        className="h-12 w-full appearance-none rounded-2xl border px-4 text-[13px] font-medium outline-none disabled:opacity-60"
-                                        style={{
-                                            background: input,
-                                            borderColor: border,
-                                            color: text,
-                                        }}
-                                    >
-                                        <option value="" disabled>
-                                            انتخاب ثبت‌کننده موجودی
-                                        </option>
-
-                                        {staff.map((item) => (
-                                            <option
-                                                key={item.id}
-                                                value={item.id}
-                                            >
-                                                {item.full_name}
-                                            </option>
-                                        ))}
-                                    </select>
-
-                                    <input
-                                        type="number"
-                                        min="0"
-                                        step="any"
-                                        value={form.quantity}
-                                        onChange={(e) =>
-                                            updateField(
-                                                "quantity",
-                                                e.target.value
-                                            )
-                                        }
-                                        placeholder="موجودی فعلی"
-                                        disabled={loading}
-                                        dir="ltr"
-                                        className="h-12 w-full rounded-2xl border px-4 text-[13px] font-medium outline-none"
-                                        style={{
-                                            background: input,
-                                            borderColor: border,
-                                            color: text,
-                                        }}
-                                    />
-
-                                    <div className="grid grid-cols-2 gap-3">
-                                        <input
-                                            type="number"
-                                            min="0"
-                                            step="any"
-                                            value={form.minimumStock}
-                                            onChange={(e) =>
-                                                updateField(
-                                                    "minimumStock",
-                                                    e.target.value
-                                                )
-                                            }
-                                            placeholder="حداقل موجودی"
-                                            disabled={loading}
-                                            dir="ltr"
-                                            className="h-12 w-full rounded-2xl border px-4 text-[13px] font-medium outline-none"
-                                            style={{
-                                                background: input,
-                                                borderColor: border,
-                                                color: text,
-                                            }}
-                                        />
-
-                                        <input
-                                            type="number"
-                                            min="0"
-                                            step="any"
-                                            value={form.maximumStock}
-                                            onChange={(e) =>
-                                                updateField(
-                                                    "maximumStock",
-                                                    e.target.value
-                                                )
-                                            }
-                                            placeholder="حداکثر موجودی"
-                                            disabled={loading}
-                                            dir="ltr"
-                                            className="h-12 w-full rounded-2xl border px-4 text-[13px] font-medium outline-none"
-                                            style={{
-                                                background: input,
-                                                borderColor: border,
-                                                color: text,
-                                            }}
-                                        />
-                                    </div>
-                                </motion.div>
+                                    {loading ? (
+                                        <Loader size={15} className="animate-spin" />
+                                    ) : (
+                                        <>
+                                            {step === 2
+                                                ? "ایجاد محصول"
+                                                : step === 3
+                                                    ? "ثبت موجودی"
+                                                    : "ادامه"}
+                                            <ArrowLeft size={14} />
+                                        </>
+                                    )}
+                                </motion.button>
                             )}
 
                             {step === 4 && (
-                                <motion.div
-                                    initial={{ opacity: 0, scale: 0.97 }}
-                                    animate={{ opacity: 1, scale: 1 }}
-                                    className="flex flex-col items-center py-8 text-center"
+                                <motion.button
+                                    type="button"
+                                    onClick={onClose}
+                                    whileTap={{ scale: 0.97 }}
+                                    className="flex h-11 w-full items-center justify-center rounded-full bg-blue-600 text-[12.5px] font-bold text-white transition-colors hover:bg-blue-500"
                                 >
-                                    <div className="mb-5 flex h-20 w-20 items-center justify-center rounded-[1.75rem] bg-indigo-500/10">
-                                        <Check
-                                            size={38}
-                                            className="text-indigo-500"
-                                        />
-                                    </div>
-
-                                    <h3
-                                        className="text-[16px] font-extrabold"
-                                        style={{ color: text }}
-                                    >
-                                        محصول با موفقیت ایجاد شد
-                                    </h3>
-
-                                    <p
-                                        className="mt-2 max-w-sm text-[12px] leading-6"
-                                        style={{ color: muted }}
-                                    >
-                                        محصول {createdProduct?.name} ایجاد شد و
-                                        موجودی اولیه آن نیز ثبت گردید.
-                                    </p>
-
-                                    {createdStock && (
-                                        <div
-                                            className="mt-5 rounded-2xl border px-5 py-3 text-[12px] font-bold"
-                                            style={{
-                                                background: input,
-                                                borderColor: border,
-                                                color: text,
-                                            }}
-                                        >
-                                            موجودی اولیه:{" "}
-                                            {createdStock.current_quantity}
-                                        </div>
-                                    )}
-                                </motion.div>
+                                    بستن
+                                </motion.button>
                             )}
-
-                            {error && (
-                                <p className="mt-4 text-center text-[12px] font-semibold leading-5 text-red-500">
-                                    {error}
-                                </p>
-                            )}
-
-                            <div className="mt-6 flex gap-3">
-                                {step > 1 && step < 4 && (
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            setError("");
-                                            setStep(
-                                                (prev) => (prev - 1) as Step
-                                            );
-                                        }}
-                                        disabled={loading}
-                                        className="flex h-12 flex-1 items-center justify-center gap-2 rounded-full border text-[12px] font-bold disabled:opacity-50"
-                                        style={{
-                                            borderColor: border,
-                                            color: text,
-                                        }}
-                                    >
-                                        <ArrowRight size={15} />
-                                        مرحله قبل
-                                    </button>
-                                )}
-
-                                {step < 4 && (
-                                    <motion.button
-                                        type="button"
-                                        onClick={handleNext}
-                                        disabled={loading}
-                                        whileTap={{ scale: 0.97 }}
-                                        className="flex h-12 flex-[1.4] items-center justify-center gap-2 rounded-full text-[12px] font-bold text-white disabled:opacity-50"
-                                        style={{
-                                            background:
-                                                "linear-gradient(135deg,#6366f1,#8b5cf6)",
-                                        }}
-                                    >
-                                        {loading ? (
-                                            <Loader
-                                                size={18}
-                                                className="animate-spin"
-                                            />
-                                        ) : (
-                                            <>
-                                                {step === 2
-                                                    ? "ایجاد محصول"
-                                                    : step === 3
-                                                        ? "ثبت موجودی"
-                                                        : "ادامه"}
-                                                <ArrowLeft size={15} />
-                                            </>
-                                        )}
-                                    </motion.button>
-                                )}
-
-                                {step === 4 && (
-                                    <motion.button
-                                        type="button"
-                                        onClick={onClose}
-                                        whileTap={{ scale: 0.97 }}
-                                        className="flex h-12 w-full items-center justify-center rounded-full text-[12px] font-bold text-white"
-                                        style={{
-                                            background:
-                                                "linear-gradient(135deg,#6366f1,#8b5cf6)",
-                                        }}
-                                    >
-                                        بستن
-                                    </motion.button>
-                                )}
-                            </div>
                         </div>
                     </motion.div>
                 </motion.div>
