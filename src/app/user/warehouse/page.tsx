@@ -5,7 +5,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import {
     BellRing, Boxes, ChevronLeft, ChevronRight, ClipboardList,
     LayoutGrid, Loader2, Package, PackagePlus, PackageSearch,
-    ReceiptText, ShieldCheck, ShoppingBag, Plus,
+    ReceiptText, ShieldCheck, ShoppingBag, Plus, FileText,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 
@@ -17,6 +17,8 @@ import WarehouseEmployeeProductWizardModal from "@/components/user/warehouse/War
 import WarehouseEmployeeTaskCard from "@/components/user/warehouse/WarehouseEmployeeTaskCard";
 import WarehouseEmployeeOrderTaskCard from "@/components/user/warehouse/WarehouseEmployeeOrderTaskCard";
 import WarehouseEmployeeStockLedger from "@/components/user/warehouse/Warehouseemployeestockledger";
+import OrderInvoiceCard from "@/components/user/warehouse/OrderInvoiceCard";
+import OrderInvoiceModal from "@/components/user/warehouse/OrderInvoiceModal";
 import AddCategoryModal from "@/components/admin/warehouse/AddCategoryModal";
 import WarehouseCategoryCard from "@/components/admin/warehouse/WarehouseCategoryCard";
 
@@ -24,10 +26,13 @@ import {
     formatDate, formatNumber, getDeadlineDate, getOrderTaskTitle,
     getStatusLabel, getStatusTone, getQuantityFromStock,
     getStockProductName, getStockStatus, PAGE_SIZE, paginate,
+    buildSalesInvoices,
 } from "@/utils/warehouseEmployee";
+import type { SalesInvoice } from "@/utils/warehouseEmployee";
 import useWarehouseEmployee from "@/hooks/useWarehouseEmployee";
 import axiosInstance from "@/lib/axiosInstance";
 import type {
+    ApiArchivedOrderTask,
     ApiOrderTaskDeadline, ApiStockInfo, ApiWarehouseTask,
 } from "@/types/warehouse";
 
@@ -35,7 +40,7 @@ interface AdminCategory { id: number; name: string }
 
 type Tab =
     | "overview" | "products" | "tasks" | "stock" | "transactions"
-    | "orders" | "deadlines" | "ledger" | "categories";
+    | "orders" | "deadlines" | "ledger" | "categories" | "invoices";
 
 const TABS: Array<[Tab, string, React.ComponentType<{ size?: number }>]> = [
     ["overview", "نمای کلی", LayoutGrid],
@@ -47,6 +52,7 @@ const TABS: Array<[Tab, string, React.ComponentType<{ size?: number }>]> = [
     ["deadlines", "مهلت‌ها", BellRing],
     ["ledger", "گردش محصول", BellRing],
     ["categories", "دسته‌بندی‌ها", Package],
+    ["invoices", "فاکتور فروش", FileText],
 ];
 
 const AVATAR_GRADIENTS = [
@@ -119,8 +125,9 @@ function Pagination({ currentPage, totalPages, onPageChange, isDark }: {
     );
 }
 
-function StockCard({ stock, index, isDark, onViewLedger }: {
+function StockCard({ stock, index, isDark, productNames, onViewLedger }: {
     stock: ApiStockInfo; index: number; isDark: boolean;
+    productNames?: Record<number, string>;
     onViewLedger?: (productId: number) => void;
 }) {
     const [hovered, setHovered] = useState(false);
@@ -339,6 +346,10 @@ export default function WarehouseEmployeePage() {
     const [adminLoading, setAdminLoading] = useState(false);
     const [showCategoryModal, setShowCategoryModal] = useState(false);
 
+    const [archivedTasks, setArchivedTasks] = useState<ApiArchivedOrderTask[]>([]);
+    const [archiveLoading, setArchiveLoading] = useState(false);
+    const [selectedInvoice, setSelectedInvoice] = useState<SalesInvoice | null>(null);
+
     useEffect(() => setTaskItems(myTasks), [myTasks]);
     useEffect(() => setCurrentPage(1), [tab]);
 
@@ -354,11 +365,49 @@ export default function WarehouseEmployeePage() {
         }
     }, []);
 
+    const fetchArchive = useCallback(async () => {
+        try {
+            setArchiveLoading(true);
+            const res = await axiosInstance.get(
+                "/warehouse/api/v1/order_task_archive/"
+            );
+            const data = Array.isArray(res.data)
+                ? res.data
+                : Array.isArray(res.data?.results)
+                    ? res.data.results
+                    : Array.isArray(res.data?.data)
+                        ? res.data.data
+                        : [];
+            setArchivedTasks(data);
+        } catch {
+            setArchivedTasks([]);
+        } finally {
+            setArchiveLoading(false);
+        }
+    }, []);
+
     useEffect(() => {
         if (tab === "categories") fetchCategories();
     }, [tab, fetchCategories]);
 
+    useEffect(() => {
+        if (tab === "invoices") fetchArchive();
+    }, [tab, fetchArchive]);
+
     const stockByProduct = useMemo(() => new Map(stockInfos.map(i => [i.product, i])), [stockInfos]);
+
+    const productNames = useMemo(
+        () => Object.fromEntries(products.map(p => [p.id, p.name])),
+        [products]
+    );
+
+    const initialQuantityByProduct = useMemo(
+        () =>
+            Object.fromEntries(
+                stockInfos.map((s) => [s.product, Number(s.initial_quantity ?? 0)])
+            ),
+        [stockInfos]
+    );
 
     const pendingOrderTasks = useMemo(
         () => orderTasks.filter(t => !["completed", "cancelled"].includes(String(t.status ?? "").toLowerCase())),
@@ -376,6 +425,15 @@ export default function WarehouseEmployeePage() {
     const paginatedOrders = useMemo(() => paged(orderTasks), [orderTasks, currentPage]);
     const paginatedDeadlines = useMemo(() => paged(orderTaskDeadlines), [orderTaskDeadlines, currentPage]);
     const paginatedCategories = useMemo(() => paged(adminCategories), [adminCategories, currentPage]);
+
+    const salesInvoices = useMemo(
+        () => buildSalesInvoices(archivedTasks),
+        [archivedTasks]
+    );
+    const paginatedInvoices = useMemo(
+        () => paged(salesInvoices),
+        [salesInvoices, currentPage]
+    );
 
     const handleTaskUpdated = useCallback((u: ApiWarehouseTask) => {
         setTaskItems(c => c.map(t => t.id === u.id ? u : t));
@@ -445,11 +503,11 @@ export default function WarehouseEmployeePage() {
         orders: pendingOrderTasks.length,
         deadlines: orderTaskDeadlines.length,
         categories: adminCategories.length,
+        invoices: salesInvoices.length,
     };
 
     return (
         <div dir="rtl" className="flex min-h-screen flex-col gap-6 p-6">
-            {/* Header */}
             <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-start gap-3">
                     <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl"
@@ -471,7 +529,6 @@ export default function WarehouseEmployeePage() {
                 </motion.button>
             </div>
 
-            {/* Tabs */}
             <div className="flex flex-wrap gap-2 rounded-2xl p-1.5"
                 style={{ background: isDark ? "rgba(255,255,255,.04)" : "rgba(15,23,42,.04)" }}>
                 {TABS.map(([id, label, Icon]) => {
@@ -631,7 +688,8 @@ export default function WarehouseEmployeePage() {
                                 {paginatedStock.items.length
                                     ? paginatedStock.items.map((stock, index) => (
                                         <StockCard key={stock.id} stock={stock} index={index}
-                                            isDark={isDark} onViewLedger={handleViewLedger} />
+                                            isDark={isDark} productNames={productNames}
+                                            onViewLedger={handleViewLedger} />
                                     ))
                                     : renderEmpty("موجودی‌ای برای نمایش وجود ندارد")}
                             </div>
@@ -644,8 +702,12 @@ export default function WarehouseEmployeePage() {
                         <>
                             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                                 {paginatedTransactions.items.length
-                                    ? paginatedTransactions.items.map(t => (
-                                        <WarehouseEmployeeTransactionCard key={t.id} transaction={t} />
+                                    ? paginatedTransactions.items.map((t) => (
+                                        <WarehouseEmployeeTransactionCard
+                                            key={t.id}
+                                            transaction={t}
+                                            initialQuantity={initialQuantityByProduct[t.product] ?? 0}
+                                        />
                                     ))
                                     : renderEmpty("تراکنشی برای نمایش وجود ندارد")}
                             </div>
@@ -729,6 +791,60 @@ export default function WarehouseEmployeePage() {
                             )}
                         </div>
                     )}
+
+                    {tab === "invoices" && (
+                        <div className="space-y-5">
+                            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                                <div className="flex items-start gap-3">
+                                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl"
+                                        style={{ background: isDark ? "rgba(99,102,241,0.14)" : "rgba(99,102,241,0.08)" }}>
+                                        <FileText size={18} className="text-indigo-500" />
+                                    </div>
+                                    <div>
+                                        <h2 className="text-[14px] font-extrabold text-gray-900 dark:text-white">فاکتورهای فروش</h2>
+                                        <p className="mt-1 text-[11.5px] text-gray-500 dark:text-gray-400">
+                                            فاکتورهای صادر شده بر اساس سفارش‌های آرشیو شده
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <motion.button type="button" whileTap={{ scale: 0.97 }} onClick={fetchArchive} disabled={archiveLoading}
+                                    className="flex h-10 items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-4 text-[12.5px] font-bold text-white transition-colors hover:bg-indigo-700 disabled:opacity-50">
+                                    <Loader2 size={14} className={archiveLoading ? "animate-spin" : ""} />
+                                    بروزرسانی
+                                </motion.button>
+                            </div>
+
+                            {archiveLoading ? (
+                                <div className="flex items-center justify-center py-20">
+                                    <Loader2 size={22} className="animate-spin" style={{ color: "#6366f1" }} />
+                                </div>
+                            ) : (
+                                <>
+                                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                                        {paginatedInvoices.items.length
+                                            ? paginatedInvoices.items.map(
+                                                (inv: SalesInvoice, index: number) => (
+                                                    <OrderInvoiceCard
+                                                        key={inv.orderTaskId}
+                                                        invoice={inv}
+                                                        index={index}
+                                                        onOpen={setSelectedInvoice}
+                                                    />
+                                                )
+                                            )
+                                            : renderEmpty("فاکتوری برای نمایش وجود ندارد")}
+                                    </div>
+                                    <Pagination
+                                        currentPage={currentPage}
+                                        totalPages={paginatedInvoices.totalPages}
+                                        onPageChange={setCurrentPage}
+                                        isDark={isDark}
+                                    />
+                                </>
+                            )}
+                        </div>
+                    )}
                 </motion.div>
             </AnimatePresence>
 
@@ -746,6 +862,12 @@ export default function WarehouseEmployeePage() {
                         onClose={() => setShowCategoryModal(false)} onSuccess={handleCategorySuccess} />
                 )}
             </AnimatePresence>
+
+            <OrderInvoiceModal
+                isOpen={!!selectedInvoice}
+                onClose={() => setSelectedInvoice(null)}
+                invoice={selectedInvoice}
+            />
         </div>
     );
 }

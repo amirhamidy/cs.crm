@@ -44,16 +44,16 @@ export const adminMenuItems: MenuItem[] = [
     label: "انبار",
     href: "/admin/warehouse",
   },
-  // {
-  //   icon: ShoppingCart,
-  //   label: "فرآیند خرید",
-  //   href: "/admin/purchasing",
-  // },
-  // {
-  //   icon: ShieldCheck,
-  //   label: "کنترل کیفی",
-  //   href: "/admin/qualityControl",
-  // },
+  {
+    icon: ShoppingCart,
+    label: "فرآیند خرید",
+    href: "/admin/purchasing",
+  },
+  {
+    icon: ShieldCheck,
+    label: "کنترل کیفی",
+    href: "/admin/qualityControl",
+  },
 
   {
     icon: FolderKanban,
@@ -128,16 +128,16 @@ export const userMenuItems: MenuItem[] = [
     label: "مشتری",
     href: "/user/customer",
   },
-  // {
-  //   icon: ShoppingCart,
-  //   label: "فرآیند خرید",
-  //   href: "/user/purchasing",
-  // },
-  // {
-  //   icon: ShieldCheck,
-  //   label: "کنترل کیفی",
-  //   href: "/user/qualityControl",
-  // },
+  {
+    icon: ShoppingCart,
+    label: "فرآیند خرید",
+    href: "/user/purchasing",
+  },
+  {
+    icon: ShieldCheck,
+    label: "کنترل کیفی",
+    href: "/user/qualityControl",
+  },
   {
     icon: FolderKanban,
     label: "پرونده‌ها",

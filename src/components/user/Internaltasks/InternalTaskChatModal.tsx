@@ -221,13 +221,15 @@ export default function InternalTaskChatModal({
 
                 if (cancelled) return;
 
-                const data =
+                // پشتیبانی از چند ساختار ممکن پاسخ
+                const raw =
                     response.data?.data ??
+                    response.data?.results ??
                     response.data;
 
                 setEmployees(
-                    Array.isArray(data)
-                        ? data.filter(
+                    Array.isArray(raw)
+                        ? raw.filter(
                             (
                                 item,
                             ): item is EmployeeListItem =>
@@ -280,6 +282,12 @@ export default function InternalTaskChatModal({
         [employees],
     );
 
+    /**
+     * نام ارسال‌کننده:
+     * 1) تطابق username با لیست employees
+     * 2) تطابق full_name با لیست employees
+     * 3) در نهایت خود مقدار created_by
+     */
     const senderName = useMemo(() => {
         const value = task.created_by?.trim();
 
@@ -297,28 +305,43 @@ export default function InternalTaskChatModal({
                 employee.full_name.trim() === value,
         );
 
-        return (
-            employeeByFullNameMatch?.full_name?.trim() || ""
-        );
+        if (employeeByFullNameMatch?.full_name?.trim()) {
+            return employeeByFullNameMatch.full_name.trim();
+        }
+
+        return value;
     }, [
         task.created_by,
         employees,
         employeeByUsername,
     ]);
 
+    /**
+     * نام دریافت‌کننده‌ها:
+     * 1) مستقیم از full_name داخل task.assigned_to
+     * 2) در صورت نبود، از لیست employees با تطابق id
+     */
     const assignedEmployees = useMemo<EmployeeRef[]>(
         () =>
             Array.isArray(task.assigned_to)
                 ? task.assigned_to
                     .map((assigned) => {
+                        const directName =
+                            assigned.full_name?.trim();
+
+                        if (directName) {
+                            return {
+                                id: Number(assigned.id),
+                                full_name: directName,
+                            };
+                        }
+
                         const employee =
                             employeeById.get(
                                 Number(assigned.id),
                             );
 
-                        if (
-                            !employee?.full_name?.trim()
-                        ) {
+                        if (!employee?.full_name?.trim()) {
                             return null;
                         }
 
@@ -1008,14 +1031,14 @@ export default function InternalTaskChatModal({
                                                                         scale: 1,
                                                                     }}
                                                                     className={`flex ${isMine
-                                                                            ? "justify-start"
-                                                                            : "justify-end"
+                                                                        ? "justify-start"
+                                                                        : "justify-end"
                                                                         }`}
                                                                 >
                                                                     <div
                                                                         className={`flex max-w-[88%] items-end gap-2 ${isMine
-                                                                                ? "flex-row"
-                                                                                : "flex-row-reverse"
+                                                                            ? "flex-row"
+                                                                            : "flex-row-reverse"
                                                                             }`}
                                                                     >
                                                                         {isMine && (
@@ -1026,8 +1049,8 @@ export default function InternalTaskChatModal({
 
                                                                         <div
                                                                             className={`rounded-[22px] px-3.5 py-3 ${isMine
-                                                                                    ? "rounded-br-[7px] bg-blue-500 text-white shadow-[0_8px_25px_rgba(59,130,246,0.16)]"
-                                                                                    : "rounded-bl-[7px] border border-black/[0.05] bg-white text-black/75 shadow-[0_5px_20px_rgba(0,0,0,0.035)] dark:border-white/[0.06] dark:bg-[#18191c] dark:text-white/75"
+                                                                                ? "rounded-br-[7px] bg-blue-500 text-white shadow-[0_8px_25px_rgba(59,130,246,0.16)]"
+                                                                                : "rounded-bl-[7px] border border-black/[0.05] bg-white text-black/75 shadow-[0_5px_20px_rgba(0,0,0,0.035)] dark:border-white/[0.06] dark:bg-[#18191c] dark:text-white/75"
                                                                                 }`}
                                                                         >
                                                                             {isMine && (
@@ -1055,8 +1078,8 @@ export default function InternalTaskChatModal({
                                                                             {attachment.file && (
                                                                                 <div
                                                                                     className={`mt-2.5 overflow-hidden rounded-2xl ${isMine
-                                                                                            ? "bg-white/10"
-                                                                                            : "bg-black/[0.035] dark:bg-white/[0.045]"
+                                                                                        ? "bg-white/10"
+                                                                                        : "bg-black/[0.035] dark:bg-white/[0.045]"
                                                                                         }`}
                                                                                 >
                                                                                     {image ? (
@@ -1083,8 +1106,8 @@ export default function InternalTaskChatModal({
                                                                                         <div className="flex min-w-[220px] items-center gap-3 p-3">
                                                                                             <div
                                                                                                 className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${isMine
-                                                                                                        ? "bg-white/15"
-                                                                                                        : "bg-blue-500/[0.08] text-blue-500"
+                                                                                                    ? "bg-white/15"
+                                                                                                    : "bg-blue-500/[0.08] text-blue-500"
                                                                                                     }`}
                                                                                             >
                                                                                                 {pdf ? (
@@ -1111,8 +1134,8 @@ export default function InternalTaskChatModal({
 
                                                                                                 <span
                                                                                                     className={`mt-1 block text-[8px] ${isMine
-                                                                                                            ? "text-white/55"
-                                                                                                            : "text-black/30 dark:text-white/30"
+                                                                                                        ? "text-white/55"
+                                                                                                        : "text-black/30 dark:text-white/30"
                                                                                                         }`}
                                                                                                 >
                                                                                                     مشاهده فایل
@@ -1127,8 +1150,8 @@ export default function InternalTaskChatModal({
                                                                                                     )
                                                                                                 }
                                                                                                 className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl ${isMine
-                                                                                                        ? "bg-white/10 text-white"
-                                                                                                        : "bg-black/[0.05] text-black/45 dark:bg-white/[0.06] dark:text-white/45"
+                                                                                                    ? "bg-white/10 text-white"
+                                                                                                    : "bg-black/[0.05] text-black/45 dark:bg-white/[0.06] dark:text-white/45"
                                                                                                     }`}
                                                                                             >
                                                                                                 <Download size={14} />
@@ -1141,8 +1164,8 @@ export default function InternalTaskChatModal({
                                                                             {attachment.note && (
                                                                                 <div
                                                                                     className={`mt-1.5 flex items-center justify-end gap-1 ${isMine
-                                                                                            ? "text-white/45"
-                                                                                            : "text-black/25 dark:text-white/25"
+                                                                                        ? "text-white/45"
+                                                                                        : "text-black/25 dark:text-white/25"
                                                                                         }`}
                                                                                 >
                                                                                     {isMine && (
