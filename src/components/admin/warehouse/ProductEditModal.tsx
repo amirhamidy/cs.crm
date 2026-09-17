@@ -6,6 +6,7 @@ import { ArrowDownCircle, ArrowUpCircle, Loader, X } from "lucide-react";
 import type { AxiosError } from "axios";
 import axiosInstance from "@/lib/axiosInstance";
 import {
+    ApiCategory,
     ApiProduct,
     ApiStockTransaction,
     STOCK_OUT_REASON_OPTIONS,
@@ -17,6 +18,7 @@ interface Props {
     isOpen: boolean;
     onClose: () => void;
     product: ApiProduct;
+    categories: ApiCategory[];
     performedById: number | string;
     onCompleted: (transaction: ApiStockTransaction) => void;
 }
@@ -51,6 +53,7 @@ export default function WarehouseEmployeeStockModal({
     const [mode, setMode] = useState<Mode>("in");
     const [quantity, setQuantity] = useState("");
     const [reason, setReason] = useState<StockOutReason>("sale");
+
     const [note, setNote] = useState("");
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
@@ -145,8 +148,8 @@ export default function WarehouseEmployeeStockModal({
                             <div className="flex items-center gap-2.5">
                                 <div
                                     className={`flex h-8 w-8 items-center justify-center rounded-xl ${mode === "in"
-                                            ? "bg-emerald-50 dark:bg-emerald-500/10"
-                                            : "bg-red-50 dark:bg-red-500/10"
+                                        ? "bg-emerald-50 dark:bg-emerald-500/10"
+                                        : "bg-red-50 dark:bg-red-500/10"
                                         }`}
                                 >
                                     {mode === "in" ? (
@@ -303,8 +306,8 @@ export default function WarehouseEmployeeStockModal({
                                 disabled={!canSubmit}
                                 whileTap={{ scale: 0.97 }}
                                 className={`flex items-center justify-center rounded-full py-3 text-[13px] font-bold text-white transition-colors disabled:opacity-50 ${mode === "in"
-                                        ? "bg-emerald-600 hover:bg-emerald-500"
-                                        : "bg-red-600 hover:bg-red-500"
+                                    ? "bg-emerald-600 hover:bg-emerald-500"
+                                    : "bg-red-600 hover:bg-red-500"
                                     }`}
                             >
                                 {loading ? (

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import axiosInstance from "@/lib/axiosInstance";
 import { useCurrentEmployee } from "@/hooks/usecurrentemployee";
+import { useAuthStore } from "@/store/authStore";
 import {
   ApiCategory,
   ApiOrderTask,
@@ -21,6 +22,8 @@ import {
 
 export default function useWarehouseEmployee() {
   const { employee, loading: employeeLoading } = useCurrentEmployee();
+  const userType = useAuthStore((state) => state.userType);
+  const hasHydrated = useAuthStore((state) => state.hasHydrated);
 
   const [categories, setCategories] = useState<ApiCategory[]>([]);
   const [staff, setStaff] = useState<ApiWarehouseStaff[]>([]);
@@ -37,170 +40,7 @@ export default function useWarehouseEmployee() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const loadAll = useCallback(async () => {
-    setError(null);
-    setLoading(true);
-
-    try {
-      const [
-        categoriesRes,
-        staffRes,
-        productsRes,
-        stockRes,
-        transactionsRes,
-        tasksRes,
-        orderTasksRes,
-        deadlinesRes,
-      ] = await Promise.all([
-        axiosInstance
-          .get("/warehouse/api/v1/products/categories/")
-          .catch(() => null),
-        axiosInstance.get("/warehouse/api/v1/staff/").catch(() => null),
-        axiosInstance.get("/warehouse/api/v1/products/").catch(() => null),
-        axiosInstance.get("/warehouse/api/v1/process/stock/").catch(() => null),
-        axiosInstance
-          .get("/warehouse/api/v1/process/transactions/")
-          .catch(() => null),
-        axiosInstance.get("/warehouse/api/v1/task/").catch(() => null),
-        axiosInstance.get("/warehouse/api/v1/order_task/").catch(() => null),
-        axiosInstance
-          .get("/warehouse/api/v1/order_task/deadlines/")
-          .catch(() => null),
-      ]);
-
-      if (
-        !categoriesRes &&
-        !staffRes &&
-        !productsRes &&
-        !stockRes &&
-        !transactionsRes &&
-        !tasksRes &&
-        !orderTasksRes &&
-        !deadlinesRes
-      ) {
-        throw new Error("دریافت اطلاعات انبار با خطا مواجه شد.");
-      }
-
-      setCategories(
-        categoriesRes ? extractList<ApiCategory>(categoriesRes.data) : [],
-      );
-
-      setStaff(staffRes ? extractList<ApiWarehouseStaff>(staffRes.data) : []);
-
-      setProducts(productsRes ? extractList<ApiProduct>(productsRes.data) : []);
-
-      setStockInfos(stockRes ? extractList<ApiStockInfo>(stockRes.data) : []);
-
-      setTransactions(
-        transactionsRes
-          ? extractList<ApiStockTransaction>(transactionsRes.data)
-          : [],
-      );
-
-      setTasks(tasksRes ? extractList<ApiWarehouseTask>(tasksRes.data) : []);
-
-      setOrderTasks(
-        orderTasksRes ? extractList<ApiOrderTask>(orderTasksRes.data) : [],
-      );
-
-      setOrderTaskDeadlines(
-        deadlinesRes
-          ? extractList<ApiOrderTaskDeadline>(deadlinesRes.data)
-          : [],
-      );
-    } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : "دریافت اطلاعات انبار با خطا مواجه شد.",
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  const refresh = useCallback(async () => {
-    setRefreshing(true);
-    setError(null);
-
-    try {
-      const [
-        categoriesRes,
-        staffRes,
-        productsRes,
-        stockRes,
-        transactionsRes,
-        tasksRes,
-        orderTasksRes,
-        deadlinesRes,
-      ] = await Promise.all([
-        axiosInstance
-          .get("/warehouse/api/v1/products/categories/")
-          .catch(() => null),
-        axiosInstance.get("/warehouse/api/v1/staff/").catch(() => null),
-        axiosInstance.get("/warehouse/api/v1/products/").catch(() => null),
-        axiosInstance.get("/warehouse/api/v1/process/stock/").catch(() => null),
-        axiosInstance
-          .get("/warehouse/api/v1/process/transactions/")
-          .catch(() => null),
-        axiosInstance.get("/warehouse/api/v1/task/").catch(() => null),
-        axiosInstance.get("/warehouse/api/v1/order_task/").catch(() => null),
-        axiosInstance
-          .get("/warehouse/api/v1/order_task/deadlines/")
-          .catch(() => null),
-      ]);
-
-      if (categoriesRes) {
-        setCategories(extractList<ApiCategory>(categoriesRes.data));
-      }
-
-      if (staffRes) {
-        setStaff(extractList<ApiWarehouseStaff>(staffRes.data));
-      }
-
-      if (productsRes) {
-        setProducts(extractList<ApiProduct>(productsRes.data));
-      }
-
-      if (stockRes) {
-        setStockInfos(extractList<ApiStockInfo>(stockRes.data));
-      }
-
-      if (transactionsRes) {
-        setTransactions(extractList<ApiStockTransaction>(transactionsRes.data));
-      }
-
-      if (tasksRes) {
-        setTasks(extractList<ApiWarehouseTask>(tasksRes.data));
-      }
-
-      if (orderTasksRes) {
-        setOrderTasks(extractList<ApiOrderTask>(orderTasksRes.data));
-      }
-
-      if (deadlinesRes) {
-        setOrderTaskDeadlines(
-          extractList<ApiOrderTaskDeadline>(deadlinesRes.data),
-        );
-      }
-    } finally {
-      setRefreshing(false);
-    }
-  }, []);
-
-  const refreshOrderTasks = useCallback(async () => {
-    try {
-      const response = await axiosInstance.get("/warehouse/api/v1/order_task/");
-
-      setOrderTasks(extractList<ApiOrderTask>(response.data));
-    } catch {}
-  }, []);
-
-  useEffect(() => {
-    if (!employeeLoading) {
-      loadAll();
-    }
-  }, [employeeLoading, loadAll]);
+  const isAdmin = userType === 1;
 
   const employeeId = useMemo(() => getEmployeeId(employee), [employee]);
 
@@ -209,7 +49,20 @@ export default function useWarehouseEmployee() {
     [staff, employeeId],
   );
 
-  const warehouseAccess = true;
+  const isWarehouseStaff = useMemo(
+    () => Boolean(myStaff?.is_active === true),
+    [myStaff],
+  );
+
+  const warehouseAccess = useMemo(
+    () => isAdmin || isWarehouseStaff,
+    [isAdmin, isWarehouseStaff],
+  );
+
+  const limitedWarehouseAccess = useMemo(
+    () => Boolean(employeeId),
+    [employeeId],
+  );
 
   const myStaffId = useMemo(() => {
     if (!myStaff) {
@@ -223,7 +76,235 @@ export default function useWarehouseEmployee() {
       : null;
   }, [myStaff]);
 
+  const loadFullWarehouseData = useCallback(async () => {
+    const [
+      categoriesRes,
+      productsRes,
+      stockRes,
+      transactionsRes,
+      tasksRes,
+      orderTasksRes,
+      deadlinesRes,
+    ] = await Promise.all([
+      axiosInstance
+        .get("/warehouse/api/v1/products/categories/")
+        .catch(() => null),
+      axiosInstance.get("/warehouse/api/v1/products/").catch(() => null),
+      axiosInstance.get("/warehouse/api/v1/process/stock/").catch(() => null),
+      axiosInstance
+        .get("/warehouse/api/v1/process/transactions/")
+        .catch(() => null),
+      axiosInstance.get("/warehouse/api/v1/task/").catch(() => null),
+      axiosInstance.get("/warehouse/api/v1/order_task/").catch(() => null),
+      axiosInstance
+        .get("/warehouse/api/v1/order_task/deadlines/")
+        .catch(() => null),
+    ]);
+
+    setCategories(
+      categoriesRes ? extractList<ApiCategory>(categoriesRes.data) : [],
+    );
+
+    setProducts(productsRes ? extractList<ApiProduct>(productsRes.data) : []);
+
+    setStockInfos(stockRes ? extractList<ApiStockInfo>(stockRes.data) : []);
+
+    setTransactions(
+      transactionsRes
+        ? extractList<ApiStockTransaction>(transactionsRes.data)
+        : [],
+    );
+
+    setTasks(tasksRes ? extractList<ApiWarehouseTask>(tasksRes.data) : []);
+
+    setOrderTasks(
+      orderTasksRes ? extractList<ApiOrderTask>(orderTasksRes.data) : [],
+    );
+
+    setOrderTaskDeadlines(
+      deadlinesRes ? extractList<ApiOrderTaskDeadline>(deadlinesRes.data) : [],
+    );
+  }, []);
+
+  const loadLimitedWarehouseData = useCallback(async () => {
+    const [productsRes, stockRes, tasksRes, orderTasksRes] =
+      await Promise.all([
+        axiosInstance.get("/warehouse/api/v1/products/").catch(() => null),
+        axiosInstance.get("/warehouse/api/v1/process/stock/").catch(() => null),
+        axiosInstance.get("/warehouse/api/v1/task/").catch(() => null),
+        axiosInstance.get("/warehouse/api/v1/order_task/").catch(() => null),
+      ]);
+
+    setCategories([]);
+    setTransactions([]);
+    setOrderTaskDeadlines([]);
+
+    setProducts(
+      productsRes ? extractList<ApiProduct>(productsRes.data) : [],
+    );
+
+    setStockInfos(
+      stockRes ? extractList<ApiStockInfo>(stockRes.data) : [],
+    );
+
+    setTasks(
+      tasksRes ? extractList<ApiWarehouseTask>(tasksRes.data) : [],
+    );
+
+    setOrderTasks(
+      orderTasksRes ? extractList<ApiOrderTask>(orderTasksRes.data) : [],
+    );
+  }, []);
+
+  const clearWarehouseData = useCallback(() => {
+    setCategories([]);
+    setProducts([]);
+    setStockInfos([]);
+    setTransactions([]);
+    setTasks([]);
+    setOrderTasks([]);
+    setOrderTaskDeadlines([]);
+  }, []);
+
+  const loadAll = useCallback(async () => {
+    if (!hasHydrated || employeeLoading) {
+      return;
+    }
+
+    setError(null);
+    setLoading(true);
+
+    try {
+      const staffResponse = await axiosInstance.get(
+        "/warehouse/api/v1/staff/",
+      );
+
+      const staffList = extractList<ApiWarehouseStaff>(staffResponse.data);
+
+      setStaff(staffList);
+
+      const currentEmployeeId = getEmployeeId(employee);
+
+      const currentStaff = findEmployeeStaff(
+        staffList,
+        currentEmployeeId,
+      );
+
+      const currentIsWarehouseStaff = currentStaff?.is_active === true;
+      const currentHasFullAccess =
+        isAdmin || currentIsWarehouseStaff;
+
+      const currentHasLimitedAccess = Boolean(currentEmployeeId);
+
+      if (!currentHasLimitedAccess) {
+        clearWarehouseData();
+        return;
+      }
+
+      if (currentHasFullAccess) {
+        await loadFullWarehouseData();
+      } else {
+        await loadLimitedWarehouseData();
+      }
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "دریافت اطلاعات انبار با خطا مواجه شد.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, [
+    employee,
+    employeeLoading,
+    hasHydrated,
+    isAdmin,
+    loadFullWarehouseData,
+    loadLimitedWarehouseData,
+    clearWarehouseData,
+  ]);
+
+  const refresh = useCallback(async () => {
+    if (!limitedWarehouseAccess) {
+      return;
+    }
+
+    setRefreshing(true);
+    setError(null);
+
+    try {
+      const staffResponse = await axiosInstance.get(
+        "/warehouse/api/v1/staff/",
+      );
+
+      const staffList = extractList<ApiWarehouseStaff>(
+        staffResponse.data,
+      );
+
+      setStaff(staffList);
+
+      const currentEmployeeId = getEmployeeId(employee);
+
+      const currentStaff = findEmployeeStaff(
+        staffList,
+        currentEmployeeId,
+      );
+
+      const currentHasFullAccess =
+        isAdmin || currentStaff?.is_active === true;
+
+      if (currentHasFullAccess) {
+        await loadFullWarehouseData();
+      } else {
+        await loadLimitedWarehouseData();
+      }
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "به‌روزرسانی اطلاعات انبار انجام نشد.",
+      );
+    } finally {
+      setRefreshing(false);
+    }
+  }, [
+    employee,
+    isAdmin,
+    limitedWarehouseAccess,
+    loadFullWarehouseData,
+    loadLimitedWarehouseData,
+  ]);
+
+  const refreshOrderTasks = useCallback(async () => {
+    if (!limitedWarehouseAccess) {
+      return;
+    }
+
+    try {
+      const response = await axiosInstance.get(
+        "/warehouse/api/v1/order_task/",
+      );
+
+      setOrderTasks(
+        extractList<ApiOrderTask>(response.data),
+      );
+    } catch {}
+  }, [limitedWarehouseAccess]);
+
+  useEffect(() => {
+    if (!hasHydrated || employeeLoading) {
+      return;
+    }
+
+    loadAll();
+  }, [employeeLoading, hasHydrated, loadAll]);
+
   const myTasks = useMemo(() => {
+    if (isAdmin || isWarehouseStaff) {
+      return tasks;
+    }
+
     const currentEmployeeId = Number(employeeId ?? 0);
 
     return tasks.filter((task) => {
@@ -239,14 +320,24 @@ export default function useWarehouseEmployee() {
 
       return Number(assignedTo) === currentEmployeeId;
     });
-  }, [tasks, employeeId]);
+  }, [
+    employeeId,
+    isAdmin,
+    isWarehouseStaff,
+    tasks,
+  ]);
 
   const pendingTasks = useMemo(
     () =>
       myTasks.filter((task) => {
         const status = String(task.status ?? "").toLowerCase();
 
-        return ["pending", "waiting", "created", "assigned"].includes(status);
+        return [
+          "pending",
+          "waiting",
+          "created",
+          "assigned",
+        ].includes(status);
       }),
     [myTasks],
   );
@@ -266,7 +357,11 @@ export default function useWarehouseEmployee() {
       myTasks.filter((task) => {
         const status = String(task.status ?? "").toLowerCase();
 
-        return ["completed", "done", "received"].includes(status);
+        return [
+          "completed",
+          "done",
+          "received",
+        ].includes(status);
       }),
     [myTasks],
   );
@@ -285,7 +380,10 @@ export default function useWarehouseEmployee() {
         );
 
         const minimum = Number(
-          data.minimum_quantity ?? data.min_quantity ?? data.min_stock ?? 0,
+          data.minimum_quantity ??
+            data.min_quantity ??
+            data.min_stock ??
+            0,
         );
 
         return minimum > 0 && current <= minimum;
@@ -300,7 +398,10 @@ export default function useWarehouseEmployee() {
     staff,
     myStaff,
     myStaffId,
+    isAdmin,
+    isWarehouseStaff,
     warehouseAccess,
+    limitedWarehouseAccess,
     categories,
     products,
     stockInfos,
