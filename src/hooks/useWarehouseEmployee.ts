@@ -35,13 +35,11 @@ export default function useWarehouseEmployee() {
   const [orderTaskDeadlines, setOrderTaskDeadlines] = useState<
     ApiOrderTaskDeadline[]
   >([]);
-
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const isAdmin = userType === 1;
-
+  const isAdmin = Number(userType) === 1;
   const employeeId = useMemo(() => getEmployeeId(employee), [employee]);
 
   const myStaff = useMemo(
@@ -49,28 +47,13 @@ export default function useWarehouseEmployee() {
     [staff, employeeId],
   );
 
-  const isWarehouseStaff = useMemo(
-    () => Boolean(myStaff?.is_active === true),
-    [myStaff],
-  );
-
-  const warehouseAccess = useMemo(
-    () => isAdmin || isWarehouseStaff,
-    [isAdmin, isWarehouseStaff],
-  );
-
-  const limitedWarehouseAccess = useMemo(
-    () => Boolean(employeeId),
-    [employeeId],
-  );
+  const isWarehouseStaff = myStaff?.is_active === true;
+  const warehouseAccess = isAdmin || isWarehouseStaff;
+  const limitedWarehouseAccess = isAdmin || Boolean(employeeId);
 
   const myStaffId = useMemo(() => {
-    if (!myStaff) {
-      return null;
-    }
-
+    if (!myStaff) return null;
     const data = myStaff as unknown as Record<string, unknown>;
-
     return typeof data.id === "number" || typeof data.id === "string"
       ? data.id
       : null;
@@ -104,53 +87,36 @@ export default function useWarehouseEmployee() {
     setCategories(
       categoriesRes ? extractList<ApiCategory>(categoriesRes.data) : [],
     );
-
     setProducts(productsRes ? extractList<ApiProduct>(productsRes.data) : []);
-
     setStockInfos(stockRes ? extractList<ApiStockInfo>(stockRes.data) : []);
-
     setTransactions(
       transactionsRes
         ? extractList<ApiStockTransaction>(transactionsRes.data)
         : [],
     );
-
     setTasks(tasksRes ? extractList<ApiWarehouseTask>(tasksRes.data) : []);
-
     setOrderTasks(
       orderTasksRes ? extractList<ApiOrderTask>(orderTasksRes.data) : [],
     );
-
     setOrderTaskDeadlines(
       deadlinesRes ? extractList<ApiOrderTaskDeadline>(deadlinesRes.data) : [],
     );
   }, []);
 
   const loadLimitedWarehouseData = useCallback(async () => {
-    const [productsRes, stockRes, tasksRes, orderTasksRes] =
-      await Promise.all([
-        axiosInstance.get("/warehouse/api/v1/products/").catch(() => null),
-        axiosInstance.get("/warehouse/api/v1/process/stock/").catch(() => null),
-        axiosInstance.get("/warehouse/api/v1/task/").catch(() => null),
-        axiosInstance.get("/warehouse/api/v1/order_task/").catch(() => null),
-      ]);
+    const [productsRes, stockRes, tasksRes, orderTasksRes] = await Promise.all([
+      axiosInstance.get("/warehouse/api/v1/products/").catch(() => null),
+      axiosInstance.get("/warehouse/api/v1/process/stock/").catch(() => null),
+      axiosInstance.get("/warehouse/api/v1/task/").catch(() => null),
+      axiosInstance.get("/warehouse/api/v1/order_task/").catch(() => null),
+    ]);
 
     setCategories([]);
     setTransactions([]);
     setOrderTaskDeadlines([]);
-
-    setProducts(
-      productsRes ? extractList<ApiProduct>(productsRes.data) : [],
-    );
-
-    setStockInfos(
-      stockRes ? extractList<ApiStockInfo>(stockRes.data) : [],
-    );
-
-    setTasks(
-      tasksRes ? extractList<ApiWarehouseTask>(tasksRes.data) : [],
-    );
-
+    setProducts(productsRes ? extractList<ApiProduct>(productsRes.data) : []);
+    setStockInfos(stockRes ? extractList<ApiStockInfo>(stockRes.data) : []);
+    setTasks(tasksRes ? extractList<ApiWarehouseTask>(tasksRes.data) : []);
     setOrderTasks(
       orderTasksRes ? extractList<ApiOrderTask>(orderTasksRes.data) : [],
     );
@@ -167,41 +133,32 @@ export default function useWarehouseEmployee() {
   }, []);
 
   const loadAll = useCallback(async () => {
-    if (!hasHydrated || employeeLoading) {
-      return;
-    }
+    if (!hasHydrated || employeeLoading) return;
 
     setError(null);
     setLoading(true);
 
     try {
-      const staffResponse = await axiosInstance.get(
-        "/warehouse/api/v1/staff/",
-      );
+      if (isAdmin) {
+        await loadFullWarehouseData();
+        return;
+      }
+
+      const staffResponse = await axiosInstance.get("/warehouse/api/v1/staff/");
 
       const staffList = extractList<ApiWarehouseStaff>(staffResponse.data);
-
       setStaff(staffList);
 
       const currentEmployeeId = getEmployeeId(employee);
 
-      const currentStaff = findEmployeeStaff(
-        staffList,
-        currentEmployeeId,
-      );
-
-      const currentIsWarehouseStaff = currentStaff?.is_active === true;
-      const currentHasFullAccess =
-        isAdmin || currentIsWarehouseStaff;
-
-      const currentHasLimitedAccess = Boolean(currentEmployeeId);
-
-      if (!currentHasLimitedAccess) {
+      if (!currentEmployeeId) {
         clearWarehouseData();
         return;
       }
 
-      if (currentHasFullAccess) {
+      const currentStaff = findEmployeeStaff(staffList, currentEmployeeId);
+
+      if (currentStaff?.is_active === true) {
         await loadFullWarehouseData();
       } else {
         await loadLimitedWarehouseData();
@@ -226,35 +183,26 @@ export default function useWarehouseEmployee() {
   ]);
 
   const refresh = useCallback(async () => {
-    if (!limitedWarehouseAccess) {
-      return;
-    }
+    if (!limitedWarehouseAccess) return;
 
     setRefreshing(true);
     setError(null);
 
     try {
-      const staffResponse = await axiosInstance.get(
-        "/warehouse/api/v1/staff/",
-      );
+      if (isAdmin) {
+        await loadFullWarehouseData();
+        return;
+      }
 
-      const staffList = extractList<ApiWarehouseStaff>(
-        staffResponse.data,
-      );
+      const staffResponse = await axiosInstance.get("/warehouse/api/v1/staff/");
 
+      const staffList = extractList<ApiWarehouseStaff>(staffResponse.data);
       setStaff(staffList);
 
       const currentEmployeeId = getEmployeeId(employee);
+      const currentStaff = findEmployeeStaff(staffList, currentEmployeeId);
 
-      const currentStaff = findEmployeeStaff(
-        staffList,
-        currentEmployeeId,
-      );
-
-      const currentHasFullAccess =
-        isAdmin || currentStaff?.is_active === true;
-
-      if (currentHasFullAccess) {
+      if (currentStaff?.is_active === true) {
         await loadFullWarehouseData();
       } else {
         await loadLimitedWarehouseData();
@@ -277,92 +225,61 @@ export default function useWarehouseEmployee() {
   ]);
 
   const refreshOrderTasks = useCallback(async () => {
-    if (!limitedWarehouseAccess) {
-      return;
-    }
+    if (!limitedWarehouseAccess) return;
 
     try {
-      const response = await axiosInstance.get(
-        "/warehouse/api/v1/order_task/",
-      );
-
-      setOrderTasks(
-        extractList<ApiOrderTask>(response.data),
-      );
+      const response = await axiosInstance.get("/warehouse/api/v1/order_task/");
+      setOrderTasks(extractList<ApiOrderTask>(response.data));
     } catch {}
   }, [limitedWarehouseAccess]);
 
   useEffect(() => {
-    if (!hasHydrated || employeeLoading) {
-      return;
-    }
-
+    if (!hasHydrated || employeeLoading) return;
     loadAll();
-  }, [employeeLoading, hasHydrated, loadAll]);
+  }, [hasHydrated, employeeLoading, loadAll]);
 
   const myTasks = useMemo(() => {
-    if (isAdmin || isWarehouseStaff) {
-      return tasks;
-    }
+    if (warehouseAccess) return tasks;
 
     const currentEmployeeId = Number(employeeId ?? 0);
 
     return tasks.filter((task) => {
       const assignedTo = task.assigned_to;
 
-      if (assignedTo === null || assignedTo === undefined) {
-        return true;
-      }
-
-      if (!currentEmployeeId) {
-        return false;
-      }
+      if (assignedTo === null || assignedTo === undefined) return true;
+      if (!currentEmployeeId) return false;
 
       return Number(assignedTo) === currentEmployeeId;
     });
-  }, [
-    employeeId,
-    isAdmin,
-    isWarehouseStaff,
-    tasks,
-  ]);
+  }, [employeeId, warehouseAccess, tasks]);
 
   const pendingTasks = useMemo(
     () =>
-      myTasks.filter((task) => {
-        const status = String(task.status ?? "").toLowerCase();
-
-        return [
-          "pending",
-          "waiting",
-          "created",
-          "assigned",
-        ].includes(status);
-      }),
+      myTasks.filter((task) =>
+        ["pending", "waiting", "created", "assigned"].includes(
+          String(task.status ?? "").toLowerCase(),
+        ),
+      ),
     [myTasks],
   );
 
   const activeTasks = useMemo(
     () =>
-      myTasks.filter((task) => {
-        const status = String(task.status ?? "").toLowerCase();
-
-        return ["in_progress", "processing"].includes(status);
-      }),
+      myTasks.filter((task) =>
+        ["in_progress", "processing"].includes(
+          String(task.status ?? "").toLowerCase(),
+        ),
+      ),
     [myTasks],
   );
 
   const completedTasks = useMemo(
     () =>
-      myTasks.filter((task) => {
-        const status = String(task.status ?? "").toLowerCase();
-
-        return [
-          "completed",
-          "done",
-          "received",
-        ].includes(status);
-      }),
+      myTasks.filter((task) =>
+        ["completed", "done", "received"].includes(
+          String(task.status ?? "").toLowerCase(),
+        ),
+      ),
     [myTasks],
   );
 
@@ -380,10 +297,7 @@ export default function useWarehouseEmployee() {
         );
 
         const minimum = Number(
-          data.minimum_quantity ??
-            data.min_quantity ??
-            data.min_stock ??
-            0,
+          data.minimum_quantity ?? data.min_quantity ?? data.min_stock ?? 0,
         );
 
         return minimum > 0 && current <= minimum;
