@@ -55,8 +55,6 @@ type FormState = {
 
 type Option = { value: string; label: string; sub?: string };
 
-/* ------------------------------ helpers ------------------------------ */
-
 const GRADIENTS = [
     "from-blue-500 to-indigo-500",
     "from-violet-500 to-fuchsia-500",
@@ -148,8 +146,6 @@ function getUnitOptions(): Option[] {
     ];
 }
 
-/* ------------------------------ FloatingInput ------------------------------ */
-
 interface FloatingInputProps
     extends InputHTMLAttributes<HTMLInputElement> {
     label: string;
@@ -194,8 +190,6 @@ const FloatingInput = forwardRef<HTMLInputElement, FloatingInputProps>(
     }
 );
 FloatingInput.displayName = "FloatingInput";
-
-/* ------------------------------ NiceSelect ------------------------------ */
 
 function NiceSelect({
     label,
@@ -280,8 +274,8 @@ function NiceSelect({
                 disabled={disabled}
                 onClick={() => !disabled && setOpen((v) => !v)}
                 className={`flex h-12 w-full items-center gap-2.5 rounded-4xl border px-3 text-right transition-all duration-200 ${open
-                        ? "border-blue-500 bg-blue-50/50 dark:border-blue-500/50 dark:bg-blue-500/[0.06]"
-                        : "border-gray-200 bg-white hover:border-gray-300 dark:border-white/[0.08] dark:bg-white/[0.03] dark:hover:border-white/[0.12]"
+                    ? "border-blue-500 bg-blue-50/50 dark:border-blue-500/50 dark:bg-blue-500/[0.06]"
+                    : "border-gray-200 bg-white hover:border-gray-300 dark:border-white/[0.08] dark:bg-white/[0.03] dark:hover:border-white/[0.12]"
                     } ${disabled ? "pointer-events-none opacity-40" : "cursor-pointer"}`}
             >
                 {selected ? (
@@ -301,8 +295,8 @@ function NiceSelect({
                 <span className="min-w-0 flex-1">
                     <span
                         className={`block truncate text-[12.5px] font-bold ${selected
-                                ? "text-gray-900 dark:text-white"
-                                : "text-gray-400"
+                            ? "text-gray-900 dark:text-white"
+                            : "text-gray-400"
                             }`}
                     >
                         {selected?.label || label}
@@ -394,8 +388,8 @@ function NiceSelect({
                                                         setOpen(false);
                                                     }}
                                                     className={`flex w-full items-center gap-2.5 rounded-2xl px-2.5 py-2 text-right transition-colors ${active
-                                                            ? "bg-blue-50 dark:bg-blue-500/10"
-                                                            : "hover:bg-gray-50 dark:hover:bg-white/[0.04]"
+                                                        ? "bg-blue-50 dark:bg-blue-500/10"
+                                                        : "hover:bg-gray-50 dark:hover:bg-white/[0.04]"
                                                         }`}
                                                 >
                                                     <span
@@ -409,8 +403,8 @@ function NiceSelect({
                                                     <span className="min-w-0 flex-1">
                                                         <span
                                                             className={`block truncate text-[12.5px] font-bold ${active
-                                                                    ? "text-blue-600 dark:text-blue-400"
-                                                                    : "text-gray-900 dark:text-white"
+                                                                ? "text-blue-600 dark:text-blue-400"
+                                                                : "text-gray-900 dark:text-white"
                                                                 }`}
                                                         >
                                                             {o.label}
@@ -445,8 +439,6 @@ function NiceSelect({
     );
 }
 
-/* ============================== component ============================== */
-
 export default function WarehouseEmployeeProductWizardModal({
     isOpen,
     onClose,
@@ -475,6 +467,13 @@ export default function WarehouseEmployeeProductWizardModal({
 
     useEffect(() => {
         if (!isOpen) return;
+
+        console.log("WIZARD OPEN");
+        console.log("WIZARD performedById:", performedById);
+        console.log("WIZARD staff:", staff);
+        console.log("WIZARD staff[0]:", staff[0]);
+        console.log("WIZARD staff[0]?.id:", staff[0]?.id);
+
         setStep(1);
         setLoading(false);
         setError("");
@@ -528,21 +527,32 @@ export default function WarehouseEmployeeProductWizardModal({
     }
 
     function validateStepThree() {
-        if (!selectedStaff) return setError("اطلاعات ثبت موجودی کامل نیست"), false;
+        console.log("WIZARD validateStepThree");
+        console.log("WIZARD performedById:", performedById);
+        console.log("WIZARD selectedStaff:", selectedStaff);
+        console.log("WIZARD staff:", staff);
+        console.log("WIZARD form:", form);
+
         if (!form.quantity) return setError("موجودی فعلی را وارد کنید"), false;
         if (!form.minimumStock) return setError("حداقل موجودی را وارد کنید"), false;
         if (!form.maximumStock) return setError("حداکثر موجودی را وارد کنید"), false;
+
         const quantity = parseNumber(form.quantity);
         const minimum = parseNumber(form.minimumStock);
         const maximum = parseNumber(form.maximumStock);
+
         if (![quantity, minimum, maximum].every(Number.isFinite))
             return setError("مقادیر موجودی معتبر نیستند"), false;
+
         if (quantity < 0 || minimum < 0 || maximum < 0)
             return setError("مقادیر موجودی نمی‌توانند منفی باشند"), false;
+
         if (minimum > maximum)
             return setError("حداقل موجودی نمی‌تواند بیشتر از حداکثر موجودی باشد"), false;
+
         if (quantity > maximum)
             return setError("موجودی فعلی نمی‌تواند بیشتر از حداکثر موجودی باشد"), false;
+
         return true;
     }
 
@@ -550,35 +560,46 @@ export default function WarehouseEmployeeProductWizardModal({
         if (!validateStepTwo()) return;
         setLoading(true);
         setError("");
+
         try {
             const unitType = form.unitType as ApiProduct["unit_type"];
+
             const initPayload: ApiProductInitDraft = {
                 name: form.name.trim(),
                 sale_price: parseNumber(form.salePrice),
                 category: Number(form.category),
                 unit_type: unitType,
             };
+
             const initResponse = await axiosInstance.post<ApiProduct>(
                 "/warehouse/api/v1/products/create-Init/",
                 initPayload
             );
+
             const product = initResponse.data;
+
             const unitData: ApiUnitData = {
                 quantity_per_unit: parseNumber(form.quantityPerUnit),
             };
+
             const createPayload: Record<string, unknown> = {
                 ...initPayload,
                 [getUnitDataKey(form.unitType)]: unitData,
             };
+
             const createResponse = await axiosInstance.post<ApiProduct>(
                 "/warehouse/api/v1/products/create/",
                 createPayload
             );
+
             const finalProduct =
                 createResponse.data?.id != null ? createResponse.data : product;
+
             setCreatedProduct(finalProduct);
             setStep(3);
         } catch (err) {
+            console.log("WIZARD createProduct ERROR:", err);
+            console.log("WIZARD createProduct ERROR RESPONSE:", (err as any)?.response?.data);
             setError(extractError(err, "خطا در ایجاد محصول"));
         } finally {
             setLoading(false);
@@ -586,25 +607,91 @@ export default function WarehouseEmployeeProductWizardModal({
     }
 
     async function createInitialStock() {
-        if (!createdProduct) return setError("محصول ایجاد نشده است");
-        if (!validateStepThree()) return;
+        console.log("WIZARD createInitialStock START");
+        console.log("WIZARD performedById:", performedById);
+        console.log("WIZARD selectedStaff:", selectedStaff);
+        console.log("WIZARD staff:", staff);
+        console.log("WIZARD createdProduct:", createdProduct);
+
+        if (!createdProduct) {
+            console.log("WIZARD STOP: createdProduct is empty");
+            return setError("محصول ایجاد نشده است");
+        }
+
+        if (!validateStepThree()) {
+            console.log("WIZARD STOP: validateStepThree failed");
+            return;
+        }
+
+        const productId = Number(createdProduct.id);
+
+        const performedBy =
+            performedById != null
+                ? Number(performedById)
+                : Number(selectedStaff);
+
+        const quantity = parseNumber(form.quantity);
+        const minimumStock = parseNumber(form.minimumStock);
+        const maximumStock = parseNumber(form.maximumStock);
+
+        console.log("WIZARD FINAL VALUES");
+        console.log("WIZARD productId:", productId);
+        console.log("WIZARD performedBy:", performedBy);
+        console.log("WIZARD quantity:", quantity);
+        console.log("WIZARD minimumStock:", minimumStock);
+        console.log("WIZARD maximumStock:", maximumStock);
+
+        if (!Number.isFinite(productId) || productId <= 0) {
+            console.log("WIZARD STOP: invalid productId");
+            setError("شناسه محصول معتبر نیست");
+            return;
+        }
+
+        if (!Number.isFinite(performedBy) || performedBy <= 0) {
+            console.log("WIZARD STOP: invalid performedBy");
+            setError("ثبت‌کننده موجودی مشخص نیست");
+            return;
+        }
+
         setLoading(true);
         setError("");
+
         try {
+            const payload = {
+                product_id: productId,
+                performed_by_id: performedBy,
+                quantity,
+                minimum_stock: minimumStock,
+                maximum_stock: maximumStock,
+            };
+
+            console.log("WIZARD STOCK POST PAYLOAD:", payload);
+            console.log(
+                "WIZARD STOCK POST URL:",
+                "/warehouse/api/v1/process/stock/initial/"
+            );
+
             const response = await axiosInstance.post<ApiStockInfo>(
                 "/warehouse/api/v1/process/stock/initial/",
-                {
-                    product_id: createdProduct.id,
-                    performed_by_id: Number(selectedStaff),
-                    quantity: parseNumber(form.quantity),
-                    minimum_stock: parseNumber(form.minimumStock),
-                    maximum_stock: parseNumber(form.maximumStock),
-                }
+                payload
             );
+
+            console.log("WIZARD STOCK RESPONSE:", response.data);
+
             setCreatedStock(response.data);
             setStep(4);
             onCreated(createdProduct, response.data);
         } catch (err) {
+            console.log("WIZARD STOCK ERROR:", err);
+            console.log(
+                "WIZARD STOCK ERROR RESPONSE:",
+                (err as any)?.response?.data
+            );
+            console.log(
+                "WIZARD STOCK ERROR STATUS:",
+                (err as any)?.response?.status
+            );
+
             setError(extractError(err, "خطا در ثبت موجودی اولیه"));
         } finally {
             setLoading(false);
@@ -639,6 +726,7 @@ export default function WarehouseEmployeeProductWizardModal({
                     username?: string;
                     role?: string;
                 };
+
                 return {
                     value: String(s.id),
                     label: a.full_name || a.username || `کارمند ${s.id}`,
@@ -682,10 +770,12 @@ export default function WarehouseEmployeeProductWizardModal({
                                         <PackagePlus size={15} className="text-blue-500" />
                                     )}
                                 </div>
+
                                 <div>
                                     <h3 className="text-[14px] font-extrabold text-gray-900 dark:text-white">
                                         {step === 4 ? "تکمیل شد" : "افزودن محصول جدید"}
                                     </h3>
+
                                     <p className="mt-0.5 text-[11px] text-gray-400">
                                         {step === 4
                                             ? "محصول و موجودی اولیه ثبت شد"
@@ -723,7 +813,7 @@ export default function WarehouseEmployeeProductWizardModal({
                             </div>
                         )}
 
-                        <div className="flex-1  px-8 pb-2">
+                        <div className="flex-1 px-8 pb-2">
                             <div className="flex flex-col gap-3">
                                 <AnimatePresence>
                                     {error && (
@@ -737,9 +827,11 @@ export default function WarehouseEmployeeProductWizardModal({
                                                 size={14}
                                                 className="mt-0.5 shrink-0 text-red-500"
                                             />
+
                                             <p className="flex-1 text-[11.5px] font-semibold leading-5 text-red-500 dark:text-red-400">
                                                 {error}
                                             </p>
+
                                             <button
                                                 type="button"
                                                 onClick={() => setError("")}
@@ -865,6 +957,7 @@ export default function WarehouseEmployeeProductWizardModal({
                                                     }
                                                     disabled={loading}
                                                 />
+
                                                 <FloatingInput
                                                     id="maximum-stock"
                                                     label="حداکثر موجودی"

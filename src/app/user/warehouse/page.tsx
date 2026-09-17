@@ -1813,13 +1813,12 @@ export default function WarehouseEmployeePage() {
                 </motion.div>
             </AnimatePresence>
 
+
             {hasFullWarehouseAccess && (
                 <>
                     <WarehouseEmployeeProductWizardModal
                         isOpen={productWizardOpen}
-                        onClose={() =>
-                            setProductWizardOpen(false)
-                        }
+                        onClose={() => setProductWizardOpen(false)}
                         categories={categories}
                         staff={myStaff ? [myStaff] : []}
                         performedById={myStaff?.id ?? null}
@@ -1855,6 +1854,7 @@ export default function WarehouseEmployeePage() {
                     />
                 </>
             )}
+
         </div>
     );
 }
