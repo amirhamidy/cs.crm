@@ -41,7 +41,7 @@ interface Transaction {
     id: number;
     product: number;
     transaction_date?: string | null;
-    transaction_type: "stock_in" | "stock_out" | string;
+    transaction_type: "initial" | "stock_in" | "stock_out" | string;
     quantity_changed?: number | string | null;
     quantity_before?: number | string | null;
     quantity_after?: number | string | null;
@@ -84,20 +84,6 @@ const AVATAR_GRADIENTS = [
     ["#f59e0b", "#ef4444"],
 ];
 
-function getPerformedByName(stock: StockInfo | null): string | null {
-    if (!stock) return null;
-    const performedBy = stock.performed_by;
-    if (performedBy && typeof performedBy === "object") {
-        return performedBy.full_name ?? null;
-    }
-    return stock.performed_by_name ?? null;
-}
-
-function getStockCreatedAt(stock: StockInfo | null): string | null {
-    if (!stock) return null;
-    return stock.created_at ?? null;
-}
-
 function getCustomerName(t: Transaction): string | null {
     const directFields = ["customer_name", "buyer_name", "recipient_name"] as const;
 
@@ -108,11 +94,13 @@ function getCustomerName(t: Transaction): string | null {
         }
     }
 
-    const customer = (t as any).customer;
+    const customer = t.customer;
+
     if (customer) {
         if (typeof customer === "string" && customer.trim()) {
             return customer.trim();
         }
+
         if (
             typeof customer === "object" &&
             typeof customer.full_name === "string" &&
@@ -120,6 +108,7 @@ function getCustomerName(t: Transaction): string | null {
         ) {
             return customer.full_name.trim();
         }
+
         if (
             typeof customer === "object" &&
             typeof customer.name === "string" &&
@@ -142,6 +131,7 @@ function getCustomerName(t: Transaction): string | null {
 
     for (const key of Object.keys(t)) {
         const lower = key.toLowerCase();
+
         if (keywords.some((k) => lower.includes(k))) {
             const value = (t as any)[key];
 
@@ -174,7 +164,7 @@ function getCustomerName(t: Transaction): string | null {
 
 function buildDescription(event: LedgerEvent): string {
     if (event.kind === "initial") {
-        return "موجودی اولیه";
+        return "موجودی اول دوره";
     }
 
     const reason = event.reasonLabel?.trim();
@@ -247,30 +237,20 @@ export default function WarehouseEmployeeStockLedger({
     const allEvents = useMemo<LedgerEvent[]>(() => {
         if (selectedProductId == null) return [];
 
-        const events: LedgerEvent[] = [];
-
-        if (selectedStock) {
-            events.push({
-                id: `initial-${selectedStock.id}`,
-                date: getStockCreatedAt(selectedStock),
-                kind: "initial",
-                quantityChanged: null,
-                quantityBefore: null,
-                quantityAfter: Number(selectedStock.initial_quantity ?? 0),
-                performedByName: getPerformedByName(selectedStock),
-            });
-        }
-
-        transactions
+        return transactions
             .filter((t) => t.product === selectedProductId)
-            .forEach((t) => {
-                console.log("TRANSACTION FULL OBJECT:", t);
-                console.log("KEYS:", Object.keys(t));
+            .map((t) => {
+                const kind: EventKind =
+                    t.transaction_type === "initial"
+                        ? "initial"
+                        : t.transaction_type === "stock_in"
+                            ? "in"
+                            : "out";
 
-                events.push({
+                return {
                     id: `tx-${t.id}`,
                     date: t.transaction_date ?? null,
-                    kind: t.transaction_type === "stock_in" ? "in" : "out",
+                    kind,
                     quantityChanged: Number(t.quantity_changed ?? 0),
                     quantityBefore: Number(t.quantity_before ?? 0),
                     quantityAfter: Number(t.quantity_after ?? 0),
@@ -278,15 +258,14 @@ export default function WarehouseEmployeeStockLedger({
                     note: t.note,
                     performedByName: t.performed_by_name ?? null,
                     customerName: getCustomerName(t),
-                });
+                };
+            })
+            .sort((a, b) => {
+                const da = a.date ? new Date(a.date).getTime() : 0;
+                const db = b.date ? new Date(b.date).getTime() : 0;
+                return db - da;
             });
-
-        return events.sort((a, b) => {
-            const da = a.date ? new Date(a.date).getTime() : 0;
-            const db = b.date ? new Date(b.date).getTime() : 0;
-            return db - da;
-        });
-    }, [selectedProductId, selectedStock, transactions]);
+    }, [selectedProductId, transactions]);
 
     const filteredEvents = useMemo(() => {
         if (kindFilter === "all") return allEvents;
@@ -351,6 +330,7 @@ export default function WarehouseEmployeeStockLedger({
                                 >
                                     {product.name?.trim().charAt(0) || "؟"}
                                 </div>
+
                                 <div className="min-w-0 flex-1">
                                     <p
                                         className={`truncate text-sm font-bold ${active
@@ -360,6 +340,7 @@ export default function WarehouseEmployeeStockLedger({
                                     >
                                         {product.name}
                                     </p>
+
                                     <p className="mt-0.5 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
                                         موجودی:{" "}
                                         {formatNumber(
@@ -367,6 +348,7 @@ export default function WarehouseEmployeeStockLedger({
                                         )}
                                     </p>
                                 </div>
+
                                 {active && (
                                     <motion.div
                                         layoutId="activeIndicator"
@@ -400,10 +382,12 @@ export default function WarehouseEmployeeStockLedger({
                                         className="text-indigo-600 dark:text-indigo-400"
                                     />
                                 </div>
+
                                 <div>
                                     <h3 className="text-sm font-black text-slate-900 dark:text-white">
                                         گردش کالا · {selectedProduct.name}
                                     </h3>
+
                                     <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
                                         {allEvents.length} رویداد ثبت شده
                                     </p>
@@ -419,6 +403,7 @@ export default function WarehouseEmployeeStockLedger({
                                     ] as const
                                 ).map(([key, label]) => {
                                     const active = kindFilter === key;
+
                                     return (
                                         <button
                                             key={key}
@@ -453,6 +438,7 @@ export default function WarehouseEmployeeStockLedger({
                                         </th>
                                     </tr>
                                 </thead>
+
                                 <tbody className="divide-y divide-slate-200 dark:divide-white/10">
                                     <AnimatePresence mode="popLayout">
                                         {paginatedEvents.items.length === 0 ? (
@@ -517,13 +503,19 @@ export default function WarehouseEmployeeStockLedger({
                                                                         size={13}
                                                                         className="mt-0.5 shrink-0 text-slate-400"
                                                                     />
+
                                                                     <div className="min-w-0">
                                                                         <span className="line-clamp-2">
                                                                             {description}
                                                                         </span>
+
                                                                         {event.performedByName && (
                                                                             <div className="mt-1 flex items-center gap-1 text-[10px] text-slate-400 dark:text-slate-500">
-                                                                                <User size={10} />
+                                                                                <User
+                                                                                    size={
+                                                                                        10
+                                                                                    }
+                                                                                />
                                                                                 {
                                                                                     event.performedByName
                                                                                 }
@@ -537,7 +529,9 @@ export default function WarehouseEmployeeStockLedger({
                                                                 {isIn ? (
                                                                     <span className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-500/10 px-2 py-1 text-xs font-black text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-400">
                                                                         <Check
-                                                                            size={12}
+                                                                            size={
+                                                                                12
+                                                                            }
                                                                         />
                                                                         {formatNumber(
                                                                             event.quantityChanged ??
@@ -555,7 +549,9 @@ export default function WarehouseEmployeeStockLedger({
                                                                 {isOut ? (
                                                                     <span className="inline-flex items-center gap-1.5 rounded-lg bg-rose-500/10 px-2 py-1 text-xs font-black text-rose-600 dark:bg-rose-500/15 dark:text-rose-400">
                                                                         <Check
-                                                                            size={12}
+                                                                            size={
+                                                                                12
+                                                                            }
                                                                         />
                                                                         {formatNumber(
                                                                             event.quantityChanged ??
@@ -592,6 +588,7 @@ export default function WarehouseEmployeeStockLedger({
                                     صفحه {formatNumber(currentPage)} از{" "}
                                     {formatNumber(paginatedEvents.totalPages)}
                                 </span>
+
                                 <div className="flex items-center gap-2">
                                     <button
                                         type="button"
@@ -603,6 +600,7 @@ export default function WarehouseEmployeeStockLedger({
                                     >
                                         <ChevronRight size={14} />
                                     </button>
+
                                     <button
                                         type="button"
                                         disabled={

@@ -26,6 +26,7 @@ import axiosInstance from "@/lib/axiosInstance";
 import {
     ApiProduct,
     ApiStockTransaction,
+    ApiWarehouseStaff,
     STOCK_OUT_REASON_OPTIONS,
     StockOutReason,
 } from "@/types/warehouse";
@@ -34,14 +35,13 @@ interface Props {
     isOpen: boolean;
     onClose: () => void;
     product: ApiProduct;
-    performedById: number | string;
+    staff: ApiWarehouseStaff[];
+    performedById?: number | string | null;
     onCompleted: (transaction: ApiStockTransaction) => void;
 }
 
 type Mode = "in" | "out";
 type Option = { value: string; label: string; sub?: string };
-
-/* ------------------------------ helpers ------------------------------ */
 
 const GRADIENTS = [
     "from-blue-500 to-indigo-500",
@@ -56,19 +56,16 @@ function gradientOf(seed: string | number) {
     const n =
         typeof seed === "number"
             ? seed
-            : Array.from(String(seed)).reduce(
-                (acc, ch) => acc + ch.charCodeAt(0),
-                0
-            );
+            : Array.from(String(seed)).reduce((a, c) => a + c.charCodeAt(0), 0);
     return GRADIENTS[Math.abs(n) % GRADIENTS.length];
 }
 
-function initialOf(text: string) {
+const initialOf = (text: string) => {
     const clean = (text || "").trim();
     return clean ? clean.charAt(0) : "؟";
-}
+};
 
-function formatNumber(raw: string): string {
+function formatNumber(raw: string) {
     if (!raw) return "";
     let str = String(raw).replace(/,/g, "").trim();
     if (!str) return "";
@@ -76,43 +73,31 @@ function formatNumber(raw: string): string {
     if (neg) str = str.slice(1);
     const parts = str.split(".");
     const intPart = parts[0].replace(/[^\d]/g, "");
-    const decPart = parts.length > 1 ? parts[1].replace(/[^\d]/g, "") : undefined;
-    const formattedInt = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-    let out = formattedInt;
+    const decPart =
+        parts.length > 1 ? parts[1].replace(/[^\d]/g, "") : undefined;
+    let out = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
     if (decPart !== undefined) out += "." + decPart;
     return (neg ? "-" : "") + out;
 }
 
-function parseNumber(raw: string): number {
+const parseNumber = (raw: string) => {
     if (!raw) return NaN;
     const cleaned = String(raw).replace(/,/g, "").trim();
     return cleaned === "" ? NaN : Number(cleaned);
-}
+};
 
 function getErrorMessage(error: unknown) {
     const data = (error as AxiosError<Record<string, unknown>>).response?.data;
     if (!data) return "خطا در ثبت تراکنش انبار";
-    for (const key of [
-        "detail",
-        "quantity",
-        "reason",
-        "message",
-        "error",
-        "non_field_errors",
-    ]) {
+    for (const key of ["detail", "quantity", "reason", "message", "error", "non_field_errors"]) {
         const value = data[key];
         if (typeof value === "string") return value;
-        if (Array.isArray(value) && typeof value[0] === "string") {
-            return value[0];
-        }
+        if (Array.isArray(value) && typeof value[0] === "string") return value[0];
     }
     return "خطا در ثبت تراکنش انبار";
 }
 
-/* ------------------------------ FloatingInput ------------------------------ */
-
-interface FloatingInputProps
-    extends InputHTMLAttributes<HTMLInputElement> {
+interface FloatingInputProps extends InputHTMLAttributes<HTMLInputElement> {
     label: string;
     id: string;
     numeric?: boolean;
@@ -120,14 +105,10 @@ interface FloatingInputProps
 }
 
 const FloatingInput = forwardRef<HTMLInputElement, FloatingInputProps>(
-    (
-        { label, id, className = "", numeric = false, onValueChange, ...props },
-        ref
-    ) => {
+    ({ label, id, className = "", numeric = false, onValueChange, ...props }, ref) => {
         function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
             const raw = e.target.value;
-            const next = numeric ? formatNumber(raw) : raw;
-            if (onValueChange) onValueChange(next);
+            onValueChange?.(numeric ? formatNumber(raw) : raw);
             props.onChange?.(e);
         }
 
@@ -156,8 +137,6 @@ const FloatingInput = forwardRef<HTMLInputElement, FloatingInputProps>(
 );
 FloatingInput.displayName = "FloatingInput";
 
-/* ------------------------------ NiceSelect ------------------------------ */
-
 function NiceSelect({
     label,
     options,
@@ -175,7 +154,6 @@ function NiceSelect({
     const [query, setQuery] = useState("");
     const [mounted, setMounted] = useState(false);
     const [coords, setCoords] = useState({ top: 0, left: 0, width: 0 });
-
     const triggerRef = useRef<HTMLButtonElement>(null);
     const panelRef = useRef<HTMLDivElement>(null);
 
@@ -188,10 +166,10 @@ function NiceSelect({
 
     useLayoutEffect(() => {
         if (!open || !triggerRef.current) return;
-        function update() {
+        const update = () => {
             const r = triggerRef.current!.getBoundingClientRect();
             setCoords({ top: r.bottom, left: r.left, width: r.width });
-        }
+        };
         update();
         window.addEventListener("resize", update);
         window.addEventListener("scroll", update, true);
@@ -203,15 +181,11 @@ function NiceSelect({
 
     useEffect(() => {
         if (!open) return;
-        function handler(e: MouseEvent) {
+        const handler = (e: MouseEvent) => {
             const t = e.target as Node;
-            if (
-                triggerRef.current?.contains(t) ||
-                panelRef.current?.contains(t)
-            )
-                return;
-            setOpen(false);
-        }
+            if (!triggerRef.current?.contains(t) && !panelRef.current?.contains(t))
+                setOpen(false);
+        };
         document.addEventListener("mousedown", handler);
         return () => document.removeEventListener("mousedown", handler);
     }, [open]);
@@ -226,9 +200,7 @@ function NiceSelect({
 
     const visible = useMemo(() => {
         const q = query.trim().toLowerCase();
-        return q
-            ? options.filter((o) => o.label.toLowerCase().includes(q))
-            : options;
+        return q ? options.filter((o) => o.label.toLowerCase().includes(q)) : options;
     }, [options, query]);
 
     return (
@@ -245,9 +217,7 @@ function NiceSelect({
             >
                 {selected ? (
                     <span
-                        className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br text-[12px] font-extrabold text-white ${gradientOf(
-                            selected.value
-                        )}`}
+                        className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br text-[12px] font-extrabold text-white ${gradientOf(selected.value)}`}
                     >
                         {initialOf(selected.label)}
                     </span>
@@ -287,11 +257,7 @@ function NiceSelect({
                                 initial={{ opacity: 0, y: -6, scale: 0.97 }}
                                 animate={{ opacity: 1, y: 0, scale: 1 }}
                                 exit={{ opacity: 0, y: -4, scale: 0.97 }}
-                                transition={{
-                                    type: "spring",
-                                    damping: 24,
-                                    stiffness: 340,
-                                }}
+                                transition={{ type: "spring", damping: 24, stiffness: 340 }}
                                 style={{
                                     position: "fixed",
                                     top: coords.top + 4,
@@ -305,16 +271,11 @@ function NiceSelect({
                                 {options.length > 5 && (
                                     <div className="border-b border-gray-100 px-3 py-2.5 dark:border-white/[0.06]">
                                         <div className="flex items-center gap-2 rounded-xl bg-gray-50 px-3 py-2 dark:bg-white/[0.04]">
-                                            <Search
-                                                size={13}
-                                                className="shrink-0 text-gray-400"
-                                            />
+                                            <Search size={13} className="shrink-0 text-gray-400" />
                                             <input
                                                 autoFocus
                                                 value={query}
-                                                onChange={(e) =>
-                                                    setQuery(e.target.value)
-                                                }
+                                                onChange={(e) => setQuery(e.target.value)}
                                                 placeholder="جستجو..."
                                                 className="w-full bg-transparent text-[12px] font-semibold text-gray-900 outline-none placeholder:text-gray-400 dark:text-white"
                                             />
@@ -350,9 +311,7 @@ function NiceSelect({
                                                         }`}
                                                 >
                                                     <span
-                                                        className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br text-[12px] font-extrabold text-white ${gradientOf(
-                                                            o.value
-                                                        )}`}
+                                                        className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br text-[12px] font-extrabold text-white ${gradientOf(o.value)}`}
                                                     >
                                                         {initialOf(o.label)}
                                                     </span>
@@ -375,11 +334,7 @@ function NiceSelect({
 
                                                     {active && (
                                                         <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-600">
-                                                            <Check
-                                                                size={11}
-                                                                className="text-white"
-                                                                strokeWidth={3}
-                                                            />
+                                                            <Check size={11} className="text-white" strokeWidth={3} />
                                                         </span>
                                                     )}
                                                 </motion.button>
@@ -396,12 +351,11 @@ function NiceSelect({
     );
 }
 
-/* ============================== component ============================== */
-
 export default function WarehouseEmployeeStockModal({
     isOpen,
     onClose,
     product,
+    staff,
     performedById,
     onCompleted,
 }: Props) {
@@ -411,6 +365,14 @@ export default function WarehouseEmployeeStockModal({
     const [note, setNote] = useState("");
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
+
+    const resolvedPerformedById = useMemo(() => {
+        if (performedById != null && Number(performedById) > 0)
+            return Number(performedById);
+        if (staff.length === 1 && Number(staff[0]?.id) > 0)
+            return Number(staff[0].id);
+        return NaN;
+    }, [performedById, staff]);
 
     useEffect(() => {
         if (!isOpen) return;
@@ -422,11 +384,10 @@ export default function WarehouseEmployeeStockModal({
     }, [isOpen]);
 
     const reasonOptions: Option[] = useMemo(
-        () =>
-            STOCK_OUT_REASON_OPTIONS.map((item) => ({
-                value: item.value,
-                label: item.label,
-            })),
+        () => STOCK_OUT_REASON_OPTIONS.map((item) => ({
+            value: item.value,
+            label: item.label,
+        })),
         []
     );
 
@@ -438,7 +399,7 @@ export default function WarehouseEmployeeStockModal({
     async function handleSubmit(event: React.FormEvent) {
         event.preventDefault();
 
-        if (!performedById) {
+        if (!Number.isFinite(resolvedPerformedById)) {
             setError("اطلاعات کارمند انبار یافت نشد");
             return;
         }
@@ -464,14 +425,12 @@ export default function WarehouseEmployeeStockModal({
 
             const payload: Record<string, unknown> = {
                 product_id: product.id,
-                performed_by_id: Number(performedById),
+                performed_by_id: resolvedPerformedById,
                 quantity: quantityValue,
                 note: note.trim(),
             };
 
-            if (mode === "out") {
-                payload.reason = reason;
-            }
+            if (mode === "out") payload.reason = reason;
 
             const { data } = await axiosInstance.post<ApiStockTransaction>(
                 endpoint,
@@ -510,7 +469,6 @@ export default function WarehouseEmployeeStockModal({
                         className="w-full max-w-md rounded-[2rem] border border-gray-100 bg-white shadow-sm dark:border-white/[0.06] dark:bg-[#0f172a]"
                         dir="rtl"
                     >
-                        {/* header */}
                         <div className="flex items-center justify-between px-8 pb-5 pt-7">
                             <div className="flex min-w-0 items-center gap-3">
                                 <div
@@ -549,7 +507,6 @@ export default function WarehouseEmployeeStockModal({
                             </button>
                         </div>
 
-                        {/* mode toggle */}
                         <div className="px-8 pb-1">
                             <div className="flex gap-1 rounded-2xl bg-gray-100 p-1 dark:bg-white/[0.04]">
                                 <button
@@ -560,10 +517,7 @@ export default function WarehouseEmployeeStockModal({
                                     }}
                                     className="relative flex flex-1 items-center justify-center gap-1.5 rounded-xl py-2.5 text-[12.5px] font-extrabold transition-colors"
                                     style={{
-                                        color:
-                                            mode === "in"
-                                                ? "#059669"
-                                                : undefined,
+                                        color: mode === "in" ? "#059669" : undefined,
                                     }}
                                 >
                                     {mode === "in" && (
@@ -572,13 +526,8 @@ export default function WarehouseEmployeeStockModal({
                                             className="absolute inset-0 rounded-xl bg-white shadow-sm dark:bg-white/[0.08]"
                                         />
                                     )}
-                                    <ArrowDownCircle
-                                        size={14}
-                                        className="relative text-current"
-                                    />
-                                    <span className="relative">
-                                        افزایش موجودی
-                                    </span>
+                                    <ArrowDownCircle size={14} className="relative text-current" />
+                                    <span className="relative">افزایش موجودی</span>
                                 </button>
 
                                 <button
@@ -589,10 +538,7 @@ export default function WarehouseEmployeeStockModal({
                                     }}
                                     className="relative flex flex-1 items-center justify-center gap-1.5 rounded-xl py-2.5 text-[12.5px] font-extrabold transition-colors"
                                     style={{
-                                        color:
-                                            mode === "out"
-                                                ? "#dc2626"
-                                                : undefined,
+                                        color: mode === "out" ? "#dc2626" : undefined,
                                     }}
                                 >
                                     {mode === "out" && (
@@ -601,18 +547,12 @@ export default function WarehouseEmployeeStockModal({
                                             className="absolute inset-0 rounded-xl bg-white shadow-sm dark:bg-white/[0.08]"
                                         />
                                     )}
-                                    <ArrowUpCircle
-                                        size={14}
-                                        className="relative text-current"
-                                    />
-                                    <span className="relative">
-                                        کاهش موجودی
-                                    </span>
+                                    <ArrowUpCircle size={14} className="relative text-current" />
+                                    <span className="relative">کاهش موجودی</span>
                                 </button>
                             </div>
                         </div>
 
-                        {/* form */}
                         <form
                             onSubmit={handleSubmit}
                             className="flex flex-col gap-3 px-8 pb-7 pt-5"
@@ -676,10 +616,7 @@ export default function WarehouseEmployeeStockModal({
                                         exit={{ opacity: 0, y: 4 }}
                                         className="flex items-start gap-2.5 rounded-2xl bg-red-50 px-3.5 py-3 dark:bg-red-500/10"
                                     >
-                                        <X
-                                            size={14}
-                                            className="mt-0.5 shrink-0 text-red-500"
-                                        />
+                                        <X size={14} className="mt-0.5 shrink-0 text-red-500" />
                                         <p className="flex-1 text-[11.5px] font-semibold leading-5 text-red-500 dark:text-red-400">
                                             {error}
                                         </p>

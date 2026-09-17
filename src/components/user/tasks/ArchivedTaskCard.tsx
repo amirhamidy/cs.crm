@@ -109,7 +109,7 @@ export default function ArchivedTaskCard({
 
         try {
             await axiosInstance.post(
-                `https://api.radcosys.ir/tasks/api/v1/tasks/${task.task_id}/reopen/`
+                `/tasks/api/v1/tasks/${task.task_id}/reopen/`
             );
 
             setConfirmOpen(false);
@@ -314,10 +314,15 @@ function InfoRow({
 }) {
     return (
         <div className="flex items-center gap-1.5 text-[10px]">
-            <Icon size={11} className="shrink-0 text-gray-400" />
+            <Icon
+                size={11}
+                className="shrink-0 text-gray-400"
+            />
+
             <span className="font-semibold text-gray-400">
                 {label}:
             </span>
+
             <span className="truncate font-bold text-gray-700 dark:text-white/80">
                 {value}
             </span>

@@ -1,20 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import {
-    Archive,
-    Building2,
-    CheckCircle2,
-    Layers3,
-    Loader,
-    LayoutGrid,
-    ShoppingBag,
-    Ban,
-} from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
+import { Archive, CheckCircle2, Filter, Loader2, PackageCheck, XCircle } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
-import UserTaskCard from "./UserTaskCard";
-import type { UserTask } from "./types";
+import { useCurrentEmployee } from "@/hooks/usecurrentemployee";
 import ArchivedTaskCard from "./ArchivedTaskCard";
 
 interface ArchiveTask {
@@ -39,422 +29,277 @@ interface ArchiveTask {
     archived_at: string;
 }
 
-interface DepartmentGroup {
-    id: number;
-    name: string;
-    tasks: ArchiveTask[];
-}
+type StatusFilter = "all" | ArchiveTask["status"];
+type DepartmentFilter = "all" | number;
 
-type ArchiveStatusFilter = "all" | "completed" | "sold" | "cancelled";
-
-const statusFilters: {
-    id: ArchiveStatusFilter;
-    label: string;
-    icon: typeof Layers3;
-    color: string;
-    activeBg: string;
-    activeBorder: string;
-}[] = [
-        {
-            id: "all",
-            label: "همه",
-            icon: Layers3,
-            color: "#818cf8",
-            activeBg: "rgba(99,102,241,0.16)",
-            activeBorder: "rgba(99,102,241,0.4)",
-        },
-        {
-            id: "completed",
-            label: "تکمیل شده",
-            icon: CheckCircle2,
-            color: "#34d399",
-            activeBg: "rgba(16,185,129,0.14)",
-            activeBorder: "rgba(16,185,129,0.4)",
-        },
-        {
-            id: "sold",
-            label: "فروش رفته",
-            icon: ShoppingBag,
-            color: "#fbbf24",
-            activeBg: "rgba(245,158,11,0.14)",
-            activeBorder: "rgba(245,158,11,0.4)",
-        },
-        {
-            id: "cancelled",
-            label: "لغو شده",
-            icon: Ban,
-            color: "#fb7185",
-            activeBg: "rgba(239,68,68,0.14)",
-            activeBorder: "rgba(239,68,68,0.4)",
-        },
-    ];
-
-function archiveToUserTask(task: ArchiveTask): UserTask {
-    return {
-        id: task.task_id,
-        title: task.title,
-        description: "",
-        case: task.case_id,
-        department: task.department_id,
-        department_name: task.department_name,
-        current_step: 0,
-        current_step_name: "",
-        assigned_employee: [],
-        status: task.status,
-        created_at: task.task_created_at,
-        completed_at: task.completed_at,
-        updated_at: task.archived_at,
-        attachments: [],
-    } as UserTask;
-}
+const STATUS_FILTERS = [
+    { key: "all" as StatusFilter, label: "همه", icon: Archive },
+    { key: "completed" as StatusFilter, label: "تکمیل شده", icon: CheckCircle2 },
+    { key: "sold" as StatusFilter, label: "فروش رفته", icon: PackageCheck },
+    { key: "cancelled" as StatusFilter, label: "لغو شده", icon: XCircle },
+];
 
 export default function ArchivedTasksBoard() {
+    const { departments, departmentIds, loading: employeeLoading, error: employeeError } = useCurrentEmployee();
     const [tasks, setTasks] = useState<ArchiveTask[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [activeDeptId, setActiveDeptId] = useState<number | null>(null);
-    const [statusFilter, setStatusFilter] =
-        useState<ArchiveStatusFilter>("all");
+    const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+    const [departmentFilter, setDepartmentFilter] = useState<DepartmentFilter>("all");
 
     useEffect(() => {
-        let cancelled = false;
+        if (employeeLoading) return;
 
+        if (employeeError) {
+            setTasks([]);
+            setLoading(false);
+            setError(employeeError);
+            return;
+        }
+
+        if (!departmentIds.length) {
+            setTasks([]);
+            setLoading(false);
+            setError(null);
+            return;
+        }
+
+        let mounted = true;
         setLoading(true);
         setError(null);
 
         axiosInstance
             .get<ArchiveTask[]>("/tasks/api/v1/task_archive/")
-            .then((res) => {
-                if (cancelled) return;
-
-                const data = Array.isArray(res.data) ? res.data : [];
-                setTasks(data);
+            .then(({ data }) => {
+                if (!mounted) return;
+                setTasks(
+                    (Array.isArray(data) ? data : []).filter((task) =>
+                        departmentIds.includes(Number(task.department_id))
+                    )
+                );
             })
             .catch(() => {
-                if (!cancelled) {
-                    setError("دریافت آرشیو تسک‌ها با خطا مواجه شد");
-                }
+                if (!mounted) return;
+                setTasks([]);
+                setError("دریافت تسک‌های آرشیو شده انجام نشد");
             })
             .finally(() => {
-                if (!cancelled) {
-                    setLoading(false);
-                }
+                if (mounted) setLoading(false);
             });
 
         return () => {
-            cancelled = true;
+            mounted = false;
         };
-    }, []);
+    }, [employeeLoading, employeeError, departmentIds]);
 
-    const departmentGroups = useMemo<DepartmentGroup[]>(() => {
-        const map = new Map<number, DepartmentGroup>();
+    const filteredTasks = useMemo(
+        () =>
+            tasks.filter(
+                (task) =>
+                    (departmentFilter === "all" ||
+                        Number(task.department_id) === departmentFilter) &&
+                    (statusFilter === "all" || task.status === statusFilter)
+            ),
+        [tasks, departmentFilter, statusFilter]
+    );
 
-        tasks.forEach((task) => {
-            const id = Number(task.department_id);
-            const name =
-                task.department_name?.trim() || "بدون دپارتمان";
+    const groupedTasks = useMemo(
+        () =>
+            Object.values(
+                filteredTasks.reduce<
+                    Record<
+                        string,
+                        {
+                            departmentId: number;
+                            departmentName: string;
+                            tasks: ArchiveTask[];
+                        }
+                    >
+                >((groups, task) => {
+                    const id = Number(task.department_id);
+                    groups[id] ??= {
+                        departmentId: id,
+                        departmentName: task.department_name || "بدون دپارتمان",
+                        tasks: [],
+                    };
+                    groups[id].tasks.push(task);
+                    return groups;
+                }, {})
+            ),
+        [filteredTasks]
+    );
 
-            if (!map.has(id)) {
-                map.set(id, {
-                    id,
-                    name,
-                    tasks: [],
-                });
-            }
+    const handleReopened = (taskId: number) =>
+        setTasks((items) => items.filter((task) => task.task_id !== taskId));
 
-            map.get(id)!.tasks.push(task);
-        });
-
-        return Array.from(map.values());
-    }, [tasks]);
-
-    useEffect(() => {
-        if (!departmentGroups.length) {
-            setActiveDeptId(null);
-            return;
-        }
-
-        if (
-            activeDeptId === null ||
-            !departmentGroups.some((group) => group.id === activeDeptId)
-        ) {
-            setActiveDeptId(departmentGroups[0].id);
-        }
-    }, [departmentGroups, activeDeptId]);
-
-    const activeGroup =
-        departmentGroups.find((group) => group.id === activeDeptId) ?? null;
-
-    const filteredTasks = useMemo(() => {
-        const activeTasks = activeGroup?.tasks ?? [];
-
-        if (statusFilter === "all") {
-            return activeTasks;
-        }
-
-        return activeTasks.filter(
-            (task) => task.status === statusFilter
-        );
-    }, [activeGroup, statusFilter]);
-
-    const getStatusCount = (status: ArchiveStatusFilter) => {
-        const activeTasks = activeGroup?.tasks ?? [];
-
-        if (status === "all") {
-            return activeTasks.length;
-        }
-
-        return activeTasks.filter(
-            (task) => task.status === status
-        ).length;
-    };
-
-    const handleReopen = async (task: ArchiveTask) => {
-        try {
-            const res = await axiosInstance.post<UserTask>(
-                `/tasks/api/v1/tasks/${task.task_id}/reopen/`
-            );
-
-            setTasks((prev) =>
-                prev.filter(
-                    (item) => item.task_id !== task.task_id
-                )
-            );
-
-            return res.data;
-        } catch {
-            throw new Error("بازگردانی تسک با خطا مواجه شد");
-        }
-    };
-
-    const handleUpdated = async (updated: UserTask) => {
-        if (updated.status === "in_progress") {
-            setTasks((prev) =>
-                prev.filter(
-                    (task) => task.task_id !== updated.id
-                )
-            );
-            return;
-        }
-
-        setTasks((prev) =>
-            prev.map((task) =>
-                task.task_id === updated.id
-                    ? {
-                        ...task,
-                        status: updated.status as ArchiveTask["status"],
-                        title: updated.title,
-                    }
-                    : task
-            )
-        );
-    };
-
-    if (loading) {
+    if (employeeLoading || loading) {
         return (
-            <div className="flex h-64 items-center justify-center">
-                <Loader
-                    size={22}
-                    className="animate-spin text-indigo-500"
-                />
+            <div className="flex min-h-[320px] items-center justify-center" dir="rtl">
+                <div className="flex flex-col items-center gap-3">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-500/10">
+                        <Loader2 size={22} className="animate-spin text-indigo-500" />
+                    </div>
+                    <span className="text-[11px] font-bold text-gray-400">
+                        در حال دریافت آرشیو...
+                    </span>
+                </div>
             </div>
         );
     }
 
     if (error) {
         return (
-            <div className="flex h-64 flex-col items-center justify-center gap-3 rounded-3xl border border-red-500/20 bg-red-500/5">
-                <p className="text-sm font-semibold text-red-500">
-                    {error}
-                </p>
-            </div>
-        );
-    }
-
-    if (!tasks.length) {
-        return (
-            <div className="flex h-64 flex-col items-center justify-center gap-3 rounded-3xl border border-dashed border-gray-200 dark:border-white/[0.07]">
-                <Archive
-                    size={28}
-                    className="text-gray-300 dark:text-gray-700"
-                />
-                <p className="text-[12px] text-gray-400">
-                    تسک بایگانی‌شده‌ای وجود ندارد
-                </p>
+            <div className="flex min-h-[320px] items-center justify-center" dir="rtl">
+                <div className="w-full max-w-md rounded-[1.5rem] border border-red-500/10 bg-red-500/[.04] p-6 text-center">
+                    <XCircle size={22} className="mx-auto text-red-500" />
+                    <p className="mt-3 text-[11px] font-bold leading-6 text-red-500">{error}</p>
+                </div>
             </div>
         );
     }
 
     return (
-        <div className="flex flex-col gap-5" dir="rtl">
-            <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2.5">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-indigo-500/10">
-                        <Archive
-                            size={17}
-                            className="text-indigo-500"
-                        />
+        <div className="space-y-5" dir="rtl">
+            <div className="flex flex-col gap-4">
+                <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                    <div className="flex items-center gap-2">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-indigo-500/10">
+                            <Archive size={18} className="text-indigo-500" />
+                        </div>
+                        <div>
+                            <h2 className="text-[15px] font-black text-gray-900 dark:text-white">
+                                آرشیو تسک‌ها
+                            </h2>
+                            <p className="mt-1 text-[10px] font-medium text-gray-400">
+                                آرشیو دپارتمان‌هایی که شما عضو آن‌ها هستید
+                            </p>
+                        </div>
                     </div>
 
-                    <div>
-                        <h3 className="text-[14px] font-extrabold text-gray-900 dark:text-white">
-                            بایگانی تسک‌ها
-                        </h3>
-
-                        <p className="text-[11px] text-gray-400 dark:text-gray-600">
-                            {departmentGroups.length} دپارتمان
-                        </p>
+                    <div className="flex items-center gap-2">
+                        <div className="flex h-9 items-center gap-1.5 rounded-xl bg-indigo-500/10 px-3 text-[10px] font-black text-indigo-500">
+                            <Archive size={12} />
+                            {filteredTasks.length} تسک
+                        </div>
+                        {departments.length > 1 && (
+                            <div className="rounded-xl bg-gray-100 px-3 py-2 text-[10px] font-bold text-gray-500 dark:bg-white/[.04] dark:text-gray-400">
+                                {departments.length} دپارتمان
+                            </div>
+                        )}
                     </div>
                 </div>
 
-                <span className="rounded-2xl bg-gray-100 px-3 py-1.5 text-[11px] font-bold text-gray-600 dark:bg-white/[0.06] dark:text-gray-400">
-                    {filteredTasks.length} تسک
-                </span>
-            </div>
+                <div className="rounded-[1.4rem] border border-gray-200/70 bg-white/80 p-3 shadow-sm dark:border-white/[.06] dark:bg-white/[.02]">
+                    <div className="mb-3 flex items-center gap-2 text-[10px] font-black text-gray-500 dark:text-gray-400">
+                        <Filter size={13} />
+                        فیلتر آرشیو
+                    </div>
 
-            <div className="flex gap-2 overflow-x-auto pb-1">
-                {departmentGroups.map((group) => {
-                    const isActive =
-                        group.id === activeDeptId;
-
-                    return (
+                    <div className="flex flex-wrap gap-2">
                         <button
-                            key={group.id}
                             type="button"
-                            onClick={() =>
-                                setActiveDeptId(group.id)
-                            }
-                            className={`flex shrink-0 items-center gap-2 rounded-2xl px-3.5 py-2 text-[11.5px] font-bold transition-colors ${isActive
-                                ? "bg-indigo-600 text-white"
-                                : "bg-gray-100 text-gray-500 hover:bg-gray-200 dark:bg-white/[0.05] dark:text-gray-400 dark:hover:bg-white/[0.08]"
+                            onClick={() => setDepartmentFilter("all")}
+                            className={`rounded-xl px-3 py-2 text-[9.5px] font-extrabold transition ${departmentFilter === "all"
+                                    ? "bg-indigo-500 text-white shadow-lg shadow-indigo-500/20"
+                                    : "bg-gray-100 text-gray-500 hover:bg-gray-200 dark:bg-white/[.04] dark:text-gray-400 dark:hover:bg-white/[.07]"
                                 }`}
                         >
-                            <Building2 size={12} />
+                            همه دپارتمان‌ها
+                        </button>
 
-                            {group.name}
-
-                            <span
-                                className={`rounded-full px-1.5 py-0.5 text-[10px] font-extrabold ${isActive
-                                    ? "bg-white/20"
-                                    : "bg-black/5 dark:bg-white/10"
+                        {departments.map((department) => (
+                            <button
+                                key={department.id}
+                                type="button"
+                                onClick={() => setDepartmentFilter(department.id)}
+                                className={`rounded-xl px-3 py-2 text-[9.5px] font-extrabold transition ${departmentFilter === department.id
+                                        ? "bg-indigo-500 text-white shadow-lg shadow-indigo-500/20"
+                                        : "bg-gray-100 text-gray-500 hover:bg-gray-200 dark:bg-white/[.04] dark:text-gray-400 dark:hover:bg-white/[.07]"
                                     }`}
                             >
-                                {group.tasks.length}
-                            </span>
-                        </button>
-                    );
-                })}
-            </div>
-
-            <div className="flex gap-2 overflow-x-auto pb-1">
-                {statusFilters.map((filter) => {
-                    const isActive =
-                        statusFilter === filter.id;
-                    const Icon = filter.icon;
-                    const count =
-                        getStatusCount(filter.id);
-
-                    return (
-                        <button
-                            key={filter.id}
-                            type="button"
-                            onClick={() =>
-                                setStatusFilter(filter.id)
-                            }
-                            className="flex shrink-0 items-center gap-2 rounded-2xl border px-3.5 py-2 text-[11px] font-bold transition-all duration-200"
-                            style={{
-                                color: isActive
-                                    ? filter.color
-                                    : undefined,
-                                backgroundColor: isActive
-                                    ? filter.activeBg
-                                    : "rgba(255,255,255,0.025)",
-                                borderColor: isActive
-                                    ? filter.activeBorder
-                                    : "rgba(255,255,255,0.07)",
-                                boxShadow: isActive
-                                    ? `0 5px 18px ${filter.color}14`
-                                    : "none",
-                            }}
-                        >
-                            <Icon
-                                size={13}
-                                style={{
-                                    color: isActive
-                                        ? filter.color
-                                        : "rgb(148 163 184)",
-                                }}
-                            />
-
-                            <span
-                                className={
-                                    isActive
-                                        ? ""
-                                        : "text-gray-500 dark:text-gray-400"
-                                }
-                            >
-                                {filter.label}
-                            </span>
-
-                            <span
-                                className="rounded-full px-1.5 py-0.5 text-[9.5px] font-extrabold tabular-nums"
-                                style={{
-                                    color: filter.color,
-                                    backgroundColor: `${filter.color}18`,
-                                }}
-                            >
-                                {count}
-                            </span>
-                        </button>
-                    );
-                })}
-            </div>
-
-            {filteredTasks.length === 0 ? (
-                <div className="flex h-64 flex-col items-center justify-center gap-3 rounded-3xl border border-dashed border-gray-200 dark:border-white/[0.07]">
-                    <LayoutGrid
-                        size={28}
-                        className="text-gray-300 dark:text-gray-700"
-                    />
-
-                    <p className="text-[12px] text-gray-400">
-                        تسکی در این وضعیت وجود ندارد
-                    </p>
-                </div>
-            ) : (
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                    <AnimatePresence>
-                        {filteredTasks.map((task) => (
-                            <motion.div
-                                key={task.id}
-                                layout
-                                initial={{
-                                    opacity: 0,
-                                    y: 10,
-                                }}
-                                animate={{
-                                    opacity: 1,
-                                    y: 0,
-                                }}
-                                exit={{
-                                    opacity: 0,
-                                    y: -8,
-                                }}
-                                transition={{
-                                    duration: 0.2,
-                                }}
-                            >
-                                <ArchivedTaskCard
-                                    task={task}
-                                    onReopened={(taskId) => {
-                                        setTasks((prev) =>
-                                            prev.filter((item) => item.task_id !== taskId)
-                                        );
-                                    }}
-                                />
-                            </motion.div>
+                                {department.name}
+                            </button>
                         ))}
-                    </AnimatePresence>
+                    </div>
+
+                    <div className="mt-3 flex flex-wrap gap-2 border-t border-gray-100 pt-3 dark:border-white/[.05]">
+                        {STATUS_FILTERS.map(({ key, label, icon: Icon }) => {
+                            const active = statusFilter === key;
+                            return (
+                                <button
+                                    key={key}
+                                    type="button"
+                                    onClick={() => setStatusFilter(key)}
+                                    className={`flex items-center gap-1.5 rounded-xl px-3 py-2 text-[9.5px] font-extrabold transition ${active
+                                            ? "bg-gray-900 text-white dark:bg-white dark:text-gray-900"
+                                            : "bg-gray-100 text-gray-500 hover:bg-gray-200 dark:bg-white/[.04] dark:text-gray-400 dark:hover:bg-white/[.07]"
+                                        }`}
+                                >
+                                    <Icon size={11} />
+                                    {label}
+                                </button>
+                            );
+                        })}
+                    </div>
+                </div>
+            </div>
+
+            {!filteredTasks.length ? (
+                <motion.div
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="flex min-h-[280px] flex-col items-center justify-center rounded-[1.7rem] border border-dashed border-gray-200 bg-white/60 px-5 dark:border-white/[.07] dark:bg-white/[.02]"
+                >
+                    <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gray-100 dark:bg-white/[.04]">
+                        <Archive size={23} className="text-gray-400" />
+                    </div>
+                    <h3 className="mt-4 text-[12px] font-extrabold text-gray-600 dark:text-gray-300">
+                        موردی در آرشیو پیدا نشد
+                    </h3>
+                    <p className="mt-1.5 text-center text-[10px] font-medium text-gray-400">
+                        برای دپارتمان یا وضعیت انتخاب‌شده تسکی وجود ندارد.
+                    </p>
+                </motion.div>
+            ) : (
+                <div className="space-y-7">
+                    {groupedTasks.map((department) => (
+                        <motion.section
+                            key={department.departmentId}
+                            layout
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="space-y-3"
+                        >
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <div className="h-7 w-1 rounded-full bg-indigo-500" />
+                                    <div>
+                                        <h3 className="text-[12px] font-black text-gray-800 dark:text-white">
+                                            {department.departmentName}
+                                        </h3>
+                                        <p className="mt-0.5 text-[9px] font-bold text-gray-400">
+                                            {department.tasks.length} تسک
+                                        </p>
+                                    </div>
+                                </div>
+                                <span className="rounded-xl bg-gray-100 px-2.5 py-1 text-[9px] font-extrabold text-gray-400 dark:bg-white/[.04]">
+                                    آرشیو
+                                </span>
+                            </div>
+
+                            <AnimatePresence mode="popLayout">
+                                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+                                    {department.tasks.map((task) => (
+                                        <ArchivedTaskCard
+                                            key={task.id}
+                                            task={task}
+                                            onReopened={handleReopened}
+                                        />
+                                    ))}
+                                </div>
+                            </AnimatePresence>
+                        </motion.section>
+                    ))}
                 </div>
             )}
         </div>

@@ -119,8 +119,8 @@ export default function WarehouseEmployeeProductCard({
     const [start, end] =
         AVATAR_GRADIENTS[product.id % AVATAR_GRADIENTS.length];
 
-    const isCritical = !!stockInfo &&
-        stockInfo.current_quantity <= stockInfo.minimum_stock;
+    const isCritical =
+        !!stockInfo && stockInfo.current_quantity <= stockInfo.minimum_stock;
 
     const stockPercentage = stockInfo?.maximum_stock
         ? Math.min(
@@ -187,7 +187,6 @@ export default function WarehouseEmployeeProductCard({
                         : "0 8px 24px rgba(15,23,42,0.05)",
                 }}
             >
-                {/* SVG border gradient animation */}
                 <svg className="pointer-events-none absolute inset-0 h-full w-full">
                     <defs>
                         <linearGradient
@@ -221,7 +220,6 @@ export default function WarehouseEmployeeProductCard({
                     />
                 </svg>
 
-                {/* Top Actions */}
                 <div className="absolute left-3 top-3 z-10 flex items-center gap-1.5">
                     {stockInfo && (
                         <span
@@ -255,9 +253,17 @@ export default function WarehouseEmployeeProductCard({
                                     : "rgba(59,130,246,.08)",
                             color: stockInfo ? "#10b981" : "#3b82f6",
                         }}
-                        title={stockInfo ? "ثبت تراکنش انبار" : "ثبت موجودی اولیه"}
+                        title={
+                            stockInfo
+                                ? "ثبت تراکنش انبار"
+                                : "ثبت موجودی اولیه"
+                        }
                     >
-                        {stockInfo ? <ArrowDownUp size={12} /> : <Boxes size={12} />}
+                        {stockInfo ? (
+                            <ArrowDownUp size={12} />
+                        ) : (
+                            <Boxes size={12} />
+                        )}
                     </button>
 
                     <button
@@ -291,7 +297,6 @@ export default function WarehouseEmployeeProductCard({
                     </button>
                 </div>
 
-                {/* Product Header */}
                 <div className="relative z-[1] mt-7 flex items-center gap-3">
                     <div
                         className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-[15px] font-extrabold text-white shadow-lg"
@@ -310,7 +315,8 @@ export default function WarehouseEmployeeProductCard({
                         <div className="mt-1 flex items-center gap-1.5 text-[10.5px] font-semibold text-gray-400 dark:text-gray-500">
                             <Tag size={10} />
                             <span className="truncate">
-                                {product.category_detail?.name ?? "بدون دسته‌بندی"}
+                                {product.category_detail?.name ??
+                                    "بدون دسته‌بندی"}
                             </span>
                         </div>
 
@@ -321,7 +327,6 @@ export default function WarehouseEmployeeProductCard({
                     </div>
                 </div>
 
-                {/* Price & Unit Row */}
                 <div className="relative z-[1] mt-3 grid grid-cols-2 gap-2">
                     <div
                         className="flex items-center gap-2 rounded-2xl px-3 py-2"
@@ -341,6 +346,7 @@ export default function WarehouseEmployeeProductCard({
                         >
                             <Wallet size={12} className="text-emerald-500" />
                         </div>
+
                         <div className="min-w-0 flex-1">
                             <p className="text-[9.5px] font-semibold text-gray-400 dark:text-white/40">
                                 قیمت فروش
@@ -372,6 +378,7 @@ export default function WarehouseEmployeeProductCard({
                         >
                             <Scale size={12} className="text-indigo-500" />
                         </div>
+
                         <div className="min-w-0 flex-1">
                             <p className="text-[9.5px] font-semibold text-gray-400 dark:text-white/40">
                                 واحد
@@ -383,165 +390,176 @@ export default function WarehouseEmployeeProductCard({
                     </div>
                 </div>
 
-                {/* Stock Section */}
                 <div className="relative z-[1] mt-3">
                     {stockInfo ? (
-                        <>
-                            {/* Three-Column Stock Info */}
-                            <div
-                                className="rounded-2xl px-3 py-3"
-                                style={{
-                                    background: isDark
-                                        ? "rgba(255,255,255,0.025)"
-                                        : "rgba(15,23,42,0.025)",
-                                }}
-                            >
-                                <div className="grid grid-cols-3 gap-2">
-                                    {/* Minimum Required */}
-                                    <div className="text-center">
-                                        <div
-                                            className="mx-auto flex h-7 w-7 items-center justify-center rounded-lg"
-                                            style={{
-                                                background: isDark
-                                                    ? "rgba(245,158,11,.14)"
-                                                    : "rgba(245,158,11,.1)",
-                                            }}
-                                        >
-                                            <AlertTriangle
-                                                size={12}
-                                                className="text-amber-500"
-                                            />
-                                        </div>
-                                        <p className="mt-1.5 text-[9px] font-bold text-gray-400 dark:text-white/40">
-                                            حداقل مورد نیاز
-                                        </p>
-                                        <p className="mt-0.5 text-[12px] font-black text-gray-700 dark:text-white/85">
-                                            {formatQuantity(stockInfo.minimum_stock)}
-                                        </p>
-                                    </div>
-
-                                    {/* Current Stock - Highlighted */}
-                                    <div className="text-center">
-                                        <div
-                                            className="mx-auto flex h-7 w-7 items-center justify-center rounded-lg"
-                                            style={{
-                                                background: isCritical
-                                                    ? isDark
-                                                        ? "rgba(239,68,68,.14)"
-                                                        : "rgba(239,68,68,.1)"
-                                                    : isDark
-                                                        ? "rgba(16,185,129,.14)"
-                                                        : "rgba(16,185,129,.1)",
-                                            }}
-                                        >
-                                            <Package
-                                                size={12}
-                                                className={
-                                                    isCritical
-                                                        ? "text-red-500"
-                                                        : "text-emerald-500"
-                                                }
-                                            />
-                                        </div>
-                                        <p className="mt-1.5 text-[9px] font-bold text-gray-400 dark:text-white/40">
-                                            موجودی فعلی
-                                        </p>
-                                        <p
-                                            className="mt-0.5 text-[13px] font-black"
-                                            style={{
-                                                color: isCritical
-                                                    ? "#ef4444"
-                                                    : isDark
-                                                        ? "#fff"
-                                                        : "#0f172a",
-                                            }}
-                                        >
-                                            {formatQuantity(stockInfo.current_quantity)}
-                                        </p>
-                                    </div>
-
-                                    {/* Maximum Capacity */}
-                                    <div className="text-center">
-                                        <div
-                                            className="mx-auto flex h-7 w-7 items-center justify-center rounded-lg"
-                                            style={{
-                                                background: isDark
-                                                    ? "rgba(99,102,241,.14)"
-                                                    : "rgba(99,102,241,.1)",
-                                            }}
-                                        >
-                                            <Boxes size={12} className="text-indigo-500" />
-                                        </div>
-                                        <p className="mt-1.5 text-[9px] font-bold text-gray-400 dark:text-white/40">
-                                            حداکثر ظرفیت
-                                        </p>
-                                        <p className="mt-0.5 text-[12px] font-black text-gray-700 dark:text-white/85">
-                                            {formatQuantity(stockInfo.maximum_stock)}
-                                        </p>
-                                    </div>
-                                </div>
-
-                                {/* Progress Bar with Minimum Marker */}
-                                <div className="relative mt-3">
+                        <div
+                            className="rounded-2xl px-3 py-3"
+                            style={{
+                                background: isDark
+                                    ? "rgba(255,255,255,0.025)"
+                                    : "rgba(15,23,42,0.025)",
+                            }}
+                        >
+                            <div className="grid grid-cols-3 gap-2">
+                                <div className="text-center">
                                     <div
-                                        className="h-1.5 overflow-hidden rounded-full"
+                                        className="mx-auto flex h-7 w-7 items-center justify-center rounded-lg"
                                         style={{
                                             background: isDark
-                                                ? "rgba(255,255,255,.06)"
-                                                : "rgba(15,23,42,.06)",
+                                                ? "rgba(245,158,11,.14)"
+                                                : "rgba(245,158,11,.1)",
                                         }}
                                     >
-                                        <motion.div
-                                            initial={{ width: 0 }}
-                                            animate={{ width: `${stockPercentage}%` }}
-                                            transition={{ duration: 0.6 }}
-                                            className="h-full rounded-full"
-                                            style={{
-                                                background: isCritical
-                                                    ? "#ef4444"
-                                                    : "linear-gradient(90deg,#6366f1,#8b5cf6)",
-                                            }}
+                                        <AlertTriangle
+                                            size={12}
+                                            className="text-amber-500"
                                         />
                                     </div>
 
-                                    {/* Minimum Marker */}
-                                    <div
-                                        className="absolute top-1/2 -translate-y-1/2"
-                                        style={{
-                                            right: `${100 - minimumMarkerPosition}%`,
-                                        }}
-                                    >
-                                        <div
-                                            className="h-3 w-0.5 rounded-full"
-                                            style={{
-                                                background: "#f59e0b",
-                                                boxShadow:
-                                                    "0 0 4px rgba(245,158,11,0.6)",
-                                            }}
-                                        />
-                                    </div>
+                                    <p className="mt-1.5 text-[9px] font-bold text-gray-400 dark:text-white/40">
+                                        حداقل مورد نیاز
+                                    </p>
+
+                                    <p className="mt-0.5 text-[12px] font-black text-gray-700 dark:text-white/85">
+                                        {formatQuantity(
+                                            stockInfo.minimum_stock
+                                        )}
+                                    </p>
                                 </div>
 
-                                {/* Percentage Label */}
-                                <div className="mt-2 flex items-center justify-between text-[10px]">
-                                    <span className="font-semibold text-gray-400 dark:text-white/40">
-                                        پرشدگی انبار
-                                    </span>
-                                    <span
-                                        className="font-extrabold"
+                                <div className="text-center">
+                                    <div
+                                        className="mx-auto flex h-7 w-7 items-center justify-center rounded-lg"
+                                        style={{
+                                            background: isCritical
+                                                ? isDark
+                                                    ? "rgba(239,68,68,.14)"
+                                                    : "rgba(239,68,68,.1)"
+                                                : isDark
+                                                    ? "rgba(16,185,129,.14)"
+                                                    : "rgba(16,185,129,.1)",
+                                        }}
+                                    >
+                                        <Package
+                                            size={12}
+                                            className={
+                                                isCritical
+                                                    ? "text-red-500"
+                                                    : "text-emerald-500"
+                                            }
+                                        />
+                                    </div>
+
+                                    <p className="mt-1.5 text-[9px] font-bold text-gray-400 dark:text-white/40">
+                                        موجودی فعلی
+                                    </p>
+
+                                    <p
+                                        className="mt-0.5 text-[13px] font-black"
                                         style={{
                                             color: isCritical
                                                 ? "#ef4444"
                                                 : isDark
-                                                    ? "#e2e8f0"
-                                                    : "#334155",
+                                                    ? "#fff"
+                                                    : "#0f172a",
                                         }}
                                     >
-                                        {Math.round(stockPercentage).toLocaleString("fa-IR")}٪
-                                    </span>
+                                        {formatQuantity(
+                                            stockInfo.current_quantity
+                                        )}
+                                    </p>
+                                </div>
+
+                                <div className="text-center">
+                                    <div
+                                        className="mx-auto flex h-7 w-7 items-center justify-center rounded-lg"
+                                        style={{
+                                            background: isDark
+                                                ? "rgba(99,102,241,.14)"
+                                                : "rgba(99,102,241,.1)",
+                                        }}
+                                    >
+                                        <Boxes
+                                            size={12}
+                                            className="text-indigo-500"
+                                        />
+                                    </div>
+
+                                    <p className="mt-1.5 text-[9px] font-bold text-gray-400 dark:text-white/40">
+                                        حداکثر ظرفیت
+                                    </p>
+
+                                    <p className="mt-0.5 text-[12px] font-black text-gray-700 dark:text-white/85">
+                                        {formatQuantity(
+                                            stockInfo.maximum_stock
+                                        )}
+                                    </p>
                                 </div>
                             </div>
-                        </>
+
+                            <div className="relative mt-3">
+                                <div
+                                    className="h-1.5 overflow-hidden rounded-full"
+                                    style={{
+                                        background: isDark
+                                            ? "rgba(255,255,255,.06)"
+                                            : "rgba(15,23,42,.06)",
+                                    }}
+                                >
+                                    <motion.div
+                                        initial={{ width: 0 }}
+                                        animate={{
+                                            width: `${stockPercentage}%`,
+                                        }}
+                                        transition={{ duration: 0.6 }}
+                                        className="h-full rounded-full"
+                                        style={{
+                                            background: isCritical
+                                                ? "#ef4444"
+                                                : "linear-gradient(90deg,#6366f1,#8b5cf6)",
+                                        }}
+                                    />
+                                </div>
+
+                                <div
+                                    className="absolute top-1/2 -translate-y-1/2"
+                                    style={{
+                                        right: `${100 - minimumMarkerPosition}%`,
+                                    }}
+                                >
+                                    <div
+                                        className="h-3 w-0.5 rounded-full"
+                                        style={{
+                                            background: "#f59e0b",
+                                            boxShadow:
+                                                "0 0 4px rgba(245,158,11,0.6)",
+                                        }}
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="mt-2 flex items-center justify-between text-[10px]">
+                                <span className="font-semibold text-gray-400 dark:text-white/40">
+                                    پرشدگی انبار
+                                </span>
+
+                                <span
+                                    className="font-extrabold"
+                                    style={{
+                                        color: isCritical
+                                            ? "#ef4444"
+                                            : isDark
+                                                ? "#e2e8f0"
+                                                : "#334155",
+                                    }}
+                                >
+                                    {Math.round(
+                                        stockPercentage
+                                    ).toLocaleString("fa-IR")}
+                                    ٪
+                                </span>
+                            </div>
+                        </div>
                     ) : (
                         <div
                             className="flex items-center justify-center gap-2 rounded-2xl border border-dashed px-3 py-4"
@@ -554,7 +572,10 @@ export default function WarehouseEmployeeProductCard({
                                     : "rgba(245,158,11,.03)",
                             }}
                         >
-                            <AlertTriangle size={13} className="text-amber-500" />
+                            <AlertTriangle
+                                size={13}
+                                className="text-amber-500"
+                            />
                             <span className="text-[11.5px] font-bold text-amber-500">
                                 موجودی اولیه ثبت نشده است
                             </span>
@@ -562,7 +583,6 @@ export default function WarehouseEmployeeProductCard({
                     )}
                 </div>
 
-                {/* Last Updated */}
                 {stockInfo?.updated_at && (
                     <div className="relative z-[1] mt-2 flex items-center justify-end gap-1">
                         <span
@@ -575,7 +595,9 @@ export default function WarehouseEmployeeProductCard({
                             }}
                         >
                             <CalendarDays size={9} />
-                            {new Date(stockInfo.updated_at).toLocaleDateString("fa-IR")}
+                            {new Date(
+                                stockInfo.updated_at
+                            ).toLocaleDateString("fa-IR")}
                         </span>
                     </div>
                 )}
@@ -603,7 +625,8 @@ export default function WarehouseEmployeeProductCard({
                     isOpen={showStock}
                     onClose={() => setShowStock(false)}
                     product={product}
-                    performedById={performedById ?? ""}
+                    staff={staff}
+                    performedById={performedById}
                     onCompleted={refreshStock}
                 />
             )}
@@ -641,8 +664,12 @@ export default function WarehouseEmployeeProductCard({
                             <div className="mb-4 flex items-center justify-between">
                                 <div className="flex items-center gap-2.5">
                                     <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-red-50 dark:bg-red-500/10">
-                                        <Trash2 size={15} className="text-red-500" />
+                                        <Trash2
+                                            size={15}
+                                            className="text-red-500"
+                                        />
                                     </div>
+
                                     <h3 className="text-[13.5px] font-extrabold text-gray-900 dark:text-white">
                                         حذف محصول
                                     </h3>
@@ -689,7 +716,10 @@ export default function WarehouseEmployeeProductCard({
                                     className="flex flex-1 items-center justify-center gap-1.5 rounded-2xl bg-red-600 py-2.5 text-[12.5px] font-bold text-white disabled:opacity-60"
                                 >
                                     {deleting ? (
-                                        <Loader2 size={14} className="animate-spin" />
+                                        <Loader2
+                                            size={14}
+                                            className="animate-spin"
+                                        />
                                     ) : (
                                         "حذف کن"
                                     )}

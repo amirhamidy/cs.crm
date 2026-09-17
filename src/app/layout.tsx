@@ -25,8 +25,8 @@ const vazir = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "ویز  - پنل مدیریت",
-  description: "پنل مدیریت حرفه‌ای crm ",
+  title: "radco crm",
+  description: "radco crm",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

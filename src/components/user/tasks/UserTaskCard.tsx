@@ -11,6 +11,7 @@ import axiosInstance from "@/lib/axiosInstance";
 import TaskCaseDescriptionModal from "./TaskCaseDescriptionModal";
 import TaskNotesModal from "./TaskNotesModal";
 import TaskActionModal from "./TaskActionModal";
+import SoldOrderTaskModal from "./SoldOrderTaskModal";
 import TaskLogsModal from "./TaskLogsModal";
 import ActionBtn from "./ActionBtn";
 import { toJalali, toPersianDigits, JALALI_MONTHS, pad2 } from "@/lib/jalali";
@@ -207,6 +208,55 @@ export default function UserTaskCard({ task, accent = "#6366f1", isLastStage, on
         }
     }
 
+    async function submitSale(data: {
+        product_id: number;
+        quantity: number;
+        note: string;
+        file?: File;
+        started_at?: string;
+        deadline?: string;
+        score: number;
+        score_reason: string;
+    }) {
+        setSubmitting(true);
+        setBlockMsg(null);
+
+        try {
+            const form = new FormData();
+            form.append("task_id", String(task.id));
+            form.append("product_id", String(data.product_id));
+            form.append("quantity", String(data.quantity));
+            if (data.note) form.append("note", data.note);
+            if (data.file) form.append("file", data.file);
+            if (data.started_at) form.append("started_at", data.started_at);
+            if (data.deadline) form.append("deadline", data.deadline);
+
+            await axiosInstance.post("/warehouse/api/v1/order_task/create/", form, {
+                headers: { "Content-Type": "multipart/form-data" },
+            });
+
+            const soldForm = new FormData();
+            soldForm.append("score", String(data.score));
+            soldForm.append("score_reason", data.score_reason);
+
+            const response = await axiosInstance.post(
+                `/tasks/api/v1/tasks/${task.id}/mark-as-sold/`,
+                soldForm,
+                { headers: { "Content-Type": "multipart/form-data" } }
+            );
+
+            await syncCustomer();
+            onUpdated({ ...task, ...(response.data ?? {}), status: "sold" });
+            fetchLog();
+            setOpenModal(null);
+        } catch (error) {
+            setBlockMsg(parseError(error));
+            throw error;
+        } finally {
+            setSubmitting(false);
+        }
+    }
+
     return (
         <>
             <motion.div layout className="group relative flex flex-col overflow-hidden rounded-[1.6rem] border bg-white p-3.5 shadow-[0_6px_22px_rgba(15,23,42,.03)] dark:bg-[#111a2d]" style={{ borderColor: `${accent}28` }}>
@@ -278,29 +328,18 @@ export default function UserTaskCard({ task, accent = "#6366f1", isLastStage, on
                         <ActionBtn rippleKey={`unsold-${task.id}`} active={false} onClick={() => setOpenModal("unsold")} color="amber" icon={<RotateCcw size={13} />} label="لغو فروش" full />
                     ) : isActive ? (
                         <>
-                            <ActionBtn
-                                rippleKey={`next-${task.id}`}
-                                active={false}
-                                onClick={() => setOpenModal("next")}
-                                color="accent"
-                                accentColor={accent}
-                                icon={<ArrowLeftCircle size={13} />}
-                                label={isLastStage ? "ثبت نظر و تکمیل" : "انتقال به مرحله بعد"}
-                                full
-                            />
-
+                            <ActionBtn rippleKey={`next-${task.id}`} active={false} onClick={() => setOpenModal("next")} color="accent" accentColor={accent} icon={<ArrowLeftCircle size={13} />} label={isLastStage ? "ثبت نظر و تکمیل" : "انتقال به مرحله بعد"} full />
                             <div className="mt-1.5 grid grid-cols-2 gap-1.5">
                                 <ActionBtn rippleKey={`prev-${task.id}`} active={false} onClick={() => setOpenModal("prev")} color="pink" icon={<ArrowRightCircle size={13} />} label="مرحله قبل" full />
                                 <ActionBtn rippleKey={`sold-${task.id}`} active={false} onClick={() => setOpenModal("sold")} color="amber" icon={<ShoppingBag size={13} />} label="فروش" full />
                             </div>
-
                             <ActionBtn rippleKey={`cancel-${task.id}`} active={false} onClick={() => setOpenModal("cancel")} color="red" icon={<XCircle size={13} />} label="لغو تسک" full />
                         </>
                     ) : null}
                 </div>
             </motion.div>
 
-            {(Object.keys(modalMeta) as ModalType[]).map((direction) => {
+            {(Object.keys(modalMeta) as ModalType[]).filter((direction) => direction !== "sold").map((direction) => {
                 const meta = modalMeta[direction];
                 const finalTitle = direction === "next" && isLastStage ? "تکمیل تسک" : meta.title;
                 return (
@@ -316,6 +355,14 @@ export default function UserTaskCard({ task, accent = "#6366f1", isLastStage, on
                     />
                 );
             })}
+
+            <SoldOrderTaskModal
+                isOpen={openModal === "sold"}
+                onClose={() => setOpenModal(null)}
+                taskId={task.id}
+                onSubmit={submitSale}
+                submitting={submitting}
+            />
 
             <TaskLogsModal isOpen={logsOpen} onClose={() => setLogsOpen(false)} taskId={task.id} taskTitle={task.title} />
             <TaskNotesModal isOpen={notesOpen} onClose={() => setNotesOpen(false)} taskId={task.id} taskTitle={task.title} />
