@@ -13,6 +13,13 @@ interface Task {
   created_at: string;
 }
 
+interface Department {
+  id: number;
+  name?: string;
+  title?: string;
+  department_name?: string;
+}
+
 interface DeptIssues {
   stage: string;
   issues: number;
@@ -49,19 +56,28 @@ const getJalaliDate = (date: Date) =>
 
 export function useCancelledTasksByDept() {
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let mounted = true;
 
-    const fetchTasks = async () => {
+    const fetchData = async () => {
       try {
-        const res = await axiosInstance.get<Task[]>("/tasks/api/v1/tasks/");
+        const [tasksRes, departmentsRes] = await Promise.all([
+          axiosInstance.get<Task[]>("/tasks/api/v1/tasks/"),
+          axiosInstance.get<Department[]>(
+            "/department/api/v1/department/list/",
+          ),
+        ]);
 
         if (!mounted) return;
 
-        setTasks(Array.isArray(res.data) ? res.data : []);
+        setTasks(Array.isArray(tasksRes.data) ? tasksRes.data : []);
+        setDepartments(
+          Array.isArray(departmentsRes.data) ? departmentsRes.data : [],
+        );
       } catch (err: any) {
         if (!mounted) return;
 
@@ -70,7 +86,7 @@ export function useCancelledTasksByDept() {
         setError(
           status === 401
             ? "401: دسترسی غیرمجاز"
-            : "خطا در دریافت اطلاعات تسک‌ها",
+            : "خطا در دریافت اطلاعات دپارتمان‌ها و تسک‌ها",
         );
       } finally {
         if (mounted) {
@@ -79,7 +95,7 @@ export function useCancelledTasksByDept() {
       }
     };
 
-    fetchTasks();
+    fetchData();
 
     return () => {
       mounted = false;
@@ -114,20 +130,21 @@ export function useCancelledTasksByDept() {
   );
 
   const allDepartments = useMemo(() => {
-    const depts = new Set<string>();
+    const seen = new Set<string>();
 
-    tasks.forEach((task) => {
-      const department = task.department_name?.trim();
+    departments.forEach((department) => {
+      const name =
+        department.name?.trim() ||
+        department.title?.trim() ||
+        department.department_name?.trim();
 
-      if (department) {
-        depts.add(department);
-      } else {
-        depts.add("نامشخص");
+      if (name) {
+        seen.add(name);
       }
     });
 
-    return Array.from(depts);
-  }, [tasks]);
+    return Array.from(seen);
+  }, [departments]);
 
   const chartData = useMemo(() => {
     const today = getToday();

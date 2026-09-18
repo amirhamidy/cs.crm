@@ -118,6 +118,7 @@ function NiceSelect({
                     className={`text-gray-400 transition-transform ${isOpen ? "rotate-180" : ""}`}
                 />
             </button>
+
             <label
                 className={`pointer-events-none absolute right-5 rounded bg-white px-1.5 text-sm text-gray-400 transition-all duration-200 dark:bg-[#0f172a] ${isOpen || selectedOption
                         ? "top-0 text-xs text-gray-500 dark:text-gray-400"
@@ -126,6 +127,7 @@ function NiceSelect({
             >
                 {label}
             </label>
+
             <AnimatePresence>
                 {isOpen && (
                     <motion.div
@@ -229,10 +231,12 @@ export default function TimeRangeModal({
     function handleSubmit() {
         const s = fieldToIso(start);
         const d = fieldToIso(deadline);
+
         if (new Date(d) <= new Date(s)) {
             setError("مهلت انجام باید بعد از زمان شروع باشد");
             return;
         }
+
         setError("");
         onSubmit(s, d);
     }
@@ -255,7 +259,7 @@ export default function TimeRangeModal({
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="fixed inset-0 z-50 flex items-center justify-center px-4"
+                className="fixed inset-0 z-[10000] flex items-center justify-center px-4"
                 style={{
                     background: "rgba(0,0,0,0.45)",
                     backdropFilter: "blur(3px)",
@@ -285,6 +289,7 @@ export default function TimeRangeModal({
                                 </p>
                             </div>
                         </div>
+
                         <button
                             type="button"
                             onClick={onClose}
@@ -304,6 +309,7 @@ export default function TimeRangeModal({
                                                 ? start
                                                 : deadline;
                                         const active = activeField === field;
+
                                         return (
                                             <button
                                                 key={field}
@@ -326,6 +332,7 @@ export default function TimeRangeModal({
                                                         ? "شروع"
                                                         : "مهلت انجام"}
                                                 </div>
+
                                                 <div
                                                     className={`text-[12.5px] font-bold ${active
                                                             ? "text-blue-600 dark:text-blue-400"
@@ -357,6 +364,7 @@ export default function TimeRangeModal({
                                     >
                                         <ChevronRight size={15} />
                                     </button>
+
                                     <div className="flex items-center gap-1.5 text-[13px] font-bold text-gray-900 dark:text-white">
                                         <CalendarDays
                                             size={14}
@@ -369,6 +377,7 @@ export default function TimeRangeModal({
                                             {toPersianDigits(viewJy)}
                                         </span>
                                     </div>
+
                                     <button
                                         type="button"
                                         onClick={nextMonth}
@@ -396,11 +405,13 @@ export default function TimeRangeModal({
                                             current.jy === viewJy &&
                                             current.jm === viewJm &&
                                             current.jd === day;
+
                                         const isToday =
                                             day !== null &&
                                             ty === viewJy &&
                                             tm === viewJm &&
                                             td === day;
+
                                         return (
                                             <button
                                                 key={idx}
@@ -442,6 +453,7 @@ export default function TimeRangeModal({
                                     }
                                     options={hoursOptions}
                                 />
+
                                 <NiceSelect
                                     label="دقیقه"
                                     value={current.minute}
@@ -475,6 +487,7 @@ export default function TimeRangeModal({
                         >
                             انصراف
                         </button>
+
                         <motion.button
                             type="button"
                             whileTap={{ scale: 0.97 }}
