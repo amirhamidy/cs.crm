@@ -58,7 +58,7 @@ function FloatingInput({
                 value={value}
                 onChange={(e) => onChange(e.target.value)}
                 disabled={disabled}
-                className="peer h-[52px] w-full rounded-2xl border border-gray-100 bg-gray-50 px-4 pt-4 text-[12.5px] font-bold text-gray-900 outline-none transition-colors focus:border-blue-500 disabled:opacity-60 dark:border-white/[0.06] dark:bg-white/[0.03] dark:text-white dark:focus:border-blue-500/50"
+                className="peer h-[52px] w-full rounded-2xl border border-gray-100 bg-gray-50 px-4 pt-4 text-[12.5px] font-bold text-gray-900 outline-none transition-all focus:border-blue-500 focus:bg-white focus:shadow-[0_0_0_4px_rgba(59,130,246,0.07)] disabled:opacity-60 dark:border-white/[0.06] dark:bg-white/[0.03] dark:text-white dark:focus:border-blue-500/50 dark:focus:bg-white/[0.045]"
             />
             <label
                 htmlFor={id}
@@ -279,7 +279,7 @@ export default function WarehouseEmployeeOrderTaskStatusModal({
 
                             <div className="mt-2 rounded-xl bg-white px-2.5 py-2 dark:bg-white/[0.04]">
                                 <div className="flex items-center justify-between">
-                                    <span className="text-[9px] font-bold text-gray-400 dark:text-white/40">کیس</span>
+                                    <span className="text-[9px] font-bold text-gray-400 dark:text-white/40">پرونده</span>
                                     <span className="max-w-[70%] truncate text-[10px] font-black text-gray-700 dark:text-gray-200">
                                         {caseTitle}
                                     </span>
@@ -295,8 +295,8 @@ export default function WarehouseEmployeeOrderTaskStatusModal({
                                     disabled={loading}
                                     onClick={() => setStatus("completed")}
                                     className={`flex h-11 items-center justify-center gap-2 rounded-2xl border text-[11px] font-bold transition ${status === "completed"
-                                            ? "border-emerald-500 bg-emerald-500 text-white shadow-lg shadow-emerald-500/20"
-                                            : "border-gray-200 bg-white text-gray-600 hover:border-emerald-200 hover:bg-emerald-50 dark:border-white/[0.08] dark:bg-white/[0.03] dark:text-gray-300 dark:hover:border-emerald-500/30"
+                                        ? "border-emerald-500 bg-emerald-500 text-white shadow-lg shadow-emerald-500/20"
+                                        : "border-gray-200 bg-white text-gray-600 hover:border-emerald-200 hover:bg-emerald-50 dark:border-white/[0.08] dark:bg-white/[0.03] dark:text-gray-300 dark:hover:border-emerald-500/30"
                                         }`}
                                 >
                                     <CheckCircle2 size={15} />
@@ -307,8 +307,8 @@ export default function WarehouseEmployeeOrderTaskStatusModal({
                                     disabled={loading}
                                     onClick={() => setStatus("cancelled")}
                                     className={`flex h-11 items-center justify-center gap-2 rounded-2xl border text-[11px] font-bold transition ${status === "cancelled"
-                                            ? "border-rose-500 bg-rose-500 text-white shadow-lg shadow-rose-500/20"
-                                            : "border-gray-200 bg-white text-gray-600 hover:border-rose-200 hover:bg-rose-50 dark:border-white/[0.08] dark:bg-white/[0.03] dark:text-gray-300 dark:hover:border-rose-500/30"
+                                        ? "border-rose-500 bg-rose-500 text-white shadow-lg shadow-rose-500/20"
+                                        : "border-gray-200 bg-white text-gray-600 hover:border-rose-200 hover:bg-rose-50 dark:border-white/[0.08] dark:bg-white/[0.03] dark:text-gray-300 dark:hover:border-rose-500/30"
                                         }`}
                                 >
                                     <XCircle size={15} />
@@ -318,14 +318,38 @@ export default function WarehouseEmployeeOrderTaskStatusModal({
                         </div>
 
                         {status === "completed" && (
-                            <FloatingInput
-                                id="completed_quantity"
-                                label="مقدار تکمیل شده"
-                                type="number"
-                                value={completedQuantity}
-                                onChange={setCompletedQuantity}
-                                disabled={loading}
-                            />
+                            <div className="rounded-[1.35rem] border border-gray-100 bg-gray-50 p-3 dark:border-white/[0.06] dark:bg-white/[0.025]">
+                                <div className="mb-2 flex items-center justify-between px-1">
+                                    <div className="flex items-center gap-2">
+                                        <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-500/10 text-blue-500 dark:bg-blue-500/15">
+                                            <Package size={13} />
+                                        </span>
+                                        <div>
+                                            <p className="text-[10px] font-black text-gray-700 dark:text-gray-200">
+                                                مقدار تکمیل شده
+                                            </p>
+                                            <p className="mt-0.5 text-[8.5px] font-medium text-gray-400">
+                                                حداکثر {formatNumber(expectedQuantity)}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="relative">
+                                    <input
+                                        id="completed_quantity"
+                                        type="number"
+                                        min="0"
+                                        max={Number.isFinite(expectedQuantity) ? expectedQuantity : undefined}
+                                        step="any"
+                                        value={completedQuantity}
+                                        onChange={(e) => setCompletedQuantity(e.target.value)}
+                                        disabled={loading}
+                                        placeholder="مثلاً 10"
+                                        className="h-[56px] w-full rounded-[1.1rem] border border-gray-200 bg-white px-4 pl-4 text-[15px] font-black text-gray-900 outline-none transition-all placeholder:text-[11px] placeholder:font-medium placeholder:text-gray-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/[0.07] disabled:opacity-60 dark:border-white/[0.07] dark:bg-[#111827] dark:text-white dark:placeholder:text-white/20 dark:focus:border-blue-500/50 dark:focus:ring-blue-500/[0.08]"
+                                    />
+                                </div>
+                            </div>
                         )}
 
                         <div className="relative">
@@ -339,11 +363,8 @@ export default function WarehouseEmployeeOrderTaskStatusModal({
                                         ? "توضیحات مربوط به انجام تسک..."
                                         : "دلیل لغو یا توضیحات مربوط به تسک..."
                                 }
-                                className="peer w-full resize-none rounded-2xl border border-gray-100 bg-gray-50 px-4 pt-6 pb-3 text-[12.5px] font-bold text-gray-900 outline-none transition-colors focus:border-blue-500 disabled:opacity-60 dark:border-white/[0.06] dark:bg-white/[0.03] dark:text-white dark:focus:border-blue-500/50"
+                                className="peer w-full resize-none rounded-2xl border border-gray-100 bg-gray-50 px-4 pt-4 pb-3 text-[12.5px] font-bold text-gray-900 outline-none transition-colors focus:border-blue-500 disabled:opacity-60 dark:border-white/[0.06] dark:bg-white/[0.03] dark:text-white dark:focus:border-blue-500/50"
                             />
-                            <label className="pointer-events-none absolute right-4 top-4 text-[12px] font-semibold text-gray-400 transition-all duration-200 peer-focus:top-[15px] peer-focus:text-[10px] peer-focus:text-blue-500 peer-[:not(:placeholder-shown)]:top-[15px] peer-[:not(:placeholder-shown)]:text-[10px]">
-                                یادداشت
-                            </label>
                         </div>
 
                         <label className="flex h-[52px] cursor-pointer items-center gap-2.5 rounded-2xl border border-dashed border-gray-200 bg-gray-50/60 px-3.5 transition-colors hover:border-blue-400 hover:bg-blue-50/40 dark:border-white/[0.1] dark:bg-white/[0.02] dark:hover:border-blue-500/40 dark:hover:bg-blue-500/[0.05]">
