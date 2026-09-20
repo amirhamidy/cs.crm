@@ -18,12 +18,15 @@ import {
     ReceiptText,
     ShieldCheck,
     ShoppingBag,
+    UsersRound,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 
 import WarehouseOverview from "@/components/admin/warehouse/Warehouseoverview";
 import AddCategoryModal from "@/components/admin/warehouse/AddCategoryModal";
 import WarehouseCategoryCard from "@/components/admin/warehouse/WarehouseCategoryCard";
+import WarehouseStaffCard from "@/components/admin/warehouse/WarehouseStaffCard";
+import AddWarehouseStaffModal from "@/components/admin/warehouse/AddWarehouseStaffModal";
 import CreateOrderTaskModal from "@/components/user/warehouse/CreateOrderTaskModal";
 import WarehouseEmployeeTransactionCard from "@/components/user/warehouse/WarehouseEmployeeTransactionCard";
 import WarehouseEmployeeProductCard from "@/components/user/warehouse/WarehouseEmployeeProductCard";
@@ -61,6 +64,15 @@ interface AdminCategory {
     name: string;
 }
 
+interface WarehouseStaff {
+    id: number;
+    employee: number;
+    employee_id: number;
+    full_name: string;
+    is_active: boolean;
+    joined_at: string;
+}
+
 type Tab =
     | "overview"
     | "products"
@@ -71,6 +83,7 @@ type Tab =
     | "deadlines"
     | "ledger"
     | "categories"
+    | "staff"
     | "invoices";
 
 const TABS: Array<
@@ -86,6 +99,7 @@ const TABS: Array<
         ["ledger", "گردش محصول", BellRing],
         ["categories", "دسته‌بندی‌ها", Package],
         ["invoices", "فاکتور فروش", FileText],
+        ["staff", "انباردارها", UsersRound],
     ];
 
 const AVATAR_GRADIENTS = [
@@ -720,6 +734,9 @@ export default function WarehouseEmployeePage() {
     const [archiveLoading, setArchiveLoading] = useState(false);
     const [selectedInvoice, setSelectedInvoice] =
         useState<SalesInvoice | null>(null);
+    const [warehouseStaff, setWarehouseStaff] = useState<WarehouseStaff[]>([]);
+    const [staffLoading, setStaffLoading] = useState(false);
+    const [showAddStaffModal, setShowAddStaffModal] = useState(false);
 
     useEffect(() => {
         setTaskItems(myTasks);
@@ -747,6 +764,25 @@ export default function WarehouseEmployeePage() {
         resolvedEmployeeId == null
             ? null
             : Number(resolvedEmployeeId);
+
+    const fetchWarehouseStaff = useCallback(async () => {
+        try {
+            setStaffLoading(true);
+            const response = await axiosInstance.get("/warehouse/api/v1/staff/");
+            const data = Array.isArray(response.data)
+                ? response.data
+                : Array.isArray(response.data?.results)
+                    ? response.data.results
+                    : Array.isArray(response.data?.data)
+                        ? response.data.data
+                        : [];
+            setWarehouseStaff(data);
+        } catch {
+            setWarehouseStaff([]);
+        } finally {
+            setStaffLoading(false);
+        }
+    }, []);
 
     const fetchCategories = useCallback(async () => {
         try {
@@ -800,6 +836,12 @@ export default function WarehouseEmployeePage() {
             fetchCategories();
         }
     }, [tab, fetchCategories, hasFullWarehouseAccess]);
+
+    useEffect(() => {
+        if (tab === "staff" && hasFullWarehouseAccess) {
+            fetchWarehouseStaff();
+        }
+    }, [tab, fetchWarehouseStaff, hasFullWarehouseAccess]);
 
     useEffect(() => {
         if (
@@ -911,6 +953,11 @@ export default function WarehouseEmployeePage() {
         [adminCategories, paged],
     );
 
+    const paginatedStaff = useMemo(
+        () => paged(warehouseStaff),
+        [warehouseStaff, paged],
+    );
+
     const salesInvoices = useMemo(
         () => buildSalesInvoices(archivedTasks),
         [archivedTasks],
@@ -953,6 +1000,21 @@ export default function WarehouseEmployeePage() {
         setTab("ledger");
         setCurrentPage(1);
     }, []);
+
+    const handleDeleteStaff = useCallback((id: number) => {
+        setWarehouseStaff((current) => current.filter((staff) => staff.id !== id));
+    }, []);
+
+    const handleUpdateStaff = useCallback((updated: WarehouseStaff) => {
+        setWarehouseStaff((current) =>
+            current.map((staff) => (staff.id === updated.id ? updated : staff)),
+        );
+    }, []);
+
+    const handleStaffSuccess = useCallback(() => {
+        setCurrentPage(1);
+        fetchWarehouseStaff();
+    }, [fetchWarehouseStaff]);
 
     const handleDeleteCategory = useCallback((id: number) => {
         setAdminCategories((current) =>
@@ -1059,6 +1121,7 @@ export default function WarehouseEmployeePage() {
         orders: pendingOrderTasks.length,
         deadlines: orderTaskDeadlines.length,
         categories: adminCategories.length,
+        staff: warehouseStaff.length,
         invoices: salesInvoices.length,
     };
 
@@ -1707,6 +1770,66 @@ export default function WarehouseEmployeePage() {
                             </div>
                         )}
 
+                    {tab === "staff" &&
+                        hasFullWarehouseAccess && (
+                            <div className="space-y-5">
+                                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                    <div>
+                                        <h2 className="text-[14px] font-extrabold text-gray-900 dark:text-white">
+                                            انباردارها
+                                        </h2>
+                                        <p className="mt-1 text-[11.5px] text-gray-500 dark:text-gray-400">
+                                            مدیریت انباردارهای ثبت‌شده در سیستم
+                                        </p>
+                                    </div>
+                                    <motion.button
+                                        type="button"
+                                        whileTap={{ scale: 0.97 }}
+                                        onClick={() => setShowAddStaffModal(true)}
+                                        className="flex items-center justify-center gap-2 rounded-full bg-blue-600 px-4 py-2.5 text-[11.5px] font-bold text-white transition-colors hover:bg-blue-500"
+                                    >
+                                        <Plus size={15} />
+                                        افزودن انباردار
+                                    </motion.button>
+                                </div>
+
+                                {staffLoading ? (
+                                    <div className="flex items-center justify-center py-20">
+                                        <Loader2
+                                            size={22}
+                                            className="animate-spin"
+                                            style={{ color: "#6366f1" }}
+                                        />
+                                    </div>
+                                ) : (
+                                    <>
+                                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                                            {paginatedStaff.items.length ? (
+                                                paginatedStaff.items.map((staff, index) => (
+                                                    <WarehouseStaffCard
+                                                        key={staff.id}
+                                                        staff={staff}
+                                                        index={index}
+                                                        onDelete={handleDeleteStaff}
+                                                        onUpdated={handleUpdateStaff}
+                                                    />
+                                                ))
+                                            ) : (
+                                                renderEmpty("هنوز انبارداری ثبت نشده است")
+                                            )}
+                                        </div>
+
+                                        <Pagination
+                                            currentPage={currentPage}
+                                            totalPages={paginatedStaff.totalPages}
+                                            onPageChange={setCurrentPage}
+                                            isDark={isDark}
+                                        />
+                                    </>
+                                )}
+                            </div>
+                        )}
+
                     {tab === "invoices" &&
                         hasFullWarehouseAccess && (
                             <div className="space-y-5">
@@ -1813,13 +1936,12 @@ export default function WarehouseEmployeePage() {
                 </motion.div>
             </AnimatePresence>
 
+
             {hasFullWarehouseAccess && (
                 <>
                     <WarehouseEmployeeProductWizardModal
                         isOpen={productWizardOpen}
-                        onClose={() =>
-                            setProductWizardOpen(false)
-                        }
+                        onClose={() => setProductWizardOpen(false)}
                         categories={categories}
                         staff={myStaff ? [myStaff] : []}
                         performedById={myStaff?.id ?? null}
@@ -1853,8 +1975,15 @@ export default function WarehouseEmployeePage() {
                         }
                         invoice={selectedInvoice}
                     />
+
+                    <AddWarehouseStaffModal
+                        isOpen={showAddStaffModal}
+                        onClose={() => setShowAddStaffModal(false)}
+                        onSuccess={handleStaffSuccess}
+                    />
                 </>
             )}
+
         </div>
     );
 }

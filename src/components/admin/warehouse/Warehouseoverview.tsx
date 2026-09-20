@@ -299,7 +299,7 @@ function StatsBar({
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.25 }}
-            className="grid grid-cols-2 overflow-hidden rounded-3xl sm:grid-cols-4"
+            className="grid grid-cols-2  rounded-3xl sm:grid-cols-4"
             style={{
                 background: isDark ? "rgba(255,255,255,0.03)" : "#fafafa",
                 border: isDark

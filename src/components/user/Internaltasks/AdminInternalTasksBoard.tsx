@@ -20,6 +20,7 @@ import {
     X,
 } from "lucide-react";
 import { useTheme } from "next-themes";
+import { useAuthStore } from "@/store/authStore";
 import {
     deleteInternalTask,
     fetchEmployeeList,
@@ -182,6 +183,14 @@ function getGradient(id: number) {
     ];
 }
 
+function getEmployeeName(employee: AdminEmployee) {
+    return (
+        employee.full_name?.trim() ||
+        employee.username?.trim() ||
+        `کارمند ${employee.id ?? ""}`
+    );
+}
+
 function resolveAssignedTo(
     rawAssignedTo: unknown,
     employees: AdminEmployee[],
@@ -197,48 +206,142 @@ function resolveAssignedTo(
             .filter(([id]) => Number.isFinite(id)),
     );
 
+    const employeeByUsername = new Map(
+        employees
+            .map((employee) => [
+                employee.username?.trim().toLowerCase(),
+                getEmployeeName(employee),
+            ] as const)
+            .filter(([username]) => Boolean(username)),
+    );
+
     return rawAssignedTo
         .map((item): EmployeeRef | null => {
+            const isObject =
+                typeof item === "object" && item !== null;
+
             const id =
                 typeof item === "number"
                     ? item
                     : Number(
-                        (item as { id?: unknown } | null)
-                            ?.id,
+                        (item as { id?: unknown } | null)?.id,
                     );
 
-            if (!Number.isFinite(id)) return null;
-
-            const providedName =
-                typeof item === "object" &&
-                    item !== null &&
-                    typeof (item as { full_name?: unknown })
-                        .full_name === "string"
-                    ? (item as { full_name: string }).full_name
+            const username =
+                isObject &&
+                    typeof (item as { username?: unknown }).username ===
+                    "string"
+                    ? (item as { username: string }).username.trim()
                     : "";
 
-            const full_name =
-                providedName.trim() ||
-                employeeById.get(id) ||
-                `کارمند ${id}`;
+            const providedName =
+                isObject &&
+                    typeof (item as { full_name?: unknown }).full_name ===
+                    "string"
+                    ? (item as { full_name: string }).full_name.trim()
+                    : "";
 
-            return { id, full_name };
+            if (!Number.isFinite(id) && !username) {
+                return null;
+            }
+
+            let full_name = providedName;
+
+            if (!full_name && username) {
+                full_name =
+                    employeeByUsername.get(username.toLowerCase()) ||
+                    username;
+            }
+
+            if (!full_name && Number.isFinite(id)) {
+                full_name =
+                    employeeById.get(id) ||
+                    `کارمند ${id}`;
+            }
+
+            return {
+                id: Number.isFinite(id) ? id : 0,
+                full_name,
+            };
         })
         .filter((item): item is EmployeeRef => item !== null);
 }
 
-function getEmployeeName(employee: AdminEmployee) {
-    return (
-        employee.full_name ||
-        employee.username ||
-        `کارمند ${employee.id ?? ""}`
+function resolveCreatorName(
+    createdBy: string,
+    employees: AdminEmployee[],
+) {
+    const username = createdBy.trim();
+
+    if (!username) return "کاربر";
+
+    const employee = employees.find(
+        (item) =>
+            item.username?.trim().toLowerCase() ===
+            username.toLowerCase(),
     );
+
+    return employee
+        ? getEmployeeName(employee)
+        : username;
+}
+
+function isTaskAssignedToUser(
+    task: InternalTask,
+    username: string,
+    employees: AdminEmployee[],
+) {
+    const currentUsername = username.trim().toLowerCase();
+
+    if (!currentUsername) return false;
+
+    return (task.assigned_to ?? []).some((item) => {
+        if (typeof item === "object" && item !== null) {
+            const itemUsername = (
+                item as { username?: unknown }
+            ).username;
+
+            if (
+                typeof itemUsername === "string" &&
+                itemUsername.trim().toLowerCase() === currentUsername
+            ) {
+                return true;
+            }
+
+            const itemId = Number(
+                (item as { id?: unknown }).id,
+            );
+
+            if (Number.isFinite(itemId)) {
+                return employees.some(
+                    (employee) =>
+                        Number(employee.id) === itemId &&
+                        employee.username?.trim().toLowerCase() ===
+                        currentUsername,
+                );
+            }
+
+            return false;
+        }
+
+        const itemId = Number(item);
+
+        if (!Number.isFinite(itemId)) return false;
+
+        return employees.some(
+            (employee) =>
+                Number(employee.id) === itemId &&
+                employee.username?.trim().toLowerCase() ===
+                currentUsername,
+        );
+    });
 }
 
 function AdminInternalTaskCard({
     task,
     index,
     employees,
+    currentUsername,
     onOpen,
     onDelete,
     onStatusChange,
@@ -247,6 +350,7 @@ function AdminInternalTaskCard({
     task: InternalTask;
     index: number;
     employees: AdminEmployee[];
+    currentUsername: string;
     onOpen: (task: InternalTask) => void;
     onDelete?: (taskId: number) => Promise<void> | void;
     onStatusChange: (task: InternalTask) => void;
@@ -264,14 +368,28 @@ function AdminInternalTaskCard({
     const [statusError, setStatusError] = useState<string | null>(null);
 
     const statusConfig = getStatusConfig(task.status);
-
     const isCompleted = task.status === "completed";
     const isCancelled = task.status === "cancelled";
+
+    const isCreator =
+        currentUsername.trim().toLowerCase() ===
+        task.created_by.trim().toLowerCase();
+
+    const isAssigned = isTaskAssignedToUser(
+        task,
+        currentUsername,
+        employees,
+    );
+
+    const isReceived = !isCreator && isAssigned;
+    const isSent = isCreator;
+
+    const canAct = isReceived;
 
     async function handleReopen(event: React.MouseEvent) {
         event.stopPropagation();
 
-        if (reopening) return;
+        if (reopening || !canAct) return;
 
         setStatusError(null);
         setReopening(true);
@@ -309,14 +427,10 @@ function AdminInternalTaskCard({
                 new Date(a.created_at).getTime(),
         )[0];
 
-    const creator = employees.find(
-        (employee) =>
-            employee.username === task.created_by,
+    const creatorName = resolveCreatorName(
+        task.created_by,
+        employees,
     );
-
-    const creatorName = creator
-        ? getEmployeeName(creator)
-        : task.created_by || "کاربر";
 
     return (
         <motion.div
@@ -369,25 +483,15 @@ function AdminInternalTaskCard({
                     width="calc(100% - 2px)"
                     height="calc(100% - 2px)"
                     rx="30"
-                    ry="30"
                     fill="none"
                     stroke={`url(#admin-border-${task.id})`}
                     strokeWidth="1.5"
                     pathLength="1"
-                    initial={{
-                        pathLength: 0,
-                        opacity: 0,
-                    }}
+                    initial={{ pathLength: 0, opacity: 0 }}
                     animate={
                         hovered
-                            ? {
-                                pathLength: 1,
-                                opacity: 1,
-                            }
-                            : {
-                                pathLength: 0,
-                                opacity: 0,
-                            }
+                            ? { pathLength: 1, opacity: 1 }
+                            : { pathLength: 0, opacity: 0 }
                     }
                     transition={{
                         duration: 0.55,
@@ -409,6 +513,18 @@ function AdminInternalTaskCard({
                         />
                         {statusConfig.label}
                     </span>
+
+                    {isSent && (
+                        <span className="rounded-full border border-indigo-500/20 bg-indigo-500/10 px-2.5 py-1 text-[10px] font-bold text-indigo-500">
+                            ارسالی
+                        </span>
+                    )}
+
+                    {isReceived && (
+                        <span className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-1 text-[10px] font-bold text-emerald-500">
+                            دریافتی
+                        </span>
+                    )}
                 </div>
 
                 <div className="flex shrink-0 items-center gap-1.5">
@@ -437,7 +553,10 @@ function AdminInternalTaskCard({
                             title="حذف تیکت"
                         >
                             {isDeleting ? (
-                                <Loader2 size={13} className="animate-spin" />
+                                <Loader2
+                                    size={13}
+                                    className="animate-spin"
+                                />
                             ) : (
                                 <Trash2 size={13} />
                             )}
@@ -450,9 +569,7 @@ function AdminInternalTaskCard({
                 <h3
                     className="line-clamp-1 text-[13.5px] font-extrabold"
                     style={{
-                        color: isDark
-                            ? "#f1f5f9"
-                            : "#1e293b",
+                        color: isDark ? "#f1f5f9" : "#1e293b",
                     }}
                 >
                     {task.title || "بدون عنوان"}
@@ -462,9 +579,7 @@ function AdminInternalTaskCard({
                     <p
                         className="line-clamp-2 text-[11.5px] leading-6"
                         style={{
-                            color: isDark
-                                ? "#94a3b8"
-                                : "#64748b",
+                            color: isDark ? "#94a3b8" : "#64748b",
                         }}
                     >
                         {task.description}
@@ -490,31 +605,27 @@ function AdminInternalTaskCard({
                         {assignedEmployees.length > 0 ? (
                             assignedEmployees.map(
                                 (employee: EmployeeRef) => {
-                                    const gradient =
-                                        getGradient(
-                                            Number(employee.id),
-                                        );
+                                    const gradient = getGradient(
+                                        Number(employee.id),
+                                    );
 
                                     return (
                                         <span
-                                            key={employee.id}
+                                            key={`${employee.id}-${employee.full_name}`}
                                             className="flex items-center gap-1.5 rounded-full border py-0.5 pl-2 pr-0.5"
                                             style={{
-                                                borderColor:
-                                                    isDark
-                                                        ? "rgba(255,255,255,.06)"
-                                                        : "rgba(0,0,0,.06)",
-                                                background:
-                                                    isDark
-                                                        ? "rgba(255,255,255,.035)"
-                                                        : "rgba(0,0,0,.025)",
+                                                borderColor: isDark
+                                                    ? "rgba(255,255,255,.06)"
+                                                    : "rgba(0,0,0,.06)",
+                                                background: isDark
+                                                    ? "rgba(255,255,255,.035)"
+                                                    : "rgba(0,0,0,.025)",
                                             }}
                                         >
                                             <span
                                                 className="flex h-5 w-5 items-center justify-center rounded-full text-[8px] font-extrabold text-white"
                                                 style={{
-                                                    background:
-                                                        `linear-gradient(135deg, ${gradient[0]}, ${gradient[1]})`,
+                                                    background: `linear-gradient(135deg, ${gradient[0]}, ${gradient[1]})`,
                                                 }}
                                             >
                                                 {employee.full_name?.slice(
@@ -611,58 +722,63 @@ function AdminInternalTaskCard({
                 </p>
             )}
 
-            <div
-                className="relative z-10 flex items-center gap-2"
-                onClick={(event) => event.stopPropagation()}
-            >
-                {!isCompleted && !isCancelled && (
-                    <>
+            {canAct && (
+                <div
+                    className="relative z-10 flex items-center gap-2"
+                    onClick={(event) => event.stopPropagation()}
+                >
+                    {!isCompleted && !isCancelled && (
+                        <>
+                            <button
+                                type="button"
+                                onClick={(event) => {
+                                    event.stopPropagation();
+                                    setStatusError(null);
+                                    setActionModal("complete");
+                                }}
+                                className="flex h-8 flex-1 items-center justify-center gap-1.5 rounded-xl bg-emerald-500 text-[10px] font-extrabold text-white transition-opacity hover:opacity-90"
+                            >
+                                <CheckCircle2 size={12} />
+                                انجام شد
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={(event) => {
+                                    event.stopPropagation();
+                                    setStatusError(null);
+                                    setActionModal("cancel");
+                                }}
+                                className="flex h-8 flex-1 items-center justify-center gap-1.5 rounded-xl bg-red-500 text-[10px] font-extrabold text-white transition-opacity hover:opacity-90"
+                            >
+                                <Ban size={12} />
+                                لغو تیکت
+                            </button>
+                        </>
+                    )}
+
+                    {(isCompleted || isCancelled) && (
                         <button
                             type="button"
-                            onClick={(event) => {
-                                event.stopPropagation();
-                                setStatusError(null);
-                                setActionModal("complete");
-                            }}
-                            className="flex h-8 flex-1 items-center justify-center gap-1.5 rounded-xl bg-emerald-500 text-[10px] font-extrabold text-white transition-opacity hover:opacity-90"
+                            onClick={handleReopen}
+                            disabled={reopening}
+                            className="flex h-8 flex-1 items-center justify-center gap-1.5 rounded-xl bg-amber-500 text-[10px] font-extrabold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
                         >
-                            <CheckCircle2 size={12} />
-                            انجام شد
+                            {reopening ? (
+                                <Loader2
+                                    size={12}
+                                    className="animate-spin"
+                                />
+                            ) : (
+                                <RotateCcw size={12} />
+                            )}
+                            بازگشایی تیکت
                         </button>
+                    )}
+                </div>
+            )}
 
-                        <button
-                            type="button"
-                            onClick={(event) => {
-                                event.stopPropagation();
-                                setStatusError(null);
-                                setActionModal("cancel");
-                            }}
-                            className="flex h-8 flex-1 items-center justify-center gap-1.5 rounded-xl bg-red-500 text-[10px] font-extrabold text-white transition-opacity hover:opacity-90"
-                        >
-                            <Ban size={12} />
-                            لغو تیکت
-                        </button>
-                    </>
-                )}
-
-                {(isCompleted || isCancelled) && (
-                    <button
-                        type="button"
-                        onClick={handleReopen}
-                        disabled={reopening}
-                        className="flex h-8 flex-1 items-center justify-center gap-1.5 rounded-xl bg-amber-500 text-[10px] font-extrabold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
-                    >
-                        {reopening ? (
-                            <Loader2 size={12} className="animate-spin" />
-                        ) : (
-                            <RotateCcw size={12} />
-                        )}
-                        بازگشایی تیکت
-                    </button>
-                )}
-            </div>
-
-            {actionModal && (
+            {actionModal && canAct && (
                 <div onClick={(event) => event.stopPropagation()}>
                     <InternalTaskActionModal
                         isOpen={true}
@@ -687,7 +803,9 @@ function AdminInternalTaskCard({
                         }}
                         onClick={(event) => {
                             event.stopPropagation();
+
                             if (isDeleting) return;
+
                             setShowConfirm(false);
                             setDeleteError(null);
                         }}
@@ -696,7 +814,10 @@ function AdminInternalTaskCard({
                             initial={{ opacity: 0, y: 16 }}
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, y: 16 }}
-                            transition={{ duration: 0.35, ease: "easeOut" }}
+                            transition={{
+                                duration: 0.35,
+                                ease: "easeOut",
+                            }}
                             onClick={(event) => event.stopPropagation()}
                             dir="rtl"
                             className="flex w-full max-w-md flex-col overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-sm dark:border-white/[0.06] dark:bg-[#0f172a]"
@@ -704,7 +825,10 @@ function AdminInternalTaskCard({
                             <div className="flex shrink-0 items-center justify-between px-8 pb-6 pt-8">
                                 <div className="flex items-center gap-2.5">
                                     <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-red-50 dark:bg-red-500/10">
-                                        <Trash2 size={15} className="text-red-500" />
+                                        <Trash2
+                                            size={15}
+                                            className="text-red-500"
+                                        />
                                     </div>
 
                                     <div>
@@ -722,6 +846,7 @@ function AdminInternalTaskCard({
                                     type="button"
                                     onClick={() => {
                                         if (isDeleting) return;
+
                                         setShowConfirm(false);
                                         setDeleteError(null);
                                     }}
@@ -744,9 +869,18 @@ function AdminInternalTaskCard({
                                 <AnimatePresence>
                                     {deleteError && (
                                         <motion.div
-                                            initial={{ opacity: 0, y: 6 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            exit={{ opacity: 0, y: 4 }}
+                                            initial={{
+                                                opacity: 0,
+                                                y: 6,
+                                            }}
+                                            animate={{
+                                                opacity: 1,
+                                                y: 0,
+                                            }}
+                                            exit={{
+                                                opacity: 0,
+                                                y: 4,
+                                            }}
                                             className="mt-4 flex items-start gap-2.5 rounded-2xl bg-red-50 px-3.5 py-3 dark:bg-red-500/10"
                                         >
                                             <ClipboardX
@@ -767,6 +901,7 @@ function AdminInternalTaskCard({
                                     type="button"
                                     onClick={() => {
                                         if (isDeleting) return;
+
                                         setShowConfirm(false);
                                         setDeleteError(null);
                                     }}
@@ -796,10 +931,16 @@ function AdminInternalTaskCard({
                                     className="flex h-11 flex-1 items-center justify-center gap-2 rounded-full bg-red-600 text-[13px] font-bold text-white transition-colors hover:bg-red-500 disabled:opacity-40"
                                 >
                                     {isDeleting ? (
-                                        <Loader size={14} className="animate-spin" />
+                                        <Loader
+                                            size={14}
+                                            className="animate-spin"
+                                        />
                                     ) : (
                                         <>
-                                            <Trash2 size={13} strokeWidth={2.5} />
+                                            <Trash2
+                                                size={13}
+                                                strokeWidth={2.5}
+                                            />
                                             حذف کن
                                         </>
                                     )}
@@ -816,6 +957,9 @@ function AdminInternalTaskCard({
 export default function AdminInternalTasksBoard(): JSX.Element {
     const { resolvedTheme } = useTheme();
     const isDark = resolvedTheme === "dark";
+    const currentUsername = useAuthStore(
+        (state) => state.username,
+    );
 
     const [tasks, setTasks] = useState<InternalTask[]>([]);
     const [employees, setEmployees] = useState<AdminEmployee[]>([]);
@@ -844,9 +988,7 @@ export default function AdminInternalTasksBoard(): JSX.Element {
                     fetchEmployeeList(),
                 ]);
 
-            setTasks(
-                normalizeTasks(tasksResponse.data),
-            );
+            setTasks(normalizeTasks(tasksResponse.data));
 
             setEmployees(
                 Array.isArray(employeesResponse.data)
@@ -870,15 +1012,11 @@ export default function AdminInternalTasksBoard(): JSX.Element {
     const sortedTasks = useMemo(() => {
         return [...tasks].sort((a, b) => {
             const aDate = new Date(
-                a.updated_at ||
-                a.created_at ||
-                0,
+                a.updated_at || a.created_at || 0,
             ).getTime();
 
             const bDate = new Date(
-                b.updated_at ||
-                b.created_at ||
-                0,
+                b.updated_at || b.created_at || 0,
             ).getTime();
 
             return bDate - aDate;
@@ -922,7 +1060,8 @@ export default function AdminInternalTasksBoard(): JSX.Element {
         setTasks((previous) => [
             withResolvedAssignees,
             ...previous.filter(
-                (task) => task.id !== withResolvedAssignees.id,
+                (task) =>
+                    task.id !== withResolvedAssignees.id,
             ),
         ]);
 
@@ -1082,6 +1221,7 @@ export default function AdminInternalTasksBoard(): JSX.Element {
                                 task={task}
                                 index={index}
                                 employees={employees}
+                                currentUsername={currentUsername}
                                 onOpen={setSelectedTask}
                                 onDelete={handleDelete}
                                 onStatusChange={handleUpdated}
@@ -1099,9 +1239,7 @@ export default function AdminInternalTasksBoard(): JSX.Element {
                     open={true}
                     task={selectedTask}
                     employees={employees}
-                    onClose={() =>
-                        setSelectedTask(null)
-                    }
+                    onClose={() => setSelectedTask(null)}
                     onUpdated={handleUpdated}
                 />
             ) : null}

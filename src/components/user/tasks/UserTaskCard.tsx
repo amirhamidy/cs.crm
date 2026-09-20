@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import {
     AlarmClock, ArrowLeftCircle, ArrowRightCircle, Ban, Building2,
-    CalendarDays, Clock3, History, Layers3, Loader2, MessageSquareText,
+    CalendarDays, CheckCircle2, Clock3, History, Layers3, Loader2, MessageSquareText,
     RotateCcw, ShoppingBag, XCircle, ClipboardList, FileText, Users
 } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
@@ -60,7 +60,7 @@ interface LatestLog {
     created_at: string;
 }
 
-type ModalType = "next" | "prev" | "sold" | "cancel" | "unsold" | "uncancel";
+type ModalType = "next" | "prev" | "sold" | "cancel" | "unsold" | "uncancel" | "complete";
 
 const modalMeta: Record<ModalType, { title: string; desc: string }> = {
     next: { title: "انتقال به مرحله بعد", desc: "نظر و ارزیابی مشتری ثبت می‌شود و تسک جلو می‌رود" },
@@ -69,6 +69,7 @@ const modalMeta: Record<ModalType, { title: string; desc: string }> = {
     cancel: { title: "لغو تسک", desc: "تسک لغو خواهد شد" },
     unsold: { title: "لغو فروش", desc: "وضعیت فروش بازگردانده می‌شود" },
     uncancel: { title: "بازگشت از لغو", desc: "تسک دوباره فعال می‌شود" },
+    complete: { title: "تکمیل تسک", desc: "قبل از تکمیل، امتیاز و نظر شما درباره مشتری ثبت می‌شود" },
 };
 
 function formatFaDate(value?: string) {
@@ -121,6 +122,7 @@ export default function UserTaskCard({ task, accent = "#6366f1", isLastStage, on
     const isActive = status === "in_progress";
     const isSold = status === "sold";
     const isCancelled = status === "cancelled";
+    const isCompleted = (status as string) === "completed";
     const deadline = formatJalali(schedule.deadline);
     const started = formatJalali(schedule.started_at);
     const dState = deadlineState(schedule.deadline);
@@ -172,7 +174,7 @@ export default function UserTaskCard({ task, accent = "#6366f1", isLastStage, on
             if (data.note.trim()) form.append("note", data.note.trim());
             data.files.forEach((file) => form.append("files", file));
 
-            if (["next", "prev", "cancel", "sold"].includes(direction)) {
+            if (["next", "prev", "cancel", "sold", "complete"].includes(direction)) {
                 form.append("score", String(data.score));
                 form.append("score_reason", data.score_reason);
             }
@@ -185,6 +187,8 @@ export default function UserTaskCard({ task, accent = "#6366f1", isLastStage, on
                 response = await axiosInstance.post(`/tasks/api/v1/tasks/${task.id}/revert/`, form, { headers: { "Content-Type": "multipart/form-data" } });
             } else if (direction === "cancel") {
                 response = await axiosInstance.post(`/tasks/api/v1/tasks/${task.id}/cancel/`, form, { headers: { "Content-Type": "multipart/form-data" } });
+            } else if (direction === "complete") {
+                response = await axiosInstance.post(`/tasks/api/v1/tasks/${task.id}/complete/`, form, { headers: { "Content-Type": "multipart/form-data" } });
             } else if (direction === "sold") {
                 response = await axiosInstance.post(`/tasks/api/v1/tasks/${task.id}/mark-as-sold/`, form, { headers: { "Content-Type": "multipart/form-data" } });
                 await syncCustomer();
@@ -265,8 +269,8 @@ export default function UserTaskCard({ task, accent = "#6366f1", isLastStage, on
                 <div className="mb-2.5 flex items-center justify-between gap-2">
                     <div className="flex flex-wrap gap-1.5">
                         <span className={`flex items-center gap-1 rounded-full px-2 py-1 text-[9.5px] font-extrabold ${dState.bg} ${dState.color}`}><DeadlineIcon size={9} />{dState.label}</span>
-                        <span className={`rounded-full px-2 py-1 text-[9.5px] font-extrabold ${isSold ? "bg-amber-500/10 text-amber-500" : isCancelled ? "bg-red-500/10 text-red-500" : "bg-indigo-500/10 text-indigo-500"}`}>
-                            {isSold ? "فروش رفته" : isCancelled ? "لغو شده" : "در حال انجام"}
+                        <span className={`rounded-full px-2 py-1 text-[9.5px] font-extrabold ${isSold ? "bg-amber-500/10 text-amber-500" : isCancelled ? "bg-red-500/10 text-red-500" : isCompleted ? "bg-emerald-500/10 text-emerald-500" : "bg-indigo-500/10 text-indigo-500"}`}>
+                            {isSold ? "فروش رفته" : isCancelled ? "لغو شده" : isCompleted ? "انجام شده" : "در حال انجام"}
                         </span>
                     </div>
                     <button type="button" onClick={() => setLogsOpen(true)} className="flex h-7 items-center gap-1 rounded-xl bg-gray-100 px-2 text-[9.5px] font-extrabold text-gray-400 dark:bg-white/[.05]"><History size={11} />تاریخچه</button>
@@ -326,6 +330,11 @@ export default function UserTaskCard({ task, accent = "#6366f1", isLastStage, on
                         <ActionBtn rippleKey={`uncancel-${task.id}`} active={false} onClick={() => setOpenModal("uncancel")} color="red" icon={<RotateCcw size={13} />} label="بازگشت از لغو" full />
                     ) : isSold ? (
                         <ActionBtn rippleKey={`unsold-${task.id}`} active={false} onClick={() => setOpenModal("unsold")} color="amber" icon={<RotateCcw size={13} />} label="لغو فروش" full />
+                    ) : isCompleted ? (
+                        <div className="flex items-center justify-center gap-1.5 rounded-xl bg-emerald-500/10 py-2.5 text-[10.5px] font-extrabold text-emerald-500">
+                            <CheckCircle2 size={13} />
+                            این تسک انجام شده است
+                        </div>
                     ) : isActive ? (
                         <>
                             <ActionBtn rippleKey={`next-${task.id}`} active={false} onClick={() => setOpenModal("next")} color="accent" accentColor={accent} icon={<ArrowLeftCircle size={13} />} label={isLastStage ? "ثبت نظر و تکمیل" : "انتقال به مرحله بعد"} full />
@@ -333,7 +342,10 @@ export default function UserTaskCard({ task, accent = "#6366f1", isLastStage, on
                                 <ActionBtn rippleKey={`prev-${task.id}`} active={false} onClick={() => setOpenModal("prev")} color="pink" icon={<ArrowRightCircle size={13} />} label="مرحله قبل" full />
                                 <ActionBtn rippleKey={`sold-${task.id}`} active={false} onClick={() => setOpenModal("sold")} color="amber" icon={<ShoppingBag size={13} />} label="فروش" full />
                             </div>
-                            <ActionBtn rippleKey={`cancel-${task.id}`} active={false} onClick={() => setOpenModal("cancel")} color="red" icon={<XCircle size={13} />} label="لغو تسک" full />
+                            <div className="mt-1.5 flex flex-col gap-1.5">
+                                <ActionBtn rippleKey={`complete-${task.id}`} active={false} onClick={() => setOpenModal("complete")} color="accent" accentColor="#10b981" icon={<CheckCircle2 size={13} />} label="انجام شد" full />
+                                <ActionBtn rippleKey={`cancel-${task.id}`} active={false} onClick={() => setOpenModal("cancel")} color="red" icon={<XCircle size={13} />} label="لغو تسک" full />
+                            </div>
                         </>
                     ) : null}
                 </div>

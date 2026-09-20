@@ -42,8 +42,8 @@ export default function TaskActionModal({
 
     if (typeof document === "undefined") return null;
 
-    const isFinal = direction === "next" && title.includes("تکمیل");
-    const needsReview = ["next", "prev", "cancel", "sold"].includes(direction);
+    const isFinal = (direction === "next" && title.includes("تکمیل")) || direction === "complete";
+    const needsReview = ["next", "prev", "cancel", "sold", "complete"].includes(direction);
 
     async function submit() {
         if (needsReview && score < 1) {

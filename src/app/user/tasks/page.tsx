@@ -172,7 +172,7 @@ export default function UserTasksPage() {
                 <div className="flex items-center gap-2 sm:justify-end">
                     <button
                         type="button"
-                        onClick={() => router.push("/dashboard/tasks/archive")}
+                        onClick={() => router.push("/user/Ticketarchive")}
                         className="flex h-9 items-center gap-1.5 rounded-xl bg-gray-100 px-3 text-[11.5px] font-bold text-gray-500 transition-colors hover:bg-gray-200 dark:bg-white/5 dark:text-gray-400 dark:hover:bg-white/10"
                     >
                         <Archive size={13} />

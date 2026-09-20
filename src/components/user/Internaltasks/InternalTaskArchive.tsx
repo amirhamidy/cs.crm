@@ -5,13 +5,12 @@ import {
     Archive,
     CalendarDays,
     CheckCircle2,
-    Filter,
+    Layers,
     LayoutGrid,
     Loader,
     RotateCcw,
     Search,
     Ticket,
-    TimerReset,
     XCircle,
 } from "lucide-react";
 import { fetchInternalTaskArchive, fetchInternalTaskRoutines } from "./Api";
@@ -25,8 +24,132 @@ type ArchiveTypeFilter = "all" | "routine" | "ticket";
 type DateFilter = "all" | "today" | "week" | "month" | "three_months";
 type StatusFilter = "all" | "completed" | "cancelled";
 
+const TYPE_LABELS: Record<ArchiveTypeFilter, string> = {
+    all: "همه انواع",
+    routine: "روتین",
+    ticket: "تیکت",
+};
+
+const DATE_LABELS: Record<DateFilter, string> = {
+    all: "همه زمان‌ها",
+    today: "امروز",
+    week: "۷ روز اخیر",
+    month: "۳۰ روز اخیر",
+    three_months: "۳ ماه اخیر",
+};
+
+const STATUS_LABELS: Record<StatusFilter, string> = {
+    all: "همه وضعیت‌ها",
+    completed: "انجام شده",
+    cancelled: "لغو شده",
+};
+
 function toPersianDigits(value: string | number) {
     return String(value).replace(/\d/g, (digit) => "۰۱۲۳۴۵۶۷۸۹"[Number(digit)]);
+}
+
+/* ───────── کاشی وضعیت: عدد واقعی + فیلتر ───────── */
+const TILE_TONES = {
+    all: {
+        idle: "border-gray-200 bg-white text-gray-800 hover:border-gray-300 dark:border-white/[0.06] dark:bg-white/[0.03] dark:text-gray-100 dark:hover:border-white/[0.12]",
+        active: "border-gray-900 bg-gray-900 text-white dark:border-white dark:bg-white dark:text-gray-900",
+        iconIdle: "bg-gray-100 text-gray-500 dark:bg-white/[0.06] dark:text-gray-400",
+        iconActive: "bg-white/15 text-white dark:bg-gray-900/10 dark:text-gray-900",
+    },
+    completed: {
+        idle: "border-emerald-500/25 bg-emerald-500/[0.06] text-emerald-700 hover:border-emerald-500/45 dark:text-emerald-300",
+        active: "border-emerald-600 bg-emerald-600 text-white",
+        iconIdle: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-300",
+        iconActive: "bg-white/20 text-white",
+    },
+    cancelled: {
+        idle: "border-red-500/25 bg-red-500/[0.06] text-red-700 hover:border-red-500/45 dark:text-red-300",
+        active: "border-red-600 bg-red-600 text-white",
+        iconIdle: "bg-red-500/15 text-red-600 dark:text-red-300",
+        iconActive: "bg-white/20 text-white",
+    },
+} as const;
+
+function StatusTile({
+    tone,
+    active,
+    icon,
+    label,
+    count,
+    onClick,
+}: {
+    tone: keyof typeof TILE_TONES;
+    active: boolean;
+    icon: React.ReactNode;
+    label: string;
+    count: number;
+    onClick: () => void;
+}) {
+    const t = TILE_TONES[tone];
+    return (
+        <button
+            type="button"
+            onClick={onClick}
+            aria-pressed={active}
+            className={`flex items-center gap-3 rounded-2xl border p-3.5 text-right transition-colors duration-150 ${active ? t.active : t.idle}`}
+        >
+            <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${active ? t.iconActive : t.iconIdle}`}>
+                {icon}
+            </span>
+            <span className="min-w-0 flex-1 text-[13px] font-bold">{label}</span>
+            <span className="text-[22px] font-black leading-none">{toPersianDigits(count)}</span>
+        </button>
+    );
+}
+
+/* ───────── کنترل انتخاب گروهی ───────── */
+function Segmented<T extends string>({
+    icon,
+    label,
+    value,
+    options,
+    onChange,
+    activeClass,
+}: {
+    icon: React.ReactNode;
+    label: string;
+    value: T;
+    options: { value: T; label: string; count?: number }[];
+    onChange: (value: T) => void;
+    activeClass: string;
+}) {
+    return (
+        <div className="flex flex-col gap-1.5">
+            <div className="flex items-center gap-1.5 px-1 text-[11.5px] font-bold text-gray-600 dark:text-gray-300">
+                {icon}
+                {label}
+            </div>
+            <div className="flex flex-wrap gap-1 rounded-2xl bg-gray-100 p-1 dark:bg-white/[0.04]">
+                {options.map((option) => {
+                    const active = value === option.value;
+                    return (
+                        <button
+                            key={option.value}
+                            type="button"
+                            onClick={() => onChange(option.value)}
+                            aria-pressed={active}
+                            className={`flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-[11.5px] font-bold transition-colors ${active
+                                ? activeClass
+                                : "text-gray-500 hover:bg-white/70 dark:text-gray-400 dark:hover:bg-white/[0.06]"
+                                }`}
+                        >
+                            {option.label}
+                            {typeof option.count === "number" && (
+                                <span className={`text-[10px] ${active ? "opacity-80" : "opacity-50"}`}>
+                                    {toPersianDigits(option.count)}
+                                </span>
+                            )}
+                        </button>
+                    );
+                })}
+            </div>
+        </div>
+    );
 }
 
 export default function InternalTaskArchive() {
@@ -192,6 +315,16 @@ export default function InternalTaskArchive() {
 
     const ticketCount = tasks.length - routineCount;
 
+    const completedCount = useMemo(
+        () => tasks.filter((task) => task.status === "completed").length,
+        [tasks],
+    );
+
+    const cancelledCount = useMemo(
+        () => tasks.filter((task) => task.status === "cancelled").length,
+        [tasks],
+    );
+
     const clearFilters = () => {
         setSearch("");
         setTypeFilter("all");
@@ -204,6 +337,14 @@ export default function InternalTaskArchive() {
         typeFilter !== "all" ||
         dateFilter !== "all" ||
         statusFilter !== "all";
+
+    /* توضیح دقیق فیلترهای فعال، به صورت متن ساده */
+    const activeFilterLabels = [
+        search.trim() ? `جستجو: «${search.trim()}»` : null,
+        statusFilter !== "all" ? `وضعیت: ${STATUS_LABELS[statusFilter]}` : null,
+        typeFilter !== "all" ? `نوع: ${TYPE_LABELS[typeFilter]}` : null,
+        dateFilter !== "all" ? `زمان: ${DATE_LABELS[dateFilter]}` : null,
+    ].filter(Boolean) as string[];
 
     if (loading) {
         return (
@@ -218,57 +359,22 @@ export default function InternalTaskArchive() {
 
     return (
         <div dir="rtl" className="flex flex-col gap-5">
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                <div className="flex items-center gap-2.5">
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-indigo-500/10">
-                        <Archive
-                            size={17}
-                            className="text-indigo-500"
-                        />
-                    </div>
-
-                    <div>
-                        <h3 className="text-[14px] font-extrabold text-gray-900 dark:text-white">
-                            بایگانی تیکت‌ها
-                        </h3>
-
-                        <p className="text-[11px] text-gray-400 dark:text-gray-600">
-                            {toPersianDigits(tasks.length)} مورد
-                            بایگانی شده
-                        </p>
-                    </div>
+            <div className="flex items-center gap-2.5">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-indigo-500/10">
+                    <Archive
+                        size={18}
+                        className="text-indigo-500"
+                    />
                 </div>
 
-                <div className="flex flex-wrap items-center gap-2">
-                    <div className="flex items-center gap-1.5 rounded-2xl border border-gray-200 bg-gray-50 px-3 py-2 dark:border-white/[0.06] dark:bg-white/[0.03]">
-                        <TimerReset
-                            size={14}
-                            className="text-indigo-500"
-                        />
+                <div>
+                    <h3 className="text-[15px] font-extrabold text-gray-900 dark:text-white">
+                        بایگانی تیکت‌ها
+                    </h3>
 
-                        <span className="text-[10px] font-bold text-gray-500 dark:text-gray-400">
-                            روتین
-                        </span>
-
-                        <span className="text-[11px] font-extrabold text-gray-900 dark:text-white">
-                            {toPersianDigits(routineCount)}
-                        </span>
-                    </div>
-
-                    <div className="flex items-center gap-1.5 rounded-2xl border border-gray-200 bg-gray-50 px-3 py-2 dark:border-white/[0.06] dark:bg-white/[0.03]">
-                        <Ticket
-                            size={14}
-                            className="text-violet-500"
-                        />
-
-                        <span className="text-[10px] font-bold text-gray-500 dark:text-gray-400">
-                            تیکت
-                        </span>
-
-                        <span className="text-[11px] font-extrabold text-gray-900 dark:text-white">
-                            {toPersianDigits(ticketCount)}
-                        </span>
-                    </div>
+                    <p className="text-[11.5px] text-gray-500 dark:text-gray-400">
+                        تیکت‌ها و روتین‌هایی که انجام یا لغو شده‌اند. مجموع: {toPersianDigits(tasks.length)} مورد
+                    </p>
                 </div>
             </div>
 
@@ -288,12 +394,41 @@ export default function InternalTaskArchive() {
                 </div>
             )}
 
-            <div className="rounded-3xl border border-gray-200 bg-white p-3 shadow-sm dark:border-white/[0.06] dark:bg-white/[0.025]">
-                <div className="flex flex-col gap-3">
+            {/* تعداد به تفکیک وضعیت (قابل کلیک برای فیلتر) */}
+            <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3">
+                <StatusTile
+                    tone="all"
+                    active={statusFilter === "all"}
+                    icon={<Layers size={19} />}
+                    label="همه"
+                    count={tasks.length}
+                    onClick={() => setStatusFilter("all")}
+                />
+                <StatusTile
+                    tone="completed"
+                    active={statusFilter === "completed"}
+                    icon={<CheckCircle2 size={19} />}
+                    label="انجام شده"
+                    count={completedCount}
+                    onClick={() => setStatusFilter(statusFilter === "completed" ? "all" : "completed")}
+                />
+                <StatusTile
+                    tone="cancelled"
+                    active={statusFilter === "cancelled"}
+                    icon={<XCircle size={19} />}
+                    label="لغو شده"
+                    count={cancelledCount}
+                    onClick={() => setStatusFilter(statusFilter === "cancelled" ? "all" : "cancelled")}
+                />
+            </div>
+
+            {/* جستجو و فیلترها */}
+            <div className="rounded-3xl border border-gray-200 bg-white p-3.5 shadow-sm dark:border-white/[0.06] dark:bg-white/[0.025]">
+                <div className="flex flex-col gap-4">
                     <div className="relative">
                         <Search
                             size={16}
-                            className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
+                            className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400"
                         />
 
                         <input
@@ -302,8 +437,8 @@ export default function InternalTaskArchive() {
                             onChange={(event) =>
                                 setSearch(event.target.value)
                             }
-                            placeholder="جستجو در عنوان، شناسه یا کاربر..."
-                            className="h-11 w-full rounded-2xl border border-gray-200 bg-gray-50 pr-10 pl-4 text-[12px] font-medium text-gray-900 outline-none transition-all placeholder:text-gray-400 focus:border-indigo-500/40 focus:bg-white dark:border-white/[0.06] dark:bg-white/[0.03] dark:text-white dark:placeholder:text-gray-600 dark:focus:bg-white/[0.04]"
+                            placeholder="جستجو بر اساس عنوان، شماره یا نام فرد"
+                            className="h-12 w-full rounded-2xl border border-gray-200 bg-gray-50 pr-10 pl-4 text-[12.5px] font-medium text-gray-900 outline-none transition-all placeholder:text-gray-400 focus:border-indigo-500/40 focus:bg-white dark:border-white/[0.06] dark:bg-white/[0.03] dark:text-white dark:placeholder:text-gray-600 dark:focus:bg-white/[0.04]"
                         />
 
                         {search && (
@@ -317,171 +452,69 @@ export default function InternalTaskArchive() {
                         )}
                     </div>
 
-                    <div className="flex flex-col gap-2.5 xl:flex-row xl:items-center xl:justify-between">
-                        <div className="flex flex-wrap items-center gap-2">
-                            <div className="flex items-center gap-1.5 text-gray-400">
-                                <Filter size={14} />
-                                <span className="text-[10px] font-bold">
-                                    نوع
-                                </span>
-                            </div>
+                    <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                        <Segmented<ArchiveTypeFilter>
+                            icon={<Ticket size={13} className="text-indigo-500" />}
+                            label="نوع"
+                            value={typeFilter}
+                            onChange={setTypeFilter}
+                            activeClass="bg-indigo-600 text-white"
+                            options={[
+                                { value: "all", label: "همه", count: tasks.length },
+                                { value: "routine", label: "روتین", count: routineCount },
+                                { value: "ticket", label: "تیکت", count: ticketCount },
+                            ]}
+                        />
 
-                            {[
-                                {
-                                    value: "all" as const,
-                                    label: "همه",
-                                },
-                                {
-                                    value: "routine" as const,
-                                    label: "روتین",
-                                },
-                                {
-                                    value: "ticket" as const,
-                                    label: "تیکت",
-                                },
-                            ].map((item) => (
-                                <button
-                                    key={item.value}
-                                    type="button"
-                                    onClick={() =>
-                                        setTypeFilter(item.value)
-                                    }
-                                    className={`rounded-xl px-3 py-2 text-[10px] font-bold transition-all ${typeFilter === item.value
-                                            ? "bg-indigo-500 text-white shadow-sm shadow-indigo-500/20"
-                                            : "bg-gray-100 text-gray-500 hover:bg-gray-200 dark:bg-white/[0.04] dark:text-gray-400 dark:hover:bg-white/[0.07]"
-                                        }`}
-                                >
-                                    {item.label}
-                                </button>
-                            ))}
-                        </div>
-
-                        <div className="flex flex-wrap items-center gap-2">
-                            <div className="flex items-center gap-1.5 text-gray-400">
-                                <CalendarDays size={14} />
-                                <span className="text-[10px] font-bold">
-                                    بازه
-                                </span>
-                            </div>
-
-                            {[
-                                {
-                                    value: "all" as const,
-                                    label: "همه",
-                                },
-                                {
-                                    value: "today" as const,
-                                    label: "امروز",
-                                },
-                                {
-                                    value: "week" as const,
-                                    label: "۷ روز",
-                                },
-                                {
-                                    value: "month" as const,
-                                    label: "۳۰ روز",
-                                },
-                                {
-                                    value: "three_months" as const,
-                                    label: "۳ ماه",
-                                },
-                            ].map((item) => (
-                                <button
-                                    key={item.value}
-                                    type="button"
-                                    onClick={() =>
-                                        setDateFilter(item.value)
-                                    }
-                                    className={`rounded-xl px-3 py-2 text-[10px] font-bold transition-all ${dateFilter === item.value
-                                            ? "bg-violet-500 text-white shadow-sm shadow-violet-500/20"
-                                            : "bg-gray-100 text-gray-500 hover:bg-gray-200 dark:bg-white/[0.04] dark:text-gray-400 dark:hover:bg-white/[0.07]"
-                                        }`}
-                                >
-                                    {item.label}
-                                </button>
-                            ))}
-                        </div>
-
-                        <div className="flex flex-wrap items-center gap-2">
-                            <div className="flex items-center gap-1.5 text-gray-400">
-                                <CheckCircle2 size={14} />
-                                <span className="text-[10px] font-bold">
-                                    وضعیت
-                                </span>
-                            </div>
-
-                            <button
-                                type="button"
-                                onClick={() =>
-                                    setStatusFilter("all")
-                                }
-                                className={`rounded-xl px-3 py-2 text-[10px] font-bold transition-all ${statusFilter === "all"
-                                        ? "bg-gray-900 text-white dark:bg-white dark:text-gray-900"
-                                        : "bg-gray-100 text-gray-500 hover:bg-gray-200 dark:bg-white/[0.04] dark:text-gray-400 dark:hover:bg-white/[0.07]"
-                                    }`}
-                            >
-                                همه
-                            </button>
-
-                            <button
-                                type="button"
-                                onClick={() =>
-                                    setStatusFilter("completed")
-                                }
-                                className={`flex items-center gap-1.5 rounded-xl px-3 py-2 text-[10px] font-bold transition-all ${statusFilter === "completed"
-                                        ? "bg-emerald-500 text-white"
-                                        : "bg-gray-100 text-gray-500 hover:bg-gray-200 dark:bg-white/[0.04] dark:text-gray-400 dark:hover:bg-white/[0.07]"
-                                    }`}
-                            >
-                                <CheckCircle2 size={12} />
-                                انجام شده
-                            </button>
-
-                            <button
-                                type="button"
-                                onClick={() =>
-                                    setStatusFilter("cancelled")
-                                }
-                                className={`flex items-center gap-1.5 rounded-xl px-3 py-2 text-[10px] font-bold transition-all ${statusFilter === "cancelled"
-                                        ? "bg-red-500 text-white"
-                                        : "bg-gray-100 text-gray-500 hover:bg-gray-200 dark:bg-white/[0.04] dark:text-gray-400 dark:hover:bg-white/[0.07]"
-                                    }`}
-                            >
-                                <XCircle size={12} />
-                                لغو شده
-                            </button>
-                        </div>
-
-                        {hasFilters && (
-                            <button
-                                type="button"
-                                onClick={clearFilters}
-                                className="flex items-center justify-center gap-1.5 rounded-xl bg-indigo-500/10 px-3 py-2 text-[10px] font-bold text-indigo-500 transition-colors hover:bg-indigo-500/15"
-                            >
-                                <RotateCcw size={13} />
-                                پاک کردن فیلترها
-                            </button>
-                        )}
+                        <Segmented<DateFilter>
+                            icon={<CalendarDays size={13} className="text-violet-500" />}
+                            label="زمان بایگانی"
+                            value={dateFilter}
+                            onChange={setDateFilter}
+                            activeClass="bg-violet-600 text-white"
+                            options={[
+                                { value: "all", label: "همه" },
+                                { value: "today", label: "امروز" },
+                                { value: "week", label: "۷ روز اخیر" },
+                                { value: "month", label: "۳۰ روز اخیر" },
+                                { value: "three_months", label: "۳ ماه اخیر" },
+                            ]}
+                        />
                     </div>
                 </div>
             </div>
 
-            <div className="flex items-center justify-between px-1">
-                <div className="flex items-center gap-2">
+            {/* خلاصه نتیجه: دقیقا چه چیزی نمایش داده می‌شود */}
+            <div className="flex flex-wrap items-center justify-between gap-2 px-1">
+                <div className="flex flex-wrap items-center gap-2">
                     <LayoutGrid
                         size={15}
                         className="text-gray-400"
                     />
 
-                    <span className="text-[11px] font-bold text-gray-500 dark:text-gray-400">
-                        {toPersianDigits(filteredTasks.length)} نتیجه
+                    <span className="text-[12px] font-bold text-gray-700 dark:text-gray-200">
+                        نمایش {toPersianDigits(filteredTasks.length)} مورد از {toPersianDigits(tasks.length)} مورد
                     </span>
+
+                    {activeFilterLabels.map((text) => (
+                        <span
+                            key={text}
+                            className="rounded-lg bg-gray-100 px-2.5 py-1 text-[10.5px] font-semibold text-gray-600 dark:bg-white/[0.06] dark:text-gray-300"
+                        >
+                            {text}
+                        </span>
+                    ))}
                 </div>
 
                 {hasFilters && (
-                    <span className="text-[10px] font-medium text-indigo-500">
-                        فیلتر فعال است
-                    </span>
+                    <button
+                        type="button"
+                        onClick={clearFilters}
+                        className="flex items-center justify-center gap-1.5 rounded-xl bg-indigo-500/10 px-3 py-2 text-[11px] font-bold text-indigo-600 transition-colors hover:bg-indigo-500/15 dark:text-indigo-300"
+                    >
+                        <RotateCcw size={13} />
+                        پاک کردن فیلترها
+                    </button>
                 )}
             </div>
 
@@ -493,9 +526,9 @@ export default function InternalTaskArchive() {
                     />
 
                     <div className="text-center">
-                        <p className="text-[12px] font-bold text-gray-500 dark:text-gray-400">
+                        <p className="text-[12.5px] font-bold text-gray-500 dark:text-gray-400">
                             {tasks.length === 0
-                                ? "تیکتی در بایگانی وجود ندارد."
+                                ? "هنوز موردی در بایگانی ثبت نشده است."
                                 : "موردی با این فیلترها پیدا نشد."}
                         </p>
 
@@ -503,7 +536,7 @@ export default function InternalTaskArchive() {
                             <button
                                 type="button"
                                 onClick={clearFilters}
-                                className="mt-2 text-[10px] font-bold text-indigo-500 hover:text-indigo-600"
+                                className="mt-2 text-[11px] font-bold text-indigo-500 hover:text-indigo-600"
                             >
                                 حذف فیلترها
                             </button>
