@@ -11,6 +11,7 @@ import WeakestEmployeesChart from "./WeakestEmployeesChart";
 import TopBringersChart from "./TopBringersChart";
 import DepartmentChurn from "./DepartmentChurn";
 import TopStagesChart from "./TopStagesChart";
+import MyTaskDeadlines from "./MyTaskDeadlines";
 
 export default function PerformancePage() {
     const { resolvedTheme } = useTheme();
@@ -170,6 +171,8 @@ export default function PerformancePage() {
                     loading={loading}
                     activeRange={range}
                 />
+                <MyTaskDeadlines />
+
             </div>
         </div>
     );

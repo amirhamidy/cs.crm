@@ -3,7 +3,7 @@
 import axiosInstance from "@/lib/axiosInstance";
 import { useAuthStore } from "@/store/authStore";
 import type { AxiosResponse } from "axios";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 
 type Trend = "up" | "down" | "same";
 
@@ -41,55 +41,41 @@ interface DepartmentEmployeeItem {
 
 type CustomersApiResponse =
   | CustomerListItem[]
-  | {
-      results: CustomerListItem[];
-      next: string | null;
-    };
+  | { results: CustomerListItem[]; next: string | null };
 
 type EmployeesApiResponse =
   | EmployeeInfo[]
-  | {
-      results: EmployeeInfo[];
-    };
+  | { results: EmployeeInfo[] };
 
 type DepartmentEmployeesApiResponse =
   | DepartmentEmployeeItem[]
-  | {
-      results: DepartmentEmployeeItem[];
-    };
+  | { results: DepartmentEmployeeItem[] };
 
 export type TimeRange = "weekly" | "monthly" | "yearly";
-
 type RangeData = Record<TimeRange, User[]>;
 
 let employeeListCache: EmployeeInfo[] | null = null;
 let inFlightRequest: Promise<EmployeeInfo[]> | null = null;
 
 async function fetchEmployeeList(): Promise<EmployeeInfo[]> {
-  if (employeeListCache) {
-    return employeeListCache;
-  }
-
-  if (inFlightRequest) {
-    return inFlightRequest;
-  }
+  if (employeeListCache) return employeeListCache;
+  if (inFlightRequest) return inFlightRequest;
 
   inFlightRequest = axiosInstance
     .get<EmployeesApiResponse>("/accounts/api/v1/employee/list/")
     .then((response: AxiosResponse<EmployeesApiResponse>) => {
-      const employees = Array.isArray(response.data)
-        ? response.data
-        : (response.data.results ?? []);
+      const data: EmployeesApiResponse = response.data;
+      const employees: EmployeeInfo[] = Array.isArray(data)
+        ? data
+        : data.results ?? [];
 
       employeeListCache = employees;
       inFlightRequest = null;
-
       return employees;
     })
-    .catch(() => {
+    .catch((error: unknown) => {
       inFlightRequest = null;
-
-      return [];
+      throw error;
     });
 
   return inFlightRequest;
@@ -107,68 +93,79 @@ async function fetchDepartmentEmployees(): Promise<DepartmentEmployeeItem[]> {
 
   const data: DepartmentEmployeesApiResponse = response.data;
 
-  return Array.isArray(data) ? data : (data.results ?? []);
+  return Array.isArray(data) ? data : data.results ?? [];
 }
 
 async function fetchAllCustomers(): Promise<CustomerListItem[]> {
-  const allCustomers: CustomerListItem[] = [];
+  const customers: CustomerListItem[] = [];
   let url: string | null = "/customers/api/v1/customers/";
+  const visited = new Set<string>();
 
-  while (url) {
+  while (url !== null && !visited.has(url)) {
+    visited.add(url);
+
+    const currentUrl: string = url;
+
     const response: AxiosResponse<CustomersApiResponse> =
-      await axiosInstance.get<CustomersApiResponse>(url);
+      await axiosInstance.get<CustomersApiResponse>(currentUrl);
 
     const data: CustomersApiResponse = response.data;
 
     if (Array.isArray(data)) {
-      allCustomers.push(...data);
+      customers.push(...data);
       break;
     }
 
-    allCustomers.push(...(data.results ?? []));
+    customers.push(...(data.results ?? []));
 
-    if (data.next) {
-      const parsedUrl = new URL(data.next);
-      url = `${parsedUrl.pathname}${parsedUrl.search}`;
-    } else {
+    if (!data.next) {
+      break;
+    }
+
+    try {
+      const nextUrl: URL = new URL(data.next);
+      url = `${nextUrl.pathname}${nextUrl.search}`;
+    } catch {
       url = null;
     }
   }
 
-  return allCustomers;
+  return customers;
 }
 
-function buildNameMap(employees: EmployeeInfo[]): Map<string, string> {
-  const nameMap = new Map<string, string>();
+function buildNameMap(
+  employees: EmployeeInfo[],
+): Map<string, string> {
+  const map = new Map<string, string>();
 
   for (const employee of employees) {
-    nameMap.set(employee.username, employee.full_name);
+    map.set(employee.username, employee.full_name);
   }
 
-  return nameMap;
+  return map;
 }
 
 function buildRoleMap(
   employees: EmployeeInfo[],
   departmentEmployees: DepartmentEmployeeItem[],
 ): Map<string, string> {
-  const employeeIdToUsername = new Map<number, string>();
+  const employeeMap = new Map<number, string>();
 
   for (const employee of employees) {
-    employeeIdToUsername.set(employee.id, employee.username);
+    employeeMap.set(employee.id, employee.username);
   }
 
-  const roleMap = new Map<string, string>();
+  const map = new Map<string, string>();
 
-  for (const departmentEmployee of departmentEmployees) {
-    const username = employeeIdToUsername.get(departmentEmployee.employee);
+  for (const item of departmentEmployees) {
+    const username = employeeMap.get(item.employee);
 
-    if (username && !roleMap.has(username)) {
-      roleMap.set(username, departmentEmployee.department_name);
+    if (username && !map.has(username)) {
+      map.set(username, item.department_name);
     }
   }
 
-  return roleMap;
+  return map;
 }
 
 function processRangeData(
@@ -178,30 +175,29 @@ function processRangeData(
   roleMap: Map<string, string>,
 ): User[] {
   const now = Date.now();
-  const rangeStart = now - days * 24 * 60 * 60 * 1000;
+  const rangeStart = now - days * 86400000;
   const midpoint = rangeStart + (now - rangeStart) / 2;
-
   const currentCounts = new Map<string, number>();
   const previousCounts = new Map<string, number>();
 
   for (const customer of customers) {
-    if (customer.status !== 2) {
-      continue;
-    }
+    if (customer.status !== 2) continue;
 
     const createdAt = new Date(customer.created_at).getTime();
 
-    if (Number.isNaN(createdAt) || createdAt < rangeStart || createdAt > now) {
+    if (
+      Number.isNaN(createdAt) ||
+      createdAt < rangeStart ||
+      createdAt > now
+    ) {
       continue;
     }
 
     const username = customer.created_by_username || "نامشخص";
+    const target =
+      createdAt >= midpoint ? currentCounts : previousCounts;
 
-    if (createdAt >= midpoint) {
-      currentCounts.set(username, (currentCounts.get(username) ?? 0) + 1);
-    } else {
-      previousCounts.set(username, (previousCounts.get(username) ?? 0) + 1);
-    }
+    target.set(username, (target.get(username) ?? 0) + 1);
   }
 
   const usernames = new Set<string>([
@@ -209,86 +205,83 @@ function processRangeData(
     ...previousCounts.keys(),
   ]);
 
-  const users: User[] = Array.from(usernames).map((username, index) => {
-    const current = currentCounts.get(username) ?? 0;
-    const previous = previousCounts.get(username) ?? 0;
-    const count = current + previous;
+  return Array.from(usernames)
+    .map((username: string, index: number): User => {
+      const current = currentCounts.get(username) ?? 0;
+      const previous = previousCounts.get(username) ?? 0;
+      const count = current + previous;
 
-    let trend: Trend = "same";
-    let trendPct = 0;
+      let trend: Trend = "same";
+      let trendPct = 0;
 
-    if (current > previous) {
-      trend = "up";
-      trendPct =
-        previous === 0
-          ? 100
-          : Math.round(((current - previous) / previous) * 100);
-    } else if (current < previous) {
-      trend = "down";
-      trendPct = Math.round(((previous - current) / previous) * 100);
-    }
+      if (current > previous) {
+        trend = "up";
+        trendPct =
+          previous === 0
+            ? 100
+            : Math.round(((current - previous) / previous) * 100);
+      } else if (current < previous) {
+        trend = "down";
+        trendPct =
+          previous === 0
+            ? 0
+            : Math.round(((previous - current) / previous) * 100);
+      }
 
-    const name =
-      username === "admin" ? "مدیر سیستم" : (nameMap.get(username) ?? username);
-
-    return {
-      id: index + 1,
-      name,
-      username,
-      role: roleMap.get(username) ?? "کارشناس فروش",
-      avatar: username.charAt(0).toUpperCase(),
-      count,
-      trend,
-      trendPct,
-    };
-  });
-
-  return users
-    .sort((firstUser, secondUser) => secondUser.count - firstUser.count)
+      return {
+        id: index + 1,
+        name:
+          username === "admin"
+            ? "مدیر سیستم"
+            : nameMap.get(username) ?? username,
+        username,
+        role: roleMap.get(username) ?? "کارشناس فروش",
+        avatar: username.charAt(0).toUpperCase(),
+        count,
+        trend,
+        trendPct,
+      };
+    })
+    .sort(
+      (firstUser: User, secondUser: User) =>
+        secondUser.count - firstUser.count,
+    )
     .slice(0, 5);
 }
 
 export function useCurrentEmployee() {
   const username = useAuthStore((state) => state.username);
   const hasHydrated = useAuthStore((state) => state.hasHydrated);
-
   const [employee, setEmployee] = useState<EmployeeInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!hasHydrated) {
-      return;
-    }
+    if (!hasHydrated) return;
 
-    let isMounted = true;
+    let mounted = true;
 
-    async function loadCurrentEmployee() {
+    async function loadCurrentEmployee(): Promise<void> {
       setLoading(true);
       setError(null);
 
       try {
-        const employees = await fetchEmployeeList();
+        const employees: EmployeeInfo[] = await fetchEmployeeList();
 
-        if (!isMounted) {
-          return;
-        }
+        if (!mounted) return;
 
-        const currentEmployee =
+        setEmployee(
           employees.find(
-            (employeeItem) => employeeItem.username === username,
-          ) ?? null;
-
-        setEmployee(currentEmployee);
+            (item: EmployeeInfo) => item.username === username,
+          ) ?? null,
+        );
       } catch {
-        if (!isMounted) {
-          return;
-        }
+        if (!mounted) return;
 
         setEmployee(null);
         setError("خطا در دریافت اطلاعات کارمند");
       } finally {
-        if (isMounted) {
+        if (mounted) {
           setLoading(false);
         }
       }
@@ -297,7 +290,7 @@ export function useCurrentEmployee() {
     void loadCurrentEmployee();
 
     return () => {
-      isMounted = false;
+      mounted = false;
     };
   }, [hasHydrated, username]);
 
@@ -317,46 +310,62 @@ export function useTopUsers() {
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const hasFetched = useRef(false);
 
   useEffect(() => {
-    if (hasFetched.current) {
-      return;
-    }
+    let mounted = true;
 
-    hasFetched.current = true;
+    async function loadTopUsers(): Promise<void> {
+      setLoading(true);
+      setError(null);
 
-    let isMounted = true;
-
-    async function loadTopUsers() {
       try {
-        setLoading(true);
-        setError(null);
-
-        const [customers, employees, departmentEmployees] = await Promise.all([
+        const result: [
+          CustomerListItem[],
+          EmployeeInfo[],
+          DepartmentEmployeeItem[],
+        ] = await Promise.all([
           fetchAllCustomers(),
           fetchEmployeeList(),
           fetchDepartmentEmployees(),
         ]);
 
-        if (!isMounted) {
-          return;
-        }
+        if (!mounted) return;
 
-        const nameMap = buildNameMap(employees);
-        const roleMap = buildRoleMap(employees, departmentEmployees);
+        const customers: CustomerListItem[] = result[0];
+        const employees: EmployeeInfo[] = result[1];
+        const departmentEmployees: DepartmentEmployeeItem[] = result[2];
+
+        const nameMap: Map<string, string> =
+          buildNameMap(employees);
+
+        const roleMap: Map<string, string> =
+          buildRoleMap(employees, departmentEmployees);
 
         setData({
-          weekly: processRangeData(customers, 7, nameMap, roleMap),
-          monthly: processRangeData(customers, 30, nameMap, roleMap),
-          yearly: processRangeData(customers, 365, nameMap, roleMap),
+          weekly: processRangeData(
+            customers,
+            7,
+            nameMap,
+            roleMap,
+          ),
+          monthly: processRangeData(
+            customers,
+            30,
+            nameMap,
+            roleMap,
+          ),
+          yearly: processRangeData(
+            customers,
+            365,
+            nameMap,
+            roleMap,
+          ),
         });
       } catch {
-        if (isMounted) {
-          setError("خطا در دریافت داده‌ها");
-        }
+        if (!mounted) return;
+        setError("خطا در دریافت داده‌ها");
       } finally {
-        if (isMounted) {
+        if (mounted) {
           setLoading(false);
         }
       }
@@ -365,7 +374,7 @@ export function useTopUsers() {
     void loadTopUsers();
 
     return () => {
-      isMounted = false;
+      mounted = false;
     };
   }, []);
 

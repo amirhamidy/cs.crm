@@ -60,7 +60,10 @@ function SegmentTooltip({ stage, isDark }: { stage: StageStat; isDark: boolean }
                         <span className="text-[11px] font-bold text-gray-700 dark:text-gray-200">{r.value}</span>
                     </div>
                 ))}
-                <div className="mt-1 flex items-center justify-between border-t border-dashed pt-1.5" style={{ borderColor: isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.07)" }}>
+                <div
+                    className="mt-1 flex items-center justify-between border-t border-dashed pt-1.5"
+                    style={{ borderColor: isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.07)" }}
+                >
                     <span className="text-[10.5px] text-gray-400 dark:text-gray-500">مجموع</span>
                     <span className="text-[11px] font-extrabold text-indigo-400">{stage.total}</span>
                 </div>
@@ -81,59 +84,61 @@ function SegmentedBar({ stages, isDark }: { stages: StageStat[]; isDark: boolean
     const maxCancelled = Math.max(0, ...stages.map((s) => s.cancelled));
 
     return (
-        <div className="flex flex-col gap-2">
-            <div className="flex h-14 w-full gap-1">
-                {stages.map((stage) => {
-                    const total = stage.total || 1;
-                    const isRisk = stage.cancelled === maxCancelled && maxCancelled > 0;
-                    return (
-                        <div
-                            key={stage.key}
-                            className="relative flex-1"
-                            onMouseEnter={() => setHoverKey(stage.key)}
-                            onMouseLeave={() => setHoverKey(null)}
-                        >
-                            <motion.div
-                                whileHover={{ y: -3 }}
-                                transition={{ duration: 0.15 }}
-                                className="flex h-full w-full cursor-pointer overflow-hidden rounded-xl"
-                                style={{
-                                    background: isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.035)",
-                                    boxShadow: isRisk ? "0 0 0 1.5px rgba(251,113,133,0.5) inset" : "none",
-                                }}
-                            >
-                                {SEGMENTS.map((seg) => {
-                                    const val = stage[seg.key as keyof StageStat] as number;
-                                    const pct = (val / total) * 100;
-                                    if (pct <= 0) return null;
-                                    return (
-                                        <div
-                                            key={seg.key}
-                                            style={{ width: `${pct}%`, background: seg.color }}
-                                            className="h-full"
-                                        />
-                                    );
-                                })}
-                            </motion.div>
+        <div className="grid grid-cols-2 gap-3">
+            {stages.map((stage) => {
+                const total = stage.total || 1;
+                const isRisk = stage.cancelled === maxCancelled && maxCancelled > 0;
 
-                            <AnimatePresence>
-                                {hoverKey === stage.key && <SegmentTooltip stage={stage} isDark={isDark} />}
-                            </AnimatePresence>
+                return (
+                    <div
+                        key={stage.key}
+                        className="relative min-w-0"
+                        onMouseEnter={() => setHoverKey(stage.key)}
+                        onMouseLeave={() => setHoverKey(null)}
+                    >
+                        <div className="mb-1.5 min-w-0 text-center">
+                            <p className="truncate text-[10.5px] font-bold text-gray-500 dark:text-gray-400">
+                                {stage.name}
+                            </p>
+                            <p className="text-[9.5px] text-gray-400 dark:text-gray-600">
+                                {stage.total} تسک
+                            </p>
                         </div>
-                    );
-                })}
-            </div>
 
-            <div className="flex gap-1">
-                {stages.map((stage) => (
-                    <div key={stage.key} className="flex-1 text-center">
-                        <p className="truncate text-[10.5px] font-bold text-gray-500 dark:text-gray-400">
-                            {stage.name}
-                        </p>
-                        <p className="text-[9.5px] text-gray-400 dark:text-gray-600">{stage.total} تسک</p>
+                        <motion.div
+                            whileHover={{ y: -3 }}
+                            transition={{ duration: 0.15 }}
+                            className="flex h-14 w-full cursor-pointer overflow-hidden rounded-xl"
+                            style={{
+                                background: isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.035)",
+                                boxShadow: isRisk
+                                    ? "0 0 0 1.5px rgba(251,113,133,0.5) inset"
+                                    : "none",
+                            }}
+                        >
+                            {SEGMENTS.map((seg) => {
+                                const val = stage[seg.key as keyof StageStat] as number;
+                                const pct = (val / total) * 100;
+                                if (pct <= 0) return null;
+
+                                return (
+                                    <div
+                                        key={seg.key}
+                                        style={{ width: `${pct}%`, background: seg.color }}
+                                        className="h-full"
+                                    />
+                                );
+                            })}
+                        </motion.div>
+
+                        <AnimatePresence>
+                            {hoverKey === stage.key && (
+                                <SegmentTooltip stage={stage} isDark={isDark} />
+                            )}
+                        </AnimatePresence>
                     </div>
-                ))}
-            </div>
+                );
+            })}
         </div>
     );
 }
@@ -149,14 +154,16 @@ function EmployeePanel({
 }) {
     const isBest = variant === "best";
     const border = isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.07)";
-
     const accentBg = isBest
         ? "linear-gradient(135deg, rgba(56,189,248,0.16), rgba(129,140,248,0.16))"
         : "linear-gradient(135deg, rgba(251,113,133,0.14), rgba(192,132,252,0.14))";
     const accentText = isBest ? "#60a5fa" : "#fb7185";
 
     return (
-        <div className="flex h-full flex-col rounded-2xl p-4" style={{ border: `1px dashed ${border}` }}>
+        <div
+            className="flex flex-col rounded-2xl p-4"
+            style={{ border: `1px dashed ${border}` }}
+        >
             <div className="mb-3 flex items-center gap-1.5">
                 {isBest ? (
                     <Crown size={13} className="text-sky-400" />
@@ -169,13 +176,13 @@ function EmployeePanel({
             </div>
 
             {!person ? (
-                <div className="flex flex-1 items-center justify-center">
+                <div className="flex min-h-28 items-center justify-center">
                     <p className="text-center text-[11px] text-gray-400 dark:text-gray-500">
                         داده‌ای ثبت نشده
                     </p>
                 </div>
             ) : (
-                <div className="flex flex-1 flex-col">
+                <>
                     <div className="mb-4 flex items-center gap-2.5">
                         <div
                             className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[14px] font-extrabold"
@@ -205,16 +212,24 @@ function EmployeePanel({
                                 style={{ borderColor: border }}
                             >
                                 <div className="flex items-center gap-1.5">
-                                    <span className="h-1.5 w-1.5 rounded-full" style={{ background: row.color }} />
-                                    <span className="text-[11px] text-gray-500 dark:text-gray-400">{row.label}</span>
+                                    <span
+                                        className="h-1.5 w-1.5 rounded-full"
+                                        style={{ background: row.color }}
+                                    />
+                                    <span className="text-[11px] text-gray-500 dark:text-gray-400">
+                                        {row.label}
+                                    </span>
                                 </div>
-                                <span className="text-[12px] font-extrabold" style={{ color: row.color }}>
+                                <span
+                                    className="text-[12px] font-extrabold"
+                                    style={{ color: row.color }}
+                                >
                                     {row.value}
                                 </span>
                             </div>
                         ))}
                     </div>
-                </div>
+                </>
             )}
         </div>
     );
@@ -226,7 +241,10 @@ function SoloEmployeePanel({ person, isDark }: { person: EmployeeStat; isDark: b
     const accentText = "#818cf8";
 
     return (
-        <div className="flex h-full flex-col rounded-2xl p-4" style={{ border: `1px dashed ${border}` }}>
+        <div
+            className="flex flex-col rounded-2xl p-4"
+            style={{ border: `1px dashed ${border}` }}
+        >
             <div className="mb-3 flex items-center gap-1.5">
                 <User size={13} className="text-indigo-400" />
                 <span className="text-[10.5px] font-extrabold text-gray-400 dark:text-gray-500">
@@ -234,46 +252,52 @@ function SoloEmployeePanel({ person, isDark }: { person: EmployeeStat; isDark: b
                 </span>
             </div>
 
-            <div className="flex flex-1 flex-col">
-                <div className="mb-4 flex items-center gap-2.5">
-                    <div
-                        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[14px] font-extrabold"
-                        style={{ background: accentBg, color: accentText }}
-                    >
-                        {person.full_name.charAt(0) || "؟"}
-                    </div>
-                    <div className="min-w-0">
-                        <p className="truncate text-[12.5px] font-bold text-gray-800 dark:text-gray-100">
-                            {person.full_name}
-                        </p>
-                        <p className="text-[10.5px] text-gray-400 dark:text-gray-500">
-                            {person.total} تسک واگذارشده
-                        </p>
-                    </div>
+            <div className="mb-4 flex items-center gap-2.5">
+                <div
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[14px] font-extrabold"
+                    style={{ background: accentBg, color: accentText }}
+                >
+                    {person.full_name.charAt(0) || "؟"}
                 </div>
+                <div className="min-w-0">
+                    <p className="truncate text-[12.5px] font-bold text-gray-800 dark:text-gray-100">
+                        {person.full_name}
+                    </p>
+                    <p className="text-[10.5px] text-gray-400 dark:text-gray-500">
+                        {person.total} تسک واگذارشده
+                    </p>
+                </div>
+            </div>
 
-                <div className="flex flex-col gap-2.5">
-                    {[
-                        { label: "فروش رفته", value: person.sold, color: "#2dd4bf" },
-                        { label: "تکمیل‌شده", value: person.completed, color: "#60a5fa" },
-                        { label: "در جریان", value: person.in_progress, color: "#a5b4fc" },
-                        { label: "لغوشده", value: person.cancelled, color: "#fb7185" },
-                    ].map((row) => (
-                        <div
-                            key={row.label}
-                            className="flex items-center justify-between border-b border-dashed pb-2 last:border-0"
-                            style={{ borderColor: border }}
-                        >
-                            <div className="flex items-center gap-1.5">
-                                <span className="h-1.5 w-1.5 rounded-full" style={{ background: row.color }} />
-                                <span className="text-[11px] text-gray-500 dark:text-gray-400">{row.label}</span>
-                            </div>
-                            <span className="text-[12px] font-extrabold" style={{ color: row.color }}>
-                                {row.value}
+            <div className="flex flex-col gap-2.5">
+                {[
+                    { label: "فروش رفته", value: person.sold, color: "#2dd4bf" },
+                    { label: "تکمیل‌شده", value: person.completed, color: "#60a5fa" },
+                    { label: "در جریان", value: person.in_progress, color: "#a5b4fc" },
+                    { label: "لغوشده", value: person.cancelled, color: "#fb7185" },
+                ].map((row) => (
+                    <div
+                        key={row.label}
+                        className="flex items-center justify-between border-b border-dashed pb-2 last:border-0"
+                        style={{ borderColor: border }}
+                    >
+                        <div className="flex items-center gap-1.5">
+                            <span
+                                className="h-1.5 w-1.5 rounded-full"
+                                style={{ background: row.color }}
+                            />
+                            <span className="text-[11px] text-gray-500 dark:text-gray-400">
+                                {row.label}
                             </span>
                         </div>
-                    ))}
-                </div>
+                        <span
+                            className="text-[12px] font-extrabold"
+                            style={{ color: row.color }}
+                        >
+                            {row.value}
+                        </span>
+                    </div>
+                ))}
             </div>
         </div>
     );
@@ -312,26 +336,25 @@ export default function DepartmentChurn({ departments, loading }: Props) {
                 style={{ border: `1px solid ${border}`, background: cardBg }}
             >
                 <Workflow size={18} className="text-gray-300 dark:text-gray-600" />
-                <p className="text-[11.5px] text-gray-400 dark:text-gray-500">داده‌ای در این بازه وجود ندارد</p>
+                <p className="text-[11.5px] text-gray-400 dark:text-gray-500">
+                    داده‌ای در این بازه وجود ندارد
+                </p>
             </div>
         );
     }
 
     const clampedIndex = Math.min(index, departments.length - 1);
     const dept = departments[clampedIndex];
-    const goTo = (i: number) => setIndex(Math.max(0, Math.min(departments.length - 1, i)));
+    const goTo = (i: number) =>
+        setIndex(Math.max(0, Math.min(departments.length - 1, i)));
 
     const maxCancelled = Math.max(0, ...dept.stages.map((s) => s.cancelled));
-    const riskStage = dept.stages.find((s) => s.cancelled === maxCancelled && maxCancelled > 0);
+    const riskStage = dept.stages.find(
+        (s) => s.cancelled === maxCancelled && maxCancelled > 0
+    );
 
     const showSolo = Boolean(dept.solo);
     const showWorst = Boolean(dept.worst && dept.worst.key !== dept.best?.key);
-
-    const panelColumns = showSolo
-        ? "lg:grid-cols-[1fr_220px]"
-        : showWorst
-            ? "lg:grid-cols-[1fr_180px_180px]"
-            : "lg:grid-cols-[1fr_180px]";
 
     return (
         <motion.div
@@ -345,7 +368,10 @@ export default function DepartmentChurn({ departments, loading }: Props) {
                 <div className="flex items-center gap-2.5">
                     <div
                         className="flex h-8 w-8 items-center justify-center rounded-xl"
-                        style={{ background: "linear-gradient(135deg, rgba(129,140,248,0.16), rgba(56,189,248,0.16))" }}
+                        style={{
+                            background:
+                                "linear-gradient(135deg, rgba(129,140,248,0.16), rgba(56,189,248,0.16))",
+                        }}
                     >
                         <Workflow size={15} className="text-indigo-400" />
                     </div>
@@ -371,7 +397,7 @@ export default function DepartmentChurn({ departments, loading }: Props) {
                                             style={{ borderColor: border }}
                                         >
                                             <p className="text-[10.5px] leading-5 text-gray-500 dark:text-gray-400">
-                                                هر تیکه از نوار یک مرحله از دپارتمان است. با هاور کردن روی هر تیکه جزئیات تعداد تسک‌های فروش‌رفته، تکمیل‌شده، در جریان و لغوشده نمایش داده می‌شود.
+                                                هر بخش از نوار یک مرحله از دپارتمان است. با هاور کردن روی هر مرحله جزئیات تعداد تسک‌های فروش‌رفته، تکمیل‌شده، در جریان و لغوشده نمایش داده می‌شود.
                                             </p>
                                         </motion.div>
                                     )}
@@ -379,13 +405,16 @@ export default function DepartmentChurn({ departments, loading }: Props) {
                             </button>
                         </div>
                         <p className="text-[10.5px] text-gray-400 dark:text-gray-500">
-                            روی هر تیکه هاور کن تا جزئیات مرحله را ببینی
+                            روی هر مرحله هاور کن تا جزئیات را ببینی
                         </p>
                     </div>
                 </div>
             </div>
 
-            <div className="mt-3.5 flex items-center gap-1 border-b px-4" style={{ borderColor: border }}>
+            <div
+                className="mt-3.5 flex items-center gap-1 border-b px-4"
+                style={{ borderColor: border }}
+            >
                 <button
                     type="button"
                     onClick={() => goTo(clampedIndex - 1)}
@@ -398,6 +427,7 @@ export default function DepartmentChurn({ departments, loading }: Props) {
                 <div className="flex flex-1 items-center gap-4 overflow-x-auto">
                     {departments.map((d, i) => {
                         const active = i === clampedIndex;
+
                         return (
                             <button
                                 key={d.key}
@@ -409,8 +439,12 @@ export default function DepartmentChurn({ departments, loading }: Props) {
                                     className="whitespace-nowrap text-[12px] font-bold transition-colors"
                                     style={{
                                         color: active
-                                            ? isDark ? "#93c5fd" : "#60a5fa"
-                                            : isDark ? "#64748b" : "#94a3b8",
+                                            ? isDark
+                                                ? "#93c5fd"
+                                                : "#60a5fa"
+                                            : isDark
+                                                ? "#64748b"
+                                                : "#94a3b8",
                                     }}
                                 >
                                     {d.department_name}
@@ -418,11 +452,15 @@ export default function DepartmentChurn({ departments, loading }: Props) {
                                         {d.total}
                                     </span>
                                 </span>
+
                                 {active && (
                                     <motion.span
                                         layoutId="dept-tab-indicator"
                                         className="absolute -bottom-[1px] h-[2px] w-full rounded-full"
-                                        style={{ background: "linear-gradient(90deg, #60a5fa, #818cf8)" }}
+                                        style={{
+                                            background:
+                                                "linear-gradient(90deg, #60a5fa, #818cf8)",
+                                        }}
                                     />
                                 )}
                             </button>
@@ -447,19 +485,57 @@ export default function DepartmentChurn({ departments, loading }: Props) {
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: 8 }}
                     transition={{ duration: 0.2, ease: [0.25, 0.46, 0.45, 0.94] }}
-                    className={`grid grid-cols-1 items-center gap-4 p-4 ${panelColumns}`}
+                    className="grid grid-cols-1 gap-4 p-4 lg:grid-cols-2"
                 >
-                    <div className="flex flex-col gap-4">
+                    <div
+                        className="min-w-0 rounded-2xl p-4"
+                        style={{
+                            border: `1px solid ${border}`,
+                            background: isDark
+                                ? "rgba(255,255,255,0.018)"
+                                : "rgba(255,255,255,0.55)",
+                        }}
+                    >
+                        <div className="mb-4 flex items-center justify-between gap-3">
+                            <div className="flex items-center gap-2">
+                                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-500/10">
+                                    <Workflow size={14} className="text-indigo-400" />
+                                </div>
+                                <div>
+                                    <p className="text-[12px] font-extrabold text-gray-800 dark:text-gray-100">
+                                        مراحل
+                                    </p>
+                                    <p className="text-[9.5px] text-gray-400 dark:text-gray-500">
+                                        وضعیت تسک‌ها در هر مرحله
+                                    </p>
+                                </div>
+                            </div>
+
+                            {riskStage && (
+                                <div className="flex items-center gap-1.5 rounded-lg bg-rose-500/10 px-2 py-1.5">
+                                    <AlertCircle size={12} className="text-rose-400" />
+                                    <span className="hidden text-[9px] font-bold text-rose-400 sm:block">
+                                        بیشترین لغو
+                                    </span>
+                                </div>
+                            )}
+                        </div>
+
                         {riskStage && (
                             <div
-                                className="flex items-center gap-1.5 rounded-xl px-3 py-2 text-[11px]"
-                                style={{ background: isDark ? "rgba(251,113,133,0.08)" : "rgba(251,113,133,0.06)" }}
+                                className="mb-4 flex items-center gap-1.5 rounded-xl px-3 py-2 text-[10.5px]"
+                                style={{
+                                    background: isDark
+                                        ? "rgba(251,113,133,0.08)"
+                                        : "rgba(251,113,133,0.06)",
+                                }}
                             >
                                 <AlertCircle size={12} className="shrink-0 text-rose-400" />
                                 <span className="text-gray-500 dark:text-gray-400">
                                     بیشترین ریزش در مرحله{" "}
-                                    <span className="font-bold text-rose-400">«{riskStage.name}»</span>{" "}
-                                    — بررسی این مرحله توصیه می‌شود
+                                    <span className="font-bold text-rose-400">
+                                        «{riskStage.name}»
+                                    </span>
                                 </span>
                             </div>
                         )}
@@ -472,24 +548,65 @@ export default function DepartmentChurn({ departments, loading }: Props) {
                             <SegmentedBar stages={dept.stages} isDark={isDark} />
                         )}
 
-                        <div className="flex flex-wrap items-center gap-3 pt-1">
+                        <div className="mt-4 flex flex-wrap items-center gap-3 border-t pt-3 dark:border-white/[.06]">
                             {SEGMENTS.map((seg) => (
                                 <div key={seg.key} className="flex items-center gap-1.5">
-                                    <span className="h-2 w-2 rounded-full" style={{ background: seg.color }} />
-                                    <span className="text-[10px] text-gray-400 dark:text-gray-500">{seg.label}</span>
+                                    <span
+                                        className="h-2 w-2 rounded-full"
+                                        style={{ background: seg.color }}
+                                    />
+                                    <span className="text-[10px] text-gray-400 dark:text-gray-500">
+                                        {seg.label}
+                                    </span>
                                 </div>
                             ))}
                         </div>
                     </div>
 
-                    {showSolo ? (
-                        <SoloEmployeePanel person={dept.solo!} isDark={isDark} />
-                    ) : (
-                        <>
-                            <EmployeePanel person={dept.best} isDark={isDark} variant="best" />
-                            {showWorst && <EmployeePanel person={dept.worst} isDark={isDark} variant="worst" />}
-                        </>
-                    )}
+                    <div
+                        className="min-w-0 rounded-2xl p-4"
+                        style={{
+                            border: `1px solid ${border}`,
+                            background: isDark
+                                ? "rgba(255,255,255,0.018)"
+                                : "rgba(255,255,255,0.55)",
+                        }}
+                    >
+                        <div className="mb-4 flex items-center gap-2">
+                            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-sky-500/10">
+                                <User size={14} className="text-sky-400" />
+                            </div>
+                            <div>
+                                <p className="text-[12px] font-extrabold text-gray-800 dark:text-gray-100">
+                                    کارمندان
+                                </p>
+                                <p className="text-[9.5px] text-gray-400 dark:text-gray-500">
+                                    مقایسه عملکرد اعضای دپارتمان
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="flex flex-col gap-4">
+                            {showSolo ? (
+                                <SoloEmployeePanel person={dept.solo!} isDark={isDark} />
+                            ) : (
+                                <>
+                                    <EmployeePanel
+                                        person={dept.best}
+                                        isDark={isDark}
+                                        variant="best"
+                                    />
+                                    {showWorst && (
+                                        <EmployeePanel
+                                            person={dept.worst}
+                                            isDark={isDark}
+                                            variant="worst"
+                                        />
+                                    )}
+                                </>
+                            )}
+                        </div>
+                    </div>
                 </motion.div>
             </AnimatePresence>
         </motion.div>
