@@ -1221,7 +1221,7 @@ export default function AdminInternalTasksBoard(): JSX.Element {
                                 task={task}
                                 index={index}
                                 employees={employees}
-                                currentUsername={currentUsername}
+                                currentUsername={currentUsername ?? ""}
                                 onOpen={setSelectedTask}
                                 onDelete={handleDelete}
                                 onStatusChange={handleUpdated}

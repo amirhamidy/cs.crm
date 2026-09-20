@@ -89,18 +89,18 @@ type Tab =
 const TABS: Array<
     [Tab, string, React.ComponentType<{ size?: number }>]
 > = [
-    ["overview", "نمای کلی", LayoutGrid],
-    ["products", "محصولات", ShoppingBag],
-    ["tasks", "وظایف انبار", ClipboardList],
-    ["stock", "موجودی انبار", Boxes],
-    ["transactions", "تراکنش‌ها", ReceiptText],
-    ["orders", "درخواست‌های داخلی", PackageSearch],
-    ["deadlines", "مهلت‌ها", BellRing],
-    ["ledger", "گردش محصول", BellRing],
-    ["categories", "دسته‌بندی‌ها", Package],
-    ["invoices", "فاکتور فروش", FileText],
-    ["staff", "انباردارها", UsersRound],
-];
+        ["overview", "نمای کلی", LayoutGrid],
+        ["products", "محصولات", ShoppingBag],
+        ["tasks", "وظایف انبار", ClipboardList],
+        ["stock", "موجودی انبار", Boxes],
+        ["transactions", "تراکنش‌ها", ReceiptText],
+        ["orders", "درخواست‌های داخلی", PackageSearch],
+        ["deadlines", "مهلت‌ها", BellRing],
+        ["ledger", "گردش محصول", BellRing],
+        ["categories", "دسته‌بندی‌ها", Package],
+        ["invoices", "فاکتور فروش", FileText],
+        ["staff", "انباردارها", UsersRound],
+    ];
 
 const AVATAR_GRADIENTS = [
     ["#6366f1", "#8b5cf6"],
@@ -734,11 +734,9 @@ export default function WarehouseEmployeePage() {
     const [archiveLoading, setArchiveLoading] = useState(false);
     const [selectedInvoice, setSelectedInvoice] =
         useState<SalesInvoice | null>(null);
-    const [warehouseStaff, setWarehouseStaff] =
-        useState<WarehouseStaff[]>([]);
+    const [warehouseStaff, setWarehouseStaff] = useState<WarehouseStaff[]>([]);
     const [staffLoading, setStaffLoading] = useState(false);
-    const [showAddStaffModal, setShowAddStaffModal] =
-        useState(false);
+    const [showAddStaffModal, setShowAddStaffModal] = useState(false);
 
     useEffect(() => {
         setTaskItems(myTasks);
@@ -770,11 +768,7 @@ export default function WarehouseEmployeePage() {
     const fetchWarehouseStaff = useCallback(async () => {
         try {
             setStaffLoading(true);
-
-            const response = await axiosInstance.get(
-                "/warehouse/api/v1/staff/",
-            );
-
+            const response = await axiosInstance.get("/warehouse/api/v1/staff/");
             const data = Array.isArray(response.data)
                 ? response.data
                 : Array.isArray(response.data?.results)
@@ -782,7 +776,6 @@ export default function WarehouseEmployeePage() {
                     : Array.isArray(response.data?.data)
                         ? response.data.data
                         : [];
-
             setWarehouseStaff(data);
         } catch {
             setWarehouseStaff([]);
@@ -845,10 +838,7 @@ export default function WarehouseEmployeePage() {
     }, [tab, fetchCategories, hasFullWarehouseAccess]);
 
     useEffect(() => {
-        if (
-            tab === "staff" &&
-            hasFullWarehouseAccess
-        ) {
+        if (tab === "staff" && hasFullWarehouseAccess) {
             fetchWarehouseStaff();
         }
     }, [tab, fetchWarehouseStaff, hasFullWarehouseAccess]);
@@ -1012,23 +1002,14 @@ export default function WarehouseEmployeePage() {
     }, []);
 
     const handleDeleteStaff = useCallback((id: number) => {
-        setWarehouseStaff((current) =>
-            current.filter((staff) => staff.id !== id),
-        );
+        setWarehouseStaff((current) => current.filter((staff) => staff.id !== id));
     }, []);
 
-    const handleUpdateStaff = useCallback(
-        (updated: WarehouseStaff) => {
-            setWarehouseStaff((current) =>
-                current.map((staff) =>
-                    staff.id === updated.id
-                        ? updated
-                        : staff,
-                ),
-            );
-        },
-        [],
-    );
+    const handleUpdateStaff = useCallback((updated: WarehouseStaff) => {
+        setWarehouseStaff((current) =>
+            current.map((staff) => (staff.id === updated.id ? updated : staff)),
+        );
+    }, []);
 
     const handleStaffSuccess = useCallback(() => {
         setCurrentPage(1);
@@ -1288,62 +1269,6 @@ export default function WarehouseEmployeePage() {
                                     orderTasks={orderTasks}
                                 />
 
-                                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                                    {[
-                                        [
-                                            "وظایف در انتظار",
-                                            pendingOrderTasks.length,
-                                            false,
-                                        ],
-                                        [
-                                            "وظایف فعال",
-                                            activeTasks.length,
-                                            false,
-                                        ],
-                                        [
-                                            "وظایف تکمیل شده",
-                                            completedTasks.length,
-                                            false,
-                                        ],
-                                        [
-                                            "موجودی‌های بحرانی",
-                                            criticalStock.length,
-                                            criticalStock.length > 0,
-                                        ],
-                                    ].map(
-                                        ([label, value, danger]) => (
-                                            <div
-                                                key={String(label)}
-                                                className="rounded-3xl border p-4"
-                                                style={{
-                                                    background: cardBg(isDark),
-                                                    border: cardBorder(isDark),
-                                                    boxShadow: cardShadow(isDark),
-                                                }}
-                                            >
-                                                <p className="text-[10.5px] text-gray-500 dark:text-gray-400">
-                                                    {String(label)}
-                                                </p>
-
-                                                <p
-                                                    className="mt-2 text-[22px] font-black"
-                                                    style={{
-                                                        color: danger
-                                                            ? "#ef4444"
-                                                            : isDark
-                                                                ? "#fff"
-                                                                : "#0f172a",
-                                                    }}
-                                                >
-                                                    {formatNumber(
-                                                        Number(value),
-                                                    )}
-                                                </p>
-                                            </div>
-                                        ),
-                                    )}
-                                </div>
-
                                 {pendingQualityTasks.length > 0 && (
                                     <div
                                         className="rounded-3xl border p-4"
@@ -1469,9 +1394,9 @@ export default function WarehouseEmployeePage() {
                                     </p>
                                 </div>
 
-                                {hasFullWarehouseAccess && (
-                                    <div className="flex flex-wrap items-center gap-2">
-                                        {qualityTasks.length > 0 && (
+                                <div className="flex flex-wrap items-center gap-2">
+                                    {hasFullWarehouseAccess &&
+                                        qualityTasks.length > 0 && (
                                             <div
                                                 className="flex items-center gap-2 rounded-xl px-3 py-2"
                                                 style={{
@@ -1490,19 +1415,18 @@ export default function WarehouseEmployeePage() {
                                             </div>
                                         )}
 
-                                        <motion.button
-                                            type="button"
-                                            whileTap={{ scale: 0.97 }}
-                                            onClick={() =>
-                                                setCreateOrderTaskOpen(true)
-                                            }
-                                            className="flex h-11 items-center justify-center gap-2 rounded-full bg-indigo-600 px-5 text-[13px] font-bold text-white transition-colors hover:bg-indigo-500"
-                                        >
-                                            <Plus size={15} />
-                                            ثبت وظیفه برای انبار
-                                        </motion.button>
-                                    </div>
-                                )}
+                                    <motion.button
+                                        type="button"
+                                        whileTap={{ scale: 0.97 }}
+                                        onClick={() =>
+                                            setCreateOrderTaskOpen(true)
+                                        }
+                                        className="flex h-11 items-center justify-center gap-2 rounded-full bg-indigo-600 px-5 text-[13px] font-bold text-white transition-colors hover:bg-indigo-500"
+                                    >
+                                        <Plus size={15} />
+                                        ثبت وظیفه برای انبار
+                                    </motion.button>
+                                </div>
                             </div>
 
                             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -1797,18 +1721,14 @@ export default function WarehouseEmployeePage() {
                                         <h2 className="text-[14px] font-extrabold text-gray-900 dark:text-white">
                                             انباردارها
                                         </h2>
-
                                         <p className="mt-1 text-[11.5px] text-gray-500 dark:text-gray-400">
                                             مدیریت انباردارهای ثبت‌شده در سیستم
                                         </p>
                                     </div>
-
                                     <motion.button
                                         type="button"
                                         whileTap={{ scale: 0.97 }}
-                                        onClick={() =>
-                                            setShowAddStaffModal(true)
-                                        }
+                                        onClick={() => setShowAddStaffModal(true)}
                                         className="flex items-center justify-center gap-2 rounded-full bg-blue-600 px-4 py-2.5 text-[11.5px] font-bold text-white transition-colors hover:bg-blue-500"
                                     >
                                         <Plus size={15} />
@@ -1821,51 +1741,30 @@ export default function WarehouseEmployeePage() {
                                         <Loader2
                                             size={22}
                                             className="animate-spin"
-                                            style={{
-                                                color: "#6366f1",
-                                            }}
+                                            style={{ color: "#6366f1" }}
                                         />
                                     </div>
                                 ) : (
                                     <>
                                         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                                             {paginatedStaff.items.length ? (
-                                                paginatedStaff.items.map(
-                                                    (
-                                                        staff,
-                                                        index,
-                                                    ) => (
-                                                        <WarehouseStaffCard
-                                                            key={
-                                                                staff.id
-                                                            }
-                                                            staff={
-                                                                staff
-                                                            }
-                                                            index={
-                                                                index
-                                                            }
-                                                            onDelete={
-                                                                handleDeleteStaff
-                                                            }
-                                                            onUpdated={
-                                                                handleUpdateStaff
-                                                            }
-                                                        />
-                                                    ),
-                                                )
+                                                paginatedStaff.items.map((staff, index) => (
+                                                    <WarehouseStaffCard
+                                                        key={staff.id}
+                                                        staff={staff}
+                                                        index={index}
+                                                        onDelete={handleDeleteStaff}
+                                                        onUpdated={handleUpdateStaff}
+                                                    />
+                                                ))
                                             ) : (
-                                                renderEmpty(
-                                                    "هنوز انبارداری ثبت نشده است",
-                                                )
+                                                renderEmpty("هنوز انبارداری ثبت نشده است")
                                             )}
                                         </div>
 
                                         <Pagination
                                             currentPage={currentPage}
-                                            totalPages={
-                                                paginatedStaff.totalPages
-                                            }
+                                            totalPages={paginatedStaff.totalPages}
                                             onPageChange={setCurrentPage}
                                             isDark={isDark}
                                         />
@@ -1980,25 +1879,23 @@ export default function WarehouseEmployeePage() {
                 </motion.div>
             </AnimatePresence>
 
+            <CreateOrderTaskModal
+                isOpen={createOrderTaskOpen}
+                onClose={() =>
+                    setCreateOrderTaskOpen(false)
+                }
+                onCreated={handleOrderTaskCreated}
+            />
+
             {hasFullWarehouseAccess && (
                 <>
                     <WarehouseEmployeeProductWizardModal
                         isOpen={productWizardOpen}
-                        onClose={() =>
-                            setProductWizardOpen(false)
-                        }
+                        onClose={() => setProductWizardOpen(false)}
                         categories={categories}
                         staff={myStaff ? [myStaff] : []}
                         performedById={myStaff?.id ?? null}
                         onCreated={handleProductCreated}
-                    />
-
-                    <CreateOrderTaskModal
-                        isOpen={createOrderTaskOpen}
-                        onClose={() =>
-                            setCreateOrderTaskOpen(false)
-                        }
-                        onCreated={handleOrderTaskCreated}
                     />
 
                     <AnimatePresence>
@@ -2023,9 +1920,7 @@ export default function WarehouseEmployeePage() {
 
                     <AddWarehouseStaffModal
                         isOpen={showAddStaffModal}
-                        onClose={() =>
-                            setShowAddStaffModal(false)
-                        }
+                        onClose={() => setShowAddStaffModal(false)}
                         onSuccess={handleStaffSuccess}
                     />
                 </>

@@ -285,13 +285,13 @@ function StatsBar({
             color: isDark ? "#6ee7b7" : "#10b981",
             bg: isDark ? "rgba(16,185,129,0.14)" : "rgba(16,185,129,0.08)",
         },
-        {
-            icon: ClipboardList,
-            label: "وظایف در انتظار",
-            value: toPersianDigits(pendingCount),
-            color: isDark ? "#fcd34d" : "#f59e0b",
-            bg: isDark ? "rgba(245,158,11,0.14)" : "rgba(245,158,11,0.08)",
-        },
+        // {
+        //     icon: ClipboardList,
+        //     label: "وظایف در انتظار",
+        //     value: toPersianDigits(pendingCount),
+        //     color: isDark ? "#fcd34d" : "#f59e0b",
+        //     bg: isDark ? "rgba(245,158,11,0.14)" : "rgba(245,158,11,0.08)",
+        // },
     ];
 
     return (
@@ -344,8 +344,8 @@ function StatsBar({
                             <div className="mt-0.5 flex items-baseline gap-1">
                                 <p
                                     className={`truncate text-[15px] font-black tracking-tight ${stat.danger
-                                            ? "text-red-500 dark:text-red-400"
-                                            : "text-gray-900 dark:text-white"
+                                        ? "text-red-500 dark:text-red-400"
+                                        : "text-gray-900 dark:text-white"
                                         }`}
                                 >
                                     {stat.value}
@@ -489,8 +489,11 @@ export default function WarehouseOverview({
         return sum + Number(p.sale_price) * s.current_quantity;
     }, 0);
 
-    const pendingWarehouseTasks = tasks.filter((t) => t.status !== "completed").length;
-    const pendingOrderTasks = orderTasks.filter((t) => t.status !== "completed").length;
+    const pendingWarehouseTasks = tasks.filter((task) =>
+        ["pending", "waiting", "created", "assigned"].includes(
+            String(task.status ?? "").toLowerCase(),
+        ),
+    ).length;
 
     const recentTransactions = [...transactions]
         .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
@@ -508,8 +511,7 @@ export default function WarehouseOverview({
                 stockByProduct={stockByProduct}
                 criticalCount={criticalProducts.length}
                 totalValue={totalStockValue}
-                pendingCount={pendingWarehouseTasks + pendingOrderTasks}
-            />
+                pendingCount={pendingWarehouseTasks} />
 
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                 <Panel
@@ -645,8 +647,8 @@ export default function WarehouseOverview({
                                         </div>
                                         <span
                                             className={`shrink-0 rounded-lg px-2 py-1 text-[11.5px] font-black ${isIn
-                                                    ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400"
-                                                    : "bg-red-50 text-red-600 dark:bg-red-500/10 dark:text-red-400"
+                                                ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400"
+                                                : "bg-red-50 text-red-600 dark:bg-red-500/10 dark:text-red-400"
                                                 }`}
                                         >
                                             {isIn ? "+" : "-"}

@@ -1269,62 +1269,6 @@ export default function WarehouseEmployeePage() {
                                     orderTasks={orderTasks}
                                 />
 
-                                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                                    {[
-                                        [
-                                            "وظایف در انتظار",
-                                            pendingTasks.length,
-                                            false,
-                                        ],
-                                        [
-                                            "وظایف فعال",
-                                            activeTasks.length,
-                                            false,
-                                        ],
-                                        [
-                                            "وظایف تکمیل شده",
-                                            completedTasks.length,
-                                            false,
-                                        ],
-                                        [
-                                            "موجودی‌های بحرانی",
-                                            criticalStock.length,
-                                            criticalStock.length > 0,
-                                        ],
-                                    ].map(
-                                        ([label, value, danger]) => (
-                                            <div
-                                                key={String(label)}
-                                                className="rounded-3xl border p-4"
-                                                style={{
-                                                    background: cardBg(isDark),
-                                                    border: cardBorder(isDark),
-                                                    boxShadow: cardShadow(isDark),
-                                                }}
-                                            >
-                                                <p className="text-[10.5px] text-gray-500 dark:text-gray-400">
-                                                    {String(label)}
-                                                </p>
-
-                                                <p
-                                                    className="mt-2 text-[22px] font-black"
-                                                    style={{
-                                                        color: danger
-                                                            ? "#ef4444"
-                                                            : isDark
-                                                                ? "#fff"
-                                                                : "#0f172a",
-                                                    }}
-                                                >
-                                                    {formatNumber(
-                                                        Number(value),
-                                                    )}
-                                                </p>
-                                            </div>
-                                        ),
-                                    )}
-                                </div>
-
                                 {pendingQualityTasks.length > 0 && (
                                     <div
                                         className="rounded-3xl border p-4"
@@ -1450,9 +1394,9 @@ export default function WarehouseEmployeePage() {
                                     </p>
                                 </div>
 
-                                {hasFullWarehouseAccess && (
-                                    <div className="flex flex-wrap items-center gap-2">
-                                        {qualityTasks.length > 0 && (
+                                <div className="flex flex-wrap items-center gap-2">
+                                    {hasFullWarehouseAccess &&
+                                        qualityTasks.length > 0 && (
                                             <div
                                                 className="flex items-center gap-2 rounded-xl px-3 py-2"
                                                 style={{
@@ -1471,19 +1415,18 @@ export default function WarehouseEmployeePage() {
                                             </div>
                                         )}
 
-                                        <motion.button
-                                            type="button"
-                                            whileTap={{ scale: 0.97 }}
-                                            onClick={() =>
-                                                setCreateOrderTaskOpen(true)
-                                            }
-                                            className="flex h-11 items-center justify-center gap-2 rounded-full bg-indigo-600 px-5 text-[13px] font-bold text-white transition-colors hover:bg-indigo-500"
-                                        >
-                                            <Plus size={15} />
-                                            ثبت وظیفه برای انبار
-                                        </motion.button>
-                                    </div>
-                                )}
+                                    <motion.button
+                                        type="button"
+                                        whileTap={{ scale: 0.97 }}
+                                        onClick={() =>
+                                            setCreateOrderTaskOpen(true)
+                                        }
+                                        className="flex h-11 items-center justify-center gap-2 rounded-full bg-indigo-600 px-5 text-[13px] font-bold text-white transition-colors hover:bg-indigo-500"
+                                    >
+                                        <Plus size={15} />
+                                        ثبت وظیفه برای انبار
+                                    </motion.button>
+                                </div>
                             </div>
 
                             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -1936,6 +1879,13 @@ export default function WarehouseEmployeePage() {
                 </motion.div>
             </AnimatePresence>
 
+            <CreateOrderTaskModal
+                isOpen={createOrderTaskOpen}
+                onClose={() =>
+                    setCreateOrderTaskOpen(false)
+                }
+                onCreated={handleOrderTaskCreated}
+            />
 
             {hasFullWarehouseAccess && (
                 <>
@@ -1946,14 +1896,6 @@ export default function WarehouseEmployeePage() {
                         staff={myStaff ? [myStaff] : []}
                         performedById={myStaff?.id ?? null}
                         onCreated={handleProductCreated}
-                    />
-
-                    <CreateOrderTaskModal
-                        isOpen={createOrderTaskOpen}
-                        onClose={() =>
-                            setCreateOrderTaskOpen(false)
-                        }
-                        onCreated={handleOrderTaskCreated}
                     />
 
                     <AnimatePresence>
@@ -1983,7 +1925,6 @@ export default function WarehouseEmployeePage() {
                     />
                 </>
             )}
-
         </div>
     );
 }

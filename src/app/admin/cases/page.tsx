@@ -2,9 +2,6 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { useTheme } from "next-themes";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import SuspenseWrapper from "@/components/SuspenseWrapper";
 import {
     ClipboardList,
     Layers,
@@ -13,42 +10,37 @@ import {
     Plus,
     RefreshCw,
 } from "lucide-react";
+import { useTheme } from "next-themes";
 import axiosInstance from "@/lib/axiosInstance";
 import { apiRoutes } from "@/lib/apiRoutes";
-import { Case, Department } from "@/types/case";
+import { extractCaseId, fetchAllTasks } from "@/lib/fetchAllTasks";
+import type { Department } from "@/types/department";
+import type { Employee } from "@/types/employee";
+import type { TaskItem } from "@/types/task";
+import CreateCaseModal from "@/components/user/cases/CreateCaseModal";
 import type { CaseItem } from "@/types/case";
 import type { Customer } from "@/types/customer";
-import type { Employee } from "@/types/employee";
-
-import CaseCard from "@/components/customcomponents/cases/CaseCard";
-import CreateCaseModal from "@/components/customcomponents/cases/CreateCaseModal";
-import EditCaseModal from "@/components/customcomponents/cases/EditCaseModal";
-import CaseTasksModal from "@/components/customcomponents/cases/CaseTasksModal";
+import EditCaseModal from "@/components/user/cases/EditCaseModal";
+import CaseCard from "@/components/user/cases/CaseCard";
 import EditTaskModal from "@/components/customcomponents/tasks/EditTaskModal";
-import type { TaskItem } from "@/types/task";
+import CaseTasksModal from "@/components/customcomponents/cases/CaseTasksModal";
 
 type ListResponse<T> = T[] | { results?: T[]; data?: T[] };
 
 function extractList<T>(data: ListResponse<T> | undefined | null): T[] {
     if (Array.isArray(data)) return data;
-
     if (data && typeof data === "object") {
         if (Array.isArray(data.results)) return data.results;
         if (Array.isArray(data.data)) return data.data;
     }
-
     return [];
 }
 
-function AdminCasesPageContent() {
+export default function UserCasesPage() {
     const { resolvedTheme } = useTheme();
     const isDark = resolvedTheme === "dark";
 
-    const router = useRouter();
-    const pathname = usePathname();
-    const searchParams = useSearchParams();
-
-    const [cases, setCases] = useState<Case[]>([]);
+    const [cases, setCases] = useState<CaseItem[]>([]);
     const [customers, setCustomers] = useState<Customer[]>([]);
     const [departments, setDepartments] = useState<Department[]>([]);
     const [employees, setEmployees] = useState<Employee[]>([]);
@@ -56,48 +48,41 @@ function AdminCasesPageContent() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
     const [caseModalOpen, setCaseModalOpen] = useState(false);
-    const [deletingId, setDeletingId] = useState<number | null>(null);
     const [editingCase, setEditingCase] = useState<CaseItem | null>(null);
     const [editCaseModalOpen, setEditCaseModalOpen] = useState(false);
+    const [deletingId, setDeletingId] = useState<number | null>(null);
     const [editingTask, setEditingTask] = useState<TaskItem | null>(null);
     const [editTaskModalOpen, setEditTaskModalOpen] = useState(false);
     const [deletingTaskId, setDeletingTaskId] = useState<number | null>(null);
     const [tasksModalOpen, setTasksModalOpen] = useState(false);
     const [selectedCaseForTasks, setSelectedCaseForTasks] =
         useState<CaseItem | null>(null);
+    const [tasksRefreshKey, setTasksRefreshKey] = useState(0);
 
     const fetchData = useCallback(async () => {
         try {
             setLoading(true);
             setError("");
+            const [casesRes, customersRes, departmentsRes, employeesRes, allTasks] =
+                await Promise.all([
+                    axiosInstance.get<ListResponse<CaseItem>>(apiRoutes.cases),
+                    axiosInstance.get<ListResponse<Customer>>(apiRoutes.customers),
+                    axiosInstance.get<ListResponse<Department>>(apiRoutes.departments),
+                    axiosInstance.get<ListResponse<Employee>>(
+                        "/accounts/api/v1/employee/list/"
+                    ),
+                    // همه‌ی صفحات وظیفه‌ها، مستقیم از API
+                    fetchAllTasks(),
+                ]);
 
-            const [
-                casesRes,
-                customersRes,
-                departmentsRes,
-                employeesRes,
-                tasksRes,
-            ] = await Promise.all([
-                axiosInstance.get<ListResponse<Case>>(apiRoutes.cases),
-                axiosInstance.get<ListResponse<Customer>>(apiRoutes.customers),
-                axiosInstance.get<ListResponse<Department>>(
-                    apiRoutes.departments
-                ),
-                axiosInstance.get<ListResponse<Employee>>(
-                    apiRoutes.departmentEmployees
-                ),
-                axiosInstance.get<ListResponse<TaskItem>>(apiRoutes.tasks),
-            ]);
-
-            const caseList = extractList<Case>(casesRes.data);
+            const caseList = extractList<CaseItem>(casesRes.data);
 
             const detailedCases = await Promise.all(
                 caseList.map(async (item) => {
                     try {
-                        const detailRes = await axiosInstance.get<Case>(
+                        const detailRes = await axiosInstance.get<CaseItem>(
                             `/tasks/api/v1/cases/${item.id}/`
                         );
-
                         return { ...item, ...detailRes.data };
                     } catch {
                         return item;
@@ -109,9 +94,8 @@ function AdminCasesPageContent() {
             setCustomers(extractList(customersRes.data));
             setDepartments(extractList(departmentsRes.data));
             setEmployees(extractList(employeesRes.data));
-            setTasks(extractList(tasksRes.data));
-        } catch (err) {
-            console.error(err);
+            setTasks(allTasks);
+        } catch {
             setError("دریافت اطلاعات با خطا مواجه شد");
         } finally {
             setLoading(false);
@@ -122,74 +106,57 @@ function AdminCasesPageContent() {
         fetchData();
     }, [fetchData]);
 
-    useEffect(() => {
-        const caseIdParam = searchParams.get("case");
+    const tasksByCase = useMemo(() => {
+        const map = new Map<string, TaskItem[]>();
+        tasks.forEach((task) => {
+            const caseId = extractCaseId(task);
+            if (caseId) {
+                if (!map.has(caseId)) map.set(caseId, []);
+                map.get(caseId)!.push(task);
+            }
+        });
+        return map;
+    }, [tasks]);
 
-        if (!caseIdParam || loading || cases.length === 0) {
-            return;
-        }
-
-        const caseId = Number(caseIdParam);
-
-        if (!Number.isFinite(caseId)) {
-            return;
-        }
-
-        const foundCase = cases.find(
-            (item) => Number(item.id) === caseId
-        );
-
-        if (!foundCase) {
-            return;
-        }
-
-        setEditingCase(foundCase as unknown as CaseItem);
-        setEditCaseModalOpen(true);
-    }, [searchParams, loading, cases]);
-
-    const clearCaseSearchParam = useCallback(() => {
-        const params = new URLSearchParams(searchParams.toString());
-
-        params.delete("case");
-
-        const queryString = params.toString();
-
-        router.replace(
-            queryString
-                ? `${pathname}?${queryString}`
-                : pathname,
-            { scroll: false }
-        );
-    }, [pathname, router, searchParams]);
+    // وقتی مودال وظیفه‌ها از API دیتای تازه گرفت، عدد روی کارت هم هماهنگ می‌شه
+    const syncCaseTasks = useCallback(
+        (caseId: string, fresh: TaskItem[]) => {
+            setTasks((prev) => [
+                ...prev.filter((t) => extractCaseId(t) !== caseId),
+                ...fresh,
+            ]);
+        },
+        []
+    );
 
     const handleDeleteCase = useCallback(
-        async (item: Case) => {
+        async (item: CaseItem) => {
             const id = Number(item.id);
-
             if (!id) return;
+
+            // قبل از حذف، از خود API چک می‌کنیم که وظیفه‌ای نمونده باشه
+            const freshTasks = await fetchAllTasks({ caseId: item.id });
+            if (freshTasks.length > 0) {
+                syncCaseTasks(String(item.id), freshTasks);
+                throw new Error("این پرونده هنوز وظیفه دارد");
+            }
 
             try {
                 setDeletingId(id);
-
-                await axiosInstance.delete(
-                    `/tasks/api/v1/cases/${id}/delete/`
-                );
-
-                setCases((prev) =>
-                    prev.filter((c) => Number(c.id) !== id)
-                );
-            } catch (err) {
-                console.error(err);
+                await axiosInstance.delete(`/tasks/api/v1/cases/${id}/delete/`);
+                setCases((prev) => prev.filter((c) => Number(c.id) !== id));
+            } catch {
                 await fetchData();
+                throw new Error("خطا در حذف پرونده");
             } finally {
                 setDeletingId(null);
             }
         },
-        [fetchData]
+        [fetchData, syncCaseTasks]
     );
 
-    const handleEditCase = useCallback((item: Case) => {
-        setEditingCase(item as unknown as CaseItem);
+    const handleEditCase = useCallback((item: CaseItem) => {
+        setEditingCase(item);
         setEditCaseModalOpen(true);
     }, []);
 
@@ -197,31 +164,15 @@ function AdminCasesPageContent() {
         fetchData();
         setEditCaseModalOpen(false);
         setEditingCase(null);
-        clearCaseSearchParam();
-    }, [fetchData, clearCaseSearchParam]);
-
-    const handleCloseEditCaseModal = useCallback(() => {
-        setEditCaseModalOpen(false);
-        setEditingCase(null);
-        clearCaseSearchParam();
-    }, [clearCaseSearchParam]);
+    }, [fetchData]);
 
     const handleDeleteTask = useCallback(async (taskId: number) => {
         try {
             setDeletingTaskId(taskId);
-
-            await axiosInstance.delete(
-                `/tasks/api/v1/tasks/${taskId}/delete/`
-            );
-
-            setTasks((prev) =>
-                prev.filter((t) => t.id !== taskId)
-            );
-
-            return Promise.resolve();
-        } catch (err) {
-            console.error(err);
-            throw err;
+            await axiosInstance.delete(`/tasks/api/v1/tasks/${taskId}/delete/`);
+            setTasks((prev) => prev.filter((t) => t.id !== taskId));
+        } catch {
+            throw new Error("خطا در حذف وظیفه");
         } finally {
             setDeletingTaskId(null);
         }
@@ -234,6 +185,8 @@ function AdminCasesPageContent() {
 
     const handleTaskUpdate = useCallback(() => {
         fetchData();
+        // مودال وظیفه‌ها هم دوباره از API می‌خونه
+        setTasksRefreshKey((k) => k + 1);
         setEditTaskModalOpen(false);
         setEditingTask(null);
     }, [fetchData]);
@@ -243,58 +196,11 @@ function AdminCasesPageContent() {
         setTasksModalOpen(true);
     }, []);
 
-    const tasksByCase = useMemo(() => {
-        const map = new Map<number, TaskItem[]>();
-
-        tasks.forEach((task) => {
-            const caseId =
-                task.case && typeof task.case === "object"
-                    ? task.case.id
-                    : task.case;
-
-            if (caseId) {
-                const id = Number(caseId);
-
-                if (!map.has(id)) {
-                    map.set(id, []);
-                }
-
-                map.get(id)!.push(task);
-            }
-        });
-
-        return map;
-    }, [tasks]);
-
-    const selectedCaseTasks = useMemo(() => {
-        if (!selectedCaseForTasks) return [];
-
-        return (
-            tasksByCase.get(Number(selectedCaseForTasks.id)) || []
-        );
-    }, [selectedCaseForTasks, tasksByCase]);
-
     return (
-        <div
-            className="flex flex-col gap-5 p-3 sm:p-4 md:p-6"
-            dir="rtl"
-        >
+        <div className="flex flex-col gap-5 p-3 sm:p-4 md:p-6" dir="rtl">
+            {/* Header */}
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-start gap-3">
-                    <div
-                        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl"
-                        style={{
-                            background: isDark
-                                ? "rgba(99,102,241,0.14)"
-                                : "rgba(99,102,241,0.08)",
-                        }}
-                    >
-                        <ClipboardList
-                            size={18}
-                            className="text-indigo-500"
-                        />
-                    </div>
-
                     <div className="min-w-0">
                         <h1 className="text-[15px] font-extrabold text-gray-900 dark:text-white">
                             پرونده‌ها
@@ -303,7 +209,7 @@ function AdminCasesPageContent() {
                         <p className="mt-0.5 text-[11.5px] text-gray-500 dark:text-gray-400">
                             {loading
                                 ? "در حال بارگذاری..."
-                                : `${cases.length} پرونده و ${tasks.length} وظیفه در سیستم`}
+                                : `${cases.length} پرونده و ${tasks.length} وظیفه`}
                         </p>
                     </div>
                 </div>
@@ -339,6 +245,7 @@ function AdminCasesPageContent() {
                 </div>
             </div>
 
+            {/* Error */}
             {error && !loading && (
                 <div className="flex flex-col items-start gap-3 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-[12.5px] text-rose-600 dark:border-rose-500/20 dark:bg-rose-500/10 dark:text-rose-300 sm:flex-row sm:items-center sm:justify-between">
                     <span>{error}</span>
@@ -353,12 +260,10 @@ function AdminCasesPageContent() {
                 </div>
             )}
 
+            {/* Loading */}
             {loading && (
                 <div className="flex flex-col items-center justify-center gap-3 py-16">
-                    <Loader
-                        size={24}
-                        className="animate-spin text-indigo-500"
-                    />
+                    <Loader size={24} className="animate-spin text-indigo-500" />
 
                     <p className="text-[12.5px] text-gray-500 dark:text-gray-400">
                         در حال دریافت لیست پرونده‌ها...
@@ -366,6 +271,7 @@ function AdminCasesPageContent() {
                 </div>
             )}
 
+            {/* Empty State */}
             {!loading && cases.length === 0 && (
                 <div className="flex flex-col items-center justify-center gap-2 py-16">
                     <ClipboardList
@@ -379,6 +285,7 @@ function AdminCasesPageContent() {
                 </div>
             )}
 
+            {/* Cases Grid */}
             {!loading && cases.length > 0 && (
                 <motion.div
                     layout
@@ -387,7 +294,7 @@ function AdminCasesPageContent() {
                     <AnimatePresence mode="popLayout">
                         {cases.map((item, i) => {
                             const caseTasks =
-                                tasksByCase.get(Number(item.id)) || [];
+                                tasksByCase.get(String(item.id)) || [];
 
                             return (
                                 <div
@@ -396,20 +303,18 @@ function AdminCasesPageContent() {
                                 >
                                     <div className="relative">
                                         <CaseCard
-                                            item={
-                                                item as unknown as CaseItem
-                                            }
+                                            item={item}
                                             index={i}
                                             customers={customers}
                                             departments={departments}
                                             users={employees}
                                             isDeleting={
-                                                deletingId ===
-                                                Number(item.id)
+                                                deletingId === Number(item.id)
                                             }
                                             hasActiveTasks={
                                                 caseTasks.length > 0
                                             }
+                                            onEdit={handleEditCase}
                                             onDelete={() =>
                                                 handleDeleteCase(item)
                                             }
@@ -417,9 +322,7 @@ function AdminCasesPageContent() {
 
                                         <button
                                             type="button"
-                                            onClick={() =>
-                                                handleEditCase(item)
-                                            }
+                                            onClick={() => handleEditCase(item)}
                                             className="absolute left-3 top-3 flex h-7 w-7 items-center justify-center rounded-xl transition-colors"
                                             title="ویرایش پرونده"
                                             style={{
@@ -428,19 +331,14 @@ function AdminCasesPageContent() {
                                                 color: "rgb(99, 102, 241)",
                                             }}
                                         >
-                                            <Pencil
-                                                size={11}
-                                                strokeWidth={2}
-                                            />
+                                            <Pencil size={11} strokeWidth={2} />
                                         </button>
                                     </div>
 
                                     <button
                                         type="button"
                                         onClick={() =>
-                                            handleOpenTasksModal(
-                                                item as unknown as CaseItem
-                                            )
+                                            handleOpenTasksModal(item)
                                         }
                                         className="flex items-center justify-between gap-2 rounded-2xl px-3.5 py-2.5 text-[12px] font-bold transition-colors"
                                         style={{
@@ -471,6 +369,7 @@ function AdminCasesPageContent() {
                 </motion.div>
             )}
 
+            {/* Modals */}
             <CreateCaseModal
                 open={caseModalOpen}
                 onClose={() => setCaseModalOpen(false)}
@@ -478,11 +377,34 @@ function AdminCasesPageContent() {
                 customers={customers}
             />
 
-            <EditCaseModal
-                isOpen={editCaseModalOpen}
-                caseItem={editingCase}
-                onClose={handleCloseEditCaseModal}
-                onSuccess={handleCaseUpdate}
+            {editCaseModalOpen && editingCase && (
+                <EditCaseModal
+                    isOpen={editCaseModalOpen}
+                    caseItem={editingCase}
+                    customers={customers}
+                    departments={departments}
+                    users={employees}
+                    onClose={() => {
+                        setEditCaseModalOpen(false);
+                        setEditingCase(null);
+                    }}
+                    onSuccess={handleCaseUpdate}
+                />
+            )}
+
+            <CaseTasksModal
+                isOpen={tasksModalOpen}
+                onClose={() => {
+                    setTasksModalOpen(false);
+                    setSelectedCaseForTasks(null);
+                }}
+                caseItem={selectedCaseForTasks}
+                employees={employees}
+                refreshKey={tasksRefreshKey}
+                onEditTask={handleEditTask}
+                onDeleteTask={handleDeleteTask}
+                deletingTaskId={deletingTaskId}
+                onTasksLoaded={syncCaseTasks}
             />
 
             {editTaskModalOpen && editingTask && (
@@ -497,26 +419,6 @@ function AdminCasesPageContent() {
                     onSuccess={handleTaskUpdate}
                 />
             )}
-
-            <CaseTasksModal
-                isOpen={tasksModalOpen}
-                onClose={() => {
-                    setTasksModalOpen(false);
-                    setSelectedCaseForTasks(null);
-                }}
-                caseItem={selectedCaseForTasks}
-                tasks={selectedCaseTasks}
-                onEditTask={handleEditTask}
-                onDeleteTask={handleDeleteTask}
-                deletingTaskId={deletingTaskId}
-            />
         </div>
-    );
-}
-export default function AdminCasesPage() {
-    return (
-        <SuspenseWrapper>
-            <AdminCasesPageContent />
-        </SuspenseWrapper>
     );
 }

@@ -13,6 +13,7 @@ import {
 import { useTheme } from "next-themes";
 import axiosInstance from "@/lib/axiosInstance";
 import { apiRoutes } from "@/lib/apiRoutes";
+import { extractCaseId, fetchAllTasks } from "@/lib/fetchAllTasks";
 import type { Department } from "@/types/department";
 import type { Employee } from "@/types/employee";
 import type { TaskItem } from "@/types/task";
@@ -33,23 +34,6 @@ function extractList<T>(data: ListResponse<T> | undefined | null): T[] {
         if (Array.isArray(data.data)) return data.data;
     }
     return [];
-}
-
-function extractCaseId(task: TaskItem): string | null {
-    const raw =
-        (task as any).case ??
-        (task as any).case_id ??
-        (task as any).caseId ??
-        null;
-
-    if (raw === null || raw === undefined) return null;
-
-    if (typeof raw === "object") {
-        const id = raw.id ?? raw.pk ?? null;
-        return id !== null && id !== undefined ? String(id) : null;
-    }
-
-    return String(raw);
 }
 
 export default function UserCasesPage() {
@@ -73,12 +57,13 @@ export default function UserCasesPage() {
     const [tasksModalOpen, setTasksModalOpen] = useState(false);
     const [selectedCaseForTasks, setSelectedCaseForTasks] =
         useState<CaseItem | null>(null);
+    const [tasksRefreshKey, setTasksRefreshKey] = useState(0);
 
     const fetchData = useCallback(async () => {
         try {
             setLoading(true);
             setError("");
-            const [casesRes, customersRes, departmentsRes, employeesRes, tasksRes] =
+            const [casesRes, customersRes, departmentsRes, employeesRes, allTasks] =
                 await Promise.all([
                     axiosInstance.get<ListResponse<CaseItem>>(apiRoutes.cases),
                     axiosInstance.get<ListResponse<Customer>>(apiRoutes.customers),
@@ -86,7 +71,8 @@ export default function UserCasesPage() {
                     axiosInstance.get<ListResponse<Employee>>(
                         "/accounts/api/v1/employee/list/"
                     ),
-                    axiosInstance.get<ListResponse<TaskItem>>(apiRoutes.tasks),
+                    // همه‌ی صفحات وظیفه‌ها، مستقیم از API
+                    fetchAllTasks(),
                 ]);
 
             const caseList = extractList<CaseItem>(casesRes.data);
@@ -104,13 +90,11 @@ export default function UserCasesPage() {
                 })
             );
 
-            const taskList = extractList(tasksRes.data);
-
             setCases(detailedCases);
             setCustomers(extractList(customersRes.data));
             setDepartments(extractList(departmentsRes.data));
             setEmployees(extractList(employeesRes.data));
-            setTasks(taskList);
+            setTasks(allTasks);
         } catch {
             setError("دریافت اطلاعات با خطا مواجه شد");
         } finally {
@@ -134,18 +118,28 @@ export default function UserCasesPage() {
         return map;
     }, [tasks]);
 
-    const selectedCaseTasks = useMemo(() => {
-        if (!selectedCaseForTasks) return [];
-        return tasksByCase.get(String(selectedCaseForTasks.id)) || [];
-    }, [selectedCaseForTasks, tasksByCase]);
+    // وقتی مودال وظیفه‌ها از API دیتای تازه گرفت، عدد روی کارت هم هماهنگ می‌شه
+    const syncCaseTasks = useCallback(
+        (caseId: string, fresh: TaskItem[]) => {
+            setTasks((prev) => [
+                ...prev.filter((t) => extractCaseId(t) !== caseId),
+                ...fresh,
+            ]);
+        },
+        []
+    );
 
     const handleDeleteCase = useCallback(
         async (item: CaseItem) => {
             const id = Number(item.id);
             if (!id) return;
 
-            const caseTasks = tasksByCase.get(String(item.id)) || [];
-            if (caseTasks.length > 0) return;
+            // قبل از حذف، از خود API چک می‌کنیم که وظیفه‌ای نمونده باشه
+            const freshTasks = await fetchAllTasks({ caseId: item.id });
+            if (freshTasks.length > 0) {
+                syncCaseTasks(String(item.id), freshTasks);
+                throw new Error("این پرونده هنوز وظیفه دارد");
+            }
 
             try {
                 setDeletingId(id);
@@ -158,7 +152,7 @@ export default function UserCasesPage() {
                 setDeletingId(null);
             }
         },
-        [fetchData, tasksByCase]
+        [fetchData, syncCaseTasks]
     );
 
     const handleEditCase = useCallback((item: CaseItem) => {
@@ -177,7 +171,6 @@ export default function UserCasesPage() {
             setDeletingTaskId(taskId);
             await axiosInstance.delete(`/tasks/api/v1/tasks/${taskId}/delete/`);
             setTasks((prev) => prev.filter((t) => t.id !== taskId));
-            return Promise.resolve();
         } catch {
             throw new Error("خطا در حذف وظیفه");
         } finally {
@@ -192,6 +185,8 @@ export default function UserCasesPage() {
 
     const handleTaskUpdate = useCallback(() => {
         fetchData();
+        // مودال وظیفه‌ها هم دوباره از API می‌خونه
+        setTasksRefreshKey((k) => k + 1);
         setEditTaskModalOpen(false);
         setEditingTask(null);
     }, [fetchData]);
@@ -206,8 +201,6 @@ export default function UserCasesPage() {
             {/* Header */}
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-start gap-3">
-                   
-
                     <div className="min-w-0">
                         <h1 className="text-[15px] font-extrabold text-gray-900 dark:text-white">
                             پرونده‌ها
@@ -399,6 +392,21 @@ export default function UserCasesPage() {
                 />
             )}
 
+            <CaseTasksModal
+                isOpen={tasksModalOpen}
+                onClose={() => {
+                    setTasksModalOpen(false);
+                    setSelectedCaseForTasks(null);
+                }}
+                caseItem={selectedCaseForTasks}
+                employees={employees}
+                refreshKey={tasksRefreshKey}
+                onEditTask={handleEditTask}
+                onDeleteTask={handleDeleteTask}
+                deletingTaskId={deletingTaskId}
+                onTasksLoaded={syncCaseTasks}
+            />
+
             {editTaskModalOpen && editingTask && (
                 <EditTaskModal
                     task={editingTask}
@@ -411,19 +419,6 @@ export default function UserCasesPage() {
                     onSuccess={handleTaskUpdate}
                 />
             )}
-
-            <CaseTasksModal
-                isOpen={tasksModalOpen}
-                onClose={() => {
-                    setTasksModalOpen(false);
-                    setSelectedCaseForTasks(null);
-                }}
-                caseItem={selectedCaseForTasks}
-                tasks={selectedCaseTasks}
-                onEditTask={handleEditTask}
-                onDeleteTask={handleDeleteTask}
-                deletingTaskId={deletingTaskId}
-            />
         </div>
     );
 }
