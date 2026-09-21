@@ -16,6 +16,7 @@ import {
     Package,
     User,
     Wallet,
+    X,
     XCircle,
 } from "lucide-react";
 import { toPersianDigits } from "@/lib/jalali";
@@ -57,57 +58,74 @@ function CriticalProductsTooltip({
         <div
             className="relative inline-flex"
             onMouseEnter={() => setOpen(true)}
-            onMouseLeave={() => setOpen(false)}
         >
             {children}
             <AnimatePresence>
                 {open && criticalProducts.length > 0 && (
                     <motion.div
-                        initial={{ opacity: 0, y: -4, scale: 0.97 }}
+                        initial={{ opacity: 0, y: 4, scale: 0.97 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
-                        exit={{ opacity: 0, y: -4, scale: 0.97 }}
+                        exit={{ opacity: 0, y: 4, scale: 0.97 }}
                         transition={{ duration: 0.15 }}
-                        className="pointer-events-none absolute bottom-full right-0 z-50 mb-2 w-[280px] rounded-2xl border border-red-400/15 bg-slate-950 p-3 shadow-2xl"
+                        className="absolute right-0 top-full z-50 mt-2 w-[280px] rounded-2xl border border-gray-200 bg-white p-3 shadow-xl dark:border-red-400/15 dark:bg-slate-950 dark:shadow-2xl"
                         dir="rtl"
                     >
-                        <div className="mb-2 flex items-center justify-between border-b border-white/10 pb-2">
-                            <div className="flex items-center gap-1.5">
-                                <AlertTriangle className="h-3.5 w-3.5 text-red-400" />
-                                <span className="text-[11px] font-extrabold text-white">
+                        <span className="absolute bottom-full right-4 h-0 w-0 border-b-4 border-l-4 border-r-4 border-b-white border-l-transparent border-r-transparent dark:border-b-slate-950" />
+
+                        <div className="mb-2 flex items-center justify-between gap-2 border-b border-gray-200 pb-2 dark:border-white/10">
+                            <div className="flex min-w-0 items-center gap-1.5">
+                                <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-red-500 dark:text-red-400" />
+                                <span className="truncate text-[11px] font-extrabold text-gray-900 dark:text-white">
                                     محصولات نیازمند تامین
                                 </span>
                             </div>
-                            <span className="rounded-md bg-red-500/20 px-1.5 py-0.5 text-[10px] font-bold text-red-300">
-                                {toPersianDigits(criticalProducts.length)}
-                            </span>
+
+                            <div className="flex shrink-0 items-center gap-1.5">
+                                <span className="rounded-md bg-red-500/10 px-1.5 py-0.5 text-[10px] font-bold text-red-600 dark:bg-red-500/20 dark:text-red-300">
+                                    {toPersianDigits(criticalProducts.length)}
+                                </span>
+
+                                <button
+                                    type="button"
+                                    aria-label="بستن"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setOpen(false);
+                                    }}
+                                    className="flex h-5 w-5 items-center justify-center rounded-md text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900 dark:text-white/50 dark:hover:bg-white/10 dark:hover:text-white"
+                                >
+                                    <X size={12} />
+                                </button>
+                            </div>
                         </div>
+
                         <div className="flex max-h-56 flex-col gap-1.5 overflow-y-auto">
                             {criticalProducts.map((p) => {
                                 const s = stockByProduct.get(p.id);
                                 return (
                                     <div
                                         key={p.id}
-                                        className="rounded-xl bg-white/[0.04] px-2.5 py-2"
+                                        className="rounded-xl bg-slate-50 px-2.5 py-2 dark:bg-white/[0.04]"
                                     >
-                                        <p className="truncate text-[11px] font-bold text-white">
+                                        <p className="truncate text-[11px] font-bold text-gray-800 dark:text-white">
                                             {p.name}
                                         </p>
                                         <div className="mt-1.5 grid grid-cols-3 gap-2">
                                             <div>
-                                                <p className="text-[9px] text-white/40">فعلی</p>
-                                                <p className="text-[11px] font-black text-red-300">
+                                                <p className="text-[9px] text-gray-400 dark:text-white/40">فعلی</p>
+                                                <p className="text-[11px] font-black text-red-500 dark:text-red-300">
                                                     {toPersianDigits(s?.current_quantity ?? 0)}
                                                 </p>
                                             </div>
                                             <div>
-                                                <p className="text-[9px] text-white/40">حداقل</p>
-                                                <p className="text-[11px] font-black text-amber-300">
+                                                <p className="text-[9px] text-gray-400 dark:text-white/40">حداقل</p>
+                                                <p className="text-[11px] font-black text-amber-600 dark:text-amber-300">
                                                     {toPersianDigits(s?.minimum_stock ?? 0)}
                                                 </p>
                                             </div>
                                             <div>
-                                                <p className="text-[9px] text-white/40">حداکثر</p>
-                                                <p className="text-[11px] font-black text-blue-300">
+                                                <p className="text-[9px] text-gray-400 dark:text-white/40">حداکثر</p>
+                                                <p className="text-[11px] font-black text-blue-600 dark:text-blue-300">
                                                     {toPersianDigits(s?.maximum_stock ?? 0)}
                                                 </p>
                                             </div>
@@ -116,7 +134,6 @@ function CriticalProductsTooltip({
                                 );
                             })}
                         </div>
-                        <span className="absolute right-4 top-full h-0 w-0 border-l-4 border-r-4 border-t-4 border-l-transparent border-r-transparent border-t-slate-950" />
                     </motion.div>
                 )}
             </AnimatePresence>
@@ -299,7 +316,7 @@ function StatsBar({
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.25 }}
-            className="grid grid-cols-2  rounded-3xl sm:grid-cols-4"
+            className="relative z-20 grid grid-cols-2  rounded-3xl sm:grid-cols-4"
             style={{
                 background: isDark ? "rgba(255,255,255,0.03)" : "#fafafa",
                 border: isDark

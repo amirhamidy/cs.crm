@@ -4,7 +4,10 @@ import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Eye, EyeOff, Loader } from "lucide-react";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { useLogin } from "@/hooks/useLogin";
+import { useLogout } from "@/hooks/useLogout";
+import { useAuthStore } from "@/store/authStore";
 import { Notification } from "@/components/Notification";
 import { FloatingInput } from "@/components/login/login";
 
@@ -16,6 +19,19 @@ export default function LoginPage() {
     const [typedSlogan, setTypedSlogan] = useState("");
 
     const { login, loading, error } = useLogin();
+    const { silentLogout } = useLogout();
+
+    const router = useRouter();
+    const hasHydrated = useAuthStore((s) => s.hasHydrated);
+    const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+    const userType = useAuthStore((s) => s.userType);
+    useEffect(() => {
+        if (!hasHydrated || !isAuthenticated) return;
+
+        router.replace(userType === 1 ? "/admin/dashboard" : "/user/dashboard");
+    }, [hasHydrated, isAuthenticated, userType, router]);
+
+    const canShowForm = hasHydrated && !isAuthenticated;
 
     useEffect(() => {
         if (error) {
@@ -24,6 +40,8 @@ export default function LoginPage() {
     }, [error]);
 
     useEffect(() => {
+        if (!canShowForm) return;
+
         const slogan = "رادکو، سکان کسب‌وکار تو";
         let index = 0;
 
@@ -39,7 +57,7 @@ export default function LoginPage() {
         }, 70);
 
         return () => window.clearInterval(interval);
-    }, []);
+    }, [canShowForm]);
 
     const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
@@ -49,9 +67,12 @@ export default function LoginPage() {
             setErrorMsg("لطفاً همه فیلدها را پر کنید");
             return;
         }
+        silentLogout();
 
         await login(username.trim(), password);
     };
+
+    if (!canShowForm) return null;
 
     return (
         <div

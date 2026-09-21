@@ -1,6 +1,6 @@
 "use client";
 
-import { ComponentType, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ComponentType, useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
     BellRing,
@@ -45,7 +45,6 @@ import {
     getOrderTaskTitle,
     getQuantityFromStock,
     getStockProductName,
-    getStockStatus,
     PAGE_SIZE,
     paginate,
 } from "@/utils/warehouseEmployee";
@@ -86,8 +85,6 @@ type Tab =
     | "staff"
     | "invoices";
 
-const REALTIME_INTERVAL = 5000;
-
 const TABS: Array<[Tab, string, ComponentType<{ size?: number }>]> = [
     ["overview", "نمای کلی", LayoutGrid],
     ["products", "محصولات", ShoppingBag],
@@ -126,8 +123,45 @@ const cardShadow = (dark: boolean) =>
 const muted = (dark: boolean) =>
     dark ? "#94a3b8" : "#64748b";
 
-function getStockColors(percentage: number, dark: boolean) {
-    if (percentage >= 80) {
+function sortNewestFirst<T extends { id: number }>(items: T[]): T[] {
+    return [...items].sort((a, b) => {
+        const timeA = new Date((a as any).created_at ?? "").getTime();
+        const timeB = new Date((b as any).created_at ?? "").getTime();
+
+        if (
+            !Number.isNaN(timeA) &&
+            !Number.isNaN(timeB) &&
+            timeA !== timeB
+        ) {
+            return timeB - timeA;
+        }
+
+        return Number(b.id) - Number(a.id);
+    });
+}
+
+type StockLevel = "critical" | "low" | "medium" | "good";
+
+const STOCK_LEVEL_LABELS: Record<StockLevel, string> = {
+    critical: "نیاز به تامین",
+    low: "موجودی کم",
+    medium: "متوسط",
+    good: "مناسب",
+};
+
+function getStockLevel(
+    current: number,
+    minimum: number,
+    percentage: number,
+): StockLevel {
+    if (current <= minimum) return "critical";
+    if (percentage < 40) return "low";
+    if (percentage < 80) return "medium";
+    return "good";
+}
+
+function getStockColors(level: StockLevel, dark: boolean) {
+    if (level === "good") {
         return {
             gradient: ["#4ade80", "#10b981"],
             text: dark ? "#6ee7b7" : "#10b981",
@@ -139,7 +173,7 @@ function getStockColors(percentage: number, dark: boolean) {
         };
     }
 
-    if (percentage >= 40) {
+    if (level === "medium") {
         return {
             gradient: ["#facc15", "#22c55e"],
             text: dark ? "#fde047" : "#ca8a04",
@@ -272,8 +306,8 @@ function StockCard({
             ? Math.min(100, Math.max(0, (current / maximum) * 100))
             : 0;
 
-    const status = getStockStatus(stock);
-    const colors = getStockColors(percentage, isDark);
+    const level = getStockLevel(current, minimum, percentage);
+    const colors = getStockColors(level, isDark);
     const [start, end] =
         AVATAR_GRADIENTS[stock.id % AVATAR_GRADIENTS.length];
 
@@ -376,7 +410,7 @@ function StockCard({
                         color: colors.text,
                     }}
                 >
-                    {percentage < 40 && (
+                    {(level === "critical" || level === "low") && (
                         <span className="relative flex h-1.5 w-1.5">
                             <span
                                 className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-60"
@@ -388,7 +422,7 @@ function StockCard({
                             />
                         </span>
                     )}
-                    {status.label}
+                    {STOCK_LEVEL_LABELS[level]}
                 </span>
             </div>
 
@@ -737,17 +771,27 @@ export default function WarehouseEmployeePage() {
     const [warehouseStaff, setWarehouseStaff] = useState<WarehouseStaff[]>([]);
     const [staffLoading, setStaffLoading] = useState(false);
     const [showAddStaffModal, setShowAddStaffModal] = useState(false);
-
-    const refreshRef = useRef(refresh);
-    const refreshInFlightRef = useRef(false);
-
-    useEffect(() => {
-        refreshRef.current = refresh;
-    }, [refresh]);
+    const [optimisticProducts, setOptimisticProducts] =
+        useState<typeof products>([]);
 
     useEffect(() => {
         setTaskItems(myTasks);
     }, [myTasks]);
+
+    useEffect(() => {
+        setOptimisticProducts((current) => {
+            if (!current.length) return current;
+
+            const next = current.filter(
+                (item) =>
+                    !products.some(
+                        (product) => product.id === item.id,
+                    ),
+            );
+
+            return next.length === current.length ? current : next;
+        });
+    }, [products]);
 
     useEffect(() => {
         setCurrentPage(1);
@@ -865,60 +909,6 @@ export default function WarehouseEmployeePage() {
         }
     }, [tab, fetchArchive, hasFullWarehouseAccess]);
 
-    useEffect(() => {
-        const tick = async () => {
-            if (document.visibilityState !== "visible") return;
-            if (refreshInFlightRef.current) return;
-
-            refreshInFlightRef.current = true;
-
-            try {
-                await refreshRef.current();
-            } catch {
-            } finally {
-                refreshInFlightRef.current = false;
-            }
-        };
-
-        const interval = setInterval(tick, REALTIME_INTERVAL);
-
-        const handleVisibility = () => {
-            if (document.visibilityState === "visible") tick();
-        };
-
-        document.addEventListener("visibilitychange", handleVisibility);
-        window.addEventListener("focus", tick);
-
-        return () => {
-            clearInterval(interval);
-            document.removeEventListener("visibilitychange", handleVisibility);
-            window.removeEventListener("focus", tick);
-        };
-    }, []);
-
-    useEffect(() => {
-        if (!hasFullWarehouseAccess) return;
-        if (!["categories", "staff", "invoices"].includes(tab)) return;
-
-        const tick = () => {
-            if (document.visibilityState !== "visible") return;
-
-            if (tab === "categories") fetchCategories(true);
-            if (tab === "staff") fetchWarehouseStaff(true);
-            if (tab === "invoices") fetchArchive(true);
-        };
-
-        const interval = setInterval(tick, REALTIME_INTERVAL);
-
-        return () => clearInterval(interval);
-    }, [
-        tab,
-        hasFullWarehouseAccess,
-        fetchCategories,
-        fetchWarehouseStaff,
-        fetchArchive,
-    ]);
-
     const stockByProduct = useMemo(
         () =>
             new Map(
@@ -985,9 +975,21 @@ export default function WarehouseEmployeePage() {
         [currentPage],
     );
 
+    const displayProducts = useMemo(() => {
+        const knownIds = new Set(
+            products.map((product) => product.id),
+        );
+
+        const pending = optimisticProducts.filter(
+            (product) => !knownIds.has(product.id),
+        );
+
+        return sortNewestFirst([...pending, ...products]);
+    }, [products, optimisticProducts]);
+
     const paginatedProducts = useMemo(
-        () => paged(products),
-        [products, paged],
+        () => paged(displayProducts),
+        [displayProducts, paged],
     );
 
     const paginatedTasks = useMemo(
@@ -1048,12 +1050,32 @@ export default function WarehouseEmployeePage() {
         [],
     );
 
-    const handleProductCreated = useCallback(async () => {
-        setProductWizardOpen(false);
-        setTab("products");
-        setCurrentPage(1);
-        await refresh();
-    }, [refresh]);
+    const handleProductCreated = useCallback(
+        async (created?: unknown) => {
+            const raw = created as any;
+            const candidate = raw?.data ?? raw?.product ?? raw;
+
+            if (
+                candidate &&
+                typeof candidate === "object" &&
+                candidate.id != null
+            ) {
+                setOptimisticProducts((current) => [
+                    candidate,
+                    ...current.filter(
+                        (item) => item.id !== candidate.id,
+                    ),
+                ]);
+            }
+
+            setProductWizardOpen(false);
+            setTab("products");
+            setCurrentPage(1);
+
+            void Promise.resolve(refresh()).catch(() => undefined);
+        },
+        [refresh],
+    );
 
     const handleOrderTaskCreated = useCallback(async () => {
         setCreateOrderTaskOpen(false);
@@ -1183,7 +1205,7 @@ export default function WarehouseEmployeePage() {
     }
 
     const counts: Record<string, number> = {
-        products: products.length,
+        products: displayProducts.length,
         tasks: pendingTasks.length,
         orders: pendingOrderTasks.length,
         deadlines: orderTaskDeadlines.length,

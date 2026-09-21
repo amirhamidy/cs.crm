@@ -43,7 +43,8 @@ export default function TaskActionModal({
     if (typeof document === "undefined") return null;
 
     const isFinal = (direction === "next" && title.includes("تکمیل")) || direction === "complete";
-    const needsReview = ["next", "prev", "cancel", "sold", "complete"].includes(direction);
+    const isCancel = direction === "cancel";
+    const needsReview = isFinal || !["next", "prev"].includes(direction);
 
     async function submit() {
         if (needsReview && score < 1) {
@@ -61,8 +62,8 @@ export default function TaskActionModal({
         await onSubmit({
             note,
             files,
-            score,
-            score_reason: reason.trim(),
+            score: needsReview ? score : 0,
+            score_reason: needsReview ? reason.trim() : "",
         });
     }
 
@@ -103,7 +104,11 @@ export default function TaskActionModal({
                                         <div>
                                             <p className="text-[12px] font-extrabold text-gray-800 dark:text-white">ارزیابی مشتری</p>
                                             <p className="mt-1 text-[10px] text-gray-400">
-                                                {isFinal ? "این امتیاز قبل از تکمیل تسک الزامی است" : "نظر خودت درباره این مشتری را ثبت کن"}
+                                                {isFinal
+                                                    ? "این امتیاز قبل از تکمیل تسک الزامی است"
+                                                    : isCancel
+                                                        ? "این امتیاز قبل از لغو تسک الزامی است"
+                                                        : "نظر خودت درباره این مشتری را ثبت کن"}
                                             </p>
                                         </div>
                                         <span className="text-[12px] font-extrabold text-amber-500">{score || "—"} / ۵</span>
@@ -166,7 +171,13 @@ export default function TaskActionModal({
                             </button>
                             <button type="button" disabled={submitting} onClick={submit} className="flex h-11 flex-[1.5] items-center justify-center gap-2 rounded-xl bg-indigo-600 text-[11px] font-extrabold text-white shadow-lg shadow-indigo-500/20 disabled:opacity-60">
                                 {submitting ? <Loader2 size={15} className="animate-spin" /> : <Check size={15} />}
-                                {isFinal ? "ثبت نظر و تکمیل تسک" : "ثبت و ادامه"}
+                                {isFinal
+                                    ? "ثبت نظر و تکمیل تسک"
+                                    : isCancel
+                                        ? "ثبت نظر و لغو تسک"
+                                        : needsReview
+                                            ? "ثبت نظر و ادامه"
+                                            : "ثبت و ادامه"}
                             </button>
                         </div>
                     </motion.div>
