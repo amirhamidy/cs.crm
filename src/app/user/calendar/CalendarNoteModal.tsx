@@ -118,8 +118,9 @@ const EVENT_TYPE_LABEL: Record<string, string> = {
     meeting: "جلسه",
     task: "وظیفه",
     tasks: "وظیفه",
-    internal_task: "تسک داخلی",
-    "internal-task": "تسک داخلی",
+    internal_task: "وظیفه درون سازمانی",
+    "internal-task": "وظیفه درون سازمانی",
+    internal_task_routine: "وظیفه درون سازمانی",
     reminder: "یادآور",
     deadline: "مهلت",
     note: "یادداشت",
@@ -138,7 +139,7 @@ const EVENT_TYPE_COLOR: Record<string, { bg: string; text: string; dot: string; 
 
 const getEventType = (type: string) => {
     const value = String(type || "").toLowerCase();
-    if (["internal_task", "internal-task"].includes(value)) return "internal_task";
+    if (["internal_task", "internal-task", "internal_task_routine"].includes(value)) return "internal_task";
     if (["task", "tasks"].includes(value)) return "task";
     if (["note", "notes"].includes(value)) return "note";
     return value;

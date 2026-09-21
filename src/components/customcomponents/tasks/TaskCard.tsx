@@ -166,9 +166,10 @@ interface TaskCardProps {
     task: TaskWithStep;
     deleting?: boolean;
     index?: number;
-    onEdit: (task: Task) => void;
+    readOnly?: boolean;
+    onEdit?: (task: Task) => void;
     onUpdated?: (task: Task) => void;
-    onDelete: (taskId: number) => Promise<boolean> | void | Promise<void>;
+    onDelete?: (taskId: number) => Promise<boolean> | void | Promise<void>;
     employees?: Employee[];
     onReorder?: (dragIndex: number, hoverIndex: number) => void;
     canManageDeadline?: boolean;
@@ -177,6 +178,7 @@ interface TaskCardProps {
 export default function TaskCard({
     task,
     index = 0,
+    readOnly = false,
     onEdit,
     onDelete,
     onUpdated,
@@ -242,6 +244,7 @@ export default function TaskCard({
     const deadlineLabel = formatJalaliDate(stepDeadline?.deadline);
 
     async function handleDelete() {
+        if (!onDelete) return;
         setDeleting(true);
         setDeleteError(null);
         try {
@@ -361,15 +364,20 @@ export default function TaskCard({
                         <button onClick={() => setNotesModalOpen(true)} className="flex h-8 w-8 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-400" title="یادداشت‌ها">
                             <MessageSquareText size={14} />
                         </button>
-                        <button onClick={() => setTimeModalOpen(true)} className="flex h-7 w-7 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-400" title="تعیین بازه زمانی">
-                            <Clock size={11} />
-                        </button>
-                        <button onClick={() => onEdit(toTask(task))} className="flex h-7 w-7 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-400" title="ویرایش تسک">
-                            <Pencil size={11} />
-                        </button>
-                        <button onClick={() => setShowConfirm(true)} disabled={deleting} className="flex h-7 w-7 items-center justify-center rounded-xl bg-red-500/10 text-red-500 disabled:opacity-40" title="حذف تسک">
-                            {deleting ? <Loader2 size={11} className="animate-spin" /> : <Trash2 size={11} />}
-                        </button>
+
+                        {!readOnly && (
+                            <>
+                                <button onClick={() => setTimeModalOpen(true)} className="flex h-7 w-7 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-400" title="تعیین بازه زمانی">
+                                    <Clock size={11} />
+                                </button>
+                                <button onClick={() => onEdit?.(toTask(task))} className="flex h-7 w-7 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-400" title="ویرایش تسک">
+                                    <Pencil size={11} />
+                                </button>
+                                <button onClick={() => setShowConfirm(true)} disabled={deleting} className="flex h-7 w-7 items-center justify-center rounded-xl bg-red-500/10 text-red-500 disabled:opacity-40" title="حذف تسک">
+                                    {deleting ? <Loader2 size={11} className="animate-spin" /> : <Trash2 size={11} />}
+                                </button>
+                            </>
+                        )}
                     </div>
                 </div>
 
@@ -415,7 +423,7 @@ export default function TaskCard({
                 </div>
             </motion.div>
 
-            {typeof document !== "undefined" && createPortal(
+            {!readOnly && typeof document !== "undefined" && createPortal(
                 <AnimatePresence>
                     {showConfirm && (
                         <motion.div
@@ -478,15 +486,17 @@ export default function TaskCard({
                 document.body
             )}
 
-            <TimeRangeModal
-                open={timeModalOpen}
-                initialStartedAt={stepDeadline?.started_at}
-                initialDeadline={stepDeadline?.deadline}
-                loading={savingTime}
-                error={timeError}
-                onClose={() => setTimeModalOpen(false)}
-                onSubmit={handleTimeSubmit}
-            />
+            {!readOnly && (
+                <TimeRangeModal
+                    open={timeModalOpen}
+                    initialStartedAt={stepDeadline?.started_at}
+                    initialDeadline={stepDeadline?.deadline}
+                    loading={savingTime}
+                    error={timeError}
+                    onClose={() => setTimeModalOpen(false)}
+                    onSubmit={handleTimeSubmit}
+                />
+            )}
 
             <AdminTaskNotesModal
                 isOpen={notesModalOpen}

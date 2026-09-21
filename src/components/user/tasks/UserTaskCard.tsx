@@ -322,7 +322,7 @@ export default function UserTaskCard({ task, accent = "#6366f1", isLastStage, on
 
                 <div className="mt-2.5 flex gap-1.5">
                     <button type="button" onClick={() => setCaseDescOpen(true)} className="flex h-8 flex-1 items-center justify-center gap-1 rounded-xl bg-gray-100 text-[9.5px] font-extrabold text-gray-500 dark:bg-white/[.05]"><FileText size={11} />پرونده</button>
-                    <button type="button" onClick={() => setNotesOpen(true)} className="flex h-8 flex-1 items-center justify-center gap-1 rounded-xl bg-indigo-500/10 text-[9.5px] font-extrabold text-indigo-500"><MessageSquareText size={11} />یادداشت‌ها</button>
+                    {/* <button type="button" onClick={() => setNotesOpen(true)} className="flex h-8 flex-1 items-center justify-center gap-1 rounded-xl bg-indigo-500/10 text-[9.5px] font-extrabold text-indigo-500"><MessageSquareText size={11} />یادداشت‌ها</button> */}
                 </div>
 
                 <div className="mt-2.5 border-t border-gray-100 pt-2.5 dark:border-white/[.06]">

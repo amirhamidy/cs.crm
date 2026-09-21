@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import {
     X,
@@ -23,8 +24,6 @@ import {
     RotateCcw,
     Layers3,
     Hash,
-    Building2,
-    Users,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import axiosInstance from "@/lib/axiosInstance";
@@ -49,9 +48,6 @@ interface TaskLog {
     note?: string;
     created_at: string;
     attachments?: Attachment[];
-    department_name?: string;
-    case_name?: string;
-    title?: string;
 }
 
 interface Props {
@@ -197,24 +193,14 @@ export default function TaskNotesModal({ isOpen, onClose, taskId, taskTitle }: P
     const [logs, setLogs] = useState<TaskLog[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [taskInfo, setTaskInfo] = useState<{ department_name?: string; case_name?: string }>({});
 
     const fetchLogs = useCallback(() => {
         setLoading(true);
         setError(null);
 
-        Promise.all([
-            axiosInstance.get<TaskLog[]>(`/tasks/api/v1/tasks/${taskId}/logs/`),
-            axiosInstance.get(`/tasks/api/v1/tasks/${taskId}/`),
-        ])
-            .then(([logsRes, taskRes]) => {
-                setLogs(logsRes.data ?? []);
-                const taskData = taskRes.data;
-                setTaskInfo({
-                    department_name: taskData?.department_name || taskData?.department?.name,
-                    case_name: taskData?.case_name || taskData?.case?.title,
-                });
-            })
+        axiosInstance
+            .get<TaskLog[]>(`/tasks/api/v1/tasks/${taskId}/logs/`)
+            .then((res) => setLogs(res.data ?? []))
             .catch(() => setError("خطا در دریافت یادداشت‌ها"))
             .finally(() => setLoading(false));
     }, [taskId]);
@@ -226,6 +212,10 @@ export default function TaskNotesModal({ isOpen, onClose, taskId, taskTitle }: P
     }, [isOpen, fetchLogs]);
 
     if (!isOpen) return null;
+
+    if (typeof document === "undefined") {
+        return null;
+    }
 
     const totalNotes = logs.filter((log) => log.note?.trim()).length;
     const totalFiles = logs.reduce((total, log) => total + (log.attachments?.length ?? 0), 0);
@@ -239,7 +229,7 @@ export default function TaskNotesModal({ isOpen, onClose, taskId, taskTitle }: P
     const buttonBg = isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.04)";
     const bodyText = isDark ? "#e2e8f0" : "#334155";
 
-    return (
+    return createPortal(
         <AnimatePresence>
             <motion.div
                 initial={{ opacity: 0 }}
@@ -257,7 +247,7 @@ export default function TaskNotesModal({ isOpen, onClose, taskId, taskTitle }: P
                     animate={{ scale: 1, y: 0 }}
                     exit={{ scale: 0.94, y: 20 }}
                     transition={{ duration: 0.22, ease: "easeOut" }}
-                    className="flex max-h-[85vh] w-full max-w-[600px] flex-col overflow-hidden rounded-3xl border"
+                    className="flex max-h-[85vh] w-full max-w-[560px] flex-col overflow-hidden rounded-3xl border"
                     style={{
                         background: surface,
                         borderColor: border,
@@ -277,20 +267,6 @@ export default function TaskNotesModal({ isOpen, onClose, taskId, taskTitle }: P
                                     یادداشت‌ها و روند تسک
                                 </h3>
                                 <p className="mt-0.5 truncate text-[11px] text-gray-400 dark:text-gray-500">{taskTitle}</p>
-                                <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                                    {taskInfo.department_name && (
-                                        <span className="flex items-center gap-1 rounded-lg px-1.5 py-0.5 text-[9px] font-bold bg-blue-500/10 text-blue-400">
-                                            <Building2 size={9} />
-                                            {taskInfo.department_name}
-                                        </span>
-                                    )}
-                                    {taskInfo.case_name && (
-                                        <span className="flex items-center gap-1 rounded-lg px-1.5 py-0.5 text-[9px] font-bold bg-amber-500/10 text-amber-400">
-                                            <ClipboardList size={9} />
-                                            {taskInfo.case_name}
-                                        </span>
-                                    )}
-                                </div>
                             </div>
                         </div>
 
@@ -404,14 +380,6 @@ export default function TaskNotesModal({ isOpen, onClose, taskId, taskTitle }: P
                                                             </div>
                                                         )}
 
-                                                        {log.employee && log.employee.length > 1 && (
-                                                            <div className="flex items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-[10px] font-bold bg-white/[0.04] text-gray-500 dark:text-gray-400">
-                                                                <Users size={10} />
-                                                                <span>تعداد مسئولین:</span>
-                                                                <span className="text-gray-200 dark:text-white">{toPersianDigits(log.employee.length)}</span>
-                                                            </div>
-                                                        )}
-
                                                         <div className="flex items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-[10px] font-bold bg-white/[0.04] text-gray-500 dark:text-gray-400">
                                                             <Hash size={10} />
                                                             <span>رویداد {toPersianDigits(log.id)}</span>
@@ -448,9 +416,6 @@ export default function TaskNotesModal({ isOpen, onClose, taskId, taskTitle }: P
                                                     <div className="flex items-center gap-1.5 text-[10px] font-bold text-gray-500">
                                                         <Paperclip size={11} />
                                                         فایل‌های پیوست
-                                                        <span className="text-[9px] font-normal text-gray-400">
-                                                            ({toPersianDigits(log.attachments.length)} فایل)
-                                                        </span>
                                                     </div>
 
                                                     <div className="flex flex-wrap gap-1.5">
@@ -488,6 +453,7 @@ export default function TaskNotesModal({ isOpen, onClose, taskId, taskTitle }: P
                     </div>
                 </motion.div>
             </motion.div>
-        </AnimatePresence>
+        </AnimatePresence>,
+        document.body
     );
 }

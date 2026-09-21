@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { ComponentType, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
     BellRing,
@@ -86,21 +86,21 @@ type Tab =
     | "staff"
     | "invoices";
 
-const TABS: Array<
-    [Tab, string, React.ComponentType<{ size?: number }>]
-> = [
-        ["overview", "نمای کلی", LayoutGrid],
-        ["products", "محصولات", ShoppingBag],
-        ["tasks", "وظایف انبار", ClipboardList],
-        ["stock", "موجودی انبار", Boxes],
-        ["transactions", "تراکنش‌ها", ReceiptText],
-        ["orders", "درخواست‌های داخلی", PackageSearch],
-        ["deadlines", "مهلت‌ها", BellRing],
-        ["ledger", "گردش محصول", BellRing],
-        ["categories", "دسته‌بندی‌ها", Package],
-        ["invoices", "فاکتور فروش", FileText],
-        ["staff", "انباردارها", UsersRound],
-    ];
+const REALTIME_INTERVAL = 5000;
+
+const TABS: Array<[Tab, string, ComponentType<{ size?: number }>]> = [
+    ["overview", "نمای کلی", LayoutGrid],
+    ["products", "محصولات", ShoppingBag],
+    ["tasks", "وظایف انبار", ClipboardList],
+    ["stock", "موجودی انبار", Boxes],
+    ["transactions", "تراکنش‌ها", ReceiptText],
+    ["orders", "درخواست‌های داخلی", PackageSearch],
+    ["deadlines", "مهلت‌ها", BellRing],
+    ["ledger", "گردش محصول", BellRing],
+    ["categories", "دسته‌بندی‌ها", Package],
+    ["invoices", "فاکتور فروش", FileText],
+    ["staff", "انباردارها", UsersRound],
+];
 
 const AVATAR_GRADIENTS = [
     ["#6366f1", "#8b5cf6"],
@@ -738,6 +738,13 @@ export default function WarehouseEmployeePage() {
     const [staffLoading, setStaffLoading] = useState(false);
     const [showAddStaffModal, setShowAddStaffModal] = useState(false);
 
+    const refreshRef = useRef(refresh);
+    const refreshInFlightRef = useRef(false);
+
+    useEffect(() => {
+        refreshRef.current = refresh;
+    }, [refresh]);
+
     useEffect(() => {
         setTaskItems(myTasks);
     }, [myTasks]);
@@ -765,9 +772,11 @@ export default function WarehouseEmployeePage() {
             ? null
             : Number(resolvedEmployeeId);
 
-    const fetchWarehouseStaff = useCallback(async () => {
+    const fetchWarehouseStaff = useCallback(async (silent?: boolean) => {
+        const isSilent = silent === true;
+
         try {
-            setStaffLoading(true);
+            if (!isSilent) setStaffLoading(true);
             const response = await axiosInstance.get("/warehouse/api/v1/staff/");
             const data = Array.isArray(response.data)
                 ? response.data
@@ -778,15 +787,17 @@ export default function WarehouseEmployeePage() {
                         : [];
             setWarehouseStaff(data);
         } catch {
-            setWarehouseStaff([]);
+            if (!isSilent) setWarehouseStaff([]);
         } finally {
-            setStaffLoading(false);
+            if (!isSilent) setStaffLoading(false);
         }
     }, []);
 
-    const fetchCategories = useCallback(async () => {
+    const fetchCategories = useCallback(async (silent?: boolean) => {
+        const isSilent = silent === true;
+
         try {
-            setAdminLoading(true);
+            if (!isSilent) setAdminLoading(true);
 
             const response = await axiosInstance.get(
                 "/warehouse/api/v1/products/categories/",
@@ -798,15 +809,17 @@ export default function WarehouseEmployeePage() {
                     : [],
             );
         } catch {
-            setAdminCategories([]);
+            if (!isSilent) setAdminCategories([]);
         } finally {
-            setAdminLoading(false);
+            if (!isSilent) setAdminLoading(false);
         }
     }, []);
 
-    const fetchArchive = useCallback(async () => {
+    const fetchArchive = useCallback(async (silent?: boolean) => {
+        const isSilent = silent === true;
+
         try {
-            setArchiveLoading(true);
+            if (!isSilent) setArchiveLoading(true);
 
             const response = await axiosInstance.get(
                 "/warehouse/api/v1/order_task_archive/",
@@ -822,9 +835,9 @@ export default function WarehouseEmployeePage() {
 
             setArchivedTasks(data);
         } catch {
-            setArchivedTasks([]);
+            if (!isSilent) setArchivedTasks([]);
         } finally {
-            setArchiveLoading(false);
+            if (!isSilent) setArchiveLoading(false);
         }
     }, []);
 
@@ -851,6 +864,60 @@ export default function WarehouseEmployeePage() {
             fetchArchive();
         }
     }, [tab, fetchArchive, hasFullWarehouseAccess]);
+
+    useEffect(() => {
+        const tick = async () => {
+            if (document.visibilityState !== "visible") return;
+            if (refreshInFlightRef.current) return;
+
+            refreshInFlightRef.current = true;
+
+            try {
+                await refreshRef.current();
+            } catch {
+            } finally {
+                refreshInFlightRef.current = false;
+            }
+        };
+
+        const interval = setInterval(tick, REALTIME_INTERVAL);
+
+        const handleVisibility = () => {
+            if (document.visibilityState === "visible") tick();
+        };
+
+        document.addEventListener("visibilitychange", handleVisibility);
+        window.addEventListener("focus", tick);
+
+        return () => {
+            clearInterval(interval);
+            document.removeEventListener("visibilitychange", handleVisibility);
+            window.removeEventListener("focus", tick);
+        };
+    }, []);
+
+    useEffect(() => {
+        if (!hasFullWarehouseAccess) return;
+        if (!["categories", "staff", "invoices"].includes(tab)) return;
+
+        const tick = () => {
+            if (document.visibilityState !== "visible") return;
+
+            if (tab === "categories") fetchCategories(true);
+            if (tab === "staff") fetchWarehouseStaff(true);
+            if (tab === "invoices") fetchArchive(true);
+        };
+
+        const interval = setInterval(tick, REALTIME_INTERVAL);
+
+        return () => clearInterval(interval);
+    }, [
+        tab,
+        hasFullWarehouseAccess,
+        fetchCategories,
+        fetchWarehouseStaff,
+        fetchArchive,
+    ]);
 
     const stockByProduct = useMemo(
         () =>
@@ -1806,7 +1873,7 @@ export default function WarehouseEmployeePage() {
                                     <motion.button
                                         type="button"
                                         whileTap={{ scale: 0.97 }}
-                                        onClick={fetchArchive}
+                                        onClick={() => fetchArchive()}
                                         disabled={archiveLoading}
                                         className="flex h-10 items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-4 text-[12.5px] font-bold text-white transition-colors hover:bg-indigo-700 disabled:opacity-50"
                                     >

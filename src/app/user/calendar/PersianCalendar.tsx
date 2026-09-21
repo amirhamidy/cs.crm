@@ -66,10 +66,11 @@ const isIranHoliday = (date: Date) => {
 const isHolidayDate = (date: Date) => isFriday(date) || isIranHoliday(date);
 
 const EVENT_TYPE_LABEL: Record<string, string> = {
-    task: "تسک",
-    tasks: "تسک",
-    internal_task: "تسک داخلی",
-    "internal-task": "تسک داخلی",
+    task: "وظیفه",
+    tasks: "وظیفه",
+    internal_task: "وظیفه درون سازمانی",
+    "internal-task": "وظیفه درون سازمانی",
+    internal_task_routine: "وظیفه درون سازمانی",
     note: "یادداشت",
     notes: "یادداشت",
     meeting: "جلسه",
@@ -89,7 +90,7 @@ const EVENT_TYPE_COLOR: Record<string, { bg: string; text: string; dot: string; 
 
 const getEventType = (type: string) => {
     const value = String(type || "").toLowerCase();
-    if (["internal_task", "internal-task"].includes(value)) return "internal_task";
+    if (["internal_task", "internal-task", "internal_task_routine"].includes(value)) return "internal_task";
     if (["task", "tasks"].includes(value)) return "task";
     if (["note", "notes"].includes(value)) return "note";
     return value;
@@ -427,8 +428,8 @@ export default function PersianCalendar() {
                     <button type="button" onClick={gotoToday} className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-bold text-slate-500 shadow-sm transition-all hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-600 dark:border-white/[0.06] dark:bg-white/[0.035] dark:text-slate-400 dark:hover:bg-indigo-500/10 dark:hover:text-indigo-300"><CalendarClock size={12} />امروز</button>
 
                     {!loading && <div className="mr-auto flex flex-wrap items-center gap-2">
-                        <span className="flex items-center gap-1.5 rounded-lg bg-indigo-50 px-2 py-1 text-[10px] font-bold text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-300"><ClipboardCheck size={11} />{toPersianDigits(taskCount)} تسک</span>
-                        <span className="flex items-center gap-1.5 rounded-lg bg-amber-50 px-2 py-1 text-[10px] font-bold text-amber-600 dark:bg-amber-500/10 dark:text-amber-300"><Layers3 size={11} />{toPersianDigits(internalTaskCount)} داخلی</span>
+                        <span className="flex items-center gap-1.5 rounded-lg bg-indigo-50 px-2 py-1 text-[10px] font-bold text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-300"><ClipboardCheck size={11} />{toPersianDigits(taskCount)} وظیفه</span>
+                        <span className="flex items-center gap-1.5 rounded-lg bg-amber-50 px-2 py-1 text-[10px] font-bold text-amber-600 dark:bg-amber-500/10 dark:text-amber-300"><Layers3 size={11} />{toPersianDigits(internalTaskCount)} وظیفه درون سازمانی</span>
                         <span className="flex items-center gap-1.5 rounded-lg bg-emerald-50 px-2 py-1 text-[10px] font-bold text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-300"><FileText size={11} />{toPersianDigits(calendarNoteCount)} یادداشت</span>
                     </div>}
                 </div>

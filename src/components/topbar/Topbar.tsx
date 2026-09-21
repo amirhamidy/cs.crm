@@ -37,7 +37,7 @@ export default function Topbar() {
           </div>
         </div>
 
-        <GlobalSearch />
+        {/* <GlobalSearch /> */}
 
         <div className="flex items-center gap-2">
           <ThemeToggle />

@@ -8,11 +8,7 @@ import { useTheme } from "next-themes";
 import axiosInstance from "@/lib/axiosInstance";
 import { apiRoutes } from "@/lib/apiRoutes";
 import { Task, TaskStatus } from "@/types/task";
-import { Department } from "@/types/department";
 import TaskCard from "@/components/customcomponents/tasks/TaskCard";
-import EditTaskModal from "@/components/customcomponents/tasks/EditTaskModal";
-import type { Customer } from "@/types/customer";
-import type { Employee } from "@/types/employee";
 
 type ListResponse<T> = T[] | { results?: T[]; data?: T[] };
 
@@ -42,33 +38,16 @@ export default function AdminArchivedTasksPage() {
     const isDark = resolvedTheme === "dark";
 
     const [tasks, setTasks] = useState<Task[]>([]);
-    const [customers, setCustomers] = useState<Customer[]>([]);
-    const [departments, setDepartments] = useState<Department[]>([]);
-    const [employees, setEmployees] = useState<Employee[]>([]);
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState<ArchiveFilter>("all");
-    const [editingTask, setEditingTask] = useState<Task | null>(null);
 
     const fetchAll = useCallback(async () => {
         try {
             setLoading(true);
-
-            const [tasksRes, customersRes, departmentsRes, employeesRes] = await Promise.all([
-                axiosInstance.get<ListResponse<Task>>(apiRoutes.tasks),
-                axiosInstance.get<ListResponse<Customer>>(apiRoutes.customers),
-                axiosInstance.get<ListResponse<Department>>(apiRoutes.departments),
-                axiosInstance.get<ListResponse<Employee>>(apiRoutes.employees),
-            ]);
-
-            setTasks(extractList(tasksRes.data).filter((task) => task.status !== ACTIVE_STATUS));
-            setCustomers(extractList(customersRes.data));
-            setDepartments(extractList(departmentsRes.data));
-            setEmployees(extractList(employeesRes.data));
+            const res = await axiosInstance.get<ListResponse<Task>>(apiRoutes.tasks);
+            setTasks(extractList(res.data).filter((task) => task.status !== ACTIVE_STATUS));
         } catch {
             setTasks([]);
-            setCustomers([]);
-            setDepartments([]);
-            setEmployees([]);
         } finally {
             setLoading(false);
         }
@@ -81,31 +60,6 @@ export default function AdminArchivedTasksPage() {
     const filteredTasks = useMemo(() => (filter === "all" ? tasks : tasks.filter((task) => task.status === filter)), [tasks, filter]);
 
     const getCount = (id: ArchiveFilter) => (id === "all" ? tasks.length : tasks.filter((task) => task.status === id).length);
-
-    const handleDelete = useCallback(
-        async (taskId: number): Promise<boolean> => {
-            try {
-                await axiosInstance.delete(apiRoutes.deleteTask(taskId));
-                setTasks((prev) => prev.filter((t) => t.id !== taskId));
-                return true;
-            } catch {
-                await fetchAll();
-                throw new Error("delete failed");
-            }
-        },
-        [fetchAll]
-    );
-
-    const handleEditSuccess = useCallback(() => {
-        setEditingTask(null);
-        fetchAll();
-    }, [fetchAll]);
-
-    const handleTaskUpdated = useCallback((updated: Task) => {
-        setTasks((prev) =>
-            updated.status === ACTIVE_STATUS ? prev.filter((t) => t.id !== updated.id) : prev.map((t) => (t.id === updated.id ? updated : t))
-        );
-    }, []);
 
     return (
         <div className="flex flex-col gap-5 p-3 sm:p-4 md:p-6" dir="rtl">
@@ -191,18 +145,12 @@ export default function AdminArchivedTasksPage() {
                     <AnimatePresence mode="popLayout">
                         {filteredTasks.map((task, index) => (
                             <motion.div key={task.id} layout initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}>
-                                <TaskCard task={task} index={index} employees={employees} onEdit={(t) => setEditingTask(t)} onDelete={handleDelete} onUpdated={handleTaskUpdated} />
+                                <TaskCard task={task} index={index} readOnly />
                             </motion.div>
                         ))}
                     </AnimatePresence>
                 </motion.div>
             )}
-
-            <AnimatePresence>
-                {editingTask && (
-                    <EditTaskModal task={editingTask} customers={customers} departments={departments} onClose={() => setEditingTask(null)} onSuccess={handleEditSuccess} />
-                )}
-            </AnimatePresence>
         </div>
     );
 }

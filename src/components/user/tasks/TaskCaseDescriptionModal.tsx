@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { X, FileText, Loader2, AlertCircle } from "lucide-react";
 import { useTheme } from "next-themes";
@@ -60,7 +61,11 @@ export default function TaskCaseDescriptionModal({
 
     if (!isOpen) return null;
 
-    return (
+    if (typeof document === "undefined") {
+        return null;
+    }
+
+    return createPortal(
         <AnimatePresence>
             <motion.div
                 initial={{ opacity: 0 }}
@@ -163,6 +168,7 @@ export default function TaskCaseDescriptionModal({
                     </div>
                 </motion.div>
             </motion.div>
-        </AnimatePresence>
+        </AnimatePresence>,
+        document.body
     );
 }

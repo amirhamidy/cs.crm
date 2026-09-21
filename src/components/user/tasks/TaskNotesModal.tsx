@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import {
     X,
@@ -212,6 +213,10 @@ export default function TaskNotesModal({ isOpen, onClose, taskId, taskTitle }: P
 
     if (!isOpen) return null;
 
+    if (typeof document === "undefined") {
+        return null;
+    }
+
     const totalNotes = logs.filter((log) => log.note?.trim()).length;
     const totalFiles = logs.reduce((total, log) => total + (log.attachments?.length ?? 0), 0);
     const totalActions = logs.length;
@@ -224,7 +229,7 @@ export default function TaskNotesModal({ isOpen, onClose, taskId, taskTitle }: P
     const buttonBg = isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.04)";
     const bodyText = isDark ? "#e2e8f0" : "#334155";
 
-    return (
+    return createPortal(
         <AnimatePresence>
             <motion.div
                 initial={{ opacity: 0 }}
@@ -448,6 +453,7 @@ export default function TaskNotesModal({ isOpen, onClose, taskId, taskTitle }: P
                     </div>
                 </motion.div>
             </motion.div>
-        </AnimatePresence>
+        </AnimatePresence>,
+        document.body
     );
 }
