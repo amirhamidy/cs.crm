@@ -15,7 +15,16 @@ interface InternalTaskChatModalProps {
     onUpdated: (task: InternalTask) => void;
 }
 
-// کش سطح ماژول: بار اول که لیست کارمندان آمد، دفعات بعد بدون فلش نام خام نمایش داده می‌شود
+interface UserListItem {
+    id: number;
+    username: string;
+}
+
+type EmployeeRecord = EmployeeListItem & {
+    username?: string;
+    full_name?: string;
+};
+
 let employeesCache: EmployeeListItem[] | null = null;
 
 function normalizeUsername(value: unknown) {
@@ -28,18 +37,30 @@ function parseEmployees(data: unknown): EmployeeListItem[] {
     if (!Array.isArray(raw)) return [];
     return raw.filter(
         (item): item is EmployeeListItem =>
-            Boolean(item) && typeof item === "object" && typeof (item as { username?: unknown }).username === "string"
+            Boolean(item) &&
+            typeof item === "object" &&
+            typeof (item as { username?: unknown }).username === "string"
     );
 }
 
 function formatTime(value: string) {
     const date = new Date(value);
-    return Number.isNaN(date.getTime()) ? "" : new Intl.DateTimeFormat("fa-IR", { hour: "2-digit", minute: "2-digit" }).format(date);
+    return Number.isNaN(date.getTime())
+        ? ""
+        : new Intl.DateTimeFormat("fa-IR", {
+            hour: "2-digit",
+            minute: "2-digit",
+        }).format(date);
 }
 
 function formatDate(value: string) {
     const date = new Date(value);
-    return Number.isNaN(date.getTime()) ? "" : new Intl.DateTimeFormat("fa-IR", { day: "numeric", month: "long" }).format(date);
+    return Number.isNaN(date.getTime())
+        ? ""
+        : new Intl.DateTimeFormat("fa-IR", {
+            day: "numeric",
+            month: "long",
+        }).format(date);
 }
 
 function isImage(fileName: string) {
@@ -61,6 +82,41 @@ function getAttachmentUrl(file: string) {
     return file;
 }
 
+function getCreatorName(task: InternalTask, employees: EmployeeListItem[]) {
+    if (!task.created_by) return "کاربر";
+
+    const createdBy = String(task.created_by).trim();
+
+    const employee = employees.find(
+        (item) =>
+            normalizeUsername((item as EmployeeRecord).username) === normalizeUsername(createdBy) ||
+            String((item as EmployeeRecord).id) === createdBy
+    ) as EmployeeRecord | undefined;
+
+    return employee?.full_name?.trim() || employee?.username?.trim() || createdBy;
+}
+
+function getSenderName(uploadedById: number, users: UserListItem[], employees: EmployeeListItem[]) {
+    const user = users.find((item) => Number(item.id) === Number(uploadedById));
+
+    if (!user) {
+        const employeeById = employees.find(
+            (item) => Number((item as EmployeeRecord).id) === Number(uploadedById)
+        ) as EmployeeRecord | undefined;
+
+        return employeeById?.full_name?.trim() || employeeById?.username?.trim() || "کاربر";
+    }
+
+    const username = user.username?.trim() || "";
+
+    const employee = employees.find(
+        (item) =>
+            normalizeUsername((item as EmployeeRecord).username) === normalizeUsername(username)
+    ) as EmployeeRecord | undefined;
+
+    return employee?.full_name?.trim() || employee?.username?.trim() || username || "کاربر";
+}
+
 export default function InternalTaskChatModal({ open, task, onClose, onUpdated }: InternalTaskChatModalProps) {
     const { userId } = useAuthStore();
     const [message, setMessage] = useState("");
@@ -69,6 +125,7 @@ export default function InternalTaskChatModal({ open, task, onClose, onUpdated }
     const [isPolling, setIsPolling] = useState(false);
     const [employees, setEmployees] = useState<EmployeeListItem[]>(employeesCache ?? []);
     const [employeesLoaded, setEmployeesLoaded] = useState(employeesCache !== null);
+    const [users, setUsers] = useState<UserListItem[]>([]);
     const scrollRef = useRef<HTMLDivElement | null>(null);
     const textareaRef = useRef<HTMLTextAreaElement | null>(null);
     const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -85,9 +142,9 @@ export default function InternalTaskChatModal({ open, task, onClose, onUpdated }
         sendingRef.current = sending;
     }, [sending]);
 
-    // دریافت لیست کارمندان (همان endpoint و همان روشی که بورد تیکت‌ها استفاده می‌کند)
     useEffect(() => {
         if (!open) return;
+
         let cancelled = false;
 
         fetchEmployeeList()
@@ -103,57 +160,85 @@ export default function InternalTaskChatModal({ open, task, onClose, onUpdated }
                 setEmployeesLoaded(true);
             });
 
+        api.get<UserListItem[]>("/accounts/api/v1/user/list/")
+            .then((response) => {
+                if (cancelled) return;
+                setUsers(Array.isArray(response.data) ? response.data : []);
+            })
+            .catch(() => {
+                if (cancelled) return;
+                setUsers([]);
+            });
+
         return () => {
             cancelled = true;
         };
     }, [open]);
 
-    // اتصال فقط با username (id در user / employee / assigned_to با هم فرق دارند)
     const employeeByUsername = useMemo(() => {
         const map = new Map<string, EmployeeListItem>();
+
         employees.forEach((employee) => {
-            const key = normalizeUsername(employee.username);
+            const key = normalizeUsername((employee as EmployeeRecord).username);
             if (key) map.set(key, employee);
         });
+
         return map;
     }, [employees]);
 
-    // ارسال‌کننده: created_by یک username است → full_name کارمند با همان username
     const senderName = useMemo(() => {
-        const username = task.created_by?.trim();
-        if (!username || !employeesLoaded) return "";
+        if (!task.created_by || !employeesLoaded) return "";
 
-        const employee = employeeByUsername.get(normalizeUsername(username));
-        return employee?.full_name?.trim() || username;
-    }, [task.created_by, employeeByUsername, employeesLoaded]);
+        const createdBy = String(task.created_by).trim();
+
+        const employee = employees.find(
+            (item) =>
+                normalizeUsername((item as EmployeeRecord).username) === normalizeUsername(createdBy) ||
+                String((item as EmployeeRecord).id) === createdBy
+        ) as EmployeeRecord | undefined;
+
+        return employee?.full_name?.trim() || employee?.username?.trim() || createdBy;
+    }, [task.created_by, employees, employeesLoaded, employeeByUsername]);
 
     const attachments = useMemo(
-        () => [...(task.attachments ?? [])].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()),
+        () =>
+            [...(task.attachments ?? [])].sort(
+                (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+            ),
         [task.attachments]
     );
 
     const groupedAttachments = useMemo(() => {
         const groups: Record<string, InternalTaskAttachment[]> = {};
+
         attachments.forEach((attachment) => {
             const key = formatDate(attachment.created_at);
             (groups[key] ??= []).push(attachment);
         });
+
         return Object.entries(groups);
     }, [attachments]);
 
     const scrollToBottom = (behavior: ScrollBehavior = "smooth") => {
-        bottomAnchorRef.current?.scrollIntoView({ behavior, block: "end" });
+        bottomAnchorRef.current?.scrollIntoView({
+            behavior,
+            block: "end",
+        });
     };
 
     useEffect(() => {
         if (!open) return;
+
         const timer = window.setTimeout(() => scrollToBottom("auto"), 80);
+
         return () => window.clearTimeout(timer);
     }, [open]);
 
     useEffect(() => {
         if (!open || !shouldAutoScrollRef.current) return;
+
         const timer = window.setTimeout(() => scrollToBottom("smooth"), 50);
+
         return () => window.clearTimeout(timer);
     }, [open, attachments.length]);
 
@@ -162,17 +247,21 @@ export default function InternalTaskChatModal({ open, task, onClose, onUpdated }
         if (!container) return;
 
         const handleScroll = () => {
-            shouldAutoScrollRef.current = container.scrollHeight - container.scrollTop - container.clientHeight < 120;
+            shouldAutoScrollRef.current =
+                container.scrollHeight - container.scrollTop - container.clientHeight < 120;
         };
 
         container.addEventListener("scroll", handleScroll);
+
         return () => container.removeEventListener("scroll", handleScroll);
     }, [open]);
 
     useEffect(() => {
         if (!open) return;
+
         const previousOverflow = document.body.style.overflow;
         document.body.style.overflow = "hidden";
+
         return () => {
             document.body.style.overflow = previousOverflow;
         };
@@ -180,6 +269,7 @@ export default function InternalTaskChatModal({ open, task, onClose, onUpdated }
 
     useEffect(() => {
         if (!open) return;
+
         let cancelled = false;
 
         const poll = async () => {
@@ -187,26 +277,55 @@ export default function InternalTaskChatModal({ open, task, onClose, onUpdated }
 
             try {
                 setIsPolling(true);
+
                 const response = await fetchInternalTasks();
+
                 if (cancelled) return;
 
                 const rawList = Array.isArray(response.data) ? response.data : [];
                 const currentTask = taskRef.current;
-                const rawTask = rawList.find((item: any) => Number(item?.id) === Number(currentTask.id));
+
+                const rawTask = rawList.find(
+                    (item: any) => Number(item?.id) === Number(currentTask.id)
+                );
+
                 if (!rawTask) return;
 
-                const rawAttachments = Array.isArray(rawTask.attachments) ? rawTask.attachments : [];
-                const existingIds = new Set((currentTask.attachments ?? []).map((item) => Number(item.id)));
-                const incomingIds = new Set(rawAttachments.map((item: InternalTaskAttachment) => Number(item.id)));
-                const newOnes = rawAttachments.filter((item: InternalTaskAttachment) => !existingIds.has(Number(item.id)));
-                const stillExists = (currentTask.attachments ?? []).filter((item) => incomingIds.has(Number(item.id)));
+                const rawAttachments = Array.isArray(rawTask.attachments)
+                    ? rawTask.attachments
+                    : [];
 
-                if (!newOnes.length && stillExists.length === (currentTask.attachments ?? []).length) return;
+                const existingIds = new Set(
+                    (currentTask.attachments ?? []).map((item) => Number(item.id))
+                );
+
+                const incomingIds = new Set(
+                    rawAttachments.map((item: InternalTaskAttachment) => Number(item.id))
+                );
+
+                const newOnes = rawAttachments.filter(
+                    (item: InternalTaskAttachment) =>
+                        !existingIds.has(Number(item.id))
+                );
+
+                const stillExists = (currentTask.attachments ?? []).filter((item) =>
+                    incomingIds.has(Number(item.id))
+                );
+
+                if (
+                    !newOnes.length &&
+                    stillExists.length === (currentTask.attachments ?? []).length
+                ) {
+                    return;
+                }
 
                 onUpdated({
                     ...currentTask,
                     attachments: [...stillExists, ...newOnes],
-                    status: typeof rawTask.status === "string" ? rawTask.status : currentTask.status,
+                    status:
+                        typeof rawTask.status === "string"
+                            ? rawTask.status
+                            : currentTask.status,
                 });
             } catch {
                 return;
@@ -228,36 +347,58 @@ export default function InternalTaskChatModal({ open, task, onClose, onUpdated }
         if (!open) return;
 
         const handleVisibility = () => {
-            if (document.visibilityState === "visible") shouldAutoScrollRef.current = true;
+            if (document.visibilityState === "visible") {
+                shouldAutoScrollRef.current = true;
+            }
         };
 
         document.addEventListener("visibilitychange", handleVisibility);
+
         return () => document.removeEventListener("visibilitychange", handleVisibility);
     }, [open]);
 
     const handleFiles = (event: ChangeEvent<HTMLInputElement>) => {
         const files = Array.from(event.target.files ?? []);
+
         if (!files.length) return;
+
         setSelectedFiles((previous) => [...previous, ...files]);
         event.target.value = "";
     };
 
     const removeFile = (index: number) => {
-        setSelectedFiles((previous) => previous.filter((_, fileIndex) => fileIndex !== index));
+        setSelectedFiles((previous) =>
+            previous.filter((_, fileIndex) => fileIndex !== index)
+        );
     };
 
     const sendMessage = async () => {
         const trimmedMessage = message.trim();
+
         if ((!trimmedMessage && !selectedFiles.length) || sending) return;
 
         setSending(true);
         shouldAutoScrollRef.current = true;
 
         try {
-            const response = await uploadInternalTaskAttachments(task.id, selectedFiles, trimmedMessage);
-            const newAttachments = Array.isArray(response.data) ? response.data : [];
-            const existingIds = new Set((task.attachments ?? []).map((item) => Number(item.id)));
-            const deduped = newAttachments.filter((item: InternalTaskAttachment) => !existingIds.has(Number(item.id)));
+            const response = await uploadInternalTaskAttachments(
+                task.id,
+                selectedFiles,
+                trimmedMessage
+            );
+
+            const newAttachments = Array.isArray(response.data)
+                ? response.data
+                : [];
+
+            const existingIds = new Set(
+                (task.attachments ?? []).map((item) => Number(item.id))
+            );
+
+            const deduped = newAttachments.filter(
+                (item: InternalTaskAttachment) =>
+                    !existingIds.has(Number(item.id))
+            );
 
             onUpdated({
                 ...task,
@@ -270,7 +411,10 @@ export default function InternalTaskChatModal({ open, task, onClose, onUpdated }
 
             requestAnimationFrame(() => {
                 textareaRef.current?.focus();
-                requestAnimationFrame(() => scrollToBottom("smooth"));
+
+                requestAnimationFrame(() => {
+                    scrollToBottom("smooth");
+                });
             });
         } catch {
             return;
@@ -288,24 +432,39 @@ export default function InternalTaskChatModal({ open, task, onClose, onUpdated }
 
     const openAttachment = (attachment: InternalTaskAttachment) => {
         if (!attachment.file) return;
+
         const url = getAttachmentUrl(attachment.file);
-        if (url) window.open(url, "_blank", "noopener,noreferrer");
+
+        if (url) {
+            window.open(url, "_blank", "noopener,noreferrer");
+        }
     };
 
     const downloadAttachment = async (attachment: InternalTaskAttachment) => {
+        if (!attachment.file) return;
+
         try {
-            const response = await api.get(attachment.file, { responseType: "blob" });
+            const response = await api.get(attachment.file, {
+                responseType: "blob",
+            });
+
             const blobUrl = URL.createObjectURL(response.data);
             const anchor = document.createElement("a");
+
             anchor.href = blobUrl;
             anchor.download = getFileName(attachment);
+
             document.body.appendChild(anchor);
             anchor.click();
             anchor.remove();
+
             URL.revokeObjectURL(blobUrl);
         } catch {
             const url = getAttachmentUrl(attachment.file);
-            if (url) window.open(url, "_blank", "noopener,noreferrer");
+
+            if (url) {
+                window.open(url, "_blank", "noopener,noreferrer");
+            }
         }
     };
 
@@ -335,41 +494,69 @@ export default function InternalTaskChatModal({ open, task, onClose, onUpdated }
                                 </div>
 
                                 <div className="min-w-0 flex-1">
-                                    <h2 className="truncate text-[14px] font-bold text-black/85 dark:text-white/90">{task.title}</h2>
+                                    <h2 className="truncate text-[14px] font-bold text-black/85 dark:text-white/90">
+                                        {task.title}
+                                    </h2>
 
                                     <div className="mt-2 flex flex-wrap items-center gap-1.5">
                                         {senderName && (
                                             <div className="flex items-center gap-1.5 rounded-full border border-blue-500/10 bg-blue-500/[0.06] py-0.5 pl-2 pr-2">
-                                                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-500 text-white"><UserRound size={11} /></span>
-                                                <span className="text-[10.5px] font-bold text-blue-600 dark:text-blue-400">ارسال‌کننده: {senderName}</span>
+                                                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-500 text-white">
+                                                    <UserRound size={11} />
+                                                </span>
+                                                <span className="text-[10.5px] font-bold text-blue-600 dark:text-blue-400">
+                                                    ارسال‌کننده: {senderName}
+                                                </span>
                                             </div>
                                         )}
 
-                                        {senderName && <span className="mx-1 h-1 w-1 rounded-full bg-black/20 dark:bg-white/20" />}
-                                        <span className="text-[10px] text-black/40 dark:text-white/35">{attachments.length} پیام</span>
+                                        {senderName && (
+                                            <span className="mx-1 h-1 w-1 rounded-full bg-black/20 dark:bg-white/20" />
+                                        )}
+
+                                        <span className="text-[10px] text-black/40 dark:text-white/35">
+                                            {attachments.length} پیام
+                                        </span>
 
                                         {isPolling && (
                                             <>
                                                 <span className="h-1 w-1 rounded-full bg-black/20 dark:bg-white/20" />
-                                                <span className="flex items-center gap-1 text-[10px] text-emerald-500"><span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />زنده</span>
+                                                <span className="flex items-center gap-1 text-[10px] text-emerald-500">
+                                                    <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />
+                                                    زنده
+                                                </span>
                                             </>
                                         )}
                                     </div>
                                 </div>
 
-                                <button type="button" onClick={onClose} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-black/[0.045] text-black/45 transition-colors hover:bg-black/[0.08] hover:text-black/70 dark:bg-white/[0.055] dark:text-white/45 dark:hover:bg-white/[0.09] dark:hover:text-white/75">
+                                <button
+                                    type="button"
+                                    onClick={onClose}
+                                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-black/[0.045] text-black/45 transition-colors hover:bg-black/[0.08] hover:text-black/70 dark:bg-white/[0.055] dark:text-white/45 dark:hover:bg-white/[0.09] dark:hover:text-white/75"
+                                >
                                     <X size={17} />
                                 </button>
                             </div>
                         </div>
 
-                        <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto px-3 py-5 sm:px-5" style={{ scrollbarWidth: "thin" }}>
+                        <div
+                            ref={scrollRef}
+                            className="min-h-0 flex-1 overflow-y-auto px-3 py-5 sm:px-5"
+                            style={{ scrollbarWidth: "thin" }}
+                        >
                             {attachments.length === 0 ? (
                                 <div className="flex h-full min-h-[300px] items-center justify-center">
                                     <div className="text-center">
-                                        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-[24px] bg-blue-500/[0.08] text-blue-500 dark:bg-blue-400/[0.08]"><Send size={23} /></div>
-                                        <h3 className="mt-4 text-[14px] font-bold text-black/75 dark:text-white/80">شروع گفتگو</h3>
-                                        <p className="mt-2 max-w-xs text-[11px] leading-6 text-black/40 dark:text-white/35">اولین پیام یا فایل را برای اعضای این تیکت ارسال کنید.</p>
+                                        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-[24px] bg-blue-500/[0.08] text-blue-500 dark:bg-blue-400/[0.08]">
+                                            <Send size={23} />
+                                        </div>
+                                        <h3 className="mt-4 text-[14px] font-bold text-black/75 dark:text-white/80">
+                                            شروع گفتگو
+                                        </h3>
+                                        <p className="mt-2 max-w-xs text-[11px] leading-6 text-black/40 dark:text-white/35">
+                                            اولین پیام یا فایل را برای اعضای این تیکت ارسال کنید.
+                                        </p>
                                     </div>
                                 </div>
                             ) : (
@@ -377,49 +564,167 @@ export default function InternalTaskChatModal({ open, task, onClose, onUpdated }
                                     {groupedAttachments.map(([date, items]) => (
                                         <div key={date}>
                                             <div className="mb-5 flex items-center justify-center">
-                                                <span className="rounded-full bg-black/[0.045] px-3 py-1 text-[9px] font-medium text-black/35 dark:bg-white/[0.055] dark:text-white/30">{date}</span>
+                                                <span className="rounded-full bg-black/[0.045] px-3 py-1 text-[9px] font-medium text-black/35 dark:bg-white/[0.055] dark:text-white/30">
+                                                    {date}
+                                                </span>
                                             </div>
 
                                             <div className="space-y-3">
                                                 {items.map((attachment) => {
-                                                    const isMine = userId !== null && Number(attachment.uploaded_by) === Number(userId);
+                                                    const isMine =
+                                                        userId !== null &&
+                                                        Number(attachment.uploaded_by) === Number(userId);
+
                                                     const fileName = getFileName(attachment);
                                                     const image = isImage(fileName);
                                                     const pdf = isPdf(fileName);
 
-                                                    return (
-                                                        <motion.div key={attachment.id} initial={{ opacity: 0, y: 8, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} className={`flex ${isMine ? "justify-start" : "justify-end"}`}>
-                                                            <div className={`flex max-w-[88%] items-end gap-2 ${isMine ? "flex-row" : "flex-row-reverse"}`}>
-                                                                {isMine && <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-blue-500 text-[9px] font-bold text-white">ش</div>}
+                                                    const messageSenderName = isMine
+                                                        ? "شما"
+                                                        : getSenderName(
+                                                            Number(attachment.uploaded_by),
+                                                            users,
+                                                            employees
+                                                        );
 
-                                                                <div className={`rounded-[22px] px-3.5 py-3 ${isMine ? "rounded-br-[7px] bg-blue-500 text-white shadow-[0_8px_25px_rgba(59,130,246,0.16)]" : "rounded-bl-[7px] border border-black/[0.05] bg-white text-black/75 shadow-[0_5px_20px_rgba(0,0,0,0.035)] dark:border-white/[0.06] dark:bg-[#18191c] dark:text-white/75"}`}>
-                                                                    {isMine && (
-                                                                        <div className="mb-1.5 flex items-center gap-2">
-                                                                            <span className="text-[9px] font-semibold text-white/75">شما</span>
-                                                                            <span className="text-[8px] text-white/50">{formatTime(attachment.created_at)}</span>
-                                                                        </div>
+                                                    return (
+                                                        <motion.div
+                                                            key={attachment.id}
+                                                            initial={{
+                                                                opacity: 0,
+                                                                y: 8,
+                                                                scale: 0.98,
+                                                            }}
+                                                            animate={{
+                                                                opacity: 1,
+                                                                y: 0,
+                                                                scale: 1,
+                                                            }}
+                                                            className={`flex ${isMine
+                                                                    ? "justify-start"
+                                                                    : "justify-end"
+                                                                }`}
+                                                        >
+                                                            <div
+                                                                className={`flex max-w-[88%] items-end gap-2 ${isMine
+                                                                        ? "flex-row"
+                                                                        : "flex-row-reverse"
+                                                                    }`}
+                                                            >
+                                                                {isMine && (
+                                                                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-blue-500 text-[9px] font-bold text-white">
+                                                                        ش
+                                                                    </div>
+                                                                )}
+
+                                                                <div
+                                                                    className={`rounded-[22px] px-3.5 py-3 ${isMine
+                                                                            ? "rounded-br-[7px] bg-blue-500 text-white shadow-[0_8px_25px_rgba(59,130,246,0.16)]"
+                                                                            : "rounded-bl-[7px] border border-black/[0.05] bg-white text-black/75 shadow-[0_5px_20px_rgba(0,0,0,0.035)] dark:border-white/[0.06] dark:bg-[#18191c] dark:text-white/75"
+                                                                        }`}
+                                                                >
+                                                                    <div className="mb-1.5 flex items-center gap-2">
+                                                                        <span
+                                                                            className={`text-[9px] font-semibold ${isMine
+                                                                                    ? "text-white/75"
+                                                                                    : "text-black/40 dark:text-white/35"
+                                                                                }`}
+                                                                        >
+                                                                            {messageSenderName}
+                                                                        </span>
+
+                                                                        <span
+                                                                            className={`text-[8px] ${isMine
+                                                                                    ? "text-white/50"
+                                                                                    : "text-black/25 dark:text-white/25"
+                                                                                }`}
+                                                                        >
+                                                                            {formatTime(
+                                                                                attachment.created_at
+                                                                            )}
+                                                                        </span>
+                                                                    </div>
+
+                                                                    {attachment.note && (
+                                                                        <p className="whitespace-pre-wrap break-words text-[11px] leading-6">
+                                                                            {attachment.note}
+                                                                        </p>
                                                                     )}
 
-                                                                    {attachment.note && <p className="whitespace-pre-wrap break-words text-[11px] leading-6">{attachment.note}</p>}
-
                                                                     {attachment.file && (
-                                                                        <div className={`mt-2.5 overflow-hidden rounded-2xl ${isMine ? "bg-white/10" : "bg-black/[0.035] dark:bg-white/[0.045]"}`}>
+                                                                        <div
+                                                                            className={`mt-2.5 overflow-hidden rounded-2xl ${isMine
+                                                                                    ? "bg-white/10"
+                                                                                    : "bg-black/[0.035] dark:bg-white/[0.045]"
+                                                                                }`}
+                                                                        >
                                                                             {image ? (
-                                                                                <button type="button" onClick={() => openAttachment(attachment)} className="block w-full overflow-hidden">
-                                                                                    <img src={attachment.file} alt={fileName} className="max-h-64 w-full object-cover transition-transform duration-300 hover:scale-[1.02]" />
+                                                                                <button
+                                                                                    type="button"
+                                                                                    onClick={() =>
+                                                                                        openAttachment(
+                                                                                            attachment
+                                                                                        )
+                                                                                    }
+                                                                                    className="block w-full overflow-hidden"
+                                                                                >
+                                                                                    <img
+                                                                                        src={getAttachmentUrl(
+                                                                                            attachment.file
+                                                                                        )}
+                                                                                        alt={fileName}
+                                                                                        className="max-h-64 w-full object-cover transition-transform duration-300 hover:scale-[1.02]"
+                                                                                    />
                                                                                 </button>
                                                                             ) : (
                                                                                 <div className="flex min-w-[220px] items-center gap-3 p-3">
-                                                                                    <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${isMine ? "bg-white/15" : "bg-blue-500/[0.08] text-blue-500"}`}>
-                                                                                        {pdf ? <File size={19} /> : <Paperclip size={19} />}
+                                                                                    <div
+                                                                                        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${isMine
+                                                                                                ? "bg-white/15"
+                                                                                                : "bg-blue-500/[0.08] text-blue-500"
+                                                                                            }`}
+                                                                                    >
+                                                                                        {pdf ? (
+                                                                                            <File size={19} />
+                                                                                        ) : (
+                                                                                            <Paperclip size={19} />
+                                                                                        )}
                                                                                     </div>
 
-                                                                                    <button type="button" onClick={() => openAttachment(attachment)} className="min-w-0 flex-1 text-right">
-                                                                                        <span className="block truncate text-[10px] font-semibold">{fileName}</span>
-                                                                                        <span className={`mt-1 block text-[8px] ${isMine ? "text-white/55" : "text-black/30 dark:text-white/30"}`}>مشاهده فایل</span>
+                                                                                    <button
+                                                                                        type="button"
+                                                                                        onClick={() =>
+                                                                                            openAttachment(
+                                                                                                attachment
+                                                                                            )
+                                                                                        }
+                                                                                        className="min-w-0 flex-1 text-right"
+                                                                                    >
+                                                                                        <span className="block truncate text-[10px] font-semibold">
+                                                                                            {fileName}
+                                                                                        </span>
+                                                                                        <span
+                                                                                            className={`mt-1 block text-[8px] ${isMine
+                                                                                                    ? "text-white/55"
+                                                                                                    : "text-black/30 dark:text-white/30"
+                                                                                                }`}
+                                                                                        >
+                                                                                            مشاهده فایل
+                                                                                        </span>
                                                                                     </button>
 
-                                                                                    <button type="button" onClick={() => downloadAttachment(attachment)} className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl ${isMine ? "bg-white/10 text-white" : "bg-black/[0.05] text-black/45 dark:bg-white/[0.06] dark:text-white/45"}`}>
+                                                                                    <button
+                                                                                        type="button"
+                                                                                        onClick={() =>
+                                                                                            downloadAttachment(
+                                                                                                attachment
+                                                                                            )
+                                                                                        }
+                                                                                        className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl ${isMine
+                                                                                                ? "bg-white/10 text-white"
+                                                                                                : "bg-black/[0.05] text-black/45 dark:bg-white/[0.06] dark:text-white/45"
+                                                                                            }`}
+                                                                                    >
                                                                                         <Download size={14} />
                                                                                     </button>
                                                                                 </div>
@@ -428,13 +733,29 @@ export default function InternalTaskChatModal({ open, task, onClose, onUpdated }
                                                                     )}
 
                                                                     {attachment.note && (
-                                                                        <div className={`mt-1.5 flex items-center justify-end gap-1 ${isMine ? "text-white/45" : "text-black/25 dark:text-white/25"}`}>
+                                                                        <div
+                                                                            className={`mt-1.5 flex items-center justify-end gap-1 ${isMine
+                                                                                    ? "text-white/45"
+                                                                                    : "text-black/25 dark:text-white/25"
+                                                                                }`}
+                                                                        >
                                                                             {isMine && <Check size={10} />}
-                                                                            <span className="text-[8px]">{formatTime(attachment.created_at)}</span>
+                                                                            <span className="text-[8px]">
+                                                                                {formatTime(
+                                                                                    attachment.created_at
+                                                                                )}
+                                                                            </span>
                                                                         </div>
                                                                     )}
 
-                                                                    {!attachment.note && !attachment.file && <span className="text-[8px] text-black/25 dark:text-white/25">{formatTime(attachment.created_at)}</span>}
+                                                                    {!attachment.note &&
+                                                                        !attachment.file && (
+                                                                            <span className="text-[8px] text-black/25 dark:text-white/25">
+                                                                                {formatTime(
+                                                                                    attachment.created_at
+                                                                                )}
+                                                                            </span>
+                                                                        )}
                                                                 </div>
                                                             </div>
                                                         </motion.div>
@@ -443,6 +764,7 @@ export default function InternalTaskChatModal({ open, task, onClose, onUpdated }
                                             </div>
                                         </div>
                                     ))}
+
                                     <div ref={bottomAnchorRef} />
                                 </div>
                             )}
@@ -451,13 +773,33 @@ export default function InternalTaskChatModal({ open, task, onClose, onUpdated }
                         <div className="shrink-0 border-t border-black/[0.06] bg-white/90 px-3 pb-3 pt-3 backdrop-blur-2xl dark:border-white/[0.06] dark:bg-[#151619]/95 sm:px-4">
                             <AnimatePresence>
                                 {selectedFiles.length > 0 && (
-                                    <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="mb-2 overflow-hidden">
+                                    <motion.div
+                                        initial={{ opacity: 0, height: 0 }}
+                                        animate={{ opacity: 1, height: "auto" }}
+                                        exit={{ opacity: 0, height: 0 }}
+                                        className="mb-2 overflow-hidden"
+                                    >
                                         <div className="flex gap-2 overflow-x-auto pb-1">
                                             {selectedFiles.map((file, index) => (
-                                                <div key={`${file.name}-${index}`} className="flex min-w-[150px] max-w-[190px] items-center gap-2 rounded-2xl border border-black/[0.06] bg-black/[0.025] px-2.5 py-2 dark:border-white/[0.06] dark:bg-white/[0.035]">
-                                                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-blue-500/[0.08] text-blue-500"><Paperclip size={14} /></div>
-                                                    <span className="min-w-0 flex-1 truncate text-[9px] text-black/55 dark:text-white/55">{file.name}</span>
-                                                    <button type="button" onClick={() => removeFile(index)} className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-black/35 hover:bg-red-500/10 hover:text-red-500 dark:text-white/35"><X size={12} /></button>
+                                                <div
+                                                    key={`${file.name}-${index}`}
+                                                    className="flex min-w-[150px] max-w-[190px] items-center gap-2 rounded-2xl border border-black/[0.06] bg-black/[0.025] px-2.5 py-2 dark:border-white/[0.06] dark:bg-white/[0.035]"
+                                                >
+                                                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-blue-500/[0.08] text-blue-500">
+                                                        <Paperclip size={14} />
+                                                    </div>
+
+                                                    <span className="min-w-0 flex-1 truncate text-[9px] text-black/55 dark:text-white/55">
+                                                        {file.name}
+                                                    </span>
+
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => removeFile(index)}
+                                                        className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-black/35 hover:bg-red-500/10 hover:text-red-500 dark:text-white/35"
+                                                    >
+                                                        <X size={12} />
+                                                    </button>
                                                 </div>
                                             ))}
                                         </div>
@@ -466,9 +808,20 @@ export default function InternalTaskChatModal({ open, task, onClose, onUpdated }
                             </AnimatePresence>
 
                             <div className="flex items-end gap-2 rounded-[24px] border border-black/[0.07] bg-black/[0.025] p-1.5 transition-colors focus-within:border-blue-500/30 focus-within:bg-white dark:border-white/[0.07] dark:bg-white/[0.035] dark:focus-within:bg-white/[0.045]">
-                                <input ref={fileInputRef} type="file" multiple className="hidden" onChange={handleFiles} />
+                                <input
+                                    ref={fileInputRef}
+                                    type="file"
+                                    multiple
+                                    className="hidden"
+                                    onChange={handleFiles}
+                                />
 
-                                <button type="button" onClick={() => fileInputRef.current?.click()} disabled={sending} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[18px] text-black/40 transition-colors hover:bg-black/[0.06] hover:text-blue-500 disabled:opacity-40 dark:text-white/40 dark:hover:bg-white/[0.07]">
+                                <button
+                                    type="button"
+                                    onClick={() => fileInputRef.current?.click()}
+                                    disabled={sending}
+                                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[18px] text-black/40 transition-colors hover:bg-black/[0.06] hover:text-blue-500 disabled:opacity-40 dark:text-white/40 dark:hover:bg-white/[0.07]"
+                                >
                                     <Paperclip size={18} />
                                 </button>
 
@@ -483,12 +836,26 @@ export default function InternalTaskChatModal({ open, task, onClose, onUpdated }
                                     className="max-h-28 min-h-10 flex-1 resize-none bg-transparent px-2 py-2.5 text-[11px] leading-5 text-black outline-none placeholder:text-black/25 disabled:opacity-50 dark:text-white dark:placeholder:text-white/25"
                                 />
 
-                                <button type="button" onClick={() => void sendMessage()} disabled={sending || (!message.trim() && !selectedFiles.length)} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[18px] bg-blue-500 text-white shadow-[0_8px_20px_rgba(59,130,246,0.2)] transition-all hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-35">
-                                    {sending ? <Loader2 size={17} className="animate-spin" /> : <Send size={17} className="translate-x-[-1px]" />}
+                                <button
+                                    type="button"
+                                    onClick={() => void sendMessage()}
+                                    disabled={
+                                        sending ||
+                                        (!message.trim() && !selectedFiles.length)
+                                    }
+                                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[18px] bg-blue-500 text-white shadow-[0_8px_20px_rgba(59,130,246,0.2)] transition-all hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-35"
+                                >
+                                    {sending ? (
+                                        <Loader2 size={17} className="animate-spin" />
+                                    ) : (
+                                        <Send size={17} className="translate-x-[-1px]" />
+                                    )}
                                 </button>
                             </div>
 
-                            <div className="mt-2 text-center text-[8px] text-black/25 dark:text-white/20">Enter برای ارسال · Shift + Enter برای خط جدید</div>
+                            <div className="mt-2 text-center text-[8px] text-black/25 dark:text-white/20">
+                                Enter برای ارسال · Shift + Enter برای خط جدید
+                            </div>
                         </div>
                     </motion.div>
                 </motion.div>

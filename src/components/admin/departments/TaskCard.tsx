@@ -301,25 +301,25 @@ export default function TaskCard({
     }, [caseId]);
 
     const buildEditableTask = (overrides?: Partial<Task>): Task =>
-        ({
-            ...task,
-            id: taskId ?? task.id,
-            title: getNullableText(task.title),
-            description: getNullableText((task as any).description),
-            status: getNullableText((task as any).status),
-            priority: getNullableText((task as any).priority),
-            created_at: getNullableText((task as any).created_at),
-            started_at: getNullableText(task.started_at),
-            deadline: getNullableText(task.deadline),
-            due_date: getNullableText(task.due_date),
-            current_step: task.current_step,
-            assigned_employee: task.assigned_employee,
-            case: task.case,
-            case_name: getNullableText(task.case_name),
-            department_name: getNullableText(task.department_name),
-            current_step_name: getNullableText(task.current_step_name),
-            ...overrides,
-        } as Task);
+    ({
+        ...task,
+        id: taskId ?? task.id,
+        title: getNullableText(task.title),
+        description: getNullableText((task as any).description),
+        status: getNullableText((task as any).status),
+        priority: getNullableText((task as any).priority),
+        created_at: getNullableText((task as any).created_at),
+        started_at: getNullableText(task.started_at),
+        deadline: getNullableText(task.deadline),
+        due_date: getNullableText(task.due_date),
+        current_step: task.current_step,
+        assigned_employee: task.assigned_employee,
+        case: task.case,
+        case_name: getNullableText(task.case_name),
+        department_name: getNullableText(task.department_name),
+        current_step_name: getNullableText(task.current_step_name),
+        ...overrides,
+    } as Task);
 
     const handleDelete = async () => {
         if (!taskId || !onDelete) return;
@@ -425,14 +425,6 @@ export default function TaskCard({
                 <div className="mt-4 flex flex-col gap-2.5">
                     {(task.department_name || caseTitle || customer) && (
                         <div className="flex flex-wrap items-center gap-1.5">
-                            {task.department_name && (
-                                <div className="flex items-center gap-1.5 rounded-xl bg-gray-50 px-2.5 py-1.5 text-[10px] font-bold text-gray-500 dark:bg-white/[0.04] dark:text-white/45">
-                                    <FolderKanban size={11} />
-                                    <span className="max-w-[130px] truncate">
-                                        {getText(task.department_name)}
-                                    </span>
-                                </div>
-                            )}
                             {caseTitle && (
                                 <div className="flex items-center gap-1.5 rounded-xl bg-violet-50 px-2.5 py-1.5 text-[10px] font-bold text-violet-600 dark:bg-violet-500/10 dark:text-violet-300">
                                     <FileText size={11} />
@@ -442,6 +434,10 @@ export default function TaskCard({
                             {customer && (
                                 <div className="flex items-center gap-1.5 rounded-xl bg-sky-50 px-2.5 py-1.5 text-[10px] font-bold text-sky-600 dark:bg-sky-500/10 dark:text-sky-300">
                                     <User size={11} />
+                                    <span className="font-bold">
+                                        مشتری :
+                                    </span>
+
                                     <span className="max-w-[130px] truncate">
                                         {customer.full_name}
                                     </span>

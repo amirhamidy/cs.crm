@@ -53,7 +53,7 @@ interface Props {
     taskTitle: string;
 }
 
-const MEDIA_BASE = "https://api.radcosys.ir";
+const MEDIA_BASE = "https://api.radcocrm.ir";
 
 function resolveFileUrl(url: string) {
     if (!url) return "";

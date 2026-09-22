@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -20,7 +19,7 @@ interface StagesPanelProps {
     stageColors?: string[];
     onReorder: (stages: Stage[]) => void;
     onAddStage?: () => void;
-    onEditStage?: (stage: Stage, values: { name: string; description: string; order: number }) => Promise<void> | void;
+    onEditStage?: (stage: Stage, values: { name: string; order: number }) => Promise<void> | void;
     onDeleteStage?: (stage: Stage) => void;
 }
 
@@ -89,7 +88,7 @@ export default function StagesPanel({
         }
     }, [activeStageKey, uniqueLocalStages]);
 
-    const handleEditStage = useCallback(async (targetStage: Stage, values: { name: string; description: string; order: number }) => {
+    const handleEditStage = useCallback(async (targetStage: Stage, values: { name: string; order: number }) => {
         if (!onEditStage) return;
 
         const oldOrder = targetStage.order;
@@ -118,7 +117,6 @@ export default function StagesPanel({
             if (conflictingStage) {
                 await onEditStage(conflictingStage, {
                     name: conflictingStage.name,
-                    description: conflictingStage.description ?? "",
                     order: oldOrder,
                 });
             }

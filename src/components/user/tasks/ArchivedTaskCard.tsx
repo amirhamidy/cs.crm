@@ -9,13 +9,16 @@ import {
     CalendarDays,
     CheckCircle2,
     Clock3,
+    FileText,
     Loader2,
+    MessageSquareText,
     RotateCcw,
     ShoppingBag,
     User,
     X,
 } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
+import AdminTaskNotesModal from "@/components/customcomponents/tasks/AdminTaskNotesModal";
 
 interface ArchiveTask {
     id: number;
@@ -54,12 +57,28 @@ function formatDate(value?: string | null) {
     });
 }
 
+function formatDateTime(value?: string | null) {
+    if (!value) return "نامشخص";
+
+    const date = new Date(value);
+
+    return `${date.toLocaleDateString("fa-IR", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+    })} · ${date.toLocaleTimeString("fa-IR", {
+        hour: "2-digit",
+        minute: "2-digit",
+    })}`;
+}
+
 function statusInfo(status: ArchiveTask["status"]) {
     if (status === "sold") {
         return {
-            label: "فروش رفته",
+            label: "فروش",
             icon: ShoppingBag,
-            className: "bg-amber-500/10 text-amber-500",
+            className:
+                "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-300 dark:border-emerald-500/20",
         };
     }
 
@@ -67,14 +86,16 @@ function statusInfo(status: ArchiveTask["status"]) {
         return {
             label: "لغو شده",
             icon: Ban,
-            className: "bg-red-500/10 text-red-500",
+            className:
+                "bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-500/10 dark:text-rose-300 dark:border-rose-500/20",
         };
     }
 
     return {
-        label: "تکمیل شده",
+        label: "انجام شده",
         icon: CheckCircle2,
-        className: "bg-emerald-500/10 text-emerald-500",
+        className:
+            "bg-sky-50 text-sky-700 border-sky-200 dark:bg-sky-500/10 dark:text-sky-300 dark:border-sky-500/20",
     };
 }
 
@@ -82,7 +103,6 @@ function parseError(error: any) {
     const data = error?.response?.data;
 
     if (!data) return "بازگردانی تسک با خطا مواجه شد";
-
     if (typeof data === "string") return data;
 
     const first = Object.values(data)[0];
@@ -92,13 +112,11 @@ function parseError(error: any) {
         : String(first ?? "بازگردانی تسک با خطا مواجه شد");
 }
 
-export default function ArchivedTaskCard({
-    task,
-    onReopened,
-}: Props) {
+export default function ArchivedTaskCard({ task, onReopened }: Props) {
     const [confirmOpen, setConfirmOpen] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [notesOpen, setNotesOpen] = useState(false);
 
     const status = statusInfo(task.status);
     const StatusIcon = status.icon;
@@ -123,71 +141,109 @@ export default function ArchivedTaskCard({
 
     return (
         <>
-            <motion.div
+            <motion.article
                 layout
-                initial={{ opacity: 0, y: 10 }}
+                initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10, scale: 0.97 }}
-                className="group relative overflow-hidden rounded-[1.6rem] border border-gray-200 bg-white p-3.5 shadow-[0_8px_28px_rgba(15,23,42,.04)] dark:border-white/[.07] dark:bg-[#111a2d]"
+                transition={{ duration: 0.28 }}
+                className="group relative overflow-hidden rounded-[1.8rem] border border-gray-100 bg-white p-4 shadow-[0_8px_28px_rgba(15,23,42,0.035)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_16px_36px_rgba(15,23,42,0.08)] dark:border-white/[0.07] dark:bg-[#111a2d] dark:shadow-none"
             >
-                <div className="absolute inset-y-0 right-0 w-1 bg-gradient-to-b from-slate-400 to-slate-500/20" />
+                <div className="absolute inset-y-0 right-0 w-1 bg-gradient-to-b from-slate-400 to-slate-400/20" />
 
-                <div className="mb-3 flex items-center justify-between gap-2">
-                    <span
-                        className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[9.5px] font-extrabold ${status.className}`}
-                    >
-                        <StatusIcon size={10} />
-                        {status.label}
-                    </span>
+                <div className="mb-3 flex items-start justify-between gap-3 pl-1">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                        <span
+                            className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-extrabold ${status.className}`}
+                        >
+                            <StatusIcon size={10} />
+                            {status.label}
+                        </span>
+                    </div>
 
-                    <span className="flex items-center gap-1 rounded-xl bg-gray-100 px-2 py-1 text-[9px] font-bold text-gray-400 dark:bg-white/[.05]">
+                    <span className="flex shrink-0 items-center gap-1 rounded-xl bg-gray-50 px-2.5 py-1.5 text-[9px] font-bold text-gray-400 dark:bg-white/[0.05] dark:text-white/40">
                         <Archive size={10} />
                         آرشیو
                     </span>
                 </div>
 
-                <h3 className="line-clamp-2 text-[13.5px] font-extrabold leading-6 text-gray-900 dark:text-white">
-                    {task.title}
+                <h3 className="text-[14px] font-extrabold leading-6 text-gray-900 dark:text-white">
+                    {task.title || "تسک بدون عنوان"}
                 </h3>
 
                 {task.case_title && (
-                    <div className="mt-1.5 line-clamp-1 text-[10px] text-gray-400">
-                        پرونده: {task.case_title}
+                    <div className="mt-2 flex items-center gap-1.5 rounded-xl bg-violet-50 px-2.5 py-1.5 text-[10px] font-bold text-violet-600 dark:bg-violet-500/10 dark:text-violet-300">
+                        <FileText size={11} />
+                        <span className="truncate">
+                            {task.case_title}
+                        </span>
                     </div>
                 )}
 
-                <div className="mt-3 flex flex-col gap-2 rounded-2xl bg-gray-50 px-3 py-2.5 dark:bg-white/[.035]">
-                    {task.customer_full_name && (
-                        <InfoRow
-                            icon={User}
-                            label="مشتری"
-                            value={task.customer_full_name}
-                        />
-                    )}
-
+                <div className="mt-4 flex flex-wrap items-center gap-1.5">
                     {task.department_name && (
-                        <InfoRow
-                            icon={Building2}
-                            label="دپارتمان"
-                            value={task.department_name}
-                        />
+                        <div className="flex items-center gap-1.5 rounded-xl bg-gray-50 px-2.5 py-1.5 text-[10px] font-bold text-gray-500 dark:bg-white/[0.04] dark:text-white/45">
+                            <Building2 size={11} />
+                            <span className="max-w-[130px] truncate">
+                                {task.department_name}
+                            </span>
+                        </div>
                     )}
 
-                    <InfoRow
-                        icon={CalendarDays}
-                        label="تاریخ ایجاد"
-                        value={formatDate(task.task_created_at)}
-                    />
-
-                    <InfoRow
-                        icon={Clock3}
-                        label="تاریخ آرشیو"
-                        value={formatDate(task.archived_at)}
-                    />
+                    {task.customer_full_name && (
+                        <div className="flex items-center gap-1.5 rounded-xl bg-sky-50 px-2.5 py-1.5 text-[10px] font-bold text-sky-600 dark:bg-sky-500/10 dark:text-sky-300">
+                            <User size={11} />
+                            <span className="max-w-[130px] truncate">
+                                {task.customer_full_name}
+                            </span>
+                        </div>
+                    )}
                 </div>
 
-                <div className="mt-2.5 rounded-2xl bg-indigo-500/[.035] px-3 py-2.5">
-                    <div className="text-[9px] font-bold text-gray-400">
+                <div className="mt-3 flex flex-col gap-2.5 rounded-2xl bg-gray-50 px-3 py-3 dark:bg-white/[0.035]">
+                    <div className="flex items-center justify-between gap-3">
+                        <div className="flex min-w-0 items-center gap-2 text-gray-500 dark:text-white/45">
+                            <CalendarDays size={13} />
+                            <div className="min-w-0">
+                                <p className="text-[9.5px] font-bold">
+                                    تاریخ ایجاد
+                                </p>
+                                <p className="mt-0.5 truncate text-[10.5px] font-extrabold text-gray-700 dark:text-white/75">
+                                    {formatDate(task.task_created_at)}
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="border-r border-gray-200 pr-3 dark:border-white/[0.08]">
+                            <p className="text-[9px] font-bold text-gray-400">
+                                آرشیو
+                            </p>
+                            <p className="mt-0.5 text-[10px] font-bold text-gray-500 dark:text-white/50">
+                                {formatDate(task.archived_at)}
+                            </p>
+                        </div>
+                    </div>
+
+                    {task.completed_at && (
+                        <div className="flex items-center gap-2 border-t border-gray-200 pt-2.5 dark:border-white/[0.07]">
+                            <Clock3
+                                size={12}
+                                className="shrink-0 text-gray-400"
+                            />
+                            <div>
+                                <p className="text-[9px] font-bold text-gray-400">
+                                    زمان تکمیل
+                                </p>
+                                <p className="mt-0.5 text-[10px] font-extrabold text-gray-600 dark:text-white/60">
+                                    {formatDateTime(task.completed_at)}
+                                </p>
+                            </div>
+                        </div>
+                    )}
+                </div>
+
+                <div className="mt-3 rounded-2xl bg-indigo-500/[.035] px-3 py-2.5 dark:bg-indigo-500/[.04]">
+                    <div className="text-[9.5px] font-bold text-gray-400 dark:text-white/35">
                         آخرین اقدام توسط
                     </div>
 
@@ -204,71 +260,73 @@ export default function ArchivedTaskCard({
                     </div>
                 )}
 
-                <button
-                    type="button"
-                    onClick={() => {
-                        setError(null);
-                        setConfirmOpen(true);
-                    }}
-                    className="mt-3 flex h-9 w-full items-center justify-center gap-1.5 rounded-xl bg-indigo-500/10 text-[10px] font-extrabold text-indigo-500 transition hover:bg-indigo-500/15"
-                >
-                    <RotateCcw size={12} />
-                    بازگشت به حالت قبل
-                </button>
-            </motion.div>
+                <div className="mt-3 flex items-center gap-2 border-t border-gray-100 pt-3.5 dark:border-white/[0.06]">
+                    <button
+                        type="button"
+                        onClick={() => setNotesOpen(true)}
+                        className="flex h-9 flex-1 items-center justify-center gap-1.5 rounded-xl bg-indigo-50 text-[10.5px] font-extrabold text-indigo-600 transition-colors hover:bg-indigo-100 dark:bg-indigo-500/10 dark:text-indigo-300 dark:hover:bg-indigo-500/20"
+                    >
+                        <MessageSquareText size={13} />
+                        یادداشت‌ها
+                    </button>
+
+                    <button
+                        type="button"
+                        onClick={() => {
+                            setError(null);
+                            setConfirmOpen(true);
+                        }}
+                        className="flex h-9 flex-1 items-center justify-center gap-1.5 rounded-xl bg-gray-50 text-[10.5px] font-extrabold text-gray-600 transition-colors hover:bg-gray-100 hover:text-indigo-600 dark:bg-white/[0.05] dark:text-white/50 dark:hover:bg-white/[0.1] dark:hover:text-indigo-300"
+                    >
+                        <RotateCcw size={13} />
+                        بازگشت
+                    </button>
+                </div>
+            </motion.article>
+
+            <AdminTaskNotesModal
+                isOpen={notesOpen}
+                onClose={() => setNotesOpen(false)}
+                taskId={task.task_id}
+                taskTitle={task.title}
+            />
 
             {confirmOpen && (
                 <div
-                    className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
+                    className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/50 px-4 backdrop-blur-sm"
                     dir="rtl"
+                    onClick={() => !submitting && setConfirmOpen(false)}
                 >
                     <motion.div
-                        initial={{ opacity: 0, scale: 0.96, y: 8 }}
-                        animate={{ opacity: 1, scale: 1, y: 0 }}
-                        className="w-full max-w-sm rounded-[1.7rem] border border-gray-200 bg-white p-5 shadow-2xl dark:border-white/[.08] dark:bg-[#111827]"
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        onClick={(event) => event.stopPropagation()}
+                        className="w-full max-w-sm rounded-[2rem] border border-gray-100 bg-white p-6 text-right shadow-2xl dark:border-white/[0.08] dark:bg-[#111a2d]"
                     >
-                        <div className="flex items-start justify-between gap-3">
-                            <div>
-                                <div className="flex items-center gap-2">
-                                    <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-500/10">
-                                        <RotateCcw
-                                            size={17}
-                                            className="text-indigo-500"
-                                        />
-                                    </div>
-
-                                    <h3 className="text-[13px] font-extrabold text-gray-900 dark:text-white">
-                                        بازگردانی تسک
-                                    </h3>
-                                </div>
-
-                                <p className="mt-3 text-[11px] leading-6 text-gray-500 dark:text-gray-400">
-                                    آیا مطمئنی می‌خواهی این تسک دوباره به حالت انجام بازگردد؟
-                                </p>
-                            </div>
-
-                            <button
-                                type="button"
-                                onClick={() => setConfirmOpen(false)}
-                                disabled={submitting}
-                                className="flex h-7 w-7 items-center justify-center rounded-lg bg-gray-100 text-gray-400 dark:bg-white/[.05]"
-                            >
-                                <X size={14} />
-                            </button>
+                        <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-500 dark:bg-indigo-500/10 dark:text-indigo-300">
+                            <RotateCcw size={19} />
                         </div>
 
-                        <div className="mt-3 rounded-xl bg-gray-50 px-3 py-2.5 dark:bg-white/[.035]">
+                        <h4 className="mt-4 text-[14px] font-extrabold text-gray-900 dark:text-white">
+                            بازگردانی تسک
+                        </h4>
+
+                        <p className="mt-2 text-[11.5px] font-medium leading-6 text-gray-400 dark:text-white/40">
+                            این تسک دوباره به وضعیت فعال برمی‌گردد و از بایگانی خارج می‌شود.
+                        </p>
+
+                        <div className="mt-4 rounded-2xl bg-gray-50 px-3 py-2.5 dark:bg-white/[0.035]">
                             <p className="line-clamp-2 text-[10.5px] font-bold leading-5 text-gray-600 dark:text-gray-300">
                                 {task.title}
                             </p>
                         </div>
 
-                        <div className="mt-4 flex gap-2">
+                        <div className="mt-5 flex gap-2">
                             <button
                                 type="button"
                                 onClick={() => setConfirmOpen(false)}
                                 disabled={submitting}
-                                className="h-9 flex-1 rounded-xl bg-gray-100 text-[10px] font-extrabold text-gray-500 dark:bg-white/[.06] dark:text-gray-400"
+                                className="flex h-10 flex-1 items-center justify-center rounded-full bg-gray-100 text-[11px] font-extrabold text-gray-500 transition hover:bg-gray-200 dark:bg-white/[0.06] dark:text-white/50 dark:hover:bg-white/[0.1]"
                             >
                                 انصراف
                             </button>
@@ -277,15 +335,15 @@ export default function ArchivedTaskCard({
                                 type="button"
                                 onClick={reopenTask}
                                 disabled={submitting}
-                                className="flex h-9 flex-1 items-center justify-center gap-1.5 rounded-xl bg-indigo-600 text-[10px] font-extrabold text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
+                                className="flex h-10 flex-1 items-center justify-center gap-2 rounded-full bg-indigo-500 text-[11px] font-extrabold text-white transition hover:bg-indigo-600 disabled:cursor-not-allowed disabled:opacity-60"
                             >
                                 {submitting ? (
                                     <Loader2
-                                        size={13}
+                                        size={14}
                                         className="animate-spin"
                                     />
                                 ) : (
-                                    <RotateCcw size={13} />
+                                    <RotateCcw size={14} />
                                 )}
 
                                 {submitting
@@ -297,35 +355,5 @@ export default function ArchivedTaskCard({
                 </div>
             )}
         </>
-    );
-}
-
-function InfoRow({
-    label,
-    value,
-    icon: Icon,
-}: {
-    label: string;
-    value: string;
-    icon: React.ComponentType<{
-        size?: number;
-        className?: string;
-    }>;
-}) {
-    return (
-        <div className="flex items-center gap-1.5 text-[10px]">
-            <Icon
-                size={11}
-                className="shrink-0 text-gray-400"
-            />
-
-            <span className="font-semibold text-gray-400">
-                {label}:
-            </span>
-
-            <span className="truncate font-bold text-gray-700 dark:text-white/80">
-                {value}
-            </span>
-        </div>
     );
 }
