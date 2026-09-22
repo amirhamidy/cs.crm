@@ -141,8 +141,9 @@ function getUnitOptions(): Option[] {
     return [
         { value: "count", label: "عددی" },
         { value: "weight", label: "وزنی" },
-        { value: "length", label: "طولی" },
+        { value: "dimension", label: "ابعادی" },
         { value: "volume", label: "حجمی" },
+        { value: "area", label: "مساحتی" },
     ];
 }
 
@@ -335,8 +336,7 @@ function NiceSelect({
                                     zIndex: 100,
                                     transformOrigin: "top center",
                                 }}
-                                className="overflow-hidden rounded-[1.5rem] border border-gray-100 bg-white shadow-xl shadow-black/5 dark:border-white/[0.08] dark:bg-[#0f172a] dark:shadow-black/40"
-                            >
+                                className="overflow-y-scroll scrollbar-hide rounded-[1.5rem] border border-gray-100 bg-white shadow-xl shadow-black/5 dark:border-white/[0.08] dark:bg-[#0f172a] dark:shadow-black/40"                            >
                                 {options.length > 5 && (
                                     <div className="border-b border-gray-100 px-3 py-2.5 dark:border-white/[0.06]">
                                         <div className="flex items-center gap-2 rounded-xl bg-gray-50 px-3 py-2 dark:bg-white/[0.04]">
