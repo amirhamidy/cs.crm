@@ -8,26 +8,64 @@ import {
     FileUp,
     Loader2,
     Upload,
+    UserCheck,
     X,
 } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
-import type {
-    ApiPurchasingEmployee,
-    ApiPurchasingTask,
-} from "@/types/purchasing";
-import {
-    FloatingSelect,
-    FloatingTextarea,
-    OPTION_CLASS,
-} from "./FormControls";
+import type { ApiPurchasingTask } from "@/types/purchasing";
+import { usePurchasingAccess } from "@/hooks/usePurchasingAccess";
+import { FloatingTextarea } from "./FormControls";
 
 interface Props {
     isOpen: boolean;
     onClose: () => void;
     mode: "advance" | "revert";
     task: ApiPurchasingTask;
-    employees: ApiPurchasingEmployee[];
     onCompleted: () => void;
+}
+
+function parseApiError(err: unknown): string {
+    const e = err as {
+        response?: {
+            data?:
+            | string
+            | {
+                detail?: string;
+                message?: string;
+                error?: string;
+                created_by?: string[] | string;
+                note?: string[] | string;
+                file?: string[] | string;
+                non_field_errors?: string[] | string;
+            };
+            status?: number;
+        };
+    };
+
+    const data = e?.response?.data;
+
+    if (!data) {
+        if (e?.response?.status === 401) return "ابتدا وارد حساب خود شوید.";
+        if (e?.response?.status === 403) return "شما به این عملیات دسترسی ندارید.";
+        if (e?.response?.status === 404) return "تسک یا مرحله یافت نشد.";
+        return "خطا در ارتباط با سرور.";
+    }
+
+    if (typeof data === "string") return data;
+
+    const pick = (v: string[] | string | undefined) =>
+        Array.isArray(v) ? v[0] : v;
+
+    return (
+        pick(data.created_by) ||
+        pick(data.note) ||
+        pick(data.file) ||
+        pick(data.non_field_errors) ||
+        data.detail ||
+        data.message ||
+        data.error ||
+        "عملیات انجام نشد."
+    );
 }
 
 export default function TaskActionModal({
@@ -35,10 +73,17 @@ export default function TaskActionModal({
     onClose,
     mode,
     task,
-    employees,
     onCompleted,
 }: Props) {
-    const [createdById, setCreatedById] = useState("");
+    const {
+        isAdmin,
+        isEmployee,
+        hasAccess,
+        currentPurchasingId,
+        currentEmployeeName,
+        loading: accessLoading,
+    } = usePurchasingAccess();
+
     const [note, setNote] = useState("");
     const [file, setFile] = useState<File | null>(null);
     const [loading, setLoading] = useState(false);
@@ -46,8 +91,6 @@ export default function TaskActionModal({
 
     useEffect(() => {
         if (!isOpen) return;
-
-        setCreatedById("");
         setNote("");
         setFile(null);
         setError("");
@@ -55,10 +98,20 @@ export default function TaskActionModal({
     }, [isOpen]);
 
     const submit = async () => {
-        if (!createdById) {
+        if (accessLoading) {
+            setError("در حال بررسی دسترسی، لطفاً صبر کنید.");
+            return;
+        }
+
+        if (!currentPurchasingId || !Number.isFinite(currentPurchasingId)) {
             setError(
-                "لطفاً کارمند انجام‌دهنده را انتخاب کنید."
+                "شناسه شما در فرآیند خرید یافت نشد. لطفاً صفحه را رفرش کنید."
             );
+            return;
+        }
+
+        if (!isAdmin && (!isEmployee || !hasAccess)) {
+            setError("شما مجاز به انجام این عملیات نیستید.");
             return;
         }
 
@@ -67,36 +120,33 @@ export default function TaskActionModal({
             setError("");
 
             const formData = new FormData();
+            formData.append("created_by", String(currentPurchasingId));
 
-            formData.append("created_by", createdById);
-
-            if (note.trim()) {
-                formData.append("note", note.trim());
-            }
-
-            if (file) {
-                formData.append("file", file);
-            }
+            if (note.trim()) formData.append("note", note.trim());
+            if (file) formData.append("file", file);
 
             const endpoint =
                 mode === "advance"
                     ? `/purchasing/api/v1/tasks/${task.id}/advance/`
                     : `/purchasing/api/v1/tasks/${task.id}/revert/`;
 
-            await axiosInstance.post(endpoint, formData);
+            await axiosInstance.post(endpoint, formData, {
+                headers: { "Content-Type": undefined },
+            });
 
             onCompleted();
-        } catch (err: any) {
-            setError(
-                err?.response?.data?.detail ||
-                err?.response?.data?.message ||
-                err?.response?.data?.error ||
-                "عملیات انجام نشد."
-            );
+        } catch (err: unknown) {
+            setError(parseApiError(err));
         } finally {
             setLoading(false);
         }
     };
+
+    const canSubmit =
+        !loading &&
+        !accessLoading &&
+        !!currentPurchasingId &&
+        (isAdmin || (isEmployee && hasAccess));
 
     return (
         <AnimatePresence>
@@ -106,29 +156,17 @@ export default function TaskActionModal({
                     dir="rtl"
                 >
                     <motion.div
-                        initial={{
-                            opacity: 0,
-                            scale: 0.96,
-                            y: 12,
-                        }}
-                        animate={{
-                            opacity: 1,
-                            scale: 1,
-                            y: 0,
-                        }}
-                        exit={{
-                            opacity: 0,
-                            scale: 0.96,
-                            y: 12,
-                        }}
+                        initial={{ opacity: 0, scale: 0.96, y: 12 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.96, y: 12 }}
                         className="w-full max-w-[430px] overflow-hidden rounded-[2rem] border border-[#DCEAFB] bg-white shadow-2xl dark:border-[rgba(96,165,250,0.14)] dark:bg-[#0A1930]"
                     >
                         <div className="flex items-center justify-between border-b border-[#DCEAFB] px-5 py-4 dark:border-[rgba(96,165,250,0.12)]">
                             <div className="flex items-center gap-3">
                                 <div
                                     className={`flex h-9 w-9 items-center justify-center rounded-xl ${mode === "advance"
-                                        ? "bg-[#2563EB]/10 text-[#2563EB] dark:text-[#38BDF8]"
-                                        : "bg-[#F43F5E]/10 text-[#F43F5E]"
+                                            ? "bg-[#2563EB]/10 text-[#2563EB] dark:text-[#38BDF8]"
+                                            : "bg-[#F43F5E]/10 text-[#F43F5E]"
                                         }`}
                                 >
                                     {mode === "advance" ? (
@@ -144,7 +182,6 @@ export default function TaskActionModal({
                                             ? "انتقال به مرحله بعد"
                                             : "بازگشت به مرحله قبل"}
                                     </h3>
-
                                     <p className="mt-0.5 max-w-[230px] truncate text-[9.5px] text-[#5D7595] dark:text-[#8FAAD1]">
                                         {task.product_name}
                                     </p>
@@ -163,48 +200,35 @@ export default function TaskActionModal({
 
                         <div className="p-5">
                             <div className="flex flex-col gap-4">
-                                <FloatingSelect
-                                    label="کارمند انجام‌دهنده"
-                                    value={createdById}
-                                    onChange={(e) =>
-                                        setCreatedById(
-                                            e.target.value
-                                        )
-                                    }
-                                >
-                                    <option value="" className={OPTION_CLASS}>
-                                        انتخاب کارمند
-                                    </option>
-
-                                    {employees.map(
-                                        (employee) => (
-                                            <option
-                                                key={
-                                                    employee.id
-                                                }
-                                                value={
-                                                    employee.employee
-                                                }
-                                                className={OPTION_CLASS}
-                                            >
-                                                {
-                                                    employee.employee_name
-                                                }
-                                            </option>
-                                        )
-                                    )}
-                                </FloatingSelect>
+                                <div className="flex items-center gap-2.5 rounded-2xl border border-[#2563EB]/20 bg-[#2563EB]/5 px-3 py-2.5 dark:bg-[#2563EB]/10">
+                                    <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#2563EB]/15 text-[#2563EB] dark:text-[#38BDF8]">
+                                        <UserCheck size={14} />
+                                    </div>
+                                    <div className="min-w-0 flex-1">
+                                        <p className="text-[9px] font-bold text-[#5D7595] dark:text-[#8FAAD1]">
+                                            انجام‌دهنده (به‌صورت خودکار)
+                                        </p>
+                                        <p className="truncate text-[11px] font-extrabold text-[#0F2647] dark:text-white">
+                                            {currentEmployeeName
+                                                ? isAdmin
+                                                    ? `${currentEmployeeName} (ادمین)`
+                                                    : currentEmployeeName
+                                                : "در حال شناسایی..."}
+                                        </p>
+                                        {currentPurchasingId !== null && (
+                                            <p className="mt-0.5 text-[8.5px] text-[#5D7595] dark:text-[#8FAAD1]">
+                                                شناسه خرید: {currentPurchasingId}
+                                            </p>
+                                        )}
+                                    </div>
+                                </div>
 
                                 <FloatingTextarea
                                     label={
-                                        mode === "advance"
-                                            ? "یادداشت انتقال"
-                                            : "دلیل بازگشت"
+                                        mode === "advance" ? "یادداشت انتقال" : "دلیل بازگشت"
                                     }
                                     value={note}
-                                    onChange={(e) =>
-                                        setNote(e.target.value)
-                                    }
+                                    onChange={(e) => setNote(e.target.value)}
                                     placeholder=" "
                                     rows={4}
                                 />
@@ -213,13 +237,7 @@ export default function TaskActionModal({
                                     <input
                                         type="file"
                                         className="hidden"
-                                        onChange={(e) =>
-                                            setFile(
-                                                e.target
-                                                    .files?.[0] ??
-                                                null
-                                            )
-                                        }
+                                        onChange={(e) => setFile(e.target.files?.[0] ?? null)}
                                     />
 
                                     {file ? (
@@ -228,10 +246,19 @@ export default function TaskActionModal({
                                                 size={19}
                                                 className="text-[#2563EB] dark:text-[#38BDF8]"
                                             />
-
                                             <span className="mt-2 max-w-full truncate text-[10px] font-bold text-[#3D5B82] dark:text-[#C7D9F2]">
                                                 {file.name}
                                             </span>
+                                            <button
+                                                type="button"
+                                                onClick={(e) => {
+                                                    e.preventDefault();
+                                                    setFile(null);
+                                                }}
+                                                className="mt-2 text-[9px] font-bold text-rose-500"
+                                            >
+                                                حذف فایل
+                                            </button>
                                         </>
                                     ) : (
                                         <>
@@ -239,11 +266,9 @@ export default function TaskActionModal({
                                                 size={19}
                                                 className="text-[#5D7595] group-hover:text-[#2563EB] dark:text-[#8FAAD1] dark:group-hover:text-[#38BDF8]"
                                             />
-
                                             <span className="mt-2 text-[10px] font-bold text-[#5D7595] dark:text-[#8FAAD1]">
                                                 افزودن فایل
                                             </span>
-
                                             <span className="mt-1 text-[8.5px] text-[#5D7595] dark:text-[#7C93B8]">
                                                 اختیاری
                                             </span>
@@ -252,7 +277,7 @@ export default function TaskActionModal({
                                 </label>
 
                                 {error && (
-                                    <div className="rounded-2xl bg-rose-500/10 px-3 py-2.5 text-[10px] font-semibold text-rose-500">
+                                    <div className="rounded-2xl bg-rose-500/10 px-3 py-2.5 text-[10px] font-semibold leading-5 text-rose-500">
                                         {error}
                                     </div>
                                 )}
@@ -270,34 +295,21 @@ export default function TaskActionModal({
                                     <button
                                         type="button"
                                         onClick={submit}
-                                        disabled={
-                                            loading ||
-                                            !employees.length
-                                        }
+                                        disabled={!canSubmit}
                                         className={`flex flex-1 items-center justify-center gap-2 rounded-2xl py-3 text-[10.5px] font-bold text-white shadow-lg disabled:opacity-50 disabled:shadow-none ${mode === "advance"
-                                            ? "bg-gradient-to-r from-[#2563EB] to-[#0EA5E9] shadow-[#2563EB]/25 hover:brightness-110"
-                                            : "bg-[#F43F5E] shadow-[#F43F5E]/25 hover:bg-rose-600"
+                                                ? "bg-gradient-to-r from-[#2563EB] to-[#0EA5E9] shadow-[#2563EB]/25 hover:brightness-110"
+                                                : "bg-[#F43F5E] shadow-[#F43F5E]/25 hover:bg-rose-600"
                                             }`}
                                     >
                                         {loading ? (
-                                            <Loader2
-                                                size={14}
-                                                className="animate-spin"
-                                            />
-                                        ) : mode ===
-                                            "advance" ? (
+                                            <Loader2 size={14} className="animate-spin" />
+                                        ) : mode === "advance" ? (
                                             <>
-                                                انتقال
-                                                <ArrowLeft
-                                                    size={13}
-                                                />
+                                                انتقال <ArrowLeft size={13} />
                                             </>
                                         ) : (
                                             <>
-                                                بازگشت
-                                                <ArrowRight
-                                                    size={13}
-                                                />
+                                                بازگشت <ArrowRight size={13} />
                                             </>
                                         )}
                                     </button>

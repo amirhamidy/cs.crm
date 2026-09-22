@@ -225,6 +225,7 @@ export default function WarehouseEmployeeTaskCard({
         setError("");
 
         if (action === "reopen") {
+
             try {
                 setSubmitting(true);
                 const response = await axiosInstance.post(
@@ -269,11 +270,16 @@ export default function WarehouseEmployeeTaskCard({
                 action === "complete"
                     ? `/warehouse/api/v1/task/${task.id}/complete/`
                     : `/warehouse/api/v1/task/${task.id}/cancel/`;
+
+            console.log("submitting to:", endpoint, "employeeId:", employeeId, "task:", task);
+            console.log("formData entries:", Array.from(formData.entries()));
+
             const response = await axiosInstance.post(endpoint, formData);
             const updatedTask = response.data?.warehouse_task ?? response.data;
             if (updatedTask) onUpdated?.(updatedTask);
             setAction(null);
         } catch (err) {
+            console.log("submitAction error:", err);
             setError(getErrorMessage(err));
         } finally {
             setSubmitting(false);
@@ -409,8 +415,8 @@ export default function WarehouseEmployeeTaskCard({
                         </p>
                         <p
                             className={`mt-0.5 text-[13px] font-black ${received >= expected && expected > 0
-                                    ? "text-emerald-500"
-                                    : "text-gray-800 dark:text-white"
+                                ? "text-emerald-500"
+                                : "text-gray-800 dark:text-white"
                                 }`}
                         >
                             {task.received_quantity === null ||

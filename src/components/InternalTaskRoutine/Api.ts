@@ -95,12 +95,23 @@ export function uploadInternalTaskAttachments(
 
 export function completeInternalTask(id: number, files: File[], note: string) {
   const formData = new FormData();
+
   files.forEach((file) => {
     formData.append("files", file);
   });
+
   if (note.trim()) {
     formData.append("note", note.trim());
   }
+
+  console.log("COMPLETE TASK ID:", id);
+  console.log("COMPLETE TASK FILES:", files);
+  console.log("COMPLETE TASK NOTE:", note);
+
+  for (const [key, value] of formData.entries()) {
+    console.log("FORM DATA:", key, value);
+  }
+
   return axiosInstance.post<InternalTask>(
     `/tasks/api/v1/internal_task/${id}/complete/`,
     formData,
@@ -109,18 +120,28 @@ export function completeInternalTask(id: number, files: File[], note: string) {
 
 export function cancelInternalTask(id: number, files: File[], note: string) {
   const formData = new FormData();
+
   files.forEach((file) => {
     formData.append("files", file);
   });
+
   if (note.trim()) {
     formData.append("note", note.trim());
   }
+
+  console.log("CANCEL TASK ID:", id);
+  console.log("CANCEL TASK FILES:", files);
+  console.log("CANCEL TASK NOTE:", note);
+
+  for (const [key, value] of formData.entries()) {
+    console.log("FORM DATA:", key, value);
+  }
+
   return axiosInstance.post<InternalTask>(
     `/tasks/api/v1/internal_task/${id}/cancel/`,
     formData,
   );
 }
-
 export function getInternalTaskAttachmentUrl(
   taskId: number,
   attachmentId: number,

@@ -5,8 +5,11 @@ import { AnimatePresence, motion } from "framer-motion";
 import {
     ClipboardList,
     ListOrdered,
+    Paperclip,
     Plus,
     RefreshCw,
+    ShieldCheck,
+    UserCheck,
     Users,
 } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
@@ -22,14 +25,13 @@ import StepCard from "./StepCard";
 import StepModal from "./StepModal";
 import TaskCard from "./TaskCard";
 import PurchasingOverview from "./PurchasingOverview";
+import TaskAttachmentsPanel from "./TaskAttachmentsPanel";
+import { usePurchasingAccess } from "@/hooks/usePurchasingAccess";
 
-type Tab = "overview" | "tasks" | "steps" | "employees";
+type Tab = "overview" | "tasks" | "attachments" | "steps" | "employees";
 
 const normalizeList = <T,>(value: unknown): T[] => {
-    if (Array.isArray(value)) {
-        return value as T[];
-    }
-
+    if (Array.isArray(value)) return value as T[];
     if (
         value &&
         typeof value === "object" &&
@@ -38,11 +40,16 @@ const normalizeList = <T,>(value: unknown): T[] => {
     ) {
         return (value as { results: T[] }).results;
     }
-
     return [];
 };
 
 export default function PurchasingPage() {
+    const {
+        isAdmin,
+        currentEmployeeId,
+        currentEmployeeName,
+    } = usePurchasingAccess();
+
     const [employees, setEmployees] = useState<ApiPurchasingEmployee[]>([]);
     const [steps, setSteps] = useState<ApiPurchasingStep[]>([]);
     const [tasks, setTasks] = useState<ApiPurchasingTask[]>([]);
@@ -59,11 +66,8 @@ export default function PurchasingPage() {
 
     const loadAll = useCallback(async (silent = false) => {
         try {
-            if (silent) {
-                setRefreshing(true);
-            } else {
-                setLoading(true);
-            }
+            if (silent) setRefreshing(true);
+            else setLoading(true);
 
             const [
                 employeesResponse,
@@ -119,26 +123,11 @@ export default function PurchasingPage() {
     };
 
     const tabs = [
-        {
-            id: "overview" as const,
-            label: "نمای کلی",
-            icon: ClipboardList,
-        },
-        {
-            id: "tasks" as const,
-            label: "تسک‌ها",
-            icon: ClipboardList,
-        },
-        {
-            id: "steps" as const,
-            label: "مراحل",
-            icon: ListOrdered,
-        },
-        {
-            id: "employees" as const,
-            label: "کارمندان",
-            icon: Users,
-        },
+        { id: "overview" as const, label: "نمای کلی", icon: ClipboardList },
+        { id: "tasks" as const, label: "تسک‌ها", icon: ClipboardList },
+        { id: "attachments" as const, label: "پیوست‌ها", icon: Paperclip },
+        { id: "steps" as const, label: "مراحل", icon: ListOrdered },
+        { id: "employees" as const, label: "کارمندان", icon: Users },
     ];
 
     const safeEmployees = employees ?? [];
@@ -175,24 +164,38 @@ export default function PurchasingPage() {
                                 <h1 className="truncate text-[17px] font-black tracking-tight sm:text-[19px]">
                                     مدیریت خرید
                                 </h1>
-
                                 <p className="mt-0.5 text-[11px] font-medium text-[#5D7595] dark:text-[#8FAAD1] sm:text-[12px]">
                                     مدیریت مراحل، کارمندان و فرآیندهای خرید
                                 </p>
                             </div>
                         </div>
 
-                        <button
-                            type="button"
-                            onClick={() => loadAll(true)}
-                            disabled={loading || refreshing}
-                            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-[#DCEAFB] bg-white text-[#2563EB] transition hover:border-[#2563EB]/40 hover:bg-[#EEF5FF] disabled:cursor-not-allowed disabled:opacity-50 dark:border-[rgba(96,165,250,0.16)] dark:bg-[rgba(96,165,250,0.06)] dark:text-[#38BDF8] dark:hover:border-[#38BDF8]/40 dark:hover:bg-[rgba(96,165,250,0.12)]"
-                        >
-                            <RefreshCw
-                                size={16}
-                                className={refreshing ? "animate-spin" : ""}
-                            />
-                        </button>
+                        <div className="flex items-center gap-2">
+                            <div
+                                className={`hidden items-center gap-1.5 rounded-2xl px-3 py-2 text-[10px] font-extrabold sm:flex ${isAdmin
+                                        ? "bg-gradient-to-r from-[#2563EB]/15 to-[#0EA5E9]/15 text-[#2563EB] dark:text-[#38BDF8]"
+                                        : "bg-[#06B6D4]/12 text-[#0891B2] dark:text-[#22D3EE]"
+                                    }`}
+                            >
+                                {isAdmin ? <ShieldCheck size={12} /> : <UserCheck size={12} />}
+                                <span>
+                                    {isAdmin ? "ادمین" : "کارمند"}
+                                    {currentEmployeeName ? ` · ${currentEmployeeName}` : ""}
+                                </span>
+                            </div>
+
+                            <button
+                                type="button"
+                                onClick={() => loadAll(true)}
+                                disabled={loading || refreshing}
+                                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-[#DCEAFB] bg-white text-[#2563EB] transition hover:border-[#2563EB]/40 hover:bg-[#EEF5FF] disabled:cursor-not-allowed disabled:opacity-50 dark:border-[rgba(96,165,250,0.16)] dark:bg-[rgba(96,165,250,0.06)] dark:text-[#38BDF8] dark:hover:border-[#38BDF8]/40 dark:hover:bg-[rgba(96,165,250,0.12)]"
+                            >
+                                <RefreshCw
+                                    size={16}
+                                    className={refreshing ? "animate-spin" : ""}
+                                />
+                            </button>
+                        </div>
                     </div>
 
                     <div className="relative flex w-full overflow-x-auto rounded-2xl border border-[#DCEAFB] bg-[#F3F8FF] p-1 dark:border-[rgba(96,165,250,0.14)] dark:bg-[rgba(96,165,250,0.05)]">
@@ -206,8 +209,8 @@ export default function PurchasingPage() {
                                     type="button"
                                     onClick={() => setActiveTab(tab.id)}
                                     className={`relative flex min-w-[105px] flex-1 items-center justify-center gap-1.5 rounded-xl px-3 py-2.5 text-[11px] font-bold transition sm:text-[12px] ${active
-                                        ? "text-white"
-                                        : "text-[#5D7595] hover:text-[#2563EB] dark:text-[#8FAAD1] dark:hover:text-[#38BDF8]"
+                                            ? "text-white"
+                                            : "text-[#5D7595] hover:text-[#2563EB] dark:text-[#8FAAD1] dark:hover:text-[#38BDF8]"
                                         }`}
                                 >
                                     {active && (
@@ -223,7 +226,6 @@ export default function PurchasingPage() {
                                     )}
 
                                     <Icon size={15} className="relative z-10" />
-
                                     <span className="relative z-10 whitespace-nowrap">
                                         {tab.label}
                                     </span>
@@ -274,10 +276,7 @@ export default function PurchasingPage() {
                                             </div>
 
                                             <div>
-                                                <h2 className="text-[13px] font-black">
-                                                    تسک‌های خرید
-                                                </h2>
-
+                                                <h2 className="text-[13px] font-black">تسک‌های خرید</h2>
                                                 <p className="text-[10px] font-medium text-[#5D7595] dark:text-[#8FAAD1]">
                                                     {safeTasks.length} تسک
                                                 </p>
@@ -290,11 +289,9 @@ export default function PurchasingPage() {
                                             <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-[#EEF5FF] text-[#2563EB] dark:bg-[rgba(96,165,250,0.08)] dark:text-[#38BDF8]">
                                                 <ClipboardList size={21} />
                                             </div>
-
                                             <span className="text-[13px] font-bold text-[#3D5B82] dark:text-[#C7D9F2]">
                                                 تسکی وجود ندارد
                                             </span>
-
                                             <span className="mt-1 text-[10px] text-[#5D7595] dark:text-[#8FAAD1]">
                                                 در حال حاضر هیچ تسک خریدی ثبت نشده است
                                             </span>
@@ -306,21 +303,20 @@ export default function PurchasingPage() {
                                                     key={task.id}
                                                     task={task}
                                                     index={index}
-                                                    employees={safeEmployees}
                                                     steps={safeSteps}
                                                     attachments={safeAttachments.filter(
-                                                        (attachment) =>
-                                                            attachment.task ===
-                                                            task.id
+                                                        (attachment) => attachment.task === task.id
                                                     )}
-                                                    onUpdated={() =>
-                                                        loadAll(true)
-                                                    }
+                                                    onUpdated={() => loadAll(true)}
                                                 />
                                             ))}
                                         </div>
                                     )}
                                 </div>
+                            )}
+
+                            {activeTab === "attachments" && (
+                                <TaskAttachmentsPanel attachments={safeAttachments} />
                             )}
 
                             {activeTab === "steps" && (
@@ -330,12 +326,8 @@ export default function PurchasingPage() {
                                             <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#2563EB]/10 text-[#2563EB] dark:text-[#38BDF8]">
                                                 <ListOrdered size={16} />
                                             </div>
-
                                             <div>
-                                                <h2 className="text-[13px] font-black">
-                                                    مراحل خرید
-                                                </h2>
-
+                                                <h2 className="text-[13px] font-black">مراحل خرید</h2>
                                                 <p className="text-[10px] font-medium text-[#5D7595] dark:text-[#8FAAD1]">
                                                     {safeSteps.length} مرحله
                                                 </p>
@@ -360,11 +352,9 @@ export default function PurchasingPage() {
                                             <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-[#EEF5FF] text-[#2563EB] dark:bg-[rgba(96,165,250,0.08)] dark:text-[#38BDF8]">
                                                 <ListOrdered size={21} />
                                             </div>
-
                                             <span className="text-[13px] font-bold text-[#3D5B82] dark:text-[#C7D9F2]">
                                                 مرحله‌ای وجود ندارد
                                             </span>
-
                                             <span className="mt-1 text-[10px] text-[#5D7595] dark:text-[#8FAAD1]">
                                                 اولین مرحله فرآیند خرید را ایجاد کنید
                                             </span>
@@ -376,12 +366,8 @@ export default function PurchasingPage() {
                                                     key={step.id}
                                                     step={step}
                                                     index={index}
-                                                    onDeleted={() =>
-                                                        loadAll(true)
-                                                    }
-                                                    onEdit={() =>
-                                                        handleStepEdit(step)
-                                                    }
+                                                    onDeleted={() => loadAll(true)}
+                                                    onEdit={() => handleStepEdit(step)}
                                                 />
                                             ))}
                                         </div>
@@ -396,28 +382,24 @@ export default function PurchasingPage() {
                                             <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#2563EB]/10 text-[#2563EB] dark:text-[#38BDF8]">
                                                 <Users size={16} />
                                             </div>
-
                                             <div>
-                                                <h2 className="text-[13px] font-black">
-                                                    کارمندان خرید
-                                                </h2>
-
+                                                <h2 className="text-[13px] font-black">کارمندان خرید</h2>
                                                 <p className="text-[10px] font-medium text-[#5D7595] dark:text-[#8FAAD1]">
                                                     {safeEmployees.length} کارمند
                                                 </p>
                                             </div>
                                         </div>
 
-                                        <button
-                                            type="button"
-                                            onClick={() =>
-                                                setEmployeeModalOpen(true)
-                                            }
-                                            className="flex h-9 items-center gap-1.5 rounded-xl bg-gradient-to-r from-[#2563EB] to-[#0EA5E9] px-3 text-[11px] font-bold text-white shadow-lg shadow-[#2563EB]/25 transition hover:brightness-110"
-                                        >
-                                            <Plus size={15} />
-                                            <span>افزودن کارمند</span>
-                                        </button>
+                                        {isAdmin && (
+                                            <button
+                                                type="button"
+                                                onClick={() => setEmployeeModalOpen(true)}
+                                                className="flex h-9 items-center gap-1.5 rounded-xl bg-gradient-to-r from-[#2563EB] to-[#0EA5E9] px-3 text-[11px] font-bold text-white shadow-lg shadow-[#2563EB]/25 transition hover:brightness-110"
+                                            >
+                                                <Plus size={15} />
+                                                <span>افزودن کارمند</span>
+                                            </button>
+                                        )}
                                     </div>
 
                                     {safeEmployees.length === 0 ? (
@@ -425,32 +407,25 @@ export default function PurchasingPage() {
                                             <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-[#EEF5FF] text-[#2563EB] dark:bg-[rgba(96,165,250,0.08)] dark:text-[#38BDF8]">
                                                 <Users size={21} />
                                             </div>
-
                                             <span className="text-[13px] font-bold text-[#3D5B82] dark:text-[#C7D9F2]">
                                                 کارمندی اضافه نشده است
                                             </span>
-
                                             <span className="mt-1 text-[10px] text-[#5D7595] dark:text-[#8FAAD1]">
                                                 برای فرآیند خرید کارمند اضافه کنید
                                             </span>
                                         </div>
                                     ) : (
                                         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                                            {safeEmployees.map(
-                                                (employee, index) => (
-                                                    <PurchasingEmployeeCard
-                                                        key={employee.id}
-                                                        employee={employee}
-                                                        index={index}
-                                                        onUpdated={() =>
-                                                            loadAll(true)
-                                                        }
-                                                        onDeleted={() =>
-                                                            loadAll(true)
-                                                        }
-                                                    />
-                                                )
-                                            )}
+                                            {safeEmployees.map((employee, index) => (
+                                                <PurchasingEmployeeCard
+                                                    key={employee.id}
+                                                    employee={employee}
+                                                    index={index}
+                                                    canManage={isAdmin}
+                                                    onUpdated={() => loadAll(true)}
+                                                    onDeleted={() => loadAll(true)}
+                                                />
+                                            ))}
                                         </div>
                                     )}
                                 </div>
@@ -460,15 +435,17 @@ export default function PurchasingPage() {
                 </AnimatePresence>
             </div>
 
-            <PurchasingEmployeeModal
-                open={employeeModalOpen}
-                onClose={() => setEmployeeModalOpen(false)}
-                existingEmployees={safeEmployees}
-                onSaved={() => {
-                    setEmployeeModalOpen(false);
-                    loadAll(true);
-                }}
-            />
+            {isAdmin && (
+                <PurchasingEmployeeModal
+                    open={employeeModalOpen}
+                    onClose={() => setEmployeeModalOpen(false)}
+                    existingEmployees={safeEmployees}
+                    onSaved={() => {
+                        setEmployeeModalOpen(false);
+                        loadAll(true);
+                    }}
+                />
+            )}
 
             <StepModal
                 open={stepModalOpen}
