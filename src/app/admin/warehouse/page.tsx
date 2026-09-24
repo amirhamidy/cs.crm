@@ -806,15 +806,7 @@ export default function WarehouseEmployeePage() {
         }
     }, [hasFullWarehouseAccess, tab]);
 
-    const resolvedEmployeeId =
-        myStaff?.employee_id ??
-        myStaff?.employee ??
-        employeeId;
-
-    const taskEmployeeId =
-        resolvedEmployeeId == null
-            ? null
-            : Number(resolvedEmployeeId);
+    const taskEmployeeId = myStaff?.id ?? null;
 
     const fetchWarehouseStaff = useCallback(async (silent?: boolean) => {
         const isSilent = silent === true;

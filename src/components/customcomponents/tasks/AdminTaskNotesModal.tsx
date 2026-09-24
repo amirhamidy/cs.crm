@@ -62,7 +62,7 @@ interface Props {
     taskTitle: string;
 }
 
-const MEDIA_BASE = "https://api.radcocrm.ir";
+const MEDIA_BASE = "https://api.crmradco.ir";
 
 const ACTION_META: Record<
     string,
