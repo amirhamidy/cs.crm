@@ -1,12 +1,19 @@
 export type QualityControlStatus = "pending" | "approved" | "rejected";
 
+export interface ApiMe {
+  id: number;
+  username: string;
+  phone_number?: string;
+  type: number;
+}
+
 export interface ApiQualityControlItem {
   id: number;
   purchase_task_id: number;
   product_name: string;
   status: QualityControlStatus;
   status_display: string;
-  note: string | null;
+  note: string;
   file: string | null;
   checked_by: number | null;
   checked_by_name: string | null;
@@ -26,42 +33,39 @@ export interface ApiQualityControlEmployee {
 export interface ApiUser {
   id: number;
   username: string;
-  first_name?: string | null;
-  last_name?: string | null;
-  email?: string | null;
+  phone_number?: string;
+  first_name?: string;
+  last_name?: string;
+  type?: number;
   is_active?: boolean;
 }
 
 export interface QualityControlActionResponse {
-  detail: string;
-  quality_control_id: number;
-  warehouse_task_id?: number;
+  id?: number;
+  quality_control_id?: number;
   purchase_task_id?: number;
+  product_name?: string;
   status: QualityControlStatus;
-  current_step?: string;
+  status_display?: string;
+  note?: string;
+  file?: string | null;
+  checked_by?: number | null;
+  checked_by_name?: string | null;
+  checked_at?: string | null;
+  created_at?: string;
 }
 
 export const QC_STATUS_META: Record<
   QualityControlStatus,
-  {
-    label: string;
-    description: string;
-    icon: string;
-  }
+  { label: string; className: string }
 > = {
   pending: {
     label: "در انتظار بررسی",
-    description: "این مورد هنوز توسط کنترل کیفی بررسی نشده است",
-    icon: "pending",
+    className: "bg-amber-500/10 text-amber-500",
   },
   approved: {
     label: "تایید شده",
-    description: "کنترل کیفی این مورد را تایید کرده است",
-    icon: "approved",
+    className: "bg-emerald-500/10 text-emerald-500",
   },
-  rejected: {
-    label: "رد شده",
-    description: "این مورد توسط کنترل کیفی رد شده است",
-    icon: "rejected",
-  },
+  rejected: { label: "رد شده", className: "bg-red-500/10 text-red-500" },
 };

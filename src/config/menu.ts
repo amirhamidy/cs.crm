@@ -15,6 +15,7 @@ import {
   ShoppingCart,
   ShieldCheck,
 } from "lucide-react";
+
 import { LucideIcon } from "lucide-react";
 
 export interface MenuItem {
@@ -40,6 +41,11 @@ export const adminMenuItems: MenuItem[] = [
     href: "/admin/departments",
   },
   {
+    icon: Users,
+    label: "منابع انسانی",
+    href: "/admin/human-resources",
+  },
+  {
     icon: Boxes,
     label: "انبار",
     href: "/admin/warehouse",
@@ -54,7 +60,6 @@ export const adminMenuItems: MenuItem[] = [
     label: "کنترل کیفی",
     href: "/admin/qualityControl",
   },
-
   {
     icon: FolderKanban,
     label: "پرونده‌ها",
@@ -168,6 +173,11 @@ export const userMenuItems: MenuItem[] = [
     label: "بایگانی تیکت‌ها",
     href: "/user/Ticketarchive",
   },
+  // {
+  //   icon: Users,
+  //   label: "منابع انسانی",
+  //   href: "/user/human-resources",
+  // },
   {
     icon: CalendarCheck2,
     label: "تقویم",
