@@ -71,7 +71,6 @@ function extractProductName(
     return "محصول بدون نام";
 }
 
-/* ────────────────────── محاسبه‌ی وضعیت ────────────────────── */
 function getStatus(current: number, minimum: number, maximum: number): StockStatus {
     if (minimum > 0 && current <= minimum) return "critical";
     if (maximum > 0 && current / maximum < 0.35) return "low";
