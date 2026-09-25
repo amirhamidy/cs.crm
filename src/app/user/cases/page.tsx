@@ -71,7 +71,6 @@ export default function UserCasesPage() {
                     axiosInstance.get<ListResponse<Employee>>(
                         "/accounts/api/v1/employee/list/"
                     ),
-                    // همه‌ی صفحات وظیفه‌ها، مستقیم از API
                     fetchAllTasks(),
                 ]);
 
@@ -118,7 +117,6 @@ export default function UserCasesPage() {
         return map;
     }, [tasks]);
 
-    // وقتی مودال وظیفه‌ها از API دیتای تازه گرفت، عدد روی کارت هم هماهنگ می‌شه
     const syncCaseTasks = useCallback(
         (caseId: string, fresh: TaskItem[]) => {
             setTasks((prev) => [
@@ -134,7 +132,6 @@ export default function UserCasesPage() {
             const id = Number(item.id);
             if (!id) return;
 
-            // قبل از حذف، از خود API چک می‌کنیم که وظیفه‌ای نمونده باشه
             const freshTasks = await fetchAllTasks({ caseId: item.id });
             if (freshTasks.length > 0) {
                 syncCaseTasks(String(item.id), freshTasks);
@@ -185,7 +182,6 @@ export default function UserCasesPage() {
 
     const handleTaskUpdate = useCallback(() => {
         fetchData();
-        // مودال وظیفه‌ها هم دوباره از API می‌خونه
         setTasksRefreshKey((k) => k + 1);
         setEditTaskModalOpen(false);
         setEditingTask(null);

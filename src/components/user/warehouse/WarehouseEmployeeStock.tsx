@@ -45,23 +45,20 @@ function extractProductName(
 ): string {
     const data = stock as unknown as Record<string, unknown>;
 
-    // 1. اگه productNames پاس داده شده، اول ازش بگیر
-    const productId = Number(data.product ?? data.product_id);
+     const productId = Number(data.product ?? data.product_id);
     if (productNames && Number.isFinite(productId)) {
         const named = productNames[productId];
         if (named) return named;
     }
 
-    // 2. فیلدهای مستقیم روی stock
-    const direct =
+     const direct =
         data.product_name ??
         data.product_title ??
         data.name ??
         data.title;
     if (typeof direct === "string" && direct.trim()) return direct.trim();
 
-    // 3. nested product_detail / product_obj
-    for (const key of ["product_detail", "product_obj", "product_data"]) {
+     for (const key of ["product_detail", "product_obj", "product_data"]) {
         const nested = data[key];
         if (nested && typeof nested === "object") {
             const n = nested as Record<string, unknown>;
@@ -70,8 +67,7 @@ function extractProductName(
         }
     }
 
-    // 4. fallback
-    if (Number.isFinite(productId)) return `محصول #${productId}`;
+     if (Number.isFinite(productId)) return `محصول #${productId}`;
     return "محصول بدون نام";
 }
 

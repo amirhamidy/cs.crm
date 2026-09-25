@@ -302,13 +302,7 @@ function StatsBar({
             color: isDark ? "#6ee7b7" : "#10b981",
             bg: isDark ? "rgba(16,185,129,0.14)" : "rgba(16,185,129,0.08)",
         },
-        // {
-        //     icon: ClipboardList,
-        //     label: "وظایف در انتظار",
-        //     value: toPersianDigits(pendingCount),
-        //     color: isDark ? "#fcd34d" : "#f59e0b",
-        //     bg: isDark ? "rgba(245,158,11,0.14)" : "rgba(245,158,11,0.08)",
-        // },
+       
     ];
 
     return (

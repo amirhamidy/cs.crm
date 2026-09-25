@@ -89,7 +89,6 @@ export default function CaseTasksModal({
     const [confirmId, setConfirmId] = useState<number | null>(null);
     const [deleteError, setDeleteError] = useState("");
 
-    // callback والد رو توی ref نگه می‌داریم تا effect بی‌دلیل دوباره اجرا نشه
     const onTasksLoadedRef = useRef(onTasksLoaded);
     useEffect(() => {
         onTasksLoadedRef.current = onTasksLoaded;
@@ -97,7 +96,6 @@ export default function CaseTasksModal({
 
     const caseId = caseItem?.id !== undefined ? String(caseItem.id) : null;
 
-    // هر بار باز شدن مودال / عوض شدن پرونده / refresh: مستقیم از API
     useEffect(() => {
         if (!isOpen || !caseId) return;
 
@@ -130,7 +128,6 @@ export default function CaseTasksModal({
         };
     }, [isOpen, caseId, refreshKey, reloadTick]);
 
-    // موقع بسته شدن هیچ داده‌ای نگه نمی‌داریم
     useEffect(() => {
         if (!isOpen) {
             setTasks([]);
@@ -182,7 +179,6 @@ export default function CaseTasksModal({
         try {
             await onDeleteTask(taskId);
             setConfirmId(null);
-            // بعد از حذف دوباره از خود API می‌خونیم
             setReloadTick((n) => n + 1);
         } catch (e) {
             setDeleteError(e instanceof Error ? e.message : "خطا در حذف وظیفه");

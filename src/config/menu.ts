@@ -173,11 +173,6 @@ export const userMenuItems: MenuItem[] = [
     label: "بایگانی تیکت‌ها",
     href: "/user/Ticketarchive",
   },
-  // {
-  //   icon: Users,
-  //   label: "منابع انسانی",
-  //   href: "/user/human-resources",
-  // },
   {
     icon: CalendarCheck2,
     label: "تقویم",
