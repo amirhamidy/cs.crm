@@ -16,10 +16,7 @@ import { matchesSearch, formatNumber } from "@/utils/warehouseEmployee";
 
 interface Props {
     stockInfos: ApiStockInfo[];
-    /**
-     * نقشه‌ی اختیاری برای نمایش نام محصول بر اساس productId
-     * اگه والد پاس بده، به جای fallback استفاده می‌شه
-     */
+
     productNames?: Record<number, string>;
 }
 
@@ -38,27 +35,26 @@ function gradientOf(seed: number) {
     return GRADIENTS[Math.abs(seed) % GRADIENTS.length];
 }
 
-/* ────────────────────── استخراج نام محصول از هر شکلی ────────────────────── */
 function extractProductName(
     stock: ApiStockInfo,
     productNames?: Record<number, string>
 ): string {
     const data = stock as unknown as Record<string, unknown>;
 
-     const productId = Number(data.product ?? data.product_id);
+    const productId = Number(data.product ?? data.product_id);
     if (productNames && Number.isFinite(productId)) {
         const named = productNames[productId];
         if (named) return named;
     }
 
-     const direct =
+    const direct =
         data.product_name ??
         data.product_title ??
         data.name ??
         data.title;
     if (typeof direct === "string" && direct.trim()) return direct.trim();
 
-     for (const key of ["product_detail", "product_obj", "product_data"]) {
+    for (const key of ["product_detail", "product_obj", "product_data"]) {
         const nested = data[key];
         if (nested && typeof nested === "object") {
             const n = nested as Record<string, unknown>;
@@ -67,7 +63,7 @@ function extractProductName(
         }
     }
 
-     if (Number.isFinite(productId)) return `محصول #${productId}`;
+    if (Number.isFinite(productId)) return `محصول #${productId}`;
     return "محصول بدون نام";
 }
 
@@ -104,7 +100,6 @@ const STATUS_STYLE: Record<
     },
 };
 
-/* ============================== component ============================== */
 
 export default function WarehouseEmployeeStock({
     stockInfos,
@@ -138,7 +133,6 @@ export default function WarehouseEmployeeStock({
 
     return (
         <section className="space-y-4">
-            {/* header + search */}
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-center gap-2.5">
                     <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50 dark:bg-blue-500/10">
@@ -177,7 +171,6 @@ export default function WarehouseEmployeeStock({
                 </div>
             </div>
 
-            {/* list */}
             {filtered.length ? (
                 <div className="grid gap-3 sm:grid-cols-2">
                     {filtered.map((stock, index) => {
@@ -240,7 +233,6 @@ export default function WarehouseEmployeeStock({
                                 whileHover={{ y: -2 }}
                                 className="group relative overflow-hidden rounded-3xl border border-gray-100 bg-white p-4 transition-colors hover:border-blue-200/60 dark:border-white/[0.06] dark:bg-[#0f172a] dark:hover:border-blue-500/20"
                             >
-                                {/* نوار رنگی بالای کارت */}
                                 <div
                                     className="pointer-events-none absolute inset-x-0 top-0 h-[3px] opacity-60 transition-opacity group-hover:opacity-100"
                                     style={{
@@ -249,7 +241,6 @@ export default function WarehouseEmployeeStock({
                                 />
 
                                 <div className="flex items-start gap-3">
-                                    {/* آواتار محصول با gradient */}
                                     <div
                                         className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl text-white"
                                         style={{
@@ -260,7 +251,6 @@ export default function WarehouseEmployeeStock({
                                     </div>
 
                                     <div className="min-w-0 flex-1">
-                                        {/* نام + وضعیت */}
                                         <div className="flex items-start justify-between gap-2">
                                             <div className="min-w-0">
                                                 <p className="truncate text-[13.5px] font-extrabold text-gray-900 dark:text-white">
@@ -281,7 +271,6 @@ export default function WarehouseEmployeeStock({
                                             </span>
                                         </div>
 
-                                        {/* اعداد */}
                                         <div className="mt-3.5 flex items-end justify-between">
                                             <div>
                                                 <p className="text-[10.5px] font-semibold text-gray-400">
@@ -304,7 +293,6 @@ export default function WarehouseEmployeeStock({
                                             </div>
                                         </div>
 
-                                        {/* progress bar */}
                                         <div className="mt-3 flex items-center gap-2">
                                             <div
                                                 className="h-1.5 flex-1 overflow-hidden rounded-full"
@@ -340,10 +328,10 @@ export default function WarehouseEmployeeStock({
                                             </div>
                                             <span
                                                 className={`shrink-0 text-[10.5px] font-bold ${status === "critical"
-                                                        ? "text-red-500"
-                                                        : status === "low"
-                                                            ? "text-amber-500"
-                                                            : "text-gray-400"
+                                                    ? "text-red-500"
+                                                    : status === "low"
+                                                        ? "text-amber-500"
+                                                        : "text-gray-400"
                                                     }`}
                                             >
                                                 {Math.round(percentage)}٪
