@@ -56,7 +56,7 @@ export interface CurrentUser {
 }
 
 const api = axios.create({
-  baseURL: "https://api.radcosys.ir",
+  baseURL: "https://api.radcosys.ir/",
 });
 
 api.interceptors.request.use((config) => {

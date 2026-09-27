@@ -50,6 +50,22 @@ const AVATAR_GRADIENTS = [
     ["#f59e0b", "#ef4444"],
 ] as const;
 
+const UNIT_SUB_LABELS: Record<string, string> = {
+    quantity_per_unit: "عدد",
+    gram: "گرم",
+    kilogram: "کیلوگرم",
+    milligram: "میلی‌گرم",
+    ton: "تن",
+    meter: "متر",
+    centimeter: "سانتی‌متر",
+    inch: "اینچ",
+    liter: "لیتر",
+    milliliter: "میلی‌لیتر",
+    gallon: "گالن",
+    square_meter: "متر مربع",
+    square_centimeter: "سانتی‌متر مربع",
+};
+
 function getErrorMessage(err: unknown, fallback: string) {
     const data = (err as AxiosError<Record<string, unknown>>).response?.data;
     if (!data) return fallback;
@@ -69,30 +85,87 @@ const formatPrice = (value: string | number) =>
 const formatQuantity = (value: number | null | undefined) =>
     Number(value ?? 0).toLocaleString("fa-IR");
 
-function getUnitText(product: ApiProduct, stock: ApiStockInfo | null) {
-    if (stock?.unit_label) return stock.unit_label;
+function getProductUnitDetail(product: ApiProduct) {
+    const type = product.unit_type;
+    const productData = product as ApiProduct & Record<string, unknown>;
 
-    const label = UNIT_TYPE_LABELS[product.unit_type] ?? "واحد";
-
-    if (product.unit_type === "count") {
-        const quantity = product.count_unit_detail?.quantity_per_unit;
-        return quantity
-            ? `${label} · ${formatQuantity(quantity)} در هر بسته`
-            : label;
-    }
-
-    const details = {
-        weight: product.weight_unit_detail,
-        volume: product.volume_unit_detail,
-        area: product.area_unit_detail,
-        dimension: product.dimension_unit_detail,
+    const detailKeys: Record<string, string> = {
+        count: "count_unit_detail",
+        weight: "weight_unit_detail",
+        dimension: "dimension_unit_detail",
+        volume: "volume_unit_detail",
+        area: "area_unit_detail",
     };
 
-    const quantity = details[product.unit_type]?.quantity_per_unit;
+    return productData[detailKeys[type]] as
+        | Record<string, unknown>
+        | undefined;
+}
 
-    return quantity
-        ? `${label} · ${formatQuantity(quantity)} در هر واحد`
-        : label;
+function getSelectedSubUnit(product: ApiProduct) {
+    const detail = getProductUnitDetail(product);
+    if (!detail) return null;
+
+    const directUnit =
+        typeof detail.unit === "string"
+            ? detail.unit
+            : typeof detail.unit_type === "string"
+                ? detail.unit_type
+                : typeof detail.sub_unit === "string"
+                    ? detail.sub_unit
+                    : null;
+
+    if (directUnit && UNIT_SUB_LABELS[directUnit]) return directUnit;
+
+    return (
+        Object.keys(detail).find(
+            (key) =>
+                key !== "id" &&
+                key !== "product" &&
+                key !== "quantity_per_unit" &&
+                detail[key] !== null &&
+                detail[key] !== undefined &&
+                UNIT_SUB_LABELS[key]
+        ) ?? (product.unit_type === "count" ? "quantity_per_unit" : null)
+    );
+}
+
+function getStockUnitText(product: ApiProduct, stock: ApiStockInfo | null) {
+    const selectedSubUnit = getSelectedSubUnit(product);
+
+    if (selectedSubUnit && UNIT_SUB_LABELS[selectedSubUnit]) {
+        return UNIT_SUB_LABELS[selectedSubUnit];
+    }
+
+    if (stock?.unit_label) return stock.unit_label;
+
+    return UNIT_TYPE_LABELS[product.unit_type] ?? "واحد";
+}
+
+function getUnitText(product: ApiProduct, stock: ApiStockInfo | null) {
+    const type = product.unit_type;
+    const label = UNIT_TYPE_LABELS[type] ?? "واحد";
+    const detail = getProductUnitDetail(product);
+
+    if (!detail) return stock?.unit_label ?? label;
+
+    const selectedSubUnit = getSelectedSubUnit(product);
+    const subLabel = selectedSubUnit
+        ? UNIT_SUB_LABELS[selectedSubUnit]
+        : undefined;
+
+    const quantity =
+        typeof detail.quantity_per_unit === "number"
+            ? detail.quantity_per_unit
+            : undefined;
+
+    if (subLabel && type === "count" && quantity && quantity !== 1) {
+        return `${subLabel} · ${formatQuantity(quantity)}`;
+    }
+
+    if (subLabel) return subLabel;
+
+    return stock?.unit_label ?? label;
 }
 
 export default function WarehouseEmployeeProductCard({
@@ -143,6 +216,7 @@ export default function WarehouseEmployeeProductCard({
         : 0;
 
     const unitText = getUnitText(product, stockInfo);
+    const stockUnitText = getStockUnitText(product, stockInfo);
 
     async function handleDelete() {
         setDeleting(true);
@@ -160,6 +234,9 @@ export default function WarehouseEmployeeProductCard({
             setDeleting(false);
         }
     }
+
+    const formatStockValue = (value: number | null | undefined) =>
+        `${formatQuantity(value)} ${stockUnitText}`;
 
     const refreshStock = () => {
         onStockChanged?.();
@@ -200,6 +277,7 @@ export default function WarehouseEmployeeProductCard({
                             <stop offset="100%" stopColor="#8b5cf6" />
                         </linearGradient>
                     </defs>
+
                     <motion.rect
                         x="1"
                         y="1"
@@ -301,7 +379,7 @@ export default function WarehouseEmployeeProductCard({
                     <div
                         className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-[15px] font-extrabold text-white shadow-lg"
                         style={{
-                            background: `linear-gradient(135deg,${start},${end})`,
+                            background: `linear-gradient(135deg, ${start}, ${end})`,
                         }}
                     >
                         {product.name.charAt(0)}
@@ -351,6 +429,7 @@ export default function WarehouseEmployeeProductCard({
                             <p className="text-[9.5px] font-semibold text-gray-400 dark:text-white/40">
                                 قیمت فروش
                             </p>
+
                             <p className="truncate text-[11.5px] font-extrabold text-gray-700 dark:text-white/85">
                                 {formatPrice(product.sale_price)}{" "}
                                 <span className="text-[9.5px] font-bold text-gray-400 dark:text-white/40">
@@ -383,6 +462,7 @@ export default function WarehouseEmployeeProductCard({
                             <p className="text-[9.5px] font-semibold text-gray-400 dark:text-white/40">
                                 واحد
                             </p>
+
                             <p className="truncate text-[11px] font-extrabold text-gray-700 dark:text-white/85">
                                 {unitText}
                             </p>
@@ -421,7 +501,7 @@ export default function WarehouseEmployeeProductCard({
                                     </p>
 
                                     <p className="mt-0.5 text-[12px] font-black text-gray-700 dark:text-white/85">
-                                        {formatQuantity(
+                                        {formatStockValue(
                                             stockInfo.minimum_stock
                                         )}
                                     </p>
@@ -464,7 +544,7 @@ export default function WarehouseEmployeeProductCard({
                                                     : "#0f172a",
                                         }}
                                     >
-                                        {formatQuantity(
+                                        {formatStockValue(
                                             stockInfo.current_quantity
                                         )}
                                     </p>
@@ -490,7 +570,7 @@ export default function WarehouseEmployeeProductCard({
                                     </p>
 
                                     <p className="mt-0.5 text-[12px] font-black text-gray-700 dark:text-white/85">
-                                        {formatQuantity(
+                                        {formatStockValue(
                                             stockInfo.maximum_stock
                                         )}
                                     </p>
@@ -537,28 +617,6 @@ export default function WarehouseEmployeeProductCard({
                                     />
                                 </div>
                             </div>
-
-                            <div className="mt-2 flex items-center justify-between text-[10px]">
-                                <span className="font-semibold text-gray-400 dark:text-white/40">
-                                    پرشدگی انبار
-                                </span>
-
-                                <span
-                                    className="font-extrabold"
-                                    style={{
-                                        color: isCritical
-                                            ? "#ef4444"
-                                            : isDark
-                                                ? "#e2e8f0"
-                                                : "#334155",
-                                    }}
-                                >
-                                    {Math.round(
-                                        stockPercentage
-                                    ).toLocaleString("fa-IR")}
-                                    ٪
-                                </span>
-                            </div>
                         </div>
                     ) : (
                         <div
@@ -576,6 +634,7 @@ export default function WarehouseEmployeeProductCard({
                                 size={13}
                                 className="text-amber-500"
                             />
+
                             <span className="text-[11.5px] font-bold text-amber-500">
                                 موجودی اولیه ثبت نشده است
                             </span>

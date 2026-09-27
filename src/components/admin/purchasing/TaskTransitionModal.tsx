@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { ArrowLeftCircle, ArrowRightCircle, FileUp, Loader2, Upload, UserCheck, X } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
@@ -59,8 +60,15 @@ function parseApiError(err: unknown): string {
     );
 }
 
-export default function TaskActionModal({ isOpen, onClose, mode, task, onCompleted }: Props) {
-    const { isAdmin, isEmployee, hasAccess, currentPurchasingId, currentEmployeeName, loading: accessLoading } = usePurchasingAccess();
+export default function TaskTransitionModal({ isOpen, onClose, mode, task, onCompleted }: Props) {
+    const {
+        isAdmin,
+        isEmployee,
+        hasAccess,
+        currentPurchasingId,
+        currentEmployeeName,
+        loading: accessLoading,
+    } = usePurchasingAccess();
 
     const [note, setNote] = useState("");
     const [file, setFile] = useState<File | null>(null);
@@ -77,7 +85,8 @@ export default function TaskActionModal({ isOpen, onClose, mode, task, onComplet
         setSubmitting(false);
     }, [isOpen]);
 
-    const canSubmit = !submitting && !accessLoading && !!currentPurchasingId && (isAdmin || (isEmployee && hasAccess));
+    const canSubmit =
+        !submitting && !accessLoading && !!currentPurchasingId && (isAdmin || (isEmployee && hasAccess));
 
     const handleSubmit = async () => {
         if (accessLoading) {
@@ -116,10 +125,15 @@ export default function TaskActionModal({ isOpen, onClose, mode, task, onComplet
         }
     };
 
-    return (
+    if (typeof document === "undefined") return null;
+
+    return createPortal(
         <AnimatePresence>
             {isOpen && (
-                <div className="fixed inset-0 z-[999] flex items-center justify-center bg-slate-950/55 px-4 backdrop-blur-sm" dir="rtl">
+                <div
+                    className="fixed inset-0 z-[999] flex items-center justify-center bg-slate-950/55 px-4 backdrop-blur-sm"
+                    dir="rtl"
+                >
                     <motion.div
                         initial={{ opacity: 0, scale: 0.96, y: 14 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -129,7 +143,9 @@ export default function TaskActionModal({ isOpen, onClose, mode, task, onComplet
                         <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4 dark:border-white/[0.06]">
                             <div className="flex items-center gap-3">
                                 <div
-                                    className={`flex h-9 w-9 items-center justify-center rounded-xl ${isAdvance ? "bg-indigo-500/10 text-indigo-500 dark:text-indigo-300" : "bg-rose-500/10 text-rose-500"
+                                    className={`flex h-9 w-9 items-center justify-center rounded-xl ${isAdvance
+                                            ? "bg-indigo-500/10 text-indigo-500 dark:text-indigo-300"
+                                            : "bg-rose-500/10 text-rose-500"
                                         }`}
                                 >
                                     {isAdvance ? <ArrowLeftCircle size={16} /> : <ArrowRightCircle size={16} />}
@@ -138,7 +154,9 @@ export default function TaskActionModal({ isOpen, onClose, mode, task, onComplet
                                     <h3 className="text-[13px] font-extrabold text-gray-900 dark:text-white">
                                         {isAdvance ? "انتقال به مرحله بعد" : "بازگشت به مرحله قبل"}
                                     </h3>
-                                    <p className="mt-0.5 max-w-[230px] truncate text-[10px] font-medium text-gray-400">{task.product_name}</p>
+                                    <p className="mt-0.5 max-w-[230px] truncate text-[10px] font-medium text-gray-400">
+                                        {task.product_name}
+                                    </p>
                                 </div>
                             </div>
                             <button
@@ -157,9 +175,15 @@ export default function TaskActionModal({ isOpen, onClose, mode, task, onComplet
                                     <UserCheck size={14} />
                                 </div>
                                 <div className="min-w-0 flex-1">
-                                    <p className="text-[9px] font-bold text-gray-400">انجام‌دهنده (به‌صورت خودکار)</p>
+                                    <p className="text-[9px] font-bold text-gray-400">
+                                        انجام‌دهنده (به‌صورت خودکار)
+                                    </p>
                                     <p className="truncate text-[11px] font-extrabold text-gray-900 dark:text-white">
-                                        {currentEmployeeName ? (isAdmin ? `${currentEmployeeName} (ادمین)` : currentEmployeeName) : "در حال شناسایی..."}
+                                        {currentEmployeeName
+                                            ? isAdmin
+                                                ? `${currentEmployeeName} (ادمین)`
+                                                : currentEmployeeName
+                                            : "در حال شناسایی..."}
                                     </p>
                                 </div>
                             </div>
@@ -173,11 +197,17 @@ export default function TaskActionModal({ isOpen, onClose, mode, task, onComplet
                             />
 
                             <label className="group flex cursor-pointer flex-col items-center justify-center rounded-[1.5rem] border border-dashed border-gray-200 bg-gray-50 px-4 py-6 transition hover:border-indigo-300 hover:bg-indigo-50/40 dark:border-white/[0.1] dark:bg-white/[0.03] dark:hover:bg-white/[0.05]">
-                                <input type="file" className="hidden" onChange={(event) => setFile(event.target.files?.[0] ?? null)} />
+                                <input
+                                    type="file"
+                                    className="hidden"
+                                    onChange={(event) => setFile(event.target.files?.[0] ?? null)}
+                                />
                                 {file ? (
                                     <>
                                         <FileUp size={19} className="text-indigo-500" />
-                                        <span className="mt-2 max-w-full truncate text-[10px] font-bold text-gray-600 dark:text-gray-300">{file.name}</span>
+                                        <span className="mt-2 max-w-full truncate text-[10px] font-bold text-gray-600 dark:text-gray-300">
+                                            {file.name}
+                                        </span>
                                         <button
                                             type="button"
                                             onClick={(event) => {
@@ -192,8 +222,12 @@ export default function TaskActionModal({ isOpen, onClose, mode, task, onComplet
                                 ) : (
                                     <>
                                         <Upload size={19} className="text-gray-400 group-hover:text-indigo-500" />
-                                        <span className="mt-2 text-[10px] font-bold text-gray-400 dark:text-gray-500">افزودن فایل</span>
-                                        <span className="mt-1 text-[8.5px] font-medium text-gray-400 dark:text-gray-500">اختیاری</span>
+                                        <span className="mt-2 text-[10px] font-bold text-gray-400 dark:text-gray-500">
+                                            افزودن فایل
+                                        </span>
+                                        <span className="mt-1 text-[8.5px] font-medium text-gray-400 dark:text-gray-500">
+                                            اختیاری
+                                        </span>
                                     </>
                                 )}
                             </label>
@@ -218,8 +252,8 @@ export default function TaskActionModal({ isOpen, onClose, mode, task, onComplet
                                     onClick={handleSubmit}
                                     disabled={!canSubmit}
                                     className={`flex flex-1 items-center justify-center gap-2 rounded-2xl py-3 text-[10.5px] font-extrabold text-white shadow-lg disabled:opacity-50 disabled:shadow-none ${isAdvance
-                                        ? "bg-gradient-to-r from-indigo-500 to-violet-500 shadow-indigo-500/25 hover:brightness-110"
-                                        : "bg-rose-500 shadow-rose-500/25 hover:bg-rose-600"
+                                            ? "bg-gradient-to-r from-indigo-500 to-violet-500 shadow-indigo-500/25 hover:brightness-110"
+                                            : "bg-rose-500 shadow-rose-500/25 hover:bg-rose-600"
                                         }`}
                                 >
                                     {submitting ? (
@@ -239,6 +273,7 @@ export default function TaskActionModal({ isOpen, onClose, mode, task, onComplet
                     </motion.div>
                 </div>
             )}
-        </AnimatePresence>
+        </AnimatePresence>,
+        document.body
     );
 }

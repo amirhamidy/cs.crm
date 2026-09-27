@@ -111,7 +111,7 @@ export default function Sidebar() {
             </motion.button>
 
             <a
-              href="https://radcosys.ir/"
+              href="https://radcosys.ir//"
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center justify-between gap-2 px-3 py-2 text-[11px] text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 transition-colors rounded-lg hover:bg-gray-100/50 dark:hover:bg-white/5"

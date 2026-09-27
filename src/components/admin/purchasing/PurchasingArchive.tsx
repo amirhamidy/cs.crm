@@ -8,7 +8,7 @@ import type {
     ApiPurchasingTask,
     ApiTaskAttachment,
 } from "@/types/purchasing";
-import TaskCard from "./TaskCard";
+import PurchasingTaskCard from "./PurchasingTaskCard";
 
 interface Props {
     tasks: ApiPurchasingTask[];
@@ -94,7 +94,7 @@ export default function PurchasingArchive({
                 <>
                     <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
                         {currentTasks.map((task, index) => (
-                            <TaskCard
+                            <PurchasingTaskCard
                                 key={task.id}
                                 task={task}
                                 index={index}

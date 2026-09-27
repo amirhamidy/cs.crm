@@ -6,7 +6,14 @@ import { useTheme } from "next-themes";
 import { ArrowDownUp, Boxes, Loader2, Pencil, Tag, Trash2, X } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
 import type { AxiosError } from "axios";
-import { ApiCategory, ApiProduct, ApiStockInfo, ApiWarehouseStaff, UNIT_TYPE_LABELS, unitDetailKey } from "@/types/warehouse";
+import {
+    ApiCategory,
+    ApiProduct,
+    ApiStockInfo,
+    ApiWarehouseStaff,
+    UNIT_TYPE_LABELS,
+    unitDetailKey,
+} from "@/types/warehouse";
 import { useCurrentEmployee } from "@/hooks/usecurrentemployee";
 import ProductEditModal from "./ProductEditModal";
 import StockModal from "./StockModal";
@@ -31,6 +38,22 @@ const AVATAR_GRADIENTS = [
     ["#f59e0b", "#ef4444"],
 ] as const;
 
+const UNIT_SUB_LABELS: Record<string, string> = {
+    quantity_per_unit: "بسته",
+    gram: "گرم",
+    kilogram: "کیلوگرم",
+    milligram: "میلی‌گرم",
+    ton: "تن",
+    meter: "متر",
+    centimeter: "سانتی‌متر",
+    inch: "اینچ",
+    liter: "لیتر",
+    milliliter: "میلی‌لیتر",
+    gallon: "گالن",
+    square_meter: "متر مربع",
+    square_centimeter: "سانتی‌متر مربع",
+};
+
 function getErrorMessage(err: unknown, fallback: string) {
     const data = (err as AxiosError<Record<string, unknown>>).response?.data;
     if (!data) return fallback;
@@ -38,6 +61,40 @@ function getErrorMessage(err: unknown, fallback: string) {
         if (typeof data[key] === "string") return data[key] as string;
     }
     return fallback;
+}
+
+function getUnitText(product: ApiProduct, stockInfo: ApiStockInfo | null) {
+    const mainLabel = UNIT_TYPE_LABELS[product.unit_type] ?? "واحد";
+    const detail = product[unitDetailKey(product.unit_type)] as Record<string, unknown> | null | undefined;
+
+    if (!detail) return stockInfo?.unit_label ?? mainLabel;
+
+    const directUnit =
+        typeof detail.unit === "string"
+            ? detail.unit
+            : typeof detail.unit_type === "string"
+                ? detail.unit_type
+                : typeof detail.sub_unit === "string"
+                    ? detail.sub_unit
+                    : null;
+
+    if (directUnit) {
+        return `${mainLabel} · ${UNIT_SUB_LABELS[directUnit] ?? directUnit}`;
+    }
+
+    const selectedUnit = Object.keys(UNIT_SUB_LABELS).find(
+        key => key !== "quantity_per_unit" && Object.prototype.hasOwnProperty.call(detail, key)
+    );
+
+    if (selectedUnit) {
+        return `${mainLabel} · ${UNIT_SUB_LABELS[selectedUnit]}`;
+    }
+
+    if (typeof detail.quantity_per_unit === "number") {
+        return `${mainLabel} · ${detail.quantity_per_unit.toLocaleString("fa-IR")} در هر بسته`;
+    }
+
+    return stockInfo?.unit_label ?? mainLabel;
 }
 
 export default function ProductCard({
@@ -61,13 +118,21 @@ export default function ProductCard({
     const [tooltipVisible, setTooltipVisible] = useState(false);
     const { employee, loading: employeeLoading } = useCurrentEmployee();
 
-    const isWarehouseStaff = !employeeLoading && !!employee && staff.some(
-        s => (s.employee_id === employee.id || (s as unknown as { employee: number }).employee === employee.id) && s.is_active
-    );
+    const isWarehouseStaff =
+        !employeeLoading &&
+        !!employee &&
+        staff.some(
+            s =>
+                (s.employee_id === employee.id ||
+                    (s as unknown as { employee: number }).employee === employee.id) &&
+                s.is_active
+        );
 
     const [start, end] = AVATAR_GRADIENTS[product.id % AVATAR_GRADIENTS.length];
-    const unitDetail = product[unitDetailKey(product.unit_type)] as { quantity_per_unit: number } | null | undefined;
-    const isCritical = stockInfo ? stockInfo.current_quantity <= stockInfo.minimum_stock : false;
+    const isCritical = stockInfo
+        ? stockInfo.current_quantity <= stockInfo.minimum_stock
+        : false;
+    const unitText = getUnitText(product, stockInfo);
 
     async function handleDelete() {
         if (!isWarehouseStaff) return;
@@ -93,13 +158,23 @@ export default function ProductCard({
                 className="relative flex min-h-[188px] flex-col justify-between rounded-3xl p-4"
                 style={{
                     background: isDark ? "rgba(255,255,255,0.03)" : "#fafafa",
-                    border: isDark ? "1px solid rgba(255,255,255,0.06)" : "1px solid rgba(15,23,42,0.06)",
-                    boxShadow: isDark ? "0 8px 30px rgba(0,0,0,0.22)" : "0 8px 24px rgba(15,23,42,0.05)",
+                    border: isDark
+                        ? "1px solid rgba(255,255,255,0.06)"
+                        : "1px solid rgba(15,23,42,0.06)",
+                    boxShadow: isDark
+                        ? "0 8px 30px rgba(0,0,0,0.22)"
+                        : "0 8px 24px rgba(15,23,42,0.05)",
                 }}
             >
                 <svg className="pointer-events-none absolute inset-0 h-full w-full">
                     <defs>
-                        <linearGradient id={`card-border-${product.id}`} x1="100%" y1="100%" x2="0%" y2="0%">
+                        <linearGradient
+                            id={`card-border-${product.id}`}
+                            x1="100%"
+                            y1="100%"
+                            x2="0%"
+                            y2="0%"
+                        >
                             <stop offset="0%" stopColor="#6366f1" />
                             <stop offset="100%" stopColor="#8b5cf6" />
                         </linearGradient>
@@ -125,7 +200,9 @@ export default function ProductCard({
                         <span
                             className="rounded-xl px-2 py-1 text-[12px] font-extrabold"
                             style={{
-                                background: isCritical ? "rgba(239,68,68,0.1)" : "rgba(16,185,129,0.1)",
+                                background: isCritical
+                                    ? "rgba(239,68,68,0.1)"
+                                    : "rgba(16,185,129,0.1)",
                                 color: isCritical ? "#ef4444" : "#10b981",
                             }}
                         >
@@ -135,12 +212,18 @@ export default function ProductCard({
 
                     <button
                         type="button"
-                        onClick={() => stockInfo ? setShowStock(true) : setShowInitialStock(true)}
+                        onClick={() =>
+                            stockInfo ? setShowStock(true) : setShowInitialStock(true)
+                        }
                         className="flex h-8 w-8 items-center justify-center rounded-xl transition-transform active:scale-90"
                         style={{
                             background: isDark
-                                ? stockInfo ? "rgba(16,185,129,0.12)" : "rgba(59,130,246,0.12)"
-                                : stockInfo ? "rgba(16,185,129,0.08)" : "rgba(59,130,246,0.08)",
+                                ? stockInfo
+                                    ? "rgba(16,185,129,0.12)"
+                                    : "rgba(59,130,246,0.12)"
+                                : stockInfo
+                                    ? "rgba(16,185,129,0.08)"
+                                    : "rgba(59,130,246,0.08)",
                             color: stockInfo ? "#10b981" : "#3b82f6",
                         }}
                         title={stockInfo ? "ثبت تراکنش انبار" : "ثبت موجودی اولیه"}
@@ -153,7 +236,9 @@ export default function ProductCard({
                         onClick={() => setShowEdit(true)}
                         className="flex h-8 w-8 items-center justify-center rounded-xl transition-transform active:scale-90"
                         style={{
-                            background: isDark ? "rgba(99,102,241,0.12)" : "rgba(99,102,241,0.08)",
+                            background: isDark
+                                ? "rgba(99,102,241,0.12)"
+                                : "rgba(99,102,241,0.08)",
                             color: isDark ? "#a5b4fc" : "#6366f1",
                         }}
                         title="ویرایش"
@@ -165,14 +250,24 @@ export default function ProductCard({
                         <button
                             type="button"
                             onClick={() => isWarehouseStaff && setShowConfirm(true)}
-                            onMouseEnter={() => !isWarehouseStaff && setTooltipVisible(true)}
+                            onMouseEnter={() =>
+                                !isWarehouseStaff && setTooltipVisible(true)
+                            }
                             onMouseLeave={() => setTooltipVisible(false)}
                             className="flex h-8 w-8 items-center justify-center rounded-xl transition-transform active:scale-90"
                             style={{
                                 background: !isWarehouseStaff
-                                    ? isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.04)"
-                                    : isDark ? "rgba(239,68,68,0.12)" : "rgba(239,68,68,0.08)",
-                                color: !isWarehouseStaff ? isDark ? "#4b5563" : "#9ca3af" : "#ef4444",
+                                    ? isDark
+                                        ? "rgba(255,255,255,0.04)"
+                                        : "rgba(0,0,0,0.04)"
+                                    : isDark
+                                        ? "rgba(239,68,68,0.12)"
+                                        : "rgba(239,68,68,0.08)",
+                                color: !isWarehouseStaff
+                                    ? isDark
+                                        ? "#4b5563"
+                                        : "#9ca3af"
+                                    : "#ef4444",
                                 cursor: !isWarehouseStaff ? "not-allowed" : "pointer",
                             }}
                             title={isWarehouseStaff ? "حذف" : undefined}
@@ -193,11 +288,17 @@ export default function ProductCard({
                                         className="flex flex-col items-center gap-1 rounded-2xl px-3 py-2 text-center shadow-xl"
                                         style={{
                                             background: isDark ? "#0f172a" : "#1e293b",
-                                            border: isDark ? "1px solid rgba(255,255,255,0.08)" : "1px solid rgba(0,0,0,0.12)",
+                                            border: isDark
+                                                ? "1px solid rgba(255,255,255,0.08)"
+                                                : "1px solid rgba(0,0,0,0.12)",
                                         }}
                                     >
-                                        <span className="text-[12px] font-bold text-white">عدم دسترسی به حذف</span>
-                                        <span className="text-[12px] text-slate-400">شما جزو پرسنل مجاز انبار نیستید</span>
+                                        <span className="text-[12px] font-bold text-white">
+                                            عدم دسترسی به حذف
+                                        </span>
+                                        <span className="text-[12px] text-slate-400">
+                                            شما جزو پرسنل مجاز انبار نیستید
+                                        </span>
                                     </div>
                                 </motion.div>
                             )}
@@ -208,12 +309,16 @@ export default function ProductCard({
                 <div className="mt-6 flex items-center gap-3">
                     <div
                         className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-[15px] font-extrabold text-white"
-                        style={{ background: `linear-gradient(135deg, ${start}, ${end})` }}
+                        style={{
+                            background: `linear-gradient(135deg, ${start}, ${end})`,
+                        }}
                     >
                         {product.name.charAt(0)}
                     </div>
                     <div className="min-w-0 flex-1">
-                        <h3 className="truncate text-[13px] font-extrabold text-gray-900 dark:text-white">{product.name}</h3>
+                        <h3 className="truncate text-[13px] font-extrabold text-gray-900 dark:text-white">
+                            {product.name}
+                        </h3>
                         <div className="mt-0.5 flex items-center gap-1.5 text-[12px] font-semibold text-gray-400 dark:text-gray-500">
                             <Tag size={11} />
                             {product.category_detail?.name ?? "بدون دسته‌بندی"}
@@ -223,29 +328,48 @@ export default function ProductCard({
 
                 <div className="mt-3 flex flex-col gap-1.5 rounded-2xl bg-gray-50 px-3 py-2.5 dark:bg-white/[0.035]">
                     <div className="flex items-center justify-between text-[12px]">
-                        <span className="font-semibold text-gray-400 dark:text-white/40">قیمت فروش</span>
-                        <span className="font-extrabold text-gray-700 dark:text-white/85">{Number(product.sale_price).toLocaleString("fa-IR")} تومان</span>
-                    </div>
-                    <div className="flex items-center justify-between text-[12px]">
-                        <span className="font-semibold text-gray-400 dark:text-white/40">واحد شمارش</span>
+                        <span className="font-semibold text-gray-400 dark:text-white/40">
+                            قیمت فروش
+                        </span>
                         <span className="font-extrabold text-gray-700 dark:text-white/85">
-                            {stockInfo?.unit_label ?? UNIT_TYPE_LABELS[product.unit_type]}
-                            {unitDetail ? ` · ${unitDetail.quantity_per_unit} در هر بسته` : ""}
+                            {Number(product.sale_price).toLocaleString("fa-IR")} تومان
                         </span>
                     </div>
+
+                    <div className="flex items-center justify-between text-[12px]">
+                        <span className="font-semibold text-gray-400 dark:text-white/40">
+                            واحد شمارش
+                        </span>
+                        <span className="font-extrabold text-gray-700 dark:text-white/85">
+                            {unitText}
+                        </span>
+                    </div>
+
                     {stockInfo ? (
                         <div className="flex items-center justify-between text-[12px]">
-                            <span className="font-semibold text-gray-400 dark:text-white/40">موجودی فعلی</span>
-                            <span className="font-extrabold" style={{ color: isCritical ? "#ef4444" : undefined }}>
-                                {stockInfo.current_quantity} از حداکثر {stockInfo.maximum_stock}
+                            <span className="font-semibold text-gray-400 dark:text-white/40">
+                                موجودی فعلی
+                            </span>
+                            <span
+                                className="font-extrabold"
+                                style={{ color: isCritical ? "#ef4444" : undefined }}
+                            >
+                                {stockInfo.current_quantity} از حداکثر{" "}
+                                {stockInfo.maximum_stock}
                             </span>
                         </div>
                     ) : (
-                        <p className="text-center text-[12px] font-semibold text-amber-500">موجودی اولیه ثبت نشده است</p>
+                        <p className="text-center text-[12px] font-semibold text-amber-500">
+                            موجودی اولیه ثبت نشده است
+                        </p>
                     )}
                 </div>
 
-                {deleteError && <p className="mt-1.5 text-center text-[12px] font-semibold text-red-500">{deleteError}</p>}
+                {deleteError && (
+                    <p className="mt-1.5 text-center text-[12px] font-semibold text-red-500">
+                        {deleteError}
+                    </p>
+                )}
             </motion.div>
 
             <ProductEditModal
@@ -255,6 +379,7 @@ export default function ProductCard({
                 categories={categories}
                 performedById={employee?.id ?? ""}
                 onCompleted={() => {
+                    onUpdated(product);
                     onStockChanged();
                     setShowEdit(false);
                 }}
@@ -292,7 +417,10 @@ export default function ProductCard({
                         exit={{ opacity: 0 }}
                         onClick={() => !deleting && setShowConfirm(false)}
                         className="fixed inset-0 z-50 flex items-center justify-center px-4"
-                        style={{ background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)" }}
+                        style={{
+                            background: "rgba(0,0,0,0.5)",
+                            backdropFilter: "blur(4px)",
+                        }}
                     >
                         <motion.div
                             initial={{ opacity: 0, scale: 0.96, y: 16 }}
@@ -307,8 +435,11 @@ export default function ProductCard({
                                     <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-red-50 dark:bg-red-500/10">
                                         <Trash2 size={15} className="text-red-500" />
                                     </div>
-                                    <h3 className="text-[13.5px] font-extrabold text-gray-900 dark:text-white">حذف محصول</h3>
+                                    <h3 className="text-[13.5px] font-extrabold text-gray-900 dark:text-white">
+                                        حذف محصول
+                                    </h3>
                                 </div>
+
                                 <button
                                     type="button"
                                     onClick={() => setShowConfirm(false)}
@@ -320,7 +451,11 @@ export default function ProductCard({
                             </div>
 
                             <p className="text-[12.5px] leading-6 text-gray-600 dark:text-gray-400">
-                                محصول <span className="font-extrabold text-gray-900 dark:text-white">{product.name}</span> به طور کامل از انبار حذف خواهد شد.
+                                محصول{" "}
+                                <span className="font-extrabold text-gray-900 dark:text-white">
+                                    {product.name}
+                                </span>{" "}
+                                به طور کامل از انبار حذف خواهد شد.
                             </p>
 
                             <div className="mt-5 flex gap-2">
@@ -332,13 +467,18 @@ export default function ProductCard({
                                 >
                                     انصراف
                                 </button>
+
                                 <button
                                     type="button"
                                     onClick={handleDelete}
                                     disabled={deleting}
                                     className="flex flex-1 items-center justify-center gap-1.5 rounded-2xl bg-red-600 py-2.5 text-[12.5px] font-bold text-white disabled:opacity-60"
                                 >
-                                    {deleting ? <Loader2 size={14} className="animate-spin" /> : "حذف کن"}
+                                    {deleting ? (
+                                        <Loader2 size={14} className="animate-spin" />
+                                    ) : (
+                                        "حذف کن"
+                                    )}
                                 </button>
                             </div>
                         </motion.div>
