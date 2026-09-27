@@ -76,8 +76,13 @@ export default function HumanResourceStepsModal({
                     title: title.trim(),
                 });
             } else {
+                const nextOrder =
+                    steps.length > 0
+                        ? Math.max(...steps.map((item) => item.order)) + 1
+                        : 1;
+
                 await createStep(document.id, {
-                    order: steps.length + 1,
+                    order: nextOrder,
                     title: title.trim(),
                 });
             }
@@ -96,9 +101,27 @@ export default function HumanResourceStepsModal({
     };
 
     const removeStep = async (id: number) => {
+        if (!document) return;
         if (!confirm("آیا از حذف این مرحله مطمئن هستید؟")) return;
 
         await deleteStep(id);
+
+        const response = await getDocumentSteps(document.id);
+        const remaining = response.data
+            .slice()
+            .sort((a, b) => a.order - b.order);
+
+        for (let i = 0; i < remaining.length; i++) {
+            const desiredOrder = i + 1;
+
+            if (remaining[i].order !== desiredOrder) {
+                await updateStep(remaining[i].id, {
+                    order: desiredOrder,
+                    title: remaining[i].title,
+                });
+            }
+        }
+
         await loadSteps();
         onChange();
     };

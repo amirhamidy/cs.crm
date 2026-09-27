@@ -22,7 +22,11 @@ export interface ApiPurchasingStep {
   employees_detail: ApiPurchasingStepEmployeeDetail[];
 }
 
-export type PurchasingTaskStatus = "pending" | "in_progress" | "completed";
+export type PurchasingTaskStatus =
+  | "pending"
+  | "in_progress"
+  | "completed"
+  | "cancelled";
 
 export interface ApiPurchasingTask {
   id: number;
@@ -78,5 +82,10 @@ export const PURCHASING_TASK_STATUS_META: Record<
     label: "تکمیل شده",
     color: "#10b981",
     bg: "rgba(16,185,129,0.10)",
+  },
+  cancelled: {
+    label: "لغو شده",
+    color: "#ef4444",
+    bg: "rgba(239,68,68,0.10)",
   },
 };
