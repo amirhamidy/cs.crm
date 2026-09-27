@@ -1,10 +1,14 @@
 "use client";
 
+import { motion } from "framer-motion";
 import {
+    ExternalLink,
     FileText,
     GitBranch,
     Pencil,
     Trash2,
+    Users,
+    X,
 } from "lucide-react";
 import {
     Department,
@@ -21,6 +25,21 @@ interface Props {
     onSteps: () => void;
     onChange: () => void;
 }
+
+const gradients = [
+    "from-indigo-500 to-violet-500",
+    "from-pink-500 to-fuchsia-500",
+    "from-cyan-500 to-blue-500",
+    "from-emerald-500 to-teal-500",
+    "from-amber-500 to-orange-500",
+    "from-rose-500 to-pink-500",
+];
+
+const gradientOf = (seed: number) =>
+    gradients[Math.abs(seed) % gradients.length];
+
+const initialOf = (text: string) =>
+    text.trim().charAt(0) || "م";
 
 export default function HumanResourceCard({
     document,
@@ -43,87 +62,145 @@ export default function HumanResourceCard({
     };
 
     return (
-        <div className="group rounded-3xl border bg-card p-5 shadow-sm transition hover:-translate-y-1 hover:shadow-lg">
-            <div className="flex items-start gap-4">
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-                    <FileText className="h-6 w-6" />
-                </div>
-
-                <div className="min-w-0 flex-1">
-                    <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                            <h3 className="truncate font-bold">
-                                {document.title}
-                            </h3>
-
-                            <div className="mt-2 inline-flex items-center rounded-lg bg-muted px-2.5 py-1 text-xs text-muted-foreground">
-                                {matchedDepartment
-                                    ? `دپارتمان ${matchedDepartment.name}`
-                                    : "قابل مشاهده برای همه"}
-                            </div>
-                        </div>
-
-                        {canManage && (
-                            <div className="flex shrink-0 gap-1">
-                                <button
-                                    onClick={onEdit}
-                                    className="flex h-8 w-8 items-center justify-center rounded-lg transition hover:bg-muted"
-                                >
-                                    <Pencil className="h-4 w-4" />
-                                </button>
-
-                                <button
-                                    onClick={onDelete}
-                                    className="flex h-8 w-8 items-center justify-center rounded-lg text-destructive transition hover:bg-destructive/10"
-                                >
-                                    <Trash2 className="h-4 w-4" />
-                                </button>
-                            </div>
-                        )}
+        <motion.div
+            layout
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.97 }}
+            whileHover={{ y: -3 }}
+            transition={{ type: "spring", damping: 24, stiffness: 260 }}
+            className="group overflow-hidden rounded-[1.45rem] border border-gray-100 bg-white shadow-sm transition-shadow hover:shadow-xl hover:shadow-black/[0.04] dark:border-white/[0.06] dark:bg-[#111827] dark:hover:shadow-black/20"
+            dir="rtl"
+        >
+            <div className="p-3">
+                <div className="flex items-start gap-3">
+                    <div
+                        className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br ${gradientOf(
+                            document.id
+                        )} text-[14px] font-extrabold text-white shadow-sm`}
+                    >
+                        {initialOf(document.title)}
                     </div>
-                </div>
-            </div>
 
-            {document.files.length > 0 && (
-                <div className="mt-5 space-y-2">
-                    {document.files.map((file) => (
-                        <div
-                            key={file.id}
-                            className="flex items-center gap-3 rounded-xl border p-3"
-                        >
-                            <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    <div className="min-w-0 flex-1">
+                        <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0">
+                                <h3 className="truncate text-[13px] font-extrabold text-gray-900 dark:text-white">
+                                    {document.title}
+                                </h3>
 
-                            <a
-                                href={file.file}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="min-w-0 flex-1 truncate text-sm text-primary hover:underline"
-                            >
-                                مشاهده فایل
-                            </a>
+                                <div className="mt-1.5 flex items-center gap-1.5">
+                                    <span className="flex h-5 w-5 items-center justify-center rounded-md bg-gray-100 dark:bg-white/[0.06]">
+                                        <Users
+                                            size={10}
+                                            className="text-gray-400"
+                                        />
+                                    </span>
+
+                                    <span className="truncate text-[10.5px] font-semibold text-gray-400">
+                                        {matchedDepartment
+                                            ? `دپارتمان ${matchedDepartment.name}`
+                                            : "قابل مشاهده برای همه"}
+                                    </span>
+                                </div>
+                            </div>
 
                             {canManage && (
-                                <button
-                                    onClick={() => removeFile(file.id)}
-                                    className="flex h-7 w-7 items-center justify-center rounded-lg text-destructive transition hover:bg-destructive/10"
-                                >
-                                    <Trash2 className="h-3.5 w-3.5" />
-                                </button>
+                                <div className="flex shrink-0 items-center gap-1">
+                                    <button
+                                        type="button"
+                                        onClick={onEdit}
+                                        className="flex h-7 w-7 items-center justify-center rounded-lg text-gray-400 transition hover:bg-blue-50 hover:text-blue-500 dark:hover:bg-blue-500/10"
+                                    >
+                                        <Pencil size={13} />
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        onClick={onDelete}
+                                        className="flex h-7 w-7 items-center justify-center rounded-lg text-gray-400 transition hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-500/10"
+                                    >
+                                        <Trash2 size={13} />
+                                    </button>
+                                </div>
                             )}
                         </div>
-                    ))}
+                    </div>
                 </div>
-            )}
 
-            <div className="mt-5 flex items-center gap-2">
-                <button
+                <div className="mt-3 h-px bg-gray-100 dark:bg-white/[0.06]" />
+
+                <div className="mt-3">
+                    {document.files.length > 0 ? (
+                        <div className="space-y-1.5">
+                            {document.files.map((file) => (
+                                <motion.div
+                                    key={file.id}
+                                    initial={{ opacity: 0, y: 4 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    className="flex items-center gap-2 rounded-xl bg-gray-50 px-2.5 py-2 dark:bg-white/[0.035]"
+                                >
+                                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-white shadow-sm dark:bg-white/[0.06]">
+                                        <FileText
+                                            size={12}
+                                            className="text-indigo-500"
+                                        />
+                                    </span>
+
+                                    <a
+                                        href={file.file}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="min-w-0 flex-1 truncate text-[11px] font-bold text-gray-600 transition hover:text-indigo-500 dark:text-gray-300"
+                                    >
+                                        مشاهده فایل
+                                    </a>
+
+                                    <ExternalLink
+                                        size={11}
+                                        className="shrink-0 text-gray-300"
+                                    />
+
+                                    {canManage && (
+                                        <button
+                                            type="button"
+                                            onClick={() =>
+                                                removeFile(file.id)
+                                            }
+                                            className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-gray-400 transition hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-500/10"
+                                        >
+                                            <X size={11} />
+                                        </button>
+                                    )}
+                                </motion.div>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="flex items-center gap-2 rounded-xl border border-dashed border-gray-200 px-2.5 py-2 dark:border-white/[0.07]">
+                            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-gray-50 dark:bg-white/[0.04]">
+                                <FileText
+                                    size={12}
+                                    className="text-gray-300"
+                                />
+                            </span>
+
+                            <span className="text-[10.5px] font-semibold text-gray-400">
+                                فایلی برای این منبع ثبت نشده
+                            </span>
+                        </div>
+                    )}
+                </div>
+
+                <motion.button
+                    type="button"
+                    whileTap={{ scale: 0.98 }}
                     onClick={onSteps}
-                    className="flex h-10 flex-1 items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-medium text-primary-foreground transition hover:opacity-90"
+                    className="mt-3 flex h-9 w-full items-center justify-center gap-2 rounded-full bg-indigo-600 text-[11.5px] font-extrabold text-white transition hover:bg-indigo-500"
                 >
-                    <GitBranch className="h-4 w-4" />
+                    <GitBranch size={13} />
                     مشاهده مراحل
-                </button>
+                </motion.button>
             </div>
-        </div>
+        </motion.div>
     );
 }

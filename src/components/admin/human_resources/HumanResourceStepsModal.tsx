@@ -1,23 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
-    Check,
-    Edit3,
-    Loader2,
-    Plus,
-    Trash2,
-    X,
+    Check, GitBranch, Loader2, Pencil, Plus, X,
 } from "lucide-react";
 import HumanResourceStepRoadmap from "./HumanResourceStepRoadmap";
 import {
-    HumanResource,
-    HumanResourceStep,
-    createStep,
-    deleteStep,
-    getDocumentSteps,
-    updateStep,
+    HumanResource, HumanResourceStep,
+    createStep, deleteStep, getDocumentSteps, updateStep,
 } from "./humanResourceApi";
 
 interface Props {
@@ -29,21 +20,16 @@ interface Props {
 }
 
 export default function HumanResourceStepsModal({
-    open,
-    document,
-    canManage,
-    onClose,
-    onChange,
+    open, document, canManage, onClose, onChange,
 }: Props) {
     const [steps, setSteps] = useState<HumanResourceStep[]>([]);
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
-    const [editing, setEditing] = useState<number | null>(null);
+    const [editingInlineId, setEditingInlineId] = useState<number | null>(null);
     const [title, setTitle] = useState("");
 
     const loadSteps = async () => {
         if (!document) return;
-
         try {
             setLoading(true);
             const response = await getDocumentSteps(document.id);
@@ -57,37 +43,15 @@ export default function HumanResourceStepsModal({
         if (open && document) loadSteps();
     }, [open, document]);
 
-    const resetForm = () => {
-        setEditing(null);
-        setTitle("");
-    };
-
     const saveStep = async () => {
         if (!document || !title.trim()) return;
-
         try {
             setSaving(true);
-
-            if (editing) {
-                await updateStep(editing, {
-                    order:
-                        steps.find((item) => item.id === editing)?.order ??
-                        steps.length + 1,
-                    title: title.trim(),
-                });
-            } else {
-                const nextOrder =
-                    steps.length > 0
-                        ? Math.max(...steps.map((item) => item.order)) + 1
-                        : 1;
-
-                await createStep(document.id, {
-                    order: nextOrder,
-                    title: title.trim(),
-                });
-            }
-
-            resetForm();
+            const nextOrder = steps.length > 0
+                ? Math.max(...steps.map((item) => item.order)) + 1
+                : 1;
+            await createStep(document.id, { order: nextOrder, title: title.trim() });
+            setTitle("");
             await loadSteps();
             onChange();
         } finally {
@@ -95,25 +59,29 @@ export default function HumanResourceStepsModal({
         }
     };
 
-    const editStep = (step: HumanResourceStep) => {
-        setEditing(step.id);
-        setTitle(step.title);
+    const handleInlineEdit = async (id: number, newTitle: string) => {
+        try {
+            setEditingInlineId(id);
+            const current = steps.find((item) => item.id === id);
+            await updateStep(id, {
+                order: current?.order ?? 1,
+                title: newTitle,
+            });
+            await loadSteps();
+            onChange();
+        } finally {
+            setEditingInlineId(null);
+        }
     };
 
     const removeStep = async (id: number) => {
         if (!document) return;
         if (!confirm("آیا از حذف این مرحله مطمئن هستید؟")) return;
-
         await deleteStep(id);
-
         const response = await getDocumentSteps(document.id);
-        const remaining = response.data
-            .slice()
-            .sort((a, b) => a.order - b.order);
-
+        const remaining = response.data.slice().sort((a, b) => a.order - b.order);
         for (let i = 0; i < remaining.length; i++) {
             const desiredOrder = i + 1;
-
             if (remaining[i].order !== desiredOrder) {
                 await updateStep(remaining[i].id, {
                     order: desiredOrder,
@@ -121,156 +89,177 @@ export default function HumanResourceStepsModal({
                 });
             }
         }
-
         await loadSteps();
         onChange();
     };
 
+    const orderedSteps = useMemo(
+        () => steps.slice().sort((a, b) => a.order - b.order),
+        [steps]
+    );
+
+    if (!open || !document) return null;
+
     return (
         <AnimatePresence>
-            {open && document && (
+            <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="fixed inset-0 z-50 flex items-center justify-center px-4"
+                style={{ background: "rgba(0,0,0,0.45)", backdropFilter: "blur(3px)" }}
+                onMouseDown={onClose}
+            >
                 <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
-                    onMouseDown={onClose}
+                    initial={{ opacity: 0, y: 18, scale: 0.98 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 18, scale: 0.98 }}
+                    transition={{ duration: 0.25, ease: "easeOut" }}
+                    onMouseDown={(e) => e.stopPropagation()}
+                    className="flex max-h-[90vh] w-full max-w-5xl flex-col overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-2xl shadow-black/10 dark:border-white/[0.06] dark:bg-[#0f172a]"
+                    dir="rtl"
                 >
-                    <motion.div
-                        initial={{ opacity: 0, scale: 0.96, y: 15 }}
-                        animate={{ opacity: 1, scale: 1, y: 0 }}
-                        exit={{ opacity: 0, scale: 0.96, y: 15 }}
-                        transition={{ duration: 0.2 }}
-                        onMouseDown={(e) => e.stopPropagation()}
-                        className="flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-3xl border bg-background shadow-2xl"
-                    >
-                        <div className="flex items-center justify-between border-b px-5 py-4">
-                            <div>
-                                <h2 className="font-bold">
-                                    مراحل {document.title}
-                                </h2>
-                                <p className="mt-1 text-sm text-muted-foreground">
-                                    مسیر انجام فرآیند
-                                </p>
+                    <div className="flex shrink-0 items-center justify-between px-7 pb-5 pt-7 sm:px-8">
+                        <div className="flex min-w-0 items-center gap-2.5">
+                            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-indigo-50 dark:bg-indigo-500/10">
+                                <GitBranch size={15} className="text-indigo-500" />
                             </div>
-
-                            <button
-                                onClick={onClose}
-                                className="flex h-9 w-9 items-center justify-center rounded-xl transition hover:bg-muted"
-                            >
-                                <X className="h-5 w-5" />
-                            </button>
+                            <div className="min-w-0">
+                                <div className="flex items-center gap-2">
+                                    <h2 className="truncate text-[14px] font-extrabold text-gray-900 dark:text-white">
+                                        مراحل {document.title}
+                                    </h2>
+                                    <span className="flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-indigo-50 px-1.5 text-[9.5px] font-extrabold text-indigo-500 dark:bg-indigo-500/10 dark:text-indigo-400">
+                                        {steps.length}
+                                    </span>
+                                </div>
+                                <p className="mt-0.5 text-[11px] text-gray-400">مسیر انجام فرآیند</p>
+                            </div>
                         </div>
+                        <button
+                            type="button"
+                            onClick={onClose}
+                            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gray-100 text-gray-400 transition hover:text-gray-600 dark:bg-white/[0.05] dark:hover:text-gray-300"
+                        >
+                            <X size={15} />
+                        </button>
+                    </div>
 
-                        <div className="overflow-y-auto p-5">
-                            {canManage && (
-                                <div className="mb-6 rounded-2xl border bg-muted/30 p-4">
-                                    <div className="flex flex-col gap-3 sm:flex-row">
-                                        <input
-                                            value={title}
-                                            onChange={(e) =>
-                                                setTitle(e.target.value)
-                                            }
-                                            onKeyDown={(e) => {
-                                                if (e.key === "Enter")
-                                                    saveStep();
-                                            }}
-                                            placeholder="عنوان مرحله..."
-                                            className="h-11 flex-1 rounded-xl border bg-background px-4 text-sm outline-none transition focus:border-primary"
-                                        />
-
-                                        <button
-                                            onClick={saveStep}
-                                            disabled={
-                                                saving || !title.trim()
-                                            }
-                                            className="flex h-11 items-center justify-center gap-2 rounded-xl bg-primary px-5 text-sm font-medium text-primary-foreground disabled:cursor-not-allowed disabled:opacity-50"
-                                        >
-                                            {saving ? (
-                                                <Loader2 className="h-4 w-4 animate-spin" />
-                                            ) : editing ? (
-                                                <Check className="h-4 w-4" />
-                                            ) : (
-                                                <Plus className="h-4 w-4" />
-                                            )}
-
-                                            {editing
-                                                ? "ذخیره تغییرات"
-                                                : "افزودن مرحله"}
-                                        </button>
-
-                                        {editing && (
-                                            <button
-                                                onClick={resetForm}
-                                                className="h-11 rounded-xl border px-4 text-sm"
-                                            >
-                                                لغو
-                                            </button>
-                                        )}
+                    <div className="flex-1 overflow-y-auto px-7 pb-7 sm:px-8">
+                        <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_1.4fr]">
+                            <div className="order-1 lg:order-2">
+                                <div className="mb-3 flex items-center gap-2">
+                                    <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-gray-50 dark:bg-white/[0.04]">
+                                        <GitBranch size={13} className="text-gray-400" />
+                                    </span>
+                                    <div>
+                                        <p className="text-[11.5px] font-extrabold text-gray-800 dark:text-white">
+                                            نقشه سفر
+                                        </p>
+                                        <p className="text-[9.5px] font-semibold text-gray-400">
+                                            {steps.length ? `${steps.length} ایستگاه` : "بدون ایستگاه"}
+                                        </p>
                                     </div>
                                 </div>
-                            )}
 
-                            {loading ? (
-                                <div className="flex justify-center py-16">
-                                    <Loader2 className="h-7 w-7 animate-spin text-primary" />
-                                </div>
-                            ) : (
-                                <>
+                                {loading ? (
+                                    <div className="flex h-44 items-center justify-center rounded-[1.5rem] border border-dashed border-gray-200 dark:border-white/[0.07]">
+                                        <Loader2 size={19} className="animate-spin text-indigo-500" />
+                                    </div>
+                                ) : (
                                     <HumanResourceStepRoadmap
                                         steps={steps}
+                                        canManage={canManage}
+                                        onEdit={handleInlineEdit}
+                                        onDelete={removeStep}
+                                        savingId={editingInlineId}
                                     />
+                                )}
+                            </div>
 
-                                    {canManage && steps.length > 0 && (
-                                        <div className="mt-8 space-y-2 border-t pt-5">
-                                            {steps
-                                                .slice()
-                                                .sort(
-                                                    (a, b) =>
-                                                        a.order - b.order
-                                                )
-                                                .map((step) => (
-                                                    <div
-                                                        key={step.id}
-                                                        className="flex items-center gap-3 rounded-xl border p-3"
-                                                    >
-                                                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-muted text-sm font-bold">
-                                                            {step.order}
-                                                        </span>
-
-                                                        <span className="min-w-0 flex-1 truncate text-sm">
-                                                            {step.title}
-                                                        </span>
-
-                                                        <button
-                                                            onClick={() =>
-                                                                editStep(step)
-                                                            }
-                                                            className="flex h-8 w-8 items-center justify-center rounded-lg transition hover:bg-muted"
-                                                        >
-                                                            <Edit3 className="h-4 w-4" />
-                                                        </button>
-
-                                                        <button
-                                                            onClick={() =>
-                                                                removeStep(
-                                                                    step.id
-                                                                )
-                                                            }
-                                                            className="flex h-8 w-8 items-center justify-center rounded-lg text-destructive transition hover:bg-destructive/10"
-                                                        >
-                                                            <Trash2 className="h-4 w-4" />
-                                                        </button>
-                                                    </div>
-                                                ))}
+                            <div className="order-2 lg:order-1">
+                                {canManage && (
+                                    <div className="rounded-[1.4rem] border border-indigo-100 bg-indigo-50/50 p-3 dark:border-indigo-500/10 dark:bg-indigo-500/[0.05]">
+                                        <div className="mb-2.5 flex items-center gap-2.5 px-1">
+                                            <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-white shadow-sm dark:bg-white/[0.06]">
+                                                <Plus size={14} className="text-indigo-500" />
+                                            </span>
+                                            <div>
+                                                <p className="text-[11.5px] font-extrabold text-gray-800 dark:text-white">
+                                                    افزودن مرحله
+                                                </p>
+                                                <p className="text-[9.5px] font-semibold text-gray-400">
+                                                    عنوان مرحله فرآیند را وارد کنید
+                                                </p>
+                                            </div>
                                         </div>
-                                    )}
-                                </>
-                            )}
+
+                                        <div className="flex flex-col gap-2">
+                                            <input
+                                                value={title}
+                                                onChange={(e) => setTitle(e.target.value)}
+                                                onKeyDown={(e) => { if (e.key === "Enter") saveStep(); }}
+                                                placeholder="عنوان مرحله..."
+                                                className="h-10 w-full rounded-xl border border-gray-100 bg-white px-3.5 text-[11.5px] font-bold text-gray-800 outline-none transition focus:border-indigo-400 dark:border-white/[0.06] dark:bg-white/[0.04] dark:text-white"
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={saveStep}
+                                                disabled={saving || !title.trim()}
+                                                className="flex h-10 items-center justify-center gap-1.5 rounded-xl bg-indigo-600 px-4 text-[11px] font-extrabold text-white transition hover:bg-indigo-500 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40"
+                                            >
+                                                {saving ? (
+                                                    <Loader2 size={13} className="animate-spin" />
+                                                ) : (
+                                                    <Plus size={13} />
+                                                )}
+                                                افزودن مرحله
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {canManage && orderedSteps.length > 0 && (
+                                    <div className="mt-4 overflow-hidden rounded-[1.4rem] border border-gray-100 dark:border-white/[0.06]">
+                                        <div className="border-b border-gray-100 bg-gray-50/70 px-3 py-2 dark:border-white/[0.06] dark:bg-white/[0.025]">
+                                            <p className="text-[10.5px] font-extrabold text-gray-500 dark:text-gray-400">
+                                                لیست مراحل
+                                            </p>
+                                        </div>
+                                        <div className="divide-y divide-gray-100 dark:divide-white/[0.05]">
+                                            {orderedSteps.map((step, index) => (
+                                                <div
+                                                    key={step.id}
+                                                    data-aos="fade-left"
+                                                    data-aos-delay={index * 40}
+                                                    className="flex items-center gap-2.5 px-3 py-2.5"
+                                                >
+                                                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-indigo-50 text-[10px] font-extrabold text-indigo-500 dark:bg-indigo-500/10 dark:text-indigo-400">
+                                                        {step.order}
+                                                    </span>
+                                                    <span className="min-w-0 flex-1 truncate text-[11.5px] font-bold text-gray-700 dark:text-gray-300">
+                                                        {step.title}
+                                                    </span>
+                                                    <Pencil size={11} className="shrink-0 text-gray-300 dark:text-gray-600" />
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {!canManage && !loading && orderedSteps.length === 0 && (
+                                    <div className="flex h-full min-h-[200px] items-center justify-center rounded-[1.4rem] border border-dashed border-gray-200 text-center dark:border-white/[0.07]">
+                                        <p className="text-[11px] font-semibold text-gray-400">
+                                            هنوز مرحله‌ای ثبت نشده است
+                                        </p>
+                                    </div>
+                                )}
+                            </div>
                         </div>
-                    </motion.div>
+                    </div>
                 </motion.div>
-            )}
+            </motion.div>
         </AnimatePresence>
     );
 }
