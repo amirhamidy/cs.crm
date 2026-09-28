@@ -2,7 +2,6 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 import { Loader, Trash2, X } from "lucide-react";
-import { createPortal } from "react-dom";
 
 interface Props {
     open: boolean;
@@ -13,17 +12,15 @@ interface Props {
     onCancel: () => void;
 }
 
-export default function PurchasingDeleteModal({ open, title, description, loading = false, onConfirm, onCancel }: Props) {
-    if (typeof document === "undefined") return null;
-
-    return createPortal(
+export default function QCDeleteModal({ open, title, description, loading = false, onConfirm, onCancel }: Props) {
+    return (
         <AnimatePresence>
             {open && (
                 <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className="fixed inset-0 z-[999] flex items-center justify-center px-4"
+                    className="fixed inset-0 z-[100] flex items-center justify-center px-4"
                     style={{ background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)" }}
                     onClick={loading ? undefined : onCancel}
                 >
@@ -44,7 +41,12 @@ export default function PurchasingDeleteModal({ open, title, description, loadin
                                 </div>
                                 <h3 className="truncate text-[13.5px] font-extrabold text-gray-900 dark:text-white">{title}</h3>
                             </div>
-                            <button type="button" onClick={onCancel} disabled={loading} className="flex h-7 w-7 shrink-0 items-center justify-center rounded-xl bg-black/[0.04] text-gray-400 transition-colors hover:text-gray-600 disabled:opacity-40 dark:bg-white/[0.05] dark:hover:text-gray-300">
+                            <button
+                                type="button"
+                                onClick={onCancel}
+                                disabled={loading}
+                                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-xl bg-black/[0.04] text-gray-400 transition-colors hover:text-gray-600 disabled:opacity-40 dark:bg-white/[0.05] dark:hover:text-gray-300"
+                            >
                                 <X size={13} />
                             </button>
                         </div>
@@ -52,7 +54,12 @@ export default function PurchasingDeleteModal({ open, title, description, loadin
                         <div className="flex flex-col gap-4 px-2 py-4">
                             <p className="text-[12.5px] leading-relaxed text-gray-500 dark:text-gray-400">{description}</p>
                             <div className="flex gap-2">
-                                <button type="button" onClick={onCancel} disabled={loading} className="flex-1 rounded-2xl bg-black/[0.04] py-2.5 text-[12.5px] font-bold text-slate-500 transition-colors disabled:opacity-40 dark:bg-white/[0.05] dark:text-slate-400">
+                                <button
+                                    type="button"
+                                    onClick={onCancel}
+                                    disabled={loading}
+                                    className="flex-1 rounded-2xl bg-black/[0.04] py-2.5 text-[12.5px] font-bold text-slate-500 transition-colors disabled:opacity-40 dark:bg-white/[0.05] dark:text-slate-400"
+                                >
                                     انصراف
                                 </button>
                                 <button
@@ -69,7 +76,6 @@ export default function PurchasingDeleteModal({ open, title, description, loadin
                     </motion.div>
                 </motion.div>
             )}
-        </AnimatePresence>,
-        document.body
+        </AnimatePresence>
     );
 }

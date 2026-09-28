@@ -2,14 +2,10 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { RefreshCw, ShieldCheck, ShoppingCart, UserCheck } from "lucide-react";
+import { CheckCircle2, Clock3, Loader2, RefreshCw, ShieldCheck, ShoppingCart, UserCheck, Users, XCircle, type LucideIcon } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
-import type {
-    ApiPurchasingEmployee,
-    ApiPurchasingStep,
-    ApiPurchasingTask,
-    ApiTaskAttachment,
-} from "@/types/purchasing";
+import { toPersianDigits } from "@/lib/jalali";
+import type { ApiPurchasingEmployee, ApiPurchasingStep, ApiPurchasingTask, ApiTaskAttachment } from "@/types/purchasing";
 import PurchasingEmployeesBar from "./Purchasingemployeesbar";
 import PurchasingEmployeeModal from "./PurchasingEmployeeModal";
 import PurchasingStagesPanel from "./PurchasingStagesPanel";
@@ -18,25 +14,29 @@ import StepFormModal from "./StepFormModal";
 import PurchasingDeleteModal from "./PurchasingDeleteModal";
 import { usePurchasingAccess } from "@/hooks/usePurchasingAccess";
 
-const normalizeList = <T,>(value: unknown): T[] => {
-    if (Array.isArray(value)) return value as T[];
+const normalizeList = <T,>(value: unknown): T[] =>
+    Array.isArray(value) ? (value as T[]) : ((value as { results?: T[] } | null)?.results ?? []);
 
-    if (
-        value &&
-        typeof value === "object" &&
-        "results" in value &&
-        Array.isArray((value as { results?: unknown }).results)
-    ) {
-        return (value as { results: T[] }).results;
-    }
+function errorText(error: unknown, fallback: string) {
+    const data = (error as { response?: { data?: { detail?: string; message?: string } } }).response?.data;
+    return data?.detail || data?.message || fallback;
+}
 
-    return [];
-};
+type DeleteTarget = { type: "step"; step: ApiPurchasingStep } | { type: "employee"; employee: ApiPurchasingEmployee } | null;
 
-type DeleteTarget =
-    | { type: "step"; step: ApiPurchasingStep }
-    | { type: "employee"; employee: ApiPurchasingEmployee }
-    | null;
+const box = "rounded-[1.45rem] border border-gray-100 bg-white shadow-sm dark:border-white/[0.06] dark:bg-[#111827]";
+
+function Stat({ label, value, icon: Icon, tone }: { label: string; value: string; icon: LucideIcon; tone: string }) {
+    return (
+        <div className={`flex items-center gap-2.5 rounded-xl px-3 py-2 ${tone}`}>
+            <Icon size={15} className="shrink-0" />
+            <div className="min-w-0">
+                <p className="text-[9.5px] font-semibold opacity-80">{label}</p>
+                <p className="mt-0.5 text-[13px] font-extrabold leading-none">{value}</p>
+            </div>
+        </div>
+    );
+}
 
 export default function PurchasingPage() {
     const { isAdmin, currentEmployeeName } = usePurchasingAccess();
@@ -45,48 +45,33 @@ export default function PurchasingPage() {
     const [steps, setSteps] = useState<ApiPurchasingStep[]>([]);
     const [tasks, setTasks] = useState<ApiPurchasingTask[]>([]);
     const [attachments, setAttachments] = useState<ApiTaskAttachment[]>([]);
-
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
+    const [error, setError] = useState("");
 
     const [employeeModalOpen, setEmployeeModalOpen] = useState(false);
     const [stepModalOpen, setStepModalOpen] = useState(false);
     const [editingStep, setEditingStep] = useState<ApiPurchasingStep | null>(null);
-
     const [deleteTarget, setDeleteTarget] = useState<DeleteTarget>(null);
     const [deleteLoading, setDeleteLoading] = useState(false);
 
     const loadAll = useCallback(async (silent = false) => {
+        if (silent) setRefreshing(true);
+        else setLoading(true);
+        setError("");
         try {
-            if (silent) {
-                setRefreshing(true);
-            } else {
-                setLoading(true);
-            }
-
-            const [employeesResponse, stepsResponse, tasksResponse, attachmentsResponse] =
-                await Promise.all([
-                    axiosInstance.get("/purchasing/api/v1/employees/"),
-                    axiosInstance.get("/purchasing/api/v1/steps/"),
-                    axiosInstance.get("/purchasing/api/v1/tasks/"),
-                    axiosInstance.get("/purchasing/api/v1/task-attachments/"),
-                ]);
-
-            setEmployees(normalizeList<ApiPurchasingEmployee>(employeesResponse.data));
-            setSteps(
-                normalizeList<ApiPurchasingStep>(stepsResponse.data).sort(
-                    (a, b) => a.order - b.order
-                )
-            );
-            setTasks(normalizeList<ApiPurchasingTask>(tasksResponse.data));
-            setAttachments(normalizeList<ApiTaskAttachment>(attachmentsResponse.data));
-        } catch (error) {
-            console.error("Purchasing data loading failed:", error);
-
-            setEmployees([]);
-            setSteps([]);
-            setTasks([]);
-            setAttachments([]);
+            const [e, s, t, a] = await Promise.all([
+                axiosInstance.get("/purchasing/api/v1/employees/"),
+                axiosInstance.get("/purchasing/api/v1/steps/"),
+                axiosInstance.get("/purchasing/api/v1/tasks/"),
+                axiosInstance.get("/purchasing/api/v1/task-attachments/"),
+            ]);
+            setEmployees(normalizeList<ApiPurchasingEmployee>(e.data));
+            setSteps(normalizeList<ApiPurchasingStep>(s.data).sort((x, y) => x.order - y.order));
+            setTasks(normalizeList<ApiPurchasingTask>(t.data));
+            setAttachments(normalizeList<ApiTaskAttachment>(a.data));
+        } catch (err) {
+            setError(errorText(err, "دریافت اطلاعات خرید انجام نشد"));
         } finally {
             setLoading(false);
             setRefreshing(false);
@@ -97,65 +82,52 @@ export default function PurchasingPage() {
         loadAll();
     }, [loadAll]);
 
-    const safeEmployees = employees ?? [];
-    const safeSteps = steps ?? [];
-    const safeTasks = tasks ?? [];
-    const safeAttachments = attachments ?? [];
+    const activeTasks = useMemo(() => tasks.filter((t) => t.status !== "completed" && t.status !== "cancelled"), [tasks]);
 
-    const activeStepTasks = useMemo(
-        () => safeTasks.filter((task) => task.status !== "completed" && task.status !== "cancelled"),
-        [safeTasks]
+    const stats = useMemo(
+        () => ({
+            active: activeTasks.length,
+            completed: tasks.filter((t) => t.status === "completed").length,
+            cancelled: tasks.filter((t) => t.status === "cancelled").length,
+            members: employees.filter((e) => e.is_active !== false).length,
+        }),
+        [tasks, activeTasks, employees]
     );
 
-    // --- Step handlers ---
-    const handleStepEdit = (step: ApiPurchasingStep) => {
-        setEditingStep(step);
-        setStepModalOpen(true);
-    };
-
-    const handleStepModalClose = () => {
+    const closeStepModal = () => {
         setStepModalOpen(false);
         setEditingStep(null);
     };
 
-    // --- Employee handlers ---
-    // توجه: مسیرهای patch/delete کارمند بر اساس الگوی موجود در steps فرض شده‌اند
-    // (/purchasing/api/v1/employees/{id}/patch/ و /delete/). اگر در بک‌اند اسم دیگری دارند، فقط همین دو خط را عوض کن.
-    const handleToggleEmployeeActive = async (employee: ApiPurchasingEmployee) => {
-        await axiosInstance.patch(`/purchasing/api/v1/employees/${employee.id}/patch/`, {
-            is_active: employee.is_active === false,
-        });
-        await loadAll(true);
+    // مسیر patch/delete کارمند: اگر در بک‌اند اسم دیگری دارد فقط همین‌ها را عوض کنید
+    const toggleEmployee = async (employee: ApiPurchasingEmployee) => {
+        try {
+            await axiosInstance.patch(`/purchasing/api/v1/employees/${employee.id}/patch/`, { is_active: employee.is_active === false });
+            await loadAll(true);
+        } catch (err) {
+            setError(errorText(err, "تغییر وضعیت انجام نشد"));
+        }
     };
 
-    // --- Delete flow (shared between steps & employees) ---
-    const deleteModalMeta = useMemo(() => {
+    const deleteMeta = useMemo(() => {
         if (!deleteTarget) return { title: "", description: "" };
-        if (deleteTarget.type === "step") {
-            return {
-                title: `حذف مرحله «${deleteTarget.step.title}»`,
-                description: "این مرحله از فرآیند خرید حذف می‌شود.",
-            };
-        }
-        return {
-            title: `حذف «${deleteTarget.employee.employee_name}» از تیم`,
-            description: "این عضو از فرآیند خرید حذف می‌شود.",
-        };
+        if (deleteTarget.type === "step")
+            return { title: `حذف مرحله «${deleteTarget.step.title}»`, description: "این مرحله از فرآیند خرید حذف می‌شود." };
+        return { title: `حذف «${deleteTarget.employee.employee_name}» از تیم`, description: "این عضو از فرآیند خرید حذف می‌شود." };
     }, [deleteTarget]);
 
-    const handleConfirmDelete = async () => {
+    const confirmDelete = async () => {
         if (!deleteTarget) return;
-
         setDeleteLoading(true);
         try {
-            if (deleteTarget.type === "step") {
-                await axiosInstance.delete(`/purchasing/api/v1/steps/${deleteTarget.step.id}/delete/`);
-            } else {
-                await axiosInstance.delete(
-                    `/purchasing/api/v1/employees/${deleteTarget.employee.id}/delete/`
-                );
-            }
+            const url =
+                deleteTarget.type === "step"
+                    ? `/purchasing/api/v1/steps/${deleteTarget.step.id}/delete/`
+                    : `/purchasing/api/v1/employees/${deleteTarget.employee.id}/delete/`;
+            await axiosInstance.delete(url);
             await loadAll(true);
+        } catch (err) {
+            setError(errorText(err, "حذف انجام نشد"));
         } finally {
             setDeleteLoading(false);
             setDeleteTarget(null);
@@ -163,93 +135,71 @@ export default function PurchasingPage() {
     };
 
     return (
-        <div dir="rtl" className="flex flex-col gap-4">
-            <PurchasingDeleteModal
-                open={!!deleteTarget}
-                title={deleteModalMeta.title}
-                description={deleteModalMeta.description}
-                loading={deleteLoading}
-                onConfirm={handleConfirmDelete}
-                onCancel={() => setDeleteTarget(null)}
-            />
+        <div dir="rtl" className="space-y-4 p-3 sm:p-5">
+            <PurchasingDeleteModal open={!!deleteTarget} title={deleteMeta.title} description={deleteMeta.description} loading={deleteLoading} onConfirm={confirmDelete} onCancel={() => setDeleteTarget(null)} />
 
-            {/* هدر بالای صفحه */}
-            <motion.div
-                initial={{ opacity: 0, y: -8 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="relative flex items-center justify-between gap-3 overflow-hidden rounded-[2rem] border border-gray-100 bg-white p-4 shadow-[0_10px_34px_rgba(15,23,42,0.05)] dark:border-white/[0.07] dark:bg-[#0A1930]"
-            >
-                <div
-                    className="absolute inset-y-0 right-0 w-1"
-                    style={{ background: "linear-gradient(180deg,#6366f1,#8b5cf6 60%,#6366f145)" }}
-                />
-
-                <div className="flex min-w-0 items-center gap-3">
-                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-500 text-white shadow-lg shadow-indigo-500/25">
-                        <ShoppingCart size={19} />
+            <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className={`${box} p-3`}>
+                <div className="flex items-center justify-between gap-3">
+                    <div className="flex min-w-0 items-center gap-3">
+                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-500 text-white shadow-sm">
+                            <ShoppingCart size={18} />
+                        </div>
+                        <div className="min-w-0">
+                            <h1 className="text-[15px] font-extrabold text-gray-900 dark:text-white">مدیریت خرید</h1>
+                            <p className="mt-0.5 truncate text-[10.5px] font-semibold text-gray-400">مدیریت مراحل، کارمندان و فرآیندهای خرید</p>
+                        </div>
                     </div>
 
-                    <div className="min-w-0">
-                        <h1 className="truncate text-[15px] font-extrabold text-gray-900 dark:text-white">
-                            مدیریت خرید
-                        </h1>
-                        <p className="mt-0.5 truncate text-[11px] font-medium text-gray-400">
-                            مدیریت مراحل، کارمندان و فرآیندهای خرید
-                        </p>
-                    </div>
-                </div>
-
-                <div className="flex shrink-0 items-center gap-2">
-                    <div
-                        className={`hidden items-center gap-1.5 rounded-2xl px-3 py-2 text-[10.5px] font-extrabold sm:flex ${isAdmin
-                                ? "bg-amber-500/10 text-amber-500"
-                                : "bg-indigo-500/10 text-indigo-600 dark:text-indigo-300"
-                            }`}
-                    >
-                        {isAdmin ? <ShieldCheck size={12} /> : <UserCheck size={12} />}
-                        <span>
+                    <div className="flex shrink-0 items-center gap-2">
+                        <span className={`hidden h-9 items-center gap-1.5 rounded-full px-3 text-[10.5px] font-extrabold md:flex ${isAdmin ? "bg-amber-500/10 text-amber-500" : "bg-indigo-500/10 text-indigo-600 dark:text-indigo-300"}`}>
+                            {isAdmin ? <ShieldCheck size={12} /> : <UserCheck size={12} />}
                             {isAdmin ? "ادمین" : "کارمند"}
                             {currentEmployeeName ? ` · ${currentEmployeeName}` : ""}
                         </span>
+                        <button type="button" onClick={() => loadAll(true)} disabled={loading || refreshing} className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 text-gray-400 transition-colors hover:text-gray-600 disabled:opacity-40 dark:bg-white/[0.05] dark:hover:text-gray-300">
+                            <RefreshCw size={13} className={refreshing ? "animate-spin" : ""} />
+                        </button>
                     </div>
+                </div>
 
-                    <button
-                        type="button"
-                        onClick={() => loadAll(true)}
-                        disabled={loading || refreshing}
-                        className="flex h-9 w-9 items-center justify-center rounded-2xl bg-gray-100 text-gray-400 transition-colors hover:text-gray-600 disabled:opacity-40 dark:bg-white/[0.05] dark:hover:text-gray-300"
-                    >
-                        <RefreshCw size={14} className={refreshing ? "animate-spin" : ""} />
-                    </button>
+                <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                    <Stat label="در جریان" value={toPersianDigits(stats.active)} icon={Clock3} tone="bg-amber-50/70 text-amber-600 dark:bg-amber-500/[0.07] dark:text-amber-400" />
+                    <Stat label="تکمیل‌شده" value={toPersianDigits(stats.completed)} icon={CheckCircle2} tone="bg-emerald-50/70 text-emerald-600 dark:bg-emerald-500/[0.07] dark:text-emerald-400" />
+                    <Stat label="لغوشده" value={toPersianDigits(stats.cancelled)} icon={XCircle} tone="bg-red-50/70 text-red-500 dark:bg-red-500/[0.07] dark:text-red-400" />
+                    <Stat label="اعضای فعال" value={`${toPersianDigits(stats.members)}/${toPersianDigits(employees.length)}`} icon={Users} tone="bg-indigo-50/70 text-indigo-600 dark:bg-indigo-500/[0.07] dark:text-indigo-400" />
                 </div>
             </motion.div>
 
+            {error && (
+                <div className="flex items-center gap-2.5 rounded-2xl bg-red-50 px-3.5 py-3 dark:bg-red-500/10">
+                    <XCircle size={14} className="shrink-0 text-red-500" />
+                    <span className="flex-1 text-[11.5px] font-semibold text-red-500 dark:text-red-400">{error}</span>
+                    <button type="button" onClick={() => loadAll()} className="rounded-full bg-red-500 px-3 py-1.5 text-[10px] font-extrabold text-white transition hover:bg-red-600">تلاش مجدد</button>
+                </div>
+            )}
+
             {loading ? (
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                    {Array.from({ length: 6 }).map((_, index) => (
-                        <div
-                            key={index}
-                            className="h-40 animate-pulse rounded-[1.8rem] border border-gray-100 bg-gray-50 dark:border-white/[0.07] dark:bg-white/[0.03]"
-                        />
-                    ))}
+                <div className={`${box} flex h-32 items-center justify-center`}>
+                    <Loader2 size={20} className="animate-spin text-indigo-500" />
                 </div>
             ) : (
                 <>
-                    {/* هدر اعضای تیم */}
                     <PurchasingEmployeesBar
-                        employees={safeEmployees}
+                        employees={employees}
                         canManage={isAdmin}
                         onAdd={() => setEmployeeModalOpen(true)}
-                        onToggleActive={handleToggleEmployeeActive}
+                        onToggleActive={toggleEmployee}
                         onDelete={(employee) => setDeleteTarget({ type: "employee", employee })}
                     />
 
-                    {/* وسط صفحه: مراحل و تسک‌ها */}
                     <PurchasingStagesPanel
-                        steps={safeSteps}
-                        tasks={activeStepTasks}
-                        attachments={safeAttachments}
-                        onEditStep={handleStepEdit}
+                        steps={steps}
+                        tasks={activeTasks}
+                        attachments={attachments}
+                        onEditStep={(step) => {
+                            setEditingStep(step);
+                            setStepModalOpen(true);
+                        }}
                         onDeleteStep={(step) => setDeleteTarget({ type: "step", step })}
                         onUpdated={() => loadAll(true)}
                         onAddStep={() => {
@@ -258,12 +208,7 @@ export default function PurchasingPage() {
                         }}
                     />
 
-                    {/* پایین صفحه: بایگانی */}
-                    <PurchasingArchivePanel
-                        tasks={safeTasks}
-                        steps={safeSteps}
-                        attachments={safeAttachments}
-                    />
+                    <PurchasingArchivePanel tasks={tasks} steps={steps} attachments={attachments} />
                 </>
             )}
 
@@ -271,7 +216,7 @@ export default function PurchasingPage() {
                 <PurchasingEmployeeModal
                     open={employeeModalOpen}
                     onClose={() => setEmployeeModalOpen(false)}
-                    existingEmployees={safeEmployees}
+                    existingEmployees={employees}
                     onSaved={() => {
                         setEmployeeModalOpen(false);
                         loadAll(true);
@@ -281,12 +226,12 @@ export default function PurchasingPage() {
 
             <StepFormModal
                 open={stepModalOpen}
-                onClose={handleStepModalClose}
+                onClose={closeStepModal}
                 step={editingStep}
-                steps={safeSteps}
-                employees={safeEmployees}
+                steps={steps}
+                employees={employees}
                 onSaved={() => {
-                    handleStepModalClose();
+                    closeStepModal();
                     loadAll(true);
                 }}
             />

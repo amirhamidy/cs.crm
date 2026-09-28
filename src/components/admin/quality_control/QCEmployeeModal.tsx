@@ -1,43 +1,71 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Loader2, Search, ShieldCheck, UserPlus, X } from "lucide-react";
+import { AlertCircle, Check, Loader2, Search, UserPlus, X } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
 import type { ApiQualityControlEmployee, ApiUser } from "@/types/quality_control";
+import { gradientOf, initialOf } from "./qcUtils";
 
 interface Props {
     isOpen: boolean;
-    users: ApiUser[];
     existingEmployees: ApiQualityControlEmployee[];
+    names: Record<string, string>;
     onClose: () => void;
-    onCreated: (employee: ApiQualityControlEmployee) => void;
+    onCreated: () => void;
 }
 
-export default function QCEmployeeModal({ isOpen, users, existingEmployees, onClose, onCreated }: Props) {
+const getList = (data: unknown): ApiUser[] =>
+    Array.isArray(data) ? data : ((data as { results?: ApiUser[]; data?: ApiUser[] } | null)?.results ?? (data as { data?: ApiUser[] } | null)?.data ?? []);
+
+export default function QCEmployeeModal({ isOpen, existingEmployees, names, onClose, onCreated }: Props) {
+    const [users, setUsers] = useState<ApiUser[]>([]);
     const [search, setSearch] = useState("");
-    const [selected, setSelected] = useState("");
+    const [selected, setSelected] = useState<number | null>(null);
+    const [fetching, setFetching] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
+
+    useEffect(() => {
+        if (!isOpen) return;
+        let mounted = true;
+        setSearch("");
+        setSelected(null);
+        setError("");
+        setFetching(true);
+        axiosInstance
+            .get("/accounts/api/v1/user/list/")
+            .then((r) => mounted && setUsers(getList(r.data)))
+            .catch(() => mounted && setError("دریافت لیست کاربران انجام نشد"))
+            .finally(() => mounted && setFetching(false));
+        return () => {
+            mounted = false;
+        };
+    }, [isOpen]);
 
     const available = useMemo(() => {
         const used = new Set(existingEmployees.map((x) => x.user));
         const q = search.trim().toLowerCase();
-        return users.filter((user) => user.is_active && !used.has(user.id) && (!q || user.username.toLowerCase().includes(q)));
-    }, [users, existingEmployees, search]);
+        return users.filter(
+            (u) =>
+                u.is_active &&
+                !used.has(u.id) &&
+                (!q || u.username.toLowerCase().includes(q) || (names[u.username] || "").toLowerCase().includes(q))
+        );
+    }, [users, existingEmployees, names, search]);
+
+    const close = () => !loading && onClose();
 
     async function create() {
         if (!selected) return setError("یک کاربر را انتخاب کنید");
         setLoading(true);
         setError("");
         try {
-            const { data } = await axiosInstance.post<ApiQualityControlEmployee>("/quality_control/api/v1/employee/create/", { user: Number(selected), is_active: true });
-            onCreated(data);
-            setSelected("");
-            setSearch("");
+            await axiosInstance.post("/quality_control/api/v1/employee/create/", { user: selected, is_active: true });
+            onCreated();
         } catch (err: unknown) {
-            const data = (err as { response?: { data?: { detail?: string } } }).response?.data;
-            setError(data?.detail || "افزودن کارمند انجام نشد");
+            const data = (err as { response?: { data?: { detail?: string; message?: string } } }).response?.data;
+            setError(data?.detail || data?.message || "افزودن کارمند انجام نشد");
         } finally {
             setLoading(false);
         }
@@ -46,35 +74,111 @@ export default function QCEmployeeModal({ isOpen, users, existingEmployees, onCl
     return (
         <AnimatePresence>
             {isOpen && (
-                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => !loading && onClose()} className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 backdrop-blur-md">
-                    <motion.div onClick={(e) => e.stopPropagation()} initial={{ opacity: 0, scale: .97, y: 15 }} animate={{ opacity: 1, scale: 1, y: 0 }} className="w-full max-w-[500px] rounded-[30px] bg-white p-6 shadow-2xl dark:bg-[#0b1220]">
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-500/10 text-blue-500"><UserPlus size={19} /></div>
-                                <div><h2 className="text-sm font-black text-gray-900 dark:text-white">افزودن عضو کنترل کیفی</h2><p className="mt-1 text-[9px] text-gray-400">کاربر موردنظر را به تیم اضافه کنید</p></div>
+                <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="fixed inset-0 z-[100] flex items-center justify-center px-4"
+                    style={{ background: "rgba(0,0,0,0.45)", backdropFilter: "blur(3px)" }}
+                    onMouseDown={close}
+                >
+                    <motion.div
+                        initial={{ opacity: 0, y: 16, scale: 0.98 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: 16, scale: 0.98 }}
+                        transition={{ duration: 0.28, ease: "easeOut" }}
+                        onMouseDown={(e) => e.stopPropagation()}
+                        className="flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-2xl shadow-black/10 dark:border-white/[0.06] dark:bg-[#0f172a]"
+                        dir="rtl"
+                    >
+                        <div className="flex shrink-0 items-center justify-between px-8 pb-6 pt-8">
+                            <div className="flex items-center gap-2.5">
+                                <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-50 dark:bg-blue-500/10">
+                                    <UserPlus size={15} className="text-blue-500" />
+                                </div>
+                                <div>
+                                    <h2 className="text-[14px] font-extrabold text-gray-900 dark:text-white">افزودن عضو کنترل کیفی</h2>
+                                    <p className="mt-0.5 text-[11px] text-gray-400">کاربر موردنظر را به تیم اضافه کنید</p>
+                                </div>
                             </div>
-                            <button onClick={onClose} className="rounded-xl bg-gray-100 p-2 dark:bg-white/[.05]"><X size={16} /></button>
+                            <button type="button" onClick={close} disabled={loading} className="flex h-8 w-8 items-center justify-center rounded-xl bg-gray-100 text-gray-400 transition hover:text-gray-600 disabled:opacity-40 dark:bg-white/[0.05] dark:hover:text-gray-300">
+                                <X size={15} />
+                            </button>
                         </div>
 
-                        <div className="relative mt-5">
-                            <Search size={15} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400" />
-                            <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="جستجوی نام کاربری..." className="h-11 w-full rounded-2xl border border-gray-200 bg-white pr-10 text-[10px] font-bold outline-none focus:border-blue-500 dark:border-white/[.07] dark:bg-white/[.04] dark:text-white" />
+                        <div className="flex min-h-0 flex-1 flex-col gap-3 px-8 pb-2">
+                            <div className="flex items-center gap-2 rounded-2xl border border-gray-100 bg-gray-50 px-3.5 py-3 transition-colors focus-within:border-blue-500 dark:border-white/[0.06] dark:bg-white/[0.03]">
+                                <Search size={13} className="shrink-0 text-gray-400" />
+                                <input
+                                    value={search}
+                                    onChange={(e) => setSearch(e.target.value)}
+                                    placeholder="جستجوی نام یا نام کاربری..."
+                                    className="w-full bg-transparent text-[12px] font-semibold text-gray-900 outline-none placeholder:text-gray-400 dark:text-white"
+                                />
+                            </div>
+
+                            <div className="max-h-[280px] space-y-1.5 overflow-y-auto">
+                                {fetching ? (
+                                    <div className="flex justify-center py-8">
+                                        <Loader2 size={18} className="animate-spin text-blue-500" />
+                                    </div>
+                                ) : available.length === 0 ? (
+                                    <p className="py-8 text-center text-[11px] text-gray-400">کاربری برای افزودن یافت نشد</p>
+                                ) : (
+                                    available.map((u, i) => {
+                                        const active = selected === u.id;
+                                        const name = names[u.username] || u.username;
+                                        return (
+                                            <motion.button
+                                                key={u.id}
+                                                type="button"
+                                                initial={{ opacity: 0, x: 6 }}
+                                                animate={{ opacity: 1, x: 0 }}
+                                                transition={{ delay: Math.min(i, 8) * 0.02 }}
+                                                onClick={() => {
+                                                    setSelected(u.id);
+                                                    setError("");
+                                                }}
+                                                className={`flex w-full items-center gap-2.5 rounded-2xl px-2.5 py-2 text-right transition-colors ${active ? "bg-blue-50 dark:bg-blue-500/10" : "hover:bg-gray-50 dark:hover:bg-white/[0.04]"}`}
+                                            >
+                                                <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${gradientOf(u.id)} text-[12px] font-extrabold text-white`}>
+                                                    {initialOf(name)}
+                                                </span>
+                                                <span className="min-w-0 flex-1">
+                                                    <span className={`block truncate text-[12.5px] font-bold ${active ? "text-blue-600 dark:text-blue-400" : "text-gray-900 dark:text-white"}`}>{name}</span>
+                                                    <span className="mt-0.5 block text-[10px] text-gray-400" dir="ltr">@{u.username}</span>
+                                                </span>
+                                                {active && (
+                                                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-600">
+                                                        <Check size={11} className="text-white" strokeWidth={3} />
+                                                    </span>
+                                                )}
+                                            </motion.button>
+                                        );
+                                    })
+                                )}
+                            </div>
+
+                            {error && (
+                                <div className="flex items-start gap-2.5 rounded-2xl bg-red-50 px-3.5 py-3 dark:bg-red-500/10">
+                                    <AlertCircle size={14} className="mt-0.5 shrink-0 text-red-500" />
+                                    <p className="text-[11.5px] font-semibold leading-5 text-red-500 dark:text-red-400">{error}</p>
+                                </div>
+                            )}
                         </div>
 
-                        <div className="mt-3 max-h-[280px] space-y-2 overflow-y-auto">
-                            {available.map((user) => (
-                                <button key={user.id} onClick={() => setSelected(String(user.id))} className={`flex w-full items-center gap-3 rounded-2xl p-3 text-right transition ${selected === String(user.id) ? "bg-blue-500/10 ring-1 ring-blue-500/20" : "bg-gray-50 dark:bg-white/[.035]"}`}>
-                                    <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-500/10 text-blue-500"><ShieldCheck size={15} /></div>
-                                    <div className="flex-1"><p className="text-[11px] font-black text-gray-800 dark:text-white">{user.username}</p><p className="mt-0.5 text-[9px] text-gray-400">شناسه کاربر: {user.id}</p></div>
-                                </button>
-                            ))}
+                        <div className="flex shrink-0 px-8 pb-8 pt-5">
+                            <motion.button
+                                type="button"
+                                whileTap={{ scale: 0.97 }}
+                                onClick={create}
+                                disabled={loading || !selected}
+                                className="flex h-11 w-full items-center justify-center gap-2 rounded-full bg-blue-600 text-[13px] font-bold text-white transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-40"
+                            >
+                                {loading ? <Loader2 size={15} className="animate-spin" /> : <UserPlus size={14} />}
+                                افزودن به تیم
+                            </motion.button>
                         </div>
-
-                        {error && <p className="mt-3 text-[10px] font-bold text-red-500">{error}</p>}
-
-                        <button onClick={create} disabled={loading || !selected} className="mt-5 flex h-11 w-full items-center justify-center gap-2 rounded-2xl bg-blue-600 text-[11px] font-black text-white disabled:opacity-40">
-                            {loading ? <Loader2 size={16} className="animate-spin" /> : <UserPlus size={16} />} افزودن به تیم
-                        </button>
                     </motion.div>
                 </motion.div>
             )}

@@ -1,38 +1,87 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { motion } from "framer-motion";
-import { Activity, CheckCircle2, ClipboardCheck, LayoutDashboard, Plus, RefreshCw, Search, ShieldCheck, Users, X, XCircle } from "lucide-react";
+import { Archive, CheckCircle2, ClipboardCheck, Clock3, Loader2, RefreshCw, Search, ShieldCheck, UserCheck, Users, X, XCircle, type LucideIcon } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
-import type { ApiMe, ApiQualityControlEmployee, ApiQualityControlItem, ApiUser, QualityControlStatus } from "@/types/quality_control";
-import QCEmployeeCard from "./QCEmployeeCard";
+import { toPersianDigits } from "@/lib/jalali";
+import { useCurrentEmployee, useEmployeeNames } from "@/hooks/usecurrentemployee";
+import type { ApiMe, ApiQualityControlEmployee, ApiQualityControlItem } from "@/types/quality_control";
+import QCDeleteModal from "./QCDeleteModal";
 import QCEmployeeModal from "./QCEmployeeModal";
 import QCItemCard from "./QCItemCard";
+import QCTeamBar from "./QCTeamBar";
 
-type Tab = "overview" | "items" | "employees";
+const PAGE = 8;
+const box = "rounded-[1.45rem] border border-gray-100 bg-white shadow-sm dark:border-white/[0.06] dark:bg-[#111827]";
+const grid = "grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3";
 
-const getList = <T,>(data: unknown): T[] => Array.isArray(data) ? data : ((data as { results?: T[]; data?: T[] } | null)?.results ?? (data as { data?: T[] } | null)?.data ?? []);
+const getList = <T,>(data: unknown): T[] =>
+    Array.isArray(data) ? data : ((data as { results?: T[]; data?: T[] } | null)?.results ?? (data as { data?: T[] } | null)?.data ?? []);
 
 function errorText(error: unknown, fallback: string) {
     const data = (error as { response?: { data?: { detail?: string; message?: string } } }).response?.data;
     return data?.detail || data?.message || fallback;
 }
 
+const time = (i: ApiQualityControlItem) => new Date(i.checked_at || i.created_at).getTime();
+
+function Stat({ label, value, icon: Icon, tone }: { label: string; value: string | number; icon: LucideIcon; tone: string }) {
+    return (
+        <div className={`flex items-center gap-2.5 rounded-xl px-3 py-2 ${tone}`}>
+            <Icon size={15} className="shrink-0" />
+            <div className="min-w-0">
+                <p className="text-[9.5px] font-semibold opacity-80">{label}</p>
+                <p className="mt-0.5 text-[13px] font-extrabold leading-none">{value}</p>
+            </div>
+        </div>
+    );
+}
+
+function Section({ icon: Icon, title, sub, count, children, empty }: { icon: LucideIcon; title: string; sub: string; count: number; children: ReactNode; empty: string }) {
+    return (
+        <section className="flex flex-col gap-3">
+            <div className="flex items-center gap-2.5">
+                <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-gray-100 dark:bg-white/[0.05]">
+                    <Icon size={15} className="text-gray-500 dark:text-gray-400" />
+                </span>
+                <div>
+                    <div className="flex items-center gap-2">
+                        <h2 className="text-[13px] font-extrabold text-gray-900 dark:text-white">{title}</h2>
+                        <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-gray-100 px-1.5 text-[9.5px] font-extrabold text-gray-500 dark:bg-white/[0.06] dark:text-gray-400">{toPersianDigits(count)}</span>
+                    </div>
+                    <p className="mt-0.5 text-[10.5px] font-semibold text-gray-400">{sub}</p>
+                </div>
+            </div>
+            {count ? children : (
+                <div className="flex min-h-[130px] flex-col items-center justify-center gap-2 rounded-[1.45rem] border border-dashed border-gray-200 text-center dark:border-white/[0.07]">
+                    <Icon size={22} className="text-gray-300 dark:text-gray-700" />
+                    <p className="text-[11px] font-semibold text-gray-400">{empty}</p>
+                </div>
+            )}
+        </section>
+    );
+}
+
 export default function QualityControlPage() {
+    const { employee: currentEmployee } = useCurrentEmployee();
+    const names = useEmployeeNames();
+
     const [me, setMe] = useState<ApiMe | null>(null);
     const [employees, setEmployees] = useState<ApiQualityControlEmployee[]>([]);
-    const [users, setUsers] = useState<ApiUser[]>([]);
     const [items, setItems] = useState<ApiQualityControlItem[]>([]);
-    const [tab, setTab] = useState<Tab>("overview");
     const [search, setSearch] = useState("");
-    const [status, setStatus] = useState<QualityControlStatus | "all">("all");
+    const [shown, setShown] = useState(PAGE);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [error, setError] = useState("");
     const [employeeModal, setEmployeeModal] = useState(false);
+    const [deleteTarget, setDeleteTarget] = useState<ApiQualityControlEmployee | null>(null);
+    const [deleting, setDeleting] = useState(false);
 
     const load = useCallback(async (silent = false) => {
-        silent ? setRefreshing(true) : setLoading(true);
+        if (silent) setRefreshing(true);
+        else setLoading(true);
         setError("");
         try {
             const [meRes, employeeRes, itemRes] = await Promise.all([
@@ -40,17 +89,9 @@ export default function QualityControlPage() {
                 axiosInstance.get("/quality_control/api/v1/employee/"),
                 axiosInstance.get("/quality_control/api/v1/"),
             ]);
-            const current = meRes.data;
-            const employeeList = getList<ApiQualityControlEmployee>(employeeRes.data);
-            setMe(current);
-            setEmployees(employeeList);
+            setMe(meRes.data);
+            setEmployees(getList<ApiQualityControlEmployee>(employeeRes.data));
             setItems(getList<ApiQualityControlItem>(itemRes.data));
-            if (current.type === 1) {
-                const userRes = await axiosInstance.get("/accounts/api/v1/user/list/");
-                setUsers(getList<ApiUser>(userRes.data));
-            } else {
-                setUsers([]);
-            }
         } catch (err) {
             setError(errorText(err, "دریافت اطلاعات کنترل کیفی انجام نشد"));
         } finally {
@@ -64,130 +105,164 @@ export default function QualityControlPage() {
     }, [load]);
 
     const isAdmin = me?.type === 1;
-    const myEmployee = employees.find((employee) => employee.user === me?.id && employee.is_active);
+    const myEmployee = useMemo(() => employees.find((e) => e.user === me?.id && e.is_active) ?? null, [employees, me]);
     const hasAccess = Boolean(isAdmin || myEmployee);
+    const myName = currentEmployee?.full_name || myEmployee?.username || "";
 
-    const filtered = useMemo(() => {
+    const stats = useMemo(() => {
+        const c = { pending: 0, approved: 0, rejected: 0 };
+        items.forEach((i) => {
+            if (i.status in c) c[i.status as keyof typeof c]++;
+        });
+        return { ...c, active: employees.filter((e) => e.is_active).length };
+    }, [items, employees]);
+
+    const { pending, archive } = useMemo(() => {
         const q = search.trim().toLowerCase();
-        return items.filter((item) => {
-            const matchesStatus = status === "all" || item.status === status;
-            const matchesSearch = !q || item.product_name?.toLowerCase().includes(q) || String(item.id).includes(q) || String(item.purchase_task_id).includes(q) || item.checked_by_name?.toLowerCase().includes(q) || item.note?.toLowerCase().includes(q);
-            return matchesStatus && matchesSearch;
-        }).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-    }, [items, search, status]);
+        const match = (i: ApiQualityControlItem) =>
+            !q ||
+            [i.product_name, String(i.id), String(i.purchase_task_id), i.checked_by_name, names[i.checked_by_name ?? ""], i.note].some((v) => v?.toLowerCase().includes(q));
+        const list = items.filter(match).sort((a, b) => time(b) - time(a));
+        return { pending: list.filter((i) => i.status === "pending"), archive: list.filter((i) => i.status !== "pending") };
+    }, [items, search, names]);
 
-    const pending = items.filter((x) => x.status === "pending").length;
-    const approved = items.filter((x) => x.status === "approved").length;
-    const rejected = items.filter((x) => x.status === "rejected").length;
-
-    const updateItem = () => load(true);
+    async function confirmDelete() {
+        if (!deleteTarget) return;
+        setDeleting(true);
+        try {
+            await axiosInstance.delete(`/quality_control/api/v1/employee/${deleteTarget.id}/delete/`);
+            setEmployees((x) => x.filter((e) => e.id !== deleteTarget.id));
+        } catch (err) {
+            setError(errorText(err, "حذف عضو انجام نشد"));
+        } finally {
+            setDeleting(false);
+            setDeleteTarget(null);
+        }
+    }
 
     if (!loading && !hasAccess) {
         return (
-            <div dir="rtl" className="min-h-full p-5 sm:p-8">
-                <div className="mx-auto flex min-h-[60vh] max-w-[600px] items-center justify-center">
-                    <div className="w-full rounded-[32px] border border-red-500/10 bg-white p-8 text-center shadow-sm dark:border-white/[.06] dark:bg-white/[.025]">
-                        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-red-500/10 text-red-500"><ShieldCheck size={28} /></div>
-                        <h2 className="mt-5 text-lg font-black text-gray-900 dark:text-white">دسترسی مجاز نیست</h2>
-                        <p className="mt-2 text-xs font-medium leading-6 text-gray-400">شما عضو تیم کنترل کیفی نیستید و دسترسی مدیر سیستم را نیز ندارید.</p>
+            <div dir="rtl" className="p-3 sm:p-5">
+                <div className={`${box} mx-auto flex min-h-[300px] max-w-md flex-col items-center justify-center p-8 text-center`}>
+                    <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-red-50 dark:bg-red-500/10">
+                        <ShieldCheck size={24} className="text-red-500" />
                     </div>
+                    <h2 className="text-[14px] font-extrabold text-gray-900 dark:text-white">دسترسی مجاز نیست</h2>
+                    <p className="mt-1.5 text-[11px] font-semibold leading-5 text-gray-400">شما عضو تیم کنترل کیفی نیستید و دسترسی مدیر سیستم را نیز ندارید.</p>
                 </div>
             </div>
         );
     }
 
+    const card = (i: ApiQualityControlItem, idx: number) => (
+        <QCItemCard key={i.id} item={i} index={idx} reviewer={myEmployee} reviewerName={myName} names={names} onUpdated={() => load(true)} />
+    );
+
     return (
-        <div dir="rtl" className="min-h-full bg-gray-50/40 p-4 sm:p-6 lg:p-8 dark:bg-[#070d18]">
-            <div className="mx-auto flex w-full max-w-[1500px] flex-col gap-5">
-                <header className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                    <div className="flex items-center gap-4">
-                        <div className="flex h-14 w-14 items-center justify-center rounded-[20px] bg-gradient-to-br from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-500/20"><ShieldCheck size={25} /></div>
-                        <div>
-                            <div className="flex flex-wrap items-center gap-2"><h1 className="text-xl font-black text-gray-900 dark:text-white">کنترل کیفی</h1><span className="rounded-full bg-emerald-500/10 px-2.5 py-1 text-[9px] font-black text-emerald-500">فعال</span></div>
-                            <p className="mt-1 text-[11px] font-medium text-gray-400">بررسی و تایید محصولات ارسال‌شده از فرآیند خرید</p>
+        <div dir="rtl" className="space-y-4 p-3 sm:p-5">
+            <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className={`${box} p-3`}>
+                <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                    <div className="flex min-w-0 items-center gap-3">
+                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-500 text-white shadow-sm">
+                            <ShieldCheck size={18} />
+                        </div>
+                        <div className="min-w-0">
+                            <h1 className="text-[15px] font-extrabold text-gray-900 dark:text-white">کنترل کیفی</h1>
+                            <p className="mt-0.5 truncate text-[10.5px] font-semibold text-gray-400">بررسی و تایید محصولات ارسال‌شده از فرآیند خرید</p>
                         </div>
                     </div>
-                    <div className="flex gap-2">
-                        <button onClick={() => load(true)} disabled={refreshing} className="flex h-11 w-11 items-center justify-center rounded-2xl border border-black/[.05] bg-white text-gray-500 dark:border-white/[.06] dark:bg-white/[.035]"><RefreshCw size={15} className={refreshing ? "animate-spin" : ""} /></button>
-                        {isAdmin && tab === "employees" && <button onClick={() => setEmployeeModal(true)} className="flex h-11 items-center gap-2 rounded-2xl bg-blue-600 px-4 text-[11px] font-black text-white shadow-lg shadow-blue-500/15"><Plus size={15} />افزودن کارمند</button>}
-                    </div>
-                </header>
 
-                {error && <div className="flex items-center gap-3 rounded-2xl border border-red-500/10 bg-red-500/[.06] p-4 text-red-500"><XCircle size={16} /><span className="flex-1 text-[10.5px] font-bold">{error}</span><button onClick={() => load()} className="rounded-xl bg-red-500 px-3 py-2 text-[9px] font-black text-white">تلاش مجدد</button></div>}
+                    <div className="flex items-center gap-2">
+                        <div className="relative min-w-0 flex-1 sm:w-64 sm:flex-none">
+                            <Search size={14} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                            <input
+                                value={search}
+                                onChange={(e) => {
+                                    setSearch(e.target.value);
+                                    setShown(PAGE);
+                                }}
+                                placeholder="جستجوی محصول، شناسه یا بررسی‌کننده..."
+                                className="h-9 w-full rounded-full border border-gray-100 bg-gray-50 pl-9 pr-9 text-[11px] font-semibold text-gray-800 outline-none transition focus:border-blue-400 dark:border-white/[0.06] dark:bg-white/[0.03] dark:text-white"
+                            />
+                            {search && (
+                                <button type="button" onClick={() => setSearch("")} className="absolute left-2.5 top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded-full text-gray-400 hover:text-gray-600">
+                                    <X size={11} />
+                                </button>
+                            )}
+                        </div>
 
-                <div className="flex gap-1 overflow-x-auto rounded-[20px] bg-gray-100 p-1.5 dark:bg-white/[.045]">
-                    {([
-                        ["overview", "نمای کلی", LayoutDashboard],
-                        ["items", "بررسی‌ها", ClipboardCheck],
-                        ["employees", "تیم کنترل کیفی", Users],
-                    ] as const).map(([id, label, Icon]) => (
-                        <button key={id} onClick={() => setTab(id)} className={`flex h-10 shrink-0 items-center gap-2 rounded-2xl px-4 text-[10.5px] font-black transition ${tab === id ? "bg-white text-blue-600 shadow-sm dark:bg-[#172033] dark:text-blue-400" : "text-gray-400"}`}>
-                            <Icon size={14} />{label}{id === "items" && pending > 0 && <span className="rounded-full bg-red-500 px-1.5 py-0.5 text-[8px] text-white">{pending}</span>}
+                        <span className={`hidden h-9 shrink-0 items-center gap-1.5 rounded-full px-3 text-[10.5px] font-extrabold md:flex ${isAdmin ? "bg-amber-500/10 text-amber-500" : "bg-blue-500/10 text-blue-600 dark:text-blue-300"}`}>
+                            {isAdmin ? <ShieldCheck size={12} /> : <UserCheck size={12} />}
+                            {isAdmin ? "ادمین" : "کارمند"}
+                            {myName ? ` · ${myName}` : ""}
+                        </span>
+
+                        <button type="button" onClick={() => load(true)} disabled={loading || refreshing} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gray-100 text-gray-400 transition-colors hover:text-gray-600 disabled:opacity-40 dark:bg-white/[0.05] dark:hover:text-gray-300">
+                            <RefreshCw size={13} className={refreshing ? "animate-spin" : ""} />
                         </button>
-                    ))}
+                    </div>
                 </div>
 
-                {loading ? <Loading /> : tab === "overview" ? <Overview items={items} employees={employees} onItems={() => setTab("items")} onEmployees={() => setTab("employees")} /> : tab === "items" ? (
-                    <>
-                        <div className="flex flex-col gap-3 lg:flex-row">
-                            <div className="relative flex-1"><Search className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400" size={16} /><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="جستجوی محصول، شناسه یا بررسی‌کننده..." className="h-12 w-full rounded-2xl border border-black/[.05] bg-white pr-11 pl-4 text-[11px] font-bold outline-none focus:border-blue-500 dark:border-white/[.06] dark:bg-white/[.035] dark:text-white" /></div>
-                            <select value={status} onChange={(e) => setStatus(e.target.value as QualityControlStatus | "all")} className="h-12 rounded-2xl border border-black/[.05] bg-white px-4 text-[10.5px] font-black dark:border-white/[.06] dark:bg-white/[.035] dark:text-white">
-                                <option value="all">همه وضعیت‌ها</option><option value="pending">در انتظار بررسی</option><option value="approved">تایید شده</option><option value="rejected">رد شده</option>
-                            </select>
-                            {(search || status !== "all") && <button onClick={() => { setSearch(""); setStatus("all"); }} className="flex h-12 items-center justify-center gap-2 rounded-2xl bg-gray-100 px-4 text-[10px] font-black text-gray-500 dark:bg-white/[.05]"><X size={14} />پاک کردن</button>}
-                        </div>
+                <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                    <Stat label="در انتظار بررسی" value={toPersianDigits(stats.pending)} icon={Clock3} tone="bg-amber-50/70 text-amber-600 dark:bg-amber-500/[0.07] dark:text-amber-400" />
+                    <Stat label="تایید شده" value={toPersianDigits(stats.approved)} icon={CheckCircle2} tone="bg-emerald-50/70 text-emerald-600 dark:bg-emerald-500/[0.07] dark:text-emerald-400" />
+                    <Stat label="رد شده" value={toPersianDigits(stats.rejected)} icon={XCircle} tone="bg-red-50/70 text-red-500 dark:bg-red-500/[0.07] dark:text-red-400" />
+                    <Stat label="اعضای فعال" value={`${toPersianDigits(stats.active)}/${toPersianDigits(employees.length)}`} icon={Users} tone="bg-blue-50/70 text-blue-600 dark:bg-blue-500/[0.07] dark:text-blue-400" />
+                </div>
+            </motion.div>
 
-                        <div className="flex items-center gap-2 text-[10px] font-bold text-gray-400"><Activity size={14} className="text-blue-500" />نمایش {filtered.length} مورد از {items.length}</div>
+            {error && (
+                <div className="flex items-center gap-2.5 rounded-2xl bg-red-50 px-3.5 py-3 dark:bg-red-500/10">
+                    <XCircle size={14} className="shrink-0 text-red-500" />
+                    <span className="flex-1 text-[11.5px] font-semibold text-red-500 dark:text-red-400">{error}</span>
+                    <button type="button" onClick={() => load()} className="rounded-full bg-red-500 px-3 py-1.5 text-[10px] font-extrabold text-white transition hover:bg-red-600">تلاش مجدد</button>
+                </div>
+            )}
 
-                        {filtered.length ? <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">{filtered.map((item, index) => <QCItemCard key={item.id} item={item} index={index} employees={employees} onUpdated={updateItem} />)}</div> : <Empty title="موردی پیدا نشد" icon={ClipboardCheck} />}
-                    </>
-                ) : isAdmin ? employees.length ? (
-                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-                        {employees.map((employee, index) => <QCEmployeeCard key={employee.id} employee={employee} index={index} onDeleted={() => setEmployees((x) => x.filter((e) => e.id !== employee.id))} />)}
-                    </div>
-                ) : <Empty title="تیم کنترل کیفی خالی است" icon={Users} /> : <Empty title="مدیریت تیم فقط برای مدیر سیستم فعال است" icon={Users} />}
-            </div>
+            {loading ? (
+                <div className={`${box} flex h-32 items-center justify-center`}>
+                    <Loader2 size={20} className="animate-spin text-blue-500" />
+                </div>
+            ) : (
+                <>
+                    <QCTeamBar employees={employees} names={names} canManage={Boolean(isAdmin)} onAdd={() => setEmployeeModal(true)} onDelete={setDeleteTarget} />
 
-            {isAdmin && <QCEmployeeModal isOpen={employeeModal} users={users} existingEmployees={employees} onClose={() => setEmployeeModal(false)} onCreated={(employee) => { setEmployees((x) => [...x, employee]); setEmployeeModal(false); }} />}
+                    <Section icon={ClipboardCheck} title="در انتظار بررسی" sub="کالاهایی که منتظر تایید یا رد هستند" count={pending.length} empty="موردی در انتظار بررسی نیست">
+                        <div className={grid}>{pending.map(card)}</div>
+                    </Section>
+
+                    <Section icon={Archive} title="بایگانی بررسی‌ها" sub="موارد تایید یا رد شده" count={archive.length} empty="هنوز بررسی‌ای در بایگانی نیست">
+                        <div className={grid}>{archive.slice(0, shown).map(card)}</div>
+                        {archive.length > shown && (
+                            <button type="button" onClick={() => setShown((n) => n + PAGE)} className="mx-auto flex h-9 items-center rounded-full bg-gray-100 px-5 text-[11px] font-extrabold text-gray-500 transition hover:text-blue-500 dark:bg-white/[0.05] dark:text-gray-400">
+                                نمایش بیشتر ({toPersianDigits(archive.length - shown)})
+                            </button>
+                        )}
+                    </Section>
+                </>
+            )}
+
+            {isAdmin && (
+                <QCEmployeeModal
+                    isOpen={employeeModal}
+                    existingEmployees={employees}
+                    names={names}
+                    onClose={() => setEmployeeModal(false)}
+                    onCreated={() => {
+                        setEmployeeModal(false);
+                        load(true);
+                    }}
+                />
+            )}
+
+            <QCDeleteModal
+                open={!!deleteTarget}
+                title={`حذف «${deleteTarget ? names[deleteTarget.username] || deleteTarget.username : ""}»`}
+                description="این عضو از تیم کنترل کیفی حذف می‌شود و دیگر نمی‌تواند کالایی را تایید یا رد کند."
+                loading={deleting}
+                onConfirm={confirmDelete}
+                onCancel={() => setDeleteTarget(null)}
+            />
         </div>
     );
-}
-
-function Loading() {
-    return <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">{Array.from({ length: 6 }).map((_, i) => <div key={i} className="h-[300px] animate-pulse rounded-[28px] bg-white dark:bg-white/[.025]" />)}</div>;
-}
-
-function Empty({ title, icon: Icon }: { title: string; icon: typeof ClipboardCheck }) {
-    return <div className="rounded-[28px] border border-black/[.05] bg-white py-20 text-center dark:border-white/[.06] dark:bg-white/[.025]"><div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-500/10 text-blue-500"><Icon size={25} /></div><h3 className="mt-5 text-sm font-black text-gray-800 dark:text-white">{title}</h3></div>;
-}
-
-function Overview({ items, employees, onItems, onEmployees }: { items: ApiQualityControlItem[]; employees: ApiQualityControlEmployee[]; onItems: () => void; onEmployees: () => void }) {
-    const pending = items.filter((x) => x.status === "pending").length;
-    const approved = items.filter((x) => x.status === "approved").length;
-    const rejected = items.filter((x) => x.status === "rejected").length;
-    const active = employees.filter((x) => x.is_active).length;
-    const checked = approved + rejected;
-    const rate = checked ? Math.round((approved / checked) * 100) : 0;
-
-    return <div className="flex flex-col gap-5">
-        <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
-            {([
-                ["در انتظار بررسی", pending, "text-amber-500", ClipboardCheck],
-                ["تایید شده", approved, "text-emerald-500", CheckCircle2],
-                ["رد شده", rejected, "text-red-500", XCircle],
-                ["کارمندان فعال", `${active}/${employees.length}`, "text-blue-500", Users],
-            ] as const).map(([label, value, color, Icon]) => <div key={label} className="rounded-[26px] border border-black/[.05] bg-white p-5 dark:border-white/[.06] dark:bg-white/[.025]"><Icon size={18} className={color} /><p className="mt-5 text-[10px] font-bold text-gray-400">{label}</p><p className={`mt-1 text-2xl font-black ${color}`}>{value}</p></div>)}
-        </div>
-
-        <div className="grid gap-5 xl:grid-cols-[1.4fr_.6fr]">
-            <div className="rounded-[28px] border border-black/[.05] bg-white p-6 dark:border-white/[.06] dark:bg-white/[.025]">
-                <div className="flex items-center justify-between"><div><h2 className="text-sm font-black text-gray-900 dark:text-white">وضعیت کلی کنترل کیفی</h2><p className="mt-1 text-[10px] text-gray-400">خلاصه وضعیت بررسی‌های ثبت‌شده</p></div><span className="rounded-xl bg-blue-500/10 px-3 py-1.5 text-[9px] font-black text-blue-500">{items.length} مورد</span></div>
-                <div className="mt-6 h-3 overflow-hidden rounded-full bg-gray-100 dark:bg-white/[.06]"><motion.div initial={{ width: 0 }} animate={{ width: `${rate}%` }} className="h-full rounded-full bg-emerald-500" /></div>
-                <div className="mt-2 flex justify-between text-[10px] font-bold text-gray-400"><span>نرخ تایید موارد بررسی‌شده</span><strong className="text-gray-800 dark:text-white">{rate}%</strong></div>
-                <div className="mt-6 flex gap-2"><button onClick={onItems} className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-gray-900 py-3 text-[10px] font-black text-white dark:bg-white dark:text-gray-900">مشاهده بررسی‌ها</button><button onClick={onEmployees} className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-gray-100 py-3 text-[10px] font-black text-gray-600 dark:bg-white/[.05] dark:text-gray-300">تیم کنترل کیفی</button></div>
-            </div>
-
-            <div className="rounded-[28px] border border-black/[.05] bg-white p-6 dark:border-white/[.06] dark:bg-white/[.025]"><Users size={18} className="text-blue-500" /><p className="mt-5 text-[10px] font-bold text-gray-400">تیم فعال</p><p className="mt-1 text-3xl font-black text-gray-900 dark:text-white">{active}</p><p className="mt-1 text-[10px] text-gray-400">نفر فعال از {employees.length} نفر</p></div>
-        </div>
-    </div>;
 }

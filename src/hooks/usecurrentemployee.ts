@@ -174,3 +174,19 @@ export function useCurrentEmployee() {
     error,
   };
 }
+
+export function useEmployeeNames() {
+  const [names, setNames] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    let mounted = true;
+    fetchEmployeeList()
+      .then((list) => mounted && setNames(Object.fromEntries(list.map((e) => [e.username, e.full_name]))))
+      .catch(() => {});
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  return names;
+}

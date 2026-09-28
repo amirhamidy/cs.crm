@@ -7,13 +7,12 @@ import axiosInstance from "@/lib/axiosInstance";
 import type { AxiosError } from "axios";
 import type { ApiQualityControlEmployee, ApiQualityControlItem, QualityControlActionResponse } from "@/types/quality_control";
 
-type Mode = "approve" | "reject";
-
 interface Props {
     isOpen: boolean;
-    mode: Mode;
+    mode: "approve" | "reject";
     item: ApiQualityControlItem;
-    employees: ApiQualityControlEmployee[];
+    reviewer: ApiQualityControlEmployee | null;
+    reviewerName: string;
     onClose: () => void;
     onCompleted: (response: QualityControlActionResponse) => void;
 }
@@ -29,48 +28,38 @@ function getErrorMessage(err: unknown, fallback: string) {
     return fallback;
 }
 
-export default function QCActionModal({ isOpen, mode, item, employees, onClose, onCompleted }: Props) {
-    const [currentUserId, setCurrentUserId] = useState<number | null>(null);
+export default function QCActionModal({ isOpen, mode, item, reviewer, reviewerName, onClose, onCompleted }: Props) {
     const [note, setNote] = useState("");
     const [file, setFile] = useState<File | null>(null);
     const [loading, setLoading] = useState(false);
-    const [loadingUser, setLoadingUser] = useState(false);
     const [error, setError] = useState("");
-    const fileInputRef = useRef<HTMLInputElement | null>(null);
+    const fileRef = useRef<HTMLInputElement | null>(null);
     const isApprove = mode === "approve";
-    const currentEmployee = currentUserId === null ? null : employees.find((employee) => employee.user === currentUserId && employee.is_active);
 
     useEffect(() => {
         if (!isOpen) return;
         setNote("");
         setFile(null);
         setError("");
-        setCurrentUserId(null);
-        setLoadingUser(true);
-        if (fileInputRef.current) fileInputRef.current.value = "";
-        axiosInstance.get("/accounts/api/v1/auth/me/")
-            .then(({ data }) => setCurrentUserId(Number(data.id)))
-            .catch((err) => setError(getErrorMessage(err, "دریافت اطلاعات کاربر انجام نشد")))
-            .finally(() => setLoadingUser(false));
+        if (fileRef.current) fileRef.current.value = "";
     }, [isOpen, item.id, mode]);
 
-    function closeModal() {
-        if (!loading) onClose();
-    }
+    const closeModal = () => !loading && onClose();
 
     async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
         event.preventDefault();
-        if (loadingUser) return setError("در حال تشخیص کارمند کنترل کیفی...");
-        if (!currentEmployee) return setError("کاربر فعلی عضو فعال تیم کنترل کیفی نیست");
+        if (!reviewer) return setError("کاربر فعلی عضو فعال تیم کنترل کیفی نیست");
         setLoading(true);
         setError("");
         try {
             const formData = new FormData();
-            formData.append("checked_by", String(currentEmployee.id));
+            formData.append("checked_by", String(reviewer.id));
             formData.append("note", note.trim());
             if (file) formData.append("file", file);
-            const endpoint = isApprove ? `/quality_control/api/v1/${item.id}/approve/` : `/quality_control/api/v1/${item.id}/reject/`;
-            const { data } = await axiosInstance.post<QualityControlActionResponse>(endpoint, formData);
+            const { data } = await axiosInstance.post<QualityControlActionResponse>(
+                `/quality_control/api/v1/${item.id}/${isApprove ? "approve" : "reject"}/`,
+                formData
+            );
             onCompleted(data);
             onClose();
         } catch (err) {
@@ -80,56 +69,106 @@ export default function QCActionModal({ isOpen, mode, item, employees, onClose, 
         }
     }
 
+    const tone = isApprove
+        ? { box: "bg-emerald-50 dark:bg-emerald-500/10", icon: "text-emerald-500", btn: "bg-emerald-600 hover:bg-emerald-500" }
+        : { box: "bg-red-50 dark:bg-red-500/10", icon: "text-red-500", btn: "bg-red-600 hover:bg-red-500" };
+    const Icon = isApprove ? CheckCircle2 : XCircle;
+    const shownName = reviewerName || reviewer?.username || "";
+
     return (
         <AnimatePresence>
             {isOpen && (
-                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm" onMouseDown={(event) => event.target === event.currentTarget && closeModal()}>
-                    <motion.div initial={{ opacity: 0, y: 18, scale: .98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 18, scale: .98 }} className="w-full max-w-md overflow-hidden rounded-[28px] border border-black/[0.06] bg-white shadow-2xl dark:border-white/[0.07] dark:bg-[#17181A]">
-                        <div className="flex items-center justify-between border-b border-black/[0.05] p-5 dark:border-white/[0.06]">
-                            <div className="flex items-center gap-3">
-                                <div className={`flex h-10 w-10 items-center justify-center rounded-2xl ${isApprove ? "bg-emerald-500/10 text-emerald-500" : "bg-red-500/10 text-red-500"}`}>
-                                    {isApprove ? <CheckCircle2 size={18} /> : <XCircle size={18} />}
+                <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="fixed inset-0 z-[100] flex items-center justify-center px-4"
+                    style={{ background: "rgba(0,0,0,0.45)", backdropFilter: "blur(3px)" }}
+                    onMouseDown={closeModal}
+                >
+                    <motion.div
+                        initial={{ opacity: 0, y: 16, scale: 0.98 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: 16, scale: 0.98 }}
+                        transition={{ duration: 0.28, ease: "easeOut" }}
+                        onMouseDown={(e) => e.stopPropagation()}
+                        className="flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-2xl shadow-black/10 dark:border-white/[0.06] dark:bg-[#0f172a]"
+                        dir="rtl"
+                    >
+                        <div className="flex shrink-0 items-center justify-between px-8 pb-6 pt-8">
+                            <div className="flex min-w-0 items-center gap-2.5">
+                                <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl ${tone.box}`}>
+                                    <Icon size={15} className={tone.icon} />
                                 </div>
-                                <div>
-                                    <h3 className="text-[13px] font-black text-gray-900 dark:text-white">{isApprove ? "تایید کنترل کیفی" : "رد کنترل کیفی"}</h3>
-                                    <p className="mt-1 text-[9.5px] font-bold text-gray-400">{item.product_name}</p>
+                                <div className="min-w-0">
+                                    <h3 className="text-[14px] font-extrabold text-gray-900 dark:text-white">{isApprove ? "تایید کنترل کیفی" : "رد کنترل کیفی"}</h3>
+                                    <p className="mt-0.5 truncate text-[11px] text-gray-400">{item.product_name}</p>
                                 </div>
                             </div>
-                            <button type="button" onClick={closeModal} disabled={loading} className="flex h-9 w-9 items-center justify-center rounded-xl bg-gray-100 text-gray-500 dark:bg-white/[0.05] dark:text-gray-300"><X size={16} /></button>
+                            <button type="button" onClick={closeModal} disabled={loading} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gray-100 text-gray-400 transition hover:text-gray-600 disabled:opacity-40 dark:bg-white/[0.05] dark:hover:text-gray-300">
+                                <X size={15} />
+                            </button>
                         </div>
 
-                        <form onSubmit={handleSubmit} className="p-5">
-                            <div className="rounded-2xl bg-blue-500/[0.06] p-3.5">
-                                <p className="text-[9px] font-bold text-gray-400">بررسی‌کننده</p>
-                                <p className="mt-1 text-[11px] font-black text-gray-800 dark:text-white">
-                                    {loadingUser ? "در حال تشخیص..." : currentEmployee?.username || "کارمند کنترل کیفی فعال یافت نشد"}
-                                </p>
-                            </div>
+                        <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
+                            <div className="flex flex-1 flex-col gap-4 overflow-y-auto px-8 pb-2">
+                                <AnimatePresence>
+                                    {error && (
+                                        <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 4 }} className="flex items-start gap-2.5 rounded-2xl bg-red-50 px-3.5 py-3 dark:bg-red-500/10">
+                                            <AlertCircle size={14} className="mt-0.5 shrink-0 text-red-500" />
+                                            <p className="flex-1 text-[11.5px] font-semibold leading-5 text-red-500 dark:text-red-400">{error}</p>
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
 
-                            <label className="mt-4 block">
-                                <span className="mb-2 block text-[10px] font-black text-gray-700 dark:text-gray-300">توضیحات</span>
-                                <textarea value={note} onChange={(event) => setNote(event.target.value)} rows={4} placeholder="توضیحات بررسی را وارد کنید..." className="w-full resize-none rounded-2xl border border-black/[0.06] bg-gray-50 p-3 text-[10.5px] font-bold outline-none transition focus:border-blue-500 dark:border-white/[0.06] dark:bg-white/[0.035] dark:text-white" />
-                            </label>
-
-                            <div className="mt-4">
-                                <input ref={fileInputRef} type="file" className="hidden" onChange={(event) => setFile(event.target.files?.[0] || null)} />
-                                <button type="button" onClick={() => fileInputRef.current?.click()} className="flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-black/[0.08] bg-gray-50 px-4 py-4 text-[10px] font-black text-gray-500 dark:border-white/[0.08] dark:bg-white/[0.025] dark:text-gray-300">
-                                    <Upload size={15} />{file ? file.name : "افزودن فایل"}
-                                </button>
-                            </div>
-
-                            {error && (
-                                <div className="mt-4 flex items-start gap-2 rounded-2xl bg-red-500/[0.07] p-3 text-red-500">
-                                    <AlertCircle size={14} className="mt-0.5 shrink-0" />
-                                    <p className="text-[10px] font-bold leading-5">{error}</p>
+                                <div>
+                                    <label className="mb-2 block text-[11.5px] font-bold text-gray-400">بررسی‌کننده</label>
+                                    <div className="flex h-[52px] items-center gap-2.5 rounded-2xl border border-gray-100 bg-gray-50 px-3 dark:border-white/[0.06] dark:bg-white/[0.03]">
+                                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-indigo-500 text-[12px] font-extrabold text-white">
+                                            {(shownName || "؟").charAt(0)}
+                                        </span>
+                                        <span className="truncate text-[12.5px] font-bold text-gray-900 dark:text-white">
+                                            {reviewer ? shownName : "کارمند کنترل کیفی فعال یافت نشد"}
+                                        </span>
+                                    </div>
                                 </div>
-                            )}
 
-                            <div className="mt-5 grid grid-cols-2 gap-2">
-                                <button type="button" onClick={closeModal} disabled={loading} className="h-11 rounded-2xl bg-gray-100 text-[10.5px] font-black text-gray-600 dark:bg-white/[0.05] dark:text-gray-300">انصراف</button>
-                                <button type="submit" disabled={loading || loadingUser || !currentEmployee} className={`flex h-11 items-center justify-center gap-2 rounded-2xl text-[10.5px] font-black text-white disabled:opacity-40 ${isApprove ? "bg-emerald-500 hover:bg-emerald-600" : "bg-red-500 hover:bg-red-600"}`}>
-                                    {loading ? <Loader2 size={15} className="animate-spin" /> : isApprove ? "تایید نهایی" : "رد نهایی"}
+                                <div>
+                                    <label className="mb-2 block text-[11.5px] font-bold text-gray-400">توضیحات</label>
+                                    <textarea
+                                        value={note}
+                                        onChange={(e) => setNote(e.target.value)}
+                                        rows={4}
+                                        placeholder="توضیحات بررسی را وارد کنید..."
+                                        className="w-full resize-none rounded-2xl border border-gray-100 bg-gray-50 p-3.5 text-[12.5px] font-bold text-gray-900 outline-none transition-colors placeholder:text-gray-400 focus:border-blue-500 dark:border-white/[0.06] dark:bg-white/[0.03] dark:text-white dark:focus:border-blue-500/50"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="mb-2 block text-[11.5px] font-bold text-gray-400">فایل (اختیاری)</label>
+                                    <label className="flex cursor-pointer items-center gap-2.5 rounded-2xl border border-dashed border-gray-200 bg-gray-50/60 px-3.5 py-3 transition-colors hover:border-blue-400 hover:bg-blue-50/40 dark:border-white/[0.1] dark:bg-white/[0.02] dark:hover:border-blue-500/40 dark:hover:bg-blue-500/[0.05]">
+                                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-white text-gray-400 shadow-sm dark:bg-white/[0.06]">
+                                            <Upload size={14} />
+                                        </span>
+                                        <span className="min-w-0 flex-1 truncate text-[12px] font-bold text-gray-600 dark:text-gray-300">{file ? file.name : "افزودن فایل"}</span>
+                                        <input ref={fileRef} type="file" className="hidden" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div className="flex shrink-0 gap-2 px-8 pb-8 pt-5">
+                                <button type="button" onClick={closeModal} disabled={loading} className="h-11 flex-1 rounded-full bg-gray-100 text-[13px] font-bold text-gray-600 transition hover:bg-gray-200 disabled:opacity-40 dark:bg-white/[0.05] dark:text-gray-300 dark:hover:bg-white/[0.08]">
+                                    انصراف
                                 </button>
+                                <motion.button
+                                    type="submit"
+                                    whileTap={{ scale: 0.97 }}
+                                    disabled={loading || !reviewer}
+                                    className={`flex h-11 flex-1 items-center justify-center gap-2 rounded-full text-[13px] font-bold text-white transition disabled:cursor-not-allowed disabled:opacity-40 ${tone.btn}`}
+                                >
+                                    {loading ? <Loader2 size={15} className="animate-spin" /> : <Icon size={14} />}
+                                    {isApprove ? "تایید نهایی" : "رد نهایی"}
+                                </motion.button>
                             </div>
                         </form>
                     </motion.div>

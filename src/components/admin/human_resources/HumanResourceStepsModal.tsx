@@ -2,14 +2,9 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import {
-    Check, GitBranch, Loader2, Pencil, Plus, X,
-} from "lucide-react";
+import { GitBranch, Loader2, Plus, X } from "lucide-react";
 import HumanResourceStepRoadmap from "./HumanResourceStepRoadmap";
-import {
-    HumanResource, HumanResourceStep,
-    createStep, deleteStep, getDocumentSteps, updateStep,
-} from "./humanResourceApi";
+import { HumanResource, HumanResourceStep, createStep, deleteStep, getDocumentSteps, updateStep } from "./humanResourceApi";
 
 interface Props {
     open: boolean;
@@ -19,9 +14,9 @@ interface Props {
     onChange: () => void;
 }
 
-export default function HumanResourceStepsModal({
-    open, document, canManage, onClose, onChange,
-}: Props) {
+const byOrder = (a: HumanResourceStep, b: HumanResourceStep) => a.order - b.order;
+
+export default function HumanResourceStepsModal({ open, document, canManage, onClose, onChange }: Props) {
     const [steps, setSteps] = useState<HumanResourceStep[]>([]);
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
@@ -32,8 +27,7 @@ export default function HumanResourceStepsModal({
         if (!document) return;
         try {
             setLoading(true);
-            const response = await getDocumentSteps(document.id);
-            setSteps(response.data);
+            setSteps((await getDocumentSteps(document.id)).data);
         } finally {
             setLoading(false);
         }
@@ -43,17 +37,19 @@ export default function HumanResourceStepsModal({
         if (open && document) loadSteps();
     }, [open, document]);
 
+    const refresh = async () => {
+        await loadSteps();
+        onChange();
+    };
+
     const saveStep = async () => {
         if (!document || !title.trim()) return;
         try {
             setSaving(true);
-            const nextOrder = steps.length > 0
-                ? Math.max(...steps.map((item) => item.order)) + 1
-                : 1;
-            await createStep(document.id, { order: nextOrder, title: title.trim() });
+            const order = steps.length ? Math.max(...steps.map((s) => s.order)) + 1 : 1;
+            await createStep(document.id, { order, title: title.trim() });
             setTitle("");
-            await loadSteps();
-            onChange();
+            await refresh();
         } finally {
             setSaving(false);
         }
@@ -62,41 +58,26 @@ export default function HumanResourceStepsModal({
     const handleInlineEdit = async (id: number, newTitle: string) => {
         try {
             setEditingInlineId(id);
-            const current = steps.find((item) => item.id === id);
-            await updateStep(id, {
-                order: current?.order ?? 1,
-                title: newTitle,
-            });
-            await loadSteps();
-            onChange();
+            await updateStep(id, { order: steps.find((s) => s.id === id)?.order ?? 1, title: newTitle });
+            await refresh();
         } finally {
             setEditingInlineId(null);
         }
     };
 
     const removeStep = async (id: number) => {
-        if (!document) return;
-        if (!confirm("آیا از حذف این مرحله مطمئن هستید؟")) return;
+        if (!document || !confirm("آیا از حذف این مرحله مطمئن هستید؟")) return;
         await deleteStep(id);
-        const response = await getDocumentSteps(document.id);
-        const remaining = response.data.slice().sort((a, b) => a.order - b.order);
-        for (let i = 0; i < remaining.length; i++) {
-            const desiredOrder = i + 1;
-            if (remaining[i].order !== desiredOrder) {
-                await updateStep(remaining[i].id, {
-                    order: desiredOrder,
-                    title: remaining[i].title,
-                });
-            }
-        }
-        await loadSteps();
-        onChange();
+        const remaining = (await getDocumentSteps(document.id)).data.slice().sort(byOrder);
+        await Promise.all(
+            remaining
+                .map((s, i) => (s.order !== i + 1 ? updateStep(s.id, { order: i + 1, title: s.title }) : null))
+                .filter(Boolean)
+        );
+        await refresh();
     };
 
-    const orderedSteps = useMemo(
-        () => steps.slice().sort((a, b) => a.order - b.order),
-        [steps]
-    );
+    const orderedSteps = useMemo(() => steps.slice().sort(byOrder), [steps]);
 
     if (!open || !document) return null;
 
@@ -127,9 +108,7 @@ export default function HumanResourceStepsModal({
                             </div>
                             <div className="min-w-0">
                                 <div className="flex items-center gap-2">
-                                    <h2 className="truncate text-[14px] font-extrabold text-gray-900 dark:text-white">
-                                        مراحل {document.title}
-                                    </h2>
+                                    <h2 className="truncate text-[14px] font-extrabold text-gray-900 dark:text-white">مراحل {document.title}</h2>
                                     <span className="flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-indigo-50 px-1.5 text-[9.5px] font-extrabold text-indigo-500 dark:bg-indigo-500/10 dark:text-indigo-400">
                                         {steps.length}
                                     </span>
@@ -137,11 +116,7 @@ export default function HumanResourceStepsModal({
                                 <p className="mt-0.5 text-[11px] text-gray-400">مسیر انجام فرآیند</p>
                             </div>
                         </div>
-                        <button
-                            type="button"
-                            onClick={onClose}
-                            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gray-100 text-gray-400 transition hover:text-gray-600 dark:bg-white/[0.05] dark:hover:text-gray-300"
-                        >
+                        <button type="button" onClick={onClose} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gray-100 text-gray-400 transition hover:text-gray-600 dark:bg-white/[0.05] dark:hover:text-gray-300">
                             <X size={15} />
                         </button>
                     </div>
@@ -154,9 +129,7 @@ export default function HumanResourceStepsModal({
                                         <GitBranch size={13} className="text-gray-400" />
                                     </span>
                                     <div>
-                                        <p className="text-[11.5px] font-extrabold text-gray-800 dark:text-white">
-                                            نقشه سفر
-                                        </p>
+                                        <p className="text-[11.5px] font-extrabold text-gray-800 dark:text-white">نقشه سفر</p>
                                         <p className="text-[9.5px] font-semibold text-gray-400">
                                             {steps.length ? `${steps.length} ایستگاه` : "بدون ایستگاه"}
                                         </p>
@@ -168,13 +141,7 @@ export default function HumanResourceStepsModal({
                                         <Loader2 size={19} className="animate-spin text-indigo-500" />
                                     </div>
                                 ) : (
-                                    <HumanResourceStepRoadmap
-                                        steps={steps}
-                                        canManage={canManage}
-                                        onEdit={handleInlineEdit}
-                                        onDelete={removeStep}
-                                        savingId={editingInlineId}
-                                    />
+                                    <HumanResourceStepRoadmap steps={steps} canManage={canManage} onEdit={handleInlineEdit} onDelete={removeStep} savingId={editingInlineId} />
                                 )}
                             </div>
 
@@ -186,12 +153,8 @@ export default function HumanResourceStepsModal({
                                                 <Plus size={14} className="text-indigo-500" />
                                             </span>
                                             <div>
-                                                <p className="text-[11.5px] font-extrabold text-gray-800 dark:text-white">
-                                                    افزودن مرحله
-                                                </p>
-                                                <p className="text-[9.5px] font-semibold text-gray-400">
-                                                    عنوان مرحله فرآیند را وارد کنید
-                                                </p>
+                                                <p className="text-[11.5px] font-extrabold text-gray-800 dark:text-white">افزودن مرحله</p>
+                                                <p className="text-[9.5px] font-semibold text-gray-400">عنوان مرحله فرآیند را وارد کنید</p>
                                             </div>
                                         </div>
 
@@ -199,7 +162,7 @@ export default function HumanResourceStepsModal({
                                             <input
                                                 value={title}
                                                 onChange={(e) => setTitle(e.target.value)}
-                                                onKeyDown={(e) => { if (e.key === "Enter") saveStep(); }}
+                                                onKeyDown={(e) => e.key === "Enter" && saveStep()}
                                                 placeholder="عنوان مرحله..."
                                                 className="h-10 w-full rounded-xl border border-gray-100 bg-white px-3.5 text-[11.5px] font-bold text-gray-800 outline-none transition focus:border-indigo-400 dark:border-white/[0.06] dark:bg-white/[0.04] dark:text-white"
                                             />
@@ -209,11 +172,7 @@ export default function HumanResourceStepsModal({
                                                 disabled={saving || !title.trim()}
                                                 className="flex h-10 items-center justify-center gap-1.5 rounded-xl bg-indigo-600 px-4 text-[11px] font-extrabold text-white transition hover:bg-indigo-500 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40"
                                             >
-                                                {saving ? (
-                                                    <Loader2 size={13} className="animate-spin" />
-                                                ) : (
-                                                    <Plus size={13} />
-                                                )}
+                                                {saving ? <Loader2 size={13} className="animate-spin" /> : <Plus size={13} />}
                                                 افزودن مرحله
                                             </button>
                                         </div>
@@ -223,25 +182,15 @@ export default function HumanResourceStepsModal({
                                 {canManage && orderedSteps.length > 0 && (
                                     <div className="mt-4 overflow-hidden rounded-[1.4rem] border border-gray-100 dark:border-white/[0.06]">
                                         <div className="border-b border-gray-100 bg-gray-50/70 px-3 py-2 dark:border-white/[0.06] dark:bg-white/[0.025]">
-                                            <p className="text-[10.5px] font-extrabold text-gray-500 dark:text-gray-400">
-                                                لیست مراحل
-                                            </p>
+                                            <p className="text-[10.5px] font-extrabold text-gray-500 dark:text-gray-400">لیست مراحل</p>
                                         </div>
                                         <div className="divide-y divide-gray-100 dark:divide-white/[0.05]">
-                                            {orderedSteps.map((step, index) => (
-                                                <div
-                                                    key={step.id}
-                                                    data-aos="fade-left"
-                                                    data-aos-delay={index * 40}
-                                                    className="flex items-center gap-2.5 px-3 py-2.5"
-                                                >
+                                            {orderedSteps.map((step, i) => (
+                                                <div key={step.id} data-aos="fade-left" data-aos-delay={i * 40} className="flex items-center gap-2.5 px-3 py-2.5">
                                                     <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-indigo-50 text-[10px] font-extrabold text-indigo-500 dark:bg-indigo-500/10 dark:text-indigo-400">
                                                         {step.order}
                                                     </span>
-                                                    <span className="min-w-0 flex-1 truncate text-[11.5px] font-bold text-gray-700 dark:text-gray-300">
-                                                        {step.title}
-                                                    </span>
-                                                    <Pencil size={11} className="shrink-0 text-gray-300 dark:text-gray-600" />
+                                                    <span className="min-w-0 flex-1 truncate text-[11.5px] font-bold text-gray-700 dark:text-gray-300">{step.title}</span>
                                                 </div>
                                             ))}
                                         </div>
@@ -250,9 +199,7 @@ export default function HumanResourceStepsModal({
 
                                 {!canManage && !loading && orderedSteps.length === 0 && (
                                     <div className="flex h-full min-h-[200px] items-center justify-center rounded-[1.4rem] border border-dashed border-gray-200 text-center dark:border-white/[0.07]">
-                                        <p className="text-[11px] font-semibold text-gray-400">
-                                            هنوز مرحله‌ای ثبت نشده است
-                                        </p>
+                                        <p className="text-[11px] font-semibold text-gray-400">هنوز مرحله‌ای ثبت نشده است</p>
                                     </div>
                                 )}
                             </div>

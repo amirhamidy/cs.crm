@@ -3,11 +3,10 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowLeftCircle, ArrowRightCircle, FileUp, Loader2, Upload, UserCheck, X } from "lucide-react";
+import { AlertCircle, ArrowLeftCircle, ArrowRightCircle, Loader2, Upload, X } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
 import type { ApiPurchasingTask } from "@/types/purchasing";
 import { usePurchasingAccess } from "@/hooks/usePurchasingAccess";
-import { FloatingTextarea } from "./FormControls";
 
 interface Props {
     isOpen: boolean;
@@ -18,62 +17,33 @@ interface Props {
 }
 
 function parseApiError(err: unknown): string {
-    const e = err as {
-        response?: {
-            data?:
-            | string
-            | {
-                detail?: string;
-                message?: string;
-                error?: string;
-                created_by?: string[] | string;
-                note?: string[] | string;
-                file?: string[] | string;
-                non_field_errors?: string[] | string;
-            };
-            status?: number;
-        };
-    };
-
+    const e = err as { response?: { data?: string | Record<string, unknown>; status?: number } };
     const data = e?.response?.data;
 
     if (!data) {
-        if (e?.response?.status === 401) return "ابتدا وارد حساب خود شوید.";
-        if (e?.response?.status === 403) return "شما به این عملیات دسترسی ندارید.";
-        if (e?.response?.status === 404) return "تسک یا مرحله یافت نشد.";
+        const s = e?.response?.status;
+        if (s === 401) return "ابتدا وارد حساب خود شوید.";
+        if (s === 403) return "شما به این عملیات دسترسی ندارید.";
+        if (s === 404) return "تسک یا مرحله یافت نشد.";
         return "خطا در ارتباط با سرور.";
     }
-
     if (typeof data === "string") return data;
 
-    const pick = (v: string[] | string | undefined) => (Array.isArray(v) ? v[0] : v);
-
-    return (
-        pick(data.created_by) ||
-        pick(data.note) ||
-        pick(data.file) ||
-        pick(data.non_field_errors) ||
-        data.detail ||
-        data.message ||
-        data.error ||
-        "عملیات انجام نشد."
-    );
+    for (const key of ["created_by", "note", "file", "non_field_errors", "detail", "message", "error"]) {
+        const v = data[key];
+        if (typeof v === "string") return v;
+        if (Array.isArray(v) && typeof v[0] === "string") return v[0];
+    }
+    return "عملیات انجام نشد.";
 }
 
 export default function TaskTransitionModal({ isOpen, onClose, mode, task, onCompleted }: Props) {
-    const {
-        isAdmin,
-        isEmployee,
-        hasAccess,
-        currentPurchasingId,
-        currentEmployeeName,
-        loading: accessLoading,
-    } = usePurchasingAccess();
+    const { isAdmin, isEmployee, hasAccess, currentPurchasingId, currentEmployeeName, loading: accessLoading } = usePurchasingAccess();
 
     const [note, setNote] = useState("");
     const [file, setFile] = useState<File | null>(null);
     const [submitting, setSubmitting] = useState(false);
-    const [errorMessage, setErrorMessage] = useState("");
+    const [error, setError] = useState("");
 
     const isAdvance = mode === "advance";
 
@@ -81,45 +51,30 @@ export default function TaskTransitionModal({ isOpen, onClose, mode, task, onCom
         if (!isOpen) return;
         setNote("");
         setFile(null);
-        setErrorMessage("");
+        setError("");
         setSubmitting(false);
     }, [isOpen]);
 
-    const canSubmit =
-        !submitting && !accessLoading && !!currentPurchasingId && (isAdmin || (isEmployee && hasAccess));
+    const canSubmit = !submitting && !accessLoading && !!currentPurchasingId && (isAdmin || (isEmployee && hasAccess));
+    const close = () => !submitting && onClose();
 
     const handleSubmit = async () => {
-        if (accessLoading) {
-            setErrorMessage("در حال بررسی دسترسی، لطفاً صبر کنید.");
-            return;
-        }
-        if (!currentPurchasingId || !Number.isFinite(currentPurchasingId)) {
-            setErrorMessage("شناسه شما در فرآیند خرید یافت نشد. لطفاً صفحه را رفرش کنید.");
-            return;
-        }
-        if (!isAdmin && (!isEmployee || !hasAccess)) {
-            setErrorMessage("شما مجاز به انجام این عملیات نیستید.");
-            return;
-        }
+        if (accessLoading) return setError("در حال بررسی دسترسی، لطفاً صبر کنید.");
+        if (!currentPurchasingId || !Number.isFinite(currentPurchasingId)) return setError("شناسه شما در فرآیند خرید یافت نشد. لطفاً صفحه را رفرش کنید.");
+        if (!isAdmin && (!isEmployee || !hasAccess)) return setError("شما مجاز به انجام این عملیات نیستید.");
 
         setSubmitting(true);
-        setErrorMessage("");
-
+        setError("");
         try {
             const formData = new FormData();
             formData.append("created_by", String(currentPurchasingId));
             if (note.trim()) formData.append("note", note.trim());
             if (file) formData.append("file", file);
 
-            const endpoint = isAdvance
-                ? `/purchasing/api/v1/tasks/${task.id}/advance/`
-                : `/purchasing/api/v1/tasks/${task.id}/revert/`;
-
-            await axiosInstance.post(endpoint, formData, { headers: { "Content-Type": undefined } });
-
+            await axiosInstance.post(`/purchasing/api/v1/tasks/${task.id}/${isAdvance ? "advance" : "revert"}/`, formData, { headers: { "Content-Type": undefined } });
             onCompleted();
         } catch (err: unknown) {
-            setErrorMessage(parseApiError(err));
+            setError(parseApiError(err));
         } finally {
             setSubmitting(false);
         }
@@ -127,151 +82,119 @@ export default function TaskTransitionModal({ isOpen, onClose, mode, task, onCom
 
     if (typeof document === "undefined") return null;
 
+    const tone = isAdvance
+        ? { box: "bg-indigo-50 dark:bg-indigo-500/10", icon: "text-indigo-500", btn: "bg-indigo-600 hover:bg-indigo-500" }
+        : { box: "bg-red-50 dark:bg-red-500/10", icon: "text-red-500", btn: "bg-red-600 hover:bg-red-500" };
+    const Icon = isAdvance ? ArrowLeftCircle : ArrowRightCircle;
+    const doer = currentEmployeeName ? (isAdmin ? `${currentEmployeeName} (ادمین)` : currentEmployeeName) : "در حال شناسایی...";
+
     return createPortal(
         <AnimatePresence>
             {isOpen && (
-                <div
-                    className="fixed inset-0 z-[999] flex items-center justify-center bg-slate-950/55 px-4 backdrop-blur-sm"
-                    dir="rtl"
+                <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="fixed inset-0 z-[999] flex items-center justify-center px-4"
+                    style={{ background: "rgba(0,0,0,0.45)", backdropFilter: "blur(3px)" }}
+                    onMouseDown={close}
                 >
                     <motion.div
-                        initial={{ opacity: 0, scale: 0.96, y: 14 }}
-                        animate={{ opacity: 1, scale: 1, y: 0 }}
-                        exit={{ opacity: 0, scale: 0.96, y: 14 }}
-                        className="w-full max-w-[430px] overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-2xl dark:border-white/[0.08] dark:bg-[#111a2d]"
+                        initial={{ opacity: 0, y: 16, scale: 0.98 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: 16, scale: 0.98 }}
+                        transition={{ duration: 0.28, ease: "easeOut" }}
+                        onMouseDown={(e) => e.stopPropagation()}
+                        className="flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-2xl shadow-black/10 dark:border-white/[0.06] dark:bg-[#0f172a]"
+                        dir="rtl"
                     >
-                        <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4 dark:border-white/[0.06]">
-                            <div className="flex items-center gap-3">
-                                <div
-                                    className={`flex h-9 w-9 items-center justify-center rounded-xl ${isAdvance
-                                            ? "bg-indigo-500/10 text-indigo-500 dark:text-indigo-300"
-                                            : "bg-rose-500/10 text-rose-500"
-                                        }`}
-                                >
-                                    {isAdvance ? <ArrowLeftCircle size={16} /> : <ArrowRightCircle size={16} />}
+                        <div className="flex shrink-0 items-center justify-between px-8 pb-6 pt-8">
+                            <div className="flex min-w-0 items-center gap-2.5">
+                                <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl ${tone.box}`}>
+                                    <Icon size={15} className={tone.icon} />
                                 </div>
-                                <div>
-                                    <h3 className="text-[13px] font-extrabold text-gray-900 dark:text-white">
-                                        {isAdvance ? "انتقال به مرحله بعد" : "بازگشت به مرحله قبل"}
-                                    </h3>
-                                    <p className="mt-0.5 max-w-[230px] truncate text-[10px] font-medium text-gray-400">
-                                        {task.product_name}
-                                    </p>
+                                <div className="min-w-0">
+                                    <h3 className="text-[14px] font-extrabold text-gray-900 dark:text-white">{isAdvance ? "انتقال به مرحله بعد" : "بازگشت به مرحله قبل"}</h3>
+                                    <p className="mt-0.5 truncate text-[11px] text-gray-400">{task.product_name}</p>
                                 </div>
                             </div>
-                            <button
-                                type="button"
-                                onClick={onClose}
-                                disabled={submitting}
-                                className="flex h-8 w-8 items-center justify-center rounded-xl bg-gray-100 text-gray-400 transition-colors hover:text-gray-600 disabled:opacity-40 dark:bg-white/[0.05] dark:hover:text-gray-300"
-                            >
-                                <X size={14} />
+                            <button type="button" onClick={close} disabled={submitting} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gray-100 text-gray-400 transition hover:text-gray-600 disabled:opacity-40 dark:bg-white/[0.05] dark:hover:text-gray-300">
+                                <X size={15} />
                             </button>
                         </div>
 
-                        <div className="flex flex-col gap-4 p-5">
-                            <div className="flex items-center gap-2.5 rounded-2xl border border-indigo-500/20 bg-indigo-500/5 px-3 py-2.5 dark:bg-indigo-500/10">
-                                <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-indigo-500/15 text-indigo-500 dark:text-indigo-300">
-                                    <UserCheck size={14} />
-                                </div>
-                                <div className="min-w-0 flex-1">
-                                    <p className="text-[9px] font-bold text-gray-400">
-                                        انجام‌دهنده (به‌صورت خودکار)
-                                    </p>
-                                    <p className="truncate text-[11px] font-extrabold text-gray-900 dark:text-white">
-                                        {currentEmployeeName
-                                            ? isAdmin
-                                                ? `${currentEmployeeName} (ادمین)`
-                                                : currentEmployeeName
-                                            : "در حال شناسایی..."}
-                                    </p>
+                        <div className="flex flex-1 flex-col gap-4 overflow-y-auto px-8 pb-2">
+                            <AnimatePresence>
+                                {error && (
+                                    <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 4 }} className="flex items-start gap-2.5 rounded-2xl bg-red-50 px-3.5 py-3 dark:bg-red-500/10">
+                                        <AlertCircle size={14} className="mt-0.5 shrink-0 text-red-500" />
+                                        <p className="flex-1 text-[11.5px] font-semibold leading-5 text-red-500 dark:text-red-400">{error}</p>
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+
+                            <div>
+                                <label className="mb-2 block text-[11.5px] font-bold text-gray-400">انجام‌دهنده</label>
+                                <div className="flex h-[52px] items-center gap-2.5 rounded-2xl border border-gray-100 bg-gray-50 px-3 dark:border-white/[0.06] dark:bg-white/[0.03]">
+                                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-violet-500 text-[12px] font-extrabold text-white">
+                                        {(currentEmployeeName || "؟").trim().charAt(0)}
+                                    </span>
+                                    <span className="truncate text-[12.5px] font-bold text-gray-900 dark:text-white">{doer}</span>
                                 </div>
                             </div>
 
-                            <FloatingTextarea
-                                label={isAdvance ? "یادداشت انتقال" : "دلیل بازگشت"}
-                                value={note}
-                                onChange={(event) => setNote(event.target.value)}
-                                placeholder=" "
-                                rows={4}
-                            />
-
-                            <label className="group flex cursor-pointer flex-col items-center justify-center rounded-[1.5rem] border border-dashed border-gray-200 bg-gray-50 px-4 py-6 transition hover:border-indigo-300 hover:bg-indigo-50/40 dark:border-white/[0.1] dark:bg-white/[0.03] dark:hover:bg-white/[0.05]">
-                                <input
-                                    type="file"
-                                    className="hidden"
-                                    onChange={(event) => setFile(event.target.files?.[0] ?? null)}
+                            <div>
+                                <label className="mb-2 block text-[11.5px] font-bold text-gray-400">{isAdvance ? "یادداشت انتقال" : "دلیل بازگشت"}</label>
+                                <textarea
+                                    value={note}
+                                    onChange={(e) => setNote(e.target.value)}
+                                    rows={4}
+                                    placeholder="توضیحات را وارد کنید..."
+                                    className="w-full resize-none rounded-2xl border border-gray-100 bg-gray-50 p-3.5 text-[12.5px] font-bold text-gray-900 outline-none transition-colors placeholder:text-gray-400 focus:border-indigo-500 dark:border-white/[0.06] dark:bg-white/[0.03] dark:text-white dark:focus:border-indigo-500/50"
                                 />
-                                {file ? (
-                                    <>
-                                        <FileUp size={19} className="text-indigo-500" />
-                                        <span className="mt-2 max-w-full truncate text-[10px] font-bold text-gray-600 dark:text-gray-300">
-                                            {file.name}
-                                        </span>
+                            </div>
+
+                            <div>
+                                <label className="mb-2 block text-[11.5px] font-bold text-gray-400">فایل (اختیاری)</label>
+                                <label className="flex cursor-pointer items-center gap-2.5 rounded-2xl border border-dashed border-gray-200 bg-gray-50/60 px-3.5 py-3 transition-colors hover:border-indigo-400 hover:bg-indigo-50/40 dark:border-white/[0.1] dark:bg-white/[0.02] dark:hover:border-indigo-500/40 dark:hover:bg-indigo-500/[0.05]">
+                                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-white text-gray-400 shadow-sm dark:bg-white/[0.06]">
+                                        <Upload size={14} />
+                                    </span>
+                                    <span className="min-w-0 flex-1 truncate text-[12px] font-bold text-gray-600 dark:text-gray-300">{file ? file.name : "افزودن فایل"}</span>
+                                    {file && (
                                         <button
                                             type="button"
-                                            onClick={(event) => {
-                                                event.preventDefault();
+                                            onClick={(e) => {
+                                                e.preventDefault();
                                                 setFile(null);
                                             }}
-                                            className="mt-2 text-[9px] font-bold text-rose-500"
+                                            className="shrink-0 text-gray-400 transition hover:text-red-500"
                                         >
-                                            حذف فایل
+                                            <X size={13} />
                                         </button>
-                                    </>
-                                ) : (
-                                    <>
-                                        <Upload size={19} className="text-gray-400 group-hover:text-indigo-500" />
-                                        <span className="mt-2 text-[10px] font-bold text-gray-400 dark:text-gray-500">
-                                            افزودن فایل
-                                        </span>
-                                        <span className="mt-1 text-[8.5px] font-medium text-gray-400 dark:text-gray-500">
-                                            اختیاری
-                                        </span>
-                                    </>
-                                )}
-                            </label>
-
-                            {errorMessage && (
-                                <div className="rounded-2xl bg-red-50 px-3 py-2.5 text-[10px] font-semibold leading-5 text-red-500 dark:bg-red-500/10">
-                                    {errorMessage}
-                                </div>
-                            )}
-
-                            <div className="flex gap-2">
-                                <button
-                                    type="button"
-                                    onClick={onClose}
-                                    disabled={submitting}
-                                    className="flex-1 rounded-2xl bg-gray-100 py-3 text-[10.5px] font-extrabold text-gray-500 dark:bg-white/[0.06] dark:text-gray-300"
-                                >
-                                    انصراف
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={handleSubmit}
-                                    disabled={!canSubmit}
-                                    className={`flex flex-1 items-center justify-center gap-2 rounded-2xl py-3 text-[10.5px] font-extrabold text-white shadow-lg disabled:opacity-50 disabled:shadow-none ${isAdvance
-                                            ? "bg-gradient-to-r from-indigo-500 to-violet-500 shadow-indigo-500/25 hover:brightness-110"
-                                            : "bg-rose-500 shadow-rose-500/25 hover:bg-rose-600"
-                                        }`}
-                                >
-                                    {submitting ? (
-                                        <Loader2 size={14} className="animate-spin" />
-                                    ) : isAdvance ? (
-                                        <>
-                                            انتقال <ArrowLeftCircle size={13} />
-                                        </>
-                                    ) : (
-                                        <>
-                                            بازگشت <ArrowRightCircle size={13} />
-                                        </>
                                     )}
-                                </button>
+                                    <input type="file" className="hidden" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
+                                </label>
                             </div>
                         </div>
+
+                        <div className="flex shrink-0 gap-2 px-8 pb-8 pt-5">
+                            <button type="button" onClick={close} disabled={submitting} className="h-11 flex-1 rounded-full bg-gray-100 text-[13px] font-bold text-gray-600 transition hover:bg-gray-200 disabled:opacity-40 dark:bg-white/[0.05] dark:text-gray-300 dark:hover:bg-white/[0.08]">
+                                انصراف
+                            </button>
+                            <motion.button
+                                type="button"
+                                whileTap={{ scale: 0.97 }}
+                                onClick={handleSubmit}
+                                disabled={!canSubmit}
+                                className={`flex h-11 flex-1 items-center justify-center gap-2 rounded-full text-[13px] font-bold text-white transition disabled:cursor-not-allowed disabled:opacity-40 ${tone.btn}`}
+                            >
+                                {submitting ? <Loader2 size={15} className="animate-spin" /> : <Icon size={14} />}
+                                {isAdvance ? "انتقال" : "بازگشت"}
+                            </motion.button>
+                        </div>
                     </motion.div>
-                </div>
+                </motion.div>
             )}
         </AnimatePresence>,
         document.body
