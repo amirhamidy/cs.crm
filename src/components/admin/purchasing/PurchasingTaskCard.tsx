@@ -282,7 +282,7 @@ export default function PurchasingTaskCard({
 
             <TaskHistoryModal
                 open={historyOpen}
-                taskTitle={task.title}
+                taskTitle={task.title || task.product_name}
                 entries={historyEntries}
                 onClose={() => setHistoryOpen(false)}
                 onRefresh={onUpdated}

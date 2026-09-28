@@ -1,30 +1,63 @@
 "use client";
+
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/authStore";
 
-export function useAuthGuard(requiredType?: 1 | 2) {
-  const { isAuthenticated, userType, initFromStorage } = useAuthStore();
+export const useAuthGuard = (requiredUserType?: 1 | 2) => {
   const router = useRouter();
+
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const hasHydrated = useAuthStore((state) => state.hasHydrated);
+  const userType = useAuthStore((state) => state.userType);
+  const initSession = useAuthStore((state) => state.initSession);
+
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
-    initFromStorage();
-    setIsReady(true);
-  }, []);
+    let mounted = true;
+
+    const initialize = async () => {
+      await initSession();
+
+      if (mounted) {
+        setIsReady(true);
+      }
+    };
+
+    initialize();
+
+    return () => {
+      mounted = false;
+    };
+  }, [initSession]);
 
   useEffect(() => {
-    if (!isReady) return;
+    if (!isReady || !hasHydrated) return;
 
     if (!isAuthenticated) {
       router.replace("/login");
       return;
     }
 
-    if (requiredType && userType !== requiredType) {
+    if (
+      requiredUserType !== undefined &&
+      userType !== requiredUserType
+    ) {
       router.replace("/login");
     }
-  }, [isReady, isAuthenticated, userType, requiredType, router]);
+  }, [
+    isReady,
+    hasHydrated,
+    isAuthenticated,
+    userType,
+    requiredUserType,
+    router,
+  ]);
 
-  return { isReady };
-}
+  return {
+    isReady: isReady && hasHydrated,
+    isAuthenticated,
+    userType,
+  };
+};

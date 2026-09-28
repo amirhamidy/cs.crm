@@ -3,12 +3,12 @@
 import { useEffect } from "react";
 import { useAuthStore } from "@/store/authStore";
 
-export function AuthInitializer() {
-    const initFromStorage = useAuthStore((s) => s.initFromStorage);
+export default function AuthInitializer() {
+    const initSession = useAuthStore((state) => state.initSession);
 
     useEffect(() => {
-        initFromStorage();
-    }, []);
+        initSession();
+    }, [initSession]);
 
     return null;
 }

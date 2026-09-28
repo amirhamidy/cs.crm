@@ -62,7 +62,7 @@ export default function QCItemCard({ item, index, reviewer, reviewerName, names,
                             <div className="flex items-start justify-between gap-2">
                                 <div className="min-w-0">
                                     <h3 className="truncate text-[13px] font-extrabold text-gray-900 dark:text-white">{item.product_name}</h3>
-                                    <p className="mt-1 text-[10.5px] font-semibold text-gray-400">درخواست خرید #{toPersianDigits(item.purchase_task_id)}</p>
+                                    <p className="mt-1 text-[10.5px] font-semibold text-gray-400">درخواست خرید یا تولید #{toPersianDigits(item.purchase_task_id)}</p>
                                 </div>
                                 <span className={`shrink-0 rounded-full px-2 py-0.5 text-[9.5px] font-extrabold ${tone}`}>
                                     {QC_STATUS_META[item.status]?.label || item.status_display}

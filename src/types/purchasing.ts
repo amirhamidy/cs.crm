@@ -10,6 +10,7 @@ export interface ApiPurchasingStepEmployeeDetail {
   id: number;
   employee_id: number;
   full_name: string;
+  username?: string;
   is_active: boolean;
 }
 
@@ -43,6 +44,11 @@ export interface ApiPurchasingTask {
   status_display: string;
   created_at: string;
   updated_at: string;
+  title?: string;
+  description?: string;
+  current_stock?: number;
+  assigned_to_name?: string;
+  assigned_to_username?: string;
 }
 
 export interface ApiTaskAttachment {

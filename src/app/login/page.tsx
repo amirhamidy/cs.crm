@@ -22,13 +22,24 @@ export default function LoginPage() {
     const { silentLogout } = useLogout();
 
     const router = useRouter();
+
     const hasHydrated = useAuthStore((s) => s.hasHydrated);
     const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
     const userType = useAuthStore((s) => s.userType);
+    const initSession = useAuthStore((s) => s.initSession);
+
+    useEffect(() => {
+        initSession();
+    }, [initSession]);
+
     useEffect(() => {
         if (!hasHydrated || !isAuthenticated) return;
 
-        router.replace(userType === 1 ? "/admin/dashboard" : "/user/dashboard");
+        router.replace(
+            userType === 1
+                ? "/admin/dashboard"
+                : "/user/dashboard",
+        );
     }, [hasHydrated, isAuthenticated, userType, router]);
 
     const canShowForm = hasHydrated && !isAuthenticated;
@@ -67,7 +78,8 @@ export default function LoginPage() {
             setErrorMsg("لطفاً همه فیلدها را پر کنید");
             return;
         }
-        silentLogout();
+
+        await silentLogout();
 
         await login(username.trim(), password);
     };
@@ -140,7 +152,9 @@ export default function LoginPage() {
 
                         <button
                             type="button"
-                            onClick={() => setShowPassword((prev) => !prev)}
+                            onClick={() =>
+                                setShowPassword((prev) => !prev)
+                            }
                             className="absolute left-3 top-1/2 flex size-8 -translate-y-1/2 items-center justify-center rounded-xl text-gray-400 transition-colors hover:text-gray-600"
                             aria-label={
                                 showPassword
@@ -159,7 +173,9 @@ export default function LoginPage() {
                     <motion.button
                         type="submit"
                         disabled={loading}
-                        whileTap={loading ? undefined : { scale: 0.97 }}
+                        whileTap={
+                            loading ? undefined : { scale: 0.97 }
+                        }
                         className="flex min-h-11 items-center justify-center rounded-full bg-blue-600 py-3 text-sm font-bold text-white transition-colors hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-70"
                     >
                         {loading ? (

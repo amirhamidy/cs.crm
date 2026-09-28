@@ -1,4 +1,4 @@
-import axiosInstance from "@/lib/axiosInstance";
+import axios from "axios";
 
 export interface LoginPayload {
   username: string;
@@ -6,8 +6,6 @@ export interface LoginPayload {
 }
 
 export interface LoginResponse {
-  access: string;
-  refresh: string;
   user: {
     id: number;
     username: string;
@@ -15,16 +13,20 @@ export interface LoginResponse {
   };
 }
 
-export interface RefreshResponse {
-  access: string;
+export interface SessionResponse {
+  authenticated: boolean;
+  user: {
+    id: number;
+    username: string;
+    type: 1 | 2;
+  };
 }
 
 export const authService = {
   login: (payload: LoginPayload) =>
-    axiosInstance.post<LoginResponse>("/accounts/api/v1/auth/login/", payload),
+    axios.post<LoginResponse>("/api/auth/login", payload),
 
-  refresh: (refresh: string) =>
-    axiosInstance.post<RefreshResponse>("/accounts/api/v1/auth/refresh/", {
-      refresh,
-    }),
+  logout: () => axios.post("/api/auth/logout"),
+
+  session: () => axios.get<SessionResponse>("/api/auth/session"),
 };

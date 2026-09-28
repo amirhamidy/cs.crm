@@ -12,10 +12,15 @@ import {
 } from "recharts";
 import { ChartContainer, type ChartConfig } from "@/components/ui/chart";
 
-import {
-  useSoldTasksByTimeRange,
-  type TimeRange,
-} from "@/hooks/useSoldTasksByTimeRange";
+type TimeRange = "weekly" | "monthly" | "yearly";
+
+type ChartPoint = {
+  name: string;
+  sales: number;
+  revenue: number;
+};
+
+type SalesChartData = Record<TimeRange, ChartPoint[]>;
 
 const chartConfig: ChartConfig = {
   sales: { label: "فروش", color: "#38bdf8" },
@@ -47,26 +52,13 @@ type ActivePoint = {
   revenue: number;
 };
 
-function SalesChartSkeleton() {
-  return (
-    <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm dark:border-white/5 dark:bg-slate-950">
-      <div className="mb-3 flex items-center justify-between" dir="rtl">
-        <div className="space-y-2">
-          <div className="h-4 w-24 animate-pulse rounded-full bg-gray-100 dark:bg-slate-900" />
-          <div className="h-3 w-40 animate-pulse rounded-full bg-gray-100/80 dark:bg-slate-900/70" />
-        </div>
-        <div className="h-8 w-28 animate-pulse rounded-xl bg-gray-100 dark:bg-slate-900" />
-      </div>
-      <div className="h-[180px] rounded-xl bg-gray-50 dark:bg-slate-900/40" />
-    </div>
-  );
-}
-
-export default function SalesChart() {
+export default function SalesChart({
+  data: chartData,
+}: {
+  data: SalesChartData;
+}) {
   const [activeRange, setActiveRange] = useState<TimeRange>("monthly");
   const [activePoint, setActivePoint] = useState<ActivePoint | null>(null);
-
-  const { chartData, loading, error } = useSoldTasksByTimeRange();
 
   const data = useMemo(
     () => chartData[activeRange] ?? [],
@@ -146,16 +138,6 @@ export default function SalesChart() {
     [activePoint]
   );
 
-  if (loading) return <SalesChartSkeleton />;
-
-  if (error) {
-    return (
-      <div className="flex h-[256px] items-center justify-center rounded-2xl border border-red-100 bg-red-50/50 p-4 text-center text-xs text-red-600 dark:border-red-950/20 dark:bg-red-950/5 dark:text-red-400">
-        {error}
-      </div>
-    );
-  }
-
   return (
     <motion.div
       initial={{ opacity: 0, y: 6 }}
@@ -169,11 +151,11 @@ export default function SalesChart() {
       <div className="mb-3 flex items-center justify-between" dir="rtl">
         <div>
           <h3 className="text-[14px] font-semibold text-gray-900 dark:text-white">
-            نمودار فروش
+            فروش
           </h3>
 
-          <p className="mt-0.5 text-[13px] text-gray-500 dark:text-gray-400">
-            گزارش عملکرد {currentRange?.sub}
+          <p className="mt-0.5 text-[12px] text-gray-500 dark:text-gray-400">
+            {currentRange?.sub}
           </p>
         </div>
 
@@ -183,7 +165,10 @@ export default function SalesChart() {
               key={range.key}
               type="button"
               onClick={() => setActiveRange(range.key)}
-              className="relative rounded-lg px-2.5 py-1 text-[11px] font-medium"
+              className={`relative rounded-lg px-2.5 py-1 text-[11px] font-medium transition-colors ${activeRange === range.key
+                  ? "text-gray-900 dark:text-white"
+                  : "text-gray-500 dark:text-gray-400"
+                }`}
             >
               {activeRange === range.key && (
                 <motion.span
@@ -197,12 +182,7 @@ export default function SalesChart() {
                 />
               )}
 
-              <span
-                className={`relative z-10 transition-colors ${activeRange === range.key
-                    ? "text-gray-900 dark:text-white"
-                    : "text-gray-500 dark:text-gray-400"
-                  }`}
-              >
+              <span className="relative z-10">
                 {range.label}
               </span>
             </button>
@@ -210,89 +190,53 @@ export default function SalesChart() {
         </div>
       </div>
 
-      <div className="relative h-[180px]">
-        <div className="absolute left-2 top-2 z-10 min-w-[150px]">
-          <AnimatePresence mode="wait">
-            {activePoint && (
-              <motion.div
-                key={`${activeRange}-${activePoint.name}`}
-                initial={{
-                  opacity: 0,
-                  y: 4,
-                  scale: 0.96,
-                }}
-                animate={{
-                  opacity: 1,
-                  y: 0,
-                  scale: 1,
-                }}
-                exit={{
-                  opacity: 0,
-                  y: 4,
-                  scale: 0.96,
-                }}
-                transition={{ duration: 0.15 }}
-                className="pointer-events-none rounded-xl border border-gray-200/60 bg-white/95 px-3 py-2 shadow-lg backdrop-blur-sm dark:border-white/10 dark:bg-slate-900/95"
-                style={{
-                  boxShadow:
-                    "0 4px 20px rgba(56,189,248,0.35)",
-                }}
-              >
-                <div className="mb-1 flex items-center gap-1.5">
-                  <span
-                    className="h-2 w-2 rounded-full"
-                    style={{
-                      backgroundColor: "#38bdf8",
-                    }}
-                  />
+      <AnimatePresence mode="wait">
+        {activePoint && (
+          <motion.div
+            key={`${activeRange}-${activePoint.name}`}
+            initial={{ opacity: 0, y: 4, scale: 0.96 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 4, scale: 0.96 }}
+            transition={{ duration: 0.15 }}
+            className="absolute left-4 top-14 z-20 min-w-[145px] rounded-xl border border-gray-200/60 bg-white/95 px-3 py-2 shadow-lg backdrop-blur-sm dark:border-white/10 dark:bg-slate-900/95"
+          >
+            <div className="mb-1 text-[11px] font-semibold text-gray-800 dark:text-gray-100">
+              {activePoint.name}
+            </div>
 
-                  <span className="text-[12px] font-semibold text-gray-800 dark:text-gray-100">
-                    {activePoint.name}
-                  </span>
-                </div>
+            <div className="flex items-center justify-between gap-4 text-[11px]">
+              <span className="text-gray-500 dark:text-gray-400">
+                فروش
+              </span>
 
-                <div className="flex flex-col gap-0.5">
-                  <p className="text-[11px] text-gray-500 dark:text-gray-400">
-                    فروش:{" "}
-                    <span
-                      className="font-bold tabular-nums"
-                      style={{
-                        color: "#38bdf8",
-                      }}
-                    >
-                      {formattedSales}
-                    </span>
-                  </p>
+              <span className="font-bold tabular-nums text-sky-500">
+                {formattedSales}
+              </span>
+            </div>
 
-                  <p className="text-[11px] text-gray-500 dark:text-gray-400">
-                    درآمد:{" "}
-                    <span
-                      className="font-bold tabular-nums"
-                      style={{
-                        color: "#c084fc",
-                      }}
-                    >
-                      {formattedRevenue}
-                    </span>
-                  </p>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
+            <div className="mt-1 flex items-center justify-between gap-4 text-[11px]">
+              <span className="text-gray-500 dark:text-gray-400">
+                درآمد
+              </span>
 
-        <ChartContainer
-          config={chartConfig}
-          className="h-full w-full"
-        >
+              <span className="font-bold tabular-nums text-purple-500">
+                {formattedRevenue}
+              </span>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <div className="h-[200px] w-full">
+        <ChartContainer config={chartConfig} className="h-full w-full">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart
               data={data}
               margin={{
-                top: 4,
+                top: 8,
                 right: 4,
                 left: -24,
-                bottom: 0,
+                bottom: 8,
               }}
               onMouseMove={handleMouseMove}
               onMouseLeave={handleMouseLeave}
@@ -301,44 +245,43 @@ export default function SalesChart() {
 
               <CartesianGrid
                 strokeDasharray="3 3"
-                className="[&_line]:stroke-gray-100 dark:[&_line]:stroke-white/[0.04]"
                 vertical={false}
+                stroke="rgba(148,163,184,0.16)"
               />
 
               <XAxis
                 dataKey="name"
-                tick={{
-                  fontSize: 11,
-                  fontWeight: 500,
-                }}
-                className="[&_text]:fill-gray-500 dark:[&_text]:fill-gray-400"
                 axisLine={false}
                 tickLine={false}
-                dy={5}
+                tick={{
+                  fontSize: 10,
+                  fill: "#94a3b8",
+                }}
+                interval={data.length > 12 ? 4 : 0}
               />
 
               <YAxis
-                tick={{
-                  fontSize: 11,
-                  fontWeight: 500,
-                }}
-                className="[&_text]:fill-gray-500 dark:[&_text]:fill-gray-400"
                 axisLine={false}
                 tickLine={false}
-                tickFormatter={(v: number) => `${v}`}
+                tick={{
+                  fontSize: 10,
+                  fill: "#94a3b8",
+                }}
+                width={30}
               />
 
               <Area
                 type="monotone"
                 dataKey="sales"
                 stroke="#38bdf8"
-                strokeWidth={2.5}
+                strokeWidth={2}
                 fill="url(#salesGradFill)"
                 dot={false}
                 activeDot={{
-                  r: 5,
-                  strokeWidth: 0,
-                  fill: "#38bdf8",
+                  r: 4,
+                  strokeWidth: 2,
+                  stroke: "#38bdf8",
+                  fill: "#fff",
                 }}
                 isAnimationActive={false}
               />
@@ -347,54 +290,37 @@ export default function SalesChart() {
                 type="monotone"
                 dataKey="revenue"
                 stroke="#c084fc"
-                strokeWidth={2.5}
+                strokeWidth={2}
                 fill="url(#revenueGradFill)"
                 dot={false}
                 activeDot={{
-                  r: 5,
-                  strokeWidth: 0,
-                  fill: "#c084fc",
+                  r: 4,
+                  strokeWidth: 2,
+                  stroke: "#c084fc",
+                  fill: "#fff",
                 }}
                 isAnimationActive={false}
               />
             </AreaChart>
           </ResponsiveContainer>
         </ChartContainer>
-
-        {!hasData && (
-          <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-            <div
-              className="text-xs text-gray-400 dark:text-gray-500"
-              dir="rtl"
-            >
-              تسک فروخته شده‌ای در این بازه ثبت نشده است.
-            </div>
-          </div>
-        )}
       </div>
 
       {hasData && (
-        <div
-          className="mt-2 flex items-center justify-end gap-4"
-          dir="rtl"
-        >
-          {Object.entries(chartConfig).map(([key, val]) => (
-            <div
-              key={key}
-              className="flex items-center gap-1.5"
-            >
-              <span
-                className="inline-block h-0.5 w-3 rounded-full"
-                style={{
-                  backgroundColor: val.color,
-                }}
-              />
+        <div className="mt-2 flex items-center justify-center gap-5">
+          <div className="flex items-center gap-1.5">
+            <span className="h-2 w-2 rounded-full bg-sky-400" />
+            <span className="text-[11px] text-gray-500 dark:text-gray-400">
+              فروش
+            </span>
+          </div>
 
-              <span className="text-[11px] text-gray-500 dark:text-gray-400">
-                {val.label}
-              </span>
-            </div>
-          ))}
+          <div className="flex items-center gap-1.5">
+            <span className="h-2 w-2 rounded-full bg-purple-400" />
+            <span className="text-[11px] text-gray-500 dark:text-gray-400">
+              درآمد
+            </span>
+          </div>
         </div>
       )}
     </motion.div>

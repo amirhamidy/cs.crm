@@ -38,6 +38,7 @@
     "zustand": "^5.0.14"
   },
   "devDependencies": {
+    "@next/bundle-analyzer": "^16.3.6",
     "@tailwindcss/postcss": "^4",
     "@types/aos": "^3.0.8",
     "@types/js-cookie": "^3.0.6",
