@@ -13,20 +13,9 @@ export interface LoginResponse {
   };
 }
 
-export interface SessionResponse {
-  authenticated: boolean;
-  user: {
-    id: number;
-    username: string;
-    type: 1 | 2;
-  };
-}
-
 export const authService = {
   login: (payload: LoginPayload) =>
     axios.post<LoginResponse>("/api/auth/login", payload),
 
   logout: () => axios.post("/api/auth/logout"),
-
-  session: () => axios.get<SessionResponse>("/api/auth/session"),
 };

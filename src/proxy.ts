@@ -5,6 +5,13 @@ const ACCESS_MAX_AGE = 60 * 15;
 const REFRESH_MAX_AGE = 60 * 60 * 24 * 7;
 const EXPIRY_THRESHOLD_SECONDS = 30;
 
+type RefreshResult = {
+  access: string;
+  refresh: string | null;
+};
+
+const refreshPromises = new Map<string, Promise<RefreshResult | null>>();
+
 function cookieOptions(maxAge: number) {
   return {
     httpOnly: true,
@@ -39,6 +46,58 @@ function redirectToLogin(request: NextRequest) {
   return response;
 }
 
+async function refreshAccessToken(
+  refresh: string,
+): Promise<RefreshResult | null> {
+  const existingPromise = refreshPromises.get(refresh);
+
+  if (existingPromise) {
+    return existingPromise;
+  }
+
+  const promise = (async () => {
+    try {
+      const refreshResponse = await fetch(
+        `${API_URL}/accounts/api/v1/auth/refresh/`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ refresh }),
+          cache: "no-store",
+        },
+      );
+
+      if (!refreshResponse.ok) {
+        return null;
+      }
+
+      const data = await refreshResponse.json();
+
+      if (typeof data.access !== "string" || !data.access) {
+        return null;
+      }
+
+      return {
+        access: data.access,
+        refresh:
+          typeof data.refresh === "string" && data.refresh
+            ? data.refresh
+            : null,
+      };
+    } catch {
+      return null;
+    } finally {
+      refreshPromises.delete(refresh);
+    }
+  })();
+
+  refreshPromises.set(refresh, promise);
+
+  return promise;
+}
+
 export async function proxy(request: NextRequest) {
   const access = request.cookies.get("crm-access")?.value;
   const refresh = request.cookies.get("crm-refresh")?.value;
@@ -51,56 +110,30 @@ export async function proxy(request: NextRequest) {
     return redirectToLogin(request);
   }
 
-  let refreshData: { access?: unknown; refresh?: unknown };
+  const refreshData = await refreshAccessToken(refresh);
 
-  try {
-    const refreshResponse = await fetch(
-      `${API_URL}/accounts/api/v1/auth/refresh/`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ refresh }),
-        cache: "no-store",
-      },
-    );
-
-    if (!refreshResponse.ok) {
-      if ([400, 401, 403].includes(refreshResponse.status)) {
-        return redirectToLogin(request);
-      }
-
-      return NextResponse.next();
-    }
-
-    refreshData = await refreshResponse.json();
-  } catch {
-    return NextResponse.next();
-  }
-
-  if (typeof refreshData.access !== "string" || !refreshData.access) {
+  if (!refreshData) {
     return redirectToLogin(request);
   }
 
-  const newAccess = refreshData.access;
-  const newRefresh =
-    typeof refreshData.refresh === "string" && refreshData.refresh
-      ? refreshData.refresh
-      : null;
+  request.cookies.set("crm-access", refreshData.access);
 
-  request.cookies.set("crm-access", newAccess);
-
-  if (newRefresh) {
-    request.cookies.set("crm-refresh", newRefresh);
+  if (refreshData.refresh) {
+    request.cookies.set("crm-refresh", refreshData.refresh);
   }
 
   const response = NextResponse.next({ request });
 
-  response.cookies.set("crm-access", newAccess, cookieOptions(ACCESS_MAX_AGE));
+  response.cookies.set(
+    "crm-access",
+    refreshData.access,
+    cookieOptions(ACCESS_MAX_AGE),
+  );
 
-  if (newRefresh) {
+  if (refreshData.refresh) {
     response.cookies.set(
       "crm-refresh",
-      newRefresh,
+      refreshData.refresh,
       cookieOptions(REFRESH_MAX_AGE),
     );
   }

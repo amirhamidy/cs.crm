@@ -1,4 +1,3 @@
-// lib/auth/getSession.ts
 import "server-only";
 import { cache } from "react";
 import { cookies } from "next/headers";
@@ -18,14 +17,30 @@ export const getSession = cache(async (): Promise<SessionUser | null> => {
   if (!access) return null;
 
   try {
-    const res = await fetch(`${API_URL}/accounts/api/v1/auth/me/`, {
-      headers: { Authorization: `Bearer ${access}` },
+    const response = await fetch(`${API_URL}/accounts/api/v1/auth/me/`, {
+      headers: {
+        Authorization: `Bearer ${access}`,
+      },
       cache: "no-store",
     });
 
-    if (!res.ok) return null;
+    if (!response.ok) return null;
 
-    return (await res.json()) as SessionUser;
+    const user = await response.json();
+
+    if (
+      typeof user?.id !== "number" ||
+      typeof user?.username !== "string" ||
+      (user?.type !== 1 && user?.type !== 2)
+    ) {
+      return null;
+    }
+
+    return {
+      id: user.id,
+      username: user.username,
+      type: user.type,
+    };
   } catch {
     return null;
   }

@@ -2,25 +2,85 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
 const API_URL = "https://api.radcosys.ir";
+const ACCESS_MAX_AGE = 60 * 15;
+const REFRESH_MAX_AGE = 60 * 60 * 24 * 7;
+
+type RefreshResult = {
+  access: string;
+  refresh: string | null;
+};
+
+const refreshPromises = new Map<string, Promise<RefreshResult | null>>();
+
+function cookieOptions(maxAge: number) {
+  return {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax" as const,
+    path: "/",
+    maxAge,
+  };
+}
 
 function cleanHeaders(source: Headers) {
-  const h = new Headers(source);
+  const headers = new Headers(source);
 
-  h.delete("content-encoding");
-  h.delete("content-length");
-  h.delete("transfer-encoding");
+  headers.delete("content-encoding");
+  headers.delete("content-length");
+  headers.delete("transfer-encoding");
 
-  return h;
+  return headers;
 }
 
 function clearCookie(response: NextResponse, name: string) {
-  response.cookies.set(name, "", {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    path: "/",
-    maxAge: 0,
-  });
+  response.cookies.set(name, "", cookieOptions(0));
+}
+
+async function refreshAccessToken(
+  refresh: string,
+): Promise<RefreshResult | null> {
+  const existingPromise = refreshPromises.get(refresh);
+
+  if (existingPromise) {
+    return existingPromise;
+  }
+
+  const promise = (async () => {
+    try {
+      const response = await fetch(`${API_URL}/accounts/api/v1/auth/refresh/`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ refresh }),
+        cache: "no-store",
+      });
+
+      if (!response.ok) return null;
+
+      const data = await response.json();
+
+      if (typeof data.access !== "string" || !data.access) {
+        return null;
+      }
+
+      return {
+        access: data.access,
+        refresh:
+          typeof data.refresh === "string" && data.refresh
+            ? data.refresh
+            : null,
+      };
+    } catch {
+      return null;
+    } finally {
+      refreshPromises.delete(refresh);
+    }
+  })();
+
+  refreshPromises.set(refresh, promise);
+
+  return promise;
 }
 
 async function proxyRequest(request: Request, path: string[]) {
@@ -29,11 +89,11 @@ async function proxyRequest(request: Request, path: string[]) {
   const access = cookieStore.get("crm-access")?.value;
   const refresh = cookieStore.get("crm-refresh")?.value;
 
-  const search = new URL(request.url).search;
+  const requestUrl = new URL(request.url);
   const joinedPath = path.join("/");
-  const url = `${API_URL}/${joinedPath}${
-    joinedPath.endsWith("/") ? "" : "/"
-  }${search}`;
+  const url = `${API_URL}/${joinedPath}${joinedPath.endsWith("/") ? "" : "/"}${
+    requestUrl.search
+  }`;
 
   const headers = new Headers(request.headers);
 
@@ -70,19 +130,9 @@ async function proxyRequest(request: Request, path: string[]) {
       });
     }
 
-    const refreshResponse = await fetch(
-      `${API_URL}/accounts/api/v1/auth/refresh/`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ refresh }),
-        cache: "no-store",
-      },
-    );
+    const refreshData = await refreshAccessToken(refresh);
 
-    if (!refreshResponse.ok) {
+    if (!refreshData) {
       const nextResponse = NextResponse.json(
         { detail: "جلسه شما منقضی شده است" },
         { status: 401 },
@@ -94,22 +144,7 @@ async function proxyRequest(request: Request, path: string[]) {
       return nextResponse;
     }
 
-    const refreshData = await refreshResponse.json();
-
-    if (typeof refreshData.access !== "string" || !refreshData.access) {
-      const nextResponse = NextResponse.json(
-        { detail: "توکن جدید دریافت نشد" },
-        { status: 401 },
-      );
-
-      clearCookie(nextResponse, "crm-access");
-
-      return nextResponse;
-    }
-
-    const newAccess: string = refreshData.access;
-
-    headers.set("Authorization", `Bearer ${newAccess}`);
+    headers.set("Authorization", `Bearer ${refreshData.access}`);
 
     response = await fetch(url, {
       method: request.method,
@@ -124,13 +159,19 @@ async function proxyRequest(request: Request, path: string[]) {
       headers: cleanHeaders(response.headers),
     });
 
-    nextResponse.cookies.set("crm-access", newAccess, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      path: "/",
-      maxAge: 60 * 15,
-    });
+    nextResponse.cookies.set(
+      "crm-access",
+      refreshData.access,
+      cookieOptions(ACCESS_MAX_AGE),
+    );
+
+    if (refreshData.refresh) {
+      nextResponse.cookies.set(
+        "crm-refresh",
+        refreshData.refresh,
+        cookieOptions(REFRESH_MAX_AGE),
+      );
+    }
 
     return nextResponse;
   } catch {
@@ -141,34 +182,31 @@ async function proxyRequest(request: Request, path: string[]) {
   }
 }
 
-type RouteContext = { params: Promise<{ path: string[] }> };
+type RouteContext = {
+  params: Promise<{ path: string[] }>;
+};
 
 export async function GET(request: Request, context: RouteContext) {
   const { path } = await context.params;
-
   return proxyRequest(request, path);
 }
 
 export async function POST(request: Request, context: RouteContext) {
   const { path } = await context.params;
-
   return proxyRequest(request, path);
 }
 
 export async function PUT(request: Request, context: RouteContext) {
   const { path } = await context.params;
-
   return proxyRequest(request, path);
 }
 
 export async function PATCH(request: Request, context: RouteContext) {
   const { path } = await context.params;
-
   return proxyRequest(request, path);
 }
 
 export async function DELETE(request: Request, context: RouteContext) {
   const { path } = await context.params;
-
   return proxyRequest(request, path);
 }

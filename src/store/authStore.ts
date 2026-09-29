@@ -12,7 +12,6 @@ interface AuthState {
     userId: number;
   }) => void;
   clearAuth: () => void;
-  initSession: () => Promise<void>;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
@@ -40,56 +39,5 @@ export const useAuthStore = create<AuthState>((set) => ({
       isAuthenticated: false,
       hasHydrated: true,
     });
-  },
-
-  initSession: async () => {
-    try {
-      const response = await fetch("/api/auth/session", {
-        method: "GET",
-        cache: "no-store",
-      });
-
-      if (!response.ok) {
-        set({
-          username: null,
-          userType: null,
-          userId: null,
-          isAuthenticated: false,
-          hasHydrated: true,
-        });
-
-        return;
-      }
-
-      const data = await response.json();
-
-      if (!data.authenticated || !data.user) {
-        set({
-          username: null,
-          userType: null,
-          userId: null,
-          isAuthenticated: false,
-          hasHydrated: true,
-        });
-
-        return;
-      }
-
-      set({
-        username: data.user.username,
-        userType: data.user.type,
-        userId: data.user.id,
-        isAuthenticated: true,
-        hasHydrated: true,
-      });
-    } catch {
-      set({
-        username: null,
-        userType: null,
-        userId: null,
-        isAuthenticated: false,
-        hasHydrated: true,
-      });
-    }
   },
 }));

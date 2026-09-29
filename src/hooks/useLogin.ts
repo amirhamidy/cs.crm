@@ -1,3 +1,5 @@
+"use client";
+
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { authService } from "@/services/authService";
@@ -5,9 +7,7 @@ import { useAuthStore } from "@/store/authStore";
 
 export const useLogin = () => {
   const router = useRouter();
-
-  const setAuth = useAuthStore((s) => s.setAuth);
-
+  const setAuth = useAuthStore((state) => state.setAuth);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -27,7 +27,7 @@ export const useLogin = () => {
         userId: data.user.id,
       });
 
-      router.push(
+      router.replace(
         data.user.type === 1 ? "/admin/dashboard" : "/user/dashboard",
       );
     } catch {

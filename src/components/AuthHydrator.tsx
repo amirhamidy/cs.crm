@@ -1,7 +1,6 @@
-// components/AuthHydrator.tsx
 "use client";
 
-import { useRef } from "react";
+import { useRef, type ReactNode } from "react";
 import { useAuthStore } from "@/store/authStore";
 import type { SessionUser } from "@/lib/auth/getSession";
 
@@ -10,7 +9,7 @@ export default function AuthHydrator({
     children,
 }: {
     user: SessionUser;
-    children: React.ReactNode;
+    children: ReactNode;
 }) {
     const initialized = useRef(false);
 
@@ -23,5 +22,5 @@ export default function AuthHydrator({
         initialized.current = true;
     }
 
-    return <>{children}</>;
+    return children;
 }
