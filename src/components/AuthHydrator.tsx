@@ -1,26 +1,27 @@
 "use client";
 
-import { useRef, type ReactNode } from "react";
-import { useAuthStore } from "@/store/authStore";
+import { useState, type ReactNode } from "react";
+import { AuthStoreContext, createAuthStore } from "@/store/authStore";
 import type { SessionUser } from "@/lib/auth/getSession";
 
 export default function AuthHydrator({
     user,
     children,
 }: {
-    user: SessionUser;
+    user: SessionUser | null;
     children: ReactNode;
 }) {
-    const initialized = useRef(false);
+    const [store] = useState(() =>
+        createAuthStore(
+            user
+                ? { username: user.username, userType: user.type, userId: user.id }
+                : null,
+        ),
+    );
 
-    if (!initialized.current) {
-        useAuthStore.getState().setAuth({
-            username: user.username,
-            userType: user.type,
-            userId: user.id,
-        });
-        initialized.current = true;
-    }
-
-    return children;
+    return (
+        <AuthStoreContext.Provider value={store}>
+            {children}
+        </AuthStoreContext.Provider>
+    );
 }

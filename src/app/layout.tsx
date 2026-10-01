@@ -5,7 +5,8 @@ import { Providers } from "@/components/providers";
 import { GeistSans } from "geist/font/sans";
 import { GeistMono } from "geist/font/mono";
 import { cn } from "@/lib/utils";
-import AuthInitializer from "@/components/AuthInitializer";
+import AuthHydrator from "@/components/AuthHydrator";
+import { getSession } from "@/lib/auth/getSession";
 
 const vazir = localFont({
   src: [
@@ -29,7 +30,11 @@ export const metadata: Metadata = {
   description: "radco crm",
 };
 
-export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+export default async function RootLayout({
+  children,
+}: Readonly<{ children: React.ReactNode }>) {
+  const user = await getSession();
+
   return (
     <html
       lang="fa"
@@ -38,10 +43,9 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       className={cn("font-sans", GeistSans.variable, GeistMono.variable)}
     >
       <body className={`${vazir.variable} font-vazir antialiased`}>
-        <Providers>
-          <AuthInitializer />
-          {children}
-        </Providers>
+        <AuthHydrator user={user}>
+          <Providers>{children}</Providers>
+        </AuthHydrator>
       </body>
     </html>
   );

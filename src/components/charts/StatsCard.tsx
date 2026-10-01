@@ -41,7 +41,7 @@ const gradientMap: Record<
     accent: "text-purple-600 dark:text-purple-400",
   },
   "from-green-500 to-green-600": {
-    bg: "from-emerald-50 to-teal-50 dark:from-emerald-50 dark:to-teal-950",
+    bg: "from-emerald-50 to-teal-50 dark:from-emerald-950 dark:to-teal-950",
     iconBg: "bg-emerald-500/15 dark:bg-emerald-400/20",
     accent: "text-emerald-600 dark:text-emerald-400",
   },
@@ -95,8 +95,8 @@ export default function StatsCard({
           <div className="flex items-center gap-1 mt-2.5 flex-wrap">
             <span
               className={`inline-flex items-center gap-1 !text-[11px] font-semibold px-1.5 py-0.5 rounded-full flex-shrink-0 ${isPositive
-                  ? "bg-emerald-500/10 text-emerald-600 dark:bg-emerald-400/15 dark:text-emerald-400"
-                  : "bg-red-500/10 text-red-600 dark:bg-red-400/15 dark:text-red-400"
+                ? "bg-emerald-500/10 text-emerald-600 dark:bg-emerald-400/15 dark:text-emerald-400"
+                : "bg-red-500/10 text-red-600 dark:bg-red-400/15 dark:text-red-400"
                 }`}
             >
               {isPositive ? (

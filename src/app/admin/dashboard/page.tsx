@@ -1,98 +1,39 @@
-import StatsCard from "@/components/charts/StatsCard";
-import SalesChart from "@/components/charts/SalesChart";
-import CategoryChart from "@/components/charts/CategoryChart";
-import VisitsChart from "@/components/charts/VisitsChart";
-import UsersCard from "@/components/charts/UsersCard";
+import { Suspense } from "react";
 import {
-    getCancelledTasksByDepartment,
-    getCustomerSourcesData,
-    getCustomersStats,
-    getEmployeesStats,
-    getProjectsStats,
-    getSalesChartData,
-    getTopUsers,
-} from "@/lib/server/dashboard";
+    CancelledSection,
+    ChartSkeleton,
+    SalesSection,
+    SourcesSection,
+    StatsSection,
+    StatsSkeleton,
+    TopUsersSection,
+} from "@/components/dashboard/Dashboardsections";
 
-export default async function AdminDashboardPage() {
-    const [
-        employees,
-        customers,
-        projects,
-        sales,
-        sources,
-        cancelled,
-        topUsers,
-    ] = await Promise.all([
-        getEmployeesStats(),
-        getCustomersStats(),
-        getProjectsStats(),
-        getSalesChartData(),
-        getCustomerSourcesData(),
-        getCancelledTasksByDepartment(),
-        getTopUsers(),
-    ]);
-
-    const statsData = [
-        {
-            title: "تعداد کارمندان",
-            value: `${employees.total.toLocaleString("fa-IR")} نفر`,
-            change: String(employees.growth),
-            icon: "users" as const,
-            gradient: "from-blue-500 to-blue-600",
-        },
-        {
-            title: "مشتریان فعال",
-            value: `${customers.activePct.toLocaleString("fa-IR")}٪`,
-            change: String(
-                customers.activePct -
-                customers.potentialPct,
-            ),
-            icon: "shoppingCart" as const,
-            gradient: "from-green-500 to-green-600",
-        },
-        ...(projects.hasProjects
-            ? [
-                {
-                    title: "پروژه‌های در حال انجام",
-                    value: `${projects.total.toLocaleString(
-                        "fa-IR",
-                    )} پروژه`,
-                    change: String(
-                        projects.deptCount,
-                    ),
-                    icon: "package" as const,
-                    gradient:
-                        "from-purple-500 to-purple-600",
-                },
-            ]
-            : []),
-    ];
-
+export default function AdminDashboardPage() {
     return (
         <div className="space-y-5">
-            <div
-                className={`grid gap-3 ${projects.hasProjects
-                        ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
-                        : "grid-cols-1 sm:grid-cols-2"
-                    }`}
-            >
-                {statsData.map((stat, index) => (
-                    <StatsCard
-                        key={index}
-                        {...stat}
-                        index={index}
-                    />
-                ))}
+            <Suspense fallback={<StatsSkeleton />}>
+                <StatsSection />
+            </Suspense>
+
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                <Suspense fallback={<ChartSkeleton />}>
+                    <SalesSection />
+                </Suspense>
+
+                <Suspense fallback={<ChartSkeleton />}>
+                    <SourcesSection />
+                </Suspense>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                <SalesChart data={sales} />
-                <CategoryChart data={sources} />
-            </div>
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                <Suspense fallback={<ChartSkeleton />}>
+                    <CancelledSection />
+                </Suspense>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                <VisitsChart data={cancelled} />
-                <UsersCard data={topUsers} />
+                <Suspense fallback={<ChartSkeleton />}>
+                    <TopUsersSection />
+                </Suspense>
             </div>
         </div>
     );
