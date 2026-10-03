@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence, type Variants } from "framer-motion";
 import { LogOut, X } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, normalizePath } from "@/lib/utils";
 import { useSidebar } from "@/hooks/useSidebar";
 import { useMenuItems } from "@/hooks/useMenuItems";
 import { useLogout } from "@/hooks/useLogout";
@@ -75,7 +75,7 @@ export default function MobileSidebar() {
             >
               {menuItems.map((item) => {
                 const Icon = item.icon;
-                const isActive = pathname === item.href;
+                const isActive = normalizePath(pathname) === normalizePath(item.href);
 
                 return (
                   <motion.div key={item.href} variants={itemVariants}>

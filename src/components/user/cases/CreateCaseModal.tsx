@@ -12,6 +12,7 @@ import {
     X,
 } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
+import { useAuthStore } from "@/store/authStore";
 import axios from "axios";
 import { apiRoutes } from "@/lib/apiRoutes";
 import type { Customer } from "@/types/customer";
@@ -154,7 +155,9 @@ export default function CreateCaseModal({
     useEffect(() => {
         if (!open) return;
         const onKey = (e: KeyboardEvent) => {
-            if (e.key === "Escape" && !submitting) onClose();
+            if (e.key === "Escape" && !submitting) {
+                onClose();
+            }
         };
         window.addEventListener("keydown", onKey);
         document.body.style.overflow = "hidden";
@@ -182,15 +185,16 @@ export default function CreateCaseModal({
 
     const canSubmit = selectedCustomer !== null && title.trim().length > 1 && !submitting;
 
+    const currentUserId = useAuthStore((state) => state.userId);
+
     const handleSubmit = useCallback(async () => {
         if (!canSubmit) return;
         try {
             setSubmitting(true);
             setSubmitError("");
-            const userId = localStorage.getItem("crm-user-id");
             await axiosInstance.post("/tasks/api/v1/cases/create/", {
                 customer: selectedCustomer,
-                created_by: userId ? Number(userId) : null,
+                created_by: currentUserId,
                 title: title.trim(),
                 description: description.trim(),
             });
@@ -204,7 +208,7 @@ export default function CreateCaseModal({
         } finally {
             setSubmitting(false);
         }
-    }, [canSubmit, selectedCustomer, title, description, onCreated, onClose]);
+    }, [canSubmit, selectedCustomer, title, description, currentUserId, onCreated, onClose]);
 
     return (
         <AnimatePresence>

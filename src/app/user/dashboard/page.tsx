@@ -5,6 +5,7 @@ import CompanyNews from "@/components/user/dashboard/CompanyNews";
 import ScoreCard from "@/components/user/dashboard/ScoreCard";
 import TodayEventCards from "@/components/user/dashboard/TodayEventCards";
 import axiosInstance from "@/lib/axiosInstance";
+import { useAuthStore } from "@/store/authStore";
 import EmployeePerformanceChart from "@/components/user/dashboard/EmployeePerformanceChart";
 
 interface CalendarEvent {
@@ -30,22 +31,8 @@ function getLocalISODate(date: Date): string {
 }
 
 export default function EmployeeDashboardPage() {
-    const [employeeId, setEmployeeId] = useState<number | null>(null);
+    const employeeId = useAuthStore((state) => state.userId);
     const [events, setEvents] = useState<CalendarEvent[]>([]);
-
-    useEffect(() => {
-        const stored = localStorage.getItem("crm-user-id");
-
-        if (!stored) {
-            return;
-        }
-
-        const parsed = Number.parseInt(stored, 10);
-
-        if (!Number.isNaN(parsed)) {
-            setEmployeeId(parsed);
-        }
-    }, []);
 
     const fetchCalendarEvents = useCallback(async () => {
         try {

@@ -1,4 +1,5 @@
 import axiosInstance from "@/lib/axiosInstance";
+import type { AxiosResponse } from "axios";
 import type {
   EmployeeListItem,
   InternalTask,
@@ -23,8 +24,33 @@ export type UpdateInternalTaskPayload = {
   status: InternalTaskStatus;
 };
 
+let internalTasksRequest: Promise<AxiosResponse<InternalTask[]>> | null = null;
+
 export function fetchInternalTasks() {
-  return axiosInstance.get<InternalTask[]>("/tasks/api/v1/internal_task/");
+  if (internalTasksRequest) {
+    return internalTasksRequest;
+  }
+
+  const request = axiosInstance.get<InternalTask[]>(
+    "/tasks/api/v1/internal_task/",
+  );
+
+  internalTasksRequest = request;
+
+  request.then(
+    () => {
+      if (internalTasksRequest === request) {
+        internalTasksRequest = null;
+      }
+    },
+    () => {
+      if (internalTasksRequest === request) {
+        internalTasksRequest = null;
+      }
+    },
+  );
+
+  return request;
 }
 
 export function fetchInternalTaskArchive() {
@@ -51,7 +77,7 @@ export function createInternalTask(data: {
   assigned_to: number[];
   created_by: number;
 }) {
-  return axiosInstance.post<InternalTask>(
+  const request = axiosInstance.post<InternalTask>(
     "/tasks/api/v1/internal_task/create/",
     {
       title: data.title,
@@ -61,39 +87,44 @@ export function createInternalTask(data: {
       created_by: data.created_by,
     },
   );
+
+  return request;
 }
 
 export function updateInternalTaskStatus(
   id: number,
   payload: UpdateInternalTaskPayload,
 ) {
-  return axiosInstance.patch<InternalTask>(
+  const request = axiosInstance.patch<InternalTask>(
     `/tasks/api/v1/internal_task/${id}/update/`,
     {
       status: payload.status,
     },
   );
-}
 
+  return request;
+}
 export function reopenInternalTask(id: number) {
-  return axiosInstance.post<InternalTask>(
+  const request = axiosInstance.post<InternalTask>(
     `/tasks/api/v1/internal_task/${id}/reopen/`,
   );
-}
 
+  return request;
+}
 export function patchInternalTaskDeadline(
   id: number,
   payload: InternalTaskDeadlinePayload,
 ) {
-  return axiosInstance.patch<InternalTaskDeadlineResponse>(
+  const request = axiosInstance.patch<InternalTaskDeadlineResponse>(
     `/tasks/api/v1/internal_task/${id}/deadline/patch/`,
     {
       started_at: payload.started_at,
       deadline: payload.deadline,
     },
   );
-}
 
+  return request;
+}
 export function uploadInternalTaskAttachments(
   id: number,
   files: File[],
@@ -109,12 +140,13 @@ export function uploadInternalTaskAttachments(
     formData.append("note", note.trim());
   }
 
-  return axiosInstance.post<InternalTaskAttachment[]>(
+  const request = axiosInstance.post<InternalTaskAttachment[]>(
     `/tasks/api/v1/internal_task/${id}/attachments/`,
     formData,
   );
-}
 
+  return request;
+}
 export function completeInternalTask(id: number, files: File[], note: string) {
   const formData = new FormData();
 
@@ -126,12 +158,13 @@ export function completeInternalTask(id: number, files: File[], note: string) {
     formData.append("note", note.trim());
   }
 
-  return axiosInstance.post<InternalTask>(
+  const request = axiosInstance.post<InternalTask>(
     `/tasks/api/v1/internal_task/${id}/complete/`,
     formData,
   );
-}
 
+  return request;
+}
 export function cancelInternalTask(id: number, files: File[], note: string) {
   const formData = new FormData();
 
@@ -143,12 +176,13 @@ export function cancelInternalTask(id: number, files: File[], note: string) {
     formData.append("note", note.trim());
   }
 
-  return axiosInstance.post<InternalTask>(
+  const request = axiosInstance.post<InternalTask>(
     `/tasks/api/v1/internal_task/${id}/cancel/`,
     formData,
   );
-}
 
+  return request;
+}
 export function getInternalTaskAttachmentUrl(
   taskId: number,
   attachmentId: number,
@@ -157,7 +191,9 @@ export function getInternalTaskAttachmentUrl(
 }
 
 export function deleteInternalTask(id: number) {
-  return axiosInstance.delete<void>(
+  const request = axiosInstance.delete<void>(
     `/tasks/api/v1/internal_task/${id}/delete/`,
   );
+
+  return request;
 }

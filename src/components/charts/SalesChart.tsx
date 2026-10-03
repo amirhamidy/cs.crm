@@ -12,14 +12,17 @@ import {
 } from "recharts";
 import { ChartContainer, type ChartConfig } from "@/components/ui/chart";
 
-import {
-  useSoldTasksByTimeRange,
-  type TimeRange,
-} from "@/hooks/useSoldTasksByTimeRange";
+type TimeRange = "weekly" | "monthly" | "yearly";
+
+type ChartPoint = {
+  name: string;
+  sales: number;
+};
+
+type SalesChartData = Record<TimeRange, ChartPoint[]>;
 
 const chartConfig: ChartConfig = {
   sales: { label: "فروش", color: "#38bdf8" },
-  revenue: { label: "درآمد", color: "#c084fc" },
 };
 
 const ranges: { key: TimeRange; label: string; sub: string }[] = [
@@ -34,39 +37,17 @@ const CHART_DEFS = (
       <stop offset="0%" stopColor="#38bdf8" stopOpacity={0.3} />
       <stop offset="100%" stopColor="#38bdf8" stopOpacity={0} />
     </linearGradient>
-    <linearGradient id="revenueGradFill" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stopColor="#c084fc" stopOpacity={0.25} />
-      <stop offset="100%" stopColor="#c084fc" stopOpacity={0} />
-    </linearGradient>
   </defs>
 );
 
 type ActivePoint = {
   name: string;
   sales: number;
-  revenue: number;
 };
 
-function SalesChartSkeleton() {
-  return (
-    <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm dark:border-white/5 dark:bg-slate-950">
-      <div className="mb-3 flex items-center justify-between" dir="rtl">
-        <div className="space-y-2">
-          <div className="h-4 w-24 animate-pulse rounded-full bg-gray-100 dark:bg-slate-900" />
-          <div className="h-3 w-40 animate-pulse rounded-full bg-gray-100/80 dark:bg-slate-900/70" />
-        </div>
-        <div className="h-8 w-28 animate-pulse rounded-xl bg-gray-100 dark:bg-slate-900" />
-      </div>
-      <div className="h-[180px] rounded-xl bg-gray-50 dark:bg-slate-900/40" />
-    </div>
-  );
-}
-
-export default function SalesChart() {
+export default function SalesChart({ data: chartData }: { data: SalesChartData }) {
   const [activeRange, setActiveRange] = useState<TimeRange>("monthly");
   const [activePoint, setActivePoint] = useState<ActivePoint | null>(null);
-
-  const { chartData, loading, error } = useSoldTasksByTimeRange();
 
   const data = useMemo(
     () => chartData[activeRange] ?? [],
@@ -78,13 +59,10 @@ export default function SalesChart() {
     [activeRange]
   );
 
-  const hasData = useMemo(() => {
-    if (!data || data.length === 0) return false;
-
-    return data.some(
-      (item) => item.sales > 0 || item.revenue > 0
-    );
-  }, [data]);
+  const hasData = useMemo(
+    () => data.some((item) => item.sales > 0),
+    [data],
+  );
 
   const handleMouseMove = useCallback(
     (state: any) => {
@@ -106,8 +84,7 @@ export default function SalesChart() {
         if (
           current &&
           current.name === item.name &&
-          current.sales === item.sales &&
-          current.revenue === item.revenue
+          current.sales === item.sales
         ) {
           return current;
         }
@@ -115,7 +92,6 @@ export default function SalesChart() {
         return {
           name: item.name,
           sales: item.sales,
-          revenue: item.revenue,
         };
       });
     },
@@ -137,24 +113,6 @@ export default function SalesChart() {
         : null,
     [activePoint]
   );
-
-  const formattedRevenue = useMemo(
-    () =>
-      activePoint
-        ? activePoint.revenue.toLocaleString("fa-IR")
-        : null,
-    [activePoint]
-  );
-
-  if (loading) return <SalesChartSkeleton />;
-
-  if (error) {
-    return (
-      <div className="flex h-[256px] items-center justify-center rounded-2xl border border-red-100 bg-red-50/50 p-4 text-center text-xs text-red-600 dark:border-red-950/20 dark:bg-red-950/5 dark:text-red-400">
-        {error}
-      </div>
-    );
-  }
 
   return (
     <motion.div
@@ -199,8 +157,8 @@ export default function SalesChart() {
 
               <span
                 className={`relative z-10 transition-colors ${activeRange === range.key
-                    ? "text-gray-900 dark:text-white"
-                    : "text-gray-500 dark:text-gray-400"
+                  ? "text-gray-900 dark:text-white"
+                  : "text-gray-500 dark:text-gray-400"
                   }`}
               >
                 {range.label}
@@ -264,17 +222,6 @@ export default function SalesChart() {
                     </span>
                   </p>
 
-                  <p className="text-[11px] text-gray-500 dark:text-gray-400">
-                    درآمد:{" "}
-                    <span
-                      className="font-bold tabular-nums"
-                      style={{
-                        color: "#c084fc",
-                      }}
-                    >
-                      {formattedRevenue}
-                    </span>
-                  </p>
                 </div>
               </motion.div>
             )}
@@ -343,20 +290,6 @@ export default function SalesChart() {
                 isAnimationActive={false}
               />
 
-              <Area
-                type="monotone"
-                dataKey="revenue"
-                stroke="#c084fc"
-                strokeWidth={2.5}
-                fill="url(#revenueGradFill)"
-                dot={false}
-                activeDot={{
-                  r: 5,
-                  strokeWidth: 0,
-                  fill: "#c084fc",
-                }}
-                isAnimationActive={false}
-              />
             </AreaChart>
           </ResponsiveContainer>
         </ChartContainer>

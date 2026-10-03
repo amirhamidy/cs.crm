@@ -1,15 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { memo, useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import {
-    Ban,
-    CheckCircle2,
     Clock3,
     History,
     MessageSquareText,
-    Repeat,
-    RotateCcw,
     UserRound,
 } from "lucide-react";
 import {
@@ -23,13 +19,7 @@ import type {
     InternalTask,
     InternalTaskStatus,
 } from "./types";
-import {
-    reopenInternalTask,
-    updateInternalTaskStatus,
-} from "./Api";
 import InternalTaskChatModal from "./InternalTaskChatModal";
-import InternalTaskActionModal from "./InternalTaskActionModal";
-import api from "@/lib/axiosInstance";
 
 interface ReceivedTaskCardProps {
     task: InternalTask;
@@ -101,58 +91,19 @@ function getDeadlineState(deadline?: string | null) {
     };
 }
 
-function getError(error: any) {
-    const data = error?.response?.data;
 
-    if (typeof data === "string") return data;
-    if (data?.detail) return String(data.detail);
-    if (data?.message) return String(data.message);
-    if (data?.error) return String(data.error);
-
-    if (data && typeof data === "object") {
-        for (const value of Object.values(data)) {
-            if (Array.isArray(value) && value.length) {
-                return String(value[0]);
-            }
-
-            if (value !== null && value !== undefined) {
-                return String(value);
-            }
-        }
-    }
-
-    switch (error?.response?.status) {
-        case 400:
-            return "اطلاعات ارسالی برای تغییر وضعیت صحیح نیست.";
-        case 403:
-            return "شما اجازه تغییر وضعیت این تسک را ندارید.";
-        case 404:
-            return "مسیر تغییر وضعیت تسک پیدا نشد.";
-        case 500:
-            return "خطای داخلی سرور هنگام تغییر وضعیت تسک رخ داد.";
-        default:
-            return "خطا در تغییر وضعیت تسک.";
-    }
-}
-
-export default function ReceivedTaskCard({
+function ReceivedTaskCard({
     task,
     employees,
     isRoutine = false,
     onUpdated,
 }: ReceivedTaskCardProps) {
     const [currentTask, setCurrentTask] = useState(task);
-    const [submitting, setSubmitting] = useState(false);
-    const [error, setError] = useState<string | null>(null);
     const [chatOpen, setChatOpen] = useState(false);
-    const [actionModal, setActionModal] = useState<
-        "complete" | "cancel" | null
-    >(null);
     const [deadlineData, setDeadlineData] = useState({
         started_at: task.started_at ?? null,
         deadline: task.deadline ?? null,
     });
-    const [loadingDeadline, setLoadingDeadline] = useState(false);
 
     useEffect(() => {
         setCurrentTask(task);
@@ -162,31 +113,6 @@ export default function ReceivedTaskCard({
         });
     }, [task]);
 
-    useEffect(() => {
-        let cancelled = false;
-
-        setLoadingDeadline(true);
-
-        api.get(`/tasks/api/v1/internal_task/${task.id}/deadline/`)
-            .then((response) => {
-                if (cancelled) return;
-
-                const data = response.data?.data ?? response.data;
-
-                setDeadlineData({
-                    started_at: data?.started_at ?? task.started_at ?? null,
-                    deadline: data?.deadline ?? task.deadline ?? null,
-                });
-            })
-            .catch(() => { })
-            .finally(() => {
-                if (!cancelled) setLoadingDeadline(false);
-            });
-
-        return () => {
-            cancelled = true;
-        };
-    }, [task.id, task.started_at, task.deadline]);
 
     const creator = employees.find(
         (employee) =>
@@ -222,183 +148,6 @@ export default function ReceivedTaskCard({
                 dot: "bg-indigo-500",
                 badge: "bg-indigo-500/10 text-indigo-500",
             };
-
-    async function changeStatus(nextStatus: InternalTaskStatus) {
-        if (isRoutine || submitting) {
-            if (isRoutine) {
-                setError(
-                    "این تسک به‌صورت روتین مدیریت می‌شود. برای تغییر وضعیت، وارد بخش تسک‌های روتین شوید.",
-                );
-            }
-            return;
-        }
-
-        setError(null);
-        setSubmitting(true);
-
-        const previousTask = currentTask;
-
-        const optimisticTask: InternalTask = {
-            ...previousTask,
-            status: nextStatus,
-            updated_at: new Date().toISOString(),
-            completed_at:
-                nextStatus === "completed"
-                    ? new Date().toISOString()
-                    : nextStatus === "in_progress"
-                        ? null
-                        : previousTask.completed_at,
-        };
-
-        setCurrentTask(optimisticTask);
-        onUpdated(optimisticTask);
-
-        try {
-            const response = await updateInternalTaskStatus(
-                previousTask.id,
-                { status: nextStatus },
-            );
-
-            const data = response.data;
-
-            const updatedTask: InternalTask = {
-                ...previousTask,
-                ...data,
-                id: previousTask.id,
-                status: data?.status ?? nextStatus,
-                title: data?.title ?? previousTask.title,
-                description:
-                    data?.description ?? previousTask.description,
-                assigned_to:
-                    Array.isArray(data?.assigned_to) &&
-                        data.assigned_to.length
-                        ? data.assigned_to
-                        : previousTask.assigned_to,
-                created_by:
-                    data?.created_by ?? previousTask.created_by,
-                created_at:
-                    data?.created_at ?? previousTask.created_at,
-                updated_at:
-                    data?.updated_at ?? new Date().toISOString(),
-                started_at:
-                    data?.started_at ?? previousTask.started_at,
-                deadline:
-                    data?.deadline ?? previousTask.deadline,
-                completed_at:
-                    data?.completed_at ??
-                    (data?.status === "completed"
-                        ? new Date().toISOString()
-                        : data?.status === "in_progress"
-                            ? null
-                            : previousTask.completed_at),
-                attachments: Array.isArray(data?.attachments)
-                    ? data.attachments
-                    : previousTask.attachments,
-            };
-
-            setCurrentTask(updatedTask);
-            onUpdated(updatedTask);
-        } catch (err) {
-            setCurrentTask(previousTask);
-            onUpdated(previousTask);
-            setError(getError(err));
-        } finally {
-            setSubmitting(false);
-        }
-    }
-
-    function completeTask() {
-        if (isRoutine) {
-            setError(
-                "این تسک به‌صورت روتین مدیریت می‌شود. انجام آن فقط از بخش تسک‌های روتین امکان‌پذیر است.",
-            );
-            return;
-        }
-
-        setError(null);
-        setActionModal("complete");
-    }
-
-    function cancelTask() {
-        if (isRoutine) {
-            setError(
-                "این تسک به‌صورت روتین مدیریت می‌شود. لغو آن فقط از بخش تسک‌های روتین امکان‌پذیر است.",
-            );
-            return;
-        }
-
-        setError(null);
-        setActionModal("cancel");
-    }
-
-    async function reopenTask() {
-        if (isRoutine) {
-            setError(
-                "این تسک به‌صورت روتین مدیریت می‌شود. بازگشایی آن فقط از بخش تسک‌های روتین امکان‌پذیر است.",
-            );
-            return;
-        }
-
-        if (submitting) return;
-
-        setError(null);
-        setSubmitting(true);
-
-        const previousTask = currentTask;
-
-        const optimisticTask: InternalTask = {
-            ...previousTask,
-            status: "in_progress",
-            completed_at: null,
-            updated_at: new Date().toISOString(),
-        };
-
-        setCurrentTask(optimisticTask);
-        onUpdated(optimisticTask);
-
-        try {
-            const response = await reopenInternalTask(previousTask.id);
-            const data = response.data;
-
-            const updatedTask: InternalTask = {
-                ...previousTask,
-                ...data,
-                id: previousTask.id,
-                status: data?.status ?? "in_progress",
-                completed_at: data?.completed_at ?? null,
-                title: data?.title ?? previousTask.title,
-                description:
-                    data?.description ?? previousTask.description,
-                assigned_to:
-                    Array.isArray(data?.assigned_to) &&
-                        data.assigned_to.length
-                        ? data.assigned_to
-                        : previousTask.assigned_to,
-                created_by:
-                    data?.created_by ?? previousTask.created_by,
-                created_at:
-                    data?.created_at ?? previousTask.created_at,
-                updated_at:
-                    data?.updated_at ?? new Date().toISOString(),
-                started_at:
-                    data?.started_at ?? previousTask.started_at,
-                deadline:
-                    data?.deadline ?? previousTask.deadline,
-                attachments: Array.isArray(data?.attachments)
-                    ? data.attachments
-                    : previousTask.attachments,
-            };
-
-            setCurrentTask(updatedTask);
-            onUpdated(updatedTask);
-        } catch (err) {
-            setCurrentTask(previousTask);
-            onUpdated(previousTask);
-            setError(getError(err));
-        } finally {
-            setSubmitting(false);
-        }
-    }
 
     return (
         <>
@@ -449,14 +198,9 @@ export default function ReceivedTaskCard({
                     <span>ایجاد: {createdDate}</span>
                 </div>
 
-                {loadingDeadline ? (
-                    <div className="flex items-center gap-2 rounded-2xl bg-gray-50 px-3 py-2.5 dark:bg-white/[0.03]">
-                        <Clock3 size={13} className="text-gray-400" />
-                        <span className="text-[11px] font-semibold text-gray-400">
-                            در حال دریافت زمان‌بندی...
-                        </span>
-                    </div>
-                ) : (
+                {(
+                    deadlineData.started_at || deadlineData.deadline
+                ) ? (
                     <>
                         {startedAtDate && (
                             <div className="flex items-center gap-2 rounded-2xl bg-indigo-50 px-3 py-2.5 dark:bg-indigo-500/10">
@@ -497,75 +241,16 @@ export default function ReceivedTaskCard({
                             </div>
                         </div>
                     </>
-                )}
-
-                {error && (
-                    <p className="rounded-xl bg-red-500/10 px-3 py-2 text-center text-[11px] font-bold text-red-500">
-                        {error}
-                    </p>
+                ) : (
+                    <div className="flex items-center gap-2 rounded-2xl bg-gray-50 px-3 py-2.5 dark:bg-white/[0.03]">
+                        <Clock3 size={13} className="text-gray-400" />
+                        <span className="text-[11px] font-semibold text-gray-400">
+                            زمان‌بندی تعیین نشده
+                        </span>
+                    </div>
                 )}
 
                 <div className="relative z-10 flex flex-col gap-2 border-t border-black/5 pt-2.5 dark:border-white/[0.05]">
-                    {isRoutine &&
-                        !isCompleted &&
-                        !isCancelled && (
-                            <div className="flex items-start gap-2 rounded-2xl border border-amber-500/15 bg-amber-500/[0.07] px-3 py-2.5">
-                                <Repeat
-                                    size={14}
-                                    className="mt-0.5 shrink-0 text-amber-500"
-                                />
-
-                                <div>
-                                    <p className="text-[11px] font-extrabold text-amber-600 dark:text-amber-400">
-                                        این تسک روتین است
-                                    </p>
-
-                                    <p className="mt-1 text-[10px] font-semibold leading-5 text-gray-500 dark:text-white/45">
-                                        انجام یا لغو این تسک فقط از بخش تسک‌های روتین امکان‌پذیر است.
-                                    </p>
-                                </div>
-                            </div>
-                        )}
-
-                    {!isRoutine &&
-                        !isCompleted &&
-                        !isCancelled && (
-                            <div className="flex gap-2">
-                                <button
-                                    type="button"
-                                    onClick={completeTask}
-                                    disabled={submitting}
-                                    className="flex h-9 flex-1 items-center justify-center gap-1.5 rounded-xl bg-emerald-500 text-[10.5px] font-extrabold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
-                                >
-                                    <CheckCircle2 size={13} />
-                                    انجام شد
-                                </button>
-
-                                <button
-                                    type="button"
-                                    onClick={cancelTask}
-                                    disabled={submitting}
-                                    className="flex h-9 flex-1 items-center justify-center gap-1.5 rounded-xl bg-red-500 text-[10.5px] font-extrabold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
-                                >
-                                    <Ban size={13} />
-                                    لغو تیکت
-                                </button>
-                            </div>
-                        )}
-
-                    {!isRoutine &&
-                        (isCompleted || isCancelled) && (
-                            <button
-                                type="button"
-                                onClick={reopenTask}
-                                disabled={submitting}
-                                className="flex h-9 w-full items-center justify-center gap-1.5 rounded-xl bg-amber-500 text-[10.5px] font-extrabold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
-                            >
-                                <RotateCcw size={13} />
-                                بازگشایی تیکت
-                            </button>
-                        )}
-
                     <button
                         type="button"
                         onClick={() => setChatOpen(true)}
@@ -586,20 +271,12 @@ export default function ReceivedTaskCard({
                     onUpdated(updatedTask);
                 }}
             />
-
-            {actionModal && (
-                <InternalTaskActionModal
-                    isOpen
-                    action={actionModal}
-                    task={currentTask}
-                    onClose={() => setActionModal(null)}
-                    onDone={(updatedTask) => {
-                        setCurrentTask(updatedTask);
-                        onUpdated(updatedTask);
-                        setActionModal(null);
-                    }}
-                />
-            )}
         </>
     );
 }
+
+export default memo(ReceivedTaskCard, (prev, next) =>
+    prev.task === next.task &&
+    prev.employees === next.employees &&
+    prev.isRoutine === next.isRoutine
+);

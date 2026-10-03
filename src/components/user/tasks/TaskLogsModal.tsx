@@ -25,6 +25,7 @@ import { createPortal } from "react-dom";
 import axiosInstance from "@/lib/axiosInstance";
 import { toJalali, toPersianDigits, JALALI_MONTHS, pad2 } from "@/lib/jalali";
 import { useEmployeeInfo } from "@/hooks/useEmployeeInfo";
+import { resolveMediaUrl } from "@/lib/media";
 
 interface TaskLogAttachment {
     id: number;
@@ -53,11 +54,10 @@ interface Props {
     taskTitle: string;
 }
 
-const MEDIA_BASE = "https://api.radcosys.ir/";
+
 
 function resolveFileUrl(url: string) {
-    if (!url) return "";
-    return url.startsWith("http") ? url : `${MEDIA_BASE}${url}`;
+    return resolveMediaUrl(url);
 }
 
 function formatJalaliDate(iso?: string | null) {

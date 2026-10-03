@@ -271,7 +271,7 @@ export default function AdminInternalTaskChatModal({
         if (!open) return;
         let cancelled = false;
         const poll = async () => {
-            if (cancelled || sendingRef.current) return;
+            if (cancelled || sendingRef.current || document.visibilityState !== "visible") return;
             try {
                 setIsPolling(true);
                 const response = await fetchInternalTasks();
@@ -343,7 +343,7 @@ export default function AdminInternalTaskChatModal({
         };
         const intervalId = window.setInterval(
             poll,
-            2000
+            10000
         );
         void poll();
         return () => {

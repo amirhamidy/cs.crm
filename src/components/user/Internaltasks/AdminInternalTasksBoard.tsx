@@ -1,6 +1,6 @@
 "use client";
 
-import { JSX, useEffect, useMemo, useState } from "react";
+import { JSX, memo, useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
     Ban,
@@ -337,7 +337,7 @@ function isTaskAssignedToUser(
     });
 }
 
-function AdminInternalTaskCard({
+const AdminInternalTaskCard = memo(function AdminInternalTaskCard({
     task,
     index,
     employees,
@@ -383,8 +383,18 @@ function AdminInternalTaskCard({
 
     const isReceived = !isCreator && isAssigned;
     const isSent = isCreator;
+    const currentUserId = useAuthStore((state) => state.userId);
 
-    const canAct = isReceived;
+    const latestAttachmentForAction = [...(task.attachments ?? [])]
+        .sort((a, b) => Number(b.id) - Number(a.id))[0];
+
+    const hasResponse =
+        isSent &&
+        latestAttachmentForAction != null &&
+        currentUserId != null &&
+        Number(latestAttachmentForAction.uploaded_by) !== Number(currentUserId);
+
+    const canAct = isSent;
 
     async function handleReopen(event: React.MouseEvent) {
         event.stopPropagation();
@@ -727,7 +737,7 @@ function AdminInternalTaskCard({
                     className="relative z-10 flex items-center gap-2"
                     onClick={(event) => event.stopPropagation()}
                 >
-                    {!isCompleted && !isCancelled && (
+                    {!isCompleted && !isCancelled && hasResponse && (
                         <>
                             <button
                                 type="button"
@@ -778,7 +788,7 @@ function AdminInternalTaskCard({
                 </div>
             )}
 
-            {actionModal && canAct && (
+            {actionModal && canAct && hasResponse && (
                 <div onClick={(event) => event.stopPropagation()}>
                     <InternalTaskActionModal
                         isOpen={true}
@@ -952,7 +962,13 @@ function AdminInternalTaskCard({
             </AnimatePresence>
         </motion.div>
     );
-}
+}, (prev, next) =>
+    prev.task === next.task &&
+    prev.index === next.index &&
+    prev.employees === next.employees &&
+    prev.currentUsername === next.currentUsername &&
+    prev.isDeleting === next.isDeleting
+);
 
 export default function AdminInternalTasksBoard(): JSX.Element {
     const { resolvedTheme } = useTheme();

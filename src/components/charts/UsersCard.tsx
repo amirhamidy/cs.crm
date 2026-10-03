@@ -2,15 +2,24 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 import { Crown, TrendingDown, TrendingUp } from "lucide-react";
-import { useEffect, useState } from "react";
-import { useTopUsers, type TimeRange } from "@/hooks/useTopUsers";
-import axiosInstance from "@/lib/axiosInstance";
+import { useState } from "react";
 
-interface EmployeeInfo {
+type TimeRange = "weekly" | "monthly" | "yearly";
+
+type Trend = "up" | "down" | "same";
+
+interface User {
   id: number;
-  full_name: string;
+  name: string;
+  role: string;
   username: string;
+  avatar: string;
+  count: number;
+  trend: Trend;
+  trendPct: number;
 }
+
+type UsersRangeData = Record<TimeRange, User[]>;
 
 const RANK_META = [
   { bg: "rgba(250,204,21,0.15)", border: "rgba(250,204,21,0.4)", text: "#facc15", glow: "rgba(250,204,21,0.55)" },
@@ -30,32 +39,13 @@ const RANGE_LABELS: Record<TimeRange, string> = {
   yearly: "سالانه",
 };
 
-export default function TopUsersCard() {
-  const { data: rangeData, loading, error } = useTopUsers();
+export default function TopUsersCard({
+  data: rangeData,
+}: {
+  data: UsersRangeData;
+}) {
   const [range, setRange] = useState<TimeRange>("monthly");
   const [hoveredId, setHoveredId] = useState<number | null>(null);
-  const [employees, setEmployees] = useState<EmployeeInfo[]>([]);
-
-  useEffect(() => {
-    axiosInstance
-      .get<EmployeeInfo[] | { results: EmployeeInfo[] }>("/accounts/api/v1/employee/list/")
-      .then((res) => {
-        const list = Array.isArray(res.data)
-          ? res.data
-          : (res.data as { results: EmployeeInfo[] }).results ?? [];
-        setEmployees(list);
-      })
-      .catch(() => { });
-  }, []);
-
-  const resolveFullName = (username: string): string => {
-    if (username === "admin") return "مدیر سیستم";
-    const match = employees.find((e) => e.username === username);
-    return match?.full_name ?? username;
-  };
-
-  if (loading) return <div className="h-[300px] animate-pulse rounded-2xl bg-gray-100 dark:bg-slate-900" />;
-  if (error) return <div className="p-4 text-center text-red-500">{error}</div>;
 
   const users = rangeData[range] ?? [];
 
@@ -78,6 +68,7 @@ export default function TopUsersCard() {
               {range === r && (
                 <motion.span layoutId="activeTab" className="absolute inset-0 rounded-lg bg-white shadow-sm dark:bg-slate-800" />
               )}
+
               <span className="relative z-10">{RANGE_LABELS[r]}</span>
             </button>
           ))}
@@ -105,6 +96,7 @@ export default function TopUsersCard() {
                   >
                     {user.avatar}
                   </div>
+
                   {rankMeta && (
                     <div
                       className="absolute -bottom-1 -left-1 flex h-[18px] w-[18px] items-center justify-center rounded-full border text-[9px]"
@@ -117,8 +109,9 @@ export default function TopUsersCard() {
 
                 <div className="flex-1 min-w-0">
                   <p className="truncate text-[13px] font-semibold text-gray-900 dark:text-white">
-                    {resolveFullName(user.username)}
+                    {user.name}
                   </p>
+
                   <p className="text-[11px] text-gray-500">{user.role}</p>
                 </div>
 
@@ -127,6 +120,7 @@ export default function TopUsersCard() {
                     {user.count.toLocaleString("fa-IR")}
                     <span className="mr-1 text-[10px] font-normal text-gray-400">مشتری</span>
                   </p>
+
                   {user.trend !== "same" && (
                     <div className={`flex items-center justify-end gap-0.5 text-[10px] ${user.trend === "up" ? "text-emerald-500" : "text-rose-500"}`}>
                       {user.trend === "up" ? <TrendingUp size={10} /> : <TrendingDown size={10} />}

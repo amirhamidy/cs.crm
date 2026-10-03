@@ -18,10 +18,15 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import {
-  useCancelledTasksByDept,
-  TimeRange,
-} from "@/hooks/useCancelledTasksByDept";
+
+type TimeRange = "weekly" | "monthly" | "yearly";
+
+type DeptIssues = {
+  stage: string;
+  issues: number;
+};
+
+type SalesIssuesChartData = Record<TimeRange, DeptIssues[]>;
 
 type BarRect = {
   left: number;
@@ -402,43 +407,11 @@ function ParticleField({
   );
 }
 
-function SalesIssuesChartSkeleton() {
-  return (
-    <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-white/5 dark:bg-slate-950">
-      <div
-        className="mb-3 flex items-start justify-between gap-3"
-        dir="rtl"
-      >
-        <div className="space-y-2">
-          <div className="h-4 w-36 animate-pulse rounded-full bg-gray-100 dark:bg-slate-900" />
-          <div className="h-3 w-20 animate-pulse rounded-full bg-gray-100/80 dark:bg-slate-900/60" />
-        </div>
-
-        <div className="h-8 w-24 animate-pulse rounded-lg bg-gray-100 dark:bg-slate-900" />
-      </div>
-
-      <div className="flex h-[180px] items-end gap-2 px-2">
-        {[60, 80, 45, 70, 35, 55].map(
-          (h, i) => (
-            <div
-              key={i}
-              className="flex-1 animate-pulse rounded-t-md bg-gray-100 dark:bg-slate-900"
-              style={{ height: `${h}%` }}
-            />
-          ),
-        )}
-      </div>
-    </div>
-  );
-}
-
-export default function SalesIssuesChart() {
-  const {
-    chartData,
-    loading,
-    error,
-  } = useCancelledTasksByDept();
-
+export default function SalesIssuesChart({
+  data: chartData,
+}: {
+  data: SalesIssuesChartData;
+}) {
   const [activeRange, setActiveRange] =
     useState<TimeRange>("monthly");
 
@@ -687,21 +660,6 @@ export default function SalesIssuesChart() {
     )
     : 0;
 
-  if (loading) {
-    return (
-      <SalesIssuesChartSkeleton />
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="flex h-[256px] items-center justify-center rounded-2xl border border-red-100 bg-red-50/50 p-4 text-center text-xs text-red-600 dark:border-red-950/20 dark:bg-red-950/5 dark:text-red-400">
-        خطایی در لود کردن اطلاعات رخ داد:{" "}
-        {error}
-      </div>
-    );
-  }
-
   return (
     <motion.div
       initial={{
@@ -764,9 +722,9 @@ export default function SalesIssuesChart() {
 
               <span
                 className={`relative z-10 transition-colors ${activeRange ===
-                    range.key
-                    ? "text-gray-900 dark:text-white"
-                    : "text-gray-500 dark:text-gray-400"
+                  range.key
+                  ? "text-gray-900 dark:text-white"
+                  : "text-gray-500 dark:text-gray-400"
                   }`}
               >
                 {range.label}

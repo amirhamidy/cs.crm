@@ -3,8 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { LayoutGrid, Loader, Plus, Ticket } from "lucide-react";
 import { useCurrentEmployee } from "@/hooks/usecurrentemployee";
-import { fetchEmployeeList, fetchInternalTasks, deleteInternalTask } from "./Api";
-import type { EmployeeListItem, InternalTask, InternalTaskStatus } from "./types";
+import { fetchInternalTasks, deleteInternalTask } from "./Api";
+import type { InternalTask, InternalTaskStatus } from "./types";
 import SentTaskCard from "./Senttaskcard";
 import CreateTicketModal from "./Createticketmodal";
 
@@ -65,7 +65,6 @@ function getUsername(employee: unknown) {
 export default function SentTicketsBoard() {
     const { employee, loading: employeeLoading } = useCurrentEmployee();
     const [tasks, setTasks] = useState<InternalTask[]>([]);
-    const [employees, setEmployees] = useState<EmployeeListItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [createOpen, setCreateOpen] = useState(false);
@@ -87,18 +86,8 @@ export default function SentTicketsBoard() {
         }
     };
 
-    const loadEmployees = async () => {
-        try {
-            const response = await fetchEmployeeList();
-            setEmployees(Array.isArray(response.data) ? response.data : []);
-        } catch {
-            setEmployees([]);
-        }
-    };
-
     useEffect(() => {
         void loadTasks();
-        void loadEmployees();
     }, []);
 
     const sentTasks = useMemo(

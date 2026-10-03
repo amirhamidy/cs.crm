@@ -5,13 +5,11 @@ import { Inbox, LayoutGrid, Loader } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
 import {
     fetchEmployeeList,
-    fetchInternalTaskRoutines,
     fetchInternalTasks,
 } from "./Api";
 import type {
     EmployeeListItem,
     InternalTask,
-    InternalTaskRoutine,
 } from "./types";
 import ReceivedTaskCard from "./Receivedtaskcard";
 
@@ -104,28 +102,10 @@ function normalizeTasks(data: unknown) {
     return Array.from(map.values());
 }
 
-function normalizeRoutines(
-    data: unknown,
-): InternalTaskRoutine[] {
-    if (!Array.isArray(data)) return [];
-
-    return data.filter((item): item is InternalTaskRoutine => {
-        if (!item || typeof item !== "object") return false;
-
-        const routine = item as Partial<InternalTaskRoutine>;
-
-        return (
-            Number.isFinite(Number(routine.id)) &&
-            Number.isFinite(Number(routine.task))
-        );
-    });
-}
-
 export default function ReceivedTicketsBoard() {
     const { userId } = useAuthStore();
 
     const [tasks, setTasks] = useState<InternalTask[]>([]);
-    const [routines, setRoutines] = useState<InternalTaskRoutine[]>([]);
     const [employees, setEmployees] = useState<EmployeeListItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -135,14 +115,9 @@ export default function ReceivedTicketsBoard() {
             setLoading(true);
             setError(null);
 
-            const [
-                tasksResponse,
-                employeesResponse,
-                routinesResponse,
-            ] = await Promise.all([
+            const [tasksResponse, employeesResponse] = await Promise.all([
                 fetchInternalTasks(),
                 fetchEmployeeList(),
-                fetchInternalTaskRoutines(),
             ]);
 
             setTasks(normalizeTasks(tasksResponse.data));
@@ -153,13 +128,9 @@ export default function ReceivedTicketsBoard() {
                     : [],
             );
 
-            setRoutines(
-                normalizeRoutines(routinesResponse.data),
-            );
         } catch {
             setTasks([]);
             setEmployees([]);
-            setRoutines([]);
             setError("دریافت تیکت‌ها با خطا مواجه شد.");
         } finally {
             setLoading(false);
@@ -184,16 +155,6 @@ export default function ReceivedTicketsBoard() {
 
         return map;
     }, [employees]);
-
-    const routinedTaskIds = useMemo(
-        () =>
-            new Set(
-                routines
-                    .map((routine) => Number(routine.task))
-                    .filter(Number.isFinite),
-            ),
-        [routines],
-    );
 
     const receivedTasks = useMemo(() => {
         if (!userId) return [];
@@ -298,7 +259,6 @@ export default function ReceivedTicketsBoard() {
                             key={task.id}
                             task={task}
                             employees={employees}
-                            isRoutine={routinedTaskIds.has(task.id)}
                             onUpdated={handleUpdated}
                         />
                     ))}

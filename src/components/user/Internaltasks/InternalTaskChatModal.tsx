@@ -273,7 +273,7 @@ export default function InternalTaskChatModal({ open, task, onClose, onUpdated }
         let cancelled = false;
 
         const poll = async () => {
-            if (cancelled || sendingRef.current) return;
+            if (cancelled || sendingRef.current || document.visibilityState !== "visible") return;
 
             try {
                 setIsPolling(true);
@@ -334,7 +334,7 @@ export default function InternalTaskChatModal({ open, task, onClose, onUpdated }
             }
         };
 
-        const intervalId = window.setInterval(poll, 2000);
+        const intervalId = window.setInterval(poll, 10000);
         void poll();
 
         return () => {

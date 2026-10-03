@@ -1,4 +1,12 @@
 /node_modules
 /.next
+next-env.d.ts
 # src/lib/apiRoutes.ts
 # src/lib/axiosInstance.ts
+
+
+node_modules/
+.next/
+out/
+coverage/
+*.log

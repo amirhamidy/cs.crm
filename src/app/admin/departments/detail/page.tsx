@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState, useCallback, useMemo } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { Suspense, useEffect, useState, useCallback, useMemo } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { Swiper, SwiperSlide } from "swiper/react";
 import "swiper/css";
@@ -25,8 +25,8 @@ const getRelationId = (value: string | number | { id: string | number } | null |
     return String(value);
 };
 
-export default function DepartmentDetailPage() {
-    const { id } = useParams<{ id: string }>();
+function DepartmentDetailPage() {
+    const id = useSearchParams().get("id") ?? "";
     const router = useRouter();
     const { departments, allEmployees, fetchAll, addStage, updateStage, deleteStage, assignEmployee, removeEmployee } = useDepartmentStore();
 
@@ -111,7 +111,7 @@ export default function DepartmentDetailPage() {
             <div className="flex h-64 flex-col items-center justify-center gap-3 rounded-3xl border border-red-500/20 bg-red-500/5" dir="rtl">
                 <AlertCircle size={28} className="text-red-500" />
                 <p className="text-[13px] font-bold text-red-500">دپارتمان یافت نشد</p>
-                <button type="button" onClick={() => router.push("/admin/departments")} className="rounded-2xl px-4 py-2 text-[12px] font-extrabold text-white transition-transform active:scale-95" style={{ background: accent }}>بازگشت به لیست</button>
+                <button type="button" onClick={() => router.push("/admin/departments/")} className="rounded-2xl px-4 py-2 text-[12px] font-extrabold text-white transition-transform active:scale-95" style={{ background: accent }}>بازگشت به لیست</button>
             </div>
         );
     }
@@ -145,7 +145,7 @@ export default function DepartmentDetailPage() {
 
             <div className="flex items-center justify-between gap-4">
                 <div className="flex min-w-0 items-center gap-2.5">
-                    <button type="button" onClick={() => router.push("/admin/departments")} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-gray-400 transition-colors hover:text-gray-600 dark:hover:text-gray-300">
+                    <button type="button" onClick={() => router.push("/admin/departments/")} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-gray-400 transition-colors hover:text-gray-600 dark:hover:text-gray-300">
                         <ArrowRight size={15} />
                     </button>
                     <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl" style={{ backgroundColor: `${accent}16`, border: `1px solid ${accent}28` }}>
@@ -165,7 +165,7 @@ export default function DepartmentDetailPage() {
                         <Swiper dir="rtl" slidesPerView="auto" spaceBetween={6} className="!w-full">
                             {departments.filter((departmentItem) => String(departmentItem.id) !== String(id)).map((departmentItem) => (
                                 <SwiperSlide key={departmentItem.id} className="!w-auto">
-                                    <button type="button" onClick={() => router.push(`/admin/departments/${departmentItem.id}`)} className="whitespace-nowrap rounded-xl border border-gray-200 bg-gray-50 px-3 py-1.5 text-[11.5px] font-bold text-gray-500 transition-all hover:border-gray-300 hover:bg-gray-100 hover:text-gray-800 dark:border-white/[0.07] dark:bg-white/[0.03] dark:text-gray-400 dark:hover:bg-white/[0.06] dark:hover:text-gray-200">
+                                    <button type="button" onClick={() => router.push(`/admin/departments/detail/?id=${departmentItem.id}`)} className="whitespace-nowrap rounded-xl border border-gray-200 bg-gray-50 px-3 py-1.5 text-[11.5px] font-bold text-gray-500 transition-all hover:border-gray-300 hover:bg-gray-100 hover:text-gray-800 dark:border-white/[0.07] dark:bg-white/[0.03] dark:text-gray-400 dark:hover:bg-white/[0.06] dark:hover:text-gray-200">
                                         {departmentItem.name}
                                     </button>
                                 </SwiperSlide>
@@ -209,5 +209,19 @@ export default function DepartmentDetailPage() {
                 </div>
             </motion.div>
         </div>
+    );
+}
+
+export default function DepartmentDetailRoute() {
+    return (
+        <Suspense
+            fallback={
+                <div className="flex h-64 items-center justify-center">
+                    <Loader size={22} className="animate-spin text-indigo-500" />
+                </div>
+            }
+        >
+            <DepartmentDetailPage />
+        </Suspense>
     );
 }

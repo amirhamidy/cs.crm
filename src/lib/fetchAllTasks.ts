@@ -36,16 +36,17 @@ function pageItems(data: TaskPage | undefined | null): TaskItem[] {
 function pageNext(data: TaskPage | undefined | null): string | null {
   if (data && !Array.isArray(data) && typeof data === "object") {
     const next = data.next;
-    if (typeof next === "string" && next.length > 0) {
-      if (
-        typeof window !== "undefined" &&
-        window.location.protocol === "https:"
-      ) {
-        return next.replace(/^http:\/\//i, "https://");
-      }
-      return next;
+
+    if (typeof next !== "string" || !next.length) return null;
+
+    try {
+      const parsed = new URL(next, window.location.origin);
+      return `${parsed.pathname}${parsed.search}`;
+    } catch {
+      return next.startsWith("/") ? next : null;
     }
   }
+
   return null;
 }
 

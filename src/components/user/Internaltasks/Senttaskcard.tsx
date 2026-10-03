@@ -1,17 +1,20 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { memo, useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
-    CalendarDays, ClipboardX, Clock, Loader, Loader2,
-    MessageSquareText, Trash2, UserRound, X,
+    Ban, CalendarDays, CheckCircle2, ClipboardX, Clock, Loader, Loader2,
+    MessageSquareText, RotateCcw, Trash2, UserRound, X,
 } from "lucide-react";
 import { useTheme } from "next-themes";
+import { useAuthStore } from "@/store/authStore";
 import type { InternalTask, InternalTaskStatus, EmployeeRef } from "./types";
 import { toJalali, toPersianDigits, JALALI_MONTHS, pad2 } from "@/lib/jalali";
 import api from "@/lib/axiosInstance";
 import InternalTimeRangeModal from "./InternalTimeRangeModal";
 import InternalTaskChatModal from "./InternalTaskChatModal";
+import InternalTaskActionModal from "./InternalTaskActionModal";
+import { reopenInternalTask } from "./Api";
 
 const AVATAR_GRADIENTS = [
     ["#6366f1", "#8b5cf6"], ["#3b82f6", "#6366f1"], ["#8b5cf6", "#ec4899"],
@@ -87,11 +90,12 @@ interface SentTaskCardProps {
     isDeleting?: boolean;
 }
 
-export default function SentTaskCard({
+function SentTaskCard({
     task, index = 0, onDelete, onUpdated, isDeleting = false,
 }: SentTaskCardProps) {
     const { resolvedTheme } = useTheme();
     const isDark = resolvedTheme === "dark";
+    const userId = useAuthStore((state) => state.userId);
     const [hovered, setHovered] = useState(false);
     const [timeModalOpen, setTimeModalOpen] = useState(false);
     const [showConfirm, setShowConfirm] = useState(false);
@@ -100,7 +104,8 @@ export default function SentTaskCard({
     const [savingTime, setSavingTime] = useState(false);
     const [timeError, setTimeError] = useState<string | null>(null);
     const [chatOpen, setChatOpen] = useState(false);
-    const [loadingDeadline, setLoadingDeadline] = useState(false);
+    const [actionModal, setActionModal] = useState<"complete" | "cancel" | null>(null);
+    const [reopening, setReopening] = useState(false);
     const [stepDeadline, setStepDeadline] = useState<StepDeadline>({
         started_at: task.started_at ?? null, deadline: task.deadline ?? null,
     });
@@ -114,32 +119,30 @@ export default function SentTaskCard({
     const status = (task.status as InternalTaskStatus) || "in_progress";
     const statusConfig = STATUS_CONFIG[status] ?? STATUS_CONFIG.in_progress;
     const isActiveTask = !["completed", "cancelled", "sold"].includes(status);
+    const latestAttachment = Array.isArray(task.attachments)
+        ? task.attachments.reduce<InternalTask["attachments"][number] | null>(
+            (latest, attachment) =>
+                !latest || Number(attachment.id) > Number(latest.id)
+                    ? attachment
+                    : latest,
+            null,
+        )
+        : null;
+    const latestAttachmentAt = latestAttachment
+        ? Date.parse(latestAttachment.created_at)
+        : NaN;
+    const taskUpdatedAt = Date.parse(task.updated_at);
+    const hasResponse =
+        isActiveTask &&
+        latestAttachment !== null &&
+        userId !== null &&
+        Number(latestAttachment.uploaded_by) !== Number(userId) &&
+        (Number.isNaN(taskUpdatedAt) ||
+            Number.isNaN(latestAttachmentAt) ||
+            latestAttachmentAt >= taskUpdatedAt - 10_000);
     const urgency = isActiveTask ? getDeadlineUrgency(stepDeadline.deadline) : null;
     const accent = urgency && urgency !== "normal" ? URGENCY_ACCENT[urgency] : null;
 
-    useEffect(() => {
-        let cancelled = false;
-        setLoadingDeadline(true);
-
-        api.get(`/tasks/api/v1/internal_task/${task.id}/deadline/`)
-            .then(({ data }) => {
-                if (cancelled) return;
-                const value = data?.data ?? data;
-                setStepDeadline({
-                    started_at: value?.started_at ?? task.started_at ?? null,
-                    deadline: value?.deadline ?? task.deadline ?? null,
-                });
-            })
-            .catch(() => {
-                if (!cancelled) setStepDeadline({
-                    started_at: task.started_at ?? null,
-                    deadline: task.deadline ?? null,
-                });
-            })
-            .finally(() => !cancelled && setLoadingDeadline(false));
-
-        return () => { cancelled = true; };
-    }, [task.id, task.started_at, task.deadline]);
 
     useEffect(() => {
         if (!stepDeadline.deadline || !isActiveTask) return;
@@ -194,6 +197,19 @@ export default function SentTaskCard({
     }
 
     const effectiveDeleting = deleting || isDeleting;
+
+    async function handleReopen() {
+        if (reopening) return;
+
+        setReopening(true);
+
+        try {
+            const { data } = await reopenInternalTask(task.id);
+            onUpdated?.(data);
+        } finally {
+            setReopening(false);
+        }
+    }
 
     return (
         <>
@@ -350,6 +366,44 @@ export default function SentTaskCard({
                         )}
                 </div>
 
+                {isActiveTask && hasResponse && (
+                    <div className="flex gap-2">
+                        <button
+                            type="button"
+                            onClick={() => setActionModal("complete")}
+                            className="flex h-9 flex-1 items-center justify-center gap-1.5 rounded-xl bg-emerald-500 text-[10.5px] font-extrabold text-white transition-opacity hover:opacity-90"
+                        >
+                            <CheckCircle2 size={13} />
+                            تأیید انجام
+                        </button>
+
+                        <button
+                            type="button"
+                            onClick={() => setActionModal("cancel")}
+                            className="flex h-9 flex-1 items-center justify-center gap-1.5 rounded-xl bg-red-500 text-[10.5px] font-extrabold text-white transition-opacity hover:opacity-90"
+                        >
+                            <Ban size={13} />
+                            لغو تیکت
+                        </button>
+                    </div>
+                )}
+
+                {!isActiveTask && (
+                    <button
+                        type="button"
+                        onClick={() => void handleReopen()}
+                        disabled={reopening}
+                        className="flex h-9 w-full items-center justify-center gap-1.5 rounded-xl bg-amber-500 text-[10.5px] font-extrabold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+                    >
+                        {reopening ? (
+                            <Loader2 size={13} className="animate-spin" />
+                        ) : (
+                            <RotateCcw size={13} />
+                        )}
+                        بازگشایی تیکت
+                    </button>
+                )}
+
                 <div className="flex flex-col gap-1.5 rounded-[1.25rem] px-3 py-2.5" style={{
                     background: accent
                         ? `color-mix(in srgb, ${accent} 8%, transparent)`
@@ -358,11 +412,7 @@ export default function SentTaskCard({
                         ? `1px solid color-mix(in srgb, ${accent} 25%, transparent)`
                         : isDark ? "1px solid rgba(99,102,241,.12)" : "1px solid rgba(99,102,241,.1)",
                 }}>
-                    {loadingDeadline ? (
-                        <div className="flex items-center gap-2 text-[10.5px] font-semibold" style={{ color: isDark ? "#94a3b8" : "#64748b" }}>
-                            <Loader2 size={12} className="animate-spin" /> در حال دریافت زمان‌بندی...
-                        </div>
-                    ) : startedAtLabel || deadlineLabel ? (
+                    {startedAtLabel || deadlineLabel ? (
                         <>
                             {startedAtLabel && (
                                 <div className="flex items-center gap-2 text-[11px] font-bold" style={{ color: accent ?? (isDark ? "#a5b4fc" : "#6366f1") }}>
@@ -441,6 +491,19 @@ export default function SentTaskCard({
                 )}
             </AnimatePresence>
 
+            {actionModal && (
+                <InternalTaskActionModal
+                    isOpen
+                    action={actionModal}
+                    task={task}
+                    onClose={() => setActionModal(null)}
+                    onDone={(updatedTask) => {
+                        onUpdated?.(updatedTask);
+                        setActionModal(null);
+                    }}
+                />
+            )}
+
             <InternalTimeRangeModal
                 open={timeModalOpen}
                 initialStartedAt={stepDeadline.started_at}
@@ -460,3 +523,9 @@ export default function SentTaskCard({
         </>
     );
 }
+
+export default memo(SentTaskCard, (prev, next) =>
+    prev.task === next.task &&
+    prev.index === next.index &&
+    prev.isDeleting === next.isDeleting
+);

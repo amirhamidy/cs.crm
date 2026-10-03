@@ -29,6 +29,7 @@ import { useTheme } from "next-themes";
 import axiosInstance from "@/lib/axiosInstance";
 import { toJalali, toPersianDigits, JALALI_MONTHS, pad2 } from "@/lib/jalali";
 import { useEmployeeInfo } from "@/hooks/useEmployeeInfo";
+import { resolveMediaUrl } from "@/lib/media";
 
 interface Attachment {
     id: number;
@@ -57,7 +58,7 @@ interface Props {
     taskTitle: string;
 }
 
-const MEDIA_BASE = "https://api.radcosys.ir/";
+
 
 const ACTION_META: Record<
     string,
@@ -125,7 +126,7 @@ const ACTION_META: Record<
 };
 
 function resolveFileUrl(url: string) {
-    return url.startsWith("http") ? url : `${MEDIA_BASE}${url}`;
+    return resolveMediaUrl(url);
 }
 
 function formatJalali(iso: string) {

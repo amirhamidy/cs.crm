@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
+import Script from "next/script";
 import "./globals.css";
 import { Providers } from "@/components/providers";
 import { GeistSans } from "geist/font/sans";
 import { GeistMono } from "geist/font/mono";
 import { cn } from "@/lib/utils";
-import { AuthInitializer } from "@/components/AuthInitializer";
+import AuthInitializer from "@/components/AuthInitializer";
 
 const vazir = localFont({
   src: [
@@ -29,7 +30,9 @@ export const metadata: Metadata = {
   description: "radco crm",
 };
 
-export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+export default function RootLayout({
+  children,
+}: Readonly<{ children: React.ReactNode }>) {
   return (
     <html
       lang="fa"
@@ -38,6 +41,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       className={cn("font-sans", GeistSans.variable, GeistMono.variable)}
     >
       <body className={`${vazir.variable} font-vazir antialiased`}>
+        <Script src="/config.js" strategy="beforeInteractive" />
         <Providers>
           <AuthInitializer />
           {children}

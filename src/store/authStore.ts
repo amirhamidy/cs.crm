@@ -1,8 +1,13 @@
-import { create } from "zustand";
+"use client";
 
-interface AuthState {
-  accessToken: string | null;
-  refreshToken: string | null;
+import { create } from "zustand";
+import {
+  clearSession,
+  getStoredUser,
+  saveSession,
+} from "@/lib/clientAuth";
+
+export interface AuthState {
   username: string | null;
   userType: 1 | 2 | null;
   userId: number | null;
@@ -19,19 +24,8 @@ interface AuthState {
   initFromStorage: () => void;
 }
 
-function syncCookies(access: string, type: 1 | 2) {
-  document.cookie = `crm-access=${access}; Max-Age=86400; path=/`;
-  document.cookie = `crm-type=${type}; Max-Age=604800; path=/`;
-}
-
-function clearCookies() {
-  document.cookie = "crm-access=; Max-Age=0; path=/";
-  document.cookie = "crm-type=; Max-Age=0; path=/";
-}
-
+// توکن‌ها فقط در localStorage نگه داشته می‌شوند (نه در state)؛ state فقط هویت کاربر است.
 export const useAuthStore = create<AuthState>((set) => ({
-  accessToken: null,
-  refreshToken: null,
   username: null,
   userType: null,
   userId: null,
@@ -39,60 +33,52 @@ export const useAuthStore = create<AuthState>((set) => ({
   hasHydrated: false,
 
   setAuth: ({ access, refresh, username, userType, userId }) => {
-    localStorage.setItem("crm-access", access);
-    localStorage.setItem("crm-refresh", refresh);
-    localStorage.setItem("crm-type", String(userType));
-    localStorage.setItem("crm-username", username);
-    localStorage.setItem("crm-user-id", String(userId));
-    syncCookies(access, userType);
+    saveSession({
+      access,
+      refresh,
+      user: { id: userId, username, type: userType },
+    });
+
     set({
-      accessToken: access,
-      refreshToken: refresh,
       username,
       userType,
       userId,
       isAuthenticated: true,
+      hasHydrated: true,
     });
   },
 
   clearAuth: () => {
-    localStorage.removeItem("crm-access");
-    localStorage.removeItem("crm-refresh");
-    localStorage.removeItem("crm-type");
-    localStorage.removeItem("crm-username");
-    localStorage.removeItem("crm-user-id");
-    clearCookies();
+    clearSession();
+
     set({
-      accessToken: null,
-      refreshToken: null,
       username: null,
       userType: null,
       userId: null,
       isAuthenticated: false,
+      hasHydrated: true,
     });
   },
 
   initFromStorage: () => {
-    const access = localStorage.getItem("crm-access");
-    const refresh = localStorage.getItem("crm-refresh");
-    const raw = localStorage.getItem("crm-type");
-    const username = localStorage.getItem("crm-username");
-    const rawId = localStorage.getItem("crm-user-id");
-    const userType = raw === "1" ? 1 : raw === "2" ? 2 : null;
-    const userId = rawId && rawId !== "undefined" ? Number(rawId) : null;
+    const user = getStoredUser();
 
-    if (access && refresh && userType) {
+    if (user) {
       set({
-        accessToken: access,
-        refreshToken: refresh,
-        username,
-        userType,
-        userId,
+        username: user.username,
+        userType: user.type,
+        userId: user.id,
         isAuthenticated: true,
         hasHydrated: true,
       });
     } else {
-      set({ hasHydrated: true });
+      set({
+        username: null,
+        userType: null,
+        userId: null,
+        isAuthenticated: false,
+        hasHydrated: true,
+      });
     }
   },
 }));

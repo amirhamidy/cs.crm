@@ -55,7 +55,7 @@ export default function DepartmentCard({
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.05 }}
             onClick={() =>
-                router.push(`/admin/departments/${department.id}`)
+                router.push(`/admin/departments/detail/?id=${department.id}`)
             }
             className={`relative cursor-pointer rounded-2xl border p-4 transition-all duration-200 ${isSelected
                 ? "border-indigo-200 bg-indigo-50/60 dark:border-indigo-500/30 dark:bg-indigo-500/10"
