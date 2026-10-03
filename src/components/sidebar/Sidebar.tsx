@@ -114,7 +114,7 @@ export default function Sidebar() {
           >
             <span>توسعه داده شده توسط تیم فنی رادکو</span>
             <Image
-              src="/logo.jpg"
+              src="/radco.png"
               alt="رادکو"
               width={30}
               height={30}

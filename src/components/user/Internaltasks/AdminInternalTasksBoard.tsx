@@ -25,7 +25,7 @@ import {
     deleteInternalTask,
     fetchEmployeeList,
     fetchInternalTasks,
-    updateInternalTaskStatus,
+    reopenInternalTask,
 } from "./Api";
 import InternalTaskActionModal from "./InternalTaskActionModal";
 import type {
@@ -75,6 +75,21 @@ function normalizeTask(item: unknown): InternalTask | null {
             ? status
             : "in_progress";
 
+    const rawCreatedBy = task.created_by;
+
+    const createdBy =
+        typeof rawCreatedBy === "string"
+            ? rawCreatedBy
+            : typeof rawCreatedBy === "number"
+                ? String(rawCreatedBy)
+                : rawCreatedBy &&
+                    typeof rawCreatedBy === "object" &&
+                    "username" in rawCreatedBy &&
+                    typeof (rawCreatedBy as { username?: unknown })
+                        .username === "string"
+                    ? (rawCreatedBy as { username: string }).username
+                    : "";
+
     return {
         id: taskId,
         title: typeof task.title === "string" ? task.title : "",
@@ -83,10 +98,7 @@ function normalizeTask(item: unknown): InternalTask | null {
                 ? task.description
                 : "",
         status: safeStatus,
-        created_by:
-            typeof task.created_by === "string"
-                ? task.created_by
-                : "",
+        created_by: createdBy,
         created_at:
             typeof task.created_at === "string" &&
                 task.created_at.trim()
@@ -238,7 +250,11 @@ function resolveAssignedTo(
                 isObject &&
                     typeof (item as { full_name?: unknown }).full_name ===
                     "string"
-                    ? (item as { full_name: string }).full_name.trim()
+                    ? (
+                        item as {
+                            full_name: string;
+                        }
+                    ).full_name.trim()
                     : "";
 
             if (!Number.isFinite(id) && !username) {
@@ -264,14 +280,17 @@ function resolveAssignedTo(
                 full_name,
             };
         })
-        .filter((item): item is EmployeeRef => item !== null);
+        .filter(
+            (item): item is EmployeeRef =>
+                item !== null,
+        );
 }
 
 function resolveCreatorName(
     createdBy: string,
     employees: AdminEmployee[],
 ) {
-    const username = createdBy.trim();
+    const username = String(createdBy ?? "").trim();
 
     if (!username) return "کاربر";
 
@@ -303,7 +322,8 @@ function isTaskAssignedToUser(
 
             if (
                 typeof itemUsername === "string" &&
-                itemUsername.trim().toLowerCase() === currentUsername
+                itemUsername.trim().toLowerCase() ===
+                currentUsername
             ) {
                 return true;
             }
@@ -337,637 +357,752 @@ function isTaskAssignedToUser(
     });
 }
 
-const AdminInternalTaskCard = memo(function AdminInternalTaskCard({
-    task,
-    index,
-    employees,
-    currentUsername,
-    onOpen,
-    onDelete,
-    onStatusChange,
-    isDeleting = false,
-}: {
-    task: InternalTask;
-    index: number;
-    employees: AdminEmployee[];
-    currentUsername: string;
-    onOpen: (task: InternalTask) => void;
-    onDelete?: (taskId: number) => Promise<void> | void;
-    onStatusChange: (task: InternalTask) => void;
-    isDeleting?: boolean;
-}) {
-    const { resolvedTheme } = useTheme();
-    const isDark = resolvedTheme === "dark";
-
-    const [hovered, setHovered] = useState(false);
-    const [showConfirm, setShowConfirm] = useState(false);
-    const [deleteError, setDeleteError] = useState<string | null>(null);
-    const [actionModal, setActionModal] =
-        useState<"complete" | "cancel" | null>(null);
-    const [reopening, setReopening] = useState(false);
-    const [statusError, setStatusError] = useState<string | null>(null);
-
-    const statusConfig = getStatusConfig(task.status);
-    const isCompleted = task.status === "completed";
-    const isCancelled = task.status === "cancelled";
-
-    const isCreator =
-        currentUsername.trim().toLowerCase() ===
-        task.created_by.trim().toLowerCase();
-
-    const isAssigned = isTaskAssignedToUser(
+const AdminInternalTaskCard = memo(
+    function AdminInternalTaskCard({
         task,
+        index,
+        employees,
         currentUsername,
-        employees,
-    );
+        onOpen,
+        onDelete,
+        onStatusChange,
+        isDeleting = false,
+    }: {
+        task: InternalTask;
+        index: number;
+        employees: AdminEmployee[];
+        currentUsername: string;
+        onOpen: (task: InternalTask) => void;
+        onDelete?: (
+            taskId: number,
+        ) => Promise<void> | void;
+        onStatusChange: (task: InternalTask) => void;
+        isDeleting?: boolean;
+    }) {
+        const { resolvedTheme } = useTheme();
+        const isDark = resolvedTheme === "dark";
 
-    const isReceived = !isCreator && isAssigned;
-    const isSent = isCreator;
-    const currentUserId = useAuthStore((state) => state.userId);
+        const [hovered, setHovered] = useState(false);
+        const [showConfirm, setShowConfirm] = useState(false);
+        const [deleteError, setDeleteError] =
+            useState<string | null>(null);
+        const [actionModal, setActionModal] =
+            useState<"complete" | "cancel" | null>(null);
+        const [reopening, setReopening] = useState(false);
+        const [statusError, setStatusError] =
+            useState<string | null>(null);
 
-    const latestAttachmentForAction = [...(task.attachments ?? [])]
-        .sort((a, b) => Number(b.id) - Number(a.id))[0];
+        const statusConfig = getStatusConfig(task.status);
+        const isCompleted = task.status === "completed";
+        const isCancelled = task.status === "cancelled";
 
-    const hasResponse =
-        isSent &&
-        latestAttachmentForAction != null &&
-        currentUserId != null &&
-        Number(latestAttachmentForAction.uploaded_by) !== Number(currentUserId);
+        const isCreator =
+            currentUsername.trim().toLowerCase() ===
+            String(task.created_by ?? "")
+                .trim()
+                .toLowerCase();
 
-    const canAct = isSent;
+        const isAssigned = isTaskAssignedToUser(
+            task,
+            currentUsername,
+            employees,
+        );
 
-    async function handleReopen(event: React.MouseEvent) {
-        event.stopPropagation();
+        const isReceived = !isCreator && isAssigned;
+        const isSent = isCreator;
+        const currentUserId = useAuthStore(
+            (state) => state.userId,
+        );
 
-        if (reopening || !canAct) return;
+        const latestAttachmentForAction = [
+            ...(task.attachments ?? []),
+        ].sort(
+            (a, b) =>
+                Number(b.id) - Number(a.id),
+        )[0];
 
-        setStatusError(null);
-        setReopening(true);
+        const hasResponse =
+            isSent &&
+            latestAttachmentForAction != null &&
+            currentUserId != null &&
+            Number(
+                latestAttachmentForAction.uploaded_by,
+            ) !== Number(currentUserId);
 
-        try {
-            const { data } = await updateInternalTaskStatus(task.id, {
-                status: "in_progress",
-            });
+        const canAct = isSent;
 
-            onStatusChange({
-                ...task,
-                ...data,
-            });
-        } catch {
-            setStatusError("بازگشایی تیکت با خطا مواجه شد.");
-        } finally {
-            setReopening(false);
+        async function handleReopen(
+            event: React.MouseEvent,
+        ) {
+            event.stopPropagation();
+
+            if (reopening || !canAct) return;
+
+            setStatusError(null);
+            setReopening(true);
+
+            try {
+                const { data } =
+                    await reopenInternalTask(task.id);
+
+                onStatusChange({
+                    ...task,
+                    ...(data ?? {}),
+                    status: "in_progress",
+                });
+            } catch {
+                setStatusError(
+                    "بازگشایی تیکت با خطا مواجه شد.",
+                );
+            } finally {
+                setReopening(false);
+            }
         }
-    }
 
-    function handleActionDone(updatedTask: InternalTask) {
-        onStatusChange(updatedTask);
-        setActionModal(null);
-    }
+        function handleActionDone(
+            updatedTask: InternalTask,
+        ) {
+            onStatusChange(updatedTask);
+            setActionModal(null);
+        }
 
-    const assignedEmployees = resolveAssignedTo(
-        task.assigned_to,
-        employees,
-    );
+        const assignedEmployees = resolveAssignedTo(
+            task.assigned_to,
+            employees,
+        );
 
-    const latestAttachment = [...(task.attachments ?? [])]
-        .sort(
+        const latestAttachment = [
+            ...(task.attachments ?? []),
+        ].sort(
             (a, b) =>
                 new Date(b.created_at).getTime() -
                 new Date(a.created_at).getTime(),
         )[0];
 
-    const creatorName = resolveCreatorName(
-        task.created_by,
-        employees,
-    );
+        const creatorName = resolveCreatorName(
+            String(task.created_by ?? ""),
+            employees,
+        );
 
-    return (
-        <motion.div
-            layout
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            transition={{
-                duration: 0.22,
-                delay: index * 0.04,
-            }}
-            onHoverStart={() => setHovered(true)}
-            onHoverEnd={() => setHovered(false)}
-            onClick={() => onOpen(task)}
-            className="group relative flex min-h-[220px] cursor-pointer flex-col gap-3 overflow-hidden rounded-[2rem] p-4"
-            style={{
-                border: isDark
-                    ? "1px solid rgba(255,255,255,0.06)"
-                    : "1px solid rgba(0,0,0,0.06)",
-                background: isDark
-                    ? "rgba(255,255,255,0.02)"
-                    : "#fafafa",
-                boxShadow: isDark
-                    ? "0 2px 24px rgba(0,0,0,0.2)"
-                    : "0 2px 16px rgba(0,0,0,0.04)",
-                transition:
-                    "border-color .4s ease, box-shadow .4s ease",
-            }}
-        >
-            <svg
-                className="pointer-events-none absolute inset-0 h-full w-full"
-                style={{ borderRadius: "2rem" }}
+        return (
+            <motion.div
+                layout
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{
+                    opacity: 0,
+                    scale: 0.95,
+                }}
+                transition={{
+                    duration: 0.22,
+                    delay: index * 0.04,
+                }}
+                onHoverStart={() => setHovered(true)}
+                onHoverEnd={() => setHovered(false)}
+                onClick={() => onOpen(task)}
+                className="group relative flex min-h-[220px] cursor-pointer flex-col gap-3 overflow-hidden rounded-[2rem] p-4"
+                style={{
+                    border: isDark
+                        ? "1px solid rgba(255,255,255,0.06)"
+                        : "1px solid rgba(0,0,0,0.06)",
+                    background: isDark
+                        ? "rgba(255,255,255,0.02)"
+                        : "#fafafa",
+                    boxShadow: isDark
+                        ? "0 2px 24px rgba(0,0,0,0.2)"
+                        : "0 2px 16px rgba(0,0,0,0.04)",
+                    transition:
+                        "border-color .4s ease, box-shadow .4s ease",
+                }}
             >
-                <defs>
-                    <linearGradient
-                        id={`admin-border-${task.id}`}
-                        x1="100%"
-                        y1="100%"
-                        x2="0%"
-                        y2="0%"
-                    >
-                        <stop offset="0%" stopColor="#6366f1" />
-                        <stop offset="100%" stopColor="#8b5cf6" />
-                    </linearGradient>
-                </defs>
+                <svg
+                    className="pointer-events-none absolute inset-0 h-full w-full"
+                    style={{ borderRadius: "2rem" }}
+                >
+                    <defs>
+                        <linearGradient
+                            id={`admin-border-${task.id}`}
+                            x1="100%"
+                            y1="100%"
+                            x2="0%"
+                            y2="0%"
+                        >
+                            <stop
+                                offset="0%"
+                                stopColor="#6366f1"
+                            />
+                            <stop
+                                offset="100%"
+                                stopColor="#8b5cf6"
+                            />
+                        </linearGradient>
+                    </defs>
 
-                <motion.rect
-                    x="1"
-                    y="1"
-                    width="calc(100% - 2px)"
-                    height="calc(100% - 2px)"
-                    rx="30"
-                    fill="none"
-                    stroke={`url(#admin-border-${task.id})`}
-                    strokeWidth="1.5"
-                    pathLength="1"
-                    initial={{ pathLength: 0, opacity: 0 }}
-                    animate={
-                        hovered
-                            ? { pathLength: 1, opacity: 1 }
-                            : { pathLength: 0, opacity: 0 }
-                    }
-                    transition={{
-                        duration: 0.55,
-                        ease: "easeInOut",
-                    }}
-                />
-            </svg>
-
-            <div className="relative z-10 flex items-start justify-between gap-3">
-                <div className="flex min-w-0 items-center gap-2">
-                    <span
-                        className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1 text-[10.5px] font-bold ${statusConfig.className}`}
-                    >
-                        <span
-                            className={`h-1.5 w-1.5 rounded-full bg-current ${task.status === "in_progress"
-                                    ? "animate-pulse"
-                                    : ""
-                                }`}
-                        />
-                        {statusConfig.label}
-                    </span>
-
-                    {isSent && (
-                        <span className="rounded-full border border-indigo-500/20 bg-indigo-500/10 px-2.5 py-1 text-[10px] font-bold text-indigo-500">
-                            ارسالی
-                        </span>
-                    )}
-
-                    {isReceived && (
-                        <span className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-1 text-[10px] font-bold text-emerald-500">
-                            دریافتی
-                        </span>
-                    )}
-                </div>
-
-                <div className="flex shrink-0 items-center gap-1.5">
-                    <button
-                        type="button"
-                        onClick={(event) => {
-                            event.stopPropagation();
-                            onOpen(task);
+                    <motion.rect
+                        x="1"
+                        y="1"
+                        width="calc(100% - 2px)"
+                        height="calc(100% - 2px)"
+                        rx="30"
+                        fill="none"
+                        stroke={`url(#admin-border-${task.id})`}
+                        strokeWidth="1.5"
+                        pathLength="1"
+                        initial={{
+                            pathLength: 0,
+                            opacity: 0,
                         }}
-                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-indigo-500/[0.08] text-indigo-500 transition-all hover:bg-indigo-500/[0.14] hover:text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-300 dark:hover:bg-indigo-500/15"
-                        title="مشاهده گفتگو"
-                    >
-                        <MessageSquareText size={13} />
-                    </button>
+                        animate={
+                            hovered
+                                ? {
+                                    pathLength: 1,
+                                    opacity: 1,
+                                }
+                                : {
+                                    pathLength: 0,
+                                    opacity: 0,
+                                }
+                        }
+                        transition={{
+                            duration: 0.55,
+                            ease: "easeInOut",
+                        }}
+                    />
+                </svg>
 
-                    {onDelete && (
+                <div className="relative z-10 flex items-start justify-between gap-3">
+                    <div className="flex min-w-0 items-center gap-2">
+                        <span
+                            className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1 text-[10.5px] font-bold ${statusConfig.className}`}
+                        >
+                            <span
+                                className={`h-1.5 w-1.5 rounded-full bg-current ${task.status ===
+                                        "in_progress"
+                                        ? "animate-pulse"
+                                        : ""
+                                    }`}
+                            />
+                            {statusConfig.label}
+                        </span>
+
+                        {isSent && (
+                            <span className="rounded-full border border-indigo-500/20 bg-indigo-500/10 px-2.5 py-1 text-[10px] font-bold text-indigo-500">
+                                ارسالی
+                            </span>
+                        )}
+
+                        {isReceived && (
+                            <span className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-1 text-[10px] font-bold text-emerald-500">
+                                دریافتی
+                            </span>
+                        )}
+                    </div>
+
+                    <div className="flex shrink-0 items-center gap-1.5">
                         <button
                             type="button"
                             onClick={(event) => {
                                 event.stopPropagation();
-                                setDeleteError(null);
-                                setShowConfirm(true);
+                                onOpen(task);
                             }}
-                            disabled={isDeleting}
-                            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-red-500/[0.08] text-red-500 transition-all hover:bg-red-500/[0.14] hover:text-red-600 disabled:opacity-40 dark:bg-red-500/10 dark:text-red-400 dark:hover:bg-red-500/15"
-                            title="حذف تیکت"
+                            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-indigo-500/[0.08] text-indigo-500 transition-all hover:bg-indigo-500/[0.14] hover:text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-300 dark:hover:bg-indigo-500/15"
+                            title="مشاهده گفتگو"
                         >
-                            {isDeleting ? (
-                                <Loader2
-                                    size={13}
-                                    className="animate-spin"
-                                />
-                            ) : (
-                                <Trash2 size={13} />
-                            )}
+                            <MessageSquareText size={13} />
                         </button>
-                    )}
-                </div>
-            </div>
 
-            <div className="relative z-10 flex flex-col gap-1">
-                <h3
-                    className="line-clamp-1 text-[13.5px] font-extrabold"
-                    style={{
-                        color: isDark ? "#f1f5f9" : "#1e293b",
-                    }}
-                >
-                    {task.title || "بدون عنوان"}
-                </h3>
-
-                {task.description ? (
-                    <p
-                        className="line-clamp-2 text-[11.5px] leading-6"
-                        style={{
-                            color: isDark ? "#94a3b8" : "#64748b",
-                        }}
-                    >
-                        {task.description}
-                    </p>
-                ) : null}
-            </div>
-
-            <div
-                className="relative z-10 flex flex-col gap-2 border-t pt-3"
-                style={{
-                    borderColor: isDark
-                        ? "rgba(255,255,255,0.05)"
-                        : "rgba(0,0,0,0.05)",
-                }}
-            >
-                <div className="flex items-center gap-2">
-                    <Users
-                        size={12}
-                        className="shrink-0 text-indigo-500"
-                    />
-
-                    <div className="flex min-w-0 flex-wrap gap-1.5">
-                        {assignedEmployees.length > 0 ? (
-                            assignedEmployees.map(
-                                (employee: EmployeeRef) => {
-                                    const gradient = getGradient(
-                                        Number(employee.id),
-                                    );
-
-                                    return (
-                                        <span
-                                            key={`${employee.id}-${employee.full_name}`}
-                                            className="flex items-center gap-1.5 rounded-full border py-0.5 pl-2 pr-0.5"
-                                            style={{
-                                                borderColor: isDark
-                                                    ? "rgba(255,255,255,.06)"
-                                                    : "rgba(0,0,0,.06)",
-                                                background: isDark
-                                                    ? "rgba(255,255,255,.035)"
-                                                    : "rgba(0,0,0,.025)",
-                                            }}
-                                        >
-                                            <span
-                                                className="flex h-5 w-5 items-center justify-center rounded-full text-[8px] font-extrabold text-white"
-                                                style={{
-                                                    background: `linear-gradient(135deg, ${gradient[0]}, ${gradient[1]})`,
-                                                }}
-                                            >
-                                                {employee.full_name?.slice(
-                                                    0,
-                                                    1,
-                                                ) || "ک"}
-                                            </span>
-
-                                            <span
-                                                className="max-w-[120px] truncate text-[9.5px] font-bold"
-                                                style={{
-                                                    color: isDark
-                                                        ? "#cbd5e1"
-                                                        : "#475569",
-                                                }}
-                                            >
-                                                {employee.full_name ||
-                                                    `کارمند ${employee.id}`}
-                                            </span>
-                                        </span>
-                                    );
-                                },
-                            )
-                        ) : (
-                            <span className="text-[10px] text-gray-400">
-                                بدون مسئول
-                            </span>
+                        {onDelete && (
+                            <button
+                                type="button"
+                                onClick={(event) => {
+                                    event.stopPropagation();
+                                    setDeleteError(null);
+                                    setShowConfirm(true);
+                                }}
+                                disabled={isDeleting}
+                                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-red-500/[0.08] text-red-500 transition-all hover:bg-red-500/[0.14] hover:text-red-600 disabled:opacity-40 dark:bg-red-500/10 dark:text-red-400 dark:hover:bg-red-500/15"
+                                title="حذف تیکت"
+                            >
+                                {isDeleting ? (
+                                    <Loader2
+                                        size={13}
+                                        className="animate-spin"
+                                    />
+                                ) : (
+                                    <Trash2 size={13} />
+                                )}
+                            </button>
                         )}
                     </div>
                 </div>
 
-                <div className="flex items-center justify-between gap-3">
-                    <div className="flex min-w-0 items-center gap-1.5">
-                        <span className="text-[9px] text-black/30 dark:text-white/25">
-                            ایجادکننده:
-                        </span>
+                <div className="relative z-10 flex flex-col gap-1">
+                    <h3
+                        className="line-clamp-1 text-[13.5px] font-extrabold"
+                        style={{
+                            color: isDark
+                                ? "#f1f5f9"
+                                : "#1e293b",
+                        }}
+                    >
+                        {task.title || "بدون عنوان"}
+                    </h3>
 
-                        <span className="truncate text-[10px] font-bold text-black/55 dark:text-white/50">
-                            {creatorName}
-                        </span>
-                    </div>
+                    {task.description ? (
+                        <p
+                            className="line-clamp-2 text-[11.5px] leading-6"
+                            style={{
+                                color: isDark
+                                    ? "#94a3b8"
+                                    : "#64748b",
+                            }}
+                        >
+                            {task.description}
+                        </p>
+                    ) : null}
+                </div>
 
-                    <div className="flex shrink-0 items-center gap-1.5">
-                        <Inbox
-                            size={11}
-                            className="text-indigo-400"
+                <div
+                    className="relative z-10 flex flex-col gap-2 border-t pt-3"
+                    style={{
+                        borderColor: isDark
+                            ? "rgba(255,255,255,0.05)"
+                            : "rgba(0,0,0,0.05)",
+                    }}
+                >
+                    <div className="flex items-center gap-2">
+                        <Users
+                            size={12}
+                            className="shrink-0 text-indigo-500"
                         />
 
-                        <span className="text-[9px] font-bold text-black/35 dark:text-white/30">
-                            {task.attachments?.length ?? 0} پیام
-                        </span>
+                        <div className="flex min-w-0 flex-wrap gap-1.5">
+                            {assignedEmployees.length > 0 ? (
+                                assignedEmployees.map(
+                                    (
+                                        employee: EmployeeRef,
+                                    ) => {
+                                        const gradient =
+                                            getGradient(
+                                                Number(
+                                                    employee.id,
+                                                ),
+                                            );
+
+                                        return (
+                                            <span
+                                                key={`${employee.id}-${employee.full_name}`}
+                                                className="flex items-center gap-1.5 rounded-full border py-0.5 pl-2 pr-0.5"
+                                                style={{
+                                                    borderColor:
+                                                        isDark
+                                                            ? "rgba(255,255,255,.06)"
+                                                            : "rgba(0,0,0,.06)",
+                                                    background:
+                                                        isDark
+                                                            ? "rgba(255,255,255,.035)"
+                                                            : "rgba(0,0,0,.025)",
+                                                }}
+                                            >
+                                                <span
+                                                    className="flex h-5 w-5 items-center justify-center rounded-full text-[8px] font-extrabold text-white"
+                                                    style={{
+                                                        background: `linear-gradient(135deg, ${gradient[0]}, ${gradient[1]})`,
+                                                    }}
+                                                >
+                                                    {employee.full_name?.slice(
+                                                        0,
+                                                        1,
+                                                    ) ||
+                                                        "ک"}
+                                                </span>
+
+                                                <span
+                                                    className="max-w-[120px] truncate text-[9.5px] font-bold"
+                                                    style={{
+                                                        color: isDark
+                                                            ? "#cbd5e1"
+                                                            : "#475569",
+                                                    }}
+                                                >
+                                                    {employee.full_name ||
+                                                        `کارمند ${employee.id}`}
+                                                </span>
+                                            </span>
+                                        );
+                                    },
+                                )
+                            ) : (
+                                <span className="text-[10px] text-gray-400">
+                                    بدون مسئول
+                                </span>
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="flex items-center justify-between gap-3">
+                        <div className="flex min-w-0 items-center gap-1.5">
+                            <span className="text-[9px] text-black/30 dark:text-white/25">
+                                ایجادکننده:
+                            </span>
+
+                            <span className="truncate text-[10px] font-bold text-black/55 dark:text-white/50">
+                                {creatorName}
+                            </span>
+                        </div>
+
+                        <div className="flex shrink-0 items-center gap-1.5">
+                            <Inbox
+                                size={11}
+                                className="text-indigo-400"
+                            />
+
+                            <span className="text-[9px] font-bold text-black/35 dark:text-white/30">
+                                {task.attachments?.length ??
+                                    0}{" "}
+                                پیام
+                            </span>
+                        </div>
                     </div>
                 </div>
-            </div>
 
-            <div
-                className="relative z-10 mt-auto flex items-center justify-between rounded-[1.15rem] px-3 py-2.5"
-                style={{
-                    background: isDark
-                        ? "rgba(99,102,241,.055)"
-                        : "rgba(99,102,241,.045)",
-                    border: isDark
-                        ? "1px solid rgba(99,102,241,.1)"
-                        : "1px solid rgba(99,102,241,.08)",
-                }}
-            >
-                <div className="flex min-w-0 items-center gap-2">
-                    <MessageSquareText
-                        size={12}
-                        className="shrink-0 text-indigo-500"
-                    />
+                <div
+                    className="relative z-10 mt-auto flex items-center justify-between rounded-[1.15rem] px-3 py-2.5"
+                    style={{
+                        background: isDark
+                            ? "rgba(99,102,241,.055)"
+                            : "rgba(99,102,241,.045)",
+                        border: isDark
+                            ? "1px solid rgba(99,102,241,.1)"
+                            : "1px solid rgba(99,102,241,.08)",
+                    }}
+                >
+                    <div className="flex min-w-0 items-center gap-2">
+                        <MessageSquareText
+                            size={12}
+                            className="shrink-0 text-indigo-500"
+                        />
 
-                    <span className="truncate text-[10px] font-semibold text-black/45 dark:text-white/40">
-                        {latestAttachment?.note ||
-                            "مشاهده گفتگوی کارکنان"}
+                        <span className="truncate text-[10px] font-semibold text-black/45 dark:text-white/40">
+                            {latestAttachment?.note ||
+                                "مشاهده گفتگوی کارکنان"}
+                        </span>
+                    </div>
+
+                    <span className="shrink-0 text-[8px] text-black/25 dark:text-white/20">
+                        {formatDate(
+                            latestAttachment?.created_at ||
+                            task.updated_at ||
+                            task.created_at,
+                        )}
                     </span>
                 </div>
 
-                <span className="shrink-0 text-[8px] text-black/25 dark:text-white/20">
-                    {formatDate(
-                        latestAttachment?.created_at ||
-                        task.updated_at ||
-                        task.created_at,
-                    )}
-                </span>
-            </div>
-
-            {statusError && (
-                <p
-                    onClick={(event) => event.stopPropagation()}
-                    className="relative z-10 rounded-xl bg-red-500/10 px-3 py-2 text-center text-[10px] font-bold text-red-500"
-                >
-                    {statusError}
-                </p>
-            )}
-
-            {canAct && (
-                <div
-                    className="relative z-10 flex items-center gap-2"
-                    onClick={(event) => event.stopPropagation()}
-                >
-                    {!isCompleted && !isCancelled && hasResponse && (
-                        <>
-                            <button
-                                type="button"
-                                onClick={(event) => {
-                                    event.stopPropagation();
-                                    setStatusError(null);
-                                    setActionModal("complete");
-                                }}
-                                className="flex h-8 flex-1 items-center justify-center gap-1.5 rounded-xl bg-emerald-500 text-[10px] font-extrabold text-white transition-opacity hover:opacity-90"
-                            >
-                                <CheckCircle2 size={12} />
-                                انجام شد
-                            </button>
-
-                            <button
-                                type="button"
-                                onClick={(event) => {
-                                    event.stopPropagation();
-                                    setStatusError(null);
-                                    setActionModal("cancel");
-                                }}
-                                className="flex h-8 flex-1 items-center justify-center gap-1.5 rounded-xl bg-red-500 text-[10px] font-extrabold text-white transition-opacity hover:opacity-90"
-                            >
-                                <Ban size={12} />
-                                لغو تیکت
-                            </button>
-                        </>
-                    )}
-
-                    {(isCompleted || isCancelled) && (
-                        <button
-                            type="button"
-                            onClick={handleReopen}
-                            disabled={reopening}
-                            className="flex h-8 flex-1 items-center justify-center gap-1.5 rounded-xl bg-amber-500 text-[10px] font-extrabold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
-                        >
-                            {reopening ? (
-                                <Loader2
-                                    size={12}
-                                    className="animate-spin"
-                                />
-                            ) : (
-                                <RotateCcw size={12} />
-                            )}
-                            بازگشایی تیکت
-                        </button>
-                    )}
-                </div>
-            )}
-
-            {actionModal && canAct && hasResponse && (
-                <div onClick={(event) => event.stopPropagation()}>
-                    <InternalTaskActionModal
-                        isOpen={true}
-                        action={actionModal}
-                        task={task}
-                        onClose={() => setActionModal(null)}
-                        onDone={handleActionDone}
-                    />
-                </div>
-            )}
-
-            <AnimatePresence>
-                {showConfirm && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-50 flex items-center justify-center px-4"
-                        style={{
-                            background: "rgba(0,0,0,0.45)",
-                            backdropFilter: "blur(3px)",
-                        }}
-                        onClick={(event) => {
-                            event.stopPropagation();
-
-                            if (isDeleting) return;
-
-                            setShowConfirm(false);
-                            setDeleteError(null);
-                        }}
+                {statusError && (
+                    <p
+                        onClick={(event) =>
+                            event.stopPropagation()
+                        }
+                        className="relative z-10 rounded-xl bg-red-500/10 px-3 py-2 text-center text-[10px] font-bold text-red-500"
                     >
-                        <motion.div
-                            initial={{ opacity: 0, y: 16 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: 16 }}
-                            transition={{
-                                duration: 0.35,
-                                ease: "easeOut",
-                            }}
-                            onClick={(event) => event.stopPropagation()}
-                            dir="rtl"
-                            className="flex w-full max-w-md flex-col overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-sm dark:border-white/[0.06] dark:bg-[#0f172a]"
-                        >
-                            <div className="flex shrink-0 items-center justify-between px-8 pb-6 pt-8">
-                                <div className="flex items-center gap-2.5">
-                                    <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-red-50 dark:bg-red-500/10">
-                                        <Trash2
-                                            size={15}
-                                            className="text-red-500"
-                                        />
-                                    </div>
+                        {statusError}
+                    </p>
+                )}
 
-                                    <div>
-                                        <h3 className="text-[14px] font-extrabold text-gray-900 dark:text-white">
-                                            حذف تیکت
-                                        </h3>
-
-                                        <p className="mt-0.5 text-[11px] text-gray-400">
-                                            این عملیات قابل بازگشت نیست
-                                        </p>
-                                    </div>
-                                </div>
-
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        if (isDeleting) return;
-
-                                        setShowConfirm(false);
-                                        setDeleteError(null);
-                                    }}
-                                    disabled={isDeleting}
-                                    className="flex h-8 w-8 items-center justify-center rounded-xl bg-gray-100 text-gray-400 transition-colors hover:text-gray-600 disabled:opacity-40 dark:bg-white/[0.05] dark:hover:text-gray-300"
-                                >
-                                    <X size={15} />
-                                </button>
-                            </div>
-
-                            <div className="flex-1 px-8 pb-2">
-                                <p className="text-[12.5px] font-semibold leading-6 text-gray-500 dark:text-gray-400">
-                                    تیکت{" "}
-                                    <span className="font-extrabold text-gray-900 dark:text-white">
-                                        {task.title || "بدون عنوان"}
-                                    </span>{" "}
-                                    برای همیشه حذف خواهد شد.
-                                </p>
-
-                                <AnimatePresence>
-                                    {deleteError && (
-                                        <motion.div
-                                            initial={{
-                                                opacity: 0,
-                                                y: 6,
-                                            }}
-                                            animate={{
-                                                opacity: 1,
-                                                y: 0,
-                                            }}
-                                            exit={{
-                                                opacity: 0,
-                                                y: 4,
-                                            }}
-                                            className="mt-4 flex items-start gap-2.5 rounded-2xl bg-red-50 px-3.5 py-3 dark:bg-red-500/10"
-                                        >
-                                            <ClipboardX
-                                                size={14}
-                                                className="mt-0.5 shrink-0 text-red-500"
-                                            />
-
-                                            <p className="flex-1 text-[11.5px] font-semibold leading-5 text-red-500 dark:text-red-400">
-                                                {deleteError}
-                                            </p>
-                                        </motion.div>
-                                    )}
-                                </AnimatePresence>
-                            </div>
-
-                            <div className="flex shrink-0 items-center gap-2 px-8 pb-8 pt-5">
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        if (isDeleting) return;
-
-                                        setShowConfirm(false);
-                                        setDeleteError(null);
-                                    }}
-                                    disabled={isDeleting}
-                                    className="flex h-11 flex-1 items-center justify-center rounded-full bg-gray-100 text-[13px] font-bold text-gray-600 transition-colors hover:bg-gray-200 disabled:opacity-40 dark:bg-white/[0.05] dark:text-gray-300 dark:hover:bg-white/[0.08]"
-                                >
-                                    انصراف
-                                </button>
-
-                                <button
-                                    type="button"
-                                    onClick={async () => {
-                                        if (!onDelete) return;
-
-                                        setDeleteError(null);
-
-                                        try {
-                                            await onDelete(task.id);
-                                            setShowConfirm(false);
-                                        } catch {
-                                            setDeleteError(
-                                                "حذف تیکت با خطا مواجه شد.",
+                {canAct && (
+                    <div
+                        className="relative z-10 flex items-center gap-2"
+                        onClick={(event) =>
+                            event.stopPropagation()
+                        }
+                    >
+                        {!isCompleted &&
+                            !isCancelled &&
+                            hasResponse && (
+                                <>
+                                    <button
+                                        type="button"
+                                        onClick={(event) => {
+                                            event.stopPropagation();
+                                            setStatusError(null);
+                                            setActionModal(
+                                                "complete",
                                             );
-                                        }
-                                    }}
-                                    disabled={isDeleting}
-                                    className="flex h-11 flex-1 items-center justify-center gap-2 rounded-full bg-red-600 text-[13px] font-bold text-white transition-colors hover:bg-red-500 disabled:opacity-40"
+                                        }}
+                                        className="flex h-8 flex-1 items-center justify-center gap-1.5 rounded-xl bg-emerald-500 text-[10px] font-extrabold text-white transition-opacity hover:opacity-90"
+                                    >
+                                        <CheckCircle2 size={12} />
+                                        انجام شد
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        onClick={(event) => {
+                                            event.stopPropagation();
+                                            setStatusError(null);
+                                            setActionModal(
+                                                "cancel",
+                                            );
+                                        }}
+                                        className="flex h-8 flex-1 items-center justify-center gap-1.5 rounded-xl bg-red-500 text-[10px] font-extrabold text-white transition-opacity hover:opacity-90"
+                                    >
+                                        <Ban size={12} />
+                                        لغو تیکت
+                                    </button>
+                                </>
+                            )}
+
+                        {(isCompleted ||
+                            isCancelled) && (
+                                <button
+                                    type="button"
+                                    onClick={handleReopen}
+                                    disabled={reopening}
+                                    className="flex h-8 flex-1 items-center justify-center gap-1.5 rounded-xl bg-amber-500 text-[10px] font-extrabold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
                                 >
-                                    {isDeleting ? (
-                                        <Loader
-                                            size={14}
+                                    {reopening ? (
+                                        <Loader2
+                                            size={12}
                                             className="animate-spin"
                                         />
                                     ) : (
-                                        <>
-                                            <Trash2
-                                                size={13}
-                                                strokeWidth={2.5}
-                                            />
-                                            حذف کن
-                                        </>
+                                        <RotateCcw size={12} />
                                     )}
+                                    بازگشایی تیکت
                                 </button>
-                            </div>
-                        </motion.div>
-                    </motion.div>
+                            )}
+                    </div>
                 )}
-            </AnimatePresence>
-        </motion.div>
-    );
-}, (prev, next) =>
-    prev.task === next.task &&
-    prev.index === next.index &&
-    prev.employees === next.employees &&
-    prev.currentUsername === next.currentUsername &&
-    prev.isDeleting === next.isDeleting
+
+                {actionModal &&
+                    canAct &&
+                    hasResponse && (
+                        <div
+                            onClick={(event) =>
+                                event.stopPropagation()
+                            }
+                        >
+                            <InternalTaskActionModal
+                                isOpen={true}
+                                action={actionModal}
+                                task={task}
+                                onClose={() =>
+                                    setActionModal(null)
+                                }
+                                onDone={handleActionDone}
+                            />
+                        </div>
+                    )}
+
+                <AnimatePresence>
+                    {showConfirm && (
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="fixed inset-0 z-50 flex items-center justify-center px-4"
+                            style={{
+                                background:
+                                    "rgba(0,0,0,0.45)",
+                                backdropFilter:
+                                    "blur(3px)",
+                            }}
+                            onClick={(event) => {
+                                event.stopPropagation();
+
+                                if (isDeleting) return;
+
+                                setShowConfirm(false);
+                                setDeleteError(null);
+                            }}
+                        >
+                            <motion.div
+                                initial={{
+                                    opacity: 0,
+                                    y: 16,
+                                }}
+                                animate={{
+                                    opacity: 1,
+                                    y: 0,
+                                }}
+                                exit={{
+                                    opacity: 0,
+                                    y: 16,
+                                }}
+                                transition={{
+                                    duration: 0.35,
+                                    ease: "easeOut",
+                                }}
+                                onClick={(event) =>
+                                    event.stopPropagation()
+                                }
+                                dir="rtl"
+                                className="flex w-full max-w-md flex-col overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-sm dark:border-white/[0.06] dark:bg-[#0f172a]"
+                            >
+                                <div className="flex shrink-0 items-center justify-between px-8 pb-6 pt-8">
+                                    <div className="flex items-center gap-2.5">
+                                        <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-red-50 dark:bg-red-500/10">
+                                            <Trash2
+                                                size={15}
+                                                className="text-red-500"
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <h3 className="text-[14px] font-extrabold text-gray-900 dark:text-white">
+                                                حذف تیکت
+                                            </h3>
+
+                                            <p className="mt-0.5 text-[11px] text-gray-400">
+                                                این عملیات قابل بازگشت نیست
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            if (
+                                                isDeleting
+                                            )
+                                                return;
+
+                                            setShowConfirm(
+                                                false,
+                                            );
+                                            setDeleteError(
+                                                null,
+                                            );
+                                        }}
+                                        disabled={isDeleting}
+                                        className="flex h-8 w-8 items-center justify-center rounded-xl bg-gray-100 text-gray-400 transition-colors hover:text-gray-600 disabled:opacity-40 dark:bg-white/[0.05] dark:hover:text-gray-300"
+                                    >
+                                        <X size={15} />
+                                    </button>
+                                </div>
+
+                                <div className="flex-1 px-8 pb-2">
+                                    <p className="text-[12.5px] font-semibold leading-6 text-gray-500 dark:text-gray-400">
+                                        تیکت{" "}
+                                        <span className="font-extrabold text-gray-900 dark:text-white">
+                                            {task.title ||
+                                                "بدون عنوان"}
+                                        </span>{" "}
+                                        برای همیشه حذف خواهد شد.
+                                    </p>
+
+                                    <AnimatePresence>
+                                        {deleteError && (
+                                            <motion.div
+                                                initial={{
+                                                    opacity: 0,
+                                                    y: 6,
+                                                }}
+                                                animate={{
+                                                    opacity: 1,
+                                                    y: 0,
+                                                }}
+                                                exit={{
+                                                    opacity: 0,
+                                                    y: 4,
+                                                }}
+                                                className="mt-4 flex items-start gap-2.5 rounded-2xl bg-red-50 px-3.5 py-3 dark:bg-red-500/10"
+                                            >
+                                                <ClipboardX
+                                                    size={14}
+                                                    className="mt-0.5 shrink-0 text-red-500"
+                                                />
+
+                                                <p className="flex-1 text-[11.5px] font-semibold leading-5 text-red-500 dark:text-red-400">
+                                                    {
+                                                        deleteError
+                                                    }
+                                                </p>
+                                            </motion.div>
+                                        )}
+                                    </AnimatePresence>
+                                </div>
+
+                                <div className="flex shrink-0 items-center gap-2 px-8 pb-8 pt-5">
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            if (
+                                                isDeleting
+                                            )
+                                                return;
+
+                                            setShowConfirm(
+                                                false,
+                                            );
+                                            setDeleteError(
+                                                null,
+                                            );
+                                        }}
+                                        disabled={isDeleting}
+                                        className="flex h-11 flex-1 items-center justify-center rounded-full bg-gray-100 text-[13px] font-bold text-gray-600 transition-colors hover:bg-gray-200 disabled:opacity-40 dark:bg-white/[0.05] dark:text-gray-300 dark:hover:bg-white/[0.08]"
+                                    >
+                                        انصراف
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        onClick={async () => {
+                                            if (!onDelete)
+                                                return;
+
+                                            setDeleteError(
+                                                null,
+                                            );
+
+                                            try {
+                                                await onDelete(
+                                                    task.id,
+                                                );
+                                                setShowConfirm(
+                                                    false,
+                                                );
+                                            } catch {
+                                                setDeleteError(
+                                                    "حذف تیکت با خطا مواجه شد.",
+                                                );
+                                            }
+                                        }}
+                                        disabled={isDeleting}
+                                        className="flex h-11 flex-1 items-center justify-center gap-2 rounded-full bg-red-600 text-[13px] font-bold text-white transition-colors hover:bg-red-500 disabled:opacity-40"
+                                    >
+                                        {isDeleting ? (
+                                            <Loader
+                                                size={14}
+                                                className="animate-spin"
+                                            />
+                                        ) : (
+                                            <>
+                                                <Trash2
+                                                    size={13}
+                                                    strokeWidth={
+                                                        2.5
+                                                    }
+                                                />
+                                                حذف کن
+                                            </>
+                                        )}
+                                    </button>
+                                </div>
+                            </motion.div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+            </motion.div>
+        );
+    },
+    (prev, next) =>
+        prev.task === next.task &&
+        prev.index === next.index &&
+        prev.employees === next.employees &&
+        prev.currentUsername ===
+        next.currentUsername &&
+        prev.isDeleting === next.isDeleting,
 );
 
 export default function AdminInternalTasksBoard(): JSX.Element {
@@ -978,7 +1113,9 @@ export default function AdminInternalTasksBoard(): JSX.Element {
     );
 
     const [tasks, setTasks] = useState<InternalTask[]>([]);
-    const [employees, setEmployees] = useState<AdminEmployee[]>([]);
+    const [employees, setEmployees] = useState<
+        AdminEmployee[]
+    >([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -998,13 +1135,17 @@ export default function AdminInternalTasksBoard(): JSX.Element {
 
             setError(null);
 
-            const [tasksResponse, employeesResponse] =
-                await Promise.all([
-                    fetchInternalTasks(),
-                    fetchEmployeeList(),
-                ]);
+            const [
+                tasksResponse,
+                employeesResponse,
+            ] = await Promise.all([
+                fetchInternalTasks(),
+                fetchEmployeeList(),
+            ]);
 
-            setTasks(normalizeTasks(tasksResponse.data));
+            setTasks(
+                normalizeTasks(tasksResponse.data),
+            );
 
             setEmployees(
                 Array.isArray(employeesResponse.data)
@@ -1028,21 +1169,28 @@ export default function AdminInternalTasksBoard(): JSX.Element {
     const sortedTasks = useMemo(() => {
         return [...tasks].sort((a, b) => {
             const aDate = new Date(
-                a.updated_at || a.created_at || 0,
+                a.updated_at ||
+                a.created_at ||
+                0,
             ).getTime();
 
             const bDate = new Date(
-                b.updated_at || b.created_at || 0,
+                b.updated_at ||
+                b.created_at ||
+                0,
             ).getTime();
 
             return bDate - aDate;
         });
     }, [tasks]);
 
-    function handleUpdated(updatedTask: InternalTask) {
+    function handleUpdated(
+        updatedTask: InternalTask,
+    ) {
         setTasks((previous) =>
             previous.map((task) =>
-                Number(task.id) === Number(updatedTask.id)
+                Number(task.id) ===
+                    Number(updatedTask.id)
                     ? updatedTask
                     : task,
             ),
@@ -1050,14 +1198,18 @@ export default function AdminInternalTasksBoard(): JSX.Element {
 
         setSelectedTask((previous) =>
             previous &&
-                Number(previous.id) === Number(updatedTask.id)
+                Number(previous.id) ===
+                Number(updatedTask.id)
                 ? updatedTask
                 : previous,
         );
     }
 
-    function handleCreated(createdTask: InternalTask) {
-        const normalized = normalizeTask(createdTask);
+    function handleCreated(
+        createdTask: InternalTask,
+    ) {
+        const normalized =
+            normalizeTask(createdTask);
 
         if (!normalized) {
             void loadData();
@@ -1065,7 +1217,8 @@ export default function AdminInternalTasksBoard(): JSX.Element {
             return;
         }
 
-        const withResolvedAssignees: InternalTask = {
+        const withResolvedAssignees: InternalTask =
+        {
             ...normalized,
             assigned_to: resolveAssignedTo(
                 normalized.assigned_to,
@@ -1077,7 +1230,8 @@ export default function AdminInternalTasksBoard(): JSX.Element {
             withResolvedAssignees,
             ...previous.filter(
                 (task) =>
-                    task.id !== withResolvedAssignees.id,
+                    task.id !==
+                    withResolvedAssignees.id,
             ),
         ]);
 
@@ -1088,7 +1242,8 @@ export default function AdminInternalTasksBoard(): JSX.Element {
     async function handleDelete(taskId: number) {
         const id = Number(taskId);
 
-        if (!Number.isFinite(id) || id <= 0) return;
+        if (!Number.isFinite(id) || id <= 0)
+            return;
 
         try {
             setDeleteLoadingId(id);
@@ -1096,11 +1251,14 @@ export default function AdminInternalTasksBoard(): JSX.Element {
             await deleteInternalTask(id);
 
             setTasks((previous) =>
-                previous.filter((task) => task.id !== id),
+                previous.filter(
+                    (task) => task.id !== id,
+                ),
             );
 
             setSelectedTask((previous) =>
-                previous && Number(previous.id) === id
+                previous &&
+                    Number(previous.id) === id
                     ? null
                     : previous,
             );
@@ -1151,7 +1309,9 @@ export default function AdminInternalTasksBoard(): JSX.Element {
                 <div className="flex shrink-0 items-center gap-2">
                     <button
                         type="button"
-                        onClick={() => setCreateOpen(true)}
+                        onClick={() =>
+                            setCreateOpen(true)
+                        }
                         className="flex items-center gap-1.5 rounded-2xl bg-indigo-600 px-3.5 py-2 text-[11.5px] font-bold text-white transition-colors hover:bg-indigo-500"
                     >
                         <Plus size={13} />
@@ -1160,7 +1320,9 @@ export default function AdminInternalTasksBoard(): JSX.Element {
 
                     <button
                         type="button"
-                        onClick={() => void loadData()}
+                        onClick={() =>
+                            void loadData()
+                        }
                         disabled={refreshing}
                         className="flex h-9 w-9 items-center justify-center rounded-2xl bg-gray-100 text-gray-500 transition-colors hover:bg-gray-200 disabled:opacity-40 dark:bg-white/[0.05] dark:text-gray-400 dark:hover:bg-white/[0.08]"
                         title="به‌روزرسانی"
@@ -1185,7 +1347,9 @@ export default function AdminInternalTasksBoard(): JSX.Element {
 
                     <button
                         type="button"
-                        onClick={() => void loadData()}
+                        onClick={() =>
+                            void loadData()
+                        }
                         className="rounded-xl bg-red-500/10 px-3 py-1.5 text-[11px] font-bold text-red-500"
                     >
                         تلاش مجدد
@@ -1231,21 +1395,35 @@ export default function AdminInternalTasksBoard(): JSX.Element {
             ) : (
                 <AnimatePresence mode="popLayout">
                     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                        {sortedTasks.map((task, index) => (
-                            <AdminInternalTaskCard
-                                key={task.id}
-                                task={task}
-                                index={index}
-                                employees={employees}
-                                currentUsername={currentUsername ?? ""}
-                                onOpen={setSelectedTask}
-                                onDelete={handleDelete}
-                                onStatusChange={handleUpdated}
-                                isDeleting={
-                                    deleteLoadingId === task.id
-                                }
-                            />
-                        ))}
+                        {sortedTasks.map(
+                            (task, index) => (
+                                <AdminInternalTaskCard
+                                    key={task.id}
+                                    task={task}
+                                    index={index}
+                                    employees={
+                                        employees
+                                    }
+                                    currentUsername={
+                                        currentUsername ??
+                                        ""
+                                    }
+                                    onOpen={
+                                        setSelectedTask
+                                    }
+                                    onDelete={
+                                        handleDelete
+                                    }
+                                    onStatusChange={
+                                        handleUpdated
+                                    }
+                                    isDeleting={
+                                        deleteLoadingId ===
+                                        task.id
+                                    }
+                                />
+                            ),
+                        )}
                     </div>
                 </AnimatePresence>
             )}
@@ -1255,14 +1433,18 @@ export default function AdminInternalTasksBoard(): JSX.Element {
                     open={true}
                     task={selectedTask}
                     employees={employees}
-                    onClose={() => setSelectedTask(null)}
+                    onClose={() =>
+                        setSelectedTask(null)
+                    }
                     onUpdated={handleUpdated}
                 />
             ) : null}
 
             <CreateTicketModal
                 isOpen={createOpen}
-                onClose={() => setCreateOpen(false)}
+                onClose={() =>
+                    setCreateOpen(false)
+                }
                 employees={employees}
                 onCreated={handleCreated}
             />

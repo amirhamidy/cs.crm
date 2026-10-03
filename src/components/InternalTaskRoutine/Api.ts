@@ -167,6 +167,12 @@ export function fetchInternalTaskRoutines() {
   );
 }
 
+export async function reopenInternalTask(taskId: number) {
+    return axiosInstance.post(
+        `/tasks/api/v1/internal_task/${taskId}/reopen/`,
+    );
+}
+
 export function createInternalTaskRoutine(
   data: CreateInternalTaskRoutinePayload,
 ) {

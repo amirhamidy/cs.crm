@@ -89,10 +89,10 @@ export default function LoginClient() {
                     </p>
 
                     <Image
-                        src="/logo.jpg"
+                        src="/radco.png"
                         alt="رادکو"
-                        width={70}
-                        height={70}
+                        width={100}
+                        height={100}
                         priority
                         className="rounded-xl object-cover"
                     />
