@@ -15,6 +15,11 @@ const BASE = "/warehouse/api/v1";
 export const WAREHOUSE_ENDPOINTS = {
   warehouses: `${BASE}/warehouse/`,
   warehouseCreate: `${BASE}/warehouse/create/`,
+  warehousePatch: (id: number) => `${BASE}/warehouse/${id}/patch/`,
+  warehouseDelete: (id: number) => `${BASE}/warehouse/${id}/delete/`,
+  taskArchive: `${BASE}/warehouse_task_archive/`,
+  attachmentCreate: `${BASE}/order_task/attachment/create/`,
+  attachmentDelete: (id: number) => `${BASE}/order_task/attachment/${id}/delete/`,
   products: `${BASE}/products/`,
   categories: `${BASE}/products/categories/`,
   stock: `${BASE}/process/stock/`,
@@ -143,6 +148,44 @@ export async function createWarehouse(
     payload,
   );
   return data;
+}
+
+export async function patchWarehouse(
+  id: number,
+  payload: Partial<CreateWarehousePayload>,
+): Promise<ApiWarehouse> {
+  const { data } = await axiosInstance.patch<ApiWarehouse>(
+    WAREHOUSE_ENDPOINTS.warehousePatch(id),
+    payload,
+  );
+  return data;
+}
+
+export async function deleteWarehouse(id: number) {
+  await axiosInstance.delete(WAREHOUSE_ENDPOINTS.warehouseDelete(id));
+}
+
+export async function createOrderTaskAttachment(input: {
+  orderTaskId: number;
+  performedBy: number | string;
+  note?: string;
+  file: File;
+}) {
+  const form = new FormData();
+  form.append("order_task", String(input.orderTaskId));
+  form.append("performed_by", String(input.performedBy));
+  if (input.note?.trim()) form.append("note", input.note.trim());
+  form.append("file", input.file);
+
+  const { data } = await axiosInstance.post(
+    WAREHOUSE_ENDPOINTS.attachmentCreate,
+    form,
+  );
+  return data;
+}
+
+export async function deleteOrderTaskAttachment(id: number) {
+  await axiosInstance.delete(WAREHOUSE_ENDPOINTS.attachmentDelete(id));
 }
 
 export async function updateStockLimits(

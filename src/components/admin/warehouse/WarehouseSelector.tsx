@@ -3,13 +3,14 @@
 import { useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import { Boxes, Loader2, Plus, X } from "lucide-react";
+import { Boxes, Loader2, Pencil, Plus, Trash2, X } from "lucide-react";
 import { useTheme } from "next-themes";
 
 import useWarehouses from "@/hooks/useWarehouses";
 import useWarehouseAccess from "@/hooks/useWarehouseAccess";
 import { apiErrorMessage, createWarehouse } from "@/lib/warehouseApi";
 import { cardBg, cardBorder, cardShadow, muted } from "@/components/admin/warehouse/WarehouseCards";
+import { DeleteWarehouseModal, EditWarehouseModal } from "@/components/admin/warehouse/WarehouseFormModals";
 import type { ApiWarehouse } from "@/types/warehouse";
 
 const inputClass =
@@ -159,6 +160,8 @@ export default function WarehouseSelector() {
     const { isAdmin } = useWarehouseAccess();
     const { warehouses, loading, error, reload } = useWarehouses();
     const [showCreate, setShowCreate] = useState(false);
+    const [editing, setEditing] = useState<ApiWarehouse | null>(null);
+    const [deleting, setDeleting] = useState<ApiWarehouse | null>(null);
 
     const open = (id: number) => router.push(`${basePath}/overview?warehouse=${id}`);
 
@@ -212,15 +215,19 @@ export default function WarehouseSelector() {
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                     {warehouses.length ? (
                         warehouses.map((warehouse, index) => (
-                            <motion.button
+                            <motion.div
                                 key={warehouse.id}
-                                type="button"
+                                role="button"
+                                tabIndex={0}
                                 initial={{ opacity: 0, y: 12 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ duration: 0.2, delay: index * 0.04 }}
                                 whileHover={{ y: -2 }}
                                 onClick={() => open(warehouse.id)}
-                                className="flex flex-col gap-3 rounded-3xl p-4 text-right"
+                                onKeyDown={(e) => {
+                                    if (e.key === "Enter") open(warehouse.id);
+                                }}
+                                className="flex cursor-pointer flex-col gap-3 rounded-3xl p-4 text-right"
                                 style={{
                                     background: cardBg(isDark),
                                     border: cardBorder(isDark),
@@ -255,10 +262,39 @@ export default function WarehouseSelector() {
                                     </span>
                                 </div>
 
-                                <p className="text-[11px] font-semibold" style={{ color: muted(isDark) }}>
-                                    کد انبار: {warehouse.code}
-                                </p>
-                            </motion.button>
+                                <div className="flex items-center justify-between gap-2">
+                                    <p className="text-[11px] font-semibold" style={{ color: muted(isDark) }}>
+                                        کد انبار: {warehouse.code}
+                                    </p>
+
+                                    {isAdmin && (
+                                        <div className="flex items-center gap-1">
+                                            <button
+                                                type="button"
+                                                aria-label="ویرایش انبار"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setEditing(warehouse);
+                                                }}
+                                                className="flex h-8 w-8 items-center justify-center rounded-xl text-indigo-500 transition-colors hover:bg-indigo-500/10"
+                                            >
+                                                <Pencil size={14} />
+                                            </button>
+                                            <button
+                                                type="button"
+                                                aria-label="حذف انبار"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setDeleting(warehouse);
+                                                }}
+                                                className="flex h-8 w-8 items-center justify-center rounded-xl text-red-500 transition-colors hover:bg-red-500/10"
+                                            >
+                                                <Trash2 size={14} />
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                            </motion.div>
                         ))
                     ) : (
                         <p
@@ -270,6 +306,24 @@ export default function WarehouseSelector() {
                     )}
                 </div>
             )}
+
+            <EditWarehouseModal
+                warehouse={editing}
+                onClose={() => setEditing(null)}
+                onSaved={() => {
+                    setEditing(null);
+                    void reload();
+                }}
+            />
+
+            <DeleteWarehouseModal
+                warehouse={deleting}
+                onClose={() => setDeleting(null)}
+                onDeleted={() => {
+                    setDeleting(null);
+                    void reload();
+                }}
+            />
 
             <CreateWarehouseModal
                 isOpen={showCreate}

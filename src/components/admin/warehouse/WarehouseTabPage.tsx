@@ -7,6 +7,7 @@ import {
     BellRing,
     Boxes,
     ClipboardList,
+    Archive,
     FileText,
     LayoutGrid,
     Loader2,
@@ -17,6 +18,7 @@ import {
     ReceiptText,
     ShieldCheck,
     ShoppingBag,
+    Trash2,
     UsersRound,
 } from "lucide-react";
 import { useTheme } from "next-themes";
@@ -27,6 +29,8 @@ import WarehouseCategoryCard from "@/components/admin/warehouse/WarehouseCategor
 import WarehouseStaffCard from "@/components/admin/warehouse/WarehouseStaffCard";
 import AddWarehouseStaffModal from "@/components/admin/warehouse/AddWarehouseStaffModal";
 import StockLimitsModal from "@/components/admin/warehouse/StockLimitsModal";
+import { DeleteWarehouseModal } from "@/components/admin/warehouse/WarehouseFormModals";
+import WarehouseTaskArchiveCard from "@/components/admin/warehouse/WarehouseTaskArchiveCard";
 import {
     DeadlineCard,
     Pagination,
@@ -84,6 +88,7 @@ const TABS: Array<[Tab, string, ComponentType<{ size?: number }>]> = [
     ["categories", "دسته‌بندی‌ها", Package],
     ["invoices", "فاکتور فروش", FileText],
     ["staff", "انباردارها", UsersRound],
+    ["task-archive", "بایگانی وظایف", Archive],
 ];
 
 /** تب‌هایی که کاربرِ بدون دسترسی کامل انبار هم می‌بیند */
@@ -118,6 +123,7 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
         myStaff,
         hasFullAccess: hasFullWarehouseAccess,
         limitedAccess,
+        isAdmin,
     } = useWarehouseAccess();
 
     const { warehouses } = useWarehouses();
@@ -140,6 +146,7 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
     const [selectedInvoice, setSelectedInvoice] = useState<SalesInvoice | null>(null);
     const [showAddStaffModal, setShowAddStaffModal] = useState(false);
     const [limitsStock, setLimitsStock] = useState<ApiStockInfo | null>(null);
+    const [deleteOpen, setDeleteOpen] = useState(false);
 
     /* ------------------------------ مسیریابی ------------------------------ */
 
@@ -238,6 +245,7 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
     const paginatedOrders = { items: orderTasks, totalPages: data.totalPages };
     const paginatedDeadlines = { items: data.deadlines, totalPages: data.totalPages };
     const paginatedCategories = { items: adminCategories, totalPages: data.totalPages };
+    const paginatedTaskArchive = { items: data.taskArchive, totalPages: data.totalPages };
     const paginatedStaff = { items: warehouseStaff, totalPages: data.totalPages };
 
     /* ------------------------------ هندلرها ------------------------------ */
@@ -426,6 +434,7 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
         categories: tab === "categories" ? data.total : 0,
         staff: tab === "staff" ? data.total : 0,
         invoices: tab === "invoices" ? salesInvoices.length : 0,
+        "task-archive": 0,
     };
 
     const visibleTabs = TABS.filter(
@@ -473,6 +482,18 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
                 >
                     تغییر انبار
                 </motion.button>
+
+                {isAdmin && warehouse && (
+                    <motion.button
+                        type="button"
+                        whileTap={{ scale: 0.96 }}
+                        onClick={() => setDeleteOpen(true)}
+                        className="flex h-10 items-center justify-center gap-2 rounded-2xl px-4 text-[12.5px] font-bold text-red-500 transition-colors hover:bg-red-500/10"
+                    >
+                        <Trash2 size={14} />
+                        حذف انبار
+                    </motion.button>
+                )}
 
                 <motion.button
                     type="button"
@@ -1098,6 +1119,42 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
                             </div>
                         )}
 
+                    {tab === "task-archive" &&
+                        hasFullWarehouseAccess && (
+                            <div className="space-y-5">
+                                <div>
+                                    <h2 className="text-[14px] font-extrabold text-gray-900 dark:text-white">
+                                        بایگانی وظایف انبار
+                                    </h2>
+
+                                    <p className="mt-1 text-[11.5px] text-gray-500 dark:text-gray-400">
+                                        وظایف دریافت کالا که تکمیل و بایگانی شده‌اند
+                                    </p>
+                                </div>
+
+                                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                                    {paginatedTaskArchive.items.length ? (
+                                        paginatedTaskArchive.items.map((item, index) => (
+                                            <WarehouseTaskArchiveCard
+                                                key={item.id}
+                                                item={item}
+                                                index={index}
+                                            />
+                                        ))
+                                    ) : (
+                                        renderEmpty("وظیفه‌ی بایگانی‌شده‌ای وجود ندارد")
+                                    )}
+                                </div>
+
+                                <Pagination
+                                    currentPage={currentPage}
+                                    totalPages={paginatedTaskArchive.totalPages}
+                                    onPageChange={goToPage}
+                                    isDark={isDark}
+                                />
+                            </div>
+                        )}
+
                     {tab === "invoices" &&
                         hasFullWarehouseAccess && (
                             <div className="space-y-5">
@@ -1204,6 +1261,15 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
                 </motion.div>
             </AnimatePresence>
             )}
+
+            <DeleteWarehouseModal
+                warehouse={deleteOpen ? warehouse : null}
+                onClose={() => setDeleteOpen(false)}
+                onDeleted={() => {
+                    setDeleteOpen(false);
+                    router.push(basePath);
+                }}
+            />
 
             <StockLimitsModal
                 isOpen={!!limitsStock}

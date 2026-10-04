@@ -12,11 +12,13 @@ import {
     Clock3,
     FileText,
     Package,
+    Paperclip,
     User,
     XCircle,
 } from "lucide-react";
 import { ApiOrderTask, ApiProduct } from "@/types/warehouse";
 import WarehouseEmployeeOrderTaskStatusModal from "./WarehouseEmployeeOrderTaskStatusModal";
+import OrderTaskAttachmentsModal from "./OrderTaskAttachmentsModal";
 import {
     formatDate,
     formatNumber,
@@ -57,6 +59,7 @@ export default function WarehouseEmployeeOrderTaskCard({
     const isDark = resolvedTheme === "dark";
     const [hovered, setHovered] = useState(false);
     const [modalOpen, setModalOpen] = useState(false);
+    const [attachmentsOpen, setAttachmentsOpen] = useState(false);
 
     const assignedEmployee = Array.isArray(orderTask.assigned_employee)
         ? orderTask.assigned_employee[0]
@@ -326,6 +329,16 @@ export default function WarehouseEmployeeOrderTaskCard({
                         <span className="text-[10px] font-semibold text-gray-500 dark:text-gray-400">
                             {formatDate(orderTask.created_at)}
                         </span>
+                        <button
+                            type="button"
+                            onClick={() => setAttachmentsOpen(true)}
+                            className="flex items-center gap-1 text-[10px] font-semibold text-gray-500 transition-colors hover:text-indigo-500 dark:text-gray-400"
+                        >
+                            <Paperclip size={10} />
+                            {(orderTask.attachments ?? []).length > 0
+                                ? `${(orderTask.attachments ?? []).length} فایل`
+                                : "فایل‌ها"}
+                        </button>
                         {orderTask.note && (
                             <div className="group/note relative flex items-center gap-1">
                                 <FileText size={10} className="text-gray-400" />
@@ -356,6 +369,15 @@ export default function WarehouseEmployeeOrderTaskCard({
                     )}
                 </div>
             </motion.article>
+
+            <OrderTaskAttachmentsModal
+                isOpen={attachmentsOpen}
+                orderTask={orderTask}
+                performedBy={staffId}
+                canManage={canChangeStatus && isStaff}
+                onClose={() => setAttachmentsOpen(false)}
+                onChanged={refresh}
+            />
 
             <AnimatePresence>
                 {modalOpen && (

@@ -85,6 +85,8 @@ export interface ApiProductInitDraft {
 
 export interface ApiStockTransaction {
   id: number;
+  warehouse?: number | { id: number; name?: string } | null;
+  warehouse_id?: number | null;
   product: number;
   product_name: string;
   performed_by: number;
@@ -131,6 +133,8 @@ export interface ApiArchivedOrderTask {
 
 export interface ApiWarehouseTask {
   id: number;
+  warehouse?: number | { id: number; name?: string } | null;
+  warehouse_id?: number | null;
   purchase_task_id: number | null;
   quality_control_id: number | null;
   product: number | null;
@@ -146,6 +150,23 @@ export interface ApiWarehouseTask {
   created_at: string;
   completed_at: string | null;
   updated_at: string;
+}
+
+export interface ApiWarehouseTaskArchive {
+  id: number;
+  warehouse_task?: number | null;
+  product?: number | null;
+  product_name?: string | null;
+  expected_quantity?: number | null;
+  received_quantity?: number | null;
+  assigned_to_name?: string | null;
+  status?: string | null;
+  status_display?: string | null;
+  note?: string | null;
+  file?: string | null;
+  completed_at?: string | null;
+  archived_at?: string | null;
+  created_at?: string | null;
 }
 
 export interface ApiWarehouseTaskCompleteResponse {
@@ -208,6 +229,8 @@ export interface ApiOrderTaskAttachment {
 
 export interface ApiOrderTask {
   id: number;
+  warehouse?: number | { id: number; name?: string } | null;
+  warehouse_id?: number | null;
   task: number;
   product: number;
   quantity: number;
@@ -278,6 +301,8 @@ export interface ApiCategory {
 
 export interface ApiProduct {
   id: number;
+  warehouse?: number | { id: number; name?: string } | null;
+  warehouse_id?: number | null;
   name: string;
   sale_price: string | number;
   category: number;
@@ -295,6 +320,8 @@ export interface ApiProduct {
 
 export interface ApiStockInfo {
   id: number;
+  warehouse?: number | { id: number; name?: string } | null;
+  warehouse_id?: number | null;
   product: number;
   product_name: string;
   initial_quantity: number;
