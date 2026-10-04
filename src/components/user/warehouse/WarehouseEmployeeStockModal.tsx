@@ -37,6 +37,7 @@ interface Props {
     product: ApiProduct;
     staff: ApiWarehouseStaff[];
     performedById?: number | string | null;
+    warehouseId?: number | null;
     onCompleted: (transaction: ApiStockTransaction) => void;
 }
 
@@ -357,6 +358,7 @@ export default function WarehouseEmployeeStockModal({
     product,
     staff,
     performedById,
+    warehouseId,
     onCompleted,
 }: Props) {
     const [mode, setMode] = useState<Mode>("in");
@@ -404,6 +406,11 @@ export default function WarehouseEmployeeStockModal({
             return;
         }
 
+        if (warehouseId == null) {
+            setError("انبار مشخص نشده است");
+            return;
+        }
+
         if (!quantityValid) {
             setError("تعداد معتبر وارد کنید");
             return;
@@ -424,6 +431,7 @@ export default function WarehouseEmployeeStockModal({
                     : "/warehouse/api/v1/process/stock/out/";
 
             const payload: Record<string, unknown> = {
+                warehouse_id: Number(warehouseId),
                 product_id: product.id,
                 performed_by_id: resolvedPerformedById,
                 quantity: quantityValue,

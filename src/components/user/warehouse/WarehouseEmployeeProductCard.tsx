@@ -37,6 +37,7 @@ interface ProductCardProps {
     categories: ApiCategory[];
     staff: ApiWarehouseStaff[];
     performedById?: number | null;
+    warehouseId?: number | null;
     onUpdated?: (product: ApiProduct) => void;
     onStockChanged?: () => void;
     onDeleted?: (id: number) => void;
@@ -175,6 +176,7 @@ export default function WarehouseEmployeeProductCard({
     categories,
     staff,
     performedById,
+    warehouseId,
     onUpdated,
     onStockChanged,
     onDeleted,
@@ -686,6 +688,7 @@ export default function WarehouseEmployeeProductCard({
                     product={product}
                     staff={staff}
                     performedById={performedById}
+                    warehouseId={warehouseId}
                     onCompleted={refreshStock}
                 />
             )}
@@ -696,6 +699,7 @@ export default function WarehouseEmployeeProductCard({
                 product={product}
                 staff={staff}
                 performedById={performedById}
+                warehouseId={warehouseId}
                 onCompleted={refreshStock}
             />
 

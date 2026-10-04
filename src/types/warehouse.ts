@@ -37,6 +37,26 @@ export interface ApiCategory {
   name: string;
 }
 
+export interface ApiWarehouse {
+  id: number;
+  name: string;
+  code: string;
+  is_active: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface CreateWarehousePayload {
+  name: string;
+  code: string;
+  is_active: boolean;
+}
+
+export interface UpdateStockLimitsPayload {
+  minimum_stock: number;
+  maximum_stock: number;
+}
+
 export interface ApiUnitData {
   quantity_per_unit: number;
 }

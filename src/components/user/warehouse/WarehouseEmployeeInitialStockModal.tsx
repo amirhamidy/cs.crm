@@ -18,6 +18,7 @@ interface WarehouseEmployeeInitialStockModalProps {
     product: ApiProduct;
     staff: ApiWarehouseStaff[];
     performedById?: number | null;
+    warehouseId?: number | null;
     onCompleted: (stockInfo: ApiStockInfo) => void;
 }
 
@@ -62,6 +63,7 @@ export default function WarehouseEmployeeInitialStockModal({
     product,
     staff,
     performedById,
+    warehouseId,
     onCompleted,
 }: WarehouseEmployeeInitialStockModalProps) {
     const { resolvedTheme } = useTheme();
@@ -144,6 +146,11 @@ export default function WarehouseEmployeeInitialStockModal({
             return;
         }
 
+        if (warehouseId == null) {
+            setError("انبار مشخص نشده است");
+            return;
+        }
+
         setLoading(true);
         setError("");
 
@@ -151,6 +158,7 @@ export default function WarehouseEmployeeInitialStockModal({
             const { data } = await axiosInstance.post<ApiStockInfo>(
                 "/warehouse/api/v1/process/stock/initial/",
                 {
+                    warehouse_id: Number(warehouseId),
                     product_id: product.id,
                     performed_by_id: Number(selectedStaff),
                     quantity: qty,

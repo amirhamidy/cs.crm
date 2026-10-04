@@ -36,6 +36,7 @@ interface WarehouseEmployeeProductWizardModalProps {
     categories: ApiCategory[];
     staff: ApiWarehouseStaff[];
     performedById?: number | null;
+    warehouseId?: number | null;
     onCreated: (product: ApiProduct, stockInfo?: ApiStockInfo) => void;
 }
 
@@ -488,6 +489,7 @@ export default function WarehouseEmployeeProductWizardModal({
     categories,
     staff,
     performedById,
+    warehouseId,
     onCreated,
 }: WarehouseEmployeeProductWizardModalProps) {
     const [step, setStep] = useState<Step>(1);
@@ -686,11 +688,15 @@ export default function WarehouseEmployeeProductWizardModal({
         if (!Number.isFinite(performedBy) || performedBy <= 0)
             return setError("ثبت‌کننده موجودی مشخص نیست");
 
+        if (warehouseId == null)
+            return setError("انبار مشخص نشده است");
+
         setLoading(true);
         setError("");
 
         try {
             const payload = {
+                warehouse_id: Number(warehouseId),
                 product_id: productId,
                 performed_by_id: performedBy,
                 quantity,
