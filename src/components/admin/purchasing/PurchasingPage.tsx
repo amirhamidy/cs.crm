@@ -11,6 +11,7 @@ import PurchasingEmployeeModal from "./PurchasingEmployeeModal";
 import PurchasingStagesPanel from "./PurchasingStagesPanel";
 import PurchasingArchivePanel from "./Purchasingarchivepanel";
 import StepFormModal from "./StepFormModal";
+import PurchasingCreateTaskModal from "./PurchasingCreateTaskModal";
 import PurchasingDeleteModal from "./PurchasingDeleteModal";
 import { usePurchasingAccess } from "@/hooks/usePurchasingAccess";
 
@@ -48,7 +49,7 @@ export default function PurchasingPage() {
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [error, setError] = useState("");
-
+    const [createTaskModalOpen, setCreateTaskModalOpen] = useState(false);
     const [employeeModalOpen, setEmployeeModalOpen] = useState(false);
     const [stepModalOpen, setStepModalOpen] = useState(false);
     const [editingStep, setEditingStep] = useState<ApiPurchasingStep | null>(null);
@@ -151,13 +152,37 @@ export default function PurchasingPage() {
                     </div>
 
                     <div className="flex shrink-0 items-center gap-2">
-                        <span className={`hidden h-9 items-center gap-1.5 rounded-full px-3 text-[10.5px] font-extrabold md:flex ${isAdmin ? "bg-amber-500/10 text-amber-500" : "bg-indigo-500/10 text-indigo-600 dark:text-indigo-300"}`}>
+                        <span
+                            className={`hidden h-9 items-center gap-1.5 rounded-full px-3 text-[10.5px] font-extrabold md:flex ${isAdmin
+                                ? "bg-amber-500/10 text-amber-500"
+                                : "bg-indigo-500/10 text-indigo-600 dark:text-indigo-300"
+                                }`}
+                        >
                             {isAdmin ? <ShieldCheck size={12} /> : <UserCheck size={12} />}
                             {isAdmin ? "ادمین" : "کارمند"}
                             {currentEmployeeName ? ` · ${currentEmployeeName}` : ""}
                         </span>
-                        <button type="button" onClick={() => loadAll(true)} disabled={loading || refreshing} className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 text-gray-400 transition-colors hover:text-gray-600 disabled:opacity-40 dark:bg-white/[0.05] dark:hover:text-gray-300">
-                            <RefreshCw size={13} className={refreshing ? "animate-spin" : ""} />
+
+                        <button
+                            type="button"
+                            onClick={() => setCreateTaskModalOpen(true)}
+                            className="flex h-9 items-center gap-1.5 rounded-full bg-indigo-600 px-3.5 text-[10.5px] font-extrabold text-white transition hover:bg-indigo-500"
+                        >
+                            <ShoppingCart size={12} />
+                            <span className="hidden sm:inline">ایجاد خرید</span>
+                            <span className="sm:hidden">خرید</span>
+                        </button>
+
+                        <button
+                            type="button"
+                            onClick={() => loadAll(true)}
+                            disabled={loading || refreshing}
+                            className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 text-gray-400 transition-colors hover:text-gray-600 disabled:opacity-40 dark:bg-white/[0.05] dark:hover:text-gray-300"
+                        >
+                            <RefreshCw
+                                size={13}
+                                className={refreshing ? "animate-spin" : ""}
+                            />
                         </button>
                     </div>
                 </div>
@@ -232,6 +257,16 @@ export default function PurchasingPage() {
                 employees={employees}
                 onSaved={() => {
                     closeStepModal();
+                    loadAll(true);
+                }}
+            />
+            <PurchasingCreateTaskModal
+                open={createTaskModalOpen}
+                steps={steps}
+                tasks={tasks}
+                onClose={() => setCreateTaskModalOpen(false)}
+                onSaved={() => {
+                    setCreateTaskModalOpen(false);
                     loadAll(true);
                 }}
             />
