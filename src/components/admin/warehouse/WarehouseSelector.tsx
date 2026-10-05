@@ -3,14 +3,14 @@
 import { useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import { Boxes, Loader2, Pencil, Plus, Trash2, X } from "lucide-react";
+import { Boxes, Loader2, Lock, Pencil, Plus, Power, PowerOff, X } from "lucide-react";
 import { useTheme } from "next-themes";
 
 import useWarehouses from "@/hooks/useWarehouses";
 import useWarehouseAccess from "@/hooks/useWarehouseAccess";
 import { apiErrorMessage, createWarehouse } from "@/lib/warehouseApi";
 import { cardBg, cardBorder, cardShadow, muted } from "@/components/admin/warehouse/WarehouseCards";
-import { DeleteWarehouseModal, EditWarehouseModal } from "@/components/admin/warehouse/WarehouseFormModals";
+import { EditWarehouseModal, WarehouseStatusModal } from "@/components/admin/warehouse/WarehouseFormModals";
 import type { ApiWarehouse } from "@/types/warehouse";
 
 const inputClass =
@@ -161,9 +161,16 @@ export default function WarehouseSelector() {
     const { warehouses, loading, error, reload } = useWarehouses();
     const [showCreate, setShowCreate] = useState(false);
     const [editing, setEditing] = useState<ApiWarehouse | null>(null);
-    const [deleting, setDeleting] = useState<ApiWarehouse | null>(null);
+    const [toggling, setToggling] = useState<ApiWarehouse | null>(null);
+    const [blockedId, setBlockedId] = useState<number | null>(null);
 
-    const open = (id: number) => router.push(`${basePath}/overview?warehouse=${id}`);
+    const open = (warehouse: ApiWarehouse) => {
+        if (!warehouse.is_active && !isAdmin) {
+            setBlockedId(warehouse.id);
+            return;
+        }
+        router.push(`${basePath}/overview?warehouse=${warehouse.id}`);
+    };
 
     return (
         <div dir="rtl" className="flex min-h-screen flex-col gap-6 p-6">
@@ -223,15 +230,17 @@ export default function WarehouseSelector() {
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ duration: 0.2, delay: index * 0.04 }}
                                 whileHover={{ y: -2 }}
-                                onClick={() => open(warehouse.id)}
+                                onClick={() => open(warehouse)}
                                 onKeyDown={(e) => {
-                                    if (e.key === "Enter") open(warehouse.id);
+                                    if (e.key === "Enter") open(warehouse);
                                 }}
-                                className="flex cursor-pointer flex-col gap-3 rounded-3xl p-4 text-right"
+                                className={`relative flex flex-col gap-3 rounded-3xl p-4 text-right ${warehouse.is_active || isAdmin ? "cursor-pointer" : "cursor-not-allowed"
+                                    }`}
                                 style={{
                                     background: cardBg(isDark),
                                     border: cardBorder(isDark),
                                     boxShadow: cardShadow(isDark),
+                                    opacity: warehouse.is_active || isAdmin ? 1 : 0.7,
                                 }}
                             >
                                 <div className="flex items-center justify-between gap-2">
@@ -282,18 +291,38 @@ export default function WarehouseSelector() {
                                             </button>
                                             <button
                                                 type="button"
-                                                aria-label="حذف انبار"
+                                                aria-label={warehouse.is_active ? "غیرفعال‌سازی انبار" : "فعال‌سازی انبار"}
+                                                title={warehouse.is_active ? "غیرفعال‌سازی انبار" : "فعال‌سازی انبار"}
                                                 onClick={(e) => {
                                                     e.stopPropagation();
-                                                    setDeleting(warehouse);
+                                                    setToggling(warehouse);
                                                 }}
-                                                className="flex h-8 w-8 items-center justify-center rounded-xl text-red-500 transition-colors hover:bg-red-500/10"
+                                                className={`flex h-8 w-8 items-center justify-center rounded-xl transition-colors ${warehouse.is_active
+                                                        ? "text-amber-500 hover:bg-amber-500/10"
+                                                        : "text-emerald-500 hover:bg-emerald-500/10"
+                                                    }`}
                                             >
-                                                <Trash2 size={14} />
+                                                {warehouse.is_active ? <PowerOff size={14} /> : <Power size={14} />}
                                             </button>
                                         </div>
                                     )}
                                 </div>
+
+                                <AnimatePresence>
+                                    {blockedId === warehouse.id && !warehouse.is_active && !isAdmin && (
+                                        <motion.div
+                                            initial={{ opacity: 0, height: 0 }}
+                                            animate={{ opacity: 1, height: "auto" }}
+                                            exit={{ opacity: 0, height: 0 }}
+                                            className="overflow-hidden"
+                                        >
+                                            <div className="flex items-center gap-2 rounded-2xl bg-red-500/10 px-3 py-2.5 text-[11.5px] font-bold text-red-500">
+                                                <Lock size={13} className="shrink-0" />
+                                                این انبار از دسترس خارج است
+                                            </div>
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
                             </motion.div>
                         ))
                     ) : (
@@ -316,11 +345,11 @@ export default function WarehouseSelector() {
                 }}
             />
 
-            <DeleteWarehouseModal
-                warehouse={deleting}
-                onClose={() => setDeleting(null)}
-                onDeleted={() => {
-                    setDeleting(null);
+            <WarehouseStatusModal
+                warehouse={toggling}
+                onClose={() => setToggling(null)}
+                onChanged={() => {
+                    setToggling(null);
                     void reload();
                 }}
             />

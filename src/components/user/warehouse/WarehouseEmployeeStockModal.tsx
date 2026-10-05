@@ -18,7 +18,9 @@ import {
     Check,
     ChevronDown,
     Loader,
+    Paperclip,
     Search,
+    Upload,
     X,
 } from "lucide-react";
 import type { AxiosError } from "axios";
@@ -90,7 +92,7 @@ const parseNumber = (raw: string) => {
 function getErrorMessage(error: unknown) {
     const data = (error as AxiosError<Record<string, unknown>>).response?.data;
     if (!data) return "خطا در ثبت تراکنش انبار";
-    for (const key of ["detail", "quantity", "reason", "message", "error", "non_field_errors"]) {
+    for (const key of ["detail", "items", "warehouse_id", "performed_by_id", "file", "note", "quantity", "reason", "message", "error", "non_field_errors"]) {
         const value = data[key];
         if (typeof value === "string") return value;
         if (Array.isArray(value) && typeof value[0] === "string") return value[0];
@@ -212,8 +214,8 @@ function NiceSelect({
                 disabled={disabled}
                 onClick={() => !disabled && setOpen((v) => !v)}
                 className={`flex h-12 w-full items-center gap-2.5 rounded-4xl border px-3 text-right transition-all duration-200 ${open
-                        ? "border-blue-500 bg-blue-50/50 dark:border-blue-500/50 dark:bg-blue-500/[0.06]"
-                        : "border-gray-200 bg-white hover:border-gray-300 dark:border-white/[0.08] dark:bg-white/[0.03] dark:hover:border-white/[0.12]"
+                    ? "border-blue-500 bg-blue-50/50 dark:border-blue-500/50 dark:bg-blue-500/[0.06]"
+                    : "border-gray-200 bg-white hover:border-gray-300 dark:border-white/[0.08] dark:bg-white/[0.03] dark:hover:border-white/[0.12]"
                     } ${disabled ? "pointer-events-none opacity-40" : "cursor-pointer"}`}
             >
                 {selected ? (
@@ -231,8 +233,8 @@ function NiceSelect({
                 <span className="min-w-0 flex-1">
                     <span
                         className={`block truncate text-[12.5px] font-bold ${selected
-                                ? "text-gray-900 dark:text-white"
-                                : "text-gray-400"
+                            ? "text-gray-900 dark:text-white"
+                            : "text-gray-400"
                             }`}
                     >
                         {selected?.label || label}
@@ -307,8 +309,8 @@ function NiceSelect({
                                                         setOpen(false);
                                                     }}
                                                     className={`flex w-full items-center gap-2.5 rounded-2xl px-2.5 py-2 text-right transition-colors ${active
-                                                            ? "bg-blue-50 dark:bg-blue-500/10"
-                                                            : "hover:bg-gray-50 dark:hover:bg-white/[0.04]"
+                                                        ? "bg-blue-50 dark:bg-blue-500/10"
+                                                        : "hover:bg-gray-50 dark:hover:bg-white/[0.04]"
                                                         }`}
                                                 >
                                                     <span
@@ -320,8 +322,8 @@ function NiceSelect({
                                                     <span className="min-w-0 flex-1">
                                                         <span
                                                             className={`block truncate text-[12.5px] font-bold ${active
-                                                                    ? "text-blue-600 dark:text-blue-400"
-                                                                    : "text-gray-900 dark:text-white"
+                                                                ? "text-blue-600 dark:text-blue-400"
+                                                                : "text-gray-900 dark:text-white"
                                                                 }`}
                                                         >
                                                             {o.label}
@@ -365,6 +367,7 @@ export default function WarehouseEmployeeStockModal({
     const [quantity, setQuantity] = useState("");
     const [reason, setReason] = useState<StockOutReason>("sale");
     const [note, setNote] = useState("");
+    const [file, setFile] = useState<File | null>(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
 
@@ -382,6 +385,7 @@ export default function WarehouseEmployeeStockModal({
         setQuantity("");
         setReason("sale");
         setNote("");
+        setFile(null);
         setError("");
     }, [isOpen]);
 
@@ -425,27 +429,47 @@ export default function WarehouseEmployeeStockModal({
         setError("");
 
         try {
-            const endpoint =
-                mode === "in"
-                    ? "/warehouse/api/v1/process/stock/in/"
-                    : "/warehouse/api/v1/process/stock/out/";
+            let result: unknown;
 
-            const payload: Record<string, unknown> = {
-                warehouse_id: Number(warehouseId),
-                product_id: product.id,
-                performed_by_id: resolvedPerformedById,
-                quantity: quantityValue,
-                note: note.trim(),
-            };
+            if (mode === "in") {
+                const { data } = await axiosInstance.post(
+                    "/warehouse/api/v1/process/stock/in/",
+                    {
+                        warehouse_id: Number(warehouseId),
+                        product_id: product.id,
+                        performed_by_id: resolvedPerformedById,
+                        quantity: quantityValue,
+                        note: note.trim(),
+                    }
+                );
+                result = data;
+            } else {
+                const formData = new FormData();
+                formData.append("warehouse_id", String(Number(warehouseId)));
+                formData.append("performed_by_id", String(resolvedPerformedById));
+                formData.append("note", note.trim());
+                if (file) formData.append("file", file);
+                formData.append(
+                    "items",
+                    JSON.stringify([
+                        {
+                            product_id: product.id,
+                            quantity: quantityValue,
+                            reason,
+                        },
+                    ])
+                );
 
-            if (mode === "out") payload.reason = reason;
+                const { data } = await axiosInstance.post(
+                    "/warehouse/api/v1/process/stock/out/",
+                    formData
+                );
+                result = data;
+            }
 
-            const { data } = await axiosInstance.post<ApiStockTransaction>(
-                endpoint,
-                payload
-            );
+            const transaction = (Array.isArray(result) ? result[0] : result) as ApiStockTransaction;
 
-            onCompleted(data);
+            onCompleted(transaction);
             onClose();
         } catch (err) {
             setError(getErrorMessage(err));
@@ -481,8 +505,8 @@ export default function WarehouseEmployeeStockModal({
                             <div className="flex min-w-0 items-center gap-3">
                                 <div
                                     className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${mode === "in"
-                                            ? "bg-emerald-50 dark:bg-emerald-500/10"
-                                            : "bg-red-50 dark:bg-red-500/10"
+                                        ? "bg-emerald-50 dark:bg-emerald-500/10"
+                                        : "bg-red-50 dark:bg-red-500/10"
                                         }`}
                                 >
                                     <Boxes
@@ -616,6 +640,41 @@ export default function WarehouseEmployeeStockModal({
                                 </span>
                             </div>
 
+                            {mode === "out" && (
+                                <div>
+                                    <label className="flex h-12 cursor-pointer items-center gap-2.5 rounded-4xl border border-dashed border-gray-200 bg-gray-50/60 px-3.5 transition-colors hover:border-blue-400 hover:bg-blue-50/40 dark:border-white/[0.1] dark:bg-white/[0.02] dark:hover:border-blue-500/40 dark:hover:bg-blue-500/[0.05]">
+                                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-white text-gray-400 shadow-sm dark:bg-white/[0.06]">
+                                            <Upload size={14} />
+                                        </span>
+                                        <span className="min-w-0 flex-1 truncate text-[12px] font-bold text-gray-500 dark:text-gray-400">
+                                            {file ? file.name : "افزودن فایل (اختیاری)"}
+                                        </span>
+                                        <input
+                                            type="file"
+                                            className="hidden"
+                                            disabled={loading}
+                                            onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+                                        />
+                                    </label>
+
+                                    {file && (
+                                        <div className="mt-2 flex items-center gap-2 rounded-xl bg-gray-50 px-3 py-2 dark:bg-white/[0.03]">
+                                            <Paperclip size={12} className="shrink-0 text-gray-400" />
+                                            <span className="min-w-0 flex-1 truncate text-[11px] font-semibold text-gray-600 dark:text-gray-300">
+                                                {file.name}
+                                            </span>
+                                            <button
+                                                type="button"
+                                                onClick={() => setFile(null)}
+                                                className="shrink-0 text-gray-400 transition-colors hover:text-red-500"
+                                            >
+                                                <X size={12} />
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
                             <AnimatePresence>
                                 {error && (
                                     <motion.div
@@ -644,8 +703,8 @@ export default function WarehouseEmployeeStockModal({
                                 disabled={!canSubmit}
                                 whileTap={{ scale: 0.97 }}
                                 className={`mt-1 flex h-11 items-center justify-center gap-2 rounded-full text-[12.5px] font-bold text-white transition-all disabled:opacity-40 ${mode === "in"
-                                        ? "bg-emerald-600 hover:bg-emerald-500"
-                                        : "bg-red-600 hover:bg-red-500"
+                                    ? "bg-emerald-600 hover:bg-emerald-500"
+                                    : "bg-red-600 hover:bg-red-500"
                                     }`}
                             >
                                 {loading ? (

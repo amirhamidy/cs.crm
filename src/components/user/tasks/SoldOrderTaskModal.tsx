@@ -4,14 +4,16 @@ import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { AlertCircle, CalendarDays, Check, ChevronDown, ClipboardList, Loader2, Package, Paperclip, Pencil, Search, ShoppingBag, Star, Upload, X } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
-import type { ApiStockInfo } from "@/types/warehouse";
+import type { ApiStockInfo, ApiWarehouse } from "@/types/warehouse";
+import { fetchWarehouses } from "@/lib/warehouseApi";
+import { scopeStocks } from "@/lib/warehouseScope";
 import TimeRangeModal from "./TimeRangeModal";
 
 interface Props {
     isOpen: boolean;
     onClose: () => void;
     taskId: number;
-    onSubmit: (data: { product_id: number; quantity: number; note: string; file?: File; started_at?: string; deadline?: string; score: number; score_reason: string }) => Promise<void>;
+    onSubmit: (data: { warehouse_id: number; product_id: number; quantity: number; note: string; file?: File; started_at?: string; deadline?: string; score: number; score_reason: string }) => Promise<void>;
     submitting?: boolean;
 }
 
@@ -152,7 +154,10 @@ function formatJalaliDateTime(iso: string) {
 
 export default function SoldOrderTaskModal({ isOpen, onClose, taskId, onSubmit, submitting = false }: Props) {
     const [products, setProducts] = useState<ApiStockInfo[]>([]);
+    const [warehouses, setWarehouses] = useState<ApiWarehouse[]>([]);
+    const [warehouseId, setWarehouseId] = useState<number | null>(null);
     const [loading, setLoading] = useState(false);
+    const [stockLoading, setStockLoading] = useState(false);
     const [error, setError] = useState("");
     const [productId, setProductId] = useState<number | null>(null);
     const [quantity, setQuantity] = useState("");
@@ -169,10 +174,37 @@ export default function SoldOrderTaskModal({ isOpen, onClose, taskId, onSubmit, 
     useEffect(() => {
         if (!isOpen) return;
         let mounted = true;
-        setProductId(null); setQuantity(""); setNote(""); setFile(undefined); setStartedAt(""); setDeadline(""); setScore(0); setScoreReason(""); setError(""); setProducts([]); setLoading(true);
-        axiosInstance.get("/warehouse/api/v1/process/stock/").then(({ data }) => { if (mounted) setProducts(Array.isArray(data) ? data : data?.results ?? []); }).catch((e) => mounted && setError(parseError(e))).finally(() => mounted && setLoading(false));
+        setWarehouseId(null); setProductId(null); setQuantity(""); setNote(""); setFile(undefined); setStartedAt(""); setDeadline(""); setScore(0); setScoreReason(""); setError(""); setProducts([]); setWarehouses([]); setLoading(true);
+        fetchWarehouses()
+            .then((list) => {
+                if (!mounted) return;
+                const active = list.filter((item) => item.is_active);
+                setWarehouses(active);
+                if (active.length === 1) setWarehouseId(active[0].id);
+            })
+            .catch((e) => mounted && setError(parseError(e)))
+            .finally(() => mounted && setLoading(false));
         return () => { mounted = false; };
     }, [isOpen]);
+
+    useEffect(() => {
+        setProductId(null);
+        setQuantity("");
+        setProducts([]);
+        if (!isOpen || warehouseId == null) return;
+        let mounted = true;
+        setStockLoading(true);
+        axiosInstance
+            .get("/warehouse/api/v1/process/stock/", { params: { warehouse_id: warehouseId } })
+            .then(({ data }) => {
+                if (!mounted) return;
+                const list: ApiStockInfo[] = Array.isArray(data) ? data : data?.results ?? [];
+                setProducts(scopeStocks(list, warehouseId));
+            })
+            .catch((e) => mounted && setError(parseError(e)))
+            .finally(() => mounted && setStockLoading(false));
+        return () => { mounted = false; };
+    }, [isOpen, warehouseId]);
 
     useEffect(() => {
         if (!selectedProduct) return;
@@ -184,17 +216,18 @@ export default function SoldOrderTaskModal({ isOpen, onClose, taskId, onSubmit, 
 
     const qty = numberValue(quantity);
     const quantityError = selectedProduct && qty > selectedProduct.current_quantity ? `حداکثر ${formatNumber(selectedProduct.current_quantity)} ${selectedProduct.unit_label} قابل درخواست است.` : "";
-    const valid = !!productId && qty > 0 && !!selectedProduct && qty <= selectedProduct.current_quantity && score >= 1 && !!scoreReason.trim() && (!startedAt || !deadline || new Date(deadline).getTime() >= new Date(startedAt).getTime());
+    const valid = warehouseId != null && !!productId && qty > 0 && !!selectedProduct && qty <= selectedProduct.current_quantity && score >= 1 && !!scoreReason.trim() && (!startedAt || !deadline || new Date(deadline).getTime() >= new Date(startedAt).getTime());
 
     async function submit() {
         if (!valid || !selectedProduct) return;
         setError("");
         try {
-            await onSubmit({ product_id: selectedProduct.product, quantity: qty, note: note.trim(), file, started_at: toIso(startedAt), deadline: toIso(deadline), score, score_reason: scoreReason.trim() });
+            await onSubmit({ warehouse_id: warehouseId as number, product_id: selectedProduct.product, quantity: qty, note: note.trim(), file, started_at: toIso(startedAt), deadline: toIso(deadline), score, score_reason: scoreReason.trim() });
         } catch (e) { setError(parseError(e)); }
     }
 
     const productOptions: Option[] = useMemo(() => products.map((item) => ({ id: item.product, label: item.product_name, sub: `موجودی: ${formatNumber(item.current_quantity)} ${item.unit_label}` })), [products]);
+    const warehouseOptions: Option[] = useMemo(() => warehouses.map((item) => ({ id: item.id, label: item.name, sub: `کد انبار: ${item.code}` })), [warehouses]);
     const hasTime = !!startedAt || !!deadline;
 
     return createPortal(
@@ -218,7 +251,8 @@ export default function SoldOrderTaskModal({ isOpen, onClose, taskId, onSubmit, 
                                     <div className="flex h-48 items-center justify-center"><Loader2 className="animate-spin text-blue-500" size={25} /></div>
                                 ) : (
                                     <div className="flex flex-col gap-4">
-                                        <NiceSelect label="کالا از موجودی انبار" placeholder="انتخاب کالا" emptyText="کالایی یافت نشد" options={productOptions} value={productId} onChange={(id) => { setProductId(id); setError(""); }} />
+                                        <NiceSelect label="انبار" placeholder="انتخاب انبار" emptyText="انبار فعالی یافت نشد" options={warehouseOptions} value={warehouseId} onChange={(id) => { setWarehouseId(id); setError(""); }} />
+                                        <NiceSelect label="کالا از موجودی انبار" placeholder={warehouseId == null ? "ابتدا انبار را انتخاب کنید" : stockLoading ? "در حال دریافت موجودی..." : "انتخاب کالا"} emptyText="کالایی یافت نشد" options={productOptions} value={productId} disabled={warehouseId == null || stockLoading} onChange={(id) => { setProductId(id); setError(""); }} />
                                         <AnimatePresence>
                                             {selectedProduct && (
                                                 <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }} className="flex items-center justify-between rounded-2xl border border-gray-100 bg-gray-50/60 px-4 py-2.5 dark:border-white/[0.06] dark:bg-white/[0.03]">

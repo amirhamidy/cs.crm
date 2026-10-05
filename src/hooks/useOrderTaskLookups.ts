@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import axiosInstance from "@/lib/axiosInstance";
 import { ApiTask } from "@/types/warehouse";
 import { extractList } from "@/utils/warehouseEmployee";
+import { scopeStocks } from "@/lib/warehouseScope";
 
 export interface ApiOrderTaskStockProduct {
   id: number;
@@ -22,7 +23,10 @@ export interface ApiOrderTaskStockProduct {
   updated_at: string;
 }
 
-export function useOrderTaskLookups(enabled: boolean) {
+export function useOrderTaskLookups(
+  enabled: boolean,
+  warehouseId?: number | null,
+) {
   const [tasks, setTasks] = useState<ApiTask[]>([]);
   const [products, setProducts] = useState<ApiOrderTaskStockProduct[]>([]);
   const [loading, setLoading] = useState(false);
@@ -40,13 +44,21 @@ export function useOrderTaskLookups(enabled: boolean) {
       try {
         const [tasksRes, productsRes] = await Promise.all([
           axiosInstance.get("/tasks/api/v1/tasks/"),
-          axiosInstance.get("/warehouse/api/v1/process/stock/"),
+          axiosInstance.get("/warehouse/api/v1/process/stock/", {
+            params:
+              warehouseId != null ? { warehouse_id: warehouseId } : undefined,
+          }),
         ]);
 
         if (!mounted) return;
 
         setTasks(extractList<ApiTask>(tasksRes.data));
-        setProducts(extractList<ApiOrderTaskStockProduct>(productsRes.data));
+        const stockList = extractList<ApiOrderTaskStockProduct>(
+          productsRes.data,
+        );
+        setProducts(
+          warehouseId != null ? scopeStocks(stockList, warehouseId) : stockList,
+        );
       } catch {
         if (!mounted) return;
 
@@ -65,7 +77,7 @@ export function useOrderTaskLookups(enabled: boolean) {
     return () => {
       mounted = false;
     };
-  }, [enabled]);
+  }, [enabled, warehouseId]);
 
   return {
     tasks,

@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Loader2, X } from "lucide-react";
-import { apiErrorMessage, deleteWarehouse, patchWarehouse } from "@/lib/warehouseApi";
+import { Loader2, Power, PowerOff, X } from "lucide-react";
+import { apiErrorMessage, patchWarehouse, setWarehouseActive } from "@/lib/warehouseApi";
 import type { ApiWarehouse } from "@/types/warehouse";
 
 const inputClass =
@@ -156,14 +156,14 @@ export function EditWarehouseModal({
     );
 }
 
-export function DeleteWarehouseModal({
+export function WarehouseStatusModal({
     warehouse,
     onClose,
-    onDeleted,
+    onChanged,
 }: {
     warehouse: ApiWarehouse | null;
     onClose: () => void;
-    onDeleted: () => void;
+    onChanged: () => void;
 }) {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
@@ -172,16 +172,23 @@ export function DeleteWarehouseModal({
         setError("");
     }, [warehouse]);
 
+    const deactivating = warehouse?.is_active ?? true;
+
     async function confirm() {
         if (!warehouse) return;
         setLoading(true);
         setError("");
 
         try {
-            await deleteWarehouse(warehouse.id);
-            onDeleted();
+            await setWarehouseActive(warehouse.id, !warehouse.is_active);
+            onChanged();
         } catch (err) {
-            setError(apiErrorMessage(err, "حذف انبار انجام نشد"));
+            setError(
+                apiErrorMessage(
+                    err,
+                    deactivating ? "غیرفعال‌سازی انبار انجام نشد" : "فعال‌سازی انبار انجام نشد",
+                ),
+            );
         } finally {
             setLoading(false);
         }
@@ -189,24 +196,43 @@ export function DeleteWarehouseModal({
 
     return (
         <Shell open={!!warehouse} busy={loading} onClose={onClose}>
-            <h3 className="text-[14px] font-extrabold text-gray-900 dark:text-white">حذف انبار</h3>
-            <p className="mt-3 text-[12px] leading-7 text-gray-600 dark:text-gray-300">
-                انبار «{warehouse?.name}» حذف شود؟ این کار قابل بازگشت نیست و ممکن است
-                محصولات و موجودی‌های این انبار هم از دسترس خارج شوند.
-            </p>
+            <div className="flex flex-col items-center text-center">
+                <div
+                    className={`flex h-14 w-14 items-center justify-center rounded-2xl ${deactivating
+                            ? "bg-amber-500/10 text-amber-500"
+                            : "bg-emerald-500/10 text-emerald-500"
+                        }`}
+                >
+                    {deactivating ? <PowerOff size={24} /> : <Power size={24} />}
+                </div>
+
+                <h3 className="mt-4 text-[15px] font-extrabold text-gray-900 dark:text-white">
+                    {deactivating ? "غیرفعال‌سازی انبار" : "فعال‌سازی انبار"}
+                </h3>
+
+                <p className="mt-2 text-[12px] font-bold text-indigo-500">
+                    {warehouse?.name}
+                </p>
+
+                <p className="mt-3 text-[12px] leading-7 text-gray-500 dark:text-gray-400">
+                    {deactivating
+                        ? "با غیرفعال شدن، این انبار برای انباردارها از دسترس خارج می‌شود. اطلاعات و موجودی‌ها حفظ می‌شوند و هر زمان بخواهید می‌توانید انبار را دوباره فعال کنید."
+                        : "با فعال شدن، این انبار دوباره در اختیار انباردارها قرار می‌گیرد و امکان ثبت عملیات روی آن فراهم می‌شود."}
+                </p>
+            </div>
 
             {error && (
-                <p className="mt-3 rounded-xl bg-red-500/10 px-3 py-2 text-[11.5px] font-bold text-red-500">
+                <p className="mt-4 rounded-xl bg-red-500/10 px-3 py-2 text-[11.5px] font-bold text-red-500">
                     {error}
                 </p>
             )}
 
-            <div className="mt-5 grid grid-cols-2 gap-2">
+            <div className="mt-6 grid grid-cols-2 gap-2">
                 <button
                     type="button"
                     onClick={onClose}
                     disabled={loading}
-                    className="h-11 rounded-2xl bg-gray-100 text-[13px] font-bold text-gray-700 dark:bg-white/10 dark:text-gray-200"
+                    className="h-11 rounded-2xl bg-gray-100 text-[13px] font-bold text-gray-700 transition-colors hover:bg-gray-200 disabled:opacity-50 dark:bg-white/10 dark:text-gray-200 dark:hover:bg-white/15"
                 >
                     انصراف
                 </button>
@@ -214,10 +240,13 @@ export function DeleteWarehouseModal({
                     type="button"
                     onClick={confirm}
                     disabled={loading}
-                    className="flex h-11 items-center justify-center gap-2 rounded-2xl bg-red-600 text-[13px] font-bold text-white hover:bg-red-500 disabled:opacity-50"
+                    className={`flex h-11 items-center justify-center gap-2 rounded-2xl text-[13px] font-bold text-white transition-colors disabled:opacity-50 ${deactivating
+                            ? "bg-amber-500 hover:bg-amber-400"
+                            : "bg-emerald-600 hover:bg-emerald-500"
+                        }`}
                 >
                     {loading && <Loader2 size={15} className="animate-spin" />}
-                    حذف
+                    {deactivating ? "غیرفعال کن" : "فعال کن"}
                 </button>
             </div>
         </Shell>

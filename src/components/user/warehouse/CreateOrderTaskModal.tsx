@@ -27,6 +27,7 @@ interface CreateOrderTaskModalProps {
     isOpen: boolean;
     onClose: () => void;
     onCreated: (orderTask: ApiOrderTask) => void;
+    warehouseId: number | null;
 }
 
 const GRADIENTS = [
@@ -70,6 +71,7 @@ function getErrorMessage(err: unknown, fallback: string) {
     if (!data) return fallback;
     for (const key of [
         "detail",
+        "warehouse_id",
         "task_id",
         "product_id",
         "quantity",
@@ -195,8 +197,8 @@ function SearchableCombobox<T>({
                 disabled={disabled}
                 onClick={() => setOpen((v) => !v)}
                 className={`flex h-[56px] w-full items-center gap-3 rounded-2xl border px-3.5 text-right transition-all duration-200 ${open
-                        ? "border-blue-500 bg-blue-50/60 shadow-sm shadow-blue-500/5 dark:border-blue-500/50 dark:bg-blue-500/[0.07]"
-                        : "border-slate-200 bg-slate-50/80 hover:border-slate-300 hover:bg-white dark:border-white/[0.07] dark:bg-white/[0.035] dark:hover:border-white/[0.13] dark:hover:bg-white/[0.05]"
+                    ? "border-blue-500 bg-blue-50/60 shadow-sm shadow-blue-500/5 dark:border-blue-500/50 dark:bg-blue-500/[0.07]"
+                    : "border-slate-200 bg-slate-50/80 hover:border-slate-300 hover:bg-white dark:border-white/[0.07] dark:bg-white/[0.035] dark:hover:border-white/[0.13] dark:hover:bg-white/[0.05]"
                     } ${disabled ? "cursor-not-allowed opacity-40" : "cursor-pointer"}`}
             >
                 {selected ? (
@@ -216,8 +218,8 @@ function SearchableCombobox<T>({
                 <span className="min-w-0 flex-1">
                     <span
                         className={`block truncate text-[12.5px] font-bold ${selected
-                                ? "text-slate-900 dark:text-white"
-                                : "text-slate-400"
+                            ? "text-slate-900 dark:text-white"
+                            : "text-slate-400"
                             }`}
                     >
                         {selected ? getLabel(selected) : placeholder}
@@ -297,8 +299,8 @@ function SearchableCombobox<T>({
                                                 setQuery("");
                                             }}
                                             className={`flex w-full items-center gap-3 rounded-xl px-2.5 py-2.5 text-right transition-colors ${active
-                                                    ? "bg-blue-50 dark:bg-blue-500/10"
-                                                    : "hover:bg-slate-50 dark:hover:bg-white/[0.04]"
+                                                ? "bg-blue-50 dark:bg-blue-500/10"
+                                                : "hover:bg-slate-50 dark:hover:bg-white/[0.04]"
                                                 }`}
                                         >
                                             <span
@@ -311,8 +313,8 @@ function SearchableCombobox<T>({
                                             <span className="min-w-0 flex-1">
                                                 <span
                                                     className={`block truncate text-[12.5px] font-bold ${active
-                                                            ? "text-blue-600 dark:text-blue-400"
-                                                            : "text-slate-900 dark:text-white"
+                                                        ? "text-blue-600 dark:text-blue-400"
+                                                        : "text-slate-900 dark:text-white"
                                                         }`}
                                                 >
                                                     {getLabel(item)}
@@ -348,13 +350,14 @@ export default function CreateOrderTaskModal({
     isOpen,
     onClose,
     onCreated,
+    warehouseId,
 }: CreateOrderTaskModalProps) {
     const {
         tasks,
         products,
         loading: lookupsLoading,
         error: lookupsError,
-    } = useOrderTaskLookups(isOpen);
+    } = useOrderTaskLookups(isOpen, warehouseId);
 
     const [taskId, setTaskId] = useState<number | null>(null);
     const [productId, setProductId] = useState<number | null>(null);
@@ -386,6 +389,10 @@ export default function CreateOrderTaskModal({
 
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
+        if (warehouseId == null) {
+            setError("انبار مشخص نشده است");
+            return;
+        }
         if (!taskId || !productId || !quantity) {
             setError("تسک، محصول و تعداد الزامی هستند");
             return;
@@ -400,6 +407,7 @@ export default function CreateOrderTaskModal({
         setError("");
         try {
             const formData = new FormData();
+            formData.append("warehouse_id", String(warehouseId));
             formData.append("task_id", String(taskId));
             formData.append("product_id", String(productId));
             formData.append("quantity", String(qty));
@@ -582,22 +590,22 @@ export default function CreateOrderTaskModal({
                                     disabled={loading}
                                     onClick={() => setTimeModalOpen(true)}
                                     className={`group flex h-[58px] items-center gap-2.5 rounded-2xl border px-3 transition-all duration-200 disabled:opacity-40 ${startedAt && deadline
-                                            ? "border-blue-500/30 bg-blue-50/60 dark:border-blue-500/30 dark:bg-blue-500/[0.07]"
-                                            : "border-slate-200 bg-slate-50/80 hover:border-slate-300 hover:bg-white dark:border-white/[0.07] dark:bg-white/[0.035] dark:hover:border-white/[0.13]"
+                                        ? "border-blue-500/30 bg-blue-50/60 dark:border-blue-500/30 dark:bg-blue-500/[0.07]"
+                                        : "border-slate-200 bg-slate-50/80 hover:border-slate-300 hover:bg-white dark:border-white/[0.07] dark:bg-white/[0.035] dark:hover:border-white/[0.13]"
                                         }`}
                                 >
                                     <span
                                         className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl shadow-sm ${startedAt && deadline
-                                                ? "bg-blue-100 text-blue-600 dark:bg-blue-500/15 dark:text-blue-400"
-                                                : "bg-white text-slate-400 dark:bg-white/[0.06]"
+                                            ? "bg-blue-100 text-blue-600 dark:bg-blue-500/15 dark:text-blue-400"
+                                            : "bg-white text-slate-400 dark:bg-white/[0.06]"
                                             }`}
                                     >
                                         <Calendar size={14} />
                                     </span>
                                     <span
                                         className={`truncate text-[11.5px] font-bold ${startedAt && deadline
-                                                ? "text-blue-600 dark:text-blue-400"
-                                                : "text-slate-500 dark:text-slate-400"
+                                            ? "text-blue-600 dark:text-blue-400"
+                                            : "text-slate-500 dark:text-slate-400"
                                             }`}
                                     >
                                         {startedAt && deadline

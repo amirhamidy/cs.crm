@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { motion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import {
+    AlertCircle,
+    Briefcase,
     Check,
     CheckCircle2,
-    FileText,
     Loader2,
     Package,
     Paperclip,
@@ -34,41 +35,26 @@ function formatNumber(value: number | string | null | undefined) {
     return new Intl.NumberFormat("fa-IR").format(number);
 }
 
-function FloatingInput({
-    label,
-    id,
-    value,
-    onChange,
-    type = "text",
-    disabled,
-}: {
-    label: string;
-    id: string;
-    value: string;
-    onChange: (v: string) => void;
-    type?: string;
-    disabled?: boolean;
-}) {
-    return (
-        <div className="relative">
-            <input
-                id={id}
-                type={type}
-                placeholder=" "
-                value={value}
-                onChange={(e) => onChange(e.target.value)}
-                disabled={disabled}
-                className="peer h-[52px] w-full rounded-2xl border border-gray-100 bg-gray-50 px-4 pt-4 text-[12.5px] font-bold text-gray-900 outline-none transition-all focus:border-blue-500 focus:bg-white focus:shadow-[0_0_0_4px_rgba(59,130,246,0.07)] disabled:opacity-60 dark:border-white/[0.06] dark:bg-white/[0.03] dark:text-white dark:focus:border-blue-500/50 dark:focus:bg-white/[0.045]"
-            />
-            <label
-                htmlFor={id}
-                className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[12px] font-semibold text-gray-400 transition-all duration-200 peer-focus:top-[15px] peer-focus:text-[10px] peer-focus:text-blue-500 peer-[:not(:placeholder-shown)]:top-[15px] peer-[:not(:placeholder-shown)]:text-[10px]"
-            >
-                {label}
-            </label>
-        </div>
-    );
-}
+const TONES = {
+    completed: {
+        title: "تایید و تکمیل درخواست",
+        accent: "#10b981",
+        soft: "rgba(16,185,129,0.12)",
+        border: "rgba(16,185,129,0.22)",
+        bar: "linear-gradient(90deg,#10b981,#34d399,#06b6d4)",
+        gradient: "linear-gradient(135deg,#10b981,#059669)",
+        shadow: "0 12px 26px rgba(16,185,129,0.28)",
+    },
+    cancelled: {
+        title: "لغو درخواست",
+        accent: "#f43f5e",
+        soft: "rgba(244,63,94,0.12)",
+        border: "rgba(244,63,94,0.22)",
+        bar: "linear-gradient(90deg,#f43f5e,#fb7185,#f97316)",
+        gradient: "linear-gradient(135deg,#f43f5e,#e11d48)",
+        shadow: "0 12px 26px rgba(244,63,94,0.28)",
+    },
+} as const;
 
 export default function WarehouseEmployeeOrderTaskStatusModal({
     open,
@@ -99,10 +85,8 @@ export default function WarehouseEmployeeOrderTaskStatusModal({
         setError("");
     }, [open, orderTask, initialStatus]);
 
-    if (!open || !orderTask) return null;
-
-    const orderData = orderTask as unknown as Record<string, unknown>;
-    const expectedQuantity = Number(orderTask.quantity ?? 0);
+    const orderData = (orderTask ?? {}) as unknown as Record<string, unknown>;
+    const expectedQuantity = Number(orderTask?.quantity ?? 0);
 
     const productName = useMemo(() => {
         const rawProduct = orderData.product;
@@ -124,6 +108,12 @@ export default function WarehouseEmployeeOrderTaskStatusModal({
         return "محصول نامشخص";
     }, [orderData.product, orderData.product_name, orderData.product_title, products]);
 
+    if (!open || !orderTask) return null;
+
+    const task = orderTask;
+    const tone = TONES[status];
+    const isCompleted = status === "completed";
+
     const caseTitle =
         (orderData.case && typeof orderData.case === "object" && (orderData.case as any).title) ||
         String(orderData.case_title ?? "بدون کیس");
@@ -132,12 +122,18 @@ export default function WarehouseEmployeeOrderTaskStatusModal({
         (orderData.customer && typeof orderData.customer === "object" && (orderData.customer as any).full_name) ||
         String(orderData.customer_name ?? "بدون مشتری");
 
+    const enteredQuantity = Number(completedQuantity);
+    const progress =
+        Number.isFinite(expectedQuantity) && expectedQuantity > 0 && Number.isFinite(enteredQuantity)
+            ? Math.min(100, Math.max(0, (enteredQuantity / expectedQuantity) * 100))
+            : 0;
+
     const submit = async () => {
         if (performedBy === null || performedBy === undefined || performedBy === "") {
             setError("شناسه انباردار پیدا نشد.");
             return;
         }
-        if (!orderTask.id) {
+        if (!task.id) {
             setError("شناسه تسک پیدا نشد.");
             return;
         }
@@ -167,7 +163,7 @@ export default function WarehouseEmployeeOrderTaskStatusModal({
             if (note.trim()) formData.append("note", note.trim());
             if (file) formData.append("file", file);
 
-            await axiosInstance.patch(`/warehouse/api/v1/order_task/${orderTask.id}/update/`, formData);
+            await axiosInstance.patch(`/warehouse/api/v1/order_task/${task.id}/update/`, formData);
             onClose();
             await onSuccess?.();
         } catch (err: any) {
@@ -189,42 +185,39 @@ export default function WarehouseEmployeeOrderTaskStatusModal({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center px-4"
-            style={{ background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)" }}
+            className="fixed inset-0 z-50 flex items-center justify-center px-4 py-4"
+            style={{ background: "rgba(2,6,23,0.55)", backdropFilter: "blur(6px)" }}
             onClick={() => !loading && onClose()}
         >
             <motion.div
-                initial={{ opacity: 0, scale: 0.96, y: 16 }}
+                initial={{ opacity: 0, scale: 0.95, y: 18 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.96, y: 16 }}
-                transition={{ duration: 0.2 }}
+                exit={{ opacity: 0, scale: 0.95, y: 18 }}
+                transition={{ duration: 0.22, ease: "easeOut" }}
                 onClick={(e) => e.stopPropagation()}
                 dir="rtl"
-                className="flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-sm dark:border-white/[0.06] dark:bg-[#0f172a]"
+                className="flex max-h-[92vh] w-full max-w-md flex-col overflow-hidden rounded-[2rem] border border-white/80 bg-white shadow-2xl shadow-black/20 dark:border-white/[0.07] dark:bg-[#0f172a]"
             >
-                <div className="flex shrink-0 items-center justify-between px-8 pb-6 pt-8">
-                    <div className="flex items-center gap-2.5">
+                <div className="h-1.5 w-full shrink-0 transition-all duration-300" style={{ background: tone.bar }} />
+
+                <div className="flex shrink-0 items-start justify-between gap-3 px-7 pb-5 pt-6">
+                    <div className="flex min-w-0 items-center gap-3.5">
                         <div
-                            className="flex h-9 w-9 items-center justify-center rounded-xl"
-                            style={{
-                                background:
-                                    status === "completed"
-                                        ? "rgba(16,185,129,0.1)"
-                                        : "rgba(244,63,94,0.1)",
-                            }}
+                            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl transition-all duration-300"
+                            style={{ background: tone.soft, border: `1px solid ${tone.border}` }}
                         >
-                            {status === "completed" ? (
-                                <CheckCircle2 size={16} className="text-emerald-500" />
+                            {isCompleted ? (
+                                <CheckCircle2 size={21} style={{ color: tone.accent }} />
                             ) : (
-                                <XCircle size={16} className="text-rose-500" />
+                                <XCircle size={21} style={{ color: tone.accent }} />
                             )}
                         </div>
-                        <div>
-                            <h3 className="text-[14px] font-extrabold text-gray-900 dark:text-white">
-                                ثبت نتیجه تسک
+                        <div className="min-w-0">
+                            <h3 className="text-[15px] font-extrabold text-gray-900 dark:text-white">
+                                {tone.title}
                             </h3>
-                            <p className="mt-0.5 text-[11px] text-gray-400">
-                                تسک #{orderTask.id}
+                            <p className="mt-1 text-[11px] font-medium text-gray-400">
+                                درخواست شماره {formatNumber(task.id)}
                             </p>
                         </div>
                     </div>
@@ -233,195 +226,266 @@ export default function WarehouseEmployeeOrderTaskStatusModal({
                         type="button"
                         onClick={onClose}
                         disabled={loading}
-                        className="flex h-8 w-8 items-center justify-center rounded-xl bg-gray-100 text-gray-400 transition-colors hover:text-gray-600 disabled:opacity-40 dark:bg-white/[0.05] dark:hover:text-gray-300"
+                        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gray-100 text-gray-400 transition-all hover:bg-gray-200 hover:text-gray-700 disabled:opacity-40 dark:bg-white/[0.05] dark:hover:bg-white/[0.09] dark:hover:text-white"
                     >
                         <X size={15} />
                     </button>
                 </div>
 
-                <div className="flex-1 overflow-y-auto px-8 pb-2">
+                <div className="flex-1 overflow-y-auto px-7 pb-2">
                     <div className="flex flex-col gap-4">
-                        <div className="rounded-2xl bg-gray-50 p-3 dark:bg-white/[0.03]">
-                            <div className="flex items-start gap-2.5">
-                                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-indigo-100 dark:bg-indigo-500/10">
-                                    <Package size={15} className="text-indigo-600 dark:text-indigo-400" />
+                        <div className="rounded-[1.4rem] border border-gray-100 bg-gray-50/80 p-3 dark:border-white/[0.06] dark:bg-white/[0.03]">
+                            <div className="flex items-center gap-3">
+                                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-500 text-white shadow-lg shadow-indigo-500/20">
+                                    <Package size={18} />
                                 </div>
                                 <div className="min-w-0 flex-1">
-                                    <p className="text-[9.5px] font-bold text-gray-400 dark:text-white/40">
-                                        درخواست
+                                    <p className="text-[9.5px] font-bold text-gray-400">درخواست</p>
+                                    <p className="mt-0.5 truncate text-[12.5px] font-black text-gray-800 dark:text-gray-100">
+                                        {task.title || "بدون عنوان درخواست"}
                                     </p>
-                                    <p className="mt-0.5 truncate text-[12px] font-black text-gray-800 dark:text-gray-100">
-                                        {orderTask.title || "بدون عنوان درخواست"}
+                                </div>
+                                <div className="shrink-0 rounded-xl bg-white px-2.5 py-1.5 text-center shadow-sm dark:bg-white/[0.06]">
+                                    <p className="text-[8.5px] font-bold text-gray-400">تعداد</p>
+                                    <p className="mt-0.5 text-[12px] font-black text-indigo-500">
+                                        {formatNumber(expectedQuantity)}
                                     </p>
                                 </div>
                             </div>
 
                             <div className="mt-3 grid grid-cols-2 gap-2">
                                 <div className="rounded-xl bg-white px-2.5 py-2 dark:bg-white/[0.04]">
-                                    <div className="flex items-center gap-1 text-[9px] font-bold text-gray-400 dark:text-white/40">
+                                    <div className="flex items-center gap-1 text-[9px] font-bold text-gray-400">
                                         <Package size={10} />
                                         محصول
                                     </div>
-                                    <p className="mt-0.5 truncate text-[10.5px] font-black text-gray-700 dark:text-gray-200">
+                                    <p className="mt-0.5 truncate text-[11px] font-black text-gray-700 dark:text-gray-200">
                                         {productName}
                                     </p>
                                 </div>
                                 <div className="rounded-xl bg-white px-2.5 py-2 dark:bg-white/[0.04]">
-                                    <div className="flex items-center gap-1 text-[9px] font-bold text-gray-400 dark:text-white/40">
+                                    <div className="flex items-center gap-1 text-[9px] font-bold text-gray-400">
                                         <User size={10} />
                                         مشتری
                                     </div>
-                                    <p className="mt-0.5 truncate text-[10.5px] font-black text-gray-700 dark:text-gray-200">
+                                    <p className="mt-0.5 truncate text-[11px] font-black text-gray-700 dark:text-gray-200">
                                         {customerName}
                                     </p>
                                 </div>
                             </div>
 
-                            <div className="mt-2 rounded-xl bg-white px-2.5 py-2 dark:bg-white/[0.04]">
-                                <div className="flex items-center justify-between">
-                                    <span className="text-[9px] font-bold text-gray-400 dark:text-white/40">پرونده</span>
-                                    <span className="max-w-[70%] truncate text-[10px] font-black text-gray-700 dark:text-gray-200">
-                                        {caseTitle}
-                                    </span>
-                                </div>
+                            <div className="mt-2 flex items-center justify-between gap-3 rounded-xl bg-white px-2.5 py-2 dark:bg-white/[0.04]">
+                                <span className="flex items-center gap-1 text-[9px] font-bold text-gray-400">
+                                    <Briefcase size={10} />
+                                    پرونده
+                                </span>
+                                <span className="max-w-[70%] truncate text-[10.5px] font-black text-gray-700 dark:text-gray-200">
+                                    {caseTitle}
+                                </span>
                             </div>
                         </div>
 
                         <div>
-                            <p className="mb-2 text-[11.5px] font-bold text-gray-400">وضعیت جدید</p>
-                            <div className="grid grid-cols-2 gap-2">
-                                <button
-                                    type="button"
-                                    disabled={loading}
-                                    onClick={() => setStatus("completed")}
-                                    className={`flex h-11 items-center justify-center gap-2 rounded-2xl border text-[11px] font-bold transition ${status === "completed"
-                                        ? "border-emerald-500 bg-emerald-500 text-white shadow-lg shadow-emerald-500/20"
-                                        : "border-gray-200 bg-white text-gray-600 hover:border-emerald-200 hover:bg-emerald-50 dark:border-white/[0.08] dark:bg-white/[0.03] dark:text-gray-300 dark:hover:border-emerald-500/30"
-                                        }`}
-                                >
-                                    <CheckCircle2 size={15} />
-                                    تکمیل شده
-                                </button>
-                                <button
-                                    type="button"
-                                    disabled={loading}
-                                    onClick={() => setStatus("cancelled")}
-                                    className={`flex h-11 items-center justify-center gap-2 rounded-2xl border text-[11px] font-bold transition ${status === "cancelled"
-                                        ? "border-rose-500 bg-rose-500 text-white shadow-lg shadow-rose-500/20"
-                                        : "border-gray-200 bg-white text-gray-600 hover:border-rose-200 hover:bg-rose-50 dark:border-white/[0.08] dark:bg-white/[0.03] dark:text-gray-300 dark:hover:border-rose-500/30"
-                                        }`}
-                                >
-                                    <XCircle size={15} />
-                                    لغو شده
-                                </button>
+                            <p className="mb-2 px-1 text-[11.5px] font-black text-gray-700 dark:text-gray-200">
+                                نتیجه درخواست
+                            </p>
+                            <div className="relative grid grid-cols-2 gap-1 rounded-[1.2rem] bg-gray-100 p-1 dark:bg-white/[0.05]">
+                                {(["completed", "cancelled"] as const).map((value) => {
+                                    const active = status === value;
+                                    const itemTone = TONES[value];
+                                    return (
+                                        <button
+                                            key={value}
+                                            type="button"
+                                            disabled={loading}
+                                            onClick={() => setStatus(value)}
+                                            className="relative flex h-11 items-center justify-center gap-2 rounded-2xl text-[12px] font-extrabold transition-colors disabled:opacity-60"
+                                            style={{ color: active ? "#ffffff" : undefined }}
+                                        >
+                                            {active && (
+                                                <motion.span
+                                                    layoutId="order-status-pill"
+                                                    transition={{ type: "spring", damping: 26, stiffness: 340 }}
+                                                    className="absolute inset-0 rounded-2xl"
+                                                    style={{
+                                                        background: itemTone.gradient,
+                                                        boxShadow: itemTone.shadow,
+                                                    }}
+                                                />
+                                            )}
+                                            <span
+                                                className={`relative flex items-center gap-2 ${active ? "" : "text-gray-500 dark:text-gray-400"
+                                                    }`}
+                                            >
+                                                {value === "completed" ? (
+                                                    <CheckCircle2 size={15} />
+                                                ) : (
+                                                    <XCircle size={15} />
+                                                )}
+                                                {value === "completed" ? "تایید و تکمیل" : "لغو درخواست"}
+                                            </span>
+                                        </button>
+                                    );
+                                })}
                             </div>
                         </div>
 
-                        {status === "completed" && (
-                            <div className="rounded-[1.35rem] border border-gray-100 bg-gray-50 p-3 dark:border-white/[0.06] dark:bg-white/[0.025]">
-                                <div className="mb-2 flex items-center justify-between px-1">
-                                    <div className="flex items-center gap-2">
-                                        <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-500/10 text-blue-500 dark:bg-blue-500/15">
-                                            <Package size={13} />
-                                        </span>
-                                        <div>
-                                            <p className="text-[10px] font-black text-gray-700 dark:text-gray-200">
-                                                مقدار تکمیل شده
-                                            </p>
-                                            <p className="mt-0.5 text-[8.5px] font-medium text-gray-400">
-                                                حداکثر {formatNumber(expectedQuantity)}
-                                            </p>
+                        <AnimatePresence initial={false}>
+                            {isCompleted && (
+                                <motion.div
+                                    key="quantity"
+                                    initial={{ opacity: 0, height: 0 }}
+                                    animate={{ opacity: 1, height: "auto" }}
+                                    exit={{ opacity: 0, height: 0 }}
+                                    transition={{ duration: 0.2 }}
+                                    className="overflow-hidden"
+                                >
+                                    <div className="rounded-[1.4rem] border border-gray-100 bg-gray-50/60 p-3.5 dark:border-white/[0.06] dark:bg-white/[0.025]">
+                                        <div className="mb-2.5 flex items-center justify-between">
+                                            <div>
+                                                <label
+                                                    htmlFor="completed_quantity"
+                                                    className="text-[11.5px] font-black text-gray-700 dark:text-gray-200"
+                                                >
+                                                    مقدار تکمیل شده
+                                                </label>
+                                                <p className="mt-0.5 text-[9.5px] font-medium text-gray-400">
+                                                    حداکثر {formatNumber(expectedQuantity)}
+                                                </p>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                disabled={loading}
+                                                onClick={() => setCompletedQuantity(String(task.quantity ?? ""))}
+                                                className="rounded-full px-2.5 py-1 text-[10px] font-extrabold transition-opacity hover:opacity-80 disabled:opacity-40"
+                                                style={{ background: tone.soft, color: tone.accent }}
+                                            >
+                                                مقدار کامل
+                                            </button>
+                                        </div>
+
+                                        <input
+                                            id="completed_quantity"
+                                            type="number"
+                                            min="0"
+                                            max={Number.isFinite(expectedQuantity) ? expectedQuantity : undefined}
+                                            step="any"
+                                            value={completedQuantity}
+                                            onChange={(e) => setCompletedQuantity(e.target.value)}
+                                            disabled={loading}
+                                            placeholder="مثلاً 10"
+                                            className="h-[54px] w-full rounded-[1.1rem] border border-gray-200 bg-white px-4 text-[16px] font-black text-gray-900 outline-none transition-all placeholder:text-[11px] placeholder:font-medium placeholder:text-gray-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/[0.07] disabled:opacity-60 dark:border-white/[0.07] dark:bg-[#111827] dark:text-white dark:placeholder:text-white/20 dark:focus:border-blue-500/50 dark:focus:ring-blue-500/[0.08]"
+                                        />
+
+                                        <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-white/[0.08]">
+                                            <motion.div
+                                                className="h-full rounded-full"
+                                                style={{ background: tone.bar }}
+                                                animate={{ width: `${progress}%` }}
+                                                transition={{ duration: 0.25 }}
+                                            />
                                         </div>
                                     </div>
-                                </div>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
 
-                                <div className="relative">
-                                    <input
-                                        id="completed_quantity"
-                                        type="number"
-                                        min="0"
-                                        max={Number.isFinite(expectedQuantity) ? expectedQuantity : undefined}
-                                        step="any"
-                                        value={completedQuantity}
-                                        onChange={(e) => setCompletedQuantity(e.target.value)}
-                                        disabled={loading}
-                                        placeholder="مثلاً 10"
-                                        className="h-[56px] w-full rounded-[1.1rem] border border-gray-200 bg-white px-4 pl-4 text-[15px] font-black text-gray-900 outline-none transition-all placeholder:text-[11px] placeholder:font-medium placeholder:text-gray-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/[0.07] disabled:opacity-60 dark:border-white/[0.07] dark:bg-[#111827] dark:text-white dark:placeholder:text-white/20 dark:focus:border-blue-500/50 dark:focus:ring-blue-500/[0.08]"
-                                    />
-                                </div>
+                        <div>
+                            <div className="mb-2 flex items-center justify-between px-1">
+                                <label
+                                    htmlFor="order_status_note"
+                                    className="text-[11.5px] font-black text-gray-700 dark:text-gray-200"
+                                >
+                                    {isCompleted ? "توضیحات" : "دلیل لغو"}
+                                </label>
+                                <span className="rounded-full bg-slate-400/15 px-2 py-0.5 text-[9.5px] font-extrabold text-slate-400">
+                                    اختیاری
+                                </span>
                             </div>
-                        )}
-
-                        <div className="relative">
                             <textarea
+                                id="order_status_note"
                                 value={note}
                                 onChange={(e) => setNote(e.target.value)}
                                 disabled={loading}
                                 rows={3}
                                 placeholder={
-                                    status === "completed"
+                                    isCompleted
                                         ? "توضیحات مربوط به انجام تسک..."
                                         : "دلیل لغو یا توضیحات مربوط به تسک..."
                                 }
-                                className="peer w-full resize-none rounded-2xl border border-gray-100 bg-gray-50 px-4 pt-4 pb-3 text-[12.5px] font-bold text-gray-900 outline-none transition-colors focus:border-blue-500 disabled:opacity-60 dark:border-white/[0.06] dark:bg-white/[0.03] dark:text-white dark:focus:border-blue-500/50"
+                                className="w-full resize-none rounded-[1.1rem] border border-gray-100 bg-gray-50 px-4 py-3 text-[12.5px] font-bold leading-6 text-gray-900 outline-none transition-all placeholder:text-[11.5px] placeholder:font-medium placeholder:text-gray-300 focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/[0.07] disabled:opacity-60 dark:border-white/[0.06] dark:bg-white/[0.03] dark:text-white dark:placeholder:text-white/20 dark:focus:border-blue-500/50"
                             />
                         </div>
 
-                        <label className="flex h-[52px] cursor-pointer items-center gap-2.5 rounded-2xl border border-dashed border-gray-200 bg-gray-50/60 px-3.5 transition-colors hover:border-blue-400 hover:bg-blue-50/40 dark:border-white/[0.1] dark:bg-white/[0.02] dark:hover:border-blue-500/40 dark:hover:bg-blue-500/[0.05]">
-                            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-white text-gray-400 shadow-sm dark:bg-white/[0.06]">
-                                <Upload size={14} />
-                            </span>
-                            <span className="truncate text-[12px] font-bold text-gray-500 dark:text-gray-400">
-                                {file ? file.name : "افزودن فایل"}
-                            </span>
-                            <input
-                                type="file"
-                                className="hidden"
-                                disabled={loading}
-                                onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-                            />
-                        </label>
-
-                        {file && (
-                            <div className="flex items-center gap-2 rounded-xl bg-gray-50 px-3 py-2 dark:bg-white/[0.03]">
-                                <Paperclip size={12} className="shrink-0 text-gray-400" />
-                                <span className="min-w-0 flex-1 truncate text-[11px] font-semibold text-gray-600 dark:text-gray-300">
-                                    {file.name}
+                        <div>
+                            <label className="flex h-[54px] cursor-pointer items-center gap-3 rounded-[1.1rem] border border-dashed border-gray-200 bg-gray-50/60 px-3.5 transition-colors hover:border-blue-400 hover:bg-blue-50/40 dark:border-white/[0.1] dark:bg-white/[0.02] dark:hover:border-blue-500/40 dark:hover:bg-blue-500/[0.05]">
+                                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white text-gray-400 shadow-sm dark:bg-white/[0.06]">
+                                    <Upload size={15} />
                                 </span>
-                                <button
-                                    type="button"
-                                    onClick={() => setFile(null)}
-                                    className="shrink-0 text-gray-400 transition-colors hover:text-red-500"
-                                >
-                                    <X size={12} />
-                                </button>
-                            </div>
-                        )}
+                                <span className="min-w-0 flex-1">
+                                    <span className="block truncate text-[12px] font-bold text-gray-600 dark:text-gray-300">
+                                        {file ? "تغییر فایل" : "افزودن فایل"}
+                                    </span>
+                                    <span className="block text-[9.5px] font-medium text-gray-400">
+                                        ضمیمه‌ی اختیاری
+                                    </span>
+                                </span>
+                                <input
+                                    type="file"
+                                    className="hidden"
+                                    disabled={loading}
+                                    onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+                                />
+                            </label>
 
-                        {error && (
-                            <div className="flex items-start gap-2.5 rounded-2xl bg-red-50 px-3.5 py-3 dark:bg-red-500/10">
-                                <FileText size={14} className="mt-0.5 shrink-0 text-red-500" />
-                                <p className="flex-1 text-[11.5px] font-semibold leading-5 text-red-500 dark:text-red-400">
-                                    {error}
-                                </p>
-                                <button
-                                    type="button"
-                                    onClick={() => setError("")}
-                                    className="shrink-0 text-red-400 transition-colors hover:text-red-600"
+                            {file && (
+                                <div className="mt-2 flex items-center gap-2 rounded-xl bg-gray-50 px-3 py-2 dark:bg-white/[0.03]">
+                                    <Paperclip size={12} className="shrink-0 text-gray-400" />
+                                    <span className="min-w-0 flex-1 truncate text-[11px] font-semibold text-gray-600 dark:text-gray-300">
+                                        {file.name}
+                                    </span>
+                                    <button
+                                        type="button"
+                                        onClick={() => setFile(null)}
+                                        className="shrink-0 text-gray-400 transition-colors hover:text-red-500"
+                                    >
+                                        <X size={12} />
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+
+                        <AnimatePresence>
+                            {error && (
+                                <motion.div
+                                    initial={{ opacity: 0, y: 6 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0, y: 4 }}
+                                    className="flex items-start gap-2.5 rounded-2xl bg-red-50 px-3.5 py-3 dark:bg-red-500/10"
                                 >
-                                    <X size={13} />
-                                </button>
-                            </div>
-                        )}
+                                    <AlertCircle size={14} className="mt-0.5 shrink-0 text-red-500" />
+                                    <p className="flex-1 text-[11.5px] font-semibold leading-5 text-red-500 dark:text-red-400">
+                                        {error}
+                                    </p>
+                                    <button
+                                        type="button"
+                                        onClick={() => setError("")}
+                                        className="shrink-0 text-red-400 transition-colors hover:text-red-600"
+                                    >
+                                        <X size={13} />
+                                    </button>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
                     </div>
                 </div>
 
-                <div className="flex shrink-0 items-center gap-2 px-8 pb-8 pt-5">
+                <div className="flex shrink-0 items-center gap-2.5 px-7 pb-7 pt-5">
                     <button
                         type="button"
                         onClick={onClose}
                         disabled={loading}
-                        className="flex-1 rounded-full bg-gray-100 py-3 text-[12.5px] font-bold text-gray-500 transition-colors hover:bg-gray-200 disabled:opacity-40 dark:bg-white/[0.05] dark:text-gray-300 dark:hover:bg-white/[0.08]"
+                        className="h-12 flex-1 rounded-full bg-gray-100 text-[12.5px] font-bold text-gray-500 transition-colors hover:bg-gray-200 disabled:opacity-40 dark:bg-white/[0.05] dark:text-gray-300 dark:hover:bg-white/[0.08]"
                     >
                         انصراف
                     </button>
@@ -430,24 +494,15 @@ export default function WarehouseEmployeeOrderTaskStatusModal({
                         whileTap={{ scale: 0.97 }}
                         onClick={submit}
                         disabled={loading}
-                        className="flex h-11 flex-1 items-center justify-center gap-2 rounded-full text-[13px] font-bold text-white transition-colors disabled:opacity-50"
-                        style={{
-                            background:
-                                status === "completed"
-                                    ? "linear-gradient(135deg,#10b981,#059669)"
-                                    : "linear-gradient(135deg,#f43f5e,#e11d48)",
-                            boxShadow:
-                                status === "completed"
-                                    ? "0 10px 24px rgba(16,185,129,0.22)"
-                                    : "0 10px 24px rgba(244,63,94,0.22)",
-                        }}
+                        className="flex h-12 flex-[1.4] items-center justify-center gap-2 rounded-full text-[13px] font-extrabold text-white transition-opacity disabled:opacity-50"
+                        style={{ background: tone.gradient, boxShadow: tone.shadow }}
                     >
                         {loading ? (
-                            <Loader2 size={15} className="animate-spin" />
+                            <Loader2 size={16} className="animate-spin" />
                         ) : (
                             <>
-                                {status === "completed" ? <Check size={14} strokeWidth={3} /> : <XCircle size={15} />}
-                                ثبت نتیجه
+                                {isCompleted ? <Check size={15} strokeWidth={3} /> : <XCircle size={16} />}
+                                {isCompleted ? "تایید و ثبت نتیجه" : "ثبت لغو"}
                             </>
                         )}
                     </motion.button>

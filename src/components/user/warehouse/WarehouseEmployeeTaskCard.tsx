@@ -12,6 +12,7 @@ import {
     Loader2,
     Package,
     PackageCheck,
+    Paperclip,
     RotateCcw,
     ShieldCheck,
     Upload,
@@ -30,6 +31,42 @@ interface WarehouseEmployeeTaskCardProps {
 }
 
 type ActionType = "complete" | "cancel" | "reopen" | null;
+
+const ACTION_TONES = {
+    complete: {
+        title: "تکمیل وظیفه",
+        subtitle: "ثبت مقدار دریافت‌شده و پایان کار",
+        submit: "تکمیل وظیفه",
+        accent: "#10b981",
+        soft: "rgba(16,185,129,0.12)",
+        border: "rgba(16,185,129,0.22)",
+        bar: "linear-gradient(90deg,#10b981,#34d399,#06b6d4)",
+        gradient: "linear-gradient(135deg,#10b981,#059669)",
+        shadow: "0 12px 26px rgba(16,185,129,0.28)",
+    },
+    cancel: {
+        title: "لغو وظیفه",
+        subtitle: "ثبت دلیل انجام نشدن وظیفه",
+        submit: "لغو وظیفه",
+        accent: "#f43f5e",
+        soft: "rgba(244,63,94,0.12)",
+        border: "rgba(244,63,94,0.22)",
+        bar: "linear-gradient(90deg,#f43f5e,#fb7185,#f97316)",
+        gradient: "linear-gradient(135deg,#f43f5e,#e11d48)",
+        shadow: "0 12px 26px rgba(244,63,94,0.28)",
+    },
+    reopen: {
+        title: "بازگشایی وظیفه",
+        subtitle: "بازگرداندن وظیفه به لیست کارها",
+        submit: "بازگشایی",
+        accent: "#f59e0b",
+        soft: "rgba(245,158,11,0.12)",
+        border: "rgba(245,158,11,0.22)",
+        bar: "linear-gradient(90deg,#f59e0b,#fbbf24,#f97316)",
+        gradient: "linear-gradient(135deg,#f59e0b,#f97316)",
+        shadow: "0 12px 26px rgba(245,158,11,0.28)",
+    },
+} as const;
 
 const AVATAR_GRADIENTS = [
     ["#6366f1", "#8b5cf6"],
@@ -125,44 +162,6 @@ const getStatusMeta = (status: string | null | undefined) => {
         text: "text-amber-600 dark:text-amber-300",
     };
 };
-
-function FloatingInput({
-    label,
-    id,
-    value,
-    onChange,
-    type = "text",
-    disabled,
-    placeholder,
-}: {
-    label: string;
-    id: string;
-    value: string;
-    onChange: (v: string) => void;
-    type?: string;
-    disabled?: boolean;
-    placeholder?: string;
-}) {
-    return (
-        <div className="relative">
-            <input
-                id={id}
-                type={type}
-                placeholder={placeholder || " "}
-                value={value}
-                onChange={(e) => onChange(e.target.value)}
-                disabled={disabled}
-                className="peer h-[52px] w-full rounded-2xl border border-gray-100 bg-gray-50 px-4 pt-4 text-[12.5px] font-bold text-gray-900 outline-none transition-colors focus:border-blue-500 disabled:opacity-60 dark:border-white/[0.06] dark:bg-white/[0.03] dark:text-white dark:focus:border-blue-500/50"
-            />
-            <label
-                htmlFor={id}
-                className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[12px] font-semibold text-gray-400 transition-all duration-200 peer-focus:top-[15px] peer-focus:text-[10px] peer-focus:text-blue-500 peer-[:not(:placeholder-shown)]:top-[15px] peer-[:not(:placeholder-shown)]:text-[10px]"
-            >
-                {label}
-            </label>
-        </div>
-    );
-}
 
 export default function WarehouseEmployeeTaskCard({
     task,
@@ -309,7 +308,7 @@ export default function WarehouseEmployeeTaskCard({
                         : "0 8px 24px rgba(15,23,42,0.05)",
                 }}
             >
-                {/* SVG border gradient animation */}
+
                 <svg className="pointer-events-none absolute inset-0 h-full w-full">
                     <defs>
                         <linearGradient
@@ -343,7 +342,6 @@ export default function WarehouseEmployeeTaskCard({
                     />
                 </svg>
 
-                {/* Product Header */}
                 <div className="relative z-[1] flex items-start gap-3">
                     <div
                         className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-[15px] font-extrabold text-white shadow-lg"
@@ -384,7 +382,6 @@ export default function WarehouseEmployeeTaskCard({
                     </div>
                 </div>
 
-                {/* Info Grid */}
                 <div className="relative z-[1] mt-4 grid grid-cols-3 gap-1.5">
                     <div
                         className="rounded-2xl px-2.5 py-2"
@@ -455,7 +452,6 @@ export default function WarehouseEmployeeTaskCard({
                     </div>
                 </div>
 
-                {/* Progress Bar */}
                 <div className="relative z-[1] mt-3">
                     <div className="mb-1.5 flex items-center justify-between">
                         <span className="text-[10.5px] font-bold text-gray-400 dark:text-white/40">
@@ -498,7 +494,6 @@ export default function WarehouseEmployeeTaskCard({
                     </div>
                 </div>
 
-                {/* Note Preview */}
                 {task.note && (
                     <div className="relative z-[1] mt-3 flex items-start gap-2 rounded-xl bg-gray-50 px-2.5 py-2 dark:bg-white/[0.025]">
                         <FileText
@@ -511,7 +506,6 @@ export default function WarehouseEmployeeTaskCard({
                     </div>
                 )}
 
-                {/* Footer */}
                 <div
                     className="relative z-[1] mt-3 flex items-center justify-between border-t pt-2.5"
                     style={{
@@ -540,7 +534,6 @@ export default function WarehouseEmployeeTaskCard({
                     )}
                 </div>
 
-                {/* Action Buttons */}
                 <div className="relative z-[1] mt-3">
                     {isPending && (
                         <div className="grid grid-cols-2 gap-2">
@@ -622,238 +615,268 @@ export default function WarehouseEmployeeTaskCard({
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-[100] flex items-center justify-center px-4"
+                        className="fixed inset-0 z-[100] flex items-center justify-center px-4 py-4"
                         style={{
-                            background: "rgba(0,0,0,0.5)",
-                            backdropFilter: "blur(4px)",
+                            background: "rgba(2,6,23,0.55)",
+                            backdropFilter: "blur(6px)",
                         }}
                         onClick={closeAction}
                     >
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.96, y: 16 }}
-                            animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.96, y: 16 }}
-                            transition={{ duration: 0.2 }}
-                            onClick={(e) => e.stopPropagation()}
-                            dir="rtl"
-                            className="flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-sm dark:border-white/[0.06] dark:bg-[#0f172a]"
-                        >
-                            {/* Header */}
-                            <div className="flex shrink-0 items-center justify-between px-8 pb-6 pt-8">
-                                <div className="flex items-center gap-2.5">
-                                    <div
-                                        className="flex h-9 w-9 items-center justify-center rounded-xl"
-                                        style={{
-                                            background:
-                                                action === "reopen"
-                                                    ? isDark
-                                                        ? "rgba(245,158,11,0.14)"
-                                                        : "rgba(245,158,11,0.1)"
-                                                    : action === "cancel"
-                                                        ? isDark
-                                                            ? "rgba(239,68,68,0.14)"
-                                                            : "rgba(239,68,68,0.1)"
-                                                        : isDark
-                                                            ? "rgba(16,185,129,0.14)"
-                                                            : "rgba(16,185,129,0.1)",
-                                        }}
-                                    >
-                                        {action === "complete" ? (
-                                            <CheckCircle2
-                                                size={15}
-                                                className="text-emerald-500"
-                                            />
-                                        ) : action === "cancel" ? (
-                                            <XCircle
-                                                size={15}
-                                                className="text-red-500"
-                                            />
-                                        ) : (
-                                            <RotateCcw
-                                                size={15}
-                                                className="text-amber-500"
-                                            />
-                                        )}
-                                    </div>
-                                    <div>
-                                        <h3 className="text-[14px] font-extrabold text-gray-900 dark:text-white">
-                                            {action === "complete"
-                                                ? "تکمیل وظیفه"
-                                                : action === "cancel"
-                                                    ? "لغو وظیفه"
-                                                    : "بازگشایی وظیفه"}
-                                        </h3>
-                                        <p className="mt-0.5 truncate max-w-[220px] text-[11px] text-gray-400">
-                                            {task.product_name || "محصول نامشخص"}
-                                        </p>
-                                    </div>
-                                </div>
+                        {(() => {
+                            const tone = ACTION_TONES[action];
+                            const isReopen = action === "reopen";
+                            const isCancel = action === "cancel";
+                            const ActionIcon = isReopen ? RotateCcw : isCancel ? XCircle : CheckCircle2;
+                            const expectedLabel = new Intl.NumberFormat("fa-IR").format(
+                                Number.isFinite(expected) ? expected : 0
+                            );
 
-                                <button
-                                    type="button"
-                                    onClick={closeAction}
-                                    disabled={submitting}
-                                    className="flex h-8 w-8 items-center justify-center rounded-xl bg-gray-100 text-gray-400 transition-colors hover:text-gray-600 disabled:opacity-40 dark:bg-white/[0.05] dark:hover:text-gray-300"
+                            return (
+                                <motion.div
+                                    initial={{ opacity: 0, scale: 0.95, y: 18 }}
+                                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                                    exit={{ opacity: 0, scale: 0.95, y: 18 }}
+                                    transition={{ duration: 0.22, ease: "easeOut" }}
+                                    onClick={(e) => e.stopPropagation()}
+                                    dir="rtl"
+                                    className="flex max-h-[92vh] w-full max-w-md flex-col overflow-hidden rounded-[2rem] border border-white/80 bg-white shadow-2xl shadow-black/20 dark:border-white/[0.07] dark:bg-[#0f172a]"
                                 >
-                                    <X size={15} />
-                                </button>
-                            </div>
+                                    <div className="h-1.5 w-full shrink-0" style={{ background: tone.bar }} />
 
-                            <div className="flex-1 overflow-y-auto px-8 pb-2">
-                                {action === "reopen" ? (
-                                    <div
-                                        className="rounded-2xl px-3.5 py-3 text-[11.5px] font-medium leading-6"
-                                        style={{
-                                            color: isDark
-                                                ? "#fcd34d"
-                                                : "#b45309",
-                                            background: isDark
-                                                ? "rgba(245,158,11,.08)"
-                                                : "#fffbeb",
-                                        }}
-                                    >
-                                        این وظیفه از حالت لغوشده خارج می‌شود و
-                                        مجدداً در لیست وظایف قابل انجام قرار
-                                        می‌گیرد.
-                                    </div>
-                                ) : (
-                                    <div className="flex flex-col gap-4">
-                                        <FloatingInput
-                                            id={`task_quantity_${task.id}`}
-                                            label="مقدار دریافت‌شده"
-                                            type="number"
-                                            value={receivedQuantity}
-                                            onChange={setReceivedQuantity}
-                                            disabled={submitting}
-                                        />
-
-                                        <div className="relative">
-                                            <textarea
-                                                value={note}
-                                                onChange={(e) =>
-                                                    setNote(e.target.value)
-                                                }
-                                                disabled={submitting}
-                                                rows={3}
-                                                placeholder={
-                                                    action === "cancel"
-                                                        ? "دلیل انجام نشدن وظیفه را وارد کنید *"
-                                                        : "توضیحات اختیاری"
-                                                }
-                                                className="peer w-full resize-none rounded-2xl border border-gray-100 bg-gray-50 px-4 pt-6 pb-3 text-[12.5px] font-bold text-gray-900 outline-none transition-colors focus:border-blue-500 disabled:opacity-60 dark:border-white/[0.06] dark:bg-white/[0.03] dark:text-white dark:focus:border-blue-500/50"
-                                            />
-                                            <label className="pointer-events-none absolute right-4 top-4 text-[12px] font-semibold text-gray-400 transition-all duration-200 peer-focus:top-[15px] peer-focus:text-[10px] peer-focus:text-blue-500 peer-[:not(:placeholder-shown)]:top-[15px] peer-[:not(:placeholder-shown)]:text-[10px]">
-                                                توضیحات
-                                                {action === "cancel" ? " *" : ""}
-                                            </label>
+                                    <div className="flex shrink-0 items-start justify-between gap-3 px-7 pb-5 pt-6">
+                                        <div className="flex min-w-0 items-center gap-3.5">
+                                            <div
+                                                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl"
+                                                style={{
+                                                    background: tone.soft,
+                                                    border: `1px solid ${tone.border}`,
+                                                }}
+                                            >
+                                                <ActionIcon size={21} style={{ color: tone.accent }} />
+                                            </div>
+                                            <div className="min-w-0">
+                                                <h3 className="text-[15px] font-extrabold text-gray-900 dark:text-white">
+                                                    {tone.title}
+                                                </h3>
+                                                <p className="mt-1 truncate text-[11px] font-medium text-gray-400">
+                                                    {tone.subtitle}
+                                                </p>
+                                            </div>
                                         </div>
 
-                                        <label className="flex h-[52px] cursor-pointer items-center gap-2.5 rounded-2xl border border-dashed border-gray-200 bg-gray-50/60 px-3.5 transition-colors hover:border-blue-400 hover:bg-blue-50/40 dark:border-white/[0.1] dark:bg-white/[0.02] dark:hover:border-blue-500/40 dark:hover:bg-blue-500/[0.05]">
-                                            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-white text-gray-400 shadow-sm dark:bg-white/[0.06]">
-                                                <Upload size={14} />
-                                            </span>
-                                            <span className="truncate text-[12px] font-bold text-gray-500 dark:text-gray-400">
-                                                {file ? file.name : "افزودن فایل"}
-                                            </span>
-                                            <input
-                                                type="file"
-                                                className="hidden"
-                                                disabled={submitting}
-                                                onChange={(e) =>
-                                                    setFile(
-                                                        e.target.files?.[0] ??
-                                                        null
-                                                    )
-                                                }
-                                            />
-                                        </label>
-                                    </div>
-                                )}
-
-                                {error && (
-                                    <motion.div
-                                        initial={{ opacity: 0, y: 6 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        className="mt-4 flex items-start gap-2.5 rounded-2xl bg-red-50 px-3.5 py-3 dark:bg-red-500/10"
-                                    >
-                                        <AlertCircle
-                                            size={14}
-                                            className="mt-0.5 shrink-0 text-red-500"
-                                        />
-                                        <p className="flex-1 text-[11.5px] font-semibold leading-5 text-red-500 dark:text-red-400">
-                                            {error}
-                                        </p>
                                         <button
                                             type="button"
-                                            onClick={() => setError("")}
-                                            className="shrink-0 text-red-400 transition-colors hover:text-red-600"
+                                            onClick={closeAction}
+                                            disabled={submitting}
+                                            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gray-100 text-gray-400 transition-all hover:bg-gray-200 hover:text-gray-700 disabled:opacity-40 dark:bg-white/[0.05] dark:hover:bg-white/[0.09] dark:hover:text-white"
                                         >
-                                            <X size={13} />
+                                            <X size={15} />
                                         </button>
-                                    </motion.div>
-                                )}
-                            </div>
+                                    </div>
 
-                            <div className="flex shrink-0 items-center gap-2 px-8 pb-8 pt-5">
-                                {action !== "reopen" && (
-                                    <button
-                                        type="button"
-                                        onClick={closeAction}
-                                        disabled={submitting}
-                                        className="flex-1 rounded-full bg-gray-100 py-3 text-[12.5px] font-bold text-gray-500 transition-colors hover:bg-gray-200 disabled:opacity-40 dark:bg-white/[0.05] dark:text-gray-300 dark:hover:bg-white/[0.08]"
-                                    >
-                                        انصراف
-                                    </button>
-                                )}
+                                    <div className="flex-1 overflow-y-auto px-7 pb-2">
+                                        <div className="flex flex-col gap-4">
+                                            <div className="flex items-center gap-3 rounded-[1.4rem] border border-gray-100 bg-gray-50/80 p-3 dark:border-white/[0.06] dark:bg-white/[0.03]">
+                                                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-500 text-white shadow-lg shadow-indigo-500/20">
+                                                    <Package size={18} />
+                                                </div>
+                                                <div className="min-w-0 flex-1">
+                                                    <p className="text-[9.5px] font-bold text-gray-400">محصول وظیفه</p>
+                                                    <p className="mt-0.5 truncate text-[12.5px] font-black text-gray-800 dark:text-gray-100">
+                                                        {task.product_name || "محصول نامشخص"}
+                                                    </p>
+                                                </div>
+                                                <div className="shrink-0 rounded-xl bg-white px-2.5 py-1.5 text-center shadow-sm dark:bg-white/[0.06]">
+                                                    <p className="text-[8.5px] font-bold text-gray-400">مورد انتظار</p>
+                                                    <p className="mt-0.5 text-[12px] font-black text-indigo-500">{expectedLabel}</p>
+                                                </div>
+                                            </div>
 
-                                <motion.button
-                                    type="button"
-                                    whileTap={{ scale: 0.97 }}
-                                    onClick={submitAction}
-                                    disabled={submitting}
-                                    className="flex h-11 flex-1 items-center justify-center gap-2 rounded-full text-[13px] font-bold text-white transition-colors disabled:opacity-50"
-                                    style={{
-                                        background:
-                                            action === "cancel"
-                                                ? "linear-gradient(135deg,#ef4444,#dc2626)"
-                                                : action === "reopen"
-                                                    ? "linear-gradient(135deg,#f59e0b,#f97316)"
-                                                    : "linear-gradient(135deg,#10b981,#059669)",
-                                        boxShadow:
-                                            action === "cancel"
-                                                ? "0 10px 24px rgba(239,68,68,0.22)"
-                                                : action === "reopen"
-                                                    ? "0 10px 24px rgba(245,158,11,0.22)"
-                                                    : "0 10px 24px rgba(16,185,129,0.22)",
-                                    }}
-                                >
-                                    {submitting ? (
-                                        <Loader2
-                                            size={15}
-                                            className="animate-spin"
-                                        />
-                                    ) : (
-                                        <>
-                                            {action === "complete" ? (
-                                                <Check
-                                                    size={14}
-                                                    strokeWidth={3}
-                                                />
-                                            ) : action === "cancel" ? (
-                                                <XCircle size={15} />
+                                            {isReopen ? (
+                                                <div
+                                                    className="flex items-start gap-3 rounded-[1.4rem] px-4 py-3.5"
+                                                    style={{
+                                                        background: tone.soft,
+                                                        border: `1px solid ${tone.border}`,
+                                                    }}
+                                                >
+                                                    <AlertCircle size={16} className="mt-0.5 shrink-0" style={{ color: tone.accent }} />
+                                                    <p className="text-[11.5px] font-semibold leading-6 text-gray-600 dark:text-gray-300">
+                                                        این وظیفه از حالت لغوشده خارج می‌شود و مجدداً در لیست وظایف قابل انجام قرار می‌گیرد.
+                                                    </p>
+                                                </div>
                                             ) : (
-                                                <RotateCcw size={15} />
+                                                <>
+                                                    <div className="rounded-[1.4rem] border border-gray-100 bg-gray-50/60 p-3.5 dark:border-white/[0.06] dark:bg-white/[0.025]">
+                                                        <div className="mb-2.5 flex items-center justify-between">
+                                                            <label
+                                                                htmlFor={`task_quantity_${task.id}`}
+                                                                className="text-[11.5px] font-black text-gray-700 dark:text-gray-200"
+                                                            >
+                                                                مقدار دریافت‌شده
+                                                            </label>
+                                                            <button
+                                                                type="button"
+                                                                disabled={submitting}
+                                                                onClick={() => setReceivedQuantity(String(task.expected_quantity ?? ""))}
+                                                                className="rounded-full px-2.5 py-1 text-[10px] font-extrabold transition-opacity hover:opacity-80 disabled:opacity-40"
+                                                                style={{ background: tone.soft, color: tone.accent }}
+                                                            >
+                                                                مقدار کامل
+                                                            </button>
+                                                        </div>
+                                                        <input
+                                                            id={`task_quantity_${task.id}`}
+                                                            type="number"
+                                                            min="0"
+                                                            step="any"
+                                                            value={receivedQuantity}
+                                                            onChange={(e) => setReceivedQuantity(e.target.value)}
+                                                            disabled={submitting}
+                                                            placeholder="مثلاً 10"
+                                                            className="h-[54px] w-full rounded-[1.1rem] border border-gray-200 bg-white px-4 text-[16px] font-black text-gray-900 outline-none transition-all placeholder:text-[11px] placeholder:font-medium placeholder:text-gray-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/[0.07] disabled:opacity-60 dark:border-white/[0.07] dark:bg-[#111827] dark:text-white dark:placeholder:text-white/20 dark:focus:border-blue-500/50"
+                                                        />
+                                                    </div>
+
+                                                    <div>
+                                                        <div className="mb-2 flex items-center justify-between px-1">
+                                                            <label
+                                                                htmlFor={`task_note_${task.id}`}
+                                                                className="text-[11.5px] font-black text-gray-700 dark:text-gray-200"
+                                                            >
+                                                                توضیحات
+                                                            </label>
+                                                            <span
+                                                                className="rounded-full px-2 py-0.5 text-[9.5px] font-extrabold"
+                                                                style={
+                                                                    isCancel
+                                                                        ? { background: tone.soft, color: tone.accent }
+                                                                        : { background: "rgba(148,163,184,0.15)", color: "#94a3b8" }
+                                                                }
+                                                            >
+                                                                {isCancel ? "الزامی" : "اختیاری"}
+                                                            </span>
+                                                        </div>
+                                                        <textarea
+                                                            id={`task_note_${task.id}`}
+                                                            value={note}
+                                                            onChange={(e) => setNote(e.target.value)}
+                                                            disabled={submitting}
+                                                            rows={3}
+                                                            placeholder={
+                                                                isCancel
+                                                                    ? "دلیل انجام نشدن وظیفه را وارد کنید..."
+                                                                    : "توضیحات مربوط به انجام وظیفه..."
+                                                            }
+                                                            className="w-full resize-none rounded-[1.1rem] border border-gray-100 bg-gray-50 px-4 py-3 text-[12.5px] font-bold leading-6 text-gray-900 outline-none transition-all placeholder:text-[11.5px] placeholder:font-medium placeholder:text-gray-300 focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/[0.07] disabled:opacity-60 dark:border-white/[0.06] dark:bg-white/[0.03] dark:text-white dark:placeholder:text-white/20 dark:focus:border-blue-500/50"
+                                                        />
+                                                    </div>
+
+                                                    <div>
+                                                        <label className="flex h-[54px] cursor-pointer items-center gap-3 rounded-[1.1rem] border border-dashed border-gray-200 bg-gray-50/60 px-3.5 transition-colors hover:border-blue-400 hover:bg-blue-50/40 dark:border-white/[0.1] dark:bg-white/[0.02] dark:hover:border-blue-500/40 dark:hover:bg-blue-500/[0.05]">
+                                                            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white text-gray-400 shadow-sm dark:bg-white/[0.06]">
+                                                                <Upload size={15} />
+                                                            </span>
+                                                            <span className="min-w-0 flex-1">
+                                                                <span className="block truncate text-[12px] font-bold text-gray-600 dark:text-gray-300">
+                                                                    {file ? "تغییر فایل" : "افزودن فایل"}
+                                                                </span>
+                                                                <span className="block text-[9.5px] font-medium text-gray-400">
+                                                                    ضمیمه‌ی اختیاری
+                                                                </span>
+                                                            </span>
+                                                            <input
+                                                                type="file"
+                                                                className="hidden"
+                                                                disabled={submitting}
+                                                                onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+                                                            />
+                                                        </label>
+
+                                                        {file && (
+                                                            <div className="mt-2 flex items-center gap-2 rounded-xl bg-gray-50 px-3 py-2 dark:bg-white/[0.03]">
+                                                                <Paperclip size={12} className="shrink-0 text-gray-400" />
+                                                                <span className="min-w-0 flex-1 truncate text-[11px] font-semibold text-gray-600 dark:text-gray-300">
+                                                                    {file.name}
+                                                                </span>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => setFile(null)}
+                                                                    className="shrink-0 text-gray-400 transition-colors hover:text-red-500"
+                                                                >
+                                                                    <X size={12} />
+                                                                </button>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </>
                                             )}
-                                            {action === "complete"
-                                                ? "تکمیل وظیفه"
-                                                : action === "cancel"
-                                                    ? "لغو وظیفه"
-                                                    : "بازگشایی"}
-                                        </>
-                                    )}
-                                </motion.button>
-                            </div>
-                        </motion.div>
+
+                                            <AnimatePresence>
+                                                {error && (
+                                                    <motion.div
+                                                        initial={{ opacity: 0, y: 6 }}
+                                                        animate={{ opacity: 1, y: 0 }}
+                                                        exit={{ opacity: 0, y: 4 }}
+                                                        className="flex items-start gap-2.5 rounded-2xl bg-red-50 px-3.5 py-3 dark:bg-red-500/10"
+                                                    >
+                                                        <AlertCircle size={14} className="mt-0.5 shrink-0 text-red-500" />
+                                                        <p className="flex-1 text-[11.5px] font-semibold leading-5 text-red-500 dark:text-red-400">
+                                                            {error}
+                                                        </p>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setError("")}
+                                                            className="shrink-0 text-red-400 transition-colors hover:text-red-600"
+                                                        >
+                                                            <X size={13} />
+                                                        </button>
+                                                    </motion.div>
+                                                )}
+                                            </AnimatePresence>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex shrink-0 items-center gap-2.5 px-7 pb-7 pt-5">
+                                        <button
+                                            type="button"
+                                            onClick={closeAction}
+                                            disabled={submitting}
+                                            className="h-12 flex-1 rounded-full bg-gray-100 text-[12.5px] font-bold text-gray-500 transition-colors hover:bg-gray-200 disabled:opacity-40 dark:bg-white/[0.05] dark:text-gray-300 dark:hover:bg-white/[0.08]"
+                                        >
+                                            انصراف
+                                        </button>
+
+                                        <motion.button
+                                            type="button"
+                                            whileTap={{ scale: 0.97 }}
+                                            onClick={submitAction}
+                                            disabled={submitting}
+                                            className="flex h-12 flex-[1.4] items-center justify-center gap-2 rounded-full text-[13px] font-extrabold text-white transition-opacity disabled:opacity-50"
+                                            style={{
+                                                background: tone.gradient,
+                                                boxShadow: tone.shadow,
+                                            }}
+                                        >
+                                            {submitting ? (
+                                                <Loader2 size={16} className="animate-spin" />
+                                            ) : (
+                                                <>
+                                                    {action === "complete" ? (
+                                                        <Check size={15} strokeWidth={3} />
+                                                    ) : isCancel ? (
+                                                        <XCircle size={16} />
+                                                    ) : (
+                                                        <RotateCcw size={16} />
+                                                    )}
+                                                    {tone.submit}
+                                                </>
+                                            )}
+                                        </motion.button>
+                                    </div>
+                                </motion.div>
+                            );
+                        })()}
                     </motion.div>
                 )}
             </AnimatePresence>

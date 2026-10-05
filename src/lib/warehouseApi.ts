@@ -6,20 +6,16 @@ import type {
   UpdateStockLimitsPayload,
 } from "@/types/warehouse";
 
-/* ============================================================
- *  همه‌ی آدرس‌ها و نام پارامترهای انبار فقط همین‌جا تعریف می‌شن
- * ============================================================ */
-
 const BASE = "/warehouse/api/v1";
 
 export const WAREHOUSE_ENDPOINTS = {
   warehouses: `${BASE}/warehouse/`,
   warehouseCreate: `${BASE}/warehouse/create/`,
   warehousePatch: (id: number) => `${BASE}/warehouse/${id}/patch/`,
-  warehouseDelete: (id: number) => `${BASE}/warehouse/${id}/delete/`,
   taskArchive: `${BASE}/warehouse_task_archive/`,
   attachmentCreate: `${BASE}/order_task/attachment/create/`,
-  attachmentDelete: (id: number) => `${BASE}/order_task/attachment/${id}/delete/`,
+  attachmentDelete: (id: number) =>
+    `${BASE}/order_task/attachment/${id}/delete/`,
   products: `${BASE}/products/`,
   categories: `${BASE}/products/categories/`,
   stock: `${BASE}/process/stock/`,
@@ -32,7 +28,6 @@ export const WAREHOUSE_ENDPOINTS = {
   staff: `${BASE}/staff/`,
 } as const;
 
-/** نام پارامتر فیلتر انبار در query لیست‌ها */
 export const WAREHOUSE_QUERY_KEY = "warehouse_id";
 
 export const PAGE_SIZE = 8;
@@ -46,7 +41,9 @@ export interface PageResult<T> {
 
 type Params = Record<string, string | number | boolean | undefined>;
 
-export const warehouseParams = (warehouseId: number | null | undefined): Params =>
+export const warehouseParams = (
+  warehouseId: number | null | undefined,
+): Params =>
   warehouseId == null ? {} : { [WAREHOUSE_QUERY_KEY]: warehouseId };
 
 function sortNewestFirst<T>(items: T[]): T[] {
@@ -60,11 +57,6 @@ function sortNewestFirst<T>(items: T[]): T[] {
   });
 }
 
-/**
- * یک صفحه از لیست را می‌گیرد.
- * - اگر بک‌اند صفحه‌بندی کند ({count, results}) فقط همان صفحه دانلود می‌شود.
- * - اگر بک‌اند آرایه‌ی ساده بدهد، همین‌جا برش داده می‌شود (رفتار قبلی).
- */
 export async function fetchPage<T>(
   url: string,
   opts: {
@@ -92,7 +84,6 @@ export async function fetchPage<T>(
       ? (data.count as number)
       : null;
 
-  // بک‌اند خودش صفحه‌بندی کرده
   if (serverCount !== null && list.length <= pageSize) {
     return {
       items: list,
@@ -102,7 +93,6 @@ export async function fetchPage<T>(
     };
   }
 
-  // بک‌اند همه‌چیز را یکجا داده → برش سمت کلاینت
   const all = opts.newestFirst ? sortNewestFirst(list) : list;
   const totalPages = Math.max(1, Math.ceil(all.length / pageSize));
   const safe = Math.min(page, totalPages);
@@ -115,8 +105,10 @@ export async function fetchPage<T>(
   };
 }
 
-/** همه‌ی رکوردهای یک لیست (برای جاهایی که واقعاً لیست کامل لازم است) */
-export async function fetchAll<T>(url: string, params: Params = {}): Promise<T[]> {
+export async function fetchAll<T>(
+  url: string,
+  params: Params = {},
+): Promise<T[]> {
   const out: T[] = [];
 
   for (let page = 1; page <= 50; page += 1) {
@@ -133,8 +125,6 @@ export async function fetchAll<T>(url: string, params: Params = {}): Promise<T[]
 
   return out;
 }
-
-/* ------------------------------ انبارها ------------------------------ */
 
 export async function fetchWarehouses(): Promise<ApiWarehouse[]> {
   return fetchAll<ApiWarehouse>(WAREHOUSE_ENDPOINTS.warehouses);
@@ -161,8 +151,11 @@ export async function patchWarehouse(
   return data;
 }
 
-export async function deleteWarehouse(id: number) {
-  await axiosInstance.delete(WAREHOUSE_ENDPOINTS.warehouseDelete(id));
+export async function setWarehouseActive(
+  id: number,
+  isActive: boolean,
+): Promise<ApiWarehouse> {
+  return patchWarehouse(id, { is_active: isActive });
 }
 
 export async function createOrderTaskAttachment(input: {
