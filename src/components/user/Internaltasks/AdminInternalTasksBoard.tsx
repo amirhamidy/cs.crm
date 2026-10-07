@@ -6,6 +6,7 @@ import {
     Ban,
     CheckCircle2,
     ClipboardX,
+    Clock3,
     Inbox,
     LayoutGrid,
     Loader,
@@ -26,6 +27,7 @@ import {
     fetchEmployeeList,
     fetchInternalTasks,
     reopenInternalTask,
+    patchInternalTaskDeadline,
 } from "./Api";
 import InternalTaskActionModal from "./InternalTaskActionModal";
 import type {
@@ -36,6 +38,7 @@ import type {
 } from "./types";
 import AdminInternalTaskChatModal from "./AdminInternalTaskChatModal";
 import CreateTicketModal from "./Createticketmodal";
+import InternalTimeRangeModal from "./InternalTimeRangeModal";
 
 type AdminEmployee = EmployeeListItem & {
     id?: number;
@@ -391,6 +394,13 @@ const AdminInternalTaskCard = memo(
         const [reopening, setReopening] = useState(false);
         const [statusError, setStatusError] =
             useState<string | null>(null);
+        const [timeModalOpen, setTimeModalOpen] = useState(false);
+        const [savingTime, setSavingTime] = useState(false);
+        const [timeError, setTimeError] = useState<string | null>(null);
+        const [schedule, setSchedule] = useState({
+            started_at: task.started_at ?? null,
+            deadline: task.deadline ?? null,
+        });
 
         const statusConfig = getStatusConfig(task.status);
         const isCompleted = task.status === "completed";
@@ -430,6 +440,36 @@ const AdminInternalTaskCard = memo(
             ) !== Number(currentUserId);
 
         const canAct = isSent;
+
+        async function handleTimeSubmit(startedAt: string, deadline: string) {
+            setSavingTime(true);
+            setTimeError(null);
+
+            try {
+                const { data } = await patchInternalTaskDeadline(task.id, {
+                    started_at: startedAt,
+                    deadline,
+                });
+
+                const updatedStartedAt = data?.started_at ?? startedAt;
+                const updatedDeadline = data?.deadline ?? deadline;
+
+                setSchedule({
+                    started_at: updatedStartedAt,
+                    deadline: updatedDeadline,
+                });
+                onStatusChange({
+                    ...task,
+                    started_at: updatedStartedAt,
+                    deadline: updatedDeadline,
+                });
+                setTimeModalOpen(false);
+            } catch {
+                setTimeError("خطا در ثبت بازه زمانی");
+            } finally {
+                setSavingTime(false);
+            }
+        }
 
         async function handleReopen(
             event: React.MouseEvent,
@@ -766,6 +806,56 @@ const AdminInternalTaskCard = memo(
                     </div>
                 </div>
 
+                {isSent && (schedule.started_at || schedule.deadline) && (
+                    <button
+                        type="button"
+                        onClick={(event) => {
+                            event.stopPropagation();
+                            setTimeError(null);
+                            setTimeModalOpen(true);
+                        }}
+                        className="relative z-10 flex items-center gap-2 rounded-[1.15rem] border px-3 py-2 text-right transition-colors hover:bg-indigo-500/5"
+                        style={{
+                            borderColor: isDark ? "rgba(99,102,241,.14)" : "rgba(99,102,241,.1)",
+                            background: isDark ? "rgba(99,102,241,.045)" : "rgba(99,102,241,.03)",
+                        }}
+                    >
+                        <Clock3 size={12} className="shrink-0 text-indigo-500" />
+                        <span className="truncate text-[10px] font-bold text-black/55 dark:text-white/55">
+                            {schedule.deadline
+                                ? `مهلت: ${formatDate(schedule.deadline)}`
+                                : `شروع: ${formatDate(schedule.started_at)}`}
+                        </span>
+                    </button>
+                )}
+
+                {isSent && !schedule.started_at && !schedule.deadline && (
+                    <button
+                        type="button"
+                        onClick={(event) => {
+                            event.stopPropagation();
+                            setTimeError(null);
+                            setTimeModalOpen(true);
+                        }}
+                        className="relative z-10 flex items-center justify-center gap-1.5 rounded-[1.15rem] border border-dashed px-3 py-2 text-[10px] font-bold text-indigo-500 transition-colors hover:bg-indigo-500/5"
+                        style={{
+                            borderColor: isDark ? "rgba(99,102,241,.18)" : "rgba(99,102,241,.14)",
+                        }}
+                    >
+                        <Clock3 size={12} />
+                        تعیین ددلاین
+                    </button>
+                )}
+
+                {timeError && (
+                    <p
+                        onClick={(event) => event.stopPropagation()}
+                        className="relative z-10 rounded-xl bg-red-500/10 px-3 py-2 text-center text-[10px] font-bold text-red-500"
+                    >
+                        {timeError}
+                    </p>
+                )}
+
                 <div
                     className="relative z-10 mt-auto flex items-center justify-between rounded-[1.15rem] px-3 py-2.5"
                     style={{
@@ -871,6 +961,20 @@ const AdminInternalTaskCard = memo(
                                     بازگشایی تیکت
                                 </button>
                             )}
+                    </div>
+                )}
+
+                {timeModalOpen && isSent && (
+                    <div onClick={(event) => event.stopPropagation()}>
+                        <InternalTimeRangeModal
+                            open={timeModalOpen}
+                            initialStartedAt={schedule.started_at}
+                            initialDeadline={schedule.deadline}
+                            onClose={() => {
+                                if (!savingTime) setTimeModalOpen(false);
+                            }}
+                            onSubmit={handleTimeSubmit}
+                        />
                     </div>
                 )}
 

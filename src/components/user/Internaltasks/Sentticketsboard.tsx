@@ -7,7 +7,11 @@ import { fetchInternalTasks, deleteInternalTask } from "./Api";
 import type { InternalTask, InternalTaskStatus } from "./types";
 import SentTaskCard from "./Senttaskcard";
 import CreateTicketModal from "./Createticketmodal";
-
+interface InternalTaskDeadlineResponse {
+    id: number;
+    started_at: string | null;
+    deadline: string | null;
+}
 function normalizeDateValue(value: unknown): string | null {
     if (!value) return null;
     if (typeof value === "string") return value.trim() || null;

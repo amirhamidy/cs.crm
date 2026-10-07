@@ -9,7 +9,7 @@ import type { AxiosError } from "axios";
 import axiosInstance from "@/lib/axiosInstance";
 import UserCard from "@/components/admin/users/UserCard";
 import AddUserModal from "@/components/admin/users/AddUserPage";
-import type { ApiEmployee } from "@/types/users";
+import type { ApiEmployee, ApiUser } from "@/types/users";
 
 interface TaskItem {
     id: number;
@@ -94,12 +94,18 @@ const extractDepartmentEmployees = (
     return data?.results ?? [];
 };
 
+const extractUsers = (data: ApiUser[] | { results?: ApiUser[] }): ApiUser[] => {
+    if (Array.isArray(data)) return data;
+    return data?.results ?? [];
+};
+
 export default function UsersPage() {
     const { resolvedTheme } = useTheme();
     const isDark = resolvedTheme === "dark";
 
 
     const [employees, setEmployees] = useState<ApiEmployee[]>([]);
+    const [adminUsers, setAdminUsers] = useState<ApiUser[]>([]);
     const [departmentNames, setDepartmentNames] = useState<
         Map<number, string>
     >(new Map());
@@ -120,12 +126,16 @@ export default function UsersPage() {
         try {
             const [
                 employeesRes,
+                usersRes,
                 tasksRes,
                 internalTasksRes,
                 departmentEmployeesRes,
             ] = await Promise.all([
                 axiosInstance.get<ApiEmployee[]>(
                     "/accounts/api/v1/employee/list/",
+                ),
+                axiosInstance.get<ApiUser[]>(
+                    "/accounts/api/v1/user/list/",
                 ),
                 axiosInstance
                     .get<TasksResponse>("/tasks/api/v1/tasks/")
@@ -152,7 +162,17 @@ export default function UsersPage() {
                 ? employeesRes.data
                 : [];
 
-            setEmployees(employeeList);
+            const userList = extractUsers(usersRes.data);
+            const adminList = userList.filter((user) => Number(user.type) === 1);
+            const adminUsernames = new Set(
+                adminList.map((user) => user.username.trim().toLowerCase()),
+            );
+            const filteredEmployeeList = employeeList.filter(
+                (employee) => !adminUsernames.has(employee.username.trim().toLowerCase()),
+            );
+
+            setEmployees(filteredEmployeeList);
+            setAdminUsers(adminList);
 
             const departmentEmployeeList =
                 extractDepartmentEmployees(
@@ -264,6 +284,7 @@ export default function UsersPage() {
             );
 
             setEmployees([]);
+            setAdminUsers([]);
             setDepartmentNames(new Map());
             setEmployeesWithTasks(new Set());
             setActiveTasks(new Map());
@@ -305,7 +326,7 @@ export default function UsersPage() {
                         <p className="mt-0.5 text-[11.5px] text-gray-500 dark:text-gray-400">
                             {loading
                                 ? "در حال بارگذاری..."
-                                : `${employees.length} کاربر ثبت شده`}
+                                : `${employees.length + adminUsers.length} کاربر ثبت شده`}
                         </p>
                     </div>
                 </div>
@@ -390,7 +411,8 @@ export default function UsersPage() {
 
             {!loading &&
                 !error &&
-                employees.length === 0 && (
+                employees.length === 0 &&
+                adminUsers.length === 0 && (
                     <div className="flex flex-col items-center justify-center gap-2 py-16">
                         <Users
                             size={28}
@@ -405,7 +427,7 @@ export default function UsersPage() {
 
             {!loading &&
                 !error &&
-                employees.length > 0 && (
+                (employees.length > 0 || adminUsers.length > 0) && (
                     <motion.div
                         layout
                         className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4"
@@ -426,7 +448,7 @@ export default function UsersPage() {
                                                 employee.id,
                                             ) ?? []
                                         }
-                                        index={index}
+                                        index={adminUsers.length + index}
                                         hasActiveTasks={employeesWithTasks.has(
                                             employee.id,
                                         )}
@@ -504,6 +526,27 @@ export default function UsersPage() {
                                     />
                                 ),
                             )}
+                            {adminUsers.map((user, index) => (
+                                <UserCard
+                                    key={`admin-${user.id}`}
+                                    employee={{
+                                        id: -user.id,
+                                        full_name: user.username,
+                                        username: user.username,
+                                        type: 1,
+                                        user: user.id,
+                                        user_id: user.id,
+                                        created_at: user.created_at,
+                                        updated_at: user.updated_at,
+                                    }}
+                                    departmentName="مدیریت سیستم"
+                                    activeTaskTitles={[]}
+                                    index={employees.length + index}
+                                    hasActiveTasks={false}
+                                    onDelete={() => undefined}
+                                    onUpdated={() => undefined}
+                                />
+                            ))}
                         </AnimatePresence>
                     </motion.div>
                 )}

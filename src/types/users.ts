@@ -3,11 +3,12 @@ export type UserType = 1 | 2;
 export interface ApiEmployee {
   id: number;
   full_name: string;
-  type: number;
+  type?: number;
   username: string;
+  user?: number;
+  user_id?: number;
   created_at: string;
   updated_at: string;
-  user: number;
   department?: number;
   role?: string;
 }

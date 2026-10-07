@@ -14,6 +14,12 @@ export interface InternalTaskAttachment {
 
 export type InternalTaskStatus = "in_progress" | "completed" | "cancelled";
 
+export interface InternalTaskDeadline {
+  id: number;
+  started_at: string | null;
+  deadline: string | null;
+}
+
 export interface InternalTask {
   id: number;
   title: string;
@@ -28,6 +34,14 @@ export interface InternalTask {
   completed_at: string | null;
   attachments: InternalTaskAttachment[];
 }
+
+export type InternalTaskApiResponse = Omit<
+  InternalTask,
+  "deadline" | "started_at"
+> & {
+  started_at?: string | null;
+  deadline: InternalTaskDeadline | null;
+};
 
 export interface InternalTaskRoutine {
   id: number;
