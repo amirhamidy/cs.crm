@@ -15,7 +15,6 @@ import {
   ShoppingCart,
   ShieldCheck,
 } from "lucide-react";
-
 import { LucideIcon } from "lucide-react";
 
 export interface MenuItem {
@@ -29,36 +28,6 @@ export const adminMenuItems: MenuItem[] = [
     icon: Home,
     label: "داشبورد",
     href: "/admin/dashboard",
-  },
-  {
-    icon: Users,
-    label: "کاربران",
-    href: "/admin/users",
-  },
-  {
-    icon: Building2,
-    label: "دپارتمان‌ها",
-    href: "/admin/departments",
-  },
-  {
-    icon: Users,
-    label: "منابع انسانی",
-    href: "/admin/human-resources",
-  },
-  {
-    icon: Boxes,
-    label: "انبار",
-    href: "/admin/warehouse",
-  },
-  {
-    icon: ShoppingCart,
-    label: "فرآیند خرید و تولید",
-    href: "/admin/purchasing",
-  },
-  {
-    icon: ShieldCheck,
-    label: "کنترل کیفی",
-    href: "/admin/qualityControl",
   },
   {
     icon: FolderKanban,
@@ -77,7 +46,7 @@ export const adminMenuItems: MenuItem[] = [
   },
   {
     icon: ClipboardList,
-    label: "وظایف  تکرار شونده",
+    label: "وظایف تکرارشونده",
     href: "/admin/taskroutine",
   },
   {
@@ -86,9 +55,44 @@ export const adminMenuItems: MenuItem[] = [
     href: "/admin/staffConversation",
   },
   {
+    icon: Archive,
+    label: "بایگانی تیکت‌ها",
+    href: "/admin/Ticketarchive",
+  },
+  {
     icon: UserRound,
     label: "مشتری",
     href: "/admin/customer",
+  },
+  {
+    icon: Boxes,
+    label: "انبار",
+    href: "/admin/warehouse",
+  },
+  {
+    icon: ShoppingCart,
+    label: "فرآیند خرید و تولید",
+    href: "/admin/purchasing",
+  },
+  {
+    icon: ShieldCheck,
+    label: "کنترل کیفی",
+    href: "/admin/qualityControl",
+  },
+  {
+    icon: Users,
+    label: "منابع انسانی",
+    href: "/admin/human-resources",
+  },
+  {
+    icon: Building2,
+    label: "دپارتمان‌ها",
+    href: "/admin/departments",
+  },
+  {
+    icon: Users,
+    label: "کاربران",
+    href: "/admin/users",
   },
   {
     icon: BarChart3,
@@ -100,11 +104,6 @@ export const adminMenuItems: MenuItem[] = [
     label: "تقویم",
     href: "/admin/calendar",
   },
-  {
-    icon: Archive,
-    label: "بایگانی تیکت‌ها",
-    href: "/admin/Ticketarchive",
-  },
 ];
 
 export const userMenuItems: MenuItem[] = [
@@ -114,39 +113,19 @@ export const userMenuItems: MenuItem[] = [
     href: "/user/dashboard",
   },
   {
+    icon: FolderKanban,
+    label: "پرونده‌ها",
+    href: "/user/cases",
+  },
+  {
     icon: ListTodo,
     label: "وظایف",
     href: "/user/processes",
   },
   {
-    icon: Boxes,
-    label: "انبارداری",
-    href: "/user/warehouse",
-  },
-  {
     icon: Archive,
     label: "بایگانی وظایف",
     href: "/user/archive",
-  },
-  {
-    icon: UserRound,
-    label: "مشتری",
-    href: "/user/customer",
-  },
-  {
-    icon: ShoppingCart,
-    label: "فرآیند خرید و تولید",
-    href: "/user/purchasing",
-  },
-  {
-    icon: ShieldCheck,
-    label: "کنترل کیفی",
-    href: "/user/qualityControl",
-  },
-  {
-    icon: FolderKanban,
-    label: "پرونده‌ها",
-    href: "/user/cases",
   },
   {
     icon: ClipboardList,
@@ -155,7 +134,7 @@ export const userMenuItems: MenuItem[] = [
   },
   {
     icon: ClipboardList,
-    label: "وظایف  تکرار شونده",
+    label: "وظایف تکرارشونده",
     href: "/user/taskroutine",
   },
   {
@@ -172,6 +151,26 @@ export const userMenuItems: MenuItem[] = [
     icon: Archive,
     label: "بایگانی تیکت‌ها",
     href: "/user/Ticketarchive",
+  },
+  {
+    icon: UserRound,
+    label: "مشتری",
+    href: "/user/customer",
+  },
+  {
+    icon: Boxes,
+    label: "انبارداری",
+    href: "/user/warehouse",
+  },
+  {
+    icon: ShoppingCart,
+    label: "فرآیند خرید و تولید",
+    href: "/user/purchasing",
+  },
+  {
+    icon: ShieldCheck,
+    label: "کنترل کیفی",
+    href: "/user/qualityControl",
   },
   {
     icon: CalendarCheck2,

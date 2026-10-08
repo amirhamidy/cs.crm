@@ -2,1556 +2,409 @@
 
 import { JSX, memo, useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import {
-    Ban,
-    CheckCircle2,
-    ClipboardX,
-    Clock3,
-    Inbox,
-    LayoutGrid,
-    Loader,
-    Loader2,
-    MessageSquareText,
-    Plus,
-    RefreshCw,
-    RotateCcw,
-    Ticket,
-    Trash2,
-    Users,
-    X,
-} from "lucide-react";
+import { Ban, CheckCircle2, ClipboardX, Clock3, Inbox, LayoutGrid, Loader, Loader2, MessageSquareText, Plus, RefreshCw, RotateCcw, Ticket, Trash2, Users, X } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useAuthStore } from "@/store/authStore";
-import {
-    deleteInternalTask,
-    fetchEmployeeList,
-    fetchInternalTasks,
-    reopenInternalTask,
-    patchInternalTaskDeadline,
-} from "./Api";
+import { deleteInternalTask, fetchEmployeeList, fetchInternalTasks, reopenInternalTask, patchInternalTaskDeadline, fetchInternalTaskDeadline } from "./Api";
 import InternalTaskActionModal from "./InternalTaskActionModal";
-import type {
-    EmployeeListItem,
-    InternalTask,
-    InternalTaskStatus,
-    EmployeeRef,
-} from "./types";
+import type { EmployeeListItem, InternalTask, InternalTaskStatus, EmployeeRef } from "./types";
 import AdminInternalTaskChatModal from "./AdminInternalTaskChatModal";
 import CreateTicketModal from "./Createticketmodal";
 import InternalTimeRangeModal from "./InternalTimeRangeModal";
 
-type AdminEmployee = EmployeeListItem & {
-    id?: number;
-    username?: string;
-    full_name?: string;
-};
+type AdminEmployee = EmployeeListItem & { id?: number; username?: string; full_name?: string };
 
 function normalizeDateValue(value: unknown): string | null {
     if (!value) return null;
-
-    if (typeof value === "string") {
-        const trimmed = value.trim();
-        return trimmed || null;
-    }
-
-    if (value instanceof Date && !Number.isNaN(value.getTime())) {
-        return value.toISOString();
-    }
-
+    if (typeof value === "string") return value.trim() || null;
+    if (value instanceof Date && !Number.isNaN(value.getTime())) return value.toISOString();
     return null;
 }
 
 function normalizeTask(item: unknown): InternalTask | null {
     if (!item || typeof item !== "object") return null;
-
     const task = item as Partial<InternalTask>;
     const taskId = Number(task.id);
-
     if (!Number.isFinite(taskId) || taskId <= 0) return null;
-
-    const status = task.status;
-
-    const safeStatus: InternalTaskStatus =
-        status === "in_progress" ||
-            status === "completed" ||
-            status === "cancelled"
-            ? status
-            : "in_progress";
-
+    const safeStatus: InternalTaskStatus = task.status === "in_progress" || task.status === "completed" || task.status === "cancelled" ? task.status : "in_progress";
     const rawCreatedBy = task.created_by;
-
-    const createdBy =
-        typeof rawCreatedBy === "string"
-            ? rawCreatedBy
-            : typeof rawCreatedBy === "number"
-                ? String(rawCreatedBy)
-                : rawCreatedBy &&
-                    typeof rawCreatedBy === "object" &&
-                    "username" in rawCreatedBy &&
-                    typeof (rawCreatedBy as { username?: unknown })
-                        .username === "string"
-                    ? (rawCreatedBy as { username: string }).username
-                    : "";
-
+    const createdBy = typeof rawCreatedBy === "string" ? rawCreatedBy : typeof rawCreatedBy === "number" ? String(rawCreatedBy) : rawCreatedBy && typeof rawCreatedBy === "object" && "username" in rawCreatedBy && typeof (rawCreatedBy as { username?: unknown }).username === "string" ? (rawCreatedBy as { username: string }).username : "";
     return {
         id: taskId,
         title: typeof task.title === "string" ? task.title : "",
-        description:
-            typeof task.description === "string"
-                ? task.description
-                : "",
+        description: typeof task.description === "string" ? task.description : "",
         status: safeStatus,
         created_by: createdBy,
-        created_at:
-            typeof task.created_at === "string" &&
-                task.created_at.trim()
-                ? task.created_at
-                : new Date().toISOString(),
-        updated_at:
-            typeof task.updated_at === "string"
-                ? task.updated_at
-                : undefined,
+        created_at: typeof task.created_at === "string" && task.created_at.trim() ? task.created_at : new Date().toISOString(),
+        updated_at: typeof task.updated_at === "string" ? task.updated_at : undefined,
         started_at: normalizeDateValue(task.started_at),
         deadline: normalizeDateValue(task.deadline),
-        assigned_to: Array.isArray(task.assigned_to)
-            ? task.assigned_to
-            : [],
-        attachments: Array.isArray(task.attachments)
-            ? task.attachments
-            : [],
+        assigned_to: Array.isArray(task.assigned_to) ? task.assigned_to : [],
+        attachments: Array.isArray(task.attachments) ? task.attachments : [],
     } as InternalTask;
 }
 
 function normalizeTasks(data: unknown): InternalTask[] {
     if (!Array.isArray(data)) return [];
-
     const map = new Map<number, InternalTask>();
-
     for (const item of data) {
         const task = normalizeTask(item);
-
-        if (task) {
-            map.set(task.id, task);
-        }
+        if (task) map.set(task.id, task);
     }
-
     return Array.from(map.values());
 }
 
 function formatDate(value?: string | null) {
     if (!value) return "";
-
     const date = new Date(value);
-
-    if (Number.isNaN(date.getTime())) {
-        return "";
-    }
-
-    return new Intl.DateTimeFormat("fa-IR", {
-        day: "numeric",
-        month: "long",
-        hour: "2-digit",
-        minute: "2-digit",
-    }).format(date);
+    if (Number.isNaN(date.getTime())) return "";
+    return new Intl.DateTimeFormat("fa-IR", { day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" }).format(date);
 }
 
 function getStatusConfig(status: InternalTaskStatus) {
-    if (status === "completed") {
-        return {
-            label: "انجام شده",
-            className:
-                "border-blue-500/20 bg-blue-500/10 text-blue-400",
-        };
-    }
-
-    if (status === "cancelled") {
-        return {
-            label: "لغو شده",
-            className:
-                "border-red-500/20 bg-red-500/10 text-red-400",
-        };
-    }
-
-    return {
-        label: "در حال انجام",
-        className:
-            "border-amber-500/20 bg-amber-500/10 text-amber-400",
-    };
+    if (status === "completed") return { label: "انجام شده", className: "border-blue-500/20 bg-blue-500/10 text-blue-400" };
+    if (status === "cancelled") return { label: "لغو شده", className: "border-red-500/20 bg-red-500/10 text-red-400" };
+    return { label: "در حال انجام", className: "border-amber-500/20 bg-amber-500/10 text-amber-400" };
 }
 
 const AVATAR_GRADIENTS = [
-    ["#6366f1", "#8b5cf6"],
-    ["#3b82f6", "#6366f1"],
-    ["#8b5cf6", "#ec4899"],
-    ["#06b6d4", "#6366f1"],
-    ["#f59e0b", "#ef4444"],
-    ["#10b981", "#3b82f6"],
-    ["#f472b6", "#ec4899"],
-    ["#8b5cf6", "#f59e0b"],
+    ["#6366f1", "#8b5cf6"], ["#3b82f6", "#6366f1"], ["#8b5cf6", "#ec4899"], ["#06b6d4", "#6366f1"],
+    ["#f59e0b", "#ef4444"], ["#10b981", "#3b82f6"], ["#f472b6", "#ec4899"], ["#8b5cf6", "#f59e0b"],
 ];
 
 function getGradient(id: number) {
     const safeId = Number.isFinite(id) ? Math.abs(id) : 0;
-
-    return AVATAR_GRADIENTS[
-        safeId % AVATAR_GRADIENTS.length
-    ];
+    return AVATAR_GRADIENTS[safeId % AVATAR_GRADIENTS.length];
 }
 
 function getEmployeeName(employee: AdminEmployee) {
-    return (
-        employee.full_name?.trim() ||
-        employee.username?.trim() ||
-        `کارمند ${employee.id ?? ""}`
-    );
+    return employee.full_name?.trim() || employee.username?.trim() || `کارمند ${employee.id ?? ""}`;
 }
 
-function resolveAssignedTo(
-    rawAssignedTo: unknown,
-    employees: AdminEmployee[],
-): EmployeeRef[] {
+function resolveAssignedTo(rawAssignedTo: unknown, employees: AdminEmployee[]): EmployeeRef[] {
     if (!Array.isArray(rawAssignedTo)) return [];
+    const employeeById = new Map(employees.map(e => [Number(e.id), getEmployeeName(e)] as const).filter(([id]) => Number.isFinite(id)));
+    const employeeByUsername = new Map(employees.map(e => [e.username?.trim().toLowerCase(), getEmployeeName(e)] as const).filter(([username]) => Boolean(username)));
 
-    const employeeById = new Map(
-        employees
-            .map((employee) => [
-                Number(employee.id),
-                getEmployeeName(employee),
-            ] as const)
-            .filter(([id]) => Number.isFinite(id)),
-    );
-
-    const employeeByUsername = new Map(
-        employees
-            .map((employee) => [
-                employee.username?.trim().toLowerCase(),
-                getEmployeeName(employee),
-            ] as const)
-            .filter(([username]) => Boolean(username)),
-    );
-
-    return rawAssignedTo
-        .map((item): EmployeeRef | null => {
-            const isObject =
-                typeof item === "object" && item !== null;
-
-            const id =
-                typeof item === "number"
-                    ? item
-                    : Number(
-                        (item as { id?: unknown } | null)?.id,
-                    );
-
-            const username =
-                isObject &&
-                    typeof (item as { username?: unknown }).username ===
-                    "string"
-                    ? (item as { username: string }).username.trim()
-                    : "";
-
-            const providedName =
-                isObject &&
-                    typeof (item as { full_name?: unknown }).full_name ===
-                    "string"
-                    ? (
-                        item as {
-                            full_name: string;
-                        }
-                    ).full_name.trim()
-                    : "";
-
-            if (!Number.isFinite(id) && !username) {
-                return null;
-            }
-
-            let full_name = providedName;
-
-            if (!full_name && username) {
-                full_name =
-                    employeeByUsername.get(username.toLowerCase()) ||
-                    username;
-            }
-
-            if (!full_name && Number.isFinite(id)) {
-                full_name =
-                    employeeById.get(id) ||
-                    `کارمند ${id}`;
-            }
-
-            return {
-                id: Number.isFinite(id) ? id : 0,
-                full_name,
-            };
-        })
-        .filter(
-            (item): item is EmployeeRef =>
-                item !== null,
-        );
+    return rawAssignedTo.map((item): EmployeeRef | null => {
+        const isObject = typeof item === "object" && item !== null;
+        const id = typeof item === "number" ? item : Number((item as { id?: unknown } | null)?.id);
+        const username = isObject && typeof (item as { username?: unknown }).username === "string" ? (item as { username: string }).username.trim() : "";
+        const providedName = isObject && typeof (item as { full_name?: unknown }).full_name === "string" ? (item as { full_name: string }).full_name.trim() : "";
+        if (!Number.isFinite(id) && !username) return null;
+        let full_name = providedName;
+        if (!full_name && username) full_name = employeeByUsername.get(username.toLowerCase()) || username;
+        if (!full_name && Number.isFinite(id)) full_name = employeeById.get(id) || `کارمند ${id}`;
+        return { id: Number.isFinite(id) ? id : 0, full_name };
+    }).filter((item): item is EmployeeRef => item !== null);
 }
 
-function resolveCreatorName(
-    createdBy: string,
-    employees: AdminEmployee[],
-) {
+function resolveCreatorName(createdBy: string, employees: AdminEmployee[]) {
     const username = String(createdBy ?? "").trim();
-
     if (!username) return "کاربر";
-
-    const employee = employees.find(
-        (item) =>
-            item.username?.trim().toLowerCase() ===
-            username.toLowerCase(),
-    );
-
-    return employee
-        ? getEmployeeName(employee)
-        : username;
+    const employee = employees.find(item => item.username?.trim().toLowerCase() === username.toLowerCase());
+    return employee ? getEmployeeName(employee) : username;
 }
 
-function isTaskAssignedToUser(
-    task: InternalTask,
-    username: string,
-    employees: AdminEmployee[],
-) {
+function isTaskAssignedToUser(task: InternalTask, username: string, employees: AdminEmployee[]) {
     const currentUsername = username.trim().toLowerCase();
-
     if (!currentUsername) return false;
-
-    return (task.assigned_to ?? []).some((item) => {
+    return (task.assigned_to ?? []).some(item => {
         if (typeof item === "object" && item !== null) {
-            const itemUsername = (
-                item as { username?: unknown }
-            ).username;
-
-            if (
-                typeof itemUsername === "string" &&
-                itemUsername.trim().toLowerCase() ===
-                currentUsername
-            ) {
-                return true;
-            }
-
-            const itemId = Number(
-                (item as { id?: unknown }).id,
-            );
-
-            if (Number.isFinite(itemId)) {
-                return employees.some(
-                    (employee) =>
-                        Number(employee.id) === itemId &&
-                        employee.username?.trim().toLowerCase() ===
-                        currentUsername,
-                );
-            }
-
-            return false;
+            const itemUsername = (item as { username?: unknown }).username;
+            if (typeof itemUsername === "string" && itemUsername.trim().toLowerCase() === currentUsername) return true;
+            const itemId = Number((item as { id?: unknown }).id);
+            return Number.isFinite(itemId) && employees.some(employee => Number(employee.id) === itemId && employee.username?.trim().toLowerCase() === currentUsername);
         }
-
         const itemId = Number(item);
-
-        if (!Number.isFinite(itemId)) return false;
-
-        return employees.some(
-            (employee) =>
-                Number(employee.id) === itemId &&
-                employee.username?.trim().toLowerCase() ===
-                currentUsername,
-        );
+        return Number.isFinite(itemId) && employees.some(employee => Number(employee.id) === itemId && employee.username?.trim().toLowerCase() === currentUsername);
     });
 }
 
-const AdminInternalTaskCard = memo(
-    function AdminInternalTaskCard({
-        task,
-        index,
-        employees,
-        currentUsername,
-        onOpen,
-        onDelete,
-        onStatusChange,
-        isDeleting = false,
-    }: {
-        task: InternalTask;
-        index: number;
-        employees: AdminEmployee[];
-        currentUsername: string;
-        onOpen: (task: InternalTask) => void;
-        onDelete?: (
-            taskId: number,
-        ) => Promise<void> | void;
-        onStatusChange: (task: InternalTask) => void;
-        isDeleting?: boolean;
-    }) {
-        const { resolvedTheme } = useTheme();
-        const isDark = resolvedTheme === "dark";
-
-        const [hovered, setHovered] = useState(false);
-        const [showConfirm, setShowConfirm] = useState(false);
-        const [deleteError, setDeleteError] =
-            useState<string | null>(null);
-        const [actionModal, setActionModal] =
-            useState<"complete" | "cancel" | null>(null);
-        const [reopening, setReopening] = useState(false);
-        const [statusError, setStatusError] =
-            useState<string | null>(null);
-        const [timeModalOpen, setTimeModalOpen] = useState(false);
-        const [savingTime, setSavingTime] = useState(false);
-        const [timeError, setTimeError] = useState<string | null>(null);
-        const [schedule, setSchedule] = useState({
-            started_at: task.started_at ?? null,
-            deadline: task.deadline ?? null,
-        });
-
-        const statusConfig = getStatusConfig(task.status);
-        const isCompleted = task.status === "completed";
-        const isCancelled = task.status === "cancelled";
-
-        const isCreator =
-            currentUsername.trim().toLowerCase() ===
-            String(task.created_by ?? "")
-                .trim()
-                .toLowerCase();
-
-        const isAssigned = isTaskAssignedToUser(
-            task,
-            currentUsername,
-            employees,
-        );
-
-        const isReceived = !isCreator && isAssigned;
-        const isSent = isCreator;
-        const currentUserId = useAuthStore(
-            (state) => state.userId,
-        );
-
-        const latestAttachmentForAction = [
-            ...(task.attachments ?? []),
-        ].sort(
-            (a, b) =>
-                Number(b.id) - Number(a.id),
-        )[0];
-
-        const hasResponse =
-            isSent &&
-            latestAttachmentForAction != null &&
-            currentUserId != null &&
-            Number(
-                latestAttachmentForAction.uploaded_by,
-            ) !== Number(currentUserId);
-
-        const canAct = isSent;
-
-        async function handleTimeSubmit(startedAt: string, deadline: string) {
-            setSavingTime(true);
-            setTimeError(null);
-
-            try {
-                const { data } = await patchInternalTaskDeadline(task.id, {
-                    started_at: startedAt,
-                    deadline,
-                });
-
-                const updatedStartedAt = data?.started_at ?? startedAt;
-                const updatedDeadline = data?.deadline ?? deadline;
-
-                setSchedule({
-                    started_at: updatedStartedAt,
-                    deadline: updatedDeadline,
-                });
-                onStatusChange({
-                    ...task,
-                    started_at: updatedStartedAt,
-                    deadline: updatedDeadline,
-                });
-                setTimeModalOpen(false);
-            } catch {
-                setTimeError("خطا در ثبت بازه زمانی");
-            } finally {
-                setSavingTime(false);
-            }
-        }
-
-        async function handleReopen(
-            event: React.MouseEvent,
-        ) {
-            event.stopPropagation();
-
-            if (reopening || !canAct) return;
-
-            setStatusError(null);
-            setReopening(true);
-
-            try {
-                const { data } =
-                    await reopenInternalTask(task.id);
-
-                onStatusChange({
-                    ...task,
-                    ...(data ?? {}),
-                    status: "in_progress",
-                });
-            } catch {
-                setStatusError(
-                    "بازگشایی تیکت با خطا مواجه شد.",
-                );
-            } finally {
-                setReopening(false);
-            }
-        }
-
-        function handleActionDone(
-            updatedTask: InternalTask,
-        ) {
-            onStatusChange(updatedTask);
-            setActionModal(null);
-        }
-
-        const assignedEmployees = resolveAssignedTo(
-            task.assigned_to,
-            employees,
-        );
-
-        const latestAttachment = [
-            ...(task.attachments ?? []),
-        ].sort(
-            (a, b) =>
-                new Date(b.created_at).getTime() -
-                new Date(a.created_at).getTime(),
-        )[0];
-
-        const creatorName = resolveCreatorName(
-            String(task.created_by ?? ""),
-            employees,
-        );
-
-        return (
-            <motion.div
-                layout
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{
-                    opacity: 0,
-                    scale: 0.95,
-                }}
-                transition={{
-                    duration: 0.22,
-                    delay: index * 0.04,
-                }}
-                onHoverStart={() => setHovered(true)}
-                onHoverEnd={() => setHovered(false)}
-                onClick={() => onOpen(task)}
-                className="group relative flex min-h-[220px] cursor-pointer flex-col gap-3 overflow-hidden rounded-[2rem] p-4"
-                style={{
-                    border: isDark
-                        ? "1px solid rgba(255,255,255,0.06)"
-                        : "1px solid rgba(0,0,0,0.06)",
-                    background: isDark
-                        ? "rgba(255,255,255,0.02)"
-                        : "#fafafa",
-                    boxShadow: isDark
-                        ? "0 2px 24px rgba(0,0,0,0.2)"
-                        : "0 2px 16px rgba(0,0,0,0.04)",
-                    transition:
-                        "border-color .4s ease, box-shadow .4s ease",
-                }}
-            >
-                <svg
-                    className="pointer-events-none absolute inset-0 h-full w-full"
-                    style={{ borderRadius: "2rem" }}
-                >
-                    <defs>
-                        <linearGradient
-                            id={`admin-border-${task.id}`}
-                            x1="100%"
-                            y1="100%"
-                            x2="0%"
-                            y2="0%"
-                        >
-                            <stop
-                                offset="0%"
-                                stopColor="#6366f1"
-                            />
-                            <stop
-                                offset="100%"
-                                stopColor="#8b5cf6"
-                            />
-                        </linearGradient>
-                    </defs>
-
-                    <motion.rect
-                        x="1"
-                        y="1"
-                        width="calc(100% - 2px)"
-                        height="calc(100% - 2px)"
-                        rx="30"
-                        fill="none"
-                        stroke={`url(#admin-border-${task.id})`}
-                        strokeWidth="1.5"
-                        pathLength="1"
-                        initial={{
-                            pathLength: 0,
-                            opacity: 0,
-                        }}
-                        animate={
-                            hovered
-                                ? {
-                                    pathLength: 1,
-                                    opacity: 1,
-                                }
-                                : {
-                                    pathLength: 0,
-                                    opacity: 0,
-                                }
-                        }
-                        transition={{
-                            duration: 0.55,
-                            ease: "easeInOut",
-                        }}
-                    />
-                </svg>
-
-                <div className="relative z-10 flex items-start justify-between gap-3">
-                    <div className="flex min-w-0 items-center gap-2">
-                        <span
-                            className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1 text-[10.5px] font-bold ${statusConfig.className}`}
-                        >
-                            <span
-                                className={`h-1.5 w-1.5 rounded-full bg-current ${task.status ===
-                                        "in_progress"
-                                        ? "animate-pulse"
-                                        : ""
-                                    }`}
-                            />
-                            {statusConfig.label}
-                        </span>
-
-                        {isSent && (
-                            <span className="rounded-full border border-indigo-500/20 bg-indigo-500/10 px-2.5 py-1 text-[10px] font-bold text-indigo-500">
-                                ارسالی
-                            </span>
-                        )}
-
-                        {isReceived && (
-                            <span className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-1 text-[10px] font-bold text-emerald-500">
-                                دریافتی
-                            </span>
-                        )}
-                    </div>
-
-                    <div className="flex shrink-0 items-center gap-1.5">
-                        <button
-                            type="button"
-                            onClick={(event) => {
-                                event.stopPropagation();
-                                onOpen(task);
-                            }}
-                            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-indigo-500/[0.08] text-indigo-500 transition-all hover:bg-indigo-500/[0.14] hover:text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-300 dark:hover:bg-indigo-500/15"
-                            title="مشاهده گفتگو"
-                        >
-                            <MessageSquareText size={13} />
-                        </button>
-
-                        {onDelete && (
-                            <button
-                                type="button"
-                                onClick={(event) => {
-                                    event.stopPropagation();
-                                    setDeleteError(null);
-                                    setShowConfirm(true);
-                                }}
-                                disabled={isDeleting}
-                                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-red-500/[0.08] text-red-500 transition-all hover:bg-red-500/[0.14] hover:text-red-600 disabled:opacity-40 dark:bg-red-500/10 dark:text-red-400 dark:hover:bg-red-500/15"
-                                title="حذف تیکت"
-                            >
-                                {isDeleting ? (
-                                    <Loader2
-                                        size={13}
-                                        className="animate-spin"
-                                    />
-                                ) : (
-                                    <Trash2 size={13} />
-                                )}
-                            </button>
-                        )}
-                    </div>
-                </div>
-
-                <div className="relative z-10 flex flex-col gap-1">
-                    <h3
-                        className="line-clamp-1 text-[13.5px] font-extrabold"
-                        style={{
-                            color: isDark
-                                ? "#f1f5f9"
-                                : "#1e293b",
-                        }}
-                    >
-                        {task.title || "بدون عنوان"}
-                    </h3>
-
-                    {task.description ? (
-                        <p
-                            className="line-clamp-2 text-[11.5px] leading-6"
-                            style={{
-                                color: isDark
-                                    ? "#94a3b8"
-                                    : "#64748b",
-                            }}
-                        >
-                            {task.description}
-                        </p>
-                    ) : null}
-                </div>
-
-                <div
-                    className="relative z-10 flex flex-col gap-2 border-t pt-3"
-                    style={{
-                        borderColor: isDark
-                            ? "rgba(255,255,255,0.05)"
-                            : "rgba(0,0,0,0.05)",
-                    }}
-                >
-                    <div className="flex items-center gap-2">
-                        <Users
-                            size={12}
-                            className="shrink-0 text-indigo-500"
-                        />
-
-                        <div className="flex min-w-0 flex-wrap gap-1.5">
-                            {assignedEmployees.length > 0 ? (
-                                assignedEmployees.map(
-                                    (
-                                        employee: EmployeeRef,
-                                    ) => {
-                                        const gradient =
-                                            getGradient(
-                                                Number(
-                                                    employee.id,
-                                                ),
-                                            );
-
-                                        return (
-                                            <span
-                                                key={`${employee.id}-${employee.full_name}`}
-                                                className="flex items-center gap-1.5 rounded-full border py-0.5 pl-2 pr-0.5"
-                                                style={{
-                                                    borderColor:
-                                                        isDark
-                                                            ? "rgba(255,255,255,.06)"
-                                                            : "rgba(0,0,0,.06)",
-                                                    background:
-                                                        isDark
-                                                            ? "rgba(255,255,255,.035)"
-                                                            : "rgba(0,0,0,.025)",
-                                                }}
-                                            >
-                                                <span
-                                                    className="flex h-5 w-5 items-center justify-center rounded-full text-[8px] font-extrabold text-white"
-                                                    style={{
-                                                        background: `linear-gradient(135deg, ${gradient[0]}, ${gradient[1]})`,
-                                                    }}
-                                                >
-                                                    {employee.full_name?.slice(
-                                                        0,
-                                                        1,
-                                                    ) ||
-                                                        "ک"}
-                                                </span>
-
-                                                <span
-                                                    className="max-w-[120px] truncate text-[9.5px] font-bold"
-                                                    style={{
-                                                        color: isDark
-                                                            ? "#cbd5e1"
-                                                            : "#475569",
-                                                    }}
-                                                >
-                                                    {employee.full_name ||
-                                                        `کارمند ${employee.id}`}
-                                                </span>
-                                            </span>
-                                        );
-                                    },
-                                )
-                            ) : (
-                                <span className="text-[10px] text-gray-400">
-                                    بدون مسئول
-                                </span>
-                            )}
-                        </div>
-                    </div>
-
-                    <div className="flex items-center justify-between gap-3">
-                        <div className="flex min-w-0 items-center gap-1.5">
-                            <span className="text-[9px] text-black/30 dark:text-white/25">
-                                ایجادکننده:
-                            </span>
-
-                            <span className="truncate text-[10px] font-bold text-black/55 dark:text-white/50">
-                                {creatorName}
-                            </span>
-                        </div>
-
-                        <div className="flex shrink-0 items-center gap-1.5">
-                            <Inbox
-                                size={11}
-                                className="text-indigo-400"
-                            />
-
-                            <span className="text-[9px] font-bold text-black/35 dark:text-white/30">
-                                {task.attachments?.length ??
-                                    0}{" "}
-                                پیام
-                            </span>
-                        </div>
-                    </div>
-                </div>
-
-                {isSent && (schedule.started_at || schedule.deadline) && (
-                    <button
-                        type="button"
-                        onClick={(event) => {
-                            event.stopPropagation();
-                            setTimeError(null);
-                            setTimeModalOpen(true);
-                        }}
-                        className="relative z-10 flex items-center gap-2 rounded-[1.15rem] border px-3 py-2 text-right transition-colors hover:bg-indigo-500/5"
-                        style={{
-                            borderColor: isDark ? "rgba(99,102,241,.14)" : "rgba(99,102,241,.1)",
-                            background: isDark ? "rgba(99,102,241,.045)" : "rgba(99,102,241,.03)",
-                        }}
-                    >
-                        <Clock3 size={12} className="shrink-0 text-indigo-500" />
-                        <span className="truncate text-[10px] font-bold text-black/55 dark:text-white/55">
-                            {schedule.deadline
-                                ? `مهلت: ${formatDate(schedule.deadline)}`
-                                : `شروع: ${formatDate(schedule.started_at)}`}
-                        </span>
-                    </button>
-                )}
-
-                {isSent && !schedule.started_at && !schedule.deadline && (
-                    <button
-                        type="button"
-                        onClick={(event) => {
-                            event.stopPropagation();
-                            setTimeError(null);
-                            setTimeModalOpen(true);
-                        }}
-                        className="relative z-10 flex items-center justify-center gap-1.5 rounded-[1.15rem] border border-dashed px-3 py-2 text-[10px] font-bold text-indigo-500 transition-colors hover:bg-indigo-500/5"
-                        style={{
-                            borderColor: isDark ? "rgba(99,102,241,.18)" : "rgba(99,102,241,.14)",
-                        }}
-                    >
-                        <Clock3 size={12} />
-                        تعیین ددلاین
-                    </button>
-                )}
-
-                {timeError && (
-                    <p
-                        onClick={(event) => event.stopPropagation()}
-                        className="relative z-10 rounded-xl bg-red-500/10 px-3 py-2 text-center text-[10px] font-bold text-red-500"
-                    >
-                        {timeError}
-                    </p>
-                )}
-
-                <div
-                    className="relative z-10 mt-auto flex items-center justify-between rounded-[1.15rem] px-3 py-2.5"
-                    style={{
-                        background: isDark
-                            ? "rgba(99,102,241,.055)"
-                            : "rgba(99,102,241,.045)",
-                        border: isDark
-                            ? "1px solid rgba(99,102,241,.1)"
-                            : "1px solid rgba(99,102,241,.08)",
-                    }}
-                >
-                    <div className="flex min-w-0 items-center gap-2">
-                        <MessageSquareText
-                            size={12}
-                            className="shrink-0 text-indigo-500"
-                        />
-
-                        <span className="truncate text-[10px] font-semibold text-black/45 dark:text-white/40">
-                            {latestAttachment?.note ||
-                                "مشاهده گفتگوی کارکنان"}
-                        </span>
-                    </div>
-
-                    <span className="shrink-0 text-[8px] text-black/25 dark:text-white/20">
-                        {formatDate(
-                            latestAttachment?.created_at ||
-                            task.updated_at ||
-                            task.created_at,
-                        )}
-                    </span>
-                </div>
-
-                {statusError && (
-                    <p
-                        onClick={(event) =>
-                            event.stopPropagation()
-                        }
-                        className="relative z-10 rounded-xl bg-red-500/10 px-3 py-2 text-center text-[10px] font-bold text-red-500"
-                    >
-                        {statusError}
-                    </p>
-                )}
-
-                {canAct && (
-                    <div
-                        className="relative z-10 flex items-center gap-2"
-                        onClick={(event) =>
-                            event.stopPropagation()
-                        }
-                    >
-                        {!isCompleted &&
-                            !isCancelled &&
-                            hasResponse && (
-                                <>
-                                    <button
-                                        type="button"
-                                        onClick={(event) => {
-                                            event.stopPropagation();
-                                            setStatusError(null);
-                                            setActionModal(
-                                                "complete",
-                                            );
-                                        }}
-                                        className="flex h-8 flex-1 items-center justify-center gap-1.5 rounded-xl bg-emerald-500 text-[10px] font-extrabold text-white transition-opacity hover:opacity-90"
-                                    >
-                                        <CheckCircle2 size={12} />
-                                        انجام شد
-                                    </button>
-
-                                    <button
-                                        type="button"
-                                        onClick={(event) => {
-                                            event.stopPropagation();
-                                            setStatusError(null);
-                                            setActionModal(
-                                                "cancel",
-                                            );
-                                        }}
-                                        className="flex h-8 flex-1 items-center justify-center gap-1.5 rounded-xl bg-red-500 text-[10px] font-extrabold text-white transition-opacity hover:opacity-90"
-                                    >
-                                        <Ban size={12} />
-                                        لغو تیکت
-                                    </button>
-                                </>
-                            )}
-
-                        {(isCompleted ||
-                            isCancelled) && (
-                                <button
-                                    type="button"
-                                    onClick={handleReopen}
-                                    disabled={reopening}
-                                    className="flex h-8 flex-1 items-center justify-center gap-1.5 rounded-xl bg-amber-500 text-[10px] font-extrabold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
-                                >
-                                    {reopening ? (
-                                        <Loader2
-                                            size={12}
-                                            className="animate-spin"
-                                        />
-                                    ) : (
-                                        <RotateCcw size={12} />
-                                    )}
-                                    بازگشایی تیکت
-                                </button>
-                            )}
-                    </div>
-                )}
-
-                {timeModalOpen && isSent && (
-                    <div onClick={(event) => event.stopPropagation()}>
-                        <InternalTimeRangeModal
-                            open={timeModalOpen}
-                            initialStartedAt={schedule.started_at}
-                            initialDeadline={schedule.deadline}
-                            onClose={() => {
-                                if (!savingTime) setTimeModalOpen(false);
-                            }}
-                            onSubmit={handleTimeSubmit}
-                        />
-                    </div>
-                )}
-
-                {actionModal &&
-                    canAct &&
-                    hasResponse && (
-                        <div
-                            onClick={(event) =>
-                                event.stopPropagation()
-                            }
-                        >
-                            <InternalTaskActionModal
-                                isOpen={true}
-                                action={actionModal}
-                                task={task}
-                                onClose={() =>
-                                    setActionModal(null)
-                                }
-                                onDone={handleActionDone}
-                            />
-                        </div>
-                    )}
-
-                <AnimatePresence>
-                    {showConfirm && (
-                        <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            className="fixed inset-0 z-50 flex items-center justify-center px-4"
-                            style={{
-                                background:
-                                    "rgba(0,0,0,0.45)",
-                                backdropFilter:
-                                    "blur(3px)",
-                            }}
-                            onClick={(event) => {
-                                event.stopPropagation();
-
-                                if (isDeleting) return;
-
-                                setShowConfirm(false);
-                                setDeleteError(null);
-                            }}
-                        >
-                            <motion.div
-                                initial={{
-                                    opacity: 0,
-                                    y: 16,
-                                }}
-                                animate={{
-                                    opacity: 1,
-                                    y: 0,
-                                }}
-                                exit={{
-                                    opacity: 0,
-                                    y: 16,
-                                }}
-                                transition={{
-                                    duration: 0.35,
-                                    ease: "easeOut",
-                                }}
-                                onClick={(event) =>
-                                    event.stopPropagation()
-                                }
-                                dir="rtl"
-                                className="flex w-full max-w-md flex-col overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-sm dark:border-white/[0.06] dark:bg-[#0f172a]"
-                            >
-                                <div className="flex shrink-0 items-center justify-between px-8 pb-6 pt-8">
-                                    <div className="flex items-center gap-2.5">
-                                        <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-red-50 dark:bg-red-500/10">
-                                            <Trash2
-                                                size={15}
-                                                className="text-red-500"
-                                            />
-                                        </div>
-
-                                        <div>
-                                            <h3 className="text-[14px] font-extrabold text-gray-900 dark:text-white">
-                                                حذف تیکت
-                                            </h3>
-
-                                            <p className="mt-0.5 text-[11px] text-gray-400">
-                                                این عملیات قابل بازگشت نیست
-                                            </p>
-                                        </div>
-                                    </div>
-
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            if (
-                                                isDeleting
-                                            )
-                                                return;
-
-                                            setShowConfirm(
-                                                false,
-                                            );
-                                            setDeleteError(
-                                                null,
-                                            );
-                                        }}
-                                        disabled={isDeleting}
-                                        className="flex h-8 w-8 items-center justify-center rounded-xl bg-gray-100 text-gray-400 transition-colors hover:text-gray-600 disabled:opacity-40 dark:bg-white/[0.05] dark:hover:text-gray-300"
-                                    >
-                                        <X size={15} />
-                                    </button>
-                                </div>
-
-                                <div className="flex-1 px-8 pb-2">
-                                    <p className="text-[12.5px] font-semibold leading-6 text-gray-500 dark:text-gray-400">
-                                        تیکت{" "}
-                                        <span className="font-extrabold text-gray-900 dark:text-white">
-                                            {task.title ||
-                                                "بدون عنوان"}
-                                        </span>{" "}
-                                        برای همیشه حذف خواهد شد.
-                                    </p>
-
-                                    <AnimatePresence>
-                                        {deleteError && (
-                                            <motion.div
-                                                initial={{
-                                                    opacity: 0,
-                                                    y: 6,
-                                                }}
-                                                animate={{
-                                                    opacity: 1,
-                                                    y: 0,
-                                                }}
-                                                exit={{
-                                                    opacity: 0,
-                                                    y: 4,
-                                                }}
-                                                className="mt-4 flex items-start gap-2.5 rounded-2xl bg-red-50 px-3.5 py-3 dark:bg-red-500/10"
-                                            >
-                                                <ClipboardX
-                                                    size={14}
-                                                    className="mt-0.5 shrink-0 text-red-500"
-                                                />
-
-                                                <p className="flex-1 text-[11.5px] font-semibold leading-5 text-red-500 dark:text-red-400">
-                                                    {
-                                                        deleteError
-                                                    }
-                                                </p>
-                                            </motion.div>
-                                        )}
-                                    </AnimatePresence>
-                                </div>
-
-                                <div className="flex shrink-0 items-center gap-2 px-8 pb-8 pt-5">
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            if (
-                                                isDeleting
-                                            )
-                                                return;
-
-                                            setShowConfirm(
-                                                false,
-                                            );
-                                            setDeleteError(
-                                                null,
-                                            );
-                                        }}
-                                        disabled={isDeleting}
-                                        className="flex h-11 flex-1 items-center justify-center rounded-full bg-gray-100 text-[13px] font-bold text-gray-600 transition-colors hover:bg-gray-200 disabled:opacity-40 dark:bg-white/[0.05] dark:text-gray-300 dark:hover:bg-white/[0.08]"
-                                    >
-                                        انصراف
-                                    </button>
-
-                                    <button
-                                        type="button"
-                                        onClick={async () => {
-                                            if (!onDelete)
-                                                return;
-
-                                            setDeleteError(
-                                                null,
-                                            );
-
-                                            try {
-                                                await onDelete(
-                                                    task.id,
-                                                );
-                                                setShowConfirm(
-                                                    false,
-                                                );
-                                            } catch {
-                                                setDeleteError(
-                                                    "حذف تیکت با خطا مواجه شد.",
-                                                );
-                                            }
-                                        }}
-                                        disabled={isDeleting}
-                                        className="flex h-11 flex-1 items-center justify-center gap-2 rounded-full bg-red-600 text-[13px] font-bold text-white transition-colors hover:bg-red-500 disabled:opacity-40"
-                                    >
-                                        {isDeleting ? (
-                                            <Loader
-                                                size={14}
-                                                className="animate-spin"
-                                            />
-                                        ) : (
-                                            <>
-                                                <Trash2
-                                                    size={13}
-                                                    strokeWidth={
-                                                        2.5
-                                                    }
-                                                />
-                                                حذف کن
-                                            </>
-                                        )}
-                                    </button>
-                                </div>
-                            </motion.div>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
-            </motion.div>
-        );
-    },
-    (prev, next) =>
-        prev.task === next.task &&
-        prev.index === next.index &&
-        prev.employees === next.employees &&
-        prev.currentUsername ===
-        next.currentUsername &&
-        prev.isDeleting === next.isDeleting,
-);
-
-export default function AdminInternalTasksBoard(): JSX.Element {
+const AdminInternalTaskCard = memo(function AdminInternalTaskCard({
+    task, index, employees, currentUsername, onOpen, onDelete, onStatusChange, isDeleting = false,
+}: {
+    task: InternalTask;
+    index: number;
+    employees: AdminEmployee[];
+    currentUsername: string;
+    onOpen: (task: InternalTask) => void;
+    onDelete?: (taskId: number) => Promise<void> | void;
+    onStatusChange: (task: InternalTask) => void;
+    isDeleting?: boolean;
+}) {
     const { resolvedTheme } = useTheme();
     const isDark = resolvedTheme === "dark";
-    const currentUsername = useAuthStore(
-        (state) => state.username,
-    );
+    const [hovered, setHovered] = useState(false);
+    const [showConfirm, setShowConfirm] = useState(false);
+    const [deleteError, setDeleteError] = useState<string | null>(null);
+    const [actionModal, setActionModal] = useState<"complete" | "cancel" | null>(null);
+    const [reopening, setReopening] = useState(false);
+    const [statusError, setStatusError] = useState<string | null>(null);
+    const [timeModalOpen, setTimeModalOpen] = useState(false);
+    const [savingTime, setSavingTime] = useState(false);
+    const [timeError, setTimeError] = useState<string | null>(null);
+    const [schedule, setSchedule] = useState({ started_at: task.started_at ?? null, deadline: task.deadline ?? null });
 
+    useEffect(() => {
+        let cancelled = false;
+        async function loadDeadline() {
+            try {
+                const { data } = await fetchInternalTaskDeadline(task.id);
+                if (cancelled) return;
+                const started_at = data?.started_at ?? task.started_at ?? null;
+                const deadline = data?.deadline ?? task.deadline ?? null;
+                setSchedule({ started_at, deadline });
+                onStatusChange({ ...task, started_at, deadline });
+            } catch {
+                if (!cancelled && (task.started_at || task.deadline)) setSchedule({ started_at: task.started_at ?? null, deadline: task.deadline ?? null });
+            }
+        }
+        void loadDeadline();
+        return () => { cancelled = true; };
+    }, [task.id]);
+
+    const statusConfig = getStatusConfig(task.status);
+    const isCompleted = task.status === "completed";
+    const isCancelled = task.status === "cancelled";
+    const isCreator = currentUsername.trim().toLowerCase() === String(task.created_by ?? "").trim().toLowerCase();
+    const isAssigned = isTaskAssignedToUser(task, currentUsername, employees);
+    const isReceived = !isCreator && isAssigned;
+    const isSent = isCreator;
+    const currentUserId = useAuthStore(state => state.userId);
+
+    const latestAttachmentForAction = [...(task.attachments ?? [])].sort((a, b) => Number(b.id) - Number(a.id))[0];
+    const hasResponse = isSent && latestAttachmentForAction != null && currentUserId != null && Number(latestAttachmentForAction.uploaded_by) !== Number(currentUserId);
+    const canAct = isSent;
+
+    async function handleTimeSubmit(startedAt: string, deadline: string) {
+        setSavingTime(true);
+        setTimeError(null);
+        try {
+            const { data } = await patchInternalTaskDeadline(task.id, { started_at: startedAt, deadline });
+            const updatedStartedAt = data?.started_at ?? startedAt;
+            const updatedDeadline = data?.deadline ?? deadline;
+            setSchedule({ started_at: updatedStartedAt, deadline: updatedDeadline });
+            onStatusChange({ ...task, started_at: updatedStartedAt, deadline: updatedDeadline });
+            setTimeModalOpen(false);
+        } catch {
+            setTimeError("خطا در ثبت بازه زمانی");
+        } finally {
+            setSavingTime(false);
+        }
+    }
+
+    async function handleReopen(event: React.MouseEvent) {
+        event.stopPropagation();
+        if (reopening || !canAct) return;
+        setStatusError(null);
+        setReopening(true);
+        try {
+            const { data } = await reopenInternalTask(task.id);
+            onStatusChange({ ...task, ...(data ?? {}), status: "in_progress" });
+        } catch {
+            setStatusError("بازگشایی تیکت با خطا مواجه شد.");
+        } finally {
+            setReopening(false);
+        }
+    }
+
+    function handleActionDone(updatedTask: InternalTask) {
+        onStatusChange(updatedTask);
+        setActionModal(null);
+    }
+
+    const assignedEmployees = resolveAssignedTo(task.assigned_to, employees);
+    const latestAttachment = [...(task.attachments ?? [])].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
+    const creatorName = resolveCreatorName(String(task.created_by ?? ""), employees);
+
+    return (
+        <motion.div layout initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: .95 }} transition={{ duration: .22, delay: index * .04 }} onHoverStart={() => setHovered(true)} onHoverEnd={() => setHovered(false)} onClick={() => onOpen(task)} className="group relative flex min-h-[220px] cursor-pointer flex-col gap-3 overflow-hidden rounded-[2rem] p-4" style={{ border: isDark ? "1px solid rgba(255,255,255,.06)" : "1px solid rgba(0,0,0,.06)", background: isDark ? "rgba(255,255,255,.02)" : "#fafafa", boxShadow: isDark ? "0 2px 24px rgba(0,0,0,.2)" : "0 2px 16px rgba(0,0,0,.04)", transition: "border-color .4s ease,box-shadow .4s ease" }}>
+            <svg className="pointer-events-none absolute inset-0 h-full w-full" style={{ borderRadius: "2rem" }}>
+                <defs><linearGradient id={`admin-border-${task.id}`} x1="100%" y1="100%" x2="0%" y2="0%"><stop offset="0%" stopColor="#6366f1" /><stop offset="100%" stopColor="#8b5cf6" /></linearGradient></defs>
+                <motion.rect x="1" y="1" width="calc(100% - 2px)" height="calc(100% - 2px)" rx="30" fill="none" stroke={`url(#admin-border-${task.id})`} strokeWidth="1.5" pathLength="1" initial={{ pathLength: 0, opacity: 0 }} animate={hovered ? { pathLength: 1, opacity: 1 } : { pathLength: 0, opacity: 0 }} transition={{ duration: .55, ease: "easeInOut" }} />
+            </svg>
+
+            <div className="relative z-10 flex items-start justify-between gap-3">
+                <div className="flex min-w-0 items-center gap-2">
+                    <span className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1 text-[10.5px] font-bold ${statusConfig.className}`}><span className={`h-1.5 w-1.5 rounded-full bg-current ${task.status === "in_progress" ? "animate-pulse" : ""}`} />{statusConfig.label}</span>
+                    {isSent && <span className="rounded-full border border-indigo-500/20 bg-indigo-500/10 px-2.5 py-1 text-[10px] font-bold text-indigo-500">ارسالی</span>}
+                    {isReceived && <span className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-1 text-[10px] font-bold text-emerald-500">دریافتی</span>}
+                </div>
+
+                <div className="flex shrink-0 items-center gap-1.5">
+                    <button type="button" onClick={event => { event.stopPropagation(); onOpen(task); }} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-indigo-500/[0.08] text-indigo-500 transition-all hover:bg-indigo-500/[0.14] hover:text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-300 dark:hover:bg-indigo-500/15" title="مشاهده گفتگو"><MessageSquareText size={13} /></button>
+                    {onDelete && <button type="button" onClick={event => { event.stopPropagation(); setDeleteError(null); setShowConfirm(true); }} disabled={isDeleting} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-red-500/[0.08] text-red-500 transition-all hover:bg-red-500/[0.14] hover:text-red-600 disabled:opacity-40 dark:bg-red-500/10 dark:text-red-400 dark:hover:bg-red-500/15" title="حذف تیکت">{isDeleting ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}</button>}
+                </div>
+            </div>
+
+            <div className="relative z-10 flex flex-col gap-1">
+                <h3 className="line-clamp-1 text-[13.5px] font-extrabold" style={{ color: isDark ? "#f1f5f9" : "#1e293b" }}>{task.title || "بدون عنوان"}</h3>
+                {task.description ? <p className="line-clamp-2 text-[11.5px] leading-6" style={{ color: isDark ? "#94a3b8" : "#64748b" }}>{task.description}</p> : null}
+            </div>
+
+            <div className="relative z-10 flex flex-col gap-2 border-t pt-3" style={{ borderColor: isDark ? "rgba(255,255,255,.05)" : "rgba(0,0,0,.05)" }}>
+                <div className="flex items-center gap-2">
+                    <Users size={12} className="shrink-0 text-indigo-500" />
+                    <div className="flex min-w-0 flex-wrap gap-1.5">
+                        {assignedEmployees.length > 0 ? assignedEmployees.map(employee => {
+                            const gradient = getGradient(Number(employee.id));
+                            return <span key={`${employee.id}-${employee.full_name}`} className="flex items-center gap-1.5 rounded-full border py-0.5 pl-2 pr-0.5" style={{ borderColor: isDark ? "rgba(255,255,255,.06)" : "rgba(0,0,0,.06)", background: isDark ? "rgba(255,255,255,.035)" : "rgba(0,0,0,.025)" }}>
+                                <span className="flex h-5 w-5 items-center justify-center rounded-full text-[8px] font-extrabold text-white" style={{ background: `linear-gradient(135deg,${gradient[0]},${gradient[1]})` }}>{employee.full_name?.slice(0, 1) || "ک"}</span>
+                                <span className="max-w-[120px] truncate text-[9.5px] font-bold" style={{ color: isDark ? "#cbd5e1" : "#475569" }}>{employee.full_name || `کارمند ${employee.id}`}</span>
+                            </span>;
+                        }) : <span className="text-[10px] text-gray-400">بدون مسئول</span>}
+                    </div>
+                </div>
+
+                <div className="flex items-center justify-between gap-3">
+                    <div className="flex min-w-0 items-center gap-1.5"><span className="text-[9px] text-black/30 dark:text-white/25">ایجادکننده:</span><span className="truncate text-[10px] font-bold text-black/55 dark:text-white/50">{creatorName}</span></div>
+                    <div className="flex shrink-0 items-center gap-1.5"><Inbox size={11} className="text-indigo-400" /><span className="text-[9px] font-bold text-black/35 dark:text-white/30">{task.attachments?.length ?? 0} پیام</span></div>
+                </div>
+            </div>
+
+            {(schedule.started_at || schedule.deadline) && (
+                <button type="button" onClick={event => { event.stopPropagation(); setTimeError(null); if (isSent) setTimeModalOpen(true); }} className="relative z-10 flex items-center gap-2 rounded-[1.15rem] border px-3 py-2 text-right transition-colors hover:bg-indigo-500/5" style={{ borderColor: isDark ? "rgba(99,102,241,.14)" : "rgba(99,102,241,.1)", background: isDark ? "rgba(99,102,241,.045)" : "rgba(99,102,241,.03)" }}>
+                    <Clock3 size={12} className="shrink-0 text-indigo-500" />
+                    <span className="truncate text-[10px] font-bold text-black/55 dark:text-white/55">
+                        {schedule.deadline ? `مهلت: ${formatDate(schedule.deadline)}` : `شروع: ${formatDate(schedule.started_at)}`}
+                    </span>
+                </button>
+            )}
+
+            {!schedule.started_at && !schedule.deadline && isSent && (
+                <button type="button" onClick={event => { event.stopPropagation(); setTimeError(null); setTimeModalOpen(true); }} className="relative z-10 flex items-center justify-center gap-1.5 rounded-[1.15rem] border border-dashed px-3 py-2 text-[10px] font-bold text-indigo-500 transition-colors hover:bg-indigo-500/5" style={{ borderColor: isDark ? "rgba(99,102,241,.18)" : "rgba(99,102,241,.14)" }}><Clock3 size={12} />تعیین ددلاین</button>
+            )}
+
+            {timeError && <p onClick={event => event.stopPropagation()} className="relative z-10 rounded-xl bg-red-500/10 px-3 py-2 text-center text-[10px] font-bold text-red-500">{timeError}</p>}
+
+            <div className="relative z-10 mt-auto flex items-center justify-between rounded-[1.15rem] px-3 py-2.5" style={{ background: isDark ? "rgba(99,102,241,.055)" : "rgba(99,102,241,.045)", border: isDark ? "1px solid rgba(99,102,241,.1)" : "1px solid rgba(99,102,241,.08)" }}>
+                <div className="flex min-w-0 items-center gap-2"><MessageSquareText size={12} className="shrink-0 text-indigo-500" /><span className="truncate text-[10px] font-semibold text-black/45 dark:text-white/40">{latestAttachment?.note || "مشاهده گفتگوی کارکنان"}</span></div>
+                <span className="shrink-0 text-[8px] text-black/25 dark:text-white/20">{formatDate(latestAttachment?.created_at || task.updated_at || task.created_at)}</span>
+            </div>
+
+            {statusError && <p onClick={event => event.stopPropagation()} className="relative z-10 rounded-xl bg-red-500/10 px-3 py-2 text-center text-[10px] font-bold text-red-500">{statusError}</p>}
+
+            {canAct && <div className="relative z-10 flex items-center gap-2" onClick={event => event.stopPropagation()}>
+                {!isCompleted && !isCancelled && hasResponse && <>
+                    <button type="button" onClick={event => { event.stopPropagation(); setStatusError(null); setActionModal("complete"); }} className="flex h-8 flex-1 items-center justify-center gap-1.5 rounded-xl bg-emerald-500 text-[10px] font-extrabold text-white transition-opacity hover:opacity-90"><CheckCircle2 size={12} />انجام شد</button>
+                    <button type="button" onClick={event => { event.stopPropagation(); setStatusError(null); setActionModal("cancel"); }} className="flex h-8 flex-1 items-center justify-center gap-1.5 rounded-xl bg-red-500 text-[10px] font-extrabold text-white transition-opacity hover:opacity-90"><Ban size={12} />لغو تیکت</button>
+                </>}
+                {(isCompleted || isCancelled) && <button type="button" onClick={handleReopen} disabled={reopening} className="flex h-8 flex-1 items-center justify-center gap-1.5 rounded-xl bg-amber-500 text-[10px] font-extrabold text-white transition-opacity hover:opacity-90 disabled:opacity-50">{reopening ? <Loader2 size={12} className="animate-spin" /> : <RotateCcw size={12} />}بازگشایی تیکت</button>}
+            </div>}
+
+            {timeModalOpen && isSent && <div onClick={event => event.stopPropagation()}><InternalTimeRangeModal open={timeModalOpen} initialStartedAt={schedule.started_at} initialDeadline={schedule.deadline} onClose={() => { if (!savingTime) setTimeModalOpen(false); }} onSubmit={handleTimeSubmit} /></div>}
+
+            {actionModal && canAct && hasResponse && <div onClick={event => event.stopPropagation()}><InternalTaskActionModal isOpen={true} action={actionModal} task={task} onClose={() => setActionModal(null)} onDone={handleActionDone} /></div>}
+
+            <AnimatePresence>
+                {showConfirm && <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center px-4" style={{ background: "rgba(0,0,0,.45)", backdropFilter: "blur(3px)" }} onClick={event => { event.stopPropagation(); if (isDeleting) return; setShowConfirm(false); setDeleteError(null); }}>
+                    <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 16 }} transition={{ duration: .35, ease: "easeOut" }} onClick={event => event.stopPropagation()} dir="rtl" className="flex w-full max-w-md flex-col overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-sm dark:border-white/[0.06] dark:bg-[#0f172a]">
+                        <div className="flex shrink-0 items-center justify-between px-8 pb-6 pt-8">
+                            <div className="flex items-center gap-2.5"><div className="flex h-8 w-8 items-center justify-center rounded-xl bg-red-50 dark:bg-red-500/10"><Trash2 size={15} className="text-red-500" /></div><div><h3 className="text-[14px] font-extrabold text-gray-900 dark:text-white">حذف تیکت</h3><p className="mt-0.5 text-[11px] text-gray-400">این عملیات قابل بازگشت نیست</p></div></div>
+                            <button type="button" onClick={() => { if (isDeleting) return; setShowConfirm(false); setDeleteError(null); }} disabled={isDeleting} className="flex h-8 w-8 items-center justify-center rounded-xl bg-gray-100 text-gray-400 transition-colors hover:text-gray-600 disabled:opacity-40 dark:bg-white/[0.05] dark:hover:text-gray-300"><X size={15} /></button>
+                        </div>
+                        <div className="flex-1 px-8 pb-2"><p className="text-[12.5px] font-semibold leading-6 text-gray-500 dark:text-gray-400">تیکت <span className="font-extrabold text-gray-900 dark:text-white">{task.title || "بدون عنوان"}</span> برای همیشه حذف خواهد شد.</p>{deleteError && <div className="mt-4 flex items-start gap-2.5 rounded-2xl bg-red-50 px-3.5 py-3 dark:bg-red-500/10"><ClipboardX size={14} className="mt-0.5 shrink-0 text-red-500" /><p className="flex-1 text-[11.5px] font-semibold leading-5 text-red-500 dark:text-red-400">{deleteError}</p></div>}</div>
+                        <div className="flex shrink-0 items-center gap-2 px-8 pb-8 pt-5">
+                            <button type="button" onClick={() => { if (isDeleting) return; setShowConfirm(false); setDeleteError(null); }} disabled={isDeleting} className="flex h-11 flex-1 items-center justify-center rounded-full bg-gray-100 text-[13px] font-bold text-gray-600 transition-colors hover:bg-gray-200 disabled:opacity-40 dark:bg-white/[0.05] dark:text-gray-300 dark:hover:bg-white/[0.08]">انصراف</button>
+                            <button type="button" onClick={async () => { if (!onDelete) return; setDeleteError(null); try { await onDelete(task.id); setShowConfirm(false); } catch { setDeleteError("حذف تیکت با خطا مواجه شد."); } }} disabled={isDeleting} className="flex h-11 flex-1 items-center justify-center gap-2 rounded-full bg-red-600 text-[13px] font-bold text-white transition-colors hover:bg-red-500 disabled:opacity-40">{isDeleting ? <Loader size={14} className="animate-spin" /> : <><Trash2 size={13} strokeWidth={2.5} />حذف کن</>}</button>
+                        </div>
+                    </motion.div>
+                </motion.div>}
+            </AnimatePresence>
+        </motion.div>
+    );
+}, (prev, next) => prev.task === next.task && prev.index === next.index && prev.employees === next.employees && prev.currentUsername === next.currentUsername && prev.isDeleting === next.isDeleting);
+
+export default function AdminInternalTasksBoard(): JSX.Element {
+    const currentUsername = useAuthStore(state => state.username);
     const [tasks, setTasks] = useState<InternalTask[]>([]);
-    const [employees, setEmployees] = useState<
-        AdminEmployee[]
-    >([]);
+    const [employees, setEmployees] = useState<AdminEmployee[]>([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [selectedTask, setSelectedTask] =
-        useState<InternalTask | null>(null);
+    const [selectedTask, setSelectedTask] = useState<InternalTask | null>(null);
     const [createOpen, setCreateOpen] = useState(false);
-    const [deleteLoadingId, setDeleteLoadingId] =
-        useState<number | null>(null);
+    const [deleteLoadingId, setDeleteLoadingId] = useState<number | null>(null);
 
     async function loadData(initial = false) {
         try {
-            if (initial) {
-                setLoading(true);
-            } else {
-                setRefreshing(true);
-            }
-
+            initial ? setLoading(true) : setRefreshing(true);
             setError(null);
-
-            const [
-                tasksResponse,
-                employeesResponse,
-            ] = await Promise.all([
-                fetchInternalTasks(),
-                fetchEmployeeList(),
-            ]);
-
-            setTasks(
-                normalizeTasks(tasksResponse.data),
-            );
-
-            setEmployees(
-                Array.isArray(employeesResponse.data)
-                    ? employeesResponse.data
-                    : [],
-            );
+            const [tasksResponse, employeesResponse] = await Promise.all([fetchInternalTasks(), fetchEmployeeList()]);
+            setTasks(normalizeTasks(tasksResponse.data));
+            setEmployees(Array.isArray(employeesResponse.data) ? employeesResponse.data : []);
         } catch {
-            setError(
-                "دریافت گفتگوهای کارکنان با خطا مواجه شد.",
-            );
+            setError("دریافت گفتگوهای کارکنان با خطا مواجه شد.");
         } finally {
             setLoading(false);
             setRefreshing(false);
         }
     }
 
-    useEffect(() => {
-        void loadData(true);
-    }, []);
+    useEffect(() => { void loadData(true); }, []);
 
-    const sortedTasks = useMemo(() => {
-        return [...tasks].sort((a, b) => {
-            const aDate = new Date(
-                a.updated_at ||
-                a.created_at ||
-                0,
-            ).getTime();
+    const sortedTasks = useMemo(() => [...tasks].sort((a, b) => new Date(b.updated_at || b.created_at || 0).getTime() - new Date(a.updated_at || a.created_at || 0).getTime()), [tasks]);
 
-            const bDate = new Date(
-                b.updated_at ||
-                b.created_at ||
-                0,
-            ).getTime();
-
-            return bDate - aDate;
-        });
-    }, [tasks]);
-
-    function handleUpdated(
-        updatedTask: InternalTask,
-    ) {
-        setTasks((previous) =>
-            previous.map((task) =>
-                Number(task.id) ===
-                    Number(updatedTask.id)
-                    ? updatedTask
-                    : task,
-            ),
-        );
-
-        setSelectedTask((previous) =>
-            previous &&
-                Number(previous.id) ===
-                Number(updatedTask.id)
-                ? updatedTask
-                : previous,
-        );
+    function handleUpdated(updatedTask: InternalTask) {
+        setTasks(previous => previous.map(task => Number(task.id) === Number(updatedTask.id) ? updatedTask : task));
+        setSelectedTask(previous => previous && Number(previous.id) === Number(updatedTask.id) ? updatedTask : previous);
     }
 
-    function handleCreated(
-        createdTask: InternalTask,
-    ) {
-        const normalized =
-            normalizeTask(createdTask);
-
+    function handleCreated(createdTask: InternalTask) {
+        const normalized = normalizeTask(createdTask);
         if (!normalized) {
             void loadData();
             setCreateOpen(false);
             return;
         }
-
-        const withResolvedAssignees: InternalTask =
-        {
-            ...normalized,
-            assigned_to: resolveAssignedTo(
-                normalized.assigned_to,
-                employees,
-            ),
-        };
-
-        setTasks((previous) => [
-            withResolvedAssignees,
-            ...previous.filter(
-                (task) =>
-                    task.id !==
-                    withResolvedAssignees.id,
-            ),
-        ]);
-
+        setTasks(previous => [{ ...normalized, assigned_to: resolveAssignedTo(normalized.assigned_to, employees) }, ...previous.filter(task => task.id !== normalized.id)]);
         setCreateOpen(false);
         void loadData();
     }
 
     async function handleDelete(taskId: number) {
         const id = Number(taskId);
-
-        if (!Number.isFinite(id) || id <= 0)
-            return;
-
+        if (!Number.isFinite(id) || id <= 0) return;
         try {
             setDeleteLoadingId(id);
-
             await deleteInternalTask(id);
-
-            setTasks((previous) =>
-                previous.filter(
-                    (task) => task.id !== id,
-                ),
-            );
-
-            setSelectedTask((previous) =>
-                previous &&
-                    Number(previous.id) === id
-                    ? null
-                    : previous,
-            );
+            setTasks(previous => previous.filter(task => task.id !== id));
+            setSelectedTask(previous => previous && Number(previous.id) === id ? null : previous);
         } finally {
             setDeleteLoadingId(null);
         }
     }
 
-    if (loading) {
-        return (
-            <div
-                dir="rtl"
-                className="flex h-64 items-center justify-center"
-            >
-                <Loader
-                    size={22}
-                    className="animate-spin text-indigo-500"
-                />
-            </div>
-        );
-    }
+    if (loading) return <div dir="rtl" className="flex h-64 items-center justify-center"><Loader size={22} className="animate-spin text-indigo-500" /></div>;
 
     return (
-        <div
-            dir="rtl"
-            className="flex flex-col gap-5"
-        >
+        <div dir="rtl" className="flex flex-col gap-5">
             <div className="flex items-center justify-between gap-4">
-                <div className="flex items-center gap-2.5">
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-indigo-500/10">
-                        <Ticket
-                            size={17}
-                            className="text-indigo-500"
-                        />
-                    </div>
-
-                    <div>
-                        <h3 className="text-[14px] font-extrabold text-gray-900 dark:text-white">
-                            گفتگوهای کارکنان
-                        </h3>
-
-                        <p className="text-[11px] text-gray-400 dark:text-gray-600">
-                            مشاهده گفتگوهای داخلی و فایل‌های رد و بدل شده
-                        </p>
-                    </div>
-                </div>
-
+                <div className="flex items-center gap-2.5"><div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-indigo-500/10"><Ticket size={17} className="text-indigo-500" /></div><div><h3 className="text-[14px] font-extrabold text-gray-900 dark:text-white">گفتگوهای کارکنان</h3><p className="text-[11px] text-gray-400 dark:text-gray-600">مشاهده گفتگوهای داخلی و فایل‌های رد و بدل شده</p></div></div>
                 <div className="flex shrink-0 items-center gap-2">
-                    <button
-                        type="button"
-                        onClick={() =>
-                            setCreateOpen(true)
-                        }
-                        className="flex items-center gap-1.5 rounded-2xl bg-indigo-600 px-3.5 py-2 text-[11.5px] font-bold text-white transition-colors hover:bg-indigo-500"
-                    >
-                        <Plus size={13} />
-                        تیکت جدید
-                    </button>
-
-                    <button
-                        type="button"
-                        onClick={() =>
-                            void loadData()
-                        }
-                        disabled={refreshing}
-                        className="flex h-9 w-9 items-center justify-center rounded-2xl bg-gray-100 text-gray-500 transition-colors hover:bg-gray-200 disabled:opacity-40 dark:bg-white/[0.05] dark:text-gray-400 dark:hover:bg-white/[0.08]"
-                        title="به‌روزرسانی"
-                    >
-                        <RefreshCw
-                            size={14}
-                            className={
-                                refreshing
-                                    ? "animate-spin"
-                                    : ""
-                            }
-                        />
-                    </button>
+                    <button type="button" onClick={() => setCreateOpen(true)} className="flex items-center gap-1.5 rounded-2xl bg-indigo-600 px-3.5 py-2 text-[11.5px] font-bold text-white transition-colors hover:bg-indigo-500"><Plus size={13} />تیکت جدید</button>
+                    <button type="button" onClick={() => void loadData()} disabled={refreshing} className="flex h-9 w-9 items-center justify-center rounded-2xl bg-gray-100 text-gray-500 transition-colors hover:bg-gray-200 disabled:opacity-40 dark:bg-white/[0.05] dark:text-gray-400 dark:hover:bg-white/[0.08]" title="به‌روزرسانی"><RefreshCw size={14} className={refreshing ? "animate-spin" : ""} /></button>
                 </div>
             </div>
 
-            {error ? (
-                <div className="flex items-center justify-between gap-3 rounded-2xl border border-red-500/20 bg-red-500/5 px-4 py-3">
-                    <p className="text-[12px] font-semibold text-red-500">
-                        {error}
-                    </p>
-
-                    <button
-                        type="button"
-                        onClick={() =>
-                            void loadData()
-                        }
-                        className="rounded-xl bg-red-500/10 px-3 py-1.5 text-[11px] font-bold text-red-500"
-                    >
-                        تلاش مجدد
-                    </button>
-                </div>
-            ) : null}
+            {error && <div className="flex items-center justify-between gap-3 rounded-2xl border border-red-500/20 bg-red-500/5 px-4 py-3"><p className="text-[12px] font-semibold text-red-500">{error}</p><button type="button" onClick={() => void loadData()} className="rounded-xl bg-red-500/10 px-3 py-1.5 text-[11px] font-bold text-red-500">تلاش مجدد</button></div>}
 
             <div className="flex items-center gap-2">
-                <div className="flex items-center gap-2 rounded-2xl bg-indigo-500/[0.07] px-3 py-2">
-                    <MessageSquareText
-                        size={13}
-                        className="text-indigo-500"
-                    />
-
-                    <span className="text-[11px] font-bold text-indigo-500">
-                        {tasks.length} گفتگو
-                    </span>
-                </div>
-
-                <div className="flex items-center gap-2 rounded-2xl bg-gray-100 px-3 py-2 dark:bg-white/[0.05]">
-                    <Users
-                        size={13}
-                        className="text-gray-400"
-                    />
-
-                    <span className="text-[11px] font-bold text-gray-400">
-                        {employees.length} کارمند
-                    </span>
-                </div>
+                <div className="flex items-center gap-2 rounded-2xl bg-indigo-500/[0.07] px-3 py-2"><MessageSquareText size={13} className="text-indigo-500" /><span className="text-[11px] font-bold text-indigo-500">{tasks.length} گفتگو</span></div>
+                <div className="flex items-center gap-2 rounded-2xl bg-gray-100 px-3 py-2 dark:bg-white/[0.05]"><Users size={13} className="text-gray-400" /><span className="text-[11px] font-bold text-gray-400">{employees.length} کارمند</span></div>
             </div>
 
-            {sortedTasks.length === 0 ? (
-                <div className="flex h-64 flex-col items-center justify-center gap-3 rounded-3xl border border-dashed border-gray-200 dark:border-white/[0.07]">
-                    <LayoutGrid
-                        size={28}
-                        className="text-gray-300 dark:text-gray-700"
-                    />
-
-                    <p className="text-[12px] text-gray-400">
-                        هنوز گفتگویی ثبت نشده است.
-                    </p>
-                </div>
-            ) : (
+            {sortedTasks.length === 0 ? <div className="flex h-64 flex-col items-center justify-center gap-3 rounded-3xl border border-dashed border-gray-200 dark:border-white/[0.07]"><LayoutGrid size={28} className="text-gray-300 dark:text-gray-700" /><p className="text-[12px] text-gray-400">هنوز گفتگویی ثبت نشده است.</p></div> : (
                 <AnimatePresence mode="popLayout">
                     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                        {sortedTasks.map(
-                            (task, index) => (
-                                <AdminInternalTaskCard
-                                    key={task.id}
-                                    task={task}
-                                    index={index}
-                                    employees={
-                                        employees
-                                    }
-                                    currentUsername={
-                                        currentUsername ??
-                                        ""
-                                    }
-                                    onOpen={
-                                        setSelectedTask
-                                    }
-                                    onDelete={
-                                        handleDelete
-                                    }
-                                    onStatusChange={
-                                        handleUpdated
-                                    }
-                                    isDeleting={
-                                        deleteLoadingId ===
-                                        task.id
-                                    }
-                                />
-                            ),
-                        )}
+                        {sortedTasks.map((task, index) => <AdminInternalTaskCard key={task.id} task={task} index={index} employees={employees} currentUsername={currentUsername ?? ""} onOpen={setSelectedTask} onDelete={handleDelete} onStatusChange={handleUpdated} isDeleting={deleteLoadingId === task.id} />)}
                     </div>
                 </AnimatePresence>
             )}
 
-            {selectedTask ? (
-                <AdminInternalTaskChatModal
-                    open={true}
-                    task={selectedTask}
-                    employees={employees}
-                    onClose={() =>
-                        setSelectedTask(null)
-                    }
-                    onUpdated={handleUpdated}
-                />
-            ) : null}
-
-            <CreateTicketModal
-                isOpen={createOpen}
-                onClose={() =>
-                    setCreateOpen(false)
-                }
-                employees={employees}
-                onCreated={handleCreated}
-            />
+            {selectedTask && <AdminInternalTaskChatModal open={true} task={selectedTask} employees={employees} onClose={() => setSelectedTask(null)} onUpdated={handleUpdated} />}
+            <CreateTicketModal isOpen={createOpen} onClose={() => setCreateOpen(false)} employees={employees} onCreated={handleCreated} />
         </div>
     );
 }

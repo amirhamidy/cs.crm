@@ -2,24 +2,11 @@
 
 import { memo, useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import {
-    Clock3,
-    History,
-    MessageSquareText,
-    UserRound,
-} from "lucide-react";
-import {
-    JALALI_MONTHS,
-    pad2,
-    toJalali,
-    toPersianDigits,
-} from "@/lib/jalali";
-import type {
-    EmployeeListItem,
-    InternalTask,
-    InternalTaskStatus,
-} from "./types";
+import { Clock3, History, MessageSquareText, UserRound } from "lucide-react";
+import { JALALI_MONTHS, pad2, toJalali, toPersianDigits } from "@/lib/jalali";
+import type { EmployeeListItem, InternalTask } from "./types";
 import InternalTaskChatModal from "./InternalTaskChatModal";
+import api from "@/lib/axiosInstance";
 
 interface ReceivedTaskCardProps {
     task: InternalTask;
@@ -30,124 +17,62 @@ interface ReceivedTaskCardProps {
 
 function formatJalali(value?: string | null) {
     if (!value) return null;
-
     const date = new Date(value);
-
     if (Number.isNaN(date.getTime())) return null;
-
-    const [jy, jm, jd] = toJalali(
-        date.getFullYear(),
-        date.getMonth() + 1,
-        date.getDate(),
-    ) as [number, number, number];
-
-    return `${toPersianDigits(jd)} ${JALALI_MONTHS[jm - 1]} ${toPersianDigits(jy)} - ${toPersianDigits(
-        pad2(date.getHours()),
-    )}:${toPersianDigits(pad2(date.getMinutes()))}`;
+    const [jy, jm, jd] = toJalali(date.getFullYear(), date.getMonth() + 1, date.getDate()) as [number, number, number];
+    return `${toPersianDigits(jd)} ${JALALI_MONTHS[jm - 1]} ${toPersianDigits(jy)} - ${toPersianDigits(pad2(date.getHours()))}:${toPersianDigits(pad2(date.getMinutes()))}`;
 }
 
 function getDeadlineState(deadline?: string | null) {
-    if (!deadline) {
-        return {
-            label: "بدون مهلت",
-            color: "text-gray-400 dark:text-gray-500",
-            background: "bg-gray-50 dark:bg-white/[0.03]",
-        };
-    }
-
+    if (!deadline) return { label: "بدون مهلت", color: "text-gray-400 dark:text-gray-500", background: "bg-gray-50 dark:bg-white/[0.03]" };
     const time = new Date(deadline).getTime();
-
-    if (Number.isNaN(time)) {
-        return {
-            label: "بدون مهلت",
-            color: "text-gray-400 dark:text-gray-500",
-            background: "bg-gray-50 dark:bg-white/[0.03]",
-        };
-    }
-
-    const diff = time - Date.now();
-    const hours = diff / 3600000;
-
-    if (diff < 0) {
-        return {
-            label: "منقضی شده",
-            color: "text-red-500 dark:text-red-400",
-            background: "bg-red-50 dark:bg-red-500/10",
-        };
-    }
-
-    if (hours <= 24) {
-        return {
-            label: "فوری",
-            color: "text-amber-600 dark:text-amber-400",
-            background: "bg-amber-50 dark:bg-amber-500/10",
-        };
-    }
-
-    return {
-        label: "در زمانبندی",
-        color: "text-emerald-600 dark:text-emerald-400",
-        background: "bg-emerald-50 dark:bg-emerald-500/10",
-    };
+    if (Number.isNaN(time)) return { label: "بدون مهلت", color: "text-gray-400 dark:text-gray-500", background: "bg-gray-50 dark:bg-white/[0.03]" };
+    const diff = time - Date.now(), hours = diff / 3600000;
+    if (diff < 0) return { label: "منقضی شده", color: "text-red-500 dark:text-red-400", background: "bg-red-50 dark:bg-red-500/10" };
+    if (hours <= 24) return { label: "فوری", color: "text-amber-600 dark:text-amber-400", background: "bg-amber-50 dark:bg-amber-500/10" };
+    return { label: "در زمانبندی", color: "text-emerald-600 dark:text-emerald-400", background: "bg-emerald-50 dark:bg-emerald-500/10" };
 }
 
-
-function ReceivedTaskCard({
-    task,
-    employees,
-    isRoutine = false,
-    onUpdated,
-}: ReceivedTaskCardProps) {
+function ReceivedTaskCard({ task, employees, isRoutine = false, onUpdated }: ReceivedTaskCardProps) {
     const [currentTask, setCurrentTask] = useState(task);
     const [chatOpen, setChatOpen] = useState(false);
-    const [deadlineData, setDeadlineData] = useState({
-        started_at: task.started_at ?? null,
-        deadline: task.deadline ?? null,
-    });
+    const [deadlineData, setDeadlineData] = useState({ started_at: task.started_at ?? null, deadline: task.deadline ?? null });
 
     useEffect(() => {
         setCurrentTask(task);
-        setDeadlineData({
-            started_at: task.started_at ?? null,
-            deadline: task.deadline ?? null,
-        });
+        setDeadlineData({ started_at: task.started_at ?? null, deadline: task.deadline ?? null });
     }, [task]);
 
+    useEffect(() => {
+        let active = true;
+        (async () => {
+            try {
+                const { data } = await api.get(`/tasks/api/v1/internal_task/${task.id}/deadline/`);
+                const value = data?.data ?? data;
+                if (!active) return;
+                const started_at = value?.started_at ?? task.started_at ?? null;
+                const deadline = value?.deadline ?? task.deadline ?? null;
+                setDeadlineData({ started_at, deadline });
+                onUpdated({ ...task, started_at, deadline });
+            } catch { }
+        })();
+        return () => { active = false; };
+    }, [task.id]);
 
-    const creator = employees.find(
-        (employee) =>
-            employee.username.trim().toLowerCase() ===
-            currentTask.created_by.trim().toLowerCase(),
-    );
-
-    const creatorName =
-        creator?.full_name || currentTask.created_by || "نامشخص";
-
+    const creator = employees.find(employee => employee.username.trim().toLowerCase() === currentTask.created_by.trim().toLowerCase());
+    const creatorName = creator?.full_name || currentTask.created_by || "نامشخص";
     const isCompleted = currentTask.status === "completed";
     const isCancelled = currentTask.status === "cancelled";
-
     const deadlineState = getDeadlineState(deadlineData.deadline);
     const deadlineDate = formatJalali(deadlineData.deadline);
     const startedAtDate = formatJalali(deadlineData.started_at);
     const createdDate = formatJalali(currentTask.created_at);
 
     const statusBadge = isCompleted
-        ? {
-            label: "انجام شده",
-            dot: "bg-emerald-500",
-            badge: "bg-emerald-500/10 text-emerald-500",
-        }
+        ? { label: "انجام شده", dot: "bg-emerald-500", badge: "bg-emerald-500/10 text-emerald-500" }
         : isCancelled
-            ? {
-                label: "لغو شده",
-                dot: "bg-red-500",
-                badge: "bg-red-500/10 text-red-500",
-            }
-            : {
-                label: "در حال انجام",
-                dot: "bg-indigo-500",
-                badge: "bg-indigo-500/10 text-indigo-500",
-            };
+            ? { label: "لغو شده", dot: "bg-red-500", badge: "bg-red-500/10 text-red-500" }
+            : { label: "در حال انجام", dot: "bg-indigo-500", badge: "bg-indigo-500/10 text-indigo-500" };
 
     return (
         <>
@@ -159,12 +84,8 @@ function ReceivedTaskCard({
                 className="flex flex-col gap-3 rounded-[1.8rem] border border-gray-100 bg-white p-4 shadow-[0_8px_28px_rgba(15,23,42,0.035)] dark:border-white/[0.07] dark:bg-[#111a2d]"
             >
                 <div className="flex items-center justify-between gap-2">
-                    <span
-                        className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-extrabold ${statusBadge.badge}`}
-                    >
-                        <span
-                            className={`h-1.5 w-1.5 rounded-full ${statusBadge.dot}`}
-                        />
+                    <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-extrabold ${statusBadge.badge}`}>
+                        <span className={`h-1.5 w-1.5 rounded-full ${statusBadge.dot}`} />
                         {statusBadge.label}
                     </span>
 
@@ -198,45 +119,24 @@ function ReceivedTaskCard({
                     <span>ایجاد: {createdDate}</span>
                 </div>
 
-                {(
-                    deadlineData.started_at || deadlineData.deadline
-                ) ? (
+                {(deadlineData.started_at || deadlineData.deadline) ? (
                     <>
                         {startedAtDate && (
                             <div className="flex items-center gap-2 rounded-2xl bg-indigo-50 px-3 py-2.5 dark:bg-indigo-500/10">
-                                <Clock3
-                                    size={13}
-                                    className="text-indigo-500 dark:text-indigo-400"
-                                />
+                                <Clock3 size={13} className="text-indigo-500 dark:text-indigo-400" />
                                 <div>
-                                    <p className="text-[11px] font-extrabold text-indigo-500 dark:text-indigo-400">
-                                        زمان شروع
-                                    </p>
-                                    <p className="mt-0.5 text-[10px] font-bold text-gray-500 dark:text-gray-400">
-                                        {startedAtDate}
-                                    </p>
+                                    <p className="text-[11px] font-extrabold text-indigo-500 dark:text-indigo-400">زمان شروع</p>
+                                    <p className="mt-0.5 text-[10px] font-bold text-gray-500 dark:text-gray-400">{startedAtDate}</p>
                                 </div>
                             </div>
                         )}
 
-                        <div
-                            className={`flex items-center gap-2 rounded-2xl px-3 py-2.5 ${deadlineState.background}`}
-                        >
-                            <Clock3
-                                size={13}
-                                className={deadlineState.color}
-                            />
+                        <div className={`flex items-center gap-2 rounded-2xl px-3 py-2.5 ${deadlineState.background}`}>
+                            <Clock3 size={13} className={deadlineState.color} />
                             <div>
-                                <p
-                                    className={`text-[11px] font-extrabold ${deadlineState.color}`}
-                                >
-                                    {deadlineState.label}
-                                </p>
-
+                                <p className={`text-[11px] font-extrabold ${deadlineState.color}`}>{deadlineState.label}</p>
                                 {deadlineDate && (
-                                    <p className="mt-0.5 text-[10px] font-bold text-gray-500 dark:text-gray-400">
-                                        {deadlineDate}
-                                    </p>
+                                    <p className="mt-0.5 text-[10px] font-bold text-gray-500 dark:text-gray-400">{deadlineDate}</p>
                                 )}
                             </div>
                         </div>
@@ -244,9 +144,7 @@ function ReceivedTaskCard({
                 ) : (
                     <div className="flex items-center gap-2 rounded-2xl bg-gray-50 px-3 py-2.5 dark:bg-white/[0.03]">
                         <Clock3 size={13} className="text-gray-400" />
-                        <span className="text-[11px] font-semibold text-gray-400">
-                            زمان‌بندی تعیین نشده
-                        </span>
+                        <span className="text-[11px] font-semibold text-gray-400">زمان‌بندی تعیین نشده</span>
                     </div>
                 )}
 

@@ -7,6 +7,7 @@ import type {
   InternalTaskAttachment,
   InternalTaskRoutine,
   InternalTaskStatus,
+  InternalTaskDeadline,
 } from "./types";
 
 export type InternalTaskDeadlinePayload = {
@@ -20,36 +21,24 @@ export type InternalTaskDeadlineResponse = {
   deadline: string;
 };
 
-export type UpdateInternalTaskPayload = {
-  status: InternalTaskStatus;
-};
+export type UpdateInternalTaskPayload = { status: InternalTaskStatus };
 
 let internalTasksRequest: Promise<AxiosResponse<InternalTask[]>> | null = null;
 
 export function fetchInternalTasks() {
-  if (internalTasksRequest) {
-    return internalTasksRequest;
-  }
-
+  if (internalTasksRequest) return internalTasksRequest;
   const request = axiosInstance.get<InternalTask[]>(
     "/tasks/api/v1/internal_task/",
   );
-
   internalTasksRequest = request;
-
   request.then(
     () => {
-      if (internalTasksRequest === request) {
-        internalTasksRequest = null;
-      }
+      if (internalTasksRequest === request) internalTasksRequest = null;
     },
     () => {
-      if (internalTasksRequest === request) {
-        internalTasksRequest = null;
-      }
+      if (internalTasksRequest === request) internalTasksRequest = null;
     },
   );
-
   return request;
 }
 
@@ -77,7 +66,7 @@ export function createInternalTask(data: {
   assigned_to: number[];
   created_by: number;
 }) {
-  const request = axiosInstance.post<InternalTask>(
+  return axiosInstance.post<InternalTask>(
     "/tasks/api/v1/internal_task/create/",
     {
       title: data.title,
@@ -87,102 +76,77 @@ export function createInternalTask(data: {
       created_by: data.created_by,
     },
   );
-
-  return request;
 }
 
 export function updateInternalTaskStatus(
   id: number,
   payload: UpdateInternalTaskPayload,
 ) {
-  const request = axiosInstance.patch<InternalTask>(
+  return axiosInstance.patch<InternalTask>(
     `/tasks/api/v1/internal_task/${id}/update/`,
-    {
-      status: payload.status,
-    },
+    { status: payload.status },
   );
-
-  return request;
 }
+
 export function reopenInternalTask(id: number) {
-  const request = axiosInstance.post<InternalTask>(
+  return axiosInstance.post<InternalTask>(
     `/tasks/api/v1/internal_task/${id}/reopen/`,
   );
-
-  return request;
 }
+
+export function fetchInternalTaskDeadline(id: number) {
+  return axiosInstance.get<InternalTaskDeadline>(
+    `/tasks/api/v1/internal_task/${id}/deadline/`,
+  );
+}
+
 export function patchInternalTaskDeadline(
   id: number,
   payload: InternalTaskDeadlinePayload,
 ) {
-  const request = axiosInstance.patch<InternalTaskDeadlineResponse>(
+  return axiosInstance.patch<InternalTaskDeadlineResponse>(
     `/tasks/api/v1/internal_task/${id}/deadline/patch/`,
     {
       started_at: payload.started_at,
       deadline: payload.deadline,
     },
   );
-
-  return request;
 }
+
 export function uploadInternalTaskAttachments(
   id: number,
   files: File[],
   note: string,
 ) {
   const formData = new FormData();
-
-  files.forEach((file) => {
-    formData.append("files", file);
-  });
-
-  if (note.trim()) {
-    formData.append("note", note.trim());
-  }
-
-  const request = axiosInstance.post<InternalTaskAttachment[]>(
+  files.forEach((file) => formData.append("files", file));
+  if (note.trim()) formData.append("note", note.trim());
+  return axiosInstance.post<InternalTaskAttachment[]>(
     `/tasks/api/v1/internal_task/${id}/attachments/`,
     formData,
   );
-
-  return request;
 }
+
 export function completeInternalTask(id: number, files: File[], note: string) {
   const formData = new FormData();
-
-  files.forEach((file) => {
-    formData.append("files", file);
-  });
-
-  if (note.trim()) {
-    formData.append("note", note.trim());
-  }
-
-  const request = axiosInstance.post<InternalTask>(
+  files.forEach((file) => formData.append("files", file));
+  if (note.trim()) formData.append("note", note.trim());
+  return axiosInstance.post<InternalTask>(
     `/tasks/api/v1/internal_task/${id}/complete/`,
     formData,
   );
-
-  return request;
 }
+
 export function cancelInternalTask(id: number, files: File[], note: string) {
   const formData = new FormData();
-
-  files.forEach((file) => {
-    formData.append("files", file);
-  });
-
-  if (note.trim()) {
-    formData.append("note", note.trim());
-  }
-
-  const request = axiosInstance.post<InternalTask>(
+  files.forEach((file) => formData.append("files", file));
+  if (note.trim()) formData.append("note", note.trim());
+  return axiosInstance.post<InternalTask>(
     `/tasks/api/v1/internal_task/${id}/cancel/`,
     formData,
   );
-
-  return request;
 }
+
 export function getInternalTaskAttachmentUrl(
   taskId: number,
   attachmentId: number,
@@ -191,9 +155,7 @@ export function getInternalTaskAttachmentUrl(
 }
 
 export function deleteInternalTask(id: number) {
-  const request = axiosInstance.delete<void>(
+  return axiosInstance.delete<void>(
     `/tasks/api/v1/internal_task/${id}/delete/`,
   );
-
-  return request;
 }

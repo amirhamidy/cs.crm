@@ -7,11 +7,7 @@ import { fetchInternalTasks, deleteInternalTask } from "./Api";
 import type { InternalTask, InternalTaskStatus } from "./types";
 import SentTaskCard from "./Senttaskcard";
 import CreateTicketModal from "./Createticketmodal";
-interface InternalTaskDeadlineResponse {
-    id: number;
-    started_at: string | null;
-    deadline: string | null;
-}
+
 function normalizeDateValue(value: unknown): string | null {
     if (!value) return null;
     if (typeof value === "string") return value.trim() || null;
@@ -35,18 +31,13 @@ function normalizeTask(item: unknown): InternalTask | null {
         description: typeof task.description === "string" ? task.description : "",
         status,
         created_by: typeof task.created_by === "string" ? task.created_by.trim() : "",
-        created_at: typeof task.created_at === "string" && task.created_at.trim()
-            ? task.created_at
-            : new Date().toISOString(),
+        created_at: typeof task.created_at === "string" && task.created_at.trim() ? task.created_at : new Date().toISOString(),
         started_at: normalizeDateValue(task.started_at),
         deadline: normalizeDateValue(task.deadline),
         assigned_to: Array.isArray(task.assigned_to) ? task.assigned_to : [],
         attachments: Array.isArray(task.attachments) ? task.attachments : [],
         updated_at: typeof task.updated_at === "string" ? task.updated_at : new Date().toISOString(),
-        completed_at:
-            typeof task.completed_at === "string" || task.completed_at === null
-                ? task.completed_at
-                : null,
+        completed_at: typeof task.completed_at === "string" || task.completed_at === null ? task.completed_at : null,
     };
 }
 
@@ -95,38 +86,26 @@ export default function SentTicketsBoard() {
     }, []);
 
     const sentTasks = useMemo(
-        () => currentUsername
-            ? tasks.filter(task => task.created_by.trim() === currentUsername)
-            : [],
+        () => currentUsername ? tasks.filter(task => task.created_by.trim() === currentUsername) : [],
         [tasks, currentUsername]
     );
 
     const handleUpdated = (updatedTask: InternalTask) => {
         const normalized = normalizeTask(updatedTask);
         if (!normalized) return;
-
-        setTasks(previous =>
-            previous.map(task =>
-                task.id === normalized.id
-                    ? { ...task, ...normalized, created_at: task.created_at }
-                    : task
-            )
-        );
+        setTasks(previous => previous.map(task =>
+            task.id === normalized.id ? { ...task, ...normalized, created_at: task.created_at } : task
+        ));
     };
 
     const handleCreated = (createdTask: InternalTask) => {
         const normalized = normalizeTask(createdTask);
-
         if (!normalized) {
             void loadTasks();
             setCreateOpen(false);
             return;
         }
-
-        setTasks(previous => [
-            normalized,
-            ...previous.filter(task => task.id !== normalized.id),
-        ]);
+        setTasks(previous => [normalized, ...previous.filter(task => task.id !== normalized.id)]);
         setCreateOpen(false);
         void loadTasks();
     };
@@ -134,7 +113,6 @@ export default function SentTicketsBoard() {
     const handleDelete = async (taskId: number) => {
         const id = Number(taskId);
         if (!Number.isFinite(id) || id <= 0) return;
-
         try {
             setDeleteLoadingId(id);
             await deleteInternalTask(id);
@@ -147,80 +125,45 @@ export default function SentTicketsBoard() {
     };
 
     if (loading || employeeLoading) {
-        return (
-            <div className="flex h-64 items-center justify-center">
-                <Loader size={22} className="animate-spin text-indigo-500" />
-            </div>
-        );
+        return <div className="flex h-64 items-center justify-center"><Loader size={22} className="animate-spin text-indigo-500" /></div>;
     }
 
     return (
         <div dir="rtl" className="flex flex-col gap-5">
             <div className="flex items-center justify-between gap-4">
                 <div className="flex items-center gap-2.5">
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-indigo-500/10">
-                        <Ticket size={17} className="text-indigo-500" />
-                    </div>
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-indigo-500/10"><Ticket size={17} className="text-indigo-500" /></div>
                     <div>
-                        <h3 className="text-[14px] font-extrabold text-gray-900 dark:text-white">
-                            تیکت‌های ارسال شده
-                        </h3>
-                        <p className="text-[11px] text-gray-400 dark:text-gray-600">
-                            {sentTasks.length} تیکت
-                        </p>
+                        <h3 className="text-[14px] font-extrabold text-gray-900 dark:text-white">تیکت‌های ارسال شده</h3>
+                        <p className="text-[11px] text-gray-400 dark:text-gray-600">{sentTasks.length} تیکت</p>
                     </div>
                 </div>
-
-                <button
-                    type="button"
-                    onClick={() => setCreateOpen(true)}
-                    className="flex shrink-0 items-center gap-1.5 rounded-2xl bg-indigo-600 px-3.5 py-2 text-[11.5px] font-bold text-white transition-colors hover:bg-indigo-500"
-                >
-                    <Plus size={13} />
-                    تیکت جدید
+                <button type="button" onClick={() => setCreateOpen(true)} className="flex shrink-0 items-center gap-1.5 rounded-2xl bg-indigo-600 px-3.5 py-2 text-[11.5px] font-bold text-white transition-colors hover:bg-indigo-500">
+                    <Plus size={13} />تیکت جدید
                 </button>
             </div>
 
             {error && (
                 <div className="flex items-center justify-between gap-3 rounded-2xl border border-red-500/20 bg-red-500/5 px-4 py-3">
                     <p className="text-[12px] font-semibold text-red-500">{error}</p>
-                    <button
-                        type="button"
-                        onClick={() => void loadTasks()}
-                        className="rounded-xl bg-red-500/10 px-3 py-1.5 text-[11px] font-bold text-red-500 transition-colors hover:bg-red-500/20"
-                    >
-                        تلاش مجدد
-                    </button>
+                    <button type="button" onClick={() => void loadTasks()} className="rounded-xl bg-red-500/10 px-3 py-1.5 text-[11px] font-bold text-red-500 transition-colors hover:bg-red-500/20">تلاش مجدد</button>
                 </div>
             )}
 
             {sentTasks.length === 0 ? (
                 <div className="flex h-64 flex-col items-center justify-center gap-3 rounded-3xl border border-dashed border-gray-200 dark:border-white/[0.07]">
                     <LayoutGrid size={28} className="text-gray-300 dark:text-gray-700" />
-                    <p className="text-[12px] text-gray-400">
-                        هنوز تیکتی ارسال نکرده‌اید.
-                    </p>
+                    <p className="text-[12px] text-gray-400">هنوز تیکتی ارسال نکرده‌اید.</p>
                 </div>
             ) : (
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
                     {sentTasks.map((task, index) => (
-                        <SentTaskCard
-                            key={task.id}
-                            task={task}
-                            index={index}
-                            onUpdated={handleUpdated}
-                            onDelete={handleDelete}
-                            isDeleting={deleteLoadingId === task.id}
-                        />
+                        <SentTaskCard key={task.id} task={task} index={index} onUpdated={handleUpdated} onDelete={handleDelete} isDeleting={deleteLoadingId === task.id} />
                     ))}
                 </div>
             )}
 
-            <CreateTicketModal
-                isOpen={createOpen}
-                onClose={() => setCreateOpen(false)}
-                onCreated={handleCreated}
-            />
+            <CreateTicketModal isOpen={createOpen} onClose={() => setCreateOpen(false)} onCreated={handleCreated} />
         </div>
     );
 }

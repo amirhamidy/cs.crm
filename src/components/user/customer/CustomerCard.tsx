@@ -1,7 +1,6 @@
-
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "next-themes";
 import {
@@ -61,25 +60,6 @@ function Avatar({ name, id }: { name: string; id: number }) {
     );
 }
 
-function Stars({ score }: { score: number }) {
-    return (
-        <div className="flex items-center gap-0.5" dir="ltr">
-            {[1, 2, 3, 4, 5].map((star) => (
-                <Star
-                    key={star}
-                    size={12}
-                    fill={star <= Math.round(score) ? "#FBBF24" : "none"}
-                    className={
-                        star <= Math.round(score)
-                            ? "text-amber-400"
-                            : "text-gray-300 dark:text-gray-700"
-                    }
-                />
-            ))}
-        </div>
-    );
-}
-
 export default function CustomerCard({
     customer,
     index,
@@ -95,6 +75,7 @@ export default function CustomerCard({
     const isDark = mounted && resolvedTheme === "dark";
 
     const [hovered, setHovered] = useState(false);
+    const [showActions, setShowActions] = useState(false);
     const [showConfirm, setShowConfirm] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
     const [showEdit, setShowEdit] = useState(false);
@@ -103,6 +84,8 @@ export default function CustomerCard({
 
     const [scores, setScores] = useState<ScoreItem[]>([]);
     const [scoresLoading, setScoresLoading] = useState(true);
+
+    const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
     const { resolveName } = useEmployeeDirectory();
 
@@ -158,6 +141,23 @@ export default function CustomerCard({
         }
     };
 
+    const handleMouseEnter = () => {
+        setHovered(true);
+        hoverTimeoutRef.current = setTimeout(() => {
+            setShowActions(true);
+        }, 300);
+    };
+
+    const handleMouseLeave = () => {
+        setHovered(false);
+        setShowActions(false);
+        setTooltipVisible(false);
+        if (hoverTimeoutRef.current) {
+            clearTimeout(hoverTimeoutRef.current);
+            hoverTimeoutRef.current = null;
+        }
+    };
+
     const borderColor = isDark
         ? "rgba(255,255,255,0.06)"
         : "rgba(0,0,0,0.06)";
@@ -168,6 +168,46 @@ export default function CustomerCard({
         ? "rgba(255,255,255,0.05)"
         : "rgba(0,0,0,0.05)";
 
+    const isPotential = customer.status_display === "بالقوه";
+
+    const spring = { type: "spring" as const, stiffness: 420, damping: 26 };
+
+    const iconBg = isDark ? "#2a2a2a" : "#eeeeee";
+    const iconColor = isDark ? "#e5e7eb" : "#374151";
+
+    const actions = [
+        {
+            key: "edit",
+            icon: <SquarePen size={16} />,
+            offset: { x: -34, y: -18 },
+            delay: 0.03,
+            disabled: false,
+            onClick: () => setShowEdit(true),
+            title: "ویرایش",
+        },
+        {
+            key: "delete",
+            icon: <Trash2 size={16} />,
+            offset: { x: 34, y: -18 },
+            delay: 0.08,
+            disabled: hasActiveCase,
+            onClick: () => {
+                if (hasActiveCase) return;
+                setShowConfirm(true);
+            },
+            title: "حذف",
+        },
+        {
+            key: "scores",
+            icon: <MessageCircle size={16} />,
+            offset: { x: 0, y: 26 },
+            delay: 0.13,
+            disabled: false,
+            onClick: () => setShowScores(true),
+            title: "نظرات",
+        },
+    ];
+
     return (
         <>
             <motion.div
@@ -175,12 +215,10 @@ export default function CustomerCard({
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95 }}
                 transition={{ duration: 0.2, delay: index * 0.04 }}
-                onHoverStart={() => setHovered(true)}
-                onHoverEnd={() => {
-                    setHovered(false);
-                    setTooltipVisible(false);
-                }}
-                className="relative flex flex-col gap-3 overflow-visible rounded-2xl p-4"
+                onMouseEnter={handleMouseEnter}
+                onMouseLeave={handleMouseLeave}
+                whileHover={{ y: -4 }}
+                className="group relative flex flex-col gap-3 overflow-visible rounded-2xl p-4"
                 style={{
                     border: `1px solid ${borderColor}`,
                     background: surfaceBg,
@@ -198,8 +236,8 @@ export default function CustomerCard({
                             x2="0%"
                             y2="0%"
                         >
-                            <stop offset="0%" stopColor="#6366f1" />
-                            <stop offset="100%" stopColor="#8b5cf6" />
+                            <stop offset="0%" stopColor="#6366f1" stopOpacity="0.5" />
+                            <stop offset="100%" stopColor="#8b5cf6" stopOpacity="0.5" />
                         </linearGradient>
                     </defs>
 
@@ -212,7 +250,7 @@ export default function CustomerCard({
                         ry="15"
                         fill="none"
                         stroke={`url(#cust-grad-${customer.id})`}
-                        strokeWidth="1.5"
+                        strokeWidth="1"
                         pathLength="1"
                         initial={{ pathLength: 0, opacity: 0 }}
                         animate={
@@ -220,88 +258,33 @@ export default function CustomerCard({
                                 ? { pathLength: 1, opacity: 1 }
                                 : { pathLength: 0, opacity: 0 }
                         }
-                        transition={{ duration: 0.55, ease: "easeInOut" }}
+                        transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
                     />
                 </svg>
 
-                <div className="absolute left-3 top-3 z-10 flex items-center gap-1.5">
-                    <button
-                        onClick={() => setShowEdit(true)}
-                        className="flex h-7 w-7 items-center justify-center rounded-xl transition-colors"
+                <div className="absolute left-3 top-3 z-10">
+                    <div
+                        className="flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-black"
                         style={{
                             background: isDark
-                                ? "rgba(99,102,241,0.1)"
-                                : "rgba(99,102,241,0.07)",
-                            color: isDark ? "#a5b4fc" : "#6366f1",
+                                ? "rgba(245,158,11,0.14)"
+                                : "rgba(245,158,11,0.1)",
+                            border: `1px solid ${isDark ? "rgba(245,158,11,0.25)" : "rgba(245,158,11,0.3)"}`,
+                            color: isDark ? "#fbbf24" : "#d97706",
                         }}
-                        title="ویرایش"
-                        type="button"
                     >
-                        <SquarePen size={11} />
-                    </button>
-
-                    <div className="relative">
-                        <button
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                if (hasActiveCase) return;
-                                setShowConfirm(true);
-                            }}
-                            onMouseEnter={() => {
-                                if (hasActiveCase) setTooltipVisible(true);
-                            }}
-                            onMouseLeave={() => setTooltipVisible(false)}
-                            className="flex h-7 w-7 items-center justify-center rounded-xl transition-colors"
-                            style={{
-                                background: hasActiveCase
-                                    ? isDark
-                                        ? "rgba(255,255,255,0.04)"
-                                        : "rgba(0,0,0,0.04)"
-                                    : isDark
-                                        ? "rgba(239,68,68,0.1)"
-                                        : "rgba(239,68,68,0.07)",
-                                color: hasActiveCase
-                                    ? isDark
-                                        ? "#4b5563"
-                                        : "#9ca3af"
-                                    : "#ef4444",
-                                cursor: hasActiveCase
-                                    ? "not-allowed"
-                                    : "pointer",
-                            }}
-                            type="button"
-                        >
-                            <Trash2 size={11} />
-                        </button>
-
-                        <AnimatePresence>
-                            {tooltipVisible && (
-                                <motion.div
-                                    initial={{ opacity: 0, y: 4, scale: 0.95 }}
-                                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                                    exit={{ opacity: 0, y: 4, scale: 0.95 }}
-                                    className="absolute bottom-full left-1/2 z-50 mb-2 -translate-x-1/2 whitespace-nowrap"
-                                    dir="rtl"
-                                >
-                                    <div
-                                        className="flex flex-col items-center gap-1 rounded-2xl px-3 py-2 text-center shadow-xl"
-                                        style={{
-                                            background: isDark
-                                                ? "#0f172a"
-                                                : "#1e293b",
-                                            border: "1px solid rgba(255,255,255,0.08)",
-                                        }}
-                                    >
-                                        <span className="text-[11px] font-bold text-white">
-                                            این مشتری پرونده دارد
-                                        </span>
-                                        <span className="text-[10px] text-slate-400">
-                                            برای حذف آن باید ابتدا پرونده‌هایش را حذف کنید
-                                        </span>
-                                    </div>
-                                </motion.div>
-                            )}
-                        </AnimatePresence>
+                        {scoresLoading ? (
+                            <Loader2 size={12} className="animate-spin" />
+                        ) : (
+                            <>
+                                <Star size={12} fill="currentColor" />
+                                <span>
+                                    {scores.length && average > 0
+                                        ? average.toFixed(1)
+                                        : "—"}
+                                </span>
+                            </>
+                        )}
                     </div>
                 </div>
 
@@ -316,37 +299,6 @@ export default function CustomerCard({
                             #{customer.id}
                         </p>
                     </div>
-
-                    {customer.status_display && (
-                        <div className="absolute left-2.5 top-[50%] flex -translate-y-1/2 justify-center">
-                            <span
-                                className="rounded-lg px-2 py-0.5 text-[10.5px] font-bold"
-                                style={
-                                    customer.status_display === "بالقوه"
-                                        ? {
-                                            background:
-                                                "linear-gradient(135deg, rgba(148,163,184,0.18), rgba(100,116,139,0.18))",
-                                            color: isDark
-                                                ? "#cbd5e1"
-                                                : "#475569",
-                                            border:
-                                                "1px solid rgba(148,163,184,0.25)",
-                                        }
-                                        : {
-                                            background:
-                                                "linear-gradient(135deg, rgba(59,130,246,0.18), rgba(6,182,212,0.18))",
-                                            color: isDark
-                                                ? "#60a5fa"
-                                                : "#0369a1",
-                                            border:
-                                                "1px solid rgba(59,130,246,0.25)",
-                                        }
-                                }
-                            >
-                                {customer.status_display}
-                            </span>
-                        </div>
-                    )}
                 </div>
 
                 <div
@@ -378,62 +330,161 @@ export default function CustomerCard({
                             <span>{formatDate(customer.created_at)}</span>
                         </div>
                     </div>
+
+                    {customer.status_display && (
+                        <div className="flex items-center gap-1.5 pt-0.5">
+                            <span
+                                className="rounded-lg px-2 py-0.5 text-[10.5px] font-bold"
+                                style={
+                                    isPotential
+                                        ? {
+                                            background:
+                                                "linear-gradient(135deg, rgba(148,163,184,0.18), rgba(100,116,139,0.18))",
+                                            color: isDark ? "#cbd5e1" : "#475569",
+                                            border: "1px solid rgba(148,163,184,0.25)",
+                                        }
+                                        : {
+                                            background:
+                                                "linear-gradient(135deg, rgba(59,130,246,0.18), rgba(6,182,212,0.18))",
+                                            color: isDark ? "#60a5fa" : "#0369a1",
+                                            border: "1px solid rgba(59,130,246,0.25)",
+                                        }
+                                }
+                            >
+                                {customer.status_display}
+                            </span>
+                        </div>
+                    )}
                 </div>
 
-                <div
-                    className="flex items-center justify-between gap-2 rounded-xl border px-3 py-2.5"
-                    style={{
-                        borderColor: isDark
-                            ? "rgba(251,191,36,0.12)"
-                            : "rgba(245,158,11,0.15)",
-                        background: isDark
-                            ? "rgba(251,191,36,0.04)"
-                            : "rgba(245,158,11,0.04)",
-                    }}
-                >
-                    <div className="flex min-w-0 items-center gap-2">
-                        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-amber-400/10">
-                            <Star
-                                size={14}
-                                fill={scores.length ? "#FBBF24" : "none"}
-                                className="text-amber-400"
-                            />
-                        </div>
+                <AnimatePresence>
+                    {showActions && (
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            transition={{ duration: 0.18, ease: "easeOut" }}
+                            className="absolute inset-0 z-30 flex items-center justify-center rounded-2xl"
+                            style={{
+                                background: isDark
+                                    ? "rgba(10,12,20,0.55)"
+                                    : "rgba(255,255,255,0.55)",
+                                backdropFilter: "blur(6px)",
+                                WebkitBackdropFilter: "blur(6px)",
+                            }}
+                        >
+                            <div className="relative h-20 w-40">
+                                {actions.map((action) => (
+                                    <div
+                                        key={action.key}
+                                        className="absolute left-1/2 top-1/2"
+                                        style={{
+                                            marginLeft: "-22px",
+                                            marginTop: "-22px",
+                                        }}
+                                    >
+                                        <div className="relative">
+                                            <motion.button
+                                                type="button"
+                                                initial={{ x: 0, y: 0, scale: 0, opacity: 0 }}
+                                                animate={{
+                                                    x: action.offset.x,
+                                                    y: action.offset.y,
+                                                    scale: 1,
+                                                    opacity: 1,
+                                                }}
+                                                exit={{ x: 0, y: 0, scale: 0, opacity: 0 }}
+                                                transition={{ ...spring, delay: action.delay }}
+                                                whileHover={
+                                                    action.disabled ? {} : { scale: 1.05 }
+                                                }
+                                                whileTap={
+                                                    action.disabled ? {} : { scale: 0.96 }
+                                                }
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    action.onClick();
+                                                }}
+                                                onMouseEnter={() => {
+                                                    if (
+                                                        action.key === "delete" &&
+                                                        hasActiveCase
+                                                    )
+                                                        setTooltipVisible(true);
+                                                }}
+                                                onMouseLeave={() => setTooltipVisible(false)}
+                                                title={action.title}
+                                                className="flex h-11 w-11 items-center justify-center rounded-full"
+                                                style={{
+                                                    background: action.disabled
+                                                        ? isDark
+                                                            ? "rgba(42,42,42,0.5)"
+                                                            : "rgba(238,238,238,0.5)"
+                                                        : iconBg,
+                                                    color: action.disabled
+                                                        ? isDark
+                                                            ? "#64748b"
+                                                            : "#9ca3af"
+                                                        : iconColor,
+                                                    boxShadow:
+                                                        "0 4px 12px rgba(0,0,0,0.12)",
+                                                    cursor: action.disabled
+                                                        ? "not-allowed"
+                                                        : "pointer",
+                                                }}
+                                            >
+                                                {action.icon}
+                                            </motion.button>
 
-                        <div className="min-w-0">
-                            <p className="text-[10px] font-bold text-gray-400">
-                                امتیاز مشتری
-                            </p>
-
-                            <div className="mt-1 flex items-center gap-2">
-                                {scoresLoading ? (
-                                    <Loader2
-                                        size={13}
-                                        className="animate-spin text-amber-400"
-                                    />
-                                ) : (
-                                    <>
-                                        <span className="text-[14px] font-black text-amber-500">
-                                            {scores.length
-                                                ? average.toFixed(1)
-                                                : "—"}
-                                        </span>
-                                        <Stars score={average} />
-                                    </>
-                                )}
+                                            {action.key === "delete" && (
+                                                <AnimatePresence>
+                                                    {tooltipVisible && (
+                                                        <motion.div
+                                                            initial={{
+                                                                opacity: 0,
+                                                                scale: 0.95,
+                                                            }}
+                                                            animate={{
+                                                                opacity: 1,
+                                                                scale: 1,
+                                                            }}
+                                                            exit={{
+                                                                opacity: 0,
+                                                                scale: 0.95,
+                                                            }}
+                                                            className="absolute left-1/2 top-0 z-50 mt-[-72px] whitespace-nowrap"
+                                                            style={{
+                                                                marginLeft: "-90px",
+                                                            }}
+                                                            dir="rtl"
+                                                        >
+                                                            <div
+                                                                className="flex flex-col items-center gap-1 rounded-2xl px-3 py-2 text-center shadow-xl"
+                                                                style={{
+                                                                    background: isDark
+                                                                        ? "#0f172a"
+                                                                        : "#1e293b",
+                                                                    border: "1px solid rgba(255,255,255,0.08)",
+                                                                }}
+                                                            >
+                                                                <span className="text-[11px] font-bold text-white">
+                                                                    این مشتری پرونده دارد
+                                                                </span>
+                                                                <span className="text-[10px] text-slate-400">
+                                                                    برای حذف آن باید ابتدا پرونده‌هایش را حذف کنید
+                                                                </span>
+                                                            </div>
+                                                        </motion.div>
+                                                    )}
+                                                </AnimatePresence>
+                                            )}
+                                        </div>
+                                    </div>
+                                ))}
                             </div>
-                        </div>
-                    </div>
-
-                    <button
-                        type="button"
-                        onClick={() => setShowScores(true)}
-                        className="flex shrink-0 items-center gap-1.5 rounded-xl bg-amber-400/10 px-2.5 py-2 text-[10px] font-bold text-amber-600 transition-colors hover:bg-amber-400/20 dark:text-amber-400"
-                    >
-                        <MessageCircle size={12} />
-                        نظرات
-                    </button>
-                </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
             </motion.div>
 
             <CustomerDeleteModal
