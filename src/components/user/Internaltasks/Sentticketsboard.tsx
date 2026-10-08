@@ -86,7 +86,12 @@ export default function SentTicketsBoard() {
     }, []);
 
     const sentTasks = useMemo(
-        () => currentUsername ? tasks.filter(task => task.created_by.trim() === currentUsername) : [],
+        () => currentUsername
+            ? tasks.filter(task =>
+                task.status === "in_progress" &&
+                task.created_by.trim() === currentUsername
+            )
+            : [],
         [tasks, currentUsername]
     );
 

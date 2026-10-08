@@ -93,7 +93,10 @@ export default function ReceivedTicketsBoard() {
     const receivedTasks = useMemo(() => {
         if (!userId) return [];
         return tasks
-            .filter(task => task.assigned_to.some(assigned => Number(assigned.id) === Number(userId)))
+            .filter(task =>
+                task.status === "in_progress" &&
+                task.assigned_to.some(assigned => Number(assigned.id) === Number(userId))
+            )
             .map(task => ({
                 ...task,
                 assigned_to: task.assigned_to.map(assigned => {
