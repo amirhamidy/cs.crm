@@ -599,6 +599,14 @@ export default function UserTaskCard({
                         />
                     )}
 
+                    {!ext.case && (
+                        <InfoRow
+                            label="پرونده"
+                            value="بدون پرونده"
+                            icon={FileText}
+                        />
+                    )}
+
                     {task.department_name && (
                         <InfoRow
                             label="دپارتمان"
@@ -696,16 +704,18 @@ export default function UserTaskCard({
                     </div>
                 )}
 
-                <div className="mt-2.5 flex gap-1.5">
-                    <button
-                        type="button"
-                        onClick={() => setCaseDescOpen(true)}
-                        className="flex h-8 flex-1 items-center justify-center gap-1 rounded-xl bg-gray-100 text-[9.5px] font-extrabold text-gray-500 dark:bg-white/[.05]"
-                    >
-                        <FileText size={11} />
-                        پرونده
-                    </button>
-                </div>
+                {ext.case && (
+                    <div className="mt-2.5 flex gap-1.5">
+                        <button
+                            type="button"
+                            onClick={() => setCaseDescOpen(true)}
+                            className="flex h-8 flex-1 items-center justify-center gap-1 rounded-xl bg-gray-100 text-[9.5px] font-extrabold text-gray-500 dark:bg-white/[.05]"
+                        >
+                            <FileText size={11} />
+                            پرونده
+                        </button>
+                    </div>
+                )}
 
                 <div className="mt-2.5 border-t border-gray-100 pt-2.5 dark:border-white/[.06]">
                     {isCancelled ? (

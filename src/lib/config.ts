@@ -6,7 +6,7 @@ declare global {
   }
 }
 
-export const DEFAULT_API_URL = "///////";
+export const DEFAULT_API_URL = "https://api.radcosys.ir";
 
 export function getApiUrl(): string {
   const fromWindow =

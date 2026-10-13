@@ -4,7 +4,7 @@ export interface UserTask {
   id: number;
   title: string;
   description?: string;
-  case: number;
+  case: number | null;
   department: number;
   department_name?: string;
   current_step: number;
