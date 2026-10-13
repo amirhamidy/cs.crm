@@ -72,6 +72,25 @@ function FloatingInput({ label, id, value, onChange }: {
     );
 }
 
+function FloatingTextarea({ label, id, value, onChange }: {
+    label: string; id: string; value: string; onChange: (v: string) => void;
+}) {
+    return (
+        <div className="relative">
+            <textarea
+                id={id} placeholder=" " value={value} rows={3}
+                onChange={(e) => onChange(e.target.value)}
+                className="peer w-full resize-none rounded-2xl bg-gray-50 dark:bg-white/[0.03] border border-gray-100 dark:border-white/[0.06] px-4 pt-6 pb-3 text-[12.5px] font-bold text-gray-900 dark:text-white outline-none transition-colors focus:border-emerald-500 dark:focus:border-emerald-500/50"
+            />
+            <label htmlFor={id}
+                className="pointer-events-none absolute right-4 top-4 text-[12px] font-semibold text-gray-400 transition-all duration-200 peer-focus:top-[10px] peer-focus:text-[10px] peer-focus:text-emerald-500 peer-[:not(:placeholder-shown)]:top-[10px] peer-[:not(:placeholder-shown)]:text-[10px]"
+            >
+                {label}
+            </label>
+        </div>
+    );
+}
+
 function NiceSelect({ label, options, value, onChange, placeholder, disabled, emptyText, multiple = false }: {
     label: string; options: Option[]; value: number | number[] | null;
     onChange: (id: number | number[]) => void; placeholder: string;
@@ -210,6 +229,7 @@ export default function CreateNoCaseTaskModal({ isOpen, onClose, onSuccess }: Pr
     const [selectedDepartment, setSelectedDepartment] = useState<number | null>(null);
     const [selectedEmployees, setSelectedEmployees] = useState<number[]>([]);
     const [title, setTitle] = useState("");
+    const [description, setDescription] = useState("");
     const [files, setFiles] = useState<File[]>([]);
 
     useEffect(() => {
@@ -229,7 +249,7 @@ export default function CreateNoCaseTaskModal({ isOpen, onClose, onSuccess }: Pr
 
     function resetAll() {
         setSelectedDepartment(null); setSelectedEmployees([]);
-        setTitle(""); setFiles([]); setSubmitError("");
+        setTitle(""); setDescription(""); setFiles([]); setSubmitError("");
     }
 
     function handleClose() { if (submitting) return; resetAll(); onClose(); }
@@ -252,6 +272,7 @@ export default function CreateNoCaseTaskModal({ isOpen, onClose, onSuccess }: Pr
         try {
             const formData = new FormData();
             formData.append("title", title);
+            formData.append("description", description);
             formData.append("case", "");
             formData.append("department", String(selectedDepartment));
             selectedEmployees.forEach((id) => formData.append("assigned_employee", String(id)));
@@ -328,6 +349,10 @@ export default function CreateNoCaseTaskModal({ isOpen, onClose, onSuccess }: Pr
 
                             <FloatingInput id="no_case_task_title" label="عنوان وظیفه" value={title}
                                 onChange={(v) => { setTitle(v); setSubmitError(""); }}
+                            />
+
+                            <FloatingTextarea id="no_case_task_description" label="توضیحات (اختیاری)" value={description}
+                                onChange={(v) => { setDescription(v); setSubmitError(""); }}
                             />
 
                             <NiceSelect
