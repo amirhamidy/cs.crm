@@ -231,6 +231,7 @@ export default function UserTaskCard({
     employeesMap = {},
 }: Props) {
     const ext = task as TaskWithSchedule;
+    const hasCase = Boolean(ext.case);
 
     const assigneeIds = useMemo(
         () => normalizeIds(task.assigned_employee),
@@ -347,6 +348,7 @@ export default function UserTaskCard({
             data.files.forEach((file) => form.append("files", file));
 
             if (
+                hasCase &&
                 ["next", "prev", "cancel", "sold", "complete"].includes(
                     direction
                 )
@@ -599,14 +601,6 @@ export default function UserTaskCard({
                         />
                     )}
 
-                    {!ext.case && (
-                        <InfoRow
-                            label="پرونده"
-                            value="بدون پرونده"
-                            icon={FileText}
-                        />
-                    )}
-
                     {task.department_name && (
                         <InfoRow
                             label="دپارتمان"
@@ -704,7 +698,7 @@ export default function UserTaskCard({
                     </div>
                 )}
 
-                {ext.case && (
+                {hasCase && (
                     <div className="mt-2.5 flex gap-1.5">
                         <button
                             type="button"
@@ -754,13 +748,17 @@ export default function UserTaskCard({
                                 icon={<ArrowLeftCircle size={13} />}
                                 label={
                                     isLastStage
-                                        ? "ثبت نظر و تکمیل"
+                                        ? hasCase
+                                            ? "ثبت نظر و تکمیل"
+                                            : "تکمیل تسک"
                                         : "انتقال به مرحله بعد"
                                 }
                                 full
                             />
 
-                            <div className="mt-1.5 grid grid-cols-2 gap-1.5">
+                            <div
+                                className={`mt-1.5 grid gap-1.5 ${hasCase ? "grid-cols-2" : "grid-cols-1"}`}
+                            >
                                 <ActionBtn
                                     rippleKey={`prev-${task.id}`}
                                     active={false}
@@ -771,15 +769,17 @@ export default function UserTaskCard({
                                     full
                                 />
 
-                                <ActionBtn
-                                    rippleKey={`sold-${task.id}`}
-                                    active={false}
-                                    onClick={() => setOpenModal("sold")}
-                                    color="amber"
-                                    icon={<ShoppingBag size={13} />}
-                                    label="فروش"
-                                    full
-                                />
+                                {hasCase && (
+                                    <ActionBtn
+                                        rippleKey={`sold-${task.id}`}
+                                        active={false}
+                                        onClick={() => setOpenModal("sold")}
+                                        color="amber"
+                                        icon={<ShoppingBag size={13} />}
+                                        label="فروش"
+                                        full
+                                    />
+                                )}
                             </div>
 
                             <div className="mt-1.5 flex flex-col gap-1.5">
@@ -821,6 +821,17 @@ export default function UserTaskCard({
                             ? "تکمیل تسک"
                             : meta.title;
 
+                    const finalDescription =
+                        direction === "next" && isLastStage
+                            ? hasCase
+                                ? "قبل از تکمیل، امتیاز و نظر شما درباره مشتری ثبت می‌شود"
+                                : "تسک به‌عنوان انجام‌شده ثبت می‌شود"
+                            : !hasCase && direction === "next"
+                                ? "تسک به مرحله بعد منتقل می‌شود"
+                                : !hasCase && direction === "complete"
+                                    ? "تسک به‌عنوان انجام‌شده ثبت می‌شود"
+                                    : meta.desc;
+
                     return (
                         <TaskActionModal
                             key={direction}
@@ -828,24 +839,23 @@ export default function UserTaskCard({
                             onClose={() => setOpenModal(null)}
                             direction={direction}
                             title={finalTitle}
-                            description={
-                                direction === "next" && isLastStage
-                                    ? "قبل از تکمیل، امتیاز و نظر شما درباره مشتری ثبت می‌شود"
-                                    : meta.desc
-                            }
+                            description={finalDescription}
                             onSubmit={(data) => action(direction, data)}
                             submitting={submitting}
+                            hideReview={!hasCase}
                         />
                     );
                 })}
 
-            <SoldOrderTaskModal
-                isOpen={openModal === "sold"}
-                onClose={() => setOpenModal(null)}
-                taskId={task.id}
-                onSubmit={submitSale}
-                submitting={submitting}
-            />
+            {hasCase && (
+                <SoldOrderTaskModal
+                    isOpen={openModal === "sold"}
+                    onClose={() => setOpenModal(null)}
+                    taskId={task.id}
+                    onSubmit={submitSale}
+                    submitting={submitting}
+                />
+            )}
 
             <TaskLogsModal
                 isOpen={logsOpen}
@@ -861,12 +871,14 @@ export default function UserTaskCard({
                 taskTitle={task.title}
             />
 
-            <TaskCaseDescriptionModal
-                isOpen={caseDescOpen}
-                onClose={() => setCaseDescOpen(false)}
-                caseId={ext.case}
-                taskTitle={task.title}
-            />
+            {hasCase && (
+                <TaskCaseDescriptionModal
+                    isOpen={caseDescOpen}
+                    onClose={() => setCaseDescOpen(false)}
+                    caseId={ext.case}
+                    taskTitle={task.title}
+                />
+            )}
         </>
     );
 }

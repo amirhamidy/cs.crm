@@ -13,6 +13,7 @@ interface Props {
     description: string;
     onSubmit: (data: { note: string; files: File[]; score: number; score_reason: string }) => Promise<void>;
     submitting: boolean;
+    hideReview?: boolean;
 }
 
 export default function TaskActionModal({
@@ -23,6 +24,7 @@ export default function TaskActionModal({
     description,
     onSubmit,
     submitting,
+    hideReview = false,
 }: Props) {
     const [note, setNote] = useState("");
     const [reason, setReason] = useState("");
@@ -44,7 +46,7 @@ export default function TaskActionModal({
 
     const isFinal = (direction === "next" && title.includes("تکمیل")) || direction === "complete";
     const isCancel = direction === "cancel";
-    const needsReview = isFinal || !["next", "prev"].includes(direction);
+    const needsReview = !hideReview && (isFinal || !["next", "prev"].includes(direction));
 
     async function submit() {
         if (needsReview && score < 1) {
@@ -172,9 +174,9 @@ export default function TaskActionModal({
                             <button type="button" disabled={submitting} onClick={submit} className="flex h-11 flex-[1.5] items-center justify-center gap-2 rounded-xl bg-indigo-600 text-[11px] font-extrabold text-white shadow-lg shadow-indigo-500/20 disabled:opacity-60">
                                 {submitting ? <Loader2 size={15} className="animate-spin" /> : <Check size={15} />}
                                 {isFinal
-                                    ? "ثبت نظر و تکمیل تسک"
+                                    ? needsReview ? "ثبت نظر و تکمیل تسک" : "تکمیل تسک"
                                     : isCancel
-                                        ? "ثبت نظر و لغو تسک"
+                                        ? needsReview ? "ثبت نظر و لغو تسک" : "لغو تسک"
                                         : needsReview
                                             ? "ثبت نظر و ادامه"
                                             : "ثبت و ادامه"}

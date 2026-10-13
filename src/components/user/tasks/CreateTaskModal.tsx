@@ -885,12 +885,6 @@ export default function CreateTaskModal({
         selectedEmployees.length > 0 &&
         !submitting;
 
-    const canSubmitWithoutCase =
-        title.trim().length > 0 &&
-        selectedDepartment !== null &&
-        selectedEmployees.length > 0 &&
-        !submitting;
-
     function resetAll() {
         setSelectedCustomer(null);
         setSelectedCase(null);
@@ -946,8 +940,8 @@ export default function CreateTaskModal({
         return "خطایی رخ داد. دوباره تلاش کنید.";
     }
 
-    async function handleSubmit(withoutCase = false) {
-        if (withoutCase ? !canSubmitWithoutCase : !canSubmit) return;
+    async function handleSubmit() {
+        if (!canSubmit) return;
 
         setSubmitError("");
         setSubmitting(true);
@@ -962,7 +956,7 @@ export default function CreateTaskModal({
 
             formData.append(
                 "case",
-                withoutCase ? "" : String(selectedCase)
+                String(selectedCase)
             );
 
             formData.append(
@@ -1395,8 +1389,8 @@ export default function CreateTaskModal({
                                 whileTap={{
                                     scale: 0.97,
                                 }}
-                                onClick={() =>
-                                    handleSubmit(false)
+                                onClick={
+                                    handleSubmit
                                 }
                                 disabled={
                                     !canSubmit
@@ -1417,37 +1411,6 @@ export default function CreateTaskModal({
                                             }
                                         />
                                         ثبت وظیفه
-                                    </>
-                                )}
-                            </motion.button>
-
-                            <motion.button
-                                type="button"
-                                whileTap={{
-                                    scale: 0.97,
-                                }}
-                                onClick={() =>
-                                    handleSubmit(true)
-                                }
-                                disabled={
-                                    !canSubmitWithoutCase
-                                }
-                                className="flex h-11 flex-1 items-center justify-center gap-2 rounded-full bg-gray-100 text-[13px] font-bold text-gray-600 transition-colors hover:bg-gray-200 disabled:opacity-40 dark:bg-white/[0.06] dark:text-gray-300 dark:hover:bg-white/[0.1]"
-                            >
-                                {submitting ? (
-                                    <Loader
-                                        size={15}
-                                        className="animate-spin"
-                                    />
-                                ) : (
-                                    <>
-                                        <Check
-                                            size={14}
-                                            strokeWidth={
-                                                3
-                                            }
-                                        />
-                                        ثبت وظیفه بدون پرونده
                                     </>
                                 )}
                             </motion.button>

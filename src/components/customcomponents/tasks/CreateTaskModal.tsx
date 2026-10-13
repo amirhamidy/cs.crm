@@ -244,7 +244,6 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess }: Props) {
     );
 
     const canSubmit = title.trim().length > 0 && selectedCase !== null && selectedDepartment !== null && selectedEmployees.length > 0 && !submitting;
-    const canSubmitWithoutCase = title.trim().length > 0 && selectedDepartment !== null && selectedEmployees.length > 0 && !submitting;
 
     function resetAll() {
         setSelectedCustomer(null); setSelectedCase(null); setSelectedDepartment(null); setSelectedEmployees([]);
@@ -265,13 +264,13 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess }: Props) {
         return "خطایی رخ داد. دوباره تلاش کنید.";
     }
 
-    async function handleSubmit(withoutCase = false) {
-        if (withoutCase ? !canSubmitWithoutCase : !canSubmit) return;
+    async function handleSubmit() {
+        if (!canSubmit) return;
         setSubmitError(""); setSubmitting(true);
         try {
             const formData = new FormData();
             formData.append("title", title);
-            formData.append("case", withoutCase ? "" : String(selectedCase));
+            formData.append("case", String(selectedCase));
             formData.append("department", String(selectedDepartment));
             selectedEmployees.forEach((id) => formData.append("assigned_employee", String(id)));
             files.forEach((f) => formData.append("files", f));
@@ -415,15 +414,10 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess }: Props) {
                     </div>
 
                     <div className="flex shrink-0 items-center gap-2 px-8 pb-8 pt-5">
-                        <motion.button type="button" whileTap={{ scale: 0.97 }} onClick={() => handleSubmit(false)} disabled={!canSubmit}
+                        <motion.button type="button" whileTap={{ scale: 0.97 }} onClick={handleSubmit} disabled={!canSubmit}
                             className="flex h-11 flex-1 items-center justify-center gap-2 rounded-full bg-blue-600 text-[13px] font-bold text-white transition-colors hover:bg-blue-500 disabled:opacity-40"
                         >
                             {submitting ? <Loader size={15} className="animate-spin" /> : <><Check size={14} strokeWidth={3} />ثبت وظیفه</>}
-                        </motion.button>
-                        <motion.button type="button" whileTap={{ scale: 0.97 }} onClick={() => handleSubmit(true)} disabled={!canSubmitWithoutCase}
-                            className="flex h-11 flex-1 items-center justify-center gap-2 rounded-full bg-gray-100 text-[13px] font-bold text-gray-600 transition-colors hover:bg-gray-200 disabled:opacity-40 dark:bg-white/[0.06] dark:text-gray-300 dark:hover:bg-white/[0.1]"
-                        >
-                            {submitting ? <Loader size={15} className="animate-spin" /> : <><Check size={14} strokeWidth={3} />ثبت وظیفه بدون پرونده</>}
                         </motion.button>
                     </div>
                 </motion.div>

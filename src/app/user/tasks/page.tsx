@@ -13,6 +13,7 @@ import type { Department } from "@/types/department";
 import type { Employee } from "@/types/employee";
 import TaskCard from "@/components/user/tasks/TaskCardx";
 import CreateTaskModal from "@/components/user/tasks/CreateTaskModal";
+import CreateNoCaseTaskModal from "@/components/customcomponents/tasks/CreateNoCaseTaskModal";
 import EditTaskModal from "@/components/user/tasks/EditTaskModal";
 
 type ListResponse<T> = T[] | { results?: T[]; data?: T[] };
@@ -58,6 +59,7 @@ export default function UserTasksPage() {
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState("");
     const [showCreate, setShowCreate] = useState(false);
+    const [showCreateNoCase, setShowCreateNoCase] = useState(false);
     const [editingTask, setEditingTask] = useState<Task | null>(null);
 
     const userId = useAuthStore((s) => s.userId);
@@ -149,6 +151,11 @@ export default function UserTasksPage() {
         fetchAll();
     }, [fetchAll]);
 
+    const handleCreateNoCaseSuccess = useCallback(() => {
+        setShowCreateNoCase(false);
+        fetchAll();
+    }, [fetchAll]);
+
     const handleEditSuccess = useCallback(() => {
         setEditingTask(null);
         fetchAll();
@@ -169,7 +176,7 @@ export default function UserTasksPage() {
                     </div>
                 </div>
 
-                <div className="flex items-center gap-2 sm:justify-end">
+                <div className="flex flex-wrap items-center gap-2 sm:justify-end">
                     <button
                         type="button"
                         onClick={() => router.push("/user/Ticketarchive")}
@@ -196,6 +203,15 @@ export default function UserTasksPage() {
                     >
                         <Plus size={13} strokeWidth={2.5} />
                         <span className="whitespace-nowrap">افزودن وظیفه</span>
+                    </button>
+
+                    <button
+                        type="button"
+                        onClick={() => setShowCreateNoCase(true)}
+                        className="flex h-9 flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-50 px-3.5 py-2 text-[12.5px] font-bold text-emerald-600 transition-all duration-200 hover:bg-emerald-600 hover:text-white dark:bg-emerald-500/10 dark:text-emerald-400 dark:hover:bg-emerald-500 dark:hover:text-white sm:flex-none"
+                    >
+                        <Plus size={13} strokeWidth={2.5} />
+                        <span className="whitespace-nowrap">ایجاد وظیفه بدون پرونده</span>
                     </button>
                 </div>
             </div>
@@ -229,6 +245,12 @@ export default function UserTasksPage() {
             <AnimatePresence>
                 {showCreate && (
                     <CreateTaskModal open={showCreate} onClose={() => setShowCreate(false)} onSuccess={handleCreateSuccess} departments={departments} />
+                )}
+            </AnimatePresence>
+
+            <AnimatePresence>
+                {showCreateNoCase && (
+                    <CreateNoCaseTaskModal isOpen={showCreateNoCase} onClose={() => setShowCreateNoCase(false)} onSuccess={handleCreateNoCaseSuccess} />
                 )}
             </AnimatePresence>
 

@@ -12,6 +12,7 @@ import { Department } from "@/types/department";
 import SuspenseWrapper from "@/components/SuspenseWrapper";
 import TaskCard from "@/components/customcomponents/tasks/TaskCard";
 import CreateTaskModal from "@/components/customcomponents/tasks/CreateTaskModal";
+import CreateNoCaseTaskModal from "@/components/customcomponents/tasks/CreateNoCaseTaskModal";
 import EditTaskModal from "@/components/customcomponents/tasks/EditTaskModal";
 import type { Customer } from "@/types/customer";
 import type { Employee } from "@/types/employee";
@@ -41,6 +42,7 @@ function AdminTasksPageContent() {
     const [employees, setEmployees] = useState<Employee[]>([]);
     const [loading, setLoading] = useState(true);
     const [showCreate, setShowCreate] = useState(false);
+    const [showCreateNoCase, setShowCreateNoCase] = useState(false);
     const [editingTask, setEditingTask] = useState<Task | null>(null);
     const [highlightedTaskId, setHighlightedTaskId] = useState<number | null>(null);
     const [viewedTaskId, setViewedTaskId] = useState<number | null>(null);
@@ -107,6 +109,11 @@ function AdminTasksPageContent() {
         fetchAll();
     }, [fetchAll]);
 
+    const handleCreateNoCaseSuccess = useCallback(() => {
+        setShowCreateNoCase(false);
+        fetchAll();
+    }, [fetchAll]);
+
     const handleEditSuccess = useCallback(() => {
         setEditingTask(null);
         fetchAll();
@@ -147,7 +154,7 @@ function AdminTasksPageContent() {
                     </div>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                     <button
                         type="button"
                         onClick={() => router.push("/admin/archive")}
@@ -176,6 +183,15 @@ function AdminTasksPageContent() {
                     >
                         <Plus size={15} />
                         افزودن وظیفه
+                    </button>
+
+                    <button
+                        type="button"
+                        onClick={() => setShowCreateNoCase(true)}
+                        className="flex h-10 items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-4 text-[12.5px] font-bold text-white transition-colors hover:bg-emerald-700"
+                    >
+                        <Plus size={15} />
+                        ایجاد وظیفه بدون پرونده
                     </button>
                 </div>
             </div>
@@ -271,6 +287,10 @@ function AdminTasksPageContent() {
 
             <AnimatePresence>
                 {showCreate && <CreateTaskModal isOpen={showCreate} onClose={() => setShowCreate(false)} onSuccess={handleCreateSuccess} />}
+            </AnimatePresence>
+
+            <AnimatePresence>
+                {showCreateNoCase && <CreateNoCaseTaskModal isOpen={showCreateNoCase} onClose={() => setShowCreateNoCase(false)} onSuccess={handleCreateNoCaseSuccess} />}
             </AnimatePresence>
 
             <AnimatePresence>
