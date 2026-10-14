@@ -16,10 +16,12 @@ import {
     ShieldCheck,
     Check,
     Power,
+    SlidersHorizontal,
 } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
 import type { ApiEmployee, ApiUser } from "@/types/users";
 import EditUserModal from "@/components/admin/users/EditUserModal";
+import AdjustScoreModal from "@/components/admin/users/AdjustScoreModal";
 
 export interface UserInfo {
     id: number;
@@ -37,9 +39,14 @@ interface UserCardProps {
     score?: number | null;
     onDelete: (id: number) => void;
     onUpdated: (employee: ApiEmployee) => void;
+    onScoreChanged?: (
+        employeeId: number,
+        action: "add" | "deduct",
+        amount: number
+    ) => void;
 }
 
-type Placement = "side" | "edgeRight" | "edgeLeft";
+type Placement = "left" | "right";
 
 const SPRING = { type: "spring" as const, stiffness: 420, damping: 26 };
 const EMPTY_TITLES: string[] = [];
@@ -191,6 +198,7 @@ function getErrorMessage(error: unknown, fallback: string) {
 const SWEEP_COLORS: Record<string, string> = {
     delete: "#ef4444",
     edit: "linear-gradient(90deg, #3b82f6, #8b5cf6)",
+    adjustScore: "linear-gradient(90deg, #f59e0b, #10b981)",
 };
 
 function SweepButton({
@@ -325,6 +333,7 @@ function UserCard({
     score = null,
     onDelete,
     onUpdated,
+    onScoreChanged,
 }: UserCardProps) {
     const { resolvedTheme } = useTheme();
 
@@ -334,13 +343,14 @@ function UserCard({
 
     const cardRef = useRef<HTMLDivElement>(null);
     const [hovered, setHovered] = useState(false);
-    const [placement, setPlacement] = useState<Placement>("side");
+    const [placement, setPlacement] = useState<Placement>("right");
     const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
 
     const [showConfirm, setShowConfirm] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
     const [deleteError, setDeleteError] = useState("");
     const [showEdit, setShowEdit] = useState(false);
+    const [showAdjust, setShowAdjust] = useState(false);
     const [showMobileSheet, setShowMobileSheet] = useState(false);
 
     const phoneNumber = userInfo?.phone ?? null;
@@ -358,7 +368,7 @@ function UserCard({
     }, [userInfo?.isActive]);
 
     const showTaskTooltip = hovered && hasActiveTasks && activeTooltip === null;
-    const isSide = placement === "side";
+    const isRight = placement === "right";
 
     const checkPosition = useCallback(() => {
         if (!cardRef.current) return;
@@ -368,16 +378,10 @@ function UserCard({
         const cardRect = cardRef.current.getBoundingClientRect();
         const parentRect = parent.getBoundingClientRect();
 
-        const distFromRight = Math.abs(cardRect.right - parentRect.right);
-        const distFromLeft = Math.abs(cardRect.left - parentRect.left);
+        const spaceRight = parentRect.right - cardRect.right;
+        const spaceLeft = cardRect.left - parentRect.left;
 
-        if (distFromRight < 54) {
-            setPlacement("edgeRight");
-        } else if (distFromLeft < 54) {
-            setPlacement("edgeLeft");
-        } else {
-            setPlacement("side");
-        }
+        setPlacement(spaceRight >= spaceLeft ? "right" : "left");
     }, []);
 
     const loggedUserId = useMemo(() => {
@@ -497,19 +501,16 @@ function UserCard({
     const iconBorder = isDark ? "rgba(255,255,255,0.13)" : "rgba(0,0,0,0.14)";
     const iconColor = isDark ? "#e5e7eb" : "#374151";
 
-    const actionsContainerClass = isSide
+    const actionsContainerClass = isRight
         ? "-right-[59px] top-1/2 -translate-y-1/2 flex-col gap-2.5 pl-6"
-        : "-bottom-[49px] left-1/2 -translate-x-1/2 flex-row gap-2.5 pt-6";
+        : "-left-[59px] top-1/2 -translate-y-1/2 flex-col gap-2.5 pr-6";
 
-    const tooltipPositionClass =
-        placement === "side"
-            ? "right-full top-1/2 mr-2.5 -translate-y-1/2"
-            : placement === "edgeRight"
-                ? "right-0 top-full mt-2.5"
-                : "left-0 top-full mt-2.5";
+    const tooltipPositionClass = isRight
+        ? "left-full top-1/2 ml-2.5 -translate-y-1/2"
+        : "right-full top-1/2 mr-2.5 -translate-y-1/2";
 
-    const tooltipOffsetX = isSide ? -4 : 0;
-    const tooltipOffsetY = isSide ? 0 : -4;
+    const tooltipOffsetX = isRight ? -4 : 4;
+    const tooltipOffsetY = 0;
 
     const actions = [
         {
@@ -541,10 +542,22 @@ function UserCard({
             icon: <SquarePen size={16} />,
         },
         {
+            key: "adjustScore",
+            tooltip: isAdmin ? "امتیاز مدیر سیستم قابل تغییر نیست" : "تغییر امتیاز",
+            disabled: isAdmin,
+            delay: 0.16,
+            color: iconColor,
+            onClick: (e: ReactMouseEvent) => {
+                e.stopPropagation();
+                if (!isAdmin) setShowAdjust(true);
+            },
+            icon: <SlidersHorizontal size={16} />,
+        },
+        {
             key: "delete",
             tooltip: deleteTooltipText,
             disabled: !canDelete,
-            delay: 0.16,
+            delay: 0.24,
             color: iconColor,
             onClick: (e: ReactMouseEvent) => {
                 e.stopPropagation();
@@ -610,11 +623,14 @@ function UserCard({
 
                 <AnimatePresence>
                     {showTaskTooltip && (
-                        <div className="pointer-events-none absolute bottom-full left-1/2 z-[70] mb-[5px] -translate-x-1/2">
+                        <div
+                            className={`pointer-events-none absolute top-1/2 z-[70] -translate-y-1/2 ${isRight ? "left-full ml-[70px]" : "right-full mr-[70px]"
+                                }`}
+                        >
                             <motion.div
-                                initial={{ opacity: 0, y: 6, scale: 0.96 }}
-                                animate={{ opacity: 1, y: 0, scale: 1 }}
-                                exit={{ opacity: 0, y: 6, scale: 0.96 }}
+                                initial={{ opacity: 0, x: isRight ? -6 : 6, scale: 0.96 }}
+                                animate={{ opacity: 1, x: 0, scale: 1 }}
+                                exit={{ opacity: 0, x: isRight ? -6 : 6, scale: 0.96 }}
                                 transition={{ duration: 0.15 }}
                                 className="w-56 rounded-2xl p-3 shadow-2xl"
                                 style={{
@@ -930,6 +946,40 @@ function UserCard({
                                     <span>ویرایش اطلاعات کاربر</span>
                                 </button>
 
+                                <button
+                                    type="button"
+                                    disabled={isAdmin}
+                                    onClick={() => {
+                                        if (isAdmin) return;
+                                        setShowMobileSheet(false);
+                                        setShowAdjust(true);
+                                    }}
+                                    className={`flex w-full items-center gap-3 rounded-2xl p-3.5 text-[13.5px] font-bold transition-all ${isAdmin
+                                        ? "cursor-not-allowed text-gray-400 opacity-50"
+                                        : "text-emerald-600 active:scale-[0.98] dark:text-emerald-400"
+                                        }`}
+                                    style={{
+                                        background: isAdmin
+                                            ? isDark
+                                                ? "rgba(255,255,255,0.03)"
+                                                : "rgba(0,0,0,0.03)"
+                                            : isDark
+                                                ? "rgba(16,185,129,0.12)"
+                                                : "rgba(16,185,129,0.08)",
+                                        border: `1px solid ${isAdmin
+                                            ? isDark
+                                                ? "rgba(255,255,255,0.06)"
+                                                : "rgba(0,0,0,0.06)"
+                                            : isDark
+                                                ? "rgba(16,185,129,0.2)"
+                                                : "rgba(16,185,129,0.14)"
+                                            }`,
+                                    }}
+                                >
+                                    <SlidersHorizontal size={18} />
+                                    <span>تغییر امتیاز</span>
+                                </button>
+
                                 <div className="flex flex-col gap-1.5 pt-1">
                                     <button
                                         type="button"
@@ -1084,6 +1134,21 @@ function UserCard({
                     setShowEdit(false);
                 }}
             />
+
+            <AnimatePresence>
+                {showAdjust && (
+                    <AdjustScoreModal
+                        isOpen={showAdjust}
+                        employeeId={employee.id}
+                        employeeName={employee.full_name || employee.username}
+                        currentScore={score}
+                        onClose={() => setShowAdjust(false)}
+                        onSuccess={(action, amount) =>
+                            onScoreChanged?.(employee.id, action, amount)
+                        }
+                    />
+                )}
+            </AnimatePresence>
         </>
     );
 }
