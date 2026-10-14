@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Archive, ClipboardList, Loader, Plus, RefreshCw } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -17,14 +17,13 @@ import CreateNoCaseTaskModal from "@/components/customcomponents/tasks/CreateNoC
 import EditTaskModal from "@/components/user/tasks/EditTaskModal";
 
 type ListResponse<T> = T[] | { results?: T[]; data?: T[] };
-
 const ACTIVE_STATUS = "in_progress" as TaskStatus;
 
 function extractList<T>(data: ListResponse<T> | undefined | null): T[] {
     if (Array.isArray(data)) return data;
     if (data && typeof data === "object") {
-        if (Array.isArray((data as any).results)) return (data as any).results;
-        if (Array.isArray((data as any).data)) return (data as any).data;
+        if (Array.isArray(data.results)) return data.results;
+        if (Array.isArray(data.data)) return data.data;
     }
     return [];
 }
@@ -33,25 +32,24 @@ function parseAssignedEmployees(raw: unknown): number[] {
     const ids: number[] = [];
     const push = (value: unknown) => {
         const id = Number(value);
-        if (!isNaN(id) && id > 0) ids.push(id);
+        if (Number.isFinite(id) && id > 0) ids.push(id);
     };
     if (Array.isArray(raw)) {
-        raw.forEach((item) =>
+        raw.forEach((item) => push(
             typeof item === "object" && item !== null
-                ? push((item as any).id ?? (item as any).employee ?? (item as any).user)
-                : push(item)
-        );
-    } else if (typeof raw === "object" && raw !== null) {
-        push((raw as any).id ?? (raw as any).employee ?? (raw as any).user);
+                ? (item as any).id ?? (item as any).employee ?? (item as any).user
+                : item
+        ));
     } else if (raw !== null && raw !== undefined) {
-        push(raw);
+        push(typeof raw === "object"
+            ? (raw as any).id ?? (raw as any).employee ?? (raw as any).user
+            : raw);
     }
     return ids;
 }
 
 export default function UserTasksPage() {
     const router = useRouter();
-
     const [tasks, setTasks] = useState<Task[]>([]);
     const [customers, setCustomers] = useState<Customer[]>([]);
     const [departments, setDepartments] = useState<Department[]>([]);
@@ -61,104 +59,109 @@ export default function UserTasksPage() {
     const [showCreate, setShowCreate] = useState(false);
     const [showCreateNoCase, setShowCreateNoCase] = useState(false);
     const [editingTask, setEditingTask] = useState<Task | null>(null);
-
     const userId = useAuthStore((s) => s.userId);
     const username = useAuthStore((s) => s.username);
+    const fetchPromiseRef = useRef<Promise<void> | null>(null);
 
     const fetchAll = useCallback(async () => {
-        try {
-            setLoading(true);
+        if (fetchPromiseRef.current) return fetchPromiseRef.current;
 
-            const [tasksRes, customersRes, departmentsRes, employeesRes] = await Promise.all([
-                axiosInstance.get<ListResponse<Task>>(apiRoutes.tasks),
-                axiosInstance.get<ListResponse<Customer>>(apiRoutes.customers),
-                axiosInstance.get<ListResponse<Department>>(apiRoutes.departments),
-                axiosInstance.get<ListResponse<Employee>>("/accounts/api/v1/employee/list/"),
-            ]);
+        const request = (async () => {
+            try {
+                setLoading(true);
+                const [tasksRes, customersRes, departmentsRes, employeesRes] = await Promise.all([
+                    axiosInstance.get<ListResponse<Task>>(apiRoutes.tasks),
+                    axiosInstance.get<ListResponse<Customer>>(apiRoutes.customers),
+                    axiosInstance.get<ListResponse<Department>>(apiRoutes.departments),
+                    axiosInstance.get<ListResponse<Employee>>("/accounts/api/v1/employee/list/"),
+                ]);
 
-            const employeeList = extractList<Employee>(employeesRes.data);
-            const taskList = extractList<Task>(tasksRes.data);
-
-            const matchedEmployee = employeeList.find(
-                (emp: any) =>
+                const employeeList = extractList<Employee>(employeesRes.data);
+                const taskList = extractList<Task>(tasksRes.data);
+                const matchedEmployee = employeeList.find((emp: any) =>
                     (username && emp.username === username) ||
                     (userId && Number(emp.user_id ?? emp.user ?? emp.user_detail?.id) === Number(userId)) ||
                     (userId && Number(emp.id) === Number(userId))
-            );
+                );
+                const empId = matchedEmployee ? Number(matchedEmployee.id) : null;
 
-            const empId = matchedEmployee ? Number(matchedEmployee.id) : null;
+                const detailedTasks = await Promise.all(
+                    taskList.map(async (task) => {
+                        try {
+                            const { data } = await axiosInstance.get<Task>(`/tasks/api/v1/tasks/${task.id}/`);
+                            return { ...task, ...data };
+                        } catch {
+                            return task;
+                        }
+                    })
+                );
 
-            const detailedTasks = await Promise.all(
-                taskList.map(async (task) => {
-                    try {
-                        const { data } = await axiosInstance.get<Task>(`/tasks/api/v1/tasks/${task.id}/`);
-                        return { ...task, ...data };
-                    } catch {
-                        return task;
-                    }
-                })
-            );
+                const scoped = empId
+                    ? detailedTasks.filter((task: any) => {
+                        const assigned = parseAssignedEmployees(task.assigned_employee);
+                        const creatorId = Number(task.created_by ?? task.creator ?? task.user);
+                        return assigned.includes(empId) || (!!userId && creatorId === Number(userId));
+                    })
+                    : detailedTasks;
 
-            const scoped = empId
-                ? detailedTasks.filter((task: any) => {
-                    const assigned = parseAssignedEmployees(task.assigned_employee);
-                    const creatorId = Number(task.created_by ?? task.creator ?? task.user);
-                    return assigned.includes(empId) || (userId && creatorId === Number(userId));
-                })
-                : detailedTasks;
+                setTasks(scoped.filter((task) => task.status === ACTIVE_STATUS));
+                setCustomers(extractList<Customer>(customersRes.data));
+                setDepartments(extractList<Department>(departmentsRes.data));
+                setEmployees(employeeList);
+            } catch {
+                setTasks([]);
+                setCustomers([]);
+                setDepartments([]);
+                setEmployees([]);
+            } finally {
+                setLoading(false);
+            }
+        })();
 
-            setTasks(scoped.filter((task) => task.status === ACTIVE_STATUS));
-            setCustomers(extractList(customersRes.data));
-            setDepartments(extractList(departmentsRes.data));
-            setEmployees(employeeList);
-        } catch {
-            setTasks([]);
-            setCustomers([]);
-            setDepartments([]);
-            setEmployees([]);
+        fetchPromiseRef.current = request;
+        try {
+            await request;
         } finally {
-            setLoading(false);
+            if (fetchPromiseRef.current === request) fetchPromiseRef.current = null;
         }
     }, [userId, username]);
 
     useEffect(() => {
-        fetchAll();
+        void fetchAll();
     }, [fetchAll]);
 
     const filteredTasks = useMemo(() => {
         const query = search.trim().toLowerCase();
         if (!query) return tasks;
-        return tasks.filter(
-            (task) => task.title?.toLowerCase().includes(query) || task.description?.toLowerCase().includes(query)
+        return tasks.filter((task) =>
+            task.title?.toLowerCase().includes(query) ||
+            task.description?.toLowerCase().includes(query)
         );
     }, [tasks, search]);
 
-    const handleDelete = useCallback(
-        async (taskId: number) => {
-            try {
-                await axiosInstance.delete(apiRoutes.deleteTask(taskId));
-                setTasks((prev) => prev.filter((t) => t.id !== taskId));
-            } catch {
-                await fetchAll();
-                throw new Error("delete failed");
-            }
-        },
-        [fetchAll]
-    );
+    const handleDelete = useCallback(async (taskId: number) => {
+        try {
+            await axiosInstance.delete(apiRoutes.deleteTask(taskId));
+            setTasks((prev) => prev.filter((task) => task.id !== taskId));
+        } catch {
+            await fetchAll();
+            throw new Error("delete failed");
+        }
+    }, [fetchAll]);
 
     const handleCreateSuccess = useCallback(() => {
         setShowCreate(false);
-        fetchAll();
+        void fetchAll();
     }, [fetchAll]);
 
     const handleCreateNoCaseSuccess = useCallback(() => {
         setShowCreateNoCase(false);
-        fetchAll();
+        void fetchAll();
     }, [fetchAll]);
 
     const handleEditSuccess = useCallback(() => {
         setEditingTask(null);
-        fetchAll();
+        void fetchAll();
     }, [fetchAll]);
 
     return (
@@ -177,51 +180,22 @@ export default function UserTasksPage() {
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2 sm:justify-end">
-                    <button
-                        type="button"
-                        onClick={() => router.push("/user/Ticketarchive")}
-                        className="flex h-9 items-center gap-1.5 rounded-xl bg-gray-100 px-3 text-[11.5px] font-bold text-gray-500 transition-colors hover:bg-gray-200 dark:bg-white/5 dark:text-gray-400 dark:hover:bg-white/10"
-                    >
-                        <Archive size={13} />
-                        بایگانی
+                    <button type="button" onClick={() => router.push("/user/Ticketarchive")} className="flex h-9 items-center gap-1.5 rounded-xl bg-gray-100 px-3 text-[11.5px] font-bold text-gray-500 transition-colors hover:bg-gray-200 dark:bg-white/5 dark:text-gray-400 dark:hover:bg-white/10">
+                        <Archive size={13} /> بایگانی
                     </button>
-
-                    <button
-                        type="button"
-                        onClick={fetchAll}
-                        disabled={loading}
-                        className="flex h-9 w-9 items-center justify-center rounded-xl text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 disabled:opacity-40 dark:text-gray-500 dark:hover:bg-white/5 dark:hover:text-gray-300"
-                        title="بارگذاری مجدد"
-                    >
+                    <button type="button" onClick={() => void fetchAll()} disabled={loading} className="flex h-9 w-9 items-center justify-center rounded-xl text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 disabled:opacity-40 dark:text-gray-500 dark:hover:bg-white/5 dark:hover:text-gray-300" title="بارگذاری مجدد">
                         <RefreshCw size={13} className={loading ? "animate-spin" : ""} />
                     </button>
-
-                    <button
-                        type="button"
-                        onClick={() => setShowCreate(true)}
-                        className="flex h-9 flex-1 items-center justify-center gap-2 rounded-xl bg-blue-600 px-3.5 py-2 text-[12.5px] font-bold text-white transition-all duration-200 hover:bg-blue-100 hover:text-blue-600 dark:bg-blue-500 dark:hover:bg-blue-500/15 dark:hover:text-blue-300 sm:flex-none"
-                    >
-                        <Plus size={13} strokeWidth={2.5} />
-                        <span className="whitespace-nowrap">افزودن وظیفه</span>
+                    <button type="button" onClick={() => setShowCreate(true)} className="flex h-9 flex-1 items-center justify-center gap-2 rounded-xl bg-blue-600 px-3.5 py-2 text-[12.5px] font-bold text-white transition-all duration-200 hover:bg-blue-100 hover:text-blue-600 dark:bg-blue-500 dark:hover:bg-blue-500/15 dark:hover:text-blue-300 sm:flex-none">
+                        <Plus size={13} strokeWidth={2.5} /><span className="whitespace-nowrap">افزودن وظیفه</span>
                     </button>
-
-                    <button
-                        type="button"
-                        onClick={() => setShowCreateNoCase(true)}
-                        className="flex h-9 flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-50 px-3.5 py-2 text-[12.5px] font-bold text-emerald-600 transition-all duration-200 hover:bg-emerald-600 hover:text-white dark:bg-emerald-500/10 dark:text-emerald-400 dark:hover:bg-emerald-500 dark:hover:text-white sm:flex-none"
-                    >
-                        <Plus size={13} strokeWidth={2.5} />
-                        <span className="whitespace-nowrap">ایجاد وظیفه بدون پرونده</span>
+                    <button type="button" onClick={() => setShowCreateNoCase(true)} className="flex h-9 flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-50 px-3.5 py-2 text-[12.5px] font-bold text-emerald-600 transition-all duration-200 hover:bg-emerald-600 hover:text-white dark:bg-emerald-500/10 dark:text-emerald-400 dark:hover:bg-emerald-500 dark:hover:text-white sm:flex-none">
+                        <Plus size={13} strokeWidth={2.5} /><span className="whitespace-nowrap">ایجاد وظیفه بدون پرونده</span>
                     </button>
                 </div>
             </div>
 
-            <input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="جستجو در عنوان یا توضیحات..."
-                className="w-full rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 text-[12.5px] text-gray-700 outline-none transition-colors focus:border-indigo-400 dark:border-white/10 dark:bg-white/[0.03] dark:text-gray-200"
-            />
+            <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="جستجو در عنوان یا توضیحات..." className="w-full rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 text-[12.5px] text-gray-700 outline-none transition-colors focus:border-indigo-400 dark:border-white/10 dark:bg-white/[0.03] dark:text-gray-200" />
 
             {loading ? (
                 <div className="flex flex-col items-center justify-center gap-3 py-16">
@@ -243,28 +217,13 @@ export default function UserTasksPage() {
             )}
 
             <AnimatePresence>
-                {showCreate && (
-                    <CreateTaskModal open={showCreate} onClose={() => setShowCreate(false)} onSuccess={handleCreateSuccess} departments={departments} />
-                )}
+                {showCreate && <CreateTaskModal open={showCreate} onClose={() => setShowCreate(false)} onSuccess={handleCreateSuccess} departments={departments} />}
             </AnimatePresence>
-
             <AnimatePresence>
-                {showCreateNoCase && (
-                    <CreateNoCaseTaskModal isOpen={showCreateNoCase} onClose={() => setShowCreateNoCase(false)} onSuccess={handleCreateNoCaseSuccess} />
-                )}
+                {showCreateNoCase && <CreateNoCaseTaskModal isOpen={showCreateNoCase} onClose={() => setShowCreateNoCase(false)} onSuccess={handleCreateNoCaseSuccess} />}
             </AnimatePresence>
-
             <AnimatePresence>
-                {editingTask && (
-                    <EditTaskModal
-                        task={editingTask}
-                        customers={customers}
-                        departments={departments}
-                        employees={employees}
-                        onClose={() => setEditingTask(null)}
-                        onSuccess={handleEditSuccess}
-                    />
-                )}
+                {editingTask && <EditTaskModal task={editingTask} customers={customers} departments={departments} employees={employees} onClose={() => setEditingTask(null)} onSuccess={handleEditSuccess} />}
             </AnimatePresence>
         </div>
     );
