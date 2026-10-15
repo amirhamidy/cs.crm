@@ -2,10 +2,11 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Users, Plus, Loader, RefreshCw, Filter } from "lucide-react";
+import { Users, Plus, Loader, RefreshCw, Filter, FileSpreadsheet } from "lucide-react";
 import { useTheme } from "next-themes";
 import CustomerCard from "@/components/user/customer/CustomerCard";
 import AddCustomerModal from "@/components/user/customer/AddCustomerModal";
+import ImportExcelModal from "@/components/user/customer/ImportExcelModal";
 import { Customer } from "@/types/customer";
 import type { Employee } from "@/types/employee";
 import type { CaseItem } from "@/types/case";
@@ -13,8 +14,6 @@ import type { TaskItem } from "@/types/task";
 import axiosInstance from "@/lib/axiosInstance";
 import { apiRoutes } from "@/lib/apiRoutes";
 import { useAuthStore } from "@/store/authStore";
-
-
 
 type ListResponse<T> = T[] | { results?: T[]; data?: T[] };
 
@@ -27,7 +26,6 @@ function extractList<T>(data: ListResponse<T> | undefined | null): T[] {
         if (Array.isArray(data.results)) return data.results;
         if (Array.isArray(data.data)) return data.data;
     }
-
 
     return [];
 }
@@ -103,6 +101,7 @@ export default function CustomersPage() {
     const [loading, setLoading] = useState(true);
     const [filterLoading, setFilterLoading] = useState(false);
     const [showAdd, setShowAdd] = useState(false);
+    const [showImport, setShowImport] = useState(false);
     const [filter, setFilter] = useState<FilterType>("all");
 
     const userId = useAuthStore((state) => state.userId);
@@ -171,7 +170,7 @@ export default function CustomersPage() {
                 allCases.map(async (c) => {
                     try {
                         const detailRes = await axiosInstance.get(
-                            `/ tasks / api / v1 / cases / ${c.id}/`
+                            `/tasks/api/v1/cases/${c.id}/`
                         );
 
                         return {
@@ -442,6 +441,17 @@ export default function CustomersPage() {
                     </button>
 
                     <button
+                        onClick={() => setShowImport(true)}
+                        className="flex h-9 items-center justify-center gap-1.5 rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-3 py-2 text-[12px] font-bold text-emerald-600 transition-all duration-200 hover:bg-emerald-500 hover:text-white dark:text-emerald-400 dark:hover:bg-emerald-600 dark:hover:text-white"
+                        type="button"
+                    >
+                        <FileSpreadsheet size={13} />
+                        <span className="whitespace-nowrap">
+                            افزودن با اکسل
+                        </span>
+                    </button>
+
+                    <button
                         onClick={() => setShowAdd(true)}
                         className="flex h-9 flex-1 items-center justify-center gap-2 rounded-xl bg-indigo-600 px-3.5 py-2 text-[12.5px] font-bold text-white transition-all duration-200 hover:bg-indigo-700 sm:flex-none"
                         type="button"
@@ -592,6 +602,12 @@ export default function CustomersPage() {
                 isOpen={showAdd}
                 onClose={() => setShowAdd(false)}
                 onAdded={handleAdded}
+            />
+
+            <ImportExcelModal
+                isOpen={showImport}
+                onClose={() => setShowImport(false)}
+                onSuccess={handleAdded}
             />
         </div>
     );

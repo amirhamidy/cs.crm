@@ -9,9 +9,11 @@ import {
     Loader,
     RefreshCw,
     Filter,
+    FileSpreadsheet,
 } from "lucide-react";
 import CustomerCard from "./CustomerCard";
 import AddCustomerModal from "./AddCustomerModal";
+import ImportExcelModal from "./ImportExcelModal";
 import { Customer } from "@/types/customer";
 import axiosInstance from "@/lib/axiosInstance";
 
@@ -31,7 +33,6 @@ export default function CustomersPage() {
     }, []);
     const isDark = mounted && resolvedTheme === "dark";
 
-
     const [customers, setCustomers] = useState<Customer[]>([]);
     const [customersWithCase, setCustomersWithCase] = useState<Set<number>>(
         new Set()
@@ -39,6 +40,7 @@ export default function CustomersPage() {
     const [loading, setLoading] = useState(true);
     const [filterLoading, setFilterLoading] = useState(false);
     const [showAdd, setShowAdd] = useState(false);
+    const [showImport, setShowImport] = useState(false);
     const [filter, setFilter] = useState<FilterType>("all");
 
     const fetchData = useCallback(async () => {
@@ -201,6 +203,15 @@ export default function CustomersPage() {
                     </button>
 
                     <button
+                        onClick={() => setShowImport(true)}
+                        className="flex h-10 items-center justify-center gap-2 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-4 text-[12.5px] font-bold text-emerald-600 transition-colors hover:bg-emerald-500 hover:text-white dark:text-emerald-400 dark:hover:bg-emerald-600 dark:hover:text-white"
+                        type="button"
+                    >
+                        <FileSpreadsheet size={15} />
+                        <span>افزودن با اکسل</span>
+                    </button>
+
+                    <button
                         onClick={() => setShowAdd(true)}
                         className="flex h-10 items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-4 text-[12.5px] font-bold text-white transition-colors hover:bg-indigo-700"
                         type="button"
@@ -238,8 +249,8 @@ export default function CustomersPage() {
                                 handleFilterChange(opt.value)
                             }
                             className={`flex h-9 items-center gap-1.5 rounded-xl px-3.5 text-[11.5px] font-bold transition-all duration-200 ${filter === opt.value
-                                    ? "bg-indigo-600 text-white shadow-sm"
-                                    : "text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                                ? "bg-indigo-600 text-white shadow-sm"
+                                : "text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
                                 }`}
                             style={{
                                 background:
@@ -255,8 +266,8 @@ export default function CustomersPage() {
 
                             <span
                                 className={`rounded-lg px-1.5 py-0.5 text-[10px] font-bold ${filter === opt.value
-                                        ? "bg-white/20 text-white"
-                                        : "bg-gray-200/50 text-gray-400 dark:bg-white/10 dark:text-gray-500"
+                                    ? "bg-white/20 text-white"
+                                    : "bg-gray-200/50 text-gray-400 dark:bg-white/10 dark:text-gray-500"
                                     }`}
                             >
                                 {opt.count}
@@ -343,8 +354,12 @@ export default function CustomersPage() {
                 onClose={() => setShowAdd(false)}
                 onAdded={handleAdded}
             />
+
+            <ImportExcelModal
+                isOpen={showImport}
+                onClose={() => setShowImport(false)}
+                onSuccess={handleAdded}
+            />
         </div>
     );
-
-
 }

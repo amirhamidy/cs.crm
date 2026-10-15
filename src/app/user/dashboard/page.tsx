@@ -7,6 +7,7 @@ import TodayEventCards from "@/components/user/dashboard/TodayEventCards";
 import axiosInstance from "@/lib/axiosInstance";
 import { useAuthStore } from "@/store/authStore";
 import EmployeePerformanceChart from "@/components/user/dashboard/EmployeePerformanceChart";
+import DepartmentScoreManager from "@/components/user/dashboard/DepartmentScoreManager";
 
 interface CalendarEvent {
     id: number;
@@ -109,6 +110,7 @@ export default function EmployeeDashboardPage() {
                         {employeeId !== null && <ScoreCard />}
                     </div>
                 </div>
+                <DepartmentScoreManager />
             </div>
         </div>
     );

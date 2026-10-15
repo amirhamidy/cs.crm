@@ -13,6 +13,7 @@ interface AdjustScoreModalProps {
     employeeId: number;
     employeeName: string;
     currentScore?: number | null;
+    initialAction?: AdjustAction;
     onClose: () => void;
     onSuccess: (action: AdjustAction, amount: number) => void;
 }
@@ -24,13 +25,14 @@ export default function AdjustScoreModal({
     employeeId,
     employeeName,
     currentScore = null,
+    initialAction = "add",
     onClose,
     onSuccess,
 }: AdjustScoreModalProps) {
     const { resolvedTheme } = useTheme();
     const isDark = resolvedTheme === "dark";
 
-    const [action, setAction] = useState<AdjustAction>("add");
+    const [action, setAction] = useState<AdjustAction>(initialAction);
     const [amount, setAmount] = useState("");
     const [reason, setReason] = useState("");
     const [loading, setLoading] = useState(false);
