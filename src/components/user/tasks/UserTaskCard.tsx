@@ -554,12 +554,12 @@ export default function UserTaskCard({
 
                         <span
                             className={`rounded-full px-2 py-1 text-[9.5px] font-extrabold ${isSold
-                                    ? "bg-amber-500/10 text-amber-500"
-                                    : isCancelled
-                                        ? "bg-red-500/10 text-red-500"
-                                        : isCompleted
-                                            ? "bg-emerald-500/10 text-emerald-500"
-                                            : "bg-indigo-500/10 text-indigo-500"
+                                ? "bg-amber-500/10 text-amber-500"
+                                : isCancelled
+                                    ? "bg-red-500/10 text-red-500"
+                                    : isCompleted
+                                        ? "bg-emerald-500/10 text-emerald-500"
+                                        : "bg-indigo-500/10 text-indigo-500"
                                 }`}
                         >
                             {isSold
@@ -586,11 +586,7 @@ export default function UserTaskCard({
                     {task.title}
                 </h3>
 
-                {task.description && (
-                    <p className="mt-1 line-clamp-2 text-[11px] leading-5 text-gray-400">
-                        {task.description}
-                    </p>
-                )}
+
 
                 <div className="mt-2.5 flex flex-col gap-1.5 rounded-2xl bg-gray-50 px-3 py-2 dark:bg-white/[.035]">
                     {customerName && (
@@ -691,6 +687,19 @@ export default function UserTaskCard({
                         </div>
                     )}
                 </div>
+
+                {task.description?.trim() && (
+                    <div className="mt-3 flex justify-start text-[11px] gap-2 items-center">
+                        <div className=" flex items-center gap-1  font-bold text-gray-500">
+                            <MessageSquareText size={12} />
+                            <span>توضیحات</span>
+                        </div>
+                        :
+                        <p className=" whitespace-pre-wrap break-words">
+                            {task.description}
+                        </p>
+                    </div>
+                )}
 
                 {blockMsg && (
                     <div className="mt-2 rounded-xl bg-red-500/10 px-3 py-2 text-center text-[10px] font-bold text-red-500">

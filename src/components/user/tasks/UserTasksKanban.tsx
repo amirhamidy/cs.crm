@@ -143,15 +143,41 @@ export default function UserTasksKanban() {
         setLoading(true);
 
         axiosInstance.get("/tasks/api/v1/tasks/")
-            .then((res) => {
+            .then(async (res) => {
                 if (cancelled) return;
+
                 const data = unwrapList<UserTask>(res.data);
-                setTasks(data.filter(
+
+                const employeeTasks = data.filter(
                     (task) =>
                         extractAssignedEmployeeIds(task).includes(employee.id) &&
                         task.status === "in_progress"
-                ));
+                );
+
+                const tasksWithDetails = await Promise.all(
+                    employeeTasks.map(async (task) => {
+                        if (task.description?.trim()) return task;
+
+                        try {
+                            const detail = await axiosInstance.get<UserTask>(
+                                `/tasks/api/v1/tasks/${task.id}/`
+                            );
+
+                            return {
+                                ...task,
+                                description: detail.data.description ?? "",
+                            };
+                        } catch {
+                            return task;
+                        }
+                    })
+                );
+
+                if (!cancelled) {
+                    setTasks(tasksWithDetails);
+                }
             })
+
             .catch(() => !cancelled && setError("دریافت تسک‌ها با خطا مواجه شد"))
             .finally(() => !cancelled && setLoading(false));
 

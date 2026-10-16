@@ -4,9 +4,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
     ClipboardList,
-    Layers,
     Loader,
-    Pencil,
     Plus,
     RefreshCw,
 } from "lucide-react";
@@ -117,15 +115,12 @@ export default function UserCasesPage() {
         return map;
     }, [tasks]);
 
-    const syncCaseTasks = useCallback(
-        (caseId: string, fresh: TaskItem[]) => {
-            setTasks((prev) => [
-                ...prev.filter((t) => extractCaseId(t) !== caseId),
-                ...fresh,
-            ]);
-        },
-        []
-    );
+    const syncCaseTasks = useCallback((caseId: string, fresh: TaskItem[]) => {
+        setTasks((prev) => [
+            ...prev.filter((t) => extractCaseId(t) !== caseId),
+            ...fresh,
+        ]);
+    }, []);
 
     const handleDeleteCase = useCallback(
         async (item: CaseItem) => {
@@ -201,7 +196,6 @@ export default function UserCasesPage() {
                         <h1 className="text-[15px] font-extrabold text-gray-900 dark:text-white">
                             پرونده‌ها
                         </h1>
-
                         <p className="mt-0.5 text-[11.5px] text-gray-500 dark:text-gray-400">
                             {loading
                                 ? "در حال بارگذاری..."
@@ -245,7 +239,6 @@ export default function UserCasesPage() {
             {error && !loading && (
                 <div className="flex flex-col items-start gap-3 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-[12.5px] text-rose-600 dark:border-rose-500/20 dark:bg-rose-500/10 dark:text-rose-300 sm:flex-row sm:items-center sm:justify-between">
                     <span>{error}</span>
-
                     <button
                         onClick={fetchData}
                         type="button"
@@ -260,7 +253,6 @@ export default function UserCasesPage() {
             {loading && (
                 <div className="flex flex-col items-center justify-center gap-3 py-16">
                     <Loader size={24} className="animate-spin text-indigo-500" />
-
                     <p className="text-[12.5px] text-gray-500 dark:text-gray-400">
                         در حال دریافت لیست پرونده‌ها...
                     </p>
@@ -274,7 +266,6 @@ export default function UserCasesPage() {
                         size={28}
                         className="text-gray-300 dark:text-gray-700"
                     />
-
                     <p className="text-[12.5px] text-gray-500 dark:text-gray-400">
                         هنوز پرونده‌ای ثبت نشده
                     </p>
@@ -290,75 +281,22 @@ export default function UserCasesPage() {
                     <AnimatePresence mode="popLayout">
                         {cases.map((item, i) => {
                             const caseTasks =
-                                tasksByCase.get(String(item.id)) || [];
-
+                                tasksByCase.get(String(item.id)) ?? [];
                             return (
-                                <div
+                                <CaseCard
                                     key={item.id}
-                                    className="relative flex flex-col gap-2 rounded-4xl border-2 border-[#eeeeee] p-3 dark:border-white/[0.06]"
-                                >
-                                    <div className="relative">
-                                        <CaseCard
-                                            item={item}
-                                            index={i}
-                                            customers={customers}
-                                            departments={departments}
-                                            users={employees}
-                                            isDeleting={
-                                                deletingId === Number(item.id)
-                                            }
-                                            hasActiveTasks={
-                                                caseTasks.length > 0
-                                            }
-                                            onEdit={handleEditCase}
-                                            onDelete={() =>
-                                                handleDeleteCase(item)
-                                            }
-                                        />
-
-                                        <button
-                                            type="button"
-                                            onClick={() => handleEditCase(item)}
-                                            className="absolute left-3 top-3 flex h-7 w-7 items-center justify-center rounded-xl transition-colors"
-                                            title="ویرایش پرونده"
-                                            style={{
-                                                background:
-                                                    "rgba(99, 102, 241, 0.07)",
-                                                color: "rgb(99, 102, 241)",
-                                            }}
-                                        >
-                                            <Pencil size={11} strokeWidth={2} />
-                                        </button>
-                                    </div>
-
-                                    <button
-                                        type="button"
-                                        onClick={() =>
-                                            handleOpenTasksModal(item)
-                                        }
-                                        className="flex items-center justify-between gap-2 rounded-2xl px-3.5 py-2.5 text-[12px] font-bold transition-colors"
-                                        style={{
-                                            background:
-                                                "rgba(99, 102, 241, 0.06)",
-                                            color: "rgb(99, 102, 241)",
-                                        }}
-                                    >
-                                        <span className="flex items-center gap-2">
-                                            <Layers size={13} />
-                                            دیدن وظیفه های این پرونده
-                                        </span>
-
-                                        <span
-                                            className="rounded-full px-2 py-0.5 text-[10.5px] font-extrabold"
-                                            style={{
-                                                background:
-                                                    "rgba(99,102,241,0.14)",
-                                            }}
-                                        >
-                                            {caseTasks.length}
-                                        </span>
-                                    </button>
-                                </div>
+                                    item={item}
+                                    index={i}
+                                    customers={customers}
+                                    departments={departments}
+                                    users={employees}
+                                    isDeleting={deletingId === Number(item.id)}
+                                    hasActiveTasks={caseTasks.length > 0}
+                                    caseTasks={caseTasks}
+                                    onEdit={handleEditCase}
+                                    onDelete={() => handleDeleteCase(item)}
+                                    onClick={() => handleOpenTasksModal(item)}
+                                />
                             );
                         })}
                     </AnimatePresence>

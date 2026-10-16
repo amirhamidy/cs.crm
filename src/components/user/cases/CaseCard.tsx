@@ -1,57 +1,70 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { memo, useEffect, useState, useRef, useCallback, useMemo } from "react";
+import type { ReactNode, MouseEvent as ReactMouseEvent } from "react";
+import { motion, AnimatePresence, animate } from "framer-motion";
 import { useTheme } from "next-themes";
 import {
-    Briefcase,
+    Trash2,
+    SquarePen,
     CalendarDays,
     Loader2,
-    Pencil,
-    Trash2,
+    MoreVertical,
+    AlertCircle,
     User,
-    X,
+    Briefcase,
+    Building2,
+    ListTodo,
 } from "lucide-react";
-import type { CaseItem, CaseStatus } from "@/types/case";
+import type { CaseItem } from "@/types/case";
 import type { Customer } from "@/types/customer";
 import type { Department } from "@/types/department";
 import type { Employee } from "@/types/employee";
+import type { TaskItem } from "@/types/task";
+
+export interface CaseInfo {
+    id: number;
+    title: string;
+}
 
 interface CaseCardProps {
     item: CaseItem;
-    index?: number;
+    index: number;
     users?: Employee[];
     customers?: Customer[];
     departments?: Department[];
     isDeleting?: boolean;
     hasActiveTasks?: boolean;
+    caseTasks?: TaskItem[];
     onEdit?: (item: CaseItem) => void;
     onDelete?: (item: CaseItem) => void;
     onClick?: (item: CaseItem) => void;
 }
 
-const STATUS_MAP: Record<CaseStatus, { label: string; light: string; dark: string }> = {
-    sold: {
-        label: "فروش",
-        light: "bg-emerald-50 text-emerald-700 border-emerald-200",
-        dark: "bg-emerald-500/10 text-emerald-300 border-emerald-500/20",
-    },
-    in_progress: {
-        label: "در حال انجام",
-        light: "bg-amber-50 text-amber-700 border-amber-200",
-        dark: "bg-amber-500/10 text-amber-300 border-amber-500/20",
-    },
-    completed: {
-        label: "انجام شده",
-        light: "bg-sky-50 text-sky-700 border-sky-200",
-        dark: "bg-sky-500/10 text-sky-300 border-sky-500/20",
-    },
-    cancelled: {
-        label: "لغو شده",
-        light: "bg-rose-50 text-rose-700 border-rose-200",
-        dark: "bg-rose-500/10 text-rose-300 border-rose-500/20",
-    },
-};
+const SPRING = { type: "spring" as const, stiffness: 420, damping: 26 };
+
+function formatDate(iso?: string | null) {
+    if (!iso) return "نامشخص";
+    return new Date(iso).toLocaleDateString("fa-IR", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+    });
+}
+
+function Avatar({ name, id }: { name: string; id: number }) {
+    const hue = (Math.abs(id) * 53) % 360;
+    return (
+        <div
+            className="flex h-11 w-11 shrink-0 select-none items-center justify-center rounded-2xl text-[15px] font-extrabold text-white"
+            style={{
+                background: `linear-gradient(135deg, oklch(55% 0.18 ${hue}), oklch(45% 0.22 ${(hue + 30) % 360}))`,
+            }}
+        >
+            {name?.charAt(0) ?? "؟"}
+        </div>
+    );
+}
 
 const isFilled = (v?: string | null): v is string =>
     typeof v === "string" && v.trim().length > 0;
@@ -74,59 +87,182 @@ const resolveName = (
     if (isFilled(directName)) return directName!.trim();
     const fromObj = nameFromObject(value);
     if (isFilled(fromObj)) return fromObj;
-    if (typeof value === "string" && !/^\d+$/.test(value.trim())) return value.trim();
-
+    if (typeof value === "string" && !/^\d+$/.test(value.trim()))
+        return value.trim();
     const id =
         typeof value === "number" || typeof value === "string"
             ? String(value)
             : value && typeof value === "object" && value.id !== undefined
                 ? String(value.id)
                 : "";
-
     if (!id || !pool?.length) return "";
     const found = pool.find(
-        (p) => p && typeof p === "object" && p.id !== undefined && String(p.id) === id
+        (p) =>
+            p &&
+            typeof p === "object" &&
+            p.id !== undefined &&
+            String(p.id) === id
     );
     return nameFromObject(found);
 };
 
-const formatDate = (value?: string | null) => {
-    if (!isFilled(value)) return "";
-    const d = new Date(value!);
-    if (Number.isNaN(d.getTime())) return "";
-    return new Intl.DateTimeFormat("fa-IR", {
-        year: "numeric",
-        month: "short",
-        day: "numeric",
-    }).format(d);
+const SWEEP_COLORS: Record<string, string> = {
+    delete: "#ef4444",
+    edit: "linear-gradient(90deg, #3b82f6, #8b5cf6)",
+    tasks: "linear-gradient(90deg, #6366f1, #8b5cf6)",
 };
 
-export default function CaseCard({
+function SweepButton({
+    actionKey,
+    icon,
+    offset,
+    delay,
+    disabled,
+    isDark,
+    iconBg,
+    iconBorder,
+    iconColor,
+    onEnter,
+    onLeave,
+    onClick,
+    spring,
+}: {
+    actionKey: string;
+    icon: ReactNode;
+    offset: { x: number; y: number };
+    delay: number;
+    disabled: boolean;
+    isDark: boolean;
+    iconBg: string;
+    iconBorder: string;
+    iconColor: string;
+    onEnter: () => void;
+    onLeave: () => void;
+    onClick: (e: ReactMouseEvent) => void;
+    spring: typeof SPRING;
+}) {
+    const spanRef = useRef<HTMLSpanElement>(null);
+    const iconWrapRef = useRef<HTMLSpanElement>(null);
+    const animatingRef = useRef(false);
+    const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+
+    useEffect(() => {
+        const timers = timersRef.current;
+        return () => timers.forEach(clearTimeout);
+    }, []);
+
+    const runSweep = useCallback(() => {
+        if (disabled || animatingRef.current) return;
+        const bg = spanRef.current;
+        const iconEl = iconWrapRef.current;
+        if (!bg || !iconEl) return;
+
+        animatingRef.current = true;
+        bg.style.transformOrigin = "0% 50%";
+        animate(bg, { scaleX: [0, 1] }, { duration: 0.4, ease: [0.4, 0, 0.2, 1] });
+
+        timersRef.current.push(
+            setTimeout(() => {
+                animate(iconEl, { color: "#ffffff" }, { duration: 0.08, ease: "easeIn" });
+            }, 300)
+        );
+
+        timersRef.current.push(
+            setTimeout(() => {
+                bg.style.transformOrigin = "100% 50%";
+                animate(bg, { scaleX: [1, 0] }, { duration: 0.4, ease: [0.4, 0, 0.2, 1] });
+                animate(iconEl, { color: iconColor }, { duration: 0.4, ease: [0.4, 0, 0.2, 1] });
+            }, 400)
+        );
+
+        timersRef.current.push(
+            setTimeout(() => {
+                animatingRef.current = false;
+            }, 820)
+        );
+    }, [disabled, iconColor]);
+
+    return (
+        <motion.button
+            type="button"
+            initial={{ x: 0, y: 0, scale: 0, opacity: 0 }}
+            animate={{ x: offset.x, y: offset.y, scale: 1, opacity: 1 }}
+            exit={{ x: 0, y: 0, scale: 0, opacity: 0 }}
+            transition={{ ...spring, delay }}
+            whileTap={disabled ? {} : { scale: 0.96 }}
+            onMouseEnter={() => {
+                runSweep();
+                onEnter();
+            }}
+            onMouseLeave={onLeave}
+            onClick={onClick}
+            className="relative flex h-11 w-11 items-center justify-center overflow-hidden rounded-full"
+            style={{
+                backgroundColor: iconBg,
+                border: `1.5px solid ${iconBorder}`,
+                cursor: disabled ? "not-allowed" : "pointer",
+                opacity: disabled ? 0.45 : 1,
+            }}
+        >
+            <span
+                ref={spanRef}
+                aria-hidden
+                className="pointer-events-none absolute inset-0 rounded-full"
+                style={{
+                    background: SWEEP_COLORS[actionKey] || "#6366f1",
+                    transform: "scaleX(0)",
+                    transformOrigin: "0% 50%",
+                }}
+            />
+            <span
+                ref={iconWrapRef}
+                className="relative z-10 flex items-center justify-center"
+                style={{
+                    color: disabled ? (isDark ? "#64748b" : "#9ca3af") : iconColor,
+                }}
+            >
+                {icon}
+            </span>
+        </motion.button>
+    );
+}
+
+function CaseCard({
     item,
-    index = 0,
+    index,
     customers,
     departments,
     users,
     isDeleting = false,
-    hasActiveTasks = false, 
+    hasActiveTasks = false,
+    caseTasks = [],
     onEdit,
     onDelete,
     onClick,
 }: CaseCardProps) {
     const { resolvedTheme } = useTheme();
-    const isDark = resolvedTheme === "dark";
-    const [hovered, setHovered] = useState(false);
-    const [showConfirm, setShowConfirm] = useState(false);
-    const [deleteLoading, setDeleteLoading] = useState(false);
-    const [deleteError, setDeleteError] = useState<string | null>(null);
-    const [tooltipVisible, setTooltipVisible] = useState(false);
 
-    const status = item.status ? STATUS_MAP[item.status] : STATUS_MAP.in_progress;
+    const [mounted, setMounted] = useState(false);
+    useEffect(() => setMounted(true), []);
+    const isDark = mounted && resolvedTheme === "dark";
+
+    const cardRef = useRef<HTMLDivElement>(null);
+    const [hovered, setHovered] = useState(false);
+    const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
+
+    const [showConfirm, setShowConfirm] = useState(false);
+    const [isDeletingState, setIsDeletingState] = useState(false);
+    const [deleteError, setDeleteError] = useState("");
+    const [showEdit, setShowEdit] = useState(false);
+    const [showMobileSheet, setShowMobileSheet] = useState(false);
 
     const customerName = useMemo(
         () =>
-            resolveName(item.customer, item.customerName ?? item.customer_name, customers) ||
-            "بدون مشتری",
+            resolveName(
+                item.customer,
+                item.customerName ?? item.customer_name,
+                customers
+            ) || "بدون مشتری",
         [item.customer, item.customerName, item.customer_name, customers]
     );
 
@@ -157,285 +293,480 @@ export default function CaseCard({
         ]
     );
 
-    const createdAt = formatDate(item.created_at);
-    const description = typeof item.description === "string" ? item.description.trim() : "";
+    const description =
+        typeof item.description === "string" ? item.description.trim() : "";
+    const canDelete = !hasActiveTasks;
 
-    const chipStyle = {
-        border: isDark ? "1px solid rgba(255,255,255,0.06)" : "1px solid rgba(0,0,0,0.06)",
-        background: isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)",
-    };
+    const deleteTooltipText = useMemo(() => {
+        if (hasActiveTasks) return "این پرونده دارای وظیفه فعال است";
+        return "حذف پرونده";
+    }, [hasActiveTasks]);
 
     const handleDelete = async () => {
-        if (!onDelete) return;
-        setDeleteLoading(true);
-        setDeleteError(null);
+        if (!canDelete || !onDelete) return;
+        setIsDeletingState(true);
+        setDeleteError("");
         try {
             await onDelete(item);
             setShowConfirm(false);
         } catch {
-            setDeleteError("خطا در حذف پرونده. دوباره تلاش کن.");
+            setDeleteError("حذف پرونده با خطا مواجه شد");
         } finally {
-            setDeleteLoading(false);
+            setIsDeletingState(false);
         }
     };
 
-    const handleClose = () => {
-        if (deleteLoading) return;
-        setShowConfirm(false);
-        setDeleteError(null);
+    const handleMouseEnter = () => {
+        if (typeof window !== "undefined" && window.innerWidth < 768) return;
+        setHovered(true);
     };
+
+    const handleMouseLeave = () => {
+        setHovered(false);
+        setActiveTooltip(null);
+    };
+
+    const borderColor = isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.06)";
+    const surfaceBg = isDark ? "rgba(255,255,255,0.02)" : "#fafafa";
+    const dividerColor = isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)";
+    const iconBg = isDark ? "#1e1e1e" : "#e2e2e2";
+    const iconBorder = isDark ? "rgba(255,255,255,0.13)" : "rgba(0,0,0,0.14)";
+    const iconColor = isDark ? "#e5e7eb" : "#374151";
+    const tasksColor = isDark ? "#a5b4fc" : "#6366f1";
+
+    const actions = [
+        {
+            key: "tasks",
+            tooltip:
+                caseTasks.length > 0
+                    ? `${caseTasks.length} وظیفه`
+                    : "وظایف پرونده",
+            disabled: false,
+            delay: 0,
+            color: tasksColor,
+            onClick: (e: ReactMouseEvent) => {
+                e.stopPropagation();
+                onClick?.(item);
+            },
+            icon: <ListTodo size={16} />,
+        },
+        {
+            key: "edit",
+            tooltip: "ویرایش اطلاعات",
+            disabled: false,
+            delay: 0.07,
+            color: iconColor,
+            onClick: (e: ReactMouseEvent) => {
+                e.stopPropagation();
+                if (onEdit) {
+                    onEdit(item);
+                } else {
+                    setShowEdit(true);
+                }
+            },
+            icon: <SquarePen size={16} />,
+        },
+        {
+            key: "delete",
+            tooltip: deleteTooltipText,
+            disabled: !canDelete,
+            delay: 0.14,
+            color: iconColor,
+            onClick: (e: ReactMouseEvent) => {
+                e.stopPropagation();
+                if (canDelete) setShowConfirm(true);
+            },
+            icon: <Trash2 size={16} />,
+        },
+    ];
 
     return (
         <>
-            <motion.article
-                layout
-                initial={{ opacity: 0, y: 18 }}
+            <motion.div
+                ref={cardRef}
+                initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -12 }}
-                transition={{ duration: 0.35, delay: Math.min(index * 0.04, 0.24), ease: [0.22, 1, 0.36, 1] }}
-                onHoverStart={() => setHovered(true)}
-                onHoverEnd={() => setHovered(false)}
+                exit={{ opacity: 0, scale: 0.95 }}
+                transition={{ duration: 0.25, delay: Math.min(index, 12) * 0.03 }}
+                onMouseEnter={handleMouseEnter}
+                onMouseLeave={handleMouseLeave}
                 onClick={() => onClick?.(item)}
-                className="group relative rounded-2xl p-4"
+                className="case-card group relative z-[1] flex flex-col gap-3 overflow-visible rounded-2xl p-4 transition-[filter,box-shadow] duration-300 hover:z-50 hover:shadow-[0_0_0_1px_rgba(99,102,241,0.35),0_14px_40px_rgba(99,102,241,0.25)] dark:hover:shadow-[0_0_0_1px_rgba(129,140,248,0.45),0_14px_44px_rgba(99,102,241,0.35)]"
                 style={{
-                    border: isDark ? "1px solid rgba(255,255,255,0.06)" : "1px solid rgba(0,0,0,0.06)",
-                    background: isDark ? "rgba(255,255,255,0.02)" : "#fafafa",
-                    minHeight: "130px",
-                    pointerEvents: isDeleting ? "none" : undefined,
-                    opacity: isDeleting ? 0.45 : 1,
-                    boxShadow: isDark ? "0 2px 24px rgba(0,0,0,0.2)" : "0 2px 16px rgba(0,0,0,0.04)",
+                    border: `1px solid ${borderColor}`,
+                    background: surfaceBg,
+                    direction: "rtl",
                     cursor: onClick ? "pointer" : "default",
                 }}
-                dir="rtl"
             >
-                <svg className="pointer-events-none absolute inset-0 h-full w-full" style={{ borderRadius: "1rem" }}>
+                <svg
+                    className="pointer-events-none absolute inset-0 h-full w-full"
+                    style={{ borderRadius: "1rem", overflow: "visible" }}
+                >
                     <defs>
-                        <linearGradient id={`caseBorder-${item.id}`} x1="100%" y1="100%" x2="0%" y2="0%">
-                            <stop offset="0%" stopColor="#6366f1" />
-                            <stop offset="100%" stopColor="#8b5cf6" />
+                        <linearGradient
+                            id={`case-grad-${item.id}`}
+                            x1="100%"
+                            y1="100%"
+                            x2="0%"
+                            y2="0%"
+                        >
+                            <stop offset="0%" stopColor="#6366f1" stopOpacity="0.5" />
+                            <stop offset="100%" stopColor="#8b5cf6" stopOpacity="0.5" />
                         </linearGradient>
                     </defs>
                     <motion.rect
-                        x="1" y="1" width="calc(100% - 2px)" height="calc(100% - 2px)"
-                        rx="15" ry="15" fill="none"
-                        stroke={`url(#caseBorder-${item.id})`}
-                        strokeWidth="1.5" pathLength="1"
+                        x="1"
+                        y="1"
+                        width="calc(100% - 2px)"
+                        height="calc(100% - 2px)"
+                        rx="15"
+                        ry="15"
+                        fill="none"
+                        stroke={`url(#case-grad-${item.id})`}
+                        strokeWidth="1.2"
+                        pathLength="1"
                         initial={{ pathLength: 0, opacity: 0 }}
-                        animate={hovered ? { pathLength: 1, opacity: 1 } : { pathLength: 0, opacity: 0 }}
-                        transition={{ duration: 0.55, ease: "easeInOut" }}
+                        animate={
+                            hovered
+                                ? { pathLength: 1, opacity: 1 }
+                                : { pathLength: 0, opacity: 0 }
+                        }
+                        transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
                     />
                 </svg>
 
-                <div className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-500 group-hover:opacity-100"
-                    style={{
-                        background: isDark
-                            ? "linear-gradient(135deg, rgba(99,102,241,0.08), transparent 55%)"
-                            : "linear-gradient(135deg, rgba(99,102,241,0.06), transparent 55%)",
-                    }}
-                />
+                <div className="absolute left-3 top-3 z-10 flex items-center gap-2">
+                    <button
+                        type="button"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            setShowMobileSheet(true);
+                        }}
+                        className="flex h-7 w-7 items-center justify-center rounded-full bg-black/5 text-gray-500 transition-colors active:scale-95 dark:bg-white/10 dark:text-gray-300 md:hidden"
+                        aria-label="گزینه‌ها"
+                    >
+                        <MoreVertical size={15} />
+                    </button>
+                </div>
 
-                <div className="relative flex items-start justify-between gap-3">
-                    <div className="flex min-w-0 items-start gap-3">
-                        <div
-                            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl"
+                <div className="flex items-center gap-3 pt-1">
+                    <Avatar name={item.title || "؟"} id={item.id} />
+                    <div className="flex min-w-0 flex-col gap-0.5">
+                        <p className="truncate text-[13.5px] font-extrabold leading-tight text-gray-800 dark:text-gray-100">
+                            {item.title || "بدون عنوان"}
+                        </p>
+                        <p className="text-[11px] font-medium text-gray-400 dark:text-gray-500">
+                            #{item.id}
+                        </p>
+                    </div>
+                </div>
+
+                <div
+                    className="flex flex-col gap-2 border-t pt-2.5"
+                    style={{ borderColor: dividerColor }}
+                >
+                    <div className="flex items-center gap-2 text-[11.5px] text-gray-400 dark:text-gray-500">
+                        <User className="h-3.5 w-3.5 shrink-0" />
+                        <span>
+                            مشتری :
+                        </span>
+                        <span className="truncate">{customerName}</span>
+                    </div>
+
+                    {description && (
+                        <div className="flex items-start gap-2 text-[11.5px] text-gray-400 dark:text-gray-500">
+                            <span>
+                                توضیحات :
+                            </span>
+                            <span className="line-clamp-2 flex-1">{description}</span>
+                        </div>
+                    )}
+
+                    <div className="flex items-center justify-between text-[11.5px] text-gray-400 dark:text-gray-500">
+                        <div className="flex min-w-0 items-center gap-1.5">
+                            <Building2 className="h-3.5 w-3.5 shrink-0" />
+                            <span className="truncate">{departmentName}</span>
+                        </div>
+                        <div className="flex shrink-0 items-center gap-1.5">
+                            <CalendarDays className="h-3.5 w-3.5" />
+                            <span>{formatDate(item.created_at)}</span>
+                        </div>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                        <span
+                            className="rounded-lg px-2 py-0.5 text-[10.5px] font-bold"
                             style={{
-                                border: isDark ? "1px solid rgba(255,255,255,0.06)" : "1px solid rgba(0,0,0,0.06)",
-                                background: isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.03)",
+                                background:
+                                    "linear-gradient(135deg, rgba(99,102,241,0.18), rgba(139,92,246,0.18))",
                                 color: isDark ? "#a5b4fc" : "#6366f1",
+                                border: "1px solid rgba(99,102,241,0.25)",
                             }}
                         >
-                            <Briefcase size={18} />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                            <h3 className="truncate text-[13.5px] font-extrabold leading-tight" style={{ color: isDark ? "#f1f5f9" : "#1e293b" }}>
-                                {item.title}
-                            </h3>
-                            {description.length > 0 && (
-                                <p
-                                    className="mt-1 line-clamp-2 text-[12px] leading-6"
+                            {assigneeName}
+                        </span>
+
+                        {hasActiveTasks && (
+                            <span
+                                className="rounded-lg bg-rose-50 px-2 py-0.5 text-[10.5px] font-bold text-rose-600 dark:bg-rose-500/10 dark:text-rose-400"
+                                style={{ border: "1px solid rgba(244,63,94,0.25)" }}
+                            >
+                                {caseTasks.length > 0
+                                    ? `${caseTasks.length} وظیفه فعال`
+                                    : "دارای وظیفه فعال"}
+                            </span>
+                        )}
+                    </div>
+                </div>
+
+                <div className="hidden md:block">
+                    <AnimatePresence>
+                        {hovered && (
+                            <motion.div
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                transition={{ duration: 0.18, ease: "easeOut" }}
+                                className="pointer-events-auto absolute -right-[59px] top-1/2 z-40 flex -translate-y-1/2 flex-col gap-2.5 pl-6"
+                            >
+                                {actions.map((act) => (
+                                    <div
+                                        key={act.key}
+                                        className="relative flex items-center justify-center"
+                                    >
+                                        <SweepButton
+                                            actionKey={act.key}
+                                            icon={act.icon}
+                                            offset={{ x: 0, y: 0 }}
+                                            delay={act.delay}
+                                            disabled={act.disabled}
+                                            isDark={isDark}
+                                            iconBg={iconBg}
+                                            iconBorder={iconBorder}
+                                            iconColor={act.color}
+                                            spring={SPRING}
+                                            onEnter={() => setActiveTooltip(act.key)}
+                                            onLeave={() => setActiveTooltip(null)}
+                                            onClick={act.onClick}
+                                        />
+
+                                        <AnimatePresence>
+                                            {activeTooltip === act.key && (
+                                                <div className="pointer-events-none absolute right-full top-1/2 z-[60] mr-2.5 -translate-y-1/2">
+                                                    <motion.div
+                                                        initial={{ opacity: 0, scale: 0.95, x: 4 }}
+                                                        animate={{ opacity: 1, scale: 1, x: 0 }}
+                                                        exit={{ opacity: 0, scale: 0.95, x: 4 }}
+                                                        transition={{ duration: 0.15 }}
+                                                        className="whitespace-nowrap rounded-2xl px-3 py-2 text-center shadow-xl"
+                                                        style={{
+                                                            background: isDark ? "#0f172a" : "#1e293b",
+                                                            border: "1px solid rgba(255,255,255,0.08)",
+                                                        }}
+                                                        dir="rtl"
+                                                    >
+                                                        <span className="text-[11px] font-bold text-white">
+                                                            {act.tooltip}
+                                                        </span>
+                                                    </motion.div>
+                                                </div>
+                                            )}
+                                        </AnimatePresence>
+                                    </div>
+                                ))}
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+                </div>
+            </motion.div>
+
+            <AnimatePresence>
+                {showMobileSheet && (
+                    <div
+                        className="fixed inset-0 z-50 flex items-end justify-center md:hidden"
+                        dir="rtl"
+                    >
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setShowMobileSheet(false)}
+                            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+                        />
+
+                        <motion.div
+                            initial={{ y: "100%" }}
+                            animate={{ y: 0 }}
+                            exit={{ y: "100%" }}
+                            transition={{ type: "spring", damping: 28, stiffness: 320 }}
+                            className="relative z-10 w-full max-w-lg rounded-t-[28px] p-5 shadow-2xl"
+                            style={{
+                                background: isDark ? "#12141c" : "#ffffff",
+                                borderTop: `1px solid ${isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.08)"}`,
+                            }}
+                        >
+                            <div className="mx-auto mb-4 h-1.5 w-12 rounded-full bg-gray-300 dark:bg-gray-700" />
+
+                            <div
+                                className="mb-4 flex items-center border-b pb-3"
+                                style={{ borderColor: dividerColor }}
+                            >
+                                <div className="flex items-center gap-2.5">
+                                    <Avatar name={item.title || "؟"} id={item.id} />
+                                    <div>
+                                        <p className="text-sm font-extrabold text-gray-800 dark:text-gray-100">
+                                            {item.title || "بدون عنوان"}
+                                        </p>
+                                        <p className="text-[11px] text-gray-400 dark:text-gray-500">
+                                            #{item.id} • {customerName}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="flex flex-col gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setShowMobileSheet(false);
+                                        onClick?.(item);
+                                    }}
+                                    className="flex w-full items-center gap-3 rounded-2xl p-3 text-sm font-bold text-gray-700 dark:text-gray-200"
                                     style={{
-                                        color: isDark ? "#94a3b8" : "#64748b",
-                                        maxWidth: "180px",
+                                        background: isDark ? "rgba(255,255,255,0.05)" : "#f8fafc",
                                     }}
                                 >
-                                    {description}
-                                </p>
-                            )}
-                        </div>
+                                    <ListTodo size={17} />
+                                    مشاهده وظایف {caseTasks.length > 0 && `(${caseTasks.length})`}
+                                </button>
+
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setShowMobileSheet(false);
+                                        onEdit ? onEdit(item) : setShowEdit(true);
+                                    }}
+                                    className="flex w-full items-center gap-3 rounded-2xl p-3 text-sm font-bold text-gray-700 dark:text-gray-200"
+                                    style={{
+                                        background: isDark ? "rgba(255,255,255,0.05)" : "#f8fafc",
+                                    }}
+                                >
+                                    <SquarePen size={17} />
+                                    ویرایش پرونده
+                                </button>
+
+                                <button
+                                    type="button"
+                                    disabled={!canDelete}
+                                    onClick={() => {
+                                        setShowMobileSheet(false);
+                                        setShowConfirm(true);
+                                        setDeleteError("");
+                                    }}
+                                    className="flex w-full items-center gap-3 rounded-2xl p-3 text-sm font-bold text-rose-600 disabled:cursor-not-allowed disabled:opacity-40 dark:text-rose-400"
+                                    style={{
+                                        background: isDark ? "rgba(244,63,94,0.08)" : "#fff1f2",
+                                    }}
+                                >
+                                    <Trash2 size={17} />
+                                    {canDelete ? "حذف پرونده" : "دارای وظیفه فعال"}
+                                </button>
+                            </div>
+                        </motion.div>
                     </div>
-                </div>
-
-                <div className="relative mt-4 flex flex-wrap items-center gap-2 border-t pt-3.5" style={{ borderColor: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)" }}>
-                    <div className="flex items-center gap-2 rounded-full px-2.5 py-1" style={chipStyle}>
-                        <User size={11} className={isDark ? "text-slate-500" : "text-slate-400"} />
-                        <span className="text-[10.5px] font-bold flex gap-2" style={{ color: isDark ? "#94a3b8" : "#64748b" }}>
-                            نام مشتری :
-                            {customerName}
-                        </span>
-                    </div>
-
-                    {isFilled(createdAt) && (
-                        <div className="mr-auto flex items-center gap-1.5 text-[10.5px] font-medium" style={{ color: isDark ? "#64748b" : "#94a3b8" }}>
-                            <CalendarDays size={11} />
-                            تاریخ ثبت : {createdAt}
-                        </div>
-                    )}
-                </div>
-
-                <div className="relative mt-3 flex items-center justify-end gap-1.5">
-                    {onDelete && (
-                        <div className="relative">
-                            <button
-                                type="button"
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    if (hasActiveTasks) return;
-                                    setShowConfirm(true);
-                                }}
-                                onMouseEnter={() => setTooltipVisible(true)}
-                                onMouseLeave={() => setTooltipVisible(false)}
-                                disabled={isDeleting}
-                                className="flex h-7 w-7 items-center justify-center rounded-xl transition-colors disabled:opacity-40"
-                                style={{
-                                    background: hasActiveTasks
-                                        ? isDark
-                                            ? "rgba(100,116,139,0.1)"
-                                            : "rgba(100,116,139,0.07)"
-                                        : isDark
-                                            ? "rgba(239,68,68,0.1)"
-                                            : "rgba(239,68,68,0.07)",
-                                    color: hasActiveTasks ? "#94a3b8" : "#ef4444",
-                                    cursor: hasActiveTasks ? "not-allowed" : "pointer",
-                                }}
-                            >
-                                {isDeleting ? (
-                                    <Loader2 size={11} className="animate-spin" />
-                                ) : (
-                                    <Trash2 size={11} />
-                                )}
-                            </button>
-
-                            <AnimatePresence>
-                                {tooltipVisible && hasActiveTasks && (
-                                    <motion.div
-                                        initial={{ opacity: 0, y: 4, scale: 0.95 }}
-                                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                                        exit={{ opacity: 0, y: 4, scale: 0.95 }}
-                                        transition={{ duration: 0.15, ease: "easeOut" }}
-                                        className="absolute bottom-full left-1/2 z-50 mb-2 -translate-x-1/2 whitespace-nowrap"
-                                        dir="rtl"
-                                    >
-                                        <div
-                                            className="flex flex-col items-center gap-1 rounded-2xl px-3 py-2 text-center shadow-xl"
-                                            style={{
-                                                background: isDark ? "#0f172a" : "#1e293b",
-                                                border: isDark
-                                                    ? "1px solid rgba(255,255,255,0.08)"
-                                                    : "1px solid rgba(0,0,0,0.12)",
-                                            }}
-                                        >
-                                            <span className="text-[11px] font-bold text-white">
-                                                این پرونده وظیفه دارد
-                                            </span>
-                                            <span className="text-[10px] text-slate-400">
-                                                برای حذف آن باید ابتدا وظایفش را حذف کنید
-                                            </span>
-                                        </div>
-                                    </motion.div>
-                                )}
-                            </AnimatePresence>
-                        </div>
-                    )}
-                </div>
-            </motion.article>
+                )}
+            </AnimatePresence>
 
             <AnimatePresence>
                 {showConfirm && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-50 flex items-center justify-center px-4"
-                        style={{ background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)" }}
-                        onClick={handleClose}
+                    <div
+                        className="fixed inset-0 z-[60] flex items-center justify-center p-4"
+                        dir="rtl"
                     >
                         <motion.div
-                            initial={{ scale: 0.95, y: 16, opacity: 0 }}
-                            animate={{ scale: 1, y: 0, opacity: 1 }}
-                            exit={{ scale: 0.95, y: 16, opacity: 0 }}
-                            transition={{ duration: 0.2, ease: "easeOut" }}
-                            className="w-full max-w-[360px] overflow-hidden rounded-[2rem] border p-5"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => !isDeletingState && setShowConfirm(false)}
+                            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+                        />
+
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95, y: 12 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.95, y: 12 }}
+                            transition={{ duration: 0.2 }}
+                            className="relative z-10 w-full max-w-sm rounded-3xl p-5 shadow-2xl"
                             style={{
-                                background: isDark ? "#0f172a" : "#ffffff",
-                                borderColor: isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.07)",
-                                boxShadow: "0 24px 64px rgba(0,0,0,0.35)",
+                                background: isDark ? "#12141c" : "#ffffff",
+                                border: `1px solid ${borderColor}`,
                             }}
-                            onClick={(e) => e.stopPropagation()}
-                            dir="rtl"
                         >
-                            <div className="flex items-center justify-between border-b px-2 py-2" style={{ borderColor: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.06)" }}>
-                                <div className="flex items-center gap-2.5">
-                                    <div className="flex h-8 w-8 items-center justify-center rounded-xl" style={{ background: isDark ? "rgba(239,68,68,0.12)" : "rgba(239,68,68,0.08)" }}>
-                                        <Trash2 size={14} className="text-red-500" />
-                                    </div>
-                                    <h3 className="text-[13.5px] font-extrabold" style={{ color: isDark ? "#ffffff" : "#0f172a" }}>
+                            <div className="mb-4 flex items-center gap-3">
+                                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-rose-500/10 text-rose-500">
+                                    <AlertCircle size={22} />
+                                </div>
+                                <div>
+                                    <h3 className="text-sm font-extrabold text-gray-800 dark:text-gray-100">
                                         حذف پرونده
                                     </h3>
+                                    <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                        از حذف این پرونده مطمئن هستید؟
+                                    </p>
                                 </div>
+                            </div>
+
+                            <p className="text-sm font-bold text-gray-700 dark:text-gray-200">
+                                {item.title || "بدون عنوان"}
+                            </p>
+
+                            {deleteError && (
+                                <p className="mt-3 text-[11.5px] font-semibold text-red-500">
+                                    {deleteError}
+                                </p>
+                            )}
+
+                            <div className="mt-5 flex gap-2.5">
                                 <button
                                     type="button"
-                                    onClick={handleClose}
-                                    disabled={deleteLoading}
-                                    className="flex h-7 w-7 items-center justify-center rounded-xl transition-colors disabled:opacity-40"
-                                    style={{ background: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.04)", color: isDark ? "#94a3b8" : "#64748b" }}
+                                    onClick={() => !isDeletingState && setShowConfirm(false)}
+                                    disabled={isDeletingState}
+                                    className="flex-1 rounded-[1.25rem] py-2.5 text-[12.5px] font-bold text-gray-600 transition-all active:scale-[0.98] disabled:opacity-50 dark:text-gray-300"
+                                    style={{
+                                        background: isDark
+                                            ? "rgba(255,255,255,0.05)"
+                                            : "rgba(0,0,0,0.05)",
+                                        border: `1px solid ${isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)"}`,
+                                    }}
                                 >
-                                    <X size={13} />
+                                    انصراف
+                                </button>
+
+                                <button
+                                    type="button"
+                                    onClick={handleDelete}
+                                    disabled={isDeletingState || !canDelete}
+                                    className="flex flex-1 items-center justify-center gap-2 rounded-[1.25rem] py-2.5 text-[12.5px] font-bold text-white transition-all active:scale-[0.98] disabled:opacity-60"
+                                    style={{
+                                        background: "linear-gradient(135deg, #ef4444, #dc2626)",
+                                        border: "1px solid rgba(239,68,68,0.3)",
+                                    }}
+                                >
+                                    {isDeletingState ? (
+                                        <Loader2 size={14} className="animate-spin" />
+                                    ) : (
+                                        <Trash2 size={14} />
+                                    )}
+                                    {isDeletingState ? "در حال حذف..." : "حذف پرونده"}
                                 </button>
                             </div>
-
-                            <div className="flex flex-col gap-4 px-2 py-4">
-                                <p className="text-[12.5px] leading-relaxed" style={{ color: isDark ? "#94a3b8" : "#64748b" }}>
-                                    پرونده{" "}
-                                    <span className="font-extrabold" style={{ color: isDark ? "#e2e8f0" : "#1e293b" }}>
-                                        {item.title}
-                                    </span>{" "}
-                                    حذف خواهد شد. این عملیات قابل بازگشت نیست.
-                                </p>
-
-                                {deleteError && (
-                                    <p className="text-center text-[11.5px] font-semibold text-red-500">{deleteError}</p>
-                                )}
-
-                                <div className="flex gap-2">
-                                    <button
-                                        type="button"
-                                        onClick={handleClose}
-                                        disabled={deleteLoading}
-                                        className="flex-1 rounded-2xl py-2.5 text-[12.5px] font-bold transition-colors disabled:opacity-40"
-                                        style={{ background: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.04)", color: isDark ? "#94a3b8" : "#64748b" }}
-                                    >
-                                        انصراف
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={handleDelete}
-                                        disabled={deleteLoading}
-                                        className="flex flex-1 items-center justify-center rounded-2xl py-2.5 text-[12.5px] font-bold text-white transition-opacity disabled:cursor-not-allowed disabled:opacity-60"
-                                        style={{ background: "linear-gradient(135deg, #ef4444, #dc2626)", boxShadow: "0 4px 14px rgba(239,68,68,0.3)" }}
-                                    >
-                                        {deleteLoading ? <Loader2 size={15} className="animate-spin" /> : (
-                                            <>
-                                                <Trash2 size={13} className="ml-1.5" />
-                                                حذف کن
-                                            </>
-                                        )}
-                                    </button>
-                                </div>
-                            </div>
                         </motion.div>
-                    </motion.div>
+                    </div>
                 )}
             </AnimatePresence>
         </>
     );
 }
+
+export default memo(CaseCard);
