@@ -119,7 +119,6 @@ export function NotificationBell() {
         };
     }, [open]);
 
-    // کلیک روی اعلان فقط آن را «خوانده» می‌کند؛ لینک/ریدایرکتی ندارد
     const handleSelect = (item: AppNotification) => {
         if (!item.read) markRead(item.id);
     };

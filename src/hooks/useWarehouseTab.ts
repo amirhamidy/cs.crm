@@ -208,7 +208,10 @@ async function loadTab(args: LoadArgs): Promise<TabData> {
     }
 
     case "tasks": {
-      let tasks = inWarehouse(await fetchAll<ApiWarehouseTask>(EP.tasks, wp), true);
+      let tasks = inWarehouse(
+        await fetchAll<ApiWarehouseTask>(EP.tasks, wp),
+        true,
+      );
 
       if (!hasFullAccess) {
         // کاربر محدود فقط وظایف خودش (یا بدون مسئول) را می‌بیند
@@ -270,7 +273,11 @@ async function loadTab(args: LoadArgs): Promise<TabData> {
         orderIds.has(Number(deadline.order_task)),
       );
 
-      const res = paginate(byNewest(scopedDeadlines as never[]), page, PAGE_SIZE);
+      const res = paginate(
+        byNewest(scopedDeadlines as never[]),
+        page,
+        PAGE_SIZE,
+      );
       data.deadlines = res.items as unknown as ApiOrderTaskDeadline[];
       data.orderTasks = scopedOrders;
       setPaged(res);
@@ -304,7 +311,9 @@ async function loadTab(args: LoadArgs): Promise<TabData> {
 
     case "invoices": {
       // فاکتور از گروه‌بندی چند ردیف آرشیو ساخته می‌شود؛ پس لیست کامل (فقط ردیف‌های این انبار) لازم است
-      data.archived = inWarehouse(await fetchAll<ApiArchivedOrderTask>(EP.archive, wp));
+      data.archived = inWarehouse(
+        await fetchAll<ApiArchivedOrderTask>(EP.archive, wp),
+      );
       break;
     }
   }
@@ -331,7 +340,13 @@ export default function useWarehouseTab(args: LoadArgs & { enabled: boolean }) {
       setError(null);
 
       try {
-        const next = await loadTab({ tab, warehouseId, page, hasFullAccess, employeeId });
+        const next = await loadTab({
+          tab,
+          warehouseId,
+          page,
+          hasFullAccess,
+          employeeId,
+        });
         if (id === requestId.current) setData(next);
       } catch {
         if (id === requestId.current) {

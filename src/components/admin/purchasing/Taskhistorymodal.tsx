@@ -15,8 +15,6 @@ import {
 } from "lucide-react";
 import { JALALI_MONTHS, pad2, toJalali, toPersianDigits } from "@/lib/jalali";
 
-// توجه: چون تایپ دقیق ApiTaskAttachment در دسترسم نبود، این شکل رو فرض کردم.
-// اگه اسم فیلدهای واقعی فرق داره (مثلاً step_name بجای to_step_name) کافیه همینجا map رو اصلاح کنی.
 export interface PurchasingTaskHistoryEntry {
     id: number | string;
     created_at: string;

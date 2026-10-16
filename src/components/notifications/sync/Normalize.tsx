@@ -133,8 +133,7 @@ export function normalizeProjectTasks(list: unknown[]): ProjectTask[] {
         const id = num(raw.id);
         if (!Number.isFinite(id) || id <= 0) continue;
 
-        // فقط فیلدهای مربوط به کارمند؛ assigned_to (شناسه‌ی کاربر) عمداً نیست
-        const assignedRaw = raw.assigned_employee ?? raw.assigned_employees;
+         const assignedRaw = raw.assigned_employee ?? raw.assigned_employees;
 
         const assignedIds = (
             Array.isArray(assignedRaw)

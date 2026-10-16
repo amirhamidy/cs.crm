@@ -100,7 +100,6 @@ export default function PurchasingPage() {
         setEditingStep(null);
     };
 
-    // مسیر patch/delete کارمند: اگر در بک‌اند اسم دیگری دارد فقط همین‌ها را عوض کنید
     const toggleEmployee = async (employee: ApiPurchasingEmployee) => {
         try {
             await axiosInstance.patch(`/purchasing/api/v1/employees/${employee.id}/patch/`, { is_active: employee.is_active === false });

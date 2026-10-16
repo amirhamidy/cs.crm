@@ -108,8 +108,7 @@ export function detectTickets(
     const self = ctx.selfTouched.has(t.id);
 
     if (!before) {
-      // تیکت کاملاً جدید که به من رسیده (فقط بعد از گرفتن baseline)
-      if (prev !== undefined && assignedToMe && !createdByMe && !self) {
+       if (prev !== undefined && assignedToMe && !createdByMe && !self) {
         events.push(receivedEvent(t, ""));
       }
     } else if (before.r === 0 && assignedToMe && !createdByMe && !self) {
@@ -218,14 +217,12 @@ export function detectTasks(
   const next: Record<string, TaskMark> = {};
   const employeeId = ctx.employeeId;
 
-  // بدون پروفایل کارمندی نمی‌شود تسک‌های من را تشخیص داد؛ snapshot را دست نزن
-  if (employeeId === null) {
+   if (employeeId === null) {
     return { events, next: prev ?? {} };
   }
 
   for (const t of tasks) {
-    // assigned_employee شناسه‌ی «کارمند» است، نه «کاربر»
-    const mine = t.assignedIds.includes(employeeId);
+     const mine = t.assignedIds.includes(employeeId);
 
     if (!mine) {
       continue;
@@ -244,8 +241,7 @@ export function detectTasks(
       continue;
     }
 
-    // prev === undefined یعنی baseline هنوز گرفته نشده → فقط ثبت کن، نوتیف نده
-    if (prev === undefined) {
+     if (prev === undefined) {
       continue;
     }
 

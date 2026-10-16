@@ -66,7 +66,6 @@ type LoadState<T> =
     | { status: "error" }
     | { status: "ready"; data: T };
 
-// داده‌ی هر بخش مستقل از بقیه لود می‌شود (دقیقاً مثل Suspense های نسخه‌ی SSR)
 function useSection<T>(loader: () => Promise<T>, label: string): LoadState<T> {
     const [state, setState] = useState<LoadState<T>>({ status: "loading" });
 
@@ -85,8 +84,6 @@ function useSection<T>(loader: () => Promise<T>, label: string): LoadState<T> {
         return () => {
             active = false;
         };
-        // loader ها توابع ثابت ماژول هستند
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     return state;
