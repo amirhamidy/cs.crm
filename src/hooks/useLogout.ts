@@ -9,7 +9,6 @@ export const useLogout = () => {
   const router = useRouter();
   const clearAuth = useAuthStore((state) => state.clearAuth);
 
-  // جلسه‌ی محلی فوراً پاک می‌شود؛ ابطال توکن روی سرور در پس‌زمینه انجام می‌شود
   const silentLogout = async () => {
     const refresh = getRefreshToken();
 

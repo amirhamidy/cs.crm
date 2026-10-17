@@ -21,7 +21,6 @@ export const authService = {
   login: (payload: LoginPayload) =>
     axiosInstance.post<LoginResponse>("/accounts/api/v1/auth/login/", payload),
 
-  // ابطال refresh روی سرور؛ شکست آن نباید خروج کاربر را مختل کند
   logout: async (refresh: string | null) => {
     if (!refresh) return;
 
@@ -32,7 +31,6 @@ export const authService = {
         { timeout: 8_000 },
       );
     } catch {
-      // نادیده گرفته می‌شود
     }
   },
 };

@@ -46,11 +46,9 @@ export function readProductId(record: unknown): number | null {
   return toNumber(source.product ?? source.product_id);
 }
 
-/** موجودی‌هایی که واقعاً مال این انبارند */
 export function scopeStocks<T>(stocks: T[], warehouseId: number): T[] {
   return stocks.filter((stock) => {
     const own = readWarehouseId(stock);
-    // بک‌اند فیلد انبار نفرستاده → به فیلتر query اعتماد می‌کنیم
     return own === undefined ? true : own === warehouseId;
   });
 }

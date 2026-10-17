@@ -6,7 +6,6 @@ const ACCESS_KEY = "crm-access";
 const REFRESH_KEY = "crm-refresh";
 const USER_KEY = "user";
 const USER_ID_KEY = "crm-user-id";
-// کلیدهای نسخه‌ی قبلی (برای اینکه کاربرانِ لاگین‌شده بیرون نیفتند)
 const LEGACY_TYPE_KEY = "crm-type";
 const LEGACY_USERNAME_KEY = "crm-username";
 
@@ -29,7 +28,6 @@ function write(key: string, value: string | null) {
     if (value === null) window.localStorage.removeItem(key);
     else window.localStorage.setItem(key, value);
   } catch {
-    // localStorage در دسترس نیست (مثلاً حالت private)
   }
 }
 
@@ -60,11 +58,9 @@ export function getStoredUser(): SessionUser | null {
         return { id: user.id, username: user.username, type: user.type };
       }
     } catch {
-      // به fallback برو
     }
   }
 
-  // fallback: ساختار قدیمی localStorage
   const type = read(LEGACY_TYPE_KEY);
   const rawId = read(USER_ID_KEY);
   const id = rawId && rawId !== "undefined" ? Number(rawId) : NaN;

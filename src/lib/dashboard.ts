@@ -6,9 +6,7 @@ const DAY_MS = 86_400_000;
 const DETAIL_CONCURRENCY = 8;
 const CACHE_TTL_MS = 30_000;
 
-/* ------------------------------------------------------------------ */
-/*  Fetch layer (client) — refresh توکن داخل axiosInstance انجام می‌شود  */
-/* ------------------------------------------------------------------ */
+
 
 export class DashboardAuthError extends Error {
   constructor() {
@@ -22,7 +20,6 @@ interface ApiListResponse<T> {
   next?: string | null;
 }
 
-// چند بخش داشبورد هم‌زمان از یک داده استفاده می‌کنند؛ نتیجه چند ثانیه کش می‌شود
 function memo<T>(loader: () => Promise<T>) {
   let entry: { at: number; promise: Promise<T> } | null = null;
 
@@ -62,7 +59,6 @@ function toRelativePath(url: string): string | null {
   }
 }
 
-// آرایه‌ی ساده یا {results,next} را می‌خواند و صفحه‌های بعدی را هم دنبال می‌کند
 async function fetchList<T>(path: string): Promise<T[]> {
   const items: T[] = [];
   const visited = new Set<string>();
@@ -157,9 +153,7 @@ const getResources = memo(() =>
   fetchList<{ id: number; title: string }>("/tasks/api/v1/cases/resources/"),
 );
 
-/* ------------------------------------------------------------------ */
-/*  Date helpers — همه‌ی روزها بر اساس تقویم تهران، نه ساعت سرور       */
-/* ------------------------------------------------------------------ */
+
 
 const dayFormatter = new Intl.DateTimeFormat("en-CA", {
   timeZone: TIME_ZONE,
@@ -168,7 +162,6 @@ const dayFormatter = new Intl.DateTimeFormat("en-CA", {
   day: "2-digit",
 });
 
-// شماره‌ی روز (از 1970) برای «روز تقویمی تهران»ِ یک لحظه
 function tehranDayNumber(date: Date): number {
   const [year, month, day] = dayFormatter.format(date).split("-").map(Number);
 
@@ -188,7 +181,7 @@ function dayNumberToParts(dayNumber: number) {
     year: date.getUTCFullYear(),
     month: date.getUTCMonth() + 1,
     day: date.getUTCDate(),
-    weekday: date.getUTCDay(), // 0 = یکشنبه
+    weekday: date.getUTCDay(), 
   };
 }
 
@@ -240,7 +233,6 @@ export async function getCustomersStats() {
 export async function getEmployeesStats() {
   const data = await getEmployees();
 
-  // ماه جاری/قبل بر اساس تقویم میلادیِ تهران
   const today = dayNumberToParts(tehranDayNumber(new Date()));
   const thisMonthStart = Date.UTC(today.year, today.month - 1, 1);
   const lastMonthStart = Date.UTC(today.year, today.month - 2, 1);
@@ -526,7 +518,6 @@ export async function getCustomerSourcesData() {
     getResources(),
   ]);
 
-  // فقط مشتری‌های یک سال اخیر نیاز به جزئیات (source) دارند
   const cutoff = Date.now() - 366 * DAY_MS;
 
   const recent = customers.filter((customer) => {
@@ -540,7 +531,6 @@ export async function getCustomerSourcesData() {
     DETAIL_CONCURRENCY,
     async (customer) => {
       try {
-        // endpoint جزئیات یک «آبجکت» برمی‌گرداند، نه آرایه
         return await fetchJson<CustomerDetail>(
           `/customers/api/v1/customers/${customer.id}/`,
         );

@@ -24,7 +24,6 @@ export interface AuthState {
   initFromStorage: () => void;
 }
 
-// توکن‌ها فقط در localStorage نگه داشته می‌شوند (نه در state)؛ state فقط هویت کاربر است.
 export const useAuthStore = create<AuthState>((set) => ({
   username: null,
   userType: null,

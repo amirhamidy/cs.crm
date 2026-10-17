@@ -114,7 +114,7 @@ export default function ImportExcelModal({
             );
 
             setResult(res.data);
-            onSuccess(); // ریفرش لیست مشتری‌ها در پس‌زمینه
+            onSuccess(); 
         } catch (err: any) {
             const msg =
                 err?.response?.data?.detail ||

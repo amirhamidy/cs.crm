@@ -1,5 +1,3 @@
-// آدرس بک‌اند (Django).
-// اولویت: public/config.js (زمان اجرا، بدون نیاز به بیلد دوباره) ← NEXT_PUBLIC_API_URL ← مقدار پیش‌فرض
 declare global {
   interface Window {
     __APP_CONFIG__?: { API_URL?: string };

@@ -156,7 +156,6 @@ async function loadTab(args: LoadArgs): Promise<TabData> {
     data.totalPages = r.totalPages;
   };
 
-  // دسته‌بندی و انباردار سراسری هستند و به انبار خاصی وابسته نیستند
   if (tab === "categories") {
     const res = await fetchPage<ApiCategory>(EP.categories, { page });
     data.categories = res.items;
@@ -214,7 +213,6 @@ async function loadTab(args: LoadArgs): Promise<TabData> {
       );
 
       if (!hasFullAccess) {
-        // کاربر محدود فقط وظایف خودش (یا بدون مسئول) را می‌بیند
         tasks = tasks.filter(
           (task) =>
             task.assigned_to == null ||
@@ -268,7 +266,6 @@ async function loadTab(args: LoadArgs): Promise<TabData> {
       const scopedOrders = inWarehouse(orderTasks);
       const orderIds = new Set(scopedOrders.map((order) => order.id));
 
-      // مهلت فقط وقتی مال این انبار است که سفارشش مال این انبار باشد
       const scopedDeadlines = deadlines.filter((deadline) =>
         orderIds.has(Number(deadline.order_task)),
       );
@@ -310,7 +307,6 @@ async function loadTab(args: LoadArgs): Promise<TabData> {
     }
 
     case "invoices": {
-      // فاکتور از گروه‌بندی چند ردیف آرشیو ساخته می‌شود؛ پس لیست کامل (فقط ردیف‌های این انبار) لازم است
       data.archived = inWarehouse(
         await fetchAll<ApiArchivedOrderTask>(EP.archive, wp),
       );

@@ -26,7 +26,6 @@ function redirectToLogin() {
 }
 
 axiosInstance.interceptors.request.use((config) => {
-  // آدرس بک‌اند در لحظه‌ی درخواست خوانده می‌شود (public/config.js)
   config.baseURL = getApiUrl();
 
   const access = getAccessToken();
@@ -34,7 +33,6 @@ axiosInstance.interceptors.request.use((config) => {
 
   if (config.data instanceof FormData) {
     delete config.headers["Content-Type"];
-    // آپلود فایل ممکن است از ۱۵ ثانیه بیشتر طول بکشد
     config.timeout = 0;
   } else {
     config.headers["Content-Type"] = "application/json";
@@ -59,8 +57,6 @@ axiosInstance.interceptors.response.use(
 
     original._retry = true;
 
-    // این درخواست با توکنِ قدیمی رفته ولی در این فاصله توکن تازه ذخیره شده
-    // (refresh یک درخواست هم‌زمان) → بدون refresh اضافه، فقط با توکن تازه ریتری می‌شود
     const sentWith = String(original.headers.Authorization ?? "");
     const current = getAccessToken();
 
@@ -74,7 +70,6 @@ axiosInstance.interceptors.response.use(
     try {
       token = await refreshAccessToken();
     } catch {
-      // خطای شبکه هنگام refresh: جلسه حفظ می‌شود
       return Promise.reject(error);
     }
 
