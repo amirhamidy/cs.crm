@@ -8,25 +8,30 @@ import {
     ChevronLeft,
     CalendarDays,
     CalendarClock,
-    MessageSquareText,
-    Layers3,
-    FileText,
-    ClipboardCheck,
     CalendarRange,
     ChevronDown,
+    ClipboardCheck,
+    Layers3,
+    FileText,
+    MessageSquareText,
+    Plus,
 } from "lucide-react";
 import api from "@/lib/axiosInstance";
 import { toJalali, toGregorian, jalaliMonthLength, jalaliWeekday, toPersianDigits, JALALI_MONTHS, pad2 } from "@/lib/jalali";
-import CalendarNoteModal, { CalendarNote, CalendarEvent } from "./CalendarNoteModal";
-
-interface CalendarResponse {
-    start: string;
-    end: string;
-    events: CalendarEvent[];
-}
+import CalendarNoteModal, {
+    CalendarNote,
+    CalendarEvent,
+    CalendarResponse,
+    IRAN_HOLIDAYS_1405,
+    getEventType,
+    getNoteDate,
+    getTypeLabel,
+    getTypeStyle,
+    isEventOnDate,
+    isFriday,
+} from "./CalendarNoteModal";
 
 type CalendarView = "month" | "season";
-type ViewOption = [CalendarView, typeof CalendarDays, string];
 
 interface MonthData {
     jy: number;
@@ -36,6 +41,8 @@ interface MonthData {
     endISO: string;
 }
 
+/* ───────────────────────── Helpers ───────────────────────── */
+
 const weekDays = ["شنبه", "یکشنبه", "دوشنبه", "سه‌شنبه", "چهارشنبه", "پنجشنبه", "جمعه"];
 const toISODate = (d: Date) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
 const toJalaliParts = (d: Date) => toJalali(d.getFullYear(), d.getMonth() + 1, d.getDate());
@@ -43,151 +50,151 @@ const jalaliToDate = (jy: number, jm: number, jd: number) => {
     const [gy, gm, gd] = toGregorian(jy, jm, jd);
     return new Date(gy, gm - 1, gd);
 };
-const getNoteDate = (n: CalendarNote) => n.created_at?.slice(0, 10) ?? "";
-const isFriday = (date: Date) => date.getDay() === 5;
-
-const IRAN_HOLIDAYS_1405 = new Set([
-    "1-1", "1-2", "1-3", "1-4", "1-12", "1-13", "1-25",
-    "3-3", "3-6", "3-14", "3-15",
-    "4-3", "4-4",
-    "5-13", "5-21", "5-22", "5-30",
-    "6-8",
-    "8-22",
-    "10-2", "10-16",
-    "11-4", "11-22",
-    "12-9", "12-19", "12-20", "12-29",
-]);
-
 const isIranHoliday = (date: Date) => {
     const [year, month, day] = toJalaliParts(date);
     return year === 1405 && IRAN_HOLIDAYS_1405.has(`${month}-${day}`);
 };
-
 const isHolidayDate = (date: Date) => isFriday(date) || isIranHoliday(date);
-
-const EVENT_TYPE_LABEL: Record<string, string> = {
-    task: "وظیفه",
-    tasks: "وظیفه",
-    internal_task: "وظیفه درون سازمانی",
-    "internal-task": "وظیفه درون سازمانی",
-    internal_task_routine: "وظیفه درون سازمانی",
-    note: "یادداشت",
-    notes: "یادداشت",
-    meeting: "جلسه",
-    reminder: "یادآور",
-    deadline: "مهلت",
-};
-
-const EVENT_TYPE_COLOR: Record<string, { bg: string; text: string; dot: string; border: string; soft: string }> = {
-    task: { bg: "bg-indigo-50 dark:bg-indigo-500/10", text: "text-indigo-600 dark:text-indigo-300", dot: "bg-indigo-500", border: "border-indigo-100 dark:border-indigo-500/15", soft: "bg-indigo-500" },
-    internal_task: { bg: "bg-amber-50 dark:bg-amber-500/10", text: "text-amber-600 dark:text-amber-300", dot: "bg-amber-500", border: "border-amber-100 dark:border-amber-500/15", soft: "bg-amber-500" },
-    note: { bg: "bg-emerald-50 dark:bg-emerald-500/10", text: "text-emerald-600 dark:text-emerald-300", dot: "bg-emerald-500", border: "border-emerald-100 dark:border-emerald-500/15", soft: "bg-emerald-500" },
-    meeting: { bg: "bg-violet-50 dark:bg-violet-500/10", text: "text-violet-600 dark:text-violet-300", dot: "bg-violet-500", border: "border-violet-100 dark:border-violet-500/15", soft: "bg-violet-500" },
-    reminder: { bg: "bg-cyan-50 dark:bg-cyan-500/10", text: "text-cyan-600 dark:text-cyan-300", dot: "bg-cyan-500", border: "border-cyan-100 dark:border-cyan-500/15", soft: "bg-cyan-500" },
-    deadline: { bg: "bg-rose-50 dark:bg-rose-500/10", text: "text-rose-600 dark:text-rose-300", dot: "bg-rose-500", border: "border-rose-100 dark:border-rose-500/15", soft: "bg-rose-500" },
-    default: { bg: "bg-slate-50 dark:bg-white/[0.04]", text: "text-slate-500 dark:text-slate-400", dot: "bg-slate-400 dark:bg-slate-500", border: "border-slate-100 dark:border-white/[0.06]", soft: "bg-slate-400" },
-};
-
-const getEventType = (type: string) => {
-    const value = String(type || "").toLowerCase();
-    if (["internal_task", "internal-task", "internal_task_routine"].includes(value)) return "internal_task";
-    if (["task", "tasks"].includes(value)) return "task";
-    if (["note", "notes"].includes(value)) return "note";
-    return value;
-};
-
-const getTypeStyle = (type: string) => EVENT_TYPE_COLOR[getEventType(type)] ?? EVENT_TYPE_COLOR.default;
-const getTypeLabel = (type: string) => EVENT_TYPE_LABEL[getEventType(type)] ?? (type || "رویداد");
-const getSeasonName = (month: number) => month <= 3 ? "بهار" : month <= 6 ? "تابستان" : month <= 9 ? "پاییز" : "زمستان";
+const persianWeekdayName = (date: Date) => weekDays[(date.getDay() + 1) % 7];
+const getSeasonName = (month: number) => (month <= 3 ? "بهار" : month <= 6 ? "تابستان" : month <= 9 ? "پاییز" : "زمستان");
 const getSeasonStartMonth = (month: number) => Math.floor((month - 1) / 3) * 3 + 1;
+const timeFmt = new Intl.DateTimeFormat("fa-IR", { hour: "2-digit", minute: "2-digit" });
 
-const isEventOnDate = (event: CalendarEvent, dateISO: string) => {
-    if (!event.start) return false;
-    const start = event.start.slice(0, 10);
-    const end = event.end?.slice(0, 10) ?? start;
-    return start <= dateISO && end >= dateISO;
-};
+/** Frosted-blue surface used by every panel */
+const glass =
+    "border border-white/70 bg-white/55 backdrop-blur-xl shadow-[0_10px_40px_-18px_rgba(37,99,235,0.35)] dark:border-white/[0.08] dark:bg-white/[0.04] dark:shadow-none";
 
-function DayEventDots({ events }: { events: CalendarEvent[] }) {
-    const grouped = useMemo(() => {
-        const map = new Map<string, number>();
-        events.forEach((event) => {
-            const type = getEventType(event.type);
-            map.set(type, (map.get(type) || 0) + 1);
-        });
-        return [...map.entries()].slice(0, 4);
-    }, [events]);
+const focusRing = "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500";
+
+/* ───────────────────────── Day cell ───────────────────────── */
+
+function DayCell({ date, events, noteCount, isToday, compact, onSelect }: {
+    date: Date;
+    events: CalendarEvent[];
+    noteCount: number;
+    isToday: boolean;
+    compact: boolean;
+    onSelect: (date: Date) => void;
+}) {
+    const [, , jd] = toJalaliParts(date);
+    const holiday = isHolidayDate(date);
+    const friday = isFriday(date);
+    const visible = events.slice(0, 2);
+    const extra = events.length - visible.length;
+    const types = Array.from(new Set(events.map((e) => getEventType(e.type)))).slice(0, 4);
 
     return (
-        <div className="mt-auto flex flex-wrap gap-1">
-            {grouped.map(([type, count]) => {
-                const style = getTypeStyle(type);
-                return <span key={type} title={getTypeLabel(type)} className={`flex items-center gap-1 rounded-lg border px-1.5 py-0.5 text-[9px] font-bold ${style.bg} ${style.text} ${style.border}`}><span className={`h-1.5 w-1.5 rounded-full ${style.dot}`} />{toPersianDigits(count)}</span>;
-            })}
-        </div>
+        <motion.button
+            type="button"
+            whileTap={{ scale: 0.97 }}
+            onClick={() => onSelect(date)}
+            title={holiday ? (friday ? "جمعه" : "تعطیل رسمی") : undefined}
+            className={`group relative flex flex-col gap-1.5 rounded-2xl border p-1.5 text-right transition-all sm:p-2 ${focusRing} ${compact ? "min-h-[62px]" : "min-h-[76px] sm:min-h-[116px]"} ${isToday
+                ? "border-blue-500/60 bg-blue-500/10 ring-2 ring-blue-500/30 dark:bg-blue-500/15"
+                : holiday
+                    ? "border-rose-200/50 bg-rose-500/[0.06] hover:bg-rose-500/10 dark:border-rose-400/10"
+                    : "border-white/70 bg-white/60 hover:-translate-y-0.5 hover:bg-white hover:shadow-[0_10px_24px_-14px_rgba(37,99,235,0.5)] dark:border-white/[0.05] dark:bg-white/[0.03] dark:hover:bg-white/[0.08]"
+                }`}
+        >
+            <div className="flex items-center justify-between gap-1">
+                <span className={`flex h-7 min-w-7 items-center justify-center rounded-full px-1 text-[11.5px] font-extrabold ${isToday
+                    ? "bg-gradient-to-br from-blue-600 to-cyan-400 text-white shadow-[0_6px_16px_-6px_rgba(37,99,235,0.85)]"
+                    : holiday
+                        ? "text-rose-500 dark:text-rose-300"
+                        : "text-slate-700 dark:text-slate-200"
+                    }`}>{toPersianDigits(jd)}</span>
+                {noteCount > 0 && (
+                    <span className="flex items-center gap-0.5 rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-[8.5px] font-bold text-emerald-600 dark:text-emerald-300">
+                        <MessageSquareText size={8} />{toPersianDigits(noteCount)}
+                    </span>
+                )}
+            </div>
+
+            {/* Event titles (roomy screens, month view) */}
+            {!compact && visible.length > 0 && (
+                <div className="hidden flex-col gap-1 sm:flex">
+                    {visible.map((event) => {
+                        const style = getTypeStyle(event.type);
+                        return (
+                            <span key={`${event.type}-${event.id}`} className={`flex items-center gap-1 overflow-hidden rounded-md px-1.5 py-[3px] text-[9.5px] font-bold ${style.bg} ${style.text}`}>
+                                <span className={`h-3 w-[3px] shrink-0 rounded-full ${style.bar}`} />
+                                <span className="truncate">{event.title}</span>
+                            </span>
+                        );
+                    })}
+                    {extra > 0 && <span className="px-1 text-[9px] font-bold text-slate-400">+{toPersianDigits(extra)} مورد دیگر</span>}
+                </div>
+            )}
+
+            {/* Dots (mobile / season view) */}
+            {types.length > 0 && (
+                <div className={`mt-auto flex-wrap items-center gap-1 ${compact ? "flex" : "flex sm:hidden"}`}>
+                    {types.map((type) => <span key={type} className={`h-1.5 w-1.5 rounded-full ${getTypeStyle(type).dot}`} />)}
+                    {events.length > 1 && <span className="text-[8.5px] font-bold text-slate-400">{toPersianDigits(events.length)}</span>}
+                </div>
+            )}
+
+            {holiday && !compact && <span className="mt-auto hidden text-[8.5px] font-bold text-rose-400 sm:block">{friday ? "جمعه" : "تعطیل"}</span>}
+        </motion.button>
     );
 }
 
-function CalendarMonthGrid({ month, eventsByDay, noteCountByDay, todayISO, onSelectDate }: {
+/* ───────────────────────── Month grid ───────────────────────── */
+
+function CalendarMonthGrid({ month, eventsByDay, noteCountByDay, todayISO, compact, onSelectDate }: {
     month: MonthData;
     eventsByDay: Map<string, CalendarEvent[]>;
     noteCountByDay: Map<string, number>;
     todayISO: string;
+    compact: boolean;
     onSelectDate: (date: Date) => void;
 }) {
+    const eventCount = useMemo(() => {
+        const ids = new Set<string>();
+        month.monthCells.forEach((d) => d && (eventsByDay.get(toISODate(d)) ?? []).forEach((e) => ids.add(`${e.type}-${e.id}`)));
+        return ids.size;
+    }, [month, eventsByDay]);
+
     return (
-        <section className="overflow-hidden rounded-[1.5rem] border border-slate-200/80 bg-white shadow-[0_4px_24px_-12px_rgba(15,23,42,0.16)] dark:border-white/[0.07] dark:bg-[#111827] dark:shadow-none">
-            <div className="flex items-center justify-between border-b border-slate-100 bg-gradient-to-l from-indigo-50/70 via-white to-white px-5 py-3.5 dark:border-white/[0.06] dark:from-indigo-500/[0.07] dark:via-[#111827] dark:to-[#111827]">
-                <div className="flex items-center gap-2.5">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-indigo-100 text-indigo-600 dark:bg-indigo-500/15 dark:text-indigo-300"><CalendarDays size={14} /></div>
-                    <div className="flex flex-col gap-0.5">
-                        <h3 className="text-[13px] font-extrabold text-slate-800 dark:text-white">{JALALI_MONTHS[month.jm - 1]}</h3>
-                        <span className="text-[10px] font-medium text-slate-400 dark:text-slate-500">تقویم ماهانه</span>
-                    </div>
+        <section className={`${glass} rounded-[1.75rem] p-3 sm:p-4`}>
+            <div className="mb-3 flex items-center justify-between px-1">
+                <div className="flex items-baseline gap-2">
+                    <h3 className="text-[15px] font-black text-slate-800 dark:text-white">{JALALI_MONTHS[month.jm - 1]}</h3>
+                    <span className="text-[11px] font-bold text-slate-400">{toPersianDigits(month.jy)}</span>
                 </div>
-                <span className="rounded-lg bg-slate-100 px-2 py-1 text-[10px] font-bold text-slate-500 dark:bg-white/[0.05] dark:text-slate-400">{toPersianDigits(month.jy)}</span>
+                <span className="rounded-full bg-blue-500/10 px-2.5 py-1 text-[10px] font-bold text-blue-600 dark:text-blue-300">{toPersianDigits(eventCount)} رویداد</span>
             </div>
 
-            <div className="grid grid-cols-7 border-b border-slate-100 bg-slate-50/70 dark:border-white/[0.05] dark:bg-white/[0.02]">
-                {weekDays.map((day, index) => <div key={day} className={`py-2.5 text-center text-[9px] font-bold ${index === 6 ? "text-rose-400 dark:text-rose-300" : "text-slate-400 dark:text-slate-500"}`}>{day}</div>)}
+            <div className="mb-1.5 grid grid-cols-7 gap-1 sm:gap-1.5">
+                {weekDays.map((day, index) => (
+                    <div key={day} className={`py-1.5 text-center text-[9.5px] font-bold ${index === 6 ? "text-rose-400" : "text-slate-400 dark:text-slate-500"}`}>
+                        {compact ? day.charAt(0) : day}
+                    </div>
+                ))}
             </div>
 
-            <div className="grid grid-cols-7 gap-px bg-slate-100 dark:bg-white/[0.045]">
+            <div className="grid grid-cols-7 gap-1 sm:gap-1.5">
                 {month.monthCells.map((date, index) => {
-                    if (!date) return <div key={`empty-${month.jy}-${month.jm}-${index}`} className="min-h-[92px] bg-slate-50/70 dark:bg-[#0f172a]/80" />;
-
+                    if (!date) return <div key={`empty-${month.jy}-${month.jm}-${index}`} className={compact ? "min-h-[62px]" : "min-h-[76px] sm:min-h-[116px]"} />;
                     const iso = toISODate(date);
-                    const dayEvents = eventsByDay.get(iso) ?? [];
-                    const noteCount = noteCountByDay.get(iso) ?? 0;
-                    const isToday = iso === todayISO;
-                    const [, , jd] = toJalaliParts(date);
-                    const holiday = isHolidayDate(date);
-                    const friday = isFriday(date);
-
                     return (
-                        <motion.button
+                        <DayCell
                             key={iso}
-                            type="button"
-                            whileTap={{ scale: 0.975 }}
-                            onClick={() => onSelectDate(date)}
-                            title={holiday ? friday ? "جمعه" : "تعطیل رسمی" : undefined}
-                            className={`group relative flex min-h-[92px] flex-col gap-1.5 p-2.5 text-right transition-all ${isToday ? "bg-indigo-50/80 dark:bg-indigo-500/[0.09]" : holiday ? "bg-rose-50/35 dark:bg-rose-500/[0.025]" : "bg-white hover:bg-slate-50 dark:bg-[#111827] dark:hover:bg-white/[0.025]"}`}
-                        >
-                            <div className="flex items-start justify-between gap-1">
-                                <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-[10px] text-[11px] font-extrabold transition-all ${isToday ? "bg-indigo-600 text-white shadow-[0_4px_10px_-4px_rgba(79,70,229,0.6)] dark:bg-indigo-500" : holiday ? "bg-rose-50 text-rose-500 dark:bg-rose-500/10 dark:text-rose-300" : "bg-slate-50 text-slate-600 group-hover:bg-white dark:bg-white/[0.045] dark:text-slate-300 dark:group-hover:bg-white/[0.07]"}`}>{toPersianDigits(jd)}</span>
-                                {noteCount > 0 && <span className="flex items-center gap-1 rounded-lg bg-emerald-50 px-1.5 py-1 text-[8.5px] font-bold text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-300"><MessageSquareText size={9} />{toPersianDigits(noteCount)}</span>}
-                            </div>
-
-                            {holiday && <span className="w-fit rounded-md bg-rose-500/10 px-1.5 py-0.5 text-[8px] font-bold text-rose-500 dark:text-rose-300">{friday ? "جمعه" : "تعطیل"}</span>}
-                            {dayEvents.length > 0 && <DayEventDots events={dayEvents} />}
-                            {isToday && <span className="absolute bottom-1.5 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-indigo-500" />}
-                        </motion.button>
+                            date={date}
+                            events={eventsByDay.get(iso) ?? []}
+                            noteCount={noteCountByDay.get(iso) ?? 0}
+                            isToday={iso === todayISO}
+                            compact={compact}
+                            onSelect={onSelectDate}
+                        />
                     );
                 })}
             </div>
         </section>
     );
 }
+
+/* ───────────────────────── Page ───────────────────────── */
 
 export default function PersianCalendar() {
     const router = useRouter();
@@ -207,6 +214,9 @@ export default function PersianCalendar() {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [pickerOpen, setPickerOpen] = useState(false);
     const [pickerYear, setPickerYear] = useState<number | null>(null);
+
+    const today = new Date();
+    const todayISO = toISODate(today);
 
     const [currentJy, currentJm] = useMemo(() => toJalaliParts(currentMonthDate), [currentMonthDate]);
     const [realTodayJy, realTodayJm] = useMemo(() => toJalaliParts(new Date()), []);
@@ -280,6 +290,7 @@ export default function PersianCalendar() {
         return () => { cancelled = true; };
     }, [startISO, endISO]);
 
+    // Deep links: ?note=ID or ?event=ID open the matching day
     useEffect(() => {
         if (loading) return;
         const eventParam = searchParams.get("event");
@@ -334,6 +345,28 @@ export default function PersianCalendar() {
         return map;
     }, [notes]);
 
+    const eventTypeCount = useMemo(() => {
+        const map = new Map<string, number>();
+        calendarEvents.forEach((event) => {
+            const type = getEventType(event.type);
+            map.set(type, (map.get(type) || 0) + 1);
+        });
+        return [...map.entries()].sort((a, b) => b[1] - a[1]);
+    }, [calendarEvents]);
+
+    const upcoming = useMemo(
+        () => calendarEvents
+            .filter((e) => e.start && (e.end ?? e.start).slice(0, 10) >= todayISO)
+            .sort((a, b) => a.start.localeCompare(b.start))
+            .slice(0, 5),
+        [calendarEvents, todayISO],
+    );
+
+    const openDate = (date: Date) => {
+        setSelectedDate(date);
+        setIsModalOpen(true);
+    };
+
     const changeDate = (delta: 1 | -1) => {
         let nextMonth = view === "month" ? currentJm + delta : getSeasonStartMonth(currentJm) + delta * 3;
         let nextYear = currentJy;
@@ -351,121 +384,227 @@ export default function PersianCalendar() {
         const now = new Date();
         const [jy, jm] = toJalaliParts(now);
         setCurrentMonthDate(jalaliToDate(jy, jm, 1));
-        setSelectedDate(now);
-        setIsModalOpen(true);
+        openDate(now);
     };
 
-    const today = new Date();
-    const todayISO = toISODate(today);
     const [, todayJm, todayJd] = toJalaliParts(today);
     const todayHoliday = isHolidayDate(today);
-    const todayPersian = `${toPersianDigits(todayJd)} ${JALALI_MONTHS[todayJm - 1]}`;
     const headerTitle = view === "month" ? `${JALALI_MONTHS[currentJm - 1]} ${toPersianDigits(currentJy)}` : `${getSeasonName(currentJm)} ${toPersianDigits(currentJy)}`;
 
     const taskCount = calendarEvents.filter((e) => getEventType(e.type) === "task").length;
     const internalTaskCount = calendarEvents.filter((e) => getEventType(e.type) === "internal_task").length;
     const calendarNoteCount = calendarEvents.filter((e) => getEventType(e.type) === "note").length;
+    const maxTypeCount = Math.max(1, ...eventTypeCount.map(([, c]) => c));
 
-    const eventTypeCount = useMemo(() => {
-        const map = new Map<string, number>();
-        calendarEvents.forEach((event) => {
-            const type = getEventType(event.type);
-            map.set(type, (map.get(type) || 0) + 1);
-        });
-        return [...map.entries()];
-    }, [calendarEvents]);
+    const stats = [
+        { label: "وظیفه", value: taskCount, Icon: ClipboardCheck, tone: "text-blue-600 bg-blue-500/10 dark:text-blue-300" },
+        { label: "درون‌سازمانی", value: internalTaskCount, Icon: Layers3, tone: "text-amber-600 bg-amber-500/10 dark:text-amber-300" },
+        { label: "یادداشت", value: calendarNoteCount, Icon: FileText, tone: "text-emerald-600 bg-emerald-500/10 dark:text-emerald-300" },
+    ];
 
     return (
         <>
-            <div dir="rtl" className="mx-auto w-full max-w-6xl overflow-hidden rounded-[2rem] border border-slate-200/80 bg-white shadow-[0_12px_40px_-24px_rgba(15,23,42,0.25)] dark:border-white/[0.07] dark:bg-[#0f172a] dark:shadow-none">
-                <div className="relative flex items-center justify-between border-b border-slate-100 px-5 py-4 sm:px-6 dark:border-white/[0.06]">
-                    <button type="button" onClick={() => changeDate(1)} className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-400 shadow-sm transition-all hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-600 dark:border-white/[0.07] dark:bg-white/[0.04] dark:hover:border-indigo-500/20 dark:hover:bg-indigo-500/10 dark:hover:text-indigo-300"><ChevronRight size={14} /></button>
+            <div dir="rtl" className="relative mx-auto w-full max-w-[1400px] overflow-hidden rounded-[2rem] border border-white/70 bg-gradient-to-br from-sky-50 via-blue-50 to-indigo-100 p-3 sm:p-5 dark:border-white/[0.07] dark:from-[#060d24] dark:via-[#0a1740] dark:to-[#0b1d4f]">
+                {/* ambient glow */}
+                <div className="pointer-events-none absolute -right-24 -top-24 h-80 w-80 rounded-full bg-blue-500/25 blur-3xl dark:bg-blue-500/20" />
+                <div className="pointer-events-none absolute -bottom-32 left-1/4 h-96 w-96 rounded-full bg-cyan-400/20 blur-3xl dark:bg-cyan-500/10" />
+                <div className="pointer-events-none absolute left-0 top-1/3 h-72 w-72 rounded-full bg-indigo-500/15 blur-3xl" />
 
-                    <div className="flex items-center gap-2.5 sm:gap-3">
-                        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-300"><CalendarDays size={15} /></div>
-                        <button type="button" onClick={() => { setPickerYear(currentJy); setPickerOpen(true); }} className="flex flex-col items-center rounded-xl px-2 py-1 transition-colors hover:bg-slate-50 dark:hover:bg-white/[0.035]">
-                            <span className="flex items-center gap-1"><h2 className="text-[14px] font-extrabold tracking-tight text-slate-900 dark:text-white">{headerTitle}</h2><ChevronDown size={13} className="text-slate-400" /></span>
-                            <span className="mt-0.5 text-[10px] font-semibold text-indigo-500 dark:text-indigo-400">امروز: {todayPersian}</span>
-                            {todayHoliday && <span className="mt-1 rounded-md bg-rose-500/10 px-1.5 py-0.5 text-[8px] font-bold text-rose-500 dark:text-rose-300">امروز تعطیل است</span>}
-                        </button>
-                    </div>
-
-                    <button type="button" onClick={() => changeDate(-1)} className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-400 shadow-sm transition-all hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-600 dark:border-white/[0.07] dark:bg-white/[0.04] dark:hover:border-indigo-500/20 dark:hover:bg-indigo-500/10 dark:hover:text-indigo-300"><ChevronLeft size={14} /></button>
-
-                    {pickerOpen && pickerYear !== null && (
-                        <>
-                            <div className="fixed inset-0 z-20" onClick={() => setPickerOpen(false)} />
-                            <motion.div initial={{ opacity: 0, y: -8, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ duration: 0.15 }} className="absolute right-1/2 top-[calc(100%+8px)] z-30 w-[min(18rem,calc(100vw-2rem))] translate-x-1/2 overflow-hidden rounded-[1.5rem] border border-slate-200 bg-white p-4 shadow-[0_20px_50px_-20px_rgba(0,0,0,0.25)] dark:border-white/[0.08] dark:bg-[#111827]">
-                                <div className="mb-3 flex items-center justify-between">
-                                    <button type="button" onClick={() => setPickerYear((y) => (y ?? currentJy) + 1)} className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-100 text-slate-400 transition-colors hover:bg-indigo-50 hover:text-indigo-600 dark:bg-white/[0.05] dark:hover:bg-indigo-500/10 dark:hover:text-indigo-300"><ChevronRight size={13} /></button>
-                                    <span className="rounded-lg bg-indigo-50 px-3 py-1 text-[12.5px] font-extrabold text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-300">{toPersianDigits(pickerYear)}</span>
-                                    <button type="button" onClick={() => setPickerYear((y) => (y ?? currentJy) - 1)} className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-100 text-slate-400 transition-colors hover:bg-indigo-50 hover:text-indigo-600 dark:bg-white/[0.05] dark:hover:bg-indigo-500/10 dark:hover:text-indigo-300"><ChevronLeft size={13} /></button>
+                <div className="relative grid gap-4 lg:grid-cols-[300px_minmax(0,1fr)]">
+                    {/* ───── Sidebar ───── */}
+                    <aside className="flex flex-col gap-4">
+                        {/* Today hero */}
+                        <div className="relative overflow-hidden rounded-[1.75rem] bg-gradient-to-br from-blue-600 via-blue-500 to-cyan-400 p-5 text-white shadow-[0_24px_50px_-20px_rgba(37,99,235,0.8)]">
+                            <div className="pointer-events-none absolute -left-8 -top-10 h-36 w-36 rounded-full bg-white/25 blur-2xl" />
+                            <div className="pointer-events-none absolute -bottom-14 right-4 h-36 w-36 rounded-full bg-indigo-500/40 blur-3xl" />
+                            <p className="relative text-[11px] font-bold text-white/80">امروز</p>
+                            <div className="relative mt-2 flex items-end gap-3">
+                                <span className="text-[64px] font-black leading-[0.85] tracking-tight">{toPersianDigits(todayJd)}</span>
+                                <div className="pb-1">
+                                    <p className="text-[15px] font-extrabold">{persianWeekdayName(today)}</p>
+                                    <p className="text-[12px] font-semibold text-white/85">{JALALI_MONTHS[todayJm - 1]}</p>
                                 </div>
-                                <div className="grid grid-cols-3 gap-1.5">
-                                    {JALALI_MONTHS.map((label, index) => {
-                                        const month = index + 1;
-                                        const active = pickerYear === currentJy && month === currentJm;
-                                        return <button key={label} type="button" onClick={() => { goToMonth(pickerYear, month); setPickerOpen(false); }} className={`rounded-xl px-2 py-2.5 text-[11px] font-bold transition-all ${active ? "bg-indigo-600 text-white shadow-sm shadow-indigo-500/20 dark:bg-indigo-500" : "bg-slate-50 text-slate-500 hover:bg-indigo-50 hover:text-indigo-600 dark:bg-white/[0.035] dark:text-slate-400 dark:hover:bg-indigo-500/10 dark:hover:text-indigo-300"}`}>{label}</button>;
+                            </div>
+                            {todayHoliday && <span className="relative mt-3 inline-block rounded-full bg-rose-500/90 px-2.5 py-1 text-[10px] font-bold">امروز تعطیل است</span>}
+                            <button type="button" onClick={gotoToday} className={`relative mt-4 flex w-full items-center justify-center gap-1.5 rounded-xl bg-white/20 py-2.5 text-[11.5px] font-bold backdrop-blur-md transition hover:bg-white/30 ${focusRing}`}>
+                                <Plus size={13} />یادداشت و برنامه امروز
+                            </button>
+                        </div>
+
+                        {/* Stats */}
+                        {!loading && (
+                            <div className="grid grid-cols-3 gap-2">
+                                {stats.map(({ label, value, Icon, tone }) => (
+                                    <div key={label} className={`${glass} flex flex-col items-center gap-1.5 rounded-2xl px-2 py-3`}>
+                                        <span className={`flex h-8 w-8 items-center justify-center rounded-xl ${tone}`}><Icon size={14} /></span>
+                                        <span className="text-[17px] font-black leading-none text-slate-800 dark:text-white">{toPersianDigits(value)}</span>
+                                        <span className="text-[9px] font-bold text-slate-400">{label}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
+                        {/* Upcoming */}
+                        <div className={`${glass} rounded-[1.5rem] p-4`}>
+                            <h4 className="mb-3 text-[12.5px] font-extrabold text-slate-700 dark:text-slate-200">رویدادهای پیش رو</h4>
+                            {loading ? (
+                                <div className="space-y-2">{[0, 1, 2].map((i) => <div key={i} className="h-11 animate-pulse rounded-xl bg-white/60 dark:bg-white/[0.05]" />)}</div>
+                            ) : upcoming.length === 0 ? (
+                                <p className="py-4 text-center text-[11px] font-semibold text-slate-400">رویداد پیش رویی در این بازه نیست</p>
+                            ) : (
+                                <ul className="space-y-1.5">
+                                    {upcoming.map((event) => {
+                                        const style = getTypeStyle(event.type);
+                                        const start = new Date(event.start);
+                                        const valid = !Number.isNaN(start.getTime());
+                                        const [, jm, jd] = valid ? toJalaliParts(start) : [0, 1, 0];
+                                        return (
+                                            <li key={`${event.type}-${event.id}`}>
+                                                <button type="button" disabled={!valid} onClick={() => valid && openDate(start)} className={`flex w-full items-center gap-3 rounded-xl p-2 text-right transition hover:bg-white/70 dark:hover:bg-white/[0.06] ${focusRing}`}>
+                                                    <span className={`flex h-10 w-10 shrink-0 flex-col items-center justify-center rounded-xl ${style.bg} ${style.text}`}>
+                                                        <span className="text-[13px] font-black leading-none">{valid ? toPersianDigits(jd) : "—"}</span>
+                                                        <span className="mt-0.5 text-[7.5px] font-bold">{JALALI_MONTHS[jm - 1]}</span>
+                                                    </span>
+                                                    <span className="min-w-0 flex-1">
+                                                        <span className="block truncate text-[11.5px] font-bold text-slate-700 dark:text-slate-200">{event.title}</span>
+                                                        <span className="mt-0.5 flex items-center gap-1.5 text-[9.5px] font-semibold text-slate-400">
+                                                            <span className={`h-1.5 w-1.5 rounded-full ${style.dot}`} />{getTypeLabel(event.type)}
+                                                            {valid && <span>· {timeFmt.format(start)}</span>}
+                                                        </span>
+                                                    </span>
+                                                </button>
+                                            </li>
+                                        );
+                                    })}
+                                </ul>
+                            )}
+                        </div>
+
+                        {/* Breakdown */}
+                        {!loading && eventTypeCount.length > 0 && (
+                            <div className={`${glass} rounded-[1.5rem] p-4`}>
+                                <h4 className="mb-3 text-[12.5px] font-extrabold text-slate-700 dark:text-slate-200">توزیع رویدادها</h4>
+                                <div className="space-y-3">
+                                    {eventTypeCount.map(([type, count]) => {
+                                        const style = getTypeStyle(type);
+                                        return (
+                                            <div key={type}>
+                                                <div className="mb-1 flex items-center justify-between text-[10.5px] font-bold">
+                                                    <span className={`flex items-center gap-1.5 ${style.text}`}><span className={`h-2 w-2 rounded-full ${style.dot}`} />{getTypeLabel(type)}</span>
+                                                    <span className="text-slate-400">{toPersianDigits(count)}</span>
+                                                </div>
+                                                <div className="h-1.5 overflow-hidden rounded-full bg-slate-500/10">
+                                                    <motion.div initial={{ width: 0 }} animate={{ width: `${(count / maxTypeCount) * 100}%` }} transition={{ duration: 0.5, ease: "easeOut" }} className={`h-full rounded-full ${style.bar}`} />
+                                                </div>
+                                            </div>
+                                        );
                                     })}
                                 </div>
-                            </motion.div>
-                        </>
-                    )}
+                            </div>
+                        )}
+                    </aside>
+
+                    {/* ───── Main ───── */}
+                    <main className="min-w-0 space-y-4">
+                        {/* Toolbar */}
+                        <div className={`${glass} relative z-20 flex flex-wrap items-center justify-between gap-3 rounded-[1.75rem] px-4 py-3`}>
+                            <div className="flex items-center gap-2">
+                                <button type="button" aria-label="قبلی" onClick={() => changeDate(1)} className={`flex h-10 w-10 items-center justify-center rounded-full border border-white/80 bg-white/70 text-slate-500 transition hover:bg-blue-500 hover:text-white dark:border-white/[0.08] dark:bg-white/[0.05] dark:text-slate-300 dark:hover:bg-blue-500 ${focusRing}`}><ChevronRight size={16} /></button>
+
+                                <div className="relative">
+                                    <button type="button" onClick={() => { setPickerYear(currentJy); setPickerOpen((v) => !v); }} className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 transition hover:bg-white/60 dark:hover:bg-white/[0.05] ${focusRing}`}>
+                                        <h2 className="text-[19px] font-black tracking-tight text-slate-900 dark:text-white">{headerTitle}</h2>
+                                        <ChevronDown size={15} className={`text-slate-400 transition-transform ${pickerOpen ? "rotate-180" : ""}`} />
+                                    </button>
+
+                                    {pickerOpen && pickerYear !== null && (
+                                        <>
+                                            <div className="fixed inset-0 z-20" onClick={() => setPickerOpen(false)} />
+                                            <motion.div
+                                                initial={{ opacity: 0, y: -8, scale: 0.97 }}
+                                                animate={{ opacity: 1, y: 0, scale: 1 }}
+                                                transition={{ duration: 0.15 }}
+                                                className="absolute right-0 top-[calc(100%+10px)] z-30 w-[min(19rem,calc(100vw-3rem))] rounded-[1.5rem] border border-white/80 bg-white/90 p-4 shadow-[0_30px_60px_-20px_rgba(30,64,175,0.45)] backdrop-blur-2xl dark:border-white/[0.1] dark:bg-[#0c1a42]/95"
+                                            >
+                                                <div className="mb-3 flex items-center justify-between">
+                                                    <button type="button" aria-label="سال بعد" onClick={() => setPickerYear((y) => (y ?? currentJy) + 1)} className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-500/10 text-blue-600 transition hover:bg-blue-500 hover:text-white dark:text-blue-300"><ChevronRight size={13} /></button>
+                                                    <span className="text-[14px] font-black text-slate-800 dark:text-white">{toPersianDigits(pickerYear)}</span>
+                                                    <button type="button" aria-label="سال قبل" onClick={() => setPickerYear((y) => (y ?? currentJy) - 1)} className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-500/10 text-blue-600 transition hover:bg-blue-500 hover:text-white dark:text-blue-300"><ChevronLeft size={13} /></button>
+                                                </div>
+                                                <div className="grid grid-cols-3 gap-1.5">
+                                                    {JALALI_MONTHS.map((label, index) => {
+                                                        const m = index + 1;
+                                                        const active = pickerYear === currentJy && m === currentJm;
+                                                        return (
+                                                            <button key={label} type="button" onClick={() => { goToMonth(pickerYear, m); setPickerOpen(false); }} className={`rounded-xl px-2 py-2.5 text-[11px] font-bold transition ${active ? "bg-gradient-to-br from-blue-600 to-cyan-400 text-white shadow-md shadow-blue-500/30" : "bg-blue-500/[0.07] text-slate-600 hover:bg-blue-500/15 dark:text-slate-300"}`}>{label}</button>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </motion.div>
+                                        </>
+                                    )}
+                                </div>
+
+                                <button type="button" aria-label="بعدی" onClick={() => changeDate(-1)} className={`flex h-10 w-10 items-center justify-center rounded-full border border-white/80 bg-white/70 text-slate-500 transition hover:bg-blue-500 hover:text-white dark:border-white/[0.08] dark:bg-white/[0.05] dark:text-slate-300 dark:hover:bg-blue-500 ${focusRing}`}><ChevronLeft size={16} /></button>
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                                <div className="flex rounded-full border border-white/80 bg-white/60 p-1 dark:border-white/[0.08] dark:bg-white/[0.04]">
+                                    {([["month", CalendarDays, "ماهانه"], ["season", CalendarRange, "فصلی"]] as const).map(([value, Icon, label]) => (
+                                        <button key={value} type="button" onClick={() => setView(value)} className={`flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[11px] font-bold transition ${view === value ? "bg-gradient-to-br from-blue-600 to-blue-500 text-white shadow-[0_6px_16px_-6px_rgba(37,99,235,0.8)]" : "text-slate-500 hover:text-blue-600 dark:text-slate-400"}`}>
+                                            <Icon size={12} />{label}
+                                        </button>
+                                    ))}
+                                </div>
+                                <button type="button" onClick={gotoToday} className={`flex items-center gap-1.5 rounded-full border border-white/80 bg-white/70 px-3.5 py-2 text-[11px] font-bold text-slate-600 transition hover:bg-blue-500 hover:text-white dark:border-white/[0.08] dark:bg-white/[0.05] dark:text-slate-300 dark:hover:bg-blue-500 ${focusRing}`}><CalendarClock size={12} />امروز</button>
+                            </div>
+                        </div>
+
+                        {/* Quick months */}
+                        <div className="flex items-center gap-2 overflow-x-auto pb-1">
+                            {quickMonths.map(({ jy, jm }) => {
+                                const selected = jy === currentJy && jm === currentJm;
+                                const realToday = jy === realTodayJy && jm === realTodayJm;
+                                return (
+                                    <button key={`${jy}-${jm}`} type="button" onClick={() => goToMonth(jy, jm)} className={`flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-3.5 py-1.5 text-[11px] font-bold transition ${focusRing} ${selected ? "border-transparent bg-gradient-to-br from-blue-600 to-cyan-400 text-white shadow-[0_8px_20px_-8px_rgba(37,99,235,0.9)]" : "border-white/80 bg-white/55 text-slate-500 backdrop-blur-md hover:bg-white hover:text-blue-600 dark:border-white/[0.07] dark:bg-white/[0.04] dark:text-slate-400 dark:hover:bg-white/[0.08]"}`}>
+                                        {realToday && <span className={`h-1.5 w-1.5 rounded-full ${selected ? "bg-white" : "bg-blue-500"}`} />}
+                                        {jy === realTodayJy ? JALALI_MONTHS[jm - 1] : `${JALALI_MONTHS[jm - 1]} ${toPersianDigits(jy)}`}
+                                    </button>
+                                );
+                            })}
+                        </div>
+
+                        {/* Grid(s) */}
+                        {loading ? (
+                            <div className={`${glass} rounded-[1.75rem] p-4`}>
+                                <div className="grid grid-cols-7 gap-1.5">
+                                    {Array.from({ length: 35 }).map((_, i) => <div key={i} className="h-[76px] animate-pulse rounded-2xl bg-white/60 sm:h-[116px] dark:bg-white/[0.04]" />)}
+                                </div>
+                            </div>
+                        ) : (
+                            <div className={view === "season" ? "grid grid-cols-1 gap-4 xl:grid-cols-3" : ""}>
+                                {visibleMonths.map((month) => (
+                                    <CalendarMonthGrid
+                                        key={`${month.jy}-${month.jm}`}
+                                        month={month}
+                                        eventsByDay={eventsByDay}
+                                        noteCountByDay={noteCountByDay}
+                                        todayISO={todayISO}
+                                        compact={view === "season"}
+                                        onSelectDate={openDate}
+                                    />
+                                ))}
+                            </div>
+                        )}
+
+                        {!loading && calendarRange && (
+                            <div className="flex items-center justify-between gap-3 px-2 text-[9.5px] font-semibold text-slate-400">
+                                <span>بازه دریافت‌شده از تقویم</span>
+                                <span dir="ltr">{calendarRange.start} تا {calendarRange.end}</span>
+                            </div>
+                        )}
+                    </main>
                 </div>
-
-                <div className="flex flex-wrap items-center gap-2 border-b border-slate-100 px-5 py-3 sm:px-6 dark:border-white/[0.06]">
-                    <div className="flex rounded-xl border border-slate-200 bg-slate-50 p-1 dark:border-white/[0.06] dark:bg-white/[0.035]">
-                        {([
-                            ["month", CalendarDays, "ماهانه"],
-                            ["season", CalendarRange, "فصل"],
-                        ] as ViewOption[]).map(([value, Icon, label]) => (
-                            <button key={value} type="button" onClick={() => setView(value)} className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[10.5px] font-bold transition-all ${view === value ? "bg-white text-indigo-600 shadow-sm dark:bg-[#1e293b] dark:text-indigo-300" : "text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"}`}>
-                                <Icon size={12} />{label}
-                            </button>
-                        ))}
-                    </div>
-
-                    <button type="button" onClick={gotoToday} className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-bold text-slate-500 shadow-sm transition-all hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-600 dark:border-white/[0.06] dark:bg-white/[0.035] dark:text-slate-400 dark:hover:bg-indigo-500/10 dark:hover:text-indigo-300"><CalendarClock size={12} />امروز</button>
-
-                    {!loading && <div className="mr-auto flex flex-wrap items-center gap-2">
-                        <span className="flex items-center gap-1.5 rounded-lg bg-indigo-50 px-2 py-1 text-[10px] font-bold text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-300"><ClipboardCheck size={11} />{toPersianDigits(taskCount)} وظیفه</span>
-                        <span className="flex items-center gap-1.5 rounded-lg bg-amber-50 px-2 py-1 text-[10px] font-bold text-amber-600 dark:bg-amber-500/10 dark:text-amber-300"><Layers3 size={11} />{toPersianDigits(internalTaskCount)} وظیفه درون سازمانی</span>
-                        <span className="flex items-center gap-1.5 rounded-lg bg-emerald-50 px-2 py-1 text-[10px] font-bold text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-300"><FileText size={11} />{toPersianDigits(calendarNoteCount)} یادداشت</span>
-                    </div>}
-                </div>
-
-                <div className="flex items-center gap-2 overflow-x-auto border-b border-slate-100 px-5 py-3 sm:px-6 dark:border-white/[0.06]">
-                    {quickMonths.map(({ jy, jm }) => {
-                        const selected = jy === currentJy && jm === currentJm;
-                        const realToday = jy === realTodayJy && jm === realTodayJm;
-                        return <button key={`${jy}-${jm}`} type="button" onClick={() => goToMonth(jy, jm)} className={`flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-3.5 py-1.5 text-[11px] font-bold transition-all ${selected ? "border-indigo-600 bg-indigo-600 text-white shadow-sm shadow-indigo-500/20 dark:border-indigo-500 dark:bg-indigo-500" : "border-slate-200 bg-white text-slate-500 hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-600 dark:border-white/[0.06] dark:bg-white/[0.025] dark:text-slate-400 dark:hover:border-indigo-500/20 dark:hover:bg-indigo-500/10 dark:hover:text-indigo-300"}`}>
-                            {realToday && <span className={`h-1.5 w-1.5 rounded-full ${selected ? "bg-white" : "bg-indigo-500"}`} />}
-                            {jy === realTodayJy ? JALALI_MONTHS[jm - 1] : `${JALALI_MONTHS[jm - 1]} ${toPersianDigits(jy)}`}
-                        </button>;
-                    })}
-                </div>
-
-                {!loading && <div className="flex flex-wrap items-center gap-x-5 gap-y-2 border-b border-slate-100 px-5 py-3 sm:px-6 dark:border-white/[0.06]">
-                    {eventTypeCount.map(([type, count]) => {
-                        const style = getTypeStyle(type);
-                        return <span key={type} className={`flex items-center gap-1.5 text-[9.5px] font-bold ${style.text}`}><span className={`h-1.5 w-1.5 rounded-full ${style.dot}`} />{getTypeLabel(type)}<span className="opacity-60">({toPersianDigits(count)})</span></span>;
-                    })}
-                </div>}
-
-                {loading ? (
-                    <div className="flex flex-col items-center justify-center gap-3 py-24">
-                        <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: "linear" }} className="h-5 w-5 rounded-full border-2 border-indigo-500/15 border-t-indigo-500" />
-                        <p className="text-[11px] font-semibold text-slate-400">در حال دریافت تقویم...</p>
-                    </div>
-                ) : (
-                    <div className={`p-4 sm:p-6 ${view === "season" ? "grid grid-cols-1 gap-5 xl:grid-cols-3" : "mx-auto max-w-5xl"}`}>
-                        {visibleMonths.map((month) => <CalendarMonthGrid key={`${month.jy}-${month.jm}`} month={month} eventsByDay={eventsByDay} noteCountByDay={noteCountByDay} todayISO={todayISO} onSelectDate={(date) => { setSelectedDate(date); setIsModalOpen(true); }} />)}
-                    </div>
-                )}
-
-                {!loading && calendarRange && <div className="border-t border-slate-100 px-5 py-2.5 dark:border-white/[0.06]">
-                    <div className="flex items-center justify-between gap-3 text-[9px] font-semibold text-slate-400"><span>بازه دریافت‌شده از تقویم</span><span dir="ltr">{calendarRange.start} تا {calendarRange.end}</span></div>
-                </div>}
             </div>
 
             <CalendarNoteModal
