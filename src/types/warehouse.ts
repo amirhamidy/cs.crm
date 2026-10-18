@@ -69,6 +69,7 @@ export interface ApiWarehouseStaff {
   is_active?: boolean;
   joined_at?: string;
   code?: string | number;
+  warehouses?: number[];
 }
 
 export interface ApiProductInitDraft {

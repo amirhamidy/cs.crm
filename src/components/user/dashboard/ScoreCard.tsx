@@ -16,11 +16,12 @@ interface ScoreData {
 interface ScoreHistory {
     id: number;
     employee: number;
-    task: number;
-    department_step: number;
+    task: number | null;
+    department_step: number | null;
+    action: "add" | "deduct";
     amount: number;
     reason: string;
-    overdue_period: number;
+    overdue_period: number | null;
     created_at: string;
 }
 
@@ -440,7 +441,7 @@ function ScoreHistory({
         >
             <div className="flex items-center justify-between">
                 <p className="text-[11px] font-bold text-gray-700 dark:text-gray-300">
-                    دلایل کسر امتیاز
+                    تاریخچه امتیاز
                 </p>
 
                 {history.length > 0 && (
@@ -480,12 +481,23 @@ function ScoreHistory({
                     }}
                 >
                     <p className="text-[10.5px] text-gray-400 dark:text-gray-500">
-                        کسر امتیازی ثبت نشده است
+                        تغییری در امتیاز ثبت نشده است
                     </p>
                 </div>
             ) : (
                 <div className="flex max-h-64 flex-col gap-2 overflow-y-auto">
-                    {history.map((item) => (
+                    {history.map((item) => {
+                        const isAdd = item.action === "add";
+                        const tone = isAdd ? "#22c55e" : "#ef4444";
+                        const toneBg = isAdd
+                            ? isDark
+                                ? "rgba(34,197,94,0.1)"
+                                : "rgba(34,197,94,0.07)"
+                            : isDark
+                                ? "rgba(239,68,68,0.1)"
+                                : "rgba(239,68,68,0.07)";
+
+                        return (
                         <motion.div
                             key={item.id}
                             initial={{
@@ -515,13 +527,11 @@ function ScoreHistory({
                                 <span
                                     className="shrink-0 rounded-lg px-2 py-1 text-[10px] font-extrabold"
                                     style={{
-                                        color: "#ef4444",
-                                        background: isDark
-                                            ? "rgba(239,68,68,0.1)"
-                                            : "rgba(239,68,68,0.07)",
+                                        color: tone,
+                                        background: toneBg,
                                     }}
                                 >
-                                    -{item.amount}
+                                    {isAdd ? "+" : "-"}{item.amount}
                                 </span>
                             </div>
 
@@ -530,14 +540,15 @@ function ScoreHistory({
                                     {formatDate(item.created_at)}
                                 </span>
 
-                                {item.overdue_period > 0 && (
+                                {item.overdue_period != null && item.overdue_period > 0 && (
                                     <span className="text-[9.5px] text-gray-400 dark:text-gray-600">
                                         دوره تأخیر {item.overdue_period}
                                     </span>
                                 )}
                             </div>
                         </motion.div>
-                    ))}
+                        );
+                    })}
                 </div>
             )}
         </div>

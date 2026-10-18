@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { Boxes, Loader2, Lock, Pencil, Plus, Power, PowerOff, X } from "lucide-react";
@@ -8,10 +8,22 @@ import { useTheme } from "next-themes";
 
 import useWarehouses from "@/hooks/useWarehouses";
 import useWarehouseAccess from "@/hooks/useWarehouseAccess";
+import { useCurrentEmployee } from "@/hooks/usecurrentemployee";
+import axiosInstance from "@/lib/axiosInstance";
 import { apiErrorMessage, createWarehouse } from "@/lib/warehouseApi";
 import { cardBg, cardBorder, cardShadow, muted } from "@/components/admin/warehouse/WarehouseCards";
 import { EditWarehouseModal, WarehouseStatusModal } from "@/components/admin/warehouse/WarehouseFormModals";
 import type { ApiWarehouse } from "@/types/warehouse";
+
+interface StaffItem {
+    id: number;
+    employee: number;
+    employee_id?: number;
+    full_name: string;
+    warehouses: number[];
+    warehouse_names?: string[];
+    is_active: boolean;
+}
 
 const inputClass =
     "h-11 w-full rounded-2xl border border-gray-200 bg-white px-3 text-[13px] font-bold text-gray-900 outline-none transition-colors focus:border-indigo-500 dark:border-white/10 dark:bg-white/5 dark:text-white";
@@ -158,11 +170,62 @@ export default function WarehouseSelector() {
     const basePath = `/${pathname.split("/").filter(Boolean)[0] ?? "admin"}/warehouse`;
 
     const { isAdmin } = useWarehouseAccess();
-    const { warehouses, loading, error, reload } = useWarehouses();
+    const { warehouses, loading: warehousesLoading, error, reload } = useWarehouses();
+    const { employee, loading: empLoading } = useCurrentEmployee();
+
+    const [assignedWarehouseIds, setAssignedWarehouseIds] = useState<number[] | null>(null);
+    const [staffLoading, setStaffLoading] = useState(false);
+
     const [showCreate, setShowCreate] = useState(false);
     const [editing, setEditing] = useState<ApiWarehouse | null>(null);
     const [toggling, setToggling] = useState<ApiWarehouse | null>(null);
     const [blockedId, setBlockedId] = useState<number | null>(null);
+
+    useEffect(() => {
+        if (isAdmin) {
+            setAssignedWarehouseIds(null);
+            return;
+        }
+
+        if (!employee?.id) return;
+
+        let active = true;
+        setStaffLoading(true);
+
+        axiosInstance
+            .get<StaffItem[]>("/warehouse/api/v1/staff/")
+            .then((res) => {
+                if (!active) return;
+                const staffList = Array.isArray(res.data) ? res.data : [];
+                const currentStaff = staffList.find(
+                    (s) =>
+                        s.is_active &&
+                        (Number(s.employee) === Number(employee.id) || Number(s.employee_id) === Number(employee.id))
+                );
+
+                if (currentStaff && Array.isArray(currentStaff.warehouses)) {
+                    setAssignedWarehouseIds(currentStaff.warehouses);
+                } else {
+                    setAssignedWarehouseIds([]);
+                }
+            })
+            .catch(() => {
+                if (active) setAssignedWarehouseIds([]);
+            })
+            .finally(() => {
+                if (active) setStaffLoading(false);
+            });
+
+        return () => {
+            active = false;
+        };
+    }, [isAdmin, employee?.id]);
+
+    const visibleWarehouses = useMemo(() => {
+        if (isAdmin) return warehouses;
+        if (!assignedWarehouseIds) return [];
+        return warehouses.filter((wh) => assignedWarehouseIds.includes(wh.id));
+    }, [isAdmin, warehouses, assignedWarehouseIds]);
 
     const open = (warehouse: ApiWarehouse) => {
         if (!warehouse.is_active && !isAdmin) {
@@ -171,6 +234,8 @@ export default function WarehouseSelector() {
         }
         router.push(`${basePath}/overview?warehouse=${warehouse.id}`);
     };
+
+    const isPageLoading = warehousesLoading || (!isAdmin && (empLoading || staffLoading));
 
     return (
         <div dir="rtl" className="flex min-h-screen flex-col gap-6 p-6">
@@ -190,7 +255,9 @@ export default function WarehouseSelector() {
                             انبارها
                         </h1>
                         <p className="mt-0.5 text-[11.5px] text-gray-500 dark:text-gray-400">
-                            انبار مورد نظر را انتخاب کنید
+                            {isAdmin
+                                ? "مدیریت و انتخاب انبار مورد نظر"
+                                : "انبارهای مجاز برای دسترسی شما"}
                         </p>
                     </div>
                 </div>
@@ -214,14 +281,14 @@ export default function WarehouseSelector() {
                 </div>
             )}
 
-            {loading ? (
+            {isPageLoading ? (
                 <div className="flex items-center justify-center py-20">
                     <Loader2 size={22} className="animate-spin text-indigo-500" />
                 </div>
             ) : (
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                    {warehouses.length ? (
-                        warehouses.map((warehouse, index) => (
+                    {visibleWarehouses.length ? (
+                        visibleWarehouses.map((warehouse, index) => (
                             <motion.div
                                 key={warehouse.id}
                                 role="button"
@@ -330,7 +397,9 @@ export default function WarehouseSelector() {
                             className="col-span-full py-16 text-center text-[12.5px]"
                             style={{ color: muted(isDark) }}
                         >
-                            هنوز انباری ثبت نشده است
+                            {isAdmin
+                                ? "هنوز انباری ثبت نشده است"
+                                : "شما به هیچ انباری دسترسی ندارید"}
                         </p>
                     )}
                 </div>

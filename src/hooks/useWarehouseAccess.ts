@@ -57,10 +57,19 @@ export default function useWarehouseAccess() {
 
   const isWarehouseStaff = myStaff?.is_active === true;
 
+  const assignedWarehouseIds = useMemo(
+    () =>
+      myStaff && Array.isArray(myStaff.warehouses)
+        ? myStaff.warehouses.map(Number)
+        : [],
+    [myStaff],
+  );
+
   return {
     ready: hasHydrated && !employeeLoading && !staffLoading,
     employeeId,
     myStaff,
+    assignedWarehouseIds,
     isAdmin,
     isWarehouseStaff,
     hasFullAccess: isAdmin || isWarehouseStaff,

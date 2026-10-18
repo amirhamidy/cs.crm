@@ -1,15 +1,17 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Check, Loader2, Power, Trash2, X } from "lucide-react";
+import { Check, Loader2, Power, Trash2, Warehouse as WarehouseIcon, X } from "lucide-react";
 import { useTheme } from "next-themes";
 import axiosInstance from "@/lib/axiosInstance";
 
-interface WarehouseStaff {
+export interface WarehouseStaff {
     id: number;
     employee: number;
     employee_id: number;
     full_name: string;
+    warehouses: number[];
+    warehouse_names?: string[];
     is_active: boolean;
     joined_at: string;
 }
@@ -21,12 +23,15 @@ interface WarehouseStaffCardProps {
     onUpdated: (staff: WarehouseStaff) => void;
 }
 
-export default function WarehouseStaffCard({
-    staff,
-    index,
-    onDelete,
-    onUpdated,
-}: WarehouseStaffCardProps) {
+const GRADIENTS = [
+    ["#6366f1", "#8b5cf6"],
+    ["#ec4899", "#8b5cf6"],
+    ["#06b6d4", "#3b82f6"],
+    ["#10b981", "#14b8a6"],
+    ["#f59e0b", "#ef4444"],
+];
+
+export default function WarehouseStaffCard({ staff, index, onDelete, onUpdated }: WarehouseStaffCardProps) {
     const { resolvedTheme } = useTheme();
     const isDark = resolvedTheme === "dark";
     const [hovered, setHovered] = useState(false);
@@ -35,7 +40,12 @@ export default function WarehouseStaffCard({
     const [isActive, setIsActive] = useState(staff.is_active);
     const [statusLoading, setStatusLoading] = useState(false);
 
+    useEffect(() => {
+        setIsActive(staff.is_active);
+    }, [staff.is_active]);
+
     const joinedDate = useMemo(() => {
+        if (!staff.joined_at) return "—";
         return new Date(staff.joined_at).toLocaleDateString("fa-IR", {
             year: "numeric",
             month: "2-digit",
@@ -47,17 +57,16 @@ export default function WarehouseStaffCard({
         const nextStatus = !isActive;
         setStatusLoading(true);
         try {
-            const { data } = await axiosInstance.patch(
-                `/warehouse/api/v1/staff/${staff.id}/update/`,
-                {
-                    employee: staff.employee,
-                    is_active: nextStatus,
-                }
-            );
+            const { data } = await axiosInstance.patch(`/warehouse/api/v1/staff/${staff.id}/update/`, {
+                employee: staff.employee,
+                warehouses: staff.warehouses,
+                is_active: nextStatus,
+            });
             setIsActive(nextStatus);
             onUpdated(data);
-        } catch {
-            setIsActive((prev) => prev);
+        } catch (err) {
+            console.error("Toggle staff active error:", err);
+            setIsActive(staff.is_active);
         } finally {
             setStatusLoading(false);
         }
@@ -69,25 +78,21 @@ export default function WarehouseStaffCard({
             await axiosInstance.delete(`/warehouse/api/v1/staff/${staff.id}/delete/`);
             onDelete(staff.id);
             setShowConfirm(false);
-        } catch {
+        } catch (err) {
+            console.error("Delete staff error:", err);
         } finally {
             setDeleting(false);
         }
     };
 
     const handleCloseConfirm = () => {
-        if (deleting) return;
-        setShowConfirm(false);
+        if (!deleting) setShowConfirm(false);
     };
 
     const employeeName = staff.full_name?.trim() || "بدون نام";
-    const [start, end] = [
-        ["#6366f1", "#8b5cf6"],
-        ["#ec4899", "#8b5cf6"],
-        ["#06b6d4", "#3b82f6"],
-        ["#10b981", "#14b8a6"],
-        ["#f59e0b", "#ef4444"],
-    ][staff.id % 5];
+    const [start, end] = GRADIENTS[staff.id % GRADIENTS.length];
+    const softBg = isDark ? "rgba(255,255,255,0.05)" : "rgba(15,23,42,0.05)";
+    const names = staff.warehouse_names ?? [];
 
     return (
         <>
@@ -98,26 +103,17 @@ export default function WarehouseStaffCard({
                 transition={{ duration: 0.2, delay: index * 0.04 }}
                 onHoverStart={() => setHovered(true)}
                 onHoverEnd={() => setHovered(false)}
-                className="relative flex min-h-[148px] flex-col justify-between overflow-visible rounded-3xl p-4"
+                className="relative flex min-h-[168px] flex-col justify-between overflow-visible rounded-3xl p-4 text-right"
                 style={{
                     background: isDark ? "rgba(255,255,255,0.03)" : "#fafafa",
-                    border: isDark
-                        ? "1px solid rgba(255,255,255,0.06)"
-                        : "1px solid rgba(15,23,42,0.06)",
-                    boxShadow: isDark
-                        ? "0 8px 30px rgba(0,0,0,0.22)"
-                        : "0 8px 24px rgba(15,23,42,0.05)",
+                    border: isDark ? "1px solid rgba(255,255,255,0.06)" : "1px solid rgba(15,23,42,0.06)",
+                    boxShadow: isDark ? "0 8px 30px rgba(0,0,0,0.22)" : "0 8px 24px rgba(15,23,42,0.05)",
                 }}
+                dir="rtl"
             >
                 <svg className="pointer-events-none absolute inset-0 h-full w-full">
                     <defs>
-                        <linearGradient
-                            id={`staff-border-${staff.id}`}
-                            x1="100%"
-                            y1="100%"
-                            x2="0%"
-                            y2="0%"
-                        >
+                        <linearGradient id={`staff-border-${staff.id}`} x1="100%" y1="100%" x2="0%" y2="0%">
                             <stop offset="0%" stopColor="#6366f1" />
                             <stop offset="100%" stopColor="#8b5cf6" />
                         </linearGradient>
@@ -133,9 +129,7 @@ export default function WarehouseStaffCard({
                         stroke={`url(#staff-border-${staff.id})`}
                         strokeWidth="1.4"
                         initial={{ pathLength: 0, opacity: 0 }}
-                        animate={
-                            hovered ? { pathLength: 1, opacity: 1 } : { pathLength: 0, opacity: 0 }
-                        }
+                        animate={hovered ? { pathLength: 1, opacity: 1 } : { pathLength: 0, opacity: 0 }}
                         transition={{ duration: 0.45, ease: "easeInOut" }}
                     />
                 </svg>
@@ -147,64 +141,61 @@ export default function WarehouseStaffCard({
                             e.stopPropagation();
                             setShowConfirm(true);
                         }}
-                        className="flex h-7 w-7 items-center justify-center rounded-xl"
+                        className="flex h-7 w-7 items-center justify-center rounded-xl transition-transform hover:scale-105"
                         style={{
-                            background: isDark
-                                ? "rgba(239,68,68,0.12)"
-                                : "rgba(239,68,68,0.08)",
+                            background: isDark ? "rgba(239,68,68,0.12)" : "rgba(239,68,68,0.08)",
                             color: "#ef4444",
                         }}
                         title="حذف"
                     >
-                        <Trash2 size={11} />
+                        <Trash2 size={12} />
                     </button>
                 </div>
 
-                <div className="flex justify-start items-center gap-2">
+                <div className="flex items-center justify-start gap-2.5">
                     <div
-                        className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-[15px] font-extrabold text-white"
-                        style={{
-                            background: `linear-gradient(135deg, ${start}, ${end})`,
-                        }}
+                        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl text-[14px] font-extrabold text-white shadow-md"
+                        style={{ background: `linear-gradient(135deg, ${start}, ${end})` }}
                     >
                         {employeeName.charAt(0)}
                     </div>
-                    <h3 className="truncate text-[13px] font-extrabold text-gray-900 dark:text-white">
-                        {employeeName}
-                    </h3>
-                </div>
-
-                <div className="my-auto mt-5 flex items-start gap-3">
-                    <div className="min-w-0 flex flex-col space-y-1.5">
-                        <div className="flex items-center justify-start gap-1">
-                            <span className="text-[11.5px] font-semibold dark:text-gray-500">
-                                نقش:
-                            </span>
-                            <span
-                                className="inline-flex h-7 items-center rounded-xl px-2.5 text-[11px] font-bold"
-                                style={{
-                                    background: isDark
-                                        ? "rgba(99,102,241,0.14)"
-                                        : "rgba(99,102,241,0.08)",
-                                    color: isDark ? "#a5b4fc" : "#6366f1",
-                                }}
-                            >
-                                انباردار
-                            </span>
-                        </div>
-
-                        <div className="flex justify-start gap-1 items-center">
-                            <span className="text-[11.5px] font-semibold dark:text-gray-500">
-                                تاریخ شروع:
-                            </span>
-                            <span className="text-[11px] text-gray-500 dark:text-gray-400">
-                                {joinedDate}
-                            </span>
-                        </div>
+                    <div className="min-w-0">
+                        <h3 className="truncate text-[13px] font-extrabold text-gray-900 dark:text-white">
+                            {employeeName}
+                        </h3>
+                        <span className="text-[10px] text-gray-400">انباردار سیستم</span>
                     </div>
                 </div>
 
-                <div className="mt-3 flex items-center justify-start gap-3">
+                <div className="my-2 flex flex-col gap-1.5">
+                    <span className="text-[10.5px] font-semibold text-gray-400">دسترسی به انبار</span>
+                    <div className="flex max-h-[50px] flex-wrap gap-1 overflow-y-auto">
+                        {names.length > 0 ? (
+                            names.map((name, i) => (
+                                <span
+                                    key={i}
+                                    className="inline-flex items-center gap-1 rounded-lg px-2 py-0.5 text-[10px] font-medium"
+                                    style={{
+                                        background: isDark ? "rgba(99,102,241,0.12)" : "rgba(99,102,241,0.07)",
+                                        color: isDark ? "#a5b4fc" : "#6366f1",
+                                    }}
+                                >
+                                    <WarehouseIcon size={10} />
+                                    {name}
+                                </span>
+                            ))
+                        ) : (
+                            <span className="text-[10px] text-gray-400">بدون تخصیص انبار</span>
+                        )}
+                    </div>
+                </div>
+
+                <div className="mt-1 flex items-center justify-between border-t border-gray-100 pt-2.5 dark:border-white/[0.05]">
+                    <div className="flex items-center gap-1 text-[10.5px] text-gray-400">
+                        <span>تاریخ عضویت:</span>
+                        <span className="font-medium text-gray-600 dark:text-gray-300">{joinedDate}</span>
+                    </div>
+
                     <button
                         type="button"
                         onClick={handleToggleActive}
@@ -212,12 +203,8 @@ export default function WarehouseStaffCard({
                         className="relative flex h-7 w-[42px] items-center justify-between rounded-full p-[2px] transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-70"
                         style={{
                             background: isActive
-                                ? isDark
-                                    ? "rgba(16,185,129,0.22)"
-                                    : "rgba(16,185,129,0.14)"
-                                : isDark
-                                    ? "rgba(100,116,139,0.2)"
-                                    : "rgba(100,116,139,0.12)",
+                                ? isDark ? "rgba(16,185,129,0.22)" : "rgba(16,185,129,0.14)"
+                                : isDark ? "rgba(100,116,139,0.2)" : "rgba(100,116,139,0.12)",
                             boxShadow: isActive
                                 ? "inset 0 0 0 1px rgba(16,185,129,0.12)"
                                 : "inset 0 0 0 1px rgba(100,116,139,0.1)",
@@ -234,27 +221,15 @@ export default function WarehouseStaffCard({
                             }}
                         >
                             <AnimatePresence mode="wait" initial={false}>
-                                {isActive ? (
-                                    <motion.span
-                                        key="check"
-                                        initial={{ opacity: 0, scale: 0.5 }}
-                                        animate={{ opacity: 1, scale: 1 }}
-                                        exit={{ opacity: 0, scale: 0.5 }}
-                                        transition={{ duration: 0.15 }}
-                                    >
-                                        <Check size={12} strokeWidth={3.5} />
-                                    </motion.span>
-                                ) : (
-                                    <motion.span
-                                        key="power"
-                                        initial={{ opacity: 0, scale: 0.5 }}
-                                        animate={{ opacity: 1, scale: 1 }}
-                                        exit={{ opacity: 0, scale: 0.5 }}
-                                        transition={{ duration: 0.15 }}
-                                    >
-                                        <Power size={11} strokeWidth={2.5} />
-                                    </motion.span>
-                                )}
+                                <motion.span
+                                    key={isActive ? "check" : "power"}
+                                    initial={{ opacity: 0, scale: 0.5 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    exit={{ opacity: 0, scale: 0.5 }}
+                                    transition={{ duration: 0.15 }}
+                                >
+                                    {isActive ? <Check size={12} strokeWidth={3.5} /> : <Power size={11} strokeWidth={2.5} />}
+                                </motion.span>
                             </AnimatePresence>
                         </motion.span>
                     </button>
@@ -269,10 +244,7 @@ export default function WarehouseStaffCard({
                         exit={{ opacity: 0 }}
                         onClick={handleCloseConfirm}
                         className="fixed inset-0 z-50 flex items-center justify-center px-4"
-                        style={{
-                            background: "rgba(0,0,0,0.5)",
-                            backdropFilter: "blur(4px)",
-                        }}
+                        style={{ background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)" }}
                     >
                         <motion.div
                             initial={{ opacity: 0, scale: 0.96, y: 16 }}
@@ -283,9 +255,7 @@ export default function WarehouseStaffCard({
                             className="w-full max-w-[360px] rounded-[2rem] p-5"
                             style={{
                                 background: isDark ? "#0f172a" : "#ffffff",
-                                border: isDark
-                                    ? "1px solid rgba(255,255,255,0.07)"
-                                    : "1px solid rgba(15,23,42,0.07)",
+                                border: isDark ? "1px solid rgba(255,255,255,0.07)" : "1px solid rgba(15,23,42,0.07)",
                                 boxShadow: "0 24px 64px rgba(0,0,0,0.35)",
                             }}
                             dir="rtl"
@@ -294,11 +264,7 @@ export default function WarehouseStaffCard({
                                 <div className="flex items-center gap-2.5">
                                     <div
                                         className="flex h-9 w-9 items-center justify-center rounded-2xl"
-                                        style={{
-                                            background: isDark
-                                                ? "rgba(239,68,68,0.14)"
-                                                : "rgba(239,68,68,0.08)",
-                                        }}
+                                        style={{ background: isDark ? "rgba(239,68,68,0.14)" : "rgba(239,68,68,0.08)" }}
                                     >
                                         <Trash2 size={15} className="text-red-500" />
                                     </div>
@@ -311,34 +277,25 @@ export default function WarehouseStaffCard({
                                     onClick={handleCloseConfirm}
                                     disabled={deleting}
                                     className="flex h-8 w-8 items-center justify-center rounded-xl text-gray-400 disabled:opacity-50"
-                                    style={{
-                                        background: isDark
-                                            ? "rgba(255,255,255,0.05)"
-                                            : "rgba(15,23,42,0.05)",
-                                    }}
+                                    style={{ background: softBg }}
                                 >
                                     <X size={14} />
                                 </button>
                             </div>
+
                             <p className="text-[12.5px] leading-6 text-gray-600 dark:text-gray-400">
                                 انباردار{" "}
-                                <span className="font-extrabold text-gray-900 dark:text-white">
-                                    {employeeName}
-                                </span>{" "}
+                                <span className="font-extrabold text-gray-900 dark:text-white">{employeeName}</span>{" "}
                                 حذف خواهد شد. این عملیات قابل بازگشت نیست.
                             </p>
+
                             <div className="mt-5 flex gap-2">
                                 <button
                                     type="button"
                                     onClick={handleCloseConfirm}
                                     disabled={deleting}
                                     className="flex-1 rounded-2xl py-2.5 text-[12.5px] font-bold disabled:opacity-50"
-                                    style={{
-                                        background: isDark
-                                            ? "rgba(255,255,255,0.05)"
-                                            : "rgba(15,23,42,0.05)",
-                                        color: isDark ? "#cbd5e1" : "#475569",
-                                    }}
+                                    style={{ background: softBg, color: isDark ? "#cbd5e1" : "#475569" }}
                                 >
                                     انصراف
                                 </button>
@@ -352,11 +309,7 @@ export default function WarehouseStaffCard({
                                         boxShadow: "0 10px 24px rgba(239,68,68,0.22)",
                                     }}
                                 >
-                                    {deleting ? (
-                                        <Loader2 size={15} className="animate-spin" />
-                                    ) : (
-                                        <Trash2 size={13} />
-                                    )}
+                                    {deleting ? <Loader2 size={15} className="animate-spin" /> : <Trash2 size={13} />}
                                     {deleting ? "" : "حذف کن"}
                                 </button>
                             </div>

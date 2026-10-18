@@ -21,14 +21,16 @@ import {
     PowerOff,
     ShieldAlert,
     ShoppingBag,
+    UploadCloud,
     UsersRound,
+    UserPlus,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 
 import WarehouseOverview from "@/components/admin/warehouse/Warehouseoverview";
 import AddCategoryModal from "@/components/admin/warehouse/AddCategoryModal";
 import WarehouseCategoryCard from "@/components/admin/warehouse/WarehouseCategoryCard";
-import WarehouseStaffCard from "@/components/admin/warehouse/WarehouseStaffCard";
+import WarehouseStaffCard, { type WarehouseStaff } from "@/components/admin/warehouse/WarehouseStaffCard";
 import AddWarehouseStaffModal from "@/components/admin/warehouse/AddWarehouseStaffModal";
 import StockLimitsModal from "@/components/admin/warehouse/StockLimitsModal";
 import { WarehouseStatusModal } from "@/components/admin/warehouse/WarehouseFormModals";
@@ -45,17 +47,13 @@ import CreateOrderTaskModal from "@/components/user/warehouse/CreateOrderTaskMod
 import WarehouseEmployeeTransactionCard from "@/components/user/warehouse/WarehouseEmployeeTransactionCard";
 import WarehouseEmployeeProductCard from "@/components/user/warehouse/WarehouseEmployeeProductCard";
 import WarehouseEmployeeProductWizardModal from "@/components/user/warehouse/WarehouseEmployeeProductWizardModal";
+import WarehouseEmployeeBulkImportModal from "@/components/admin/warehouse/WarehouseEmployeeBulkImportModal";
 import WarehouseEmployeeTaskCard from "@/components/user/warehouse/WarehouseEmployeeTaskCard";
 import WarehouseEmployeeOrderTaskCard from "@/components/user/warehouse/WarehouseEmployeeOrderTaskCard";
 import WarehouseEmployeeStockLedger from "@/components/user/warehouse/Warehouseemployeestockledger";
 import OrderInvoiceCard from "@/components/user/warehouse/OrderInvoiceCard";
 import OrderInvoiceModal from "@/components/user/warehouse/OrderInvoiceModal";
-
-import {
-    buildSalesInvoices,
-    getOrderTaskTitle,
-    paginate,
-} from "@/utils/warehouseEmployee";
+import { buildSalesInvoices, getOrderTaskTitle, paginate } from "@/utils/warehouseEmployee";
 import type { SalesInvoice } from "@/utils/warehouseEmployee";
 import useWarehouseAccess from "@/hooks/useWarehouseAccess";
 import useWarehouses from "@/hooks/useWarehouses";
@@ -67,15 +65,6 @@ import type { ApiStockInfo, ApiWarehouseTask } from "@/types/warehouse";
 interface AdminCategory {
     id: number;
     name: string;
-}
-
-interface WarehouseStaff {
-    id: number;
-    employee: number;
-    employee_id: number;
-    full_name: string;
-    is_active: boolean;
-    joined_at: string;
 }
 
 const TABS: Array<[Tab, string, ComponentType<{ size?: number }>]> = [
@@ -98,7 +87,6 @@ const LIMITED_TABS: Tab[] = ["orders", "stock", "tasks"];
 export default function WarehouseTabPage({ tab }: { tab: Tab }) {
     const { resolvedTheme } = useTheme();
     const isDark = resolvedTheme === "dark";
-
     const router = useRouter();
     const pathname = usePathname();
     const searchParams = useSearchParams();
@@ -110,18 +98,16 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
 
     const warehouseParam = searchParams.get("warehouse");
     const warehouseId =
-        warehouseParam && Number.isFinite(Number(warehouseParam))
-            ? Number(warehouseParam)
-            : null;
+        warehouseParam && Number.isFinite(Number(warehouseParam)) ? Number(warehouseParam) : null;
     const currentPage = Math.max(1, Number(searchParams.get("page")) || 1);
     const productParam = Number(searchParams.get("product"));
-    const ledgerProductId =
-        Number.isFinite(productParam) && productParam > 0 ? productParam : null;
+    const ledgerProductId = Number.isFinite(productParam) && productParam > 0 ? productParam : null;
 
     const {
         ready,
         employeeId,
         myStaff,
+        assignedWarehouseIds,
         hasFullAccess: hasFullWarehouseAccess,
         limitedAccess,
         isAdmin,
@@ -132,24 +118,10 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
     const warehouseInactive = warehouse !== null && !warehouse.is_active;
     const warehouseBlocked = !isAdmin && warehouseInactive;
     const warehouseResolving = !isAdmin && warehousesLoading;
+    const warehouseForbidden =
+        !isAdmin && ready && warehouseId !== null && !assignedWarehouseIds.includes(warehouseId);
 
-    const tabAllowed = hasFullWarehouseAccess || LIMITED_TABS.includes(tab);
-
-    const { data, setData, loading, refreshing, error, reload } = useWarehouseTab({
-        enabled:
-            ready &&
-            limitedAccess &&
-            warehouseId !== null &&
-            tabAllowed &&
-            !warehouseBlocked &&
-            !warehouseResolving,
-        tab,
-        warehouseId: warehouseId ?? 0,
-        page: currentPage,
-        hasFullAccess: hasFullWarehouseAccess,
-        employeeId,
-    });
-
+    const [bulkImportOpen, setBulkImportOpen] = useState(false);
     const [productWizardOpen, setProductWizardOpen] = useState(false);
     const [createOrderTaskOpen, setCreateOrderTaskOpen] = useState(false);
     const [showCategoryModal, setShowCategoryModal] = useState(false);
@@ -158,22 +130,33 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
     const [limitsStock, setLimitsStock] = useState<ApiStockInfo | null>(null);
     const [statusOpen, setStatusOpen] = useState(false);
 
+    const tabAllowed = tab === "staff" ? isAdmin : hasFullWarehouseAccess || LIMITED_TABS.includes(tab);
+
+    const { data, setData, loading, refreshing, error, reload } = useWarehouseTab({
+        enabled:
+            ready &&
+            limitedAccess &&
+            warehouseId !== null &&
+            tabAllowed &&
+            !warehouseBlocked &&
+            !warehouseForbidden &&
+            !warehouseResolving,
+        tab,
+        warehouseId: warehouseId ?? 0,
+        page: currentPage,
+        hasFullAccess: hasFullWarehouseAccess,
+        employeeId,
+    });
+
     const buildUrl = useCallback(
         (target: Tab, page = 1, extra = "") =>
-            `${basePath}/${target}?warehouse=${warehouseId}${page > 1 ? `&page=${page}` : ""
-            }${extra}`,
+            `${basePath}/${target}?warehouse=${warehouseId}${page > 1 ? `&page=${page}` : ""}${extra}`,
         [basePath, warehouseId],
     );
 
-    const goToPage = useCallback(
-        (page: number) => router.push(buildUrl(tab, page)),
-        [router, buildUrl, tab],
-    );
+    const goToPage = useCallback((page: number) => router.push(buildUrl(tab, page)), [router, buildUrl, tab]);
 
-    const goToTab = useCallback(
-        (target: Tab) => router.push(buildUrl(target)),
-        [router, buildUrl],
-    );
+    const goToTab = useCallback((target: Tab) => router.push(buildUrl(target)), [router, buildUrl]);
 
     const goOrReload = useCallback(
         (target: Tab) => {
@@ -184,26 +167,26 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
     );
 
     useEffect(() => {
+        if (warehouseForbidden) router.replace(basePath);
+    }, [warehouseForbidden, router, basePath]);
+
+    useEffect(() => {
         if (warehouseId === null) router.replace(basePath);
     }, [warehouseId, router, basePath]);
 
     useEffect(() => {
         if (ready && warehouseId !== null && !tabAllowed) {
-            router.replace(buildUrl("orders"));
+            router.replace(buildUrl(isAdmin ? "overview" : "stock"));
         }
-    }, [ready, warehouseId, tabAllowed, router, buildUrl]);
+    }, [ready, warehouseId, tabAllowed, isAdmin, router, buildUrl]);
 
-    const salesInvoices = useMemo(
-        () => buildSalesInvoices(data.archived),
-        [data.archived],
-    );
+    const salesInvoices = useMemo(() => buildSalesInvoices(data.archived), [data.archived]);
     const paginatedInvoices = useMemo(
         () => paginate(salesInvoices, currentPage, PAGE_SIZE),
         [salesInvoices, currentPage],
     );
 
-    const totalPages =
-        tab === "invoices" ? paginatedInvoices.totalPages : data.totalPages;
+    const totalPages = tab === "invoices" ? paginatedInvoices.totalPages : data.totalPages;
 
     useEffect(() => {
         if (!loading && warehouseId !== null && currentPage > totalPages) {
@@ -249,26 +232,18 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
     const paginatedDeadlines = { items: data.deadlines, totalPages: data.totalPages };
     const paginatedCategories = { items: adminCategories, totalPages: data.totalPages };
     const paginatedTaskArchive = { items: data.taskArchive, totalPages: data.totalPages };
-    const paginatedStaff = { items: warehouseStaff, totalPages: data.totalPages };
 
     const refresh = useCallback(() => {
         void reload(true);
     }, [reload]);
 
-    const refreshOrderTasks = refresh;
-
-    const adminLoading = false;
-    const staffLoading = false;
     const archiveLoading = refreshing;
-    const fetchArchive = refresh;
 
     const handleTaskUpdated = useCallback(
         (updated: ApiWarehouseTask) => {
             setData((current) => ({
                 ...current,
-                tasks: current.tasks.map((task) =>
-                    task.id === updated.id ? updated : task,
-                ),
+                tasks: current.tasks.map((task) => (task.id === updated.id ? updated : task)),
             }));
         },
         [setData],
@@ -285,8 +260,7 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
     }, [goOrReload]);
 
     const handleViewLedger = useCallback(
-        (productId: number) =>
-            router.push(buildUrl("ledger", 1, `&product=${productId}`)),
+        (productId: number) => router.push(buildUrl("ledger", 1, `&product=${productId}`)),
         [router, buildUrl],
     );
 
@@ -299,20 +273,6 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
             void reload(true);
         },
         [setData, reload],
-    );
-
-    const handleUpdateStaff = useCallback(
-        (updated: WarehouseStaff) => {
-            setData((current) => ({
-                ...current,
-                staffList: current.staffList.map((staff) =>
-                    staff.id === updated.id
-                        ? (updated as unknown as typeof staff)
-                        : staff,
-                ),
-            }));
-        },
-        [setData],
     );
 
     const handleStaffSuccess = useCallback(() => goOrReload("staff"), [goOrReload]);
@@ -332,9 +292,7 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
         (updated: AdminCategory) => {
             setData((current) => ({
                 ...current,
-                categories: current.categories.map((c) =>
-                    c.id === updated.id ? updated : c,
-                ),
+                categories: current.categories.map((c) => (c.id === updated.id ? updated : c)),
             }));
         },
         [setData],
@@ -352,71 +310,41 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
 
     const renderEmpty = useCallback(
         (text: string) => (
-            <p
-                className="col-span-full py-16 text-center text-[12.5px]"
-                style={{ color: muted(isDark) }}
-            >
+            <p className="col-span-full py-16 text-center text-[12.5px]" style={{ color: muted(isDark) }}>
                 {text}
             </p>
         ),
         [isDark],
     );
 
+    const pageBg = isDark ? "#0f172a" : "#f8fafc";
+    const cardBorder = isDark ? "rgba(255,255,255,0.06)" : "rgba(15,23,42,0.06)";
+    const iconBg = isDark ? "rgba(99,102,241,0.14)" : "rgba(99,102,241,0.08)";
+
     if (!ready) {
         return (
-            <div
-                dir="rtl"
-                className="flex min-h-screen items-center justify-center"
-                style={{
-                    background: isDark ? "#0f172a" : "#f8fafc",
-                }}
-            >
-                <Loader2
-                    size={24}
-                    className="animate-spin"
-                    style={{ color: "#6366f1" }}
-                />
+            <div dir="rtl" className="flex min-h-screen items-center justify-center" style={{ background: pageBg }}>
+                <Loader2 size={24} className="animate-spin" style={{ color: "#6366f1" }} />
             </div>
         );
     }
 
     if (!limitedAccess) {
         return (
-            <div
-                dir="rtl"
-                className="flex min-h-screen items-center justify-center p-6"
-                style={{
-                    background: isDark ? "#0f172a" : "#f8fafc",
-                }}
-            >
+            <div dir="rtl" className="flex min-h-screen items-center justify-center p-6" style={{ background: pageBg }}>
                 <div
                     className="w-full max-w-md rounded-3xl border p-8 text-center"
-                    style={{
-                        background: cardBg(isDark),
-                        borderColor: isDark
-                            ? "rgba(255,255,255,0.06)"
-                            : "rgba(15,23,42,0.06)",
-                        boxShadow: cardShadow(isDark),
-                    }}
+                    style={{ background: cardBg(isDark), borderColor: cardBorder, boxShadow: cardShadow(isDark) }}
                 >
                     <div
                         className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl"
-                        style={{
-                            background: isDark
-                                ? "rgba(99,102,241,0.12)"
-                                : "rgba(99,102,241,0.08)",
-                        }}
+                        style={{ background: iconBg }}
                     >
-                        <Boxes
-                            size={18}
-                            className="text-indigo-500"
-                        />
+                        <Boxes size={18} className="text-indigo-500" />
                     </div>
-
                     <h2 className="mt-5 text-[14px] font-extrabold text-gray-900 dark:text-white">
                         دسترسی به انبار ندارید
                     </h2>
-
                     <p className="mt-2 text-[11.5px] leading-7 text-gray-500 dark:text-gray-400">
                         حساب کاربری شما امکان مشاهده اطلاعات انبار را ندارد.
                     </p>
@@ -425,37 +353,24 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
         );
     }
 
+    if (warehouseForbidden) return null;
+
     if (warehouseBlocked) {
         return (
-            <div
-                dir="rtl"
-                className="flex min-h-screen items-center justify-center p-6"
-                style={{
-                    background: isDark ? "#0f172a" : "#f8fafc",
-                }}
-            >
+            <div dir="rtl" className="flex min-h-screen items-center justify-center p-6" style={{ background: pageBg }}>
                 <div
                     className="w-full max-w-md rounded-3xl border p-8 text-center"
-                    style={{
-                        background: cardBg(isDark),
-                        borderColor: isDark
-                            ? "rgba(255,255,255,0.06)"
-                            : "rgba(15,23,42,0.06)",
-                        boxShadow: cardShadow(isDark),
-                    }}
+                    style={{ background: cardBg(isDark), borderColor: cardBorder, boxShadow: cardShadow(isDark) }}
                 >
                     <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-red-500/10">
                         <ShieldAlert size={22} className="text-red-500" />
                     </div>
-
                     <h2 className="mt-5 text-[14px] font-extrabold text-gray-900 dark:text-white">
                         این انبار از دسترس خارج است
                     </h2>
-
                     <p className="mt-2 text-[11.5px] leading-7 text-gray-500 dark:text-gray-400">
                         انبار «{warehouse?.name}» توسط مدیر غیرفعال شده است و فعلاً امکان استفاده از آن وجود ندارد.
                     </p>
-
                     <motion.button
                         type="button"
                         whileTap={{ scale: 0.97 }}
@@ -480,36 +395,35 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
         "task-archive": 0,
     };
 
-    const visibleTabs = TABS.filter(
-        ([id]) => hasFullWarehouseAccess || LIMITED_TABS.includes(id),
+    const visibleTabs = TABS.filter(([id]) =>
+        id === "staff" ? isAdmin : hasFullWarehouseAccess || LIMITED_TABS.includes(id),
+    );
+
+    const addButtonClass =
+        "flex h-11 items-center justify-center gap-2 rounded-full bg-indigo-600 px-5 text-[13px] font-bold text-white transition-colors hover:bg-indigo-500";
+    const sectionHeaderClass = "flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between";
+    const titleClass = "text-[14px] font-extrabold text-gray-900 dark:text-white";
+    const subtitleClass = "mt-1 text-[11.5px] text-gray-500 dark:text-gray-400";
+    const spinner = (
+        <div className="flex items-center justify-center py-20">
+            <Loader2 size={22} className="animate-spin" style={{ color: "#6366f1" }} />
+        </div>
     );
 
     return (
-        <div
-            dir="rtl"
-            className="flex min-h-screen flex-col gap-6 p-6"
-        >
+        <div dir="rtl" className="flex min-h-screen flex-col gap-6 p-6">
             <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-start gap-3">
                     <div
                         className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl"
-                        style={{
-                            background: isDark
-                                ? "rgba(99,102,241,0.14)"
-                                : "rgba(99,102,241,0.08)",
-                        }}
+                        style={{ background: iconBg }}
                     >
-                        <Boxes
-                            size={18}
-                            className="text-indigo-500"
-                        />
+                        <Boxes size={18} className="text-indigo-500" />
                     </div>
-
                     <div>
                         <h1 className="text-[15px] font-extrabold text-gray-900 dark:text-white">
                             {warehouse ? `انبار ${warehouse.name}` : "انبار"}
                         </h1>
-
                         <p className="mt-0.5 text-[11.5px] text-gray-500 dark:text-gray-400">
                             مدیریت وظایف، محصولات، موجودی و فرآیندهای ورود و خروج کالا
                         </p>
@@ -548,10 +462,7 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
                         disabled={refreshing}
                         className="flex h-10 items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-4 text-[12.5px] font-bold text-white transition-colors hover:bg-indigo-700 disabled:opacity-50"
                     >
-                        <Loader2
-                            size={15}
-                            className={refreshing ? "animate-spin" : ""}
-                        />
+                        <Loader2 size={15} className={refreshing ? "animate-spin" : ""} />
                         بروزرسانی
                     </motion.button>
                 </div>
@@ -566,16 +477,11 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
 
             <div
                 className="flex flex-wrap gap-2 rounded-2xl p-1.5"
-                style={{
-                    background: isDark
-                        ? "rgba(255,255,255,.04)"
-                        : "rgba(15,23,42,.04)",
-                }}
+                style={{ background: isDark ? "rgba(255,255,255,.04)" : "rgba(15,23,42,.04)" }}
             >
                 {visibleTabs.map(([id, label, Icon]) => {
                     const active = tab === id;
                     const count = counts[id] ?? 0;
-
                     return (
                         <button
                             key={id}
@@ -583,37 +489,26 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
                             onClick={() => goToTab(id)}
                             className="relative flex items-center gap-1.5 rounded-xl px-4 py-2 text-[12px] font-extrabold"
                             style={{
-                                background: active
-                                    ? "linear-gradient(135deg,#6366f1,#8b5cf6)"
-                                    : "transparent",
-                                color: active
-                                    ? "#fff"
-                                    : isDark
-                                        ? "#94a3b8"
-                                        : "#475569",
-                                boxShadow: active
-                                    ? "0 4px 12px rgba(99,102,241,.25)"
-                                    : "none",
+                                background: active ? "linear-gradient(135deg,#6366f1,#8b5cf6)" : "transparent",
+                                color: active ? "#fff" : isDark ? "#94a3b8" : "#475569",
+                                boxShadow: active ? "0 4px 12px rgba(99,102,241,.25)" : "none",
                             }}
                         >
                             <Icon size={14} />
                             {label}
-
                             {count > 0 && (
                                 <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[9px] text-white">
                                     {count}
                                 </span>
                             )}
-
-                            {id === "tasks" &&
-                                pendingQualityTasks.length > 0 && (
-                                    <span
-                                        className="flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[9px] text-white"
-                                        style={{ background: "#8b5cf6" }}
-                                    >
-                                        {pendingQualityTasks.length}
-                                    </span>
-                                )}
+                            {id === "tasks" && pendingQualityTasks.length > 0 && (
+                                <span
+                                    className="flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[9px] text-white"
+                                    style={{ background: "#8b5cf6" }}
+                                >
+                                    {pendingQualityTasks.length}
+                                </span>
+                            )}
                         </button>
                     );
                 })}
@@ -623,9 +518,7 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
                 <div
                     className="rounded-2xl border px-4 py-3 text-[12px] font-bold"
                     style={{
-                        background: isDark
-                            ? "rgba(239,68,68,.08)"
-                            : "rgba(239,68,68,.05)",
+                        background: isDark ? "rgba(239,68,68,.08)" : "rgba(239,68,68,.05)",
                         borderColor: "rgba(239,68,68,.15)",
                         color: "#ef4444",
                     }}
@@ -635,13 +528,7 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
             )}
 
             {loading ? (
-                <div className="flex items-center justify-center py-20">
-                    <Loader2
-                        size={22}
-                        className="animate-spin"
-                        style={{ color: "#6366f1" }}
-                    />
-                </div>
+                spinner
             ) : (
                 <AnimatePresence mode="wait">
                     <motion.div
@@ -651,171 +538,136 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
                         exit={{ opacity: 0, y: -8 }}
                         transition={{ duration: 0.2 }}
                     >
-                        {tab === "overview" &&
-                            hasFullWarehouseAccess && (
-                                <div className="space-y-6">
-                                    <WarehouseOverview
-                                        products={products}
-                                        stockInfos={stockInfos}
-                                        transactions={transactions}
-                                        tasks={taskItems}
-                                        orderTasks={orderTasks}
-                                    />
+                        {tab === "overview" && hasFullWarehouseAccess && (
+                            <div className="space-y-6">
+                                <WarehouseOverview
+                                    products={products}
+                                    stockInfos={stockInfos}
+                                    transactions={transactions}
+                                    tasks={taskItems}
+                                    orderTasks={orderTasks}
+                                />
 
-                                    {pendingQualityTasks.length > 0 && (
-                                        <div
-                                            className="rounded-3xl border p-4"
-                                            style={{
-                                                background: isDark
-                                                    ? "rgba(139,92,246,.06)"
-                                                    : "rgba(139,92,246,.04)",
-                                                borderColor:
-                                                    "rgba(139,92,246,.12)",
-                                            }}
-                                        >
-                                            <div className="flex items-center gap-3">
-                                                <div
-                                                    className="flex h-10 w-10 items-center justify-center rounded-xl"
-                                                    style={{
-                                                        background:
-                                                            "rgba(139,92,246,.1)",
-                                                        color: "#8b5cf6",
-                                                    }}
-                                                >
-                                                    <ShieldCheck size={18} />
-                                                </div>
-
-                                                <div>
-                                                    <p className="text-[12px] font-extrabold text-gray-900 dark:text-white">
-                                                        وظایف کنترل کیفیت
-                                                    </p>
-
-                                                    <p className="mt-1 text-[10.5px] text-gray-500 dark:text-gray-400">
-                                                        {pendingQualityTasks.length}{" "}
-                                                        وظیفه کنترل کیفیت در انتظار انجام است
-                                                    </p>
-                                                </div>
+                                {pendingQualityTasks.length > 0 && (
+                                    <div
+                                        className="rounded-3xl border p-4"
+                                        style={{
+                                            background: isDark ? "rgba(139,92,246,.06)" : "rgba(139,92,246,.04)",
+                                            borderColor: "rgba(139,92,246,.12)",
+                                        }}
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            <div
+                                                className="flex h-10 w-10 items-center justify-center rounded-xl"
+                                                style={{ background: "rgba(139,92,246,.1)", color: "#8b5cf6" }}
+                                            >
+                                                <ShieldCheck size={18} />
+                                            </div>
+                                            <div>
+                                                <p className="text-[12px] font-extrabold text-gray-900 dark:text-white">
+                                                    وظایف کنترل کیفیت
+                                                </p>
+                                                <p className="mt-1 text-[10.5px] text-gray-500 dark:text-gray-400">
+                                                    {pendingQualityTasks.length} وظیفه کنترل کیفیت در انتظار انجام است
+                                                </p>
                                             </div>
                                         </div>
-                                    )}
-                                </div>
-                            )}
+                                    </div>
+                                )}
+                            </div>
+                        )}
 
-                        {tab === "products" &&
-                            hasFullWarehouseAccess && (
-                                <div className="space-y-5">
-                                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                                        <div>
-                                            <h2 className="text-[14px] font-extrabold text-gray-900 dark:text-white">
-                                                محصولات انبار
-                                            </h2>
+                        {tab === "products" && hasFullWarehouseAccess && (
+                            <div className="space-y-5">
+                                <div className={sectionHeaderClass}>
+                                    <div>
+                                        <h2 className={titleClass}>محصولات انبار</h2>
+                                        <p className={subtitleClass}>مدیریت محصولات و عملیات مربوط به موجودی</p>
+                                    </div>
 
-                                            <p className="mt-1 text-[11.5px] text-gray-500 dark:text-gray-400">
-                                                مدیریت محصولات و عملیات مربوط به موجودی
-                                            </p>
-                                        </div>
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        {!isAdmin && myStaff && (
+                                            <motion.button
+                                                type="button"
+                                                whileTap={{ scale: 0.97 }}
+                                                onClick={() => setBulkImportOpen(true)}
+                                                className="flex h-11 items-center justify-center gap-2 rounded-full bg-emerald-600 px-5 text-[13px] font-bold text-white transition-colors hover:bg-emerald-500"
+                                            >
+                                                <UploadCloud size={16} />
+                                                ثبت گروهی محصولات
+                                            </motion.button>
+                                        )}
 
                                         <motion.button
                                             type="button"
                                             whileTap={{ scale: 0.97 }}
-                                            onClick={() =>
-                                                setProductWizardOpen(true)
-                                            }
-                                            className="flex h-11 items-center justify-center gap-2 rounded-full bg-indigo-600 px-5 text-[13px] font-bold text-white transition-colors hover:bg-indigo-500"
+                                            onClick={() => setProductWizardOpen(true)}
+                                            className={addButtonClass}
                                         >
                                             <PackagePlus size={16} />
                                             افزودن محصول
                                         </motion.button>
                                     </div>
-
-                                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                                        {paginatedProducts.items.length ? (
-                                            paginatedProducts.items.map(
-                                                (product, index) => (
-                                                    <WarehouseEmployeeProductCard
-                                                        key={product.id}
-                                                        product={product}
-                                                        stockInfo={
-                                                            stockByProduct.get(
-                                                                product.id,
-                                                            ) ?? null
-                                                        }
-                                                        index={index}
-                                                        categories={categories}
-                                                        staff={
-                                                            myStaff
-                                                                ? [myStaff]
-                                                                : []
-                                                        }
-                                                        performedById={
-                                                            myStaff?.id ?? null
-                                                        }
-                                                        warehouseId={warehouseId}
-                                                        onUpdated={refresh}
-                                                        onStockChanged={refresh}
-                                                        onDeleted={refresh}
-                                                    />
-                                                ),
-                                            )
-                                        ) : (
-                                            renderEmpty(
-                                                "محصولی برای نمایش وجود ندارد",
-                                            )
-                                        )}
-                                    </div>
-
-                                    <Pagination
-                                        currentPage={currentPage}
-                                        totalPages={
-                                            paginatedProducts.totalPages
-                                        }
-                                        onPageChange={goToPage}
-                                        isDark={isDark}
-                                    />
                                 </div>
-                            )}
+
+                                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                                    {paginatedProducts.items.length
+                                        ? paginatedProducts.items.map((product, index) => (
+                                            <WarehouseEmployeeProductCard
+                                                key={product.id}
+                                                product={product}
+                                                stockInfo={stockByProduct.get(product.id) ?? null}
+                                                index={index}
+                                                categories={categories}
+                                                staff={myStaff ? [myStaff] : []}
+                                                performedById={myStaff?.id ?? null}
+                                                warehouseId={warehouseId}
+                                                onUpdated={refresh}
+                                                onStockChanged={refresh}
+                                                onDeleted={refresh}
+                                            />
+                                        ))
+                                        : renderEmpty("محصولی برای نمایش وجود ندارد")}
+                                </div>
+
+                                <Pagination
+                                    currentPage={currentPage}
+                                    totalPages={paginatedProducts.totalPages}
+                                    onPageChange={goToPage}
+                                    isDark={isDark}
+                                />
+                            </div>
+                        )}
 
                         {tab === "tasks" && (
                             <div className="space-y-5">
-                                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                                <div className={sectionHeaderClass}>
                                     <div>
-                                        <h2 className="text-[14px] font-extrabold text-gray-900 dark:text-white">
-                                            وظایف انبار
-                                        </h2>
-
-                                        <p className="mt-1 text-[11.5px] text-gray-500 dark:text-gray-400">
-                                            وظایف دریافت کالا و درخواست‌های کنترل کیفیت
-                                        </p>
+                                        <h2 className={titleClass}>وظایف انبار</h2>
+                                        <p className={subtitleClass}>وظایف دریافت کالا و درخواست‌های کنترل کیفیت</p>
                                     </div>
 
                                     <div className="flex flex-wrap items-center gap-2">
-                                        {hasFullWarehouseAccess &&
-                                            qualityTasks.length > 0 && (
-                                                <div
-                                                    className="flex items-center gap-2 rounded-xl px-3 py-2"
-                                                    style={{
-                                                        background: isDark
-                                                            ? "rgba(139,92,246,.08)"
-                                                            : "rgba(139,92,246,.06)",
-                                                        color: "#8b5cf6",
-                                                    }}
-                                                >
-                                                    <ShieldCheck size={15} />
-
-                                                    <span className="text-[10.5px] font-extrabold">
-                                                        {qualityTasks.length}{" "}
-                                                        وظیفه کنترل کیفیت
-                                                    </span>
-                                                </div>
-                                            )}
+                                        {hasFullWarehouseAccess && qualityTasks.length > 0 && (
+                                            <div
+                                                className="flex items-center gap-2 rounded-xl px-3 py-2"
+                                                style={{
+                                                    background: isDark ? "rgba(139,92,246,.08)" : "rgba(139,92,246,.06)",
+                                                    color: "#8b5cf6",
+                                                }}
+                                            >
+                                                <ShieldCheck size={15} />
+                                                <span className="text-[10.5px] font-extrabold">
+                                                    {qualityTasks.length} وظیفه کنترل کیفیت
+                                                </span>
+                                            </div>
+                                        )}
 
                                         <motion.button
                                             type="button"
                                             whileTap={{ scale: 0.97 }}
-                                            onClick={() =>
-                                                setCreateOrderTaskOpen(true)
-                                            }
-                                            className="flex h-11 items-center justify-center gap-2 rounded-full bg-indigo-600 px-5 text-[13px] font-bold text-white transition-colors hover:bg-indigo-500"
+                                            onClick={() => setCreateOrderTaskOpen(true)}
+                                            className={addButtonClass}
                                         >
                                             <Plus size={15} />
                                             ثبت وظیفه برای انبار
@@ -824,27 +676,17 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
                                 </div>
 
                                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                                    {paginatedTasks.items.length ? (
-                                        paginatedTasks.items.map(
-                                            (task, index) => (
-                                                <WarehouseEmployeeTaskCard
-                                                    key={task.id}
-                                                    task={task}
-                                                    index={index}
-                                                    employeeId={
-                                                        taskEmployeeId
-                                                    }
-                                                    onUpdated={
-                                                        handleTaskUpdated
-                                                    }
-                                                />
-                                            ),
-                                        )
-                                    ) : (
-                                        renderEmpty(
-                                            "وظیفه‌ای برای شما وجود ندارد",
-                                        )
-                                    )}
+                                    {paginatedTasks.items.length
+                                        ? paginatedTasks.items.map((task, index) => (
+                                            <WarehouseEmployeeTaskCard
+                                                key={task.id}
+                                                task={task}
+                                                index={index}
+                                                employeeId={taskEmployeeId}
+                                                onUpdated={handleTaskUpdated}
+                                            />
+                                        ))
+                                        : renderEmpty("وظیفه‌ای برای شما وجود ندارد")}
                                 </div>
 
                                 <Pagination
@@ -859,33 +701,19 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
                         {tab === "stock" && (
                             <>
                                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                                    {paginatedStock.items.length ? (
-                                        paginatedStock.items.map(
-                                            (stock, index) => (
-                                                <StockCard
-                                                    key={stock.id}
-                                                    stock={stock}
-                                                    index={index}
-                                                    isDark={isDark}
-                                                    productNames={productNames}
-                                                    onViewLedger={
-                                                        hasFullWarehouseAccess
-                                                            ? handleViewLedger
-                                                            : undefined
-                                                    }
-                                                    onEditLimits={
-                                                        hasFullWarehouseAccess
-                                                            ? setLimitsStock
-                                                            : undefined
-                                                    }
-                                                />
-                                            ),
-                                        )
-                                    ) : (
-                                        renderEmpty(
-                                            "موجودی‌ای برای نمایش وجود ندارد",
-                                        )
-                                    )}
+                                    {paginatedStock.items.length
+                                        ? paginatedStock.items.map((stock, index) => (
+                                            <StockCard
+                                                key={stock.id}
+                                                stock={stock}
+                                                index={index}
+                                                isDark={isDark}
+                                                productNames={productNames}
+                                                onViewLedger={hasFullWarehouseAccess ? handleViewLedger : undefined}
+                                                onEditLimits={hasFullWarehouseAccess ? setLimitsStock : undefined}
+                                            />
+                                        ))
+                                        : renderEmpty("موجودی‌ای برای نمایش وجود ندارد")}
                                 </div>
 
                                 <Pagination
@@ -897,66 +725,45 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
                             </>
                         )}
 
-                        {tab === "transactions" &&
-                            hasFullWarehouseAccess && (
-                                <>
-                                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                                        {paginatedTransactions.items.length ? (
-                                            paginatedTransactions.items.map(
-                                                (transaction) => (
-                                                    <WarehouseEmployeeTransactionCard
-                                                        key={transaction.id}
-                                                        transaction={transaction}
-                                                    />
-                                                ),
-                                            )
-                                        ) : (
-                                            renderEmpty(
-                                                "تراکنشی برای نمایش وجود ندارد",
-                                            )
-                                        )}
-                                    </div>
+                        {tab === "transactions" && hasFullWarehouseAccess && (
+                            <>
+                                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                                    {paginatedTransactions.items.length
+                                        ? paginatedTransactions.items.map((transaction) => (
+                                            <WarehouseEmployeeTransactionCard
+                                                key={transaction.id}
+                                                transaction={transaction}
+                                            />
+                                        ))
+                                        : renderEmpty("تراکنشی برای نمایش وجود ندارد")}
+                                </div>
 
-                                    <Pagination
-                                        currentPage={currentPage}
-                                        totalPages={
-                                            paginatedTransactions.totalPages
-                                        }
-                                        onPageChange={goToPage}
-                                        isDark={isDark}
-                                    />
-                                </>
-                            )}
+                                <Pagination
+                                    currentPage={currentPage}
+                                    totalPages={paginatedTransactions.totalPages}
+                                    onPageChange={goToPage}
+                                    isDark={isDark}
+                                />
+                            </>
+                        )}
 
                         {tab === "orders" && (
                             <>
                                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                                    {paginatedOrders.items.length ? (
-                                        paginatedOrders.items.map(
-                                            (orderTask, index) => (
-                                                <WarehouseEmployeeOrderTaskCard
-                                                    key={orderTask.id}
-                                                    orderTask={orderTask}
-                                                    products={products}
-                                                    index={index}
-                                                    isStaff={!!myStaff}
-                                                    staffId={
-                                                        myStaff?.id ?? null
-                                                    }
-                                                    canChangeStatus={
-                                                        hasFullWarehouseAccess
-                                                    }
-                                                    onRefresh={
-                                                        refreshOrderTasks
-                                                    }
-                                                />
-                                            ),
-                                        )
-                                    ) : (
-                                        renderEmpty(
-                                            "درخواست داخلی‌ای برای انبار ثبت نشده است",
-                                        )
-                                    )}
+                                    {paginatedOrders.items.length
+                                        ? paginatedOrders.items.map((orderTask, index) => (
+                                            <WarehouseEmployeeOrderTaskCard
+                                                key={orderTask.id}
+                                                orderTask={orderTask}
+                                                products={products}
+                                                index={index}
+                                                isStaff={!!myStaff}
+                                                staffId={myStaff?.id ?? null}
+                                                canChangeStatus={hasFullWarehouseAccess}
+                                                onRefresh={refresh}
+                                            />
+                                        ))
+                                        : renderEmpty("درخواست داخلی‌ای برای انبار ثبت نشده است")}
                                 </div>
 
                                 <Pagination
@@ -968,349 +775,202 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
                             </>
                         )}
 
-                        {tab === "deadlines" &&
-                            hasFullWarehouseAccess && (
-                                <>
-                                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                                        {paginatedDeadlines.items.length ? (
-                                            paginatedDeadlines.items.map(
-                                                (deadline, index) => {
-                                                    const order =
-                                                        orderTasks.find(
-                                                            (item) =>
-                                                                item.id ===
-                                                                deadline.order_task,
-                                                        );
+                        {tab === "deadlines" && hasFullWarehouseAccess && (
+                            <>
+                                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                                    {paginatedDeadlines.items.length
+                                        ? paginatedDeadlines.items.map((deadline, index) => {
+                                            const order = orderTasks.find((item) => item.id === deadline.order_task);
+                                            return (
+                                                <DeadlineCard
+                                                    key={deadline.id}
+                                                    deadline={deadline}
+                                                    orderTitle={
+                                                        order
+                                                            ? getOrderTaskTitle(order)
+                                                            : `سفارش #${deadline.order_task ?? "—"}`
+                                                    }
+                                                    index={index}
+                                                    isDark={isDark}
+                                                />
+                                            );
+                                        })
+                                        : renderEmpty("مهلتی برای نمایش وجود ندارد")}
+                                </div>
 
-                                                    return (
-                                                        <DeadlineCard
-                                                            key={deadline.id}
-                                                            deadline={deadline}
-                                                            orderTitle={
-                                                                order
-                                                                    ? getOrderTaskTitle(
-                                                                        order,
-                                                                    )
-                                                                    : `سفارش #${deadline.order_task ?? "—"}`
-                                                            }
-                                                            index={index}
-                                                            isDark={isDark}
-                                                        />
-                                                    );
-                                                },
-                                            )
-                                        ) : (
-                                            renderEmpty(
-                                                "مهلتی برای نمایش وجود ندارد",
-                                            )
-                                        )}
-                                    </div>
-
-                                    <Pagination
-                                        currentPage={currentPage}
-                                        totalPages={
-                                            paginatedDeadlines.totalPages
-                                        }
-                                        onPageChange={goToPage}
-                                        isDark={isDark}
-                                    />
-                                </>
-                            )}
-
-                        {tab === "ledger" &&
-                            hasFullWarehouseAccess && (
-                                <WarehouseEmployeeStockLedger
-                                    products={products}
-                                    stockInfos={stockInfos}
-                                    transactions={transactions}
-                                    defaultProductId={ledgerProductId}
+                                <Pagination
+                                    currentPage={currentPage}
+                                    totalPages={paginatedDeadlines.totalPages}
+                                    onPageChange={goToPage}
+                                    isDark={isDark}
                                 />
-                            )}
+                            </>
+                        )}
 
-                        {tab === "categories" &&
-                            hasFullWarehouseAccess && (
-                                <div className="space-y-5">
-                                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                                        <div>
-                                            <h2 className="text-[14px] font-extrabold text-gray-900 dark:text-white">
-                                                دسته‌بندی محصولات
-                                            </h2>
+                        {tab === "ledger" && hasFullWarehouseAccess && (
+                            <WarehouseEmployeeStockLedger
+                                products={products}
+                                stockInfos={stockInfos}
+                                transactions={transactions}
+                                defaultProductId={ledgerProductId}
+                            />
+                        )}
 
-                                            <p className="mt-1 text-[11.5px] text-gray-500 dark:text-gray-400">
-                                                دسته‌بندی‌های موجود در انبار
-                                            </p>
-                                        </div>
-
-                                        <motion.button
-                                            type="button"
-                                            whileTap={{ scale: 0.97 }}
-                                            onClick={() =>
-                                                setShowCategoryModal(true)
-                                            }
-                                            className="flex h-11 items-center justify-center gap-2 rounded-full bg-indigo-600 px-5 text-[13px] font-bold text-white transition-colors hover:bg-indigo-500"
-                                        >
-                                            <Package size={16} />
-                                            افزودن دسته‌بندی
-                                        </motion.button>
-                                    </div>
-
-                                    {adminLoading ? (
-                                        <div className="flex items-center justify-center py-20">
-                                            <Loader2
-                                                size={22}
-                                                className="animate-spin"
-                                                style={{
-                                                    color: "#6366f1",
-                                                }}
-                                            />
-                                        </div>
-                                    ) : (
-                                        <>
-                                            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                                                {paginatedCategories.items.length ? (
-                                                    paginatedCategories.items.map(
-                                                        (
-                                                            category,
-                                                            index,
-                                                        ) => (
-                                                            <WarehouseCategoryCard
-                                                                key={
-                                                                    category.id
-                                                                }
-                                                                category={
-                                                                    category
-                                                                }
-                                                                index={
-                                                                    index
-                                                                }
-                                                                onDelete={
-                                                                    handleDeleteCategory
-                                                                }
-                                                                onUpdated={
-                                                                    handleUpdateCategory
-                                                                }
-                                                            />
-                                                        ),
-                                                    )
-                                                ) : (
-                                                    renderEmpty(
-                                                        "هنوز دسته‌بندی ثبت نشده",
-                                                    )
-                                                )}
-                                            </div>
-
-                                            <Pagination
-                                                currentPage={currentPage}
-                                                totalPages={
-                                                    paginatedCategories.totalPages
-                                                }
-                                                onPageChange={goToPage}
-                                                isDark={isDark}
-                                            />
-                                        </>
-                                    )}
-                                </div>
-                            )}
-
-                        {tab === "staff" &&
-                            hasFullWarehouseAccess && (
-                                <div className="space-y-5">
-                                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                                        <div>
-                                            <h2 className="text-[14px] font-extrabold text-gray-900 dark:text-white">
-                                                انباردارها
-                                            </h2>
-                                            <p className="mt-1 text-[11.5px] text-gray-500 dark:text-gray-400">
-                                                مدیریت انباردارهای ثبت‌شده در سیستم
-                                            </p>
-                                        </div>
-                                        <motion.button
-                                            type="button"
-                                            whileTap={{ scale: 0.97 }}
-                                            onClick={() => setShowAddStaffModal(true)}
-                                            className="flex items-center justify-center gap-2 rounded-full bg-blue-600 px-4 py-2.5 text-[11.5px] font-bold text-white transition-colors hover:bg-blue-500"
-                                        >
-                                            <Plus size={15} />
-                                            افزودن انباردار
-                                        </motion.button>
-                                    </div>
-
-                                    {staffLoading ? (
-                                        <div className="flex items-center justify-center py-20">
-                                            <Loader2
-                                                size={22}
-                                                className="animate-spin"
-                                                style={{ color: "#6366f1" }}
-                                            />
-                                        </div>
-                                    ) : (
-                                        <>
-                                            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                                                {paginatedStaff.items.length ? (
-                                                    paginatedStaff.items.map((staff, index) => (
-                                                        <WarehouseStaffCard
-                                                            key={staff.id}
-                                                            staff={staff}
-                                                            index={index}
-                                                            onDelete={handleDeleteStaff}
-                                                            onUpdated={handleUpdateStaff}
-                                                        />
-                                                    ))
-                                                ) : (
-                                                    renderEmpty("هنوز انبارداری ثبت نشده است")
-                                                )}
-                                            </div>
-
-                                            <Pagination
-                                                currentPage={currentPage}
-                                                totalPages={paginatedStaff.totalPages}
-                                                onPageChange={goToPage}
-                                                isDark={isDark}
-                                            />
-                                        </>
-                                    )}
-                                </div>
-                            )}
-
-                        {tab === "task-archive" &&
-                            hasFullWarehouseAccess && (
-                                <div className="space-y-5">
+                        {tab === "categories" && hasFullWarehouseAccess && (
+                            <div className="space-y-5">
+                                <div className={sectionHeaderClass}>
                                     <div>
-                                        <h2 className="text-[14px] font-extrabold text-gray-900 dark:text-white">
-                                            بایگانی وظایف انبار
-                                        </h2>
+                                        <h2 className={titleClass}>دسته‌بندی محصولات</h2>
+                                        <p className={subtitleClass}>دسته‌بندی‌های موجود در انبار</p>
+                                    </div>
 
-                                        <p className="mt-1 text-[11.5px] text-gray-500 dark:text-gray-400">
-                                            وظایف دریافت کالا که تکمیل و بایگانی شده‌اند
+                                    <motion.button
+                                        type="button"
+                                        whileTap={{ scale: 0.97 }}
+                                        onClick={() => setShowCategoryModal(true)}
+                                        className={addButtonClass}
+                                    >
+                                        <Package size={16} />
+                                        افزودن دسته‌بندی
+                                    </motion.button>
+                                </div>
+
+                                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                                    {paginatedCategories.items.length
+                                        ? paginatedCategories.items.map((category, index) => (
+                                            <WarehouseCategoryCard
+                                                key={category.id}
+                                                category={category}
+                                                index={index}
+                                                onDelete={handleDeleteCategory}
+                                                onUpdated={handleUpdateCategory}
+                                            />
+                                        ))
+                                        : renderEmpty("هنوز دسته‌بندی ثبت نشده")}
+                                </div>
+
+                                <Pagination
+                                    currentPage={currentPage}
+                                    totalPages={paginatedCategories.totalPages}
+                                    onPageChange={goToPage}
+                                    isDark={isDark}
+                                />
+                            </div>
+                        )}
+
+                        {tab === "staff" && isAdmin && (
+                            <div className="space-y-4">
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <h2 className={titleClass}>انباردارها</h2>
+                                        <p className="mt-0.5 text-[11px] text-gray-400">
+                                            مدیریت انبارداران و دسترسی‌های این انبار
                                         </p>
                                     </div>
-
-                                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                                        {paginatedTaskArchive.items.length ? (
-                                            paginatedTaskArchive.items.map((item, index) => (
-                                                <WarehouseTaskArchiveCard
-                                                    key={item.id}
-                                                    item={item}
-                                                    index={index}
-                                                />
-                                            ))
-                                        ) : (
-                                            renderEmpty("وظیفه‌ی بایگانی‌شده‌ای وجود ندارد")
-                                        )}
-                                    </div>
-
-                                    <Pagination
-                                        currentPage={currentPage}
-                                        totalPages={paginatedTaskArchive.totalPages}
-                                        onPageChange={goToPage}
-                                        isDark={isDark}
-                                    />
+                                    <motion.button
+                                        type="button"
+                                        whileTap={{ scale: 0.97 }}
+                                        onClick={() => setShowAddStaffModal(true)}
+                                        className="flex items-center gap-2 rounded-2xl bg-indigo-600 px-4 py-2.5 text-[12px] font-bold text-white shadow-md shadow-indigo-500/20 transition-colors hover:bg-indigo-500"
+                                    >
+                                        <UserPlus size={14} />
+                                        افزودن انباردار
+                                    </motion.button>
                                 </div>
-                            )}
 
-                        {tab === "invoices" &&
-                            hasFullWarehouseAccess && (
-                                <div className="space-y-5">
-                                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                                        <div className="flex items-start gap-3">
-                                            <div
-                                                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl"
-                                                style={{
-                                                    background: isDark
-                                                        ? "rgba(99,102,241,0.14)"
-                                                        : "rgba(99,102,241,0.08)",
-                                                }}
-                                            >
-                                                <FileText
-                                                    size={18}
-                                                    className="text-indigo-500"
-                                                />
-                                            </div>
+                                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                                    {(Array.isArray(warehouseStaff) ? warehouseStaff : []).map((staffMember, idx) => (
+                                        <WarehouseStaffCard
+                                            key={staffMember.id}
+                                            staff={staffMember}
+                                            index={idx}
+                                            onDelete={handleDeleteStaff}
+                                            onUpdated={refresh}
+                                        />
+                                    ))}
+                                </div>
+                            </div>
+                        )}
 
-                                            <div>
-                                                <h2 className="text-[14px] font-extrabold text-gray-900 dark:text-white">
-                                                    فاکتورهای فروش
-                                                </h2>
+                        {tab === "task-archive" && hasFullWarehouseAccess && (
+                            <div className="space-y-5">
+                                <div>
+                                    <h2 className={titleClass}>بایگانی وظایف انبار</h2>
+                                    <p className={subtitleClass}>وظایف دریافت کالا که تکمیل و بایگانی شده‌اند</p>
+                                </div>
 
-                                                <p className="mt-1 text-[11.5px] text-gray-500 dark:text-gray-400">
-                                                    فاکتورهای صادر شده بر اساس سفارش‌های آرشیو شده
-                                                </p>
-                                            </div>
-                                        </div>
+                                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                                    {paginatedTaskArchive.items.length
+                                        ? paginatedTaskArchive.items.map((item, index) => (
+                                            <WarehouseTaskArchiveCard key={item.id} item={item} index={index} />
+                                        ))
+                                        : renderEmpty("وظیفه‌ی بایگانی‌شده‌ای وجود ندارد")}
+                                </div>
 
-                                        <motion.button
-                                            type="button"
-                                            whileTap={{ scale: 0.97 }}
-                                            onClick={() => fetchArchive()}
-                                            disabled={archiveLoading}
-                                            className="flex h-10 items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-4 text-[12.5px] font-bold text-white transition-colors hover:bg-indigo-700 disabled:opacity-50"
+                                <Pagination
+                                    currentPage={currentPage}
+                                    totalPages={paginatedTaskArchive.totalPages}
+                                    onPageChange={goToPage}
+                                    isDark={isDark}
+                                />
+                            </div>
+                        )}
+
+                        {tab === "invoices" && hasFullWarehouseAccess && (
+                            <div className="space-y-5">
+                                <div className={sectionHeaderClass}>
+                                    <div className="flex items-start gap-3">
+                                        <div
+                                            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl"
+                                            style={{ background: iconBg }}
                                         >
-                                            <Loader2
-                                                size={14}
-                                                className={
-                                                    archiveLoading
-                                                        ? "animate-spin"
-                                                        : ""
-                                                }
-                                            />
-                                            بروزرسانی
-                                        </motion.button>
+                                            <FileText size={18} className="text-indigo-500" />
+                                        </div>
+                                        <div>
+                                            <h2 className={titleClass}>فاکتورهای فروش</h2>
+                                            <p className={subtitleClass}>فاکتورهای صادر شده بر اساس سفارش‌های آرشیو شده</p>
+                                        </div>
                                     </div>
 
-                                    {archiveLoading ? (
-                                        <div className="flex items-center justify-center py-20">
-                                            <Loader2
-                                                size={22}
-                                                className="animate-spin"
-                                                style={{
-                                                    color: "#6366f1",
-                                                }}
-                                            />
-                                        </div>
-                                    ) : (
-                                        <>
-                                            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                                                {paginatedInvoices.items.length ? (
-                                                    paginatedInvoices.items.map(
-                                                        (
-                                                            invoice: SalesInvoice,
-                                                            index: number,
-                                                        ) => (
-                                                            <OrderInvoiceCard
-                                                                key={
-                                                                    invoice.orderTaskId
-                                                                }
-                                                                invoice={
-                                                                    invoice
-                                                                }
-                                                                index={
-                                                                    index
-                                                                }
-                                                                onOpen={
-                                                                    setSelectedInvoice
-                                                                }
-                                                            />
-                                                        ),
-                                                    )
-                                                ) : (
-                                                    renderEmpty(
-                                                        "فاکتوری برای نمایش وجود ندارد",
-                                                    )
-                                                )}
-                                            </div>
-
-                                            <Pagination
-                                                currentPage={currentPage}
-                                                totalPages={
-                                                    paginatedInvoices.totalPages
-                                                }
-                                                onPageChange={goToPage}
-                                                isDark={isDark}
-                                            />
-                                        </>
-                                    )}
+                                    <motion.button
+                                        type="button"
+                                        whileTap={{ scale: 0.97 }}
+                                        onClick={refresh}
+                                        disabled={archiveLoading}
+                                        className="flex h-10 items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-4 text-[12.5px] font-bold text-white transition-colors hover:bg-indigo-700 disabled:opacity-50"
+                                    >
+                                        <Loader2 size={14} className={archiveLoading ? "animate-spin" : ""} />
+                                        بروزرسانی
+                                    </motion.button>
                                 </div>
-                            )}
+
+                                {archiveLoading ? (
+                                    spinner
+                                ) : (
+                                    <>
+                                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                                            {paginatedInvoices.items.length
+                                                ? paginatedInvoices.items.map((invoice: SalesInvoice, index: number) => (
+                                                    <OrderInvoiceCard
+                                                        key={invoice.orderTaskId}
+                                                        invoice={invoice}
+                                                        index={index}
+                                                        onOpen={setSelectedInvoice}
+                                                    />
+                                                ))
+                                                : renderEmpty("فاکتوری برای نمایش وجود ندارد")}
+                                        </div>
+
+                                        <Pagination
+                                            currentPage={currentPage}
+                                            totalPages={paginatedInvoices.totalPages}
+                                            onPageChange={goToPage}
+                                            isDark={isDark}
+                                        />
+                                    </>
+                                )}
+                            </div>
+                        )}
                     </motion.div>
                 </AnimatePresence>
             )}
@@ -1334,9 +994,7 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
             <CreateOrderTaskModal
                 warehouseId={warehouseId}
                 isOpen={createOrderTaskOpen}
-                onClose={() =>
-                    setCreateOrderTaskOpen(false)
-                }
+                onClose={() => setCreateOrderTaskOpen(false)}
                 onCreated={handleOrderTaskCreated}
             />
 
@@ -1352,13 +1010,20 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
                         onCreated={handleProductCreated}
                     />
 
+                    {!isAdmin && myStaff && (
+                        <WarehouseEmployeeBulkImportModal
+                            isOpen={bulkImportOpen}
+                            onClose={() => setBulkImportOpen(false)}
+                            performedById={myStaff.id}
+                            onCompleted={refresh}
+                        />
+                    )}
+
                     <AnimatePresence>
                         {showCategoryModal && (
                             <AddCategoryModal
                                 isOpen={showCategoryModal}
-                                onClose={() =>
-                                    setShowCategoryModal(false)
-                                }
+                                onClose={() => setShowCategoryModal(false)}
                                 onSuccess={handleCategorySuccess}
                             />
                         )}
@@ -1366,9 +1031,7 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
 
                     <OrderInvoiceModal
                         isOpen={!!selectedInvoice}
-                        onClose={() =>
-                            setSelectedInvoice(null)
-                        }
+                        onClose={() => setSelectedInvoice(null)}
                         invoice={selectedInvoice}
                     />
 
