@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import {
     Archive,
@@ -15,9 +15,9 @@ import {
     RotateCcw,
     ShoppingBag,
     User,
-    X,
 } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
+import { useCurrentEmployee } from "@/hooks/usecurrentemployee";
 import AdminTaskNotesModal from "@/components/customcomponents/tasks/AdminTaskNotesModal";
 
 interface ArchiveTask {
@@ -42,6 +42,20 @@ interface ArchiveTask {
     archived_at: string;
 }
 
+interface DepartmentStep {
+    id: number;
+    department: number;
+    name: string;
+    order: number;
+}
+
+interface DepartmentEmployee {
+    employee: number;
+    employee_name: string;
+    department: number;
+    is_manager: boolean;
+}
+
 interface Props {
     task: ArchiveTask;
     onReopened: (taskId: number) => void;
@@ -49,7 +63,6 @@ interface Props {
 
 function formatDate(value?: string | null) {
     if (!value) return "نامشخص";
-
     return new Date(value).toLocaleDateString("fa-IR", {
         year: "numeric",
         month: "long",
@@ -59,9 +72,7 @@ function formatDate(value?: string | null) {
 
 function formatDateTime(value?: string | null) {
     if (!value) return "نامشخص";
-
     const date = new Date(value);
-
     return `${date.toLocaleDateString("fa-IR", {
         year: "numeric",
         month: "long",
@@ -77,8 +88,7 @@ function statusInfo(status: ArchiveTask["status"]) {
         return {
             label: "فروش",
             icon: ShoppingBag,
-            className:
-                "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-300 dark:border-emerald-500/20",
+            className: "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-300 dark:border-emerald-500/20",
         };
     }
 
@@ -86,48 +96,173 @@ function statusInfo(status: ArchiveTask["status"]) {
         return {
             label: "لغو شده",
             icon: Ban,
-            className:
-                "bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-500/10 dark:text-rose-300 dark:border-rose-500/20",
+            className: "bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-500/10 dark:text-rose-300 dark:border-rose-500/20",
         };
     }
 
     return {
         label: "انجام شده",
         icon: CheckCircle2,
-        className:
-            "bg-sky-50 text-sky-700 border-sky-200 dark:bg-sky-500/10 dark:text-sky-300 dark:border-sky-500/20",
+        className: "bg-sky-50 text-sky-700 border-sky-200 dark:bg-sky-500/10 dark:text-sky-300 dark:border-sky-500/20",
     };
 }
 
 function parseError(error: any) {
     const data = error?.response?.data;
-
     if (!data) return "بازگردانی تسک با خطا مواجه شد";
     if (typeof data === "string") return data;
-
     const first = Object.values(data)[0];
-
     return Array.isArray(first)
         ? String(first[0])
         : String(first ?? "بازگردانی تسک با خطا مواجه شد");
 }
 
 export default function ArchivedTaskCard({ task, onReopened }: Props) {
+    const {
+        departments,
+        loading: employeeLoading,
+        error: employeeError,
+    } = useCurrentEmployee();
+
     const [confirmOpen, setConfirmOpen] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [notesOpen, setNotesOpen] = useState(false);
+    const [departmentEmployees, setDepartmentEmployees] = useState<DepartmentEmployee[]>([]);
+    const [steps, setSteps] = useState<DepartmentStep[]>([]);
+    const [selectedDepartment, setSelectedDepartment] = useState("");
+    const [selectedEmployee, setSelectedEmployee] = useState("");
+    const [selectedStep, setSelectedStep] = useState("");
+    const [optionsLoading, setOptionsLoading] = useState(false);
+
+    const managerDepartments = useMemo(
+        () => departments.filter((department) => department.isManager === true),
+        [departments],
+    );
+
+    const canReopen = managerDepartments.length > 0;
+
+    const availableEmployees = useMemo(
+        () => departmentEmployees.filter(
+            (employee) => Number(employee.department) === Number(selectedDepartment),
+        ),
+        [departmentEmployees, selectedDepartment],
+    );
+
+    const availableSteps = useMemo(
+        () => steps
+            .filter((step) => Number(step.department) === Number(selectedDepartment))
+            .sort((a, b) => a.order - b.order),
+        [steps, selectedDepartment],
+    );
 
     const status = statusInfo(task.status);
     const StatusIcon = status.icon;
 
+    useEffect(() => {
+        if (!confirmOpen) {
+            setSelectedDepartment("");
+            setSelectedEmployee("");
+            setSelectedStep("");
+            setDepartmentEmployees([]);
+            setSteps([]);
+            setError(null);
+            setOptionsLoading(false);
+            return;
+        }
+
+        if (employeeLoading || employeeError || !managerDepartments.length) return;
+
+        let cancelled = false;
+        setOptionsLoading(true);
+
+        Promise.all([
+            axiosInstance.get("/department/api/v1/department_employee/list/"),
+            axiosInstance.get("/department/api/v1/department_step/"),
+        ])
+            .then(([employeeResponse, stepResponse]) => {
+                if (cancelled) return;
+
+                const employeeData = Array.isArray(employeeResponse.data)
+                    ? employeeResponse.data
+                    : employeeResponse.data?.results ?? [];
+
+                const stepData = Array.isArray(stepResponse.data)
+                    ? stepResponse.data
+                    : stepResponse.data?.results ?? [];
+
+                const managerIds = new Set(
+                    managerDepartments.map((department) => Number(department.id)),
+                );
+
+                setDepartmentEmployees(
+                    employeeData.filter(
+                        (item: DepartmentEmployee) =>
+                            managerIds.has(Number(item.department)) &&
+                            Number(item.employee) > 0,
+                    ),
+                );
+
+                setSteps(stepData);
+                setError(null);
+            })
+            .catch((err) => {
+                if (!cancelled) setError(parseError(err));
+            })
+            .finally(() => {
+                if (!cancelled) setOptionsLoading(false);
+            });
+
+        return () => {
+            cancelled = true;
+        };
+    }, [confirmOpen, employeeLoading, employeeError, managerDepartments]);
+
+    useEffect(() => {
+        setSelectedEmployee("");
+        setSelectedStep("");
+    }, [selectedDepartment]);
+
     async function reopenTask() {
+        if (!canReopen) {
+            setError("فقط مدیر دپارتمان مجاز به بازگردانی این تسک است");
+            return;
+        }
+
+        if (!selectedDepartment || !selectedEmployee || !selectedStep) {
+            setError("لطفاً دپارتمان، کارمند و مرحله را انتخاب کنید");
+            return;
+        }
+
+        const departmentId = Number(selectedDepartment);
+        const employeeId = Number(selectedEmployee);
+        const step = availableSteps.find(
+            (item) => Number(item.id) === Number(selectedStep),
+        );
+
+        if (
+            !managerDepartments.some(
+                (department) => Number(department.id) === departmentId,
+            ) ||
+            !availableEmployees.some(
+                (employee) => Number(employee.employee) === employeeId,
+            ) ||
+            !step
+        ) {
+            setError("انتخاب‌های انجام‌شده معتبر نیستند");
+            return;
+        }
+
         setSubmitting(true);
         setError(null);
 
         try {
             await axiosInstance.post(
-                `/tasks/api/v1/tasks/${task.task_id}/reopen/`
+                `/tasks/api/v1/tasks/${task.task_id}/reopen/`,
+                {
+                    current_step: Math.max(0, Number(step.order) - 1),
+                    assigned_employee: [employeeId],
+                },
             );
 
             setConfirmOpen(false);
@@ -152,15 +287,10 @@ export default function ArchivedTaskCard({ task, onReopened }: Props) {
                 <div className="absolute inset-y-0 right-0 w-1 bg-gradient-to-b from-slate-400 to-slate-400/20" />
 
                 <div className="mb-3 flex items-start justify-between gap-3 pl-1">
-                    <div className="flex flex-wrap items-center gap-1.5">
-                        <span
-                            className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-extrabold ${status.className}`}
-                        >
-                            <StatusIcon size={10} />
-                            {status.label}
-                        </span>
-                    </div>
-
+                    <span className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-extrabold ${status.className}`}>
+                        <StatusIcon size={10} />
+                        {status.label}
+                    </span>
                     <span className="flex shrink-0 items-center gap-1 rounded-xl bg-gray-50 px-2.5 py-1.5 text-[9px] font-bold text-gray-400 dark:bg-white/[0.05] dark:text-white/40">
                         <Archive size={10} />
                         آرشیو
@@ -174,9 +304,7 @@ export default function ArchivedTaskCard({ task, onReopened }: Props) {
                 {task.case_title && (
                     <div className="mt-2 flex items-center gap-1.5 rounded-xl bg-violet-50 px-2.5 py-1.5 text-[10px] font-bold text-violet-600 dark:bg-violet-500/10 dark:text-violet-300">
                         <FileText size={11} />
-                        <span className="truncate">
-                            {task.case_title}
-                        </span>
+                        <span className="truncate">{task.case_title}</span>
                     </div>
                 )}
 
@@ -184,18 +312,13 @@ export default function ArchivedTaskCard({ task, onReopened }: Props) {
                     {task.department_name && (
                         <div className="flex items-center gap-1.5 rounded-xl bg-gray-50 px-2.5 py-1.5 text-[10px] font-bold text-gray-500 dark:bg-white/[0.04] dark:text-white/45">
                             <Building2 size={11} />
-                            <span className="max-w-[130px] truncate">
-                                {task.department_name}
-                            </span>
+                            <span className="max-w-[130px] truncate">{task.department_name}</span>
                         </div>
                     )}
-
                     {task.customer_full_name && (
                         <div className="flex items-center gap-1.5 rounded-xl bg-sky-50 px-2.5 py-1.5 text-[10px] font-bold text-sky-600 dark:bg-sky-500/10 dark:text-sky-300">
                             <User size={11} />
-                            <span className="max-w-[130px] truncate">
-                                {task.customer_full_name}
-                            </span>
+                            <span className="max-w-[130px] truncate">{task.customer_full_name}</span>
                         </div>
                     )}
                 </div>
@@ -205,19 +328,14 @@ export default function ArchivedTaskCard({ task, onReopened }: Props) {
                         <div className="flex min-w-0 items-center gap-2 text-gray-500 dark:text-white/45">
                             <CalendarDays size={13} />
                             <div className="min-w-0">
-                                <p className="text-[9.5px] font-bold">
-                                    تاریخ ایجاد
-                                </p>
+                                <p className="text-[9.5px] font-bold">تاریخ ایجاد</p>
                                 <p className="mt-0.5 truncate text-[10.5px] font-extrabold text-gray-700 dark:text-white/75">
                                     {formatDate(task.task_created_at)}
                                 </p>
                             </div>
                         </div>
-
                         <div className="border-r border-gray-200 pr-3 dark:border-white/[0.08]">
-                            <p className="text-[9px] font-bold text-gray-400">
-                                آرشیو
-                            </p>
+                            <p className="text-[9px] font-bold text-gray-400">آرشیو</p>
                             <p className="mt-0.5 text-[10px] font-bold text-gray-500 dark:text-white/50">
                                 {formatDate(task.archived_at)}
                             </p>
@@ -226,14 +344,9 @@ export default function ArchivedTaskCard({ task, onReopened }: Props) {
 
                     {task.completed_at && (
                         <div className="flex items-center gap-2 border-t border-gray-200 pt-2.5 dark:border-white/[0.07]">
-                            <Clock3
-                                size={12}
-                                className="shrink-0 text-gray-400"
-                            />
+                            <Clock3 size={12} className="shrink-0 text-gray-400" />
                             <div>
-                                <p className="text-[9px] font-bold text-gray-400">
-                                    زمان تکمیل
-                                </p>
+                                <p className="text-[9px] font-bold text-gray-400">زمان تکمیل</p>
                                 <p className="mt-0.5 text-[10px] font-extrabold text-gray-600 dark:text-white/60">
                                     {formatDateTime(task.completed_at)}
                                 </p>
@@ -243,18 +356,13 @@ export default function ArchivedTaskCard({ task, onReopened }: Props) {
                 </div>
 
                 <div className="mt-3 rounded-2xl bg-indigo-500/[.035] px-3 py-2.5 dark:bg-indigo-500/[.04]">
-                    <div className="text-[9.5px] font-bold text-gray-400 dark:text-white/35">
-                        آخرین اقدام توسط
-                    </div>
-
+                    <div className="text-[9.5px] font-bold text-gray-400 dark:text-white/35">آخرین اقدام توسط</div>
                     <div className="mt-1 text-[10.5px] font-extrabold text-gray-700 dark:text-gray-200">
-                        {task.final_action_by_full_name ||
-                            task.final_action_by_username ||
-                            "نامشخص"}
+                        {task.final_action_by_full_name || task.final_action_by_username || "نامشخص"}
                     </div>
                 </div>
 
-                {error && (
+                {error && !confirmOpen && (
                     <div className="mt-2 rounded-xl bg-red-500/10 px-3 py-2 text-center text-[9.5px] font-bold text-red-500">
                         {error}
                     </div>
@@ -270,17 +378,19 @@ export default function ArchivedTaskCard({ task, onReopened }: Props) {
                         یادداشت‌ها
                     </button>
 
-                    <button
-                        type="button"
-                        onClick={() => {
-                            setError(null);
-                            setConfirmOpen(true);
-                        }}
-                        className="flex h-9 flex-1 items-center justify-center gap-1.5 rounded-xl bg-gray-50 text-[10.5px] font-extrabold text-gray-600 transition-colors hover:bg-gray-100 hover:text-indigo-600 dark:bg-white/[0.05] dark:text-white/50 dark:hover:bg-white/[0.1] dark:hover:text-indigo-300"
-                    >
-                        <RotateCcw size={13} />
-                        بازگشت
-                    </button>
+                    {canReopen && (
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setError(null);
+                                setConfirmOpen(true);
+                            }}
+                            className="flex h-9 flex-1 items-center justify-center gap-1.5 rounded-xl bg-gray-50 text-[10.5px] font-extrabold text-gray-600 transition-colors hover:bg-gray-100 hover:text-indigo-600 dark:bg-white/[0.05] dark:text-white/50 dark:hover:bg-white/[0.1] dark:hover:text-indigo-300"
+                        >
+                            <RotateCcw size={13} />
+                            بازگشت
+                        </button>
+                    )}
                 </div>
             </motion.article>
 
@@ -307,12 +417,9 @@ export default function ArchivedTaskCard({ task, onReopened }: Props) {
                             <RotateCcw size={19} />
                         </div>
 
-                        <h4 className="mt-4 text-[14px] font-extrabold text-gray-900 dark:text-white">
-                            بازگردانی تسک
-                        </h4>
-
+                        <h4 className="mt-4 text-[14px] font-extrabold text-gray-900 dark:text-white">بازگردانی تسک</h4>
                         <p className="mt-2 text-[11.5px] font-medium leading-6 text-gray-400 dark:text-white/40">
-                            این تسک دوباره به وضعیت فعال برمی‌گردد و از بایگانی خارج می‌شود.
+                            دپارتمان، کارمند مسئول و مرحله شروع مجدد تسک را انتخاب کنید.
                         </p>
 
                         <div className="mt-4 rounded-2xl bg-gray-50 px-3 py-2.5 dark:bg-white/[0.035]">
@@ -320,6 +427,79 @@ export default function ArchivedTaskCard({ task, onReopened }: Props) {
                                 {task.title}
                             </p>
                         </div>
+
+                        {optionsLoading || employeeLoading ? (
+                            <div className="mt-4 flex items-center justify-center gap-2 rounded-xl bg-gray-50 py-5 text-[11px] text-gray-400 dark:bg-white/[0.035]">
+                                <Loader2 size={15} className="animate-spin" />
+                                در حال دریافت اطلاعات...
+                            </div>
+                        ) : employeeError ? (
+                            <p className="mt-4 rounded-xl bg-red-500/10 px-3 py-2 text-[10.5px] font-bold text-red-500">
+                                {employeeError}
+                            </p>
+                        ) : (
+                            <div className="mt-4 space-y-3">
+                                <div>
+                                    <label className="mb-1.5 block text-[10.5px] font-bold text-gray-500 dark:text-gray-400">دپارتمان</label>
+                                    <select
+                                        value={selectedDepartment}
+                                        onChange={(event) => setSelectedDepartment(event.target.value)}
+                                        disabled={submitting}
+                                        className="h-10 w-full rounded-xl border border-gray-200 bg-white px-3 text-[11px] font-bold text-gray-700 outline-none focus:border-indigo-400 dark:border-white/[0.08] dark:bg-[#111a2d] dark:text-white"
+                                    >
+                                        <option value="">انتخاب دپارتمان</option>
+                                        {managerDepartments.map((department) => (
+                                            <option key={department.id} value={department.id}>
+                                                {department.name}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label className="mb-1.5 block text-[10.5px] font-bold text-gray-500 dark:text-gray-400">کارمند مسئول</label>
+                                    <select
+                                        value={selectedEmployee}
+                                        onChange={(event) => setSelectedEmployee(event.target.value)}
+                                        disabled={submitting || !selectedDepartment}
+                                        className="h-10 w-full rounded-xl border border-gray-200 bg-white px-3 text-[11px] font-bold text-gray-700 outline-none focus:border-indigo-400 disabled:opacity-50 dark:border-white/[0.08] dark:bg-[#111a2d] dark:text-white"
+                                    >
+                                        <option value="">انتخاب کارمند</option>
+                                        {availableEmployees.map((employee) => (
+                                            <option
+                                                key={`${employee.department}-${employee.employee}`}
+                                                value={employee.employee}
+                                            >
+                                                {employee.employee_name}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label className="mb-1.5 block text-[10.5px] font-bold text-gray-500 dark:text-gray-400">مرحله شروع</label>
+                                    <select
+                                        value={selectedStep}
+                                        onChange={(event) => setSelectedStep(event.target.value)}
+                                        disabled={submitting || !selectedDepartment}
+                                        className="h-10 w-full rounded-xl border border-gray-200 bg-white px-3 text-[11px] font-bold text-gray-700 outline-none focus:border-indigo-400 disabled:opacity-50 dark:border-white/[0.08] dark:bg-[#111a2d] dark:text-white"
+                                    >
+                                        <option value="">انتخاب مرحله</option>
+                                        {availableSteps.map((step) => (
+                                            <option key={step.id} value={step.id}>
+                                                {step.name}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+                            </div>
+                        )}
+
+                        {error && (
+                            <p className="mt-3 rounded-xl bg-red-500/10 px-3 py-2 text-center text-[10.5px] font-bold text-red-500">
+                                {error}
+                            </p>
+                        )}
 
                         <div className="mt-5 flex gap-2">
                             <button
@@ -330,25 +510,14 @@ export default function ArchivedTaskCard({ task, onReopened }: Props) {
                             >
                                 انصراف
                             </button>
-
                             <button
                                 type="button"
                                 onClick={reopenTask}
-                                disabled={submitting}
+                                disabled={submitting || optionsLoading || employeeLoading}
                                 className="flex h-10 flex-1 items-center justify-center gap-2 rounded-full bg-indigo-500 text-[11px] font-extrabold text-white transition hover:bg-indigo-600 disabled:cursor-not-allowed disabled:opacity-60"
                             >
-                                {submitting ? (
-                                    <Loader2
-                                        size={14}
-                                        className="animate-spin"
-                                    />
-                                ) : (
-                                    <RotateCcw size={14} />
-                                )}
-
-                                {submitting
-                                    ? "در حال بازگردانی..."
-                                    : "بازگرداندن"}
+                                {submitting ? <Loader2 size={14} className="animate-spin" /> : <RotateCcw size={14} />}
+                                {submitting ? "در حال بازگردانی..." : "بازگرداندن"}
                             </button>
                         </div>
                     </motion.div>

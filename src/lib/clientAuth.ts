@@ -27,8 +27,7 @@ function write(key: string, value: string | null) {
   try {
     if (value === null) window.localStorage.removeItem(key);
     else window.localStorage.setItem(key, value);
-  } catch {
-  }
+  } catch {}
 }
 
 export const getAccessToken = () => read(ACCESS_KEY);
@@ -55,10 +54,13 @@ export function getStoredUser(): SessionUser | null {
       const user = JSON.parse(raw);
 
       if (isValidUser(user)) {
-        return { id: user.id, username: user.username, type: user.type };
+        return {
+          id: user.id,
+          username: user.username,
+          type: user.type,
+        };
       }
-    } catch {
-    }
+    } catch {}
   }
 
   const type = read(LEGACY_TYPE_KEY);
@@ -72,7 +74,11 @@ export function getStoredUser(): SessionUser | null {
   };
 
   return isValidUser(legacy)
-    ? { id: legacy.id, username: legacy.username, type: legacy.type }
+    ? {
+        id: legacy.id,
+        username: legacy.username,
+        type: legacy.type,
+      }
     : null;
 }
 
@@ -100,16 +106,11 @@ export function clearSession() {
 
 let refreshPromise: Promise<string | null> | null = null;
 
-/**
- * چند درخواست هم‌زمان فقط «یک» refresh می‌زنند.
- * - توکن جدید  → رشته
- * - refresh رد شد (۴۰۰/۴۰۱/۴۰۳) → null  (یعنی باید لاگ‌اوت شود)
- * - خطای شبکه/سرور → throw  (جلسه حفظ می‌شود تا با قطعی لحظه‌ای بیرون نیفتد)
- */
 export function refreshAccessToken(): Promise<string | null> {
   if (refreshPromise) return refreshPromise;
 
   const refresh = getRefreshToken();
+
   if (!refresh) return Promise.resolve(null);
 
   refreshPromise = (async () => {
@@ -120,7 +121,9 @@ export function refreshAccessToken(): Promise<string | null> {
         { timeout: 15_000 },
       );
 
-      if (typeof data?.access !== "string" || !data.access) return null;
+      if (typeof data?.access !== "string" || !data.access) {
+        return null;
+      }
 
       write(ACCESS_KEY, data.access);
 
@@ -134,7 +137,9 @@ export function refreshAccessToken(): Promise<string | null> {
         ? error.response?.status
         : undefined;
 
-      if (status === 400 || status === 401 || status === 403) return null;
+      if (status === 400 || status === 401 || status === 403) {
+        return null;
+      }
 
       throw error;
     } finally {

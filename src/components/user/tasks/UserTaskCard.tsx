@@ -81,12 +81,14 @@ interface DeadlineResponse {
     deadline: string | null;
 }
 
-interface TaskWithSchedule extends UserTask {
+interface TaskWithSchedule extends Omit<UserTask, "department"> {
     started_at?: string | null;
     deadline?: string | null;
     due_date?: string | null;
     customer_name?: string | null;
     customer_phone?: string | null;
+    department?: number | { id: number } | null;
+    department_id?: number | null;
 }
 
 interface LatestLog {
@@ -230,8 +232,13 @@ export default function UserTaskCard({
     onUpdated,
     employeesMap = {},
 }: Props) {
-    const ext = task as TaskWithSchedule;
+    const ext = task as unknown as TaskWithSchedule;
     const hasCase = Boolean(ext.case);
+    const departmentId = Number(
+        typeof ext.department === "object"
+            ? ext.department?.id
+            : ext.department ?? ext.department_id
+    );
 
     const assigneeIds = useMemo(
         () => normalizeIds(task.assigned_employee),
@@ -333,6 +340,7 @@ export default function UserTaskCard({
             files: File[];
             score: number;
             score_reason: string;
+            next_assigned_employee: number[];
         }
     ) {
         setSubmitting(true);
@@ -346,6 +354,12 @@ export default function UserTaskCard({
             }
 
             data.files.forEach((file) => form.append("files", file));
+
+            if (direction === "next" && !isLastStage) {
+                data.next_assigned_employee.forEach((id) => {
+                    form.append("next_assigned_employee", String(id));
+                });
+            }
 
             if (
                 hasCase &&
@@ -585,8 +599,6 @@ export default function UserTaskCard({
                 <h3 className="line-clamp-2 text-[13.5px] font-extrabold leading-snug text-gray-900 dark:text-white">
                     {task.title}
                 </h3>
-
-
 
                 <div className="mt-2.5 flex flex-col gap-1.5 rounded-2xl bg-gray-50 px-3 py-2 dark:bg-white/[.035]">
                     {customerName && (
@@ -849,6 +861,7 @@ export default function UserTaskCard({
                             direction={direction}
                             title={finalTitle}
                             description={finalDescription}
+                            departmentId={Number.isFinite(departmentId) && departmentId > 0 ? departmentId : undefined}
                             onSubmit={(data) => action(direction, data)}
                             submitting={submitting}
                             hideReview={!hasCase}

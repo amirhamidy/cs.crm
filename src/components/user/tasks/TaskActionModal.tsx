@@ -3,7 +3,13 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
-import { Check, FileText, Loader2, Paperclip, Star, X } from "lucide-react";
+import { Check, FileText, Loader2, Paperclip, Star, User2, X } from "lucide-react";
+import axiosInstance from "@/lib/axiosInstance";
+
+interface Employee {
+    id: number;
+    name: string;
+}
 
 interface Props {
     isOpen: boolean;
@@ -11,7 +17,14 @@ interface Props {
     direction: string;
     title: string;
     description: string;
-    onSubmit: (data: { note: string; files: File[]; score: number; score_reason: string }) => Promise<void>;
+    departmentId?: number;
+    onSubmit: (data: {
+        note: string;
+        files: File[];
+        score: number;
+        score_reason: string;
+        next_assigned_employee: number[];
+    }) => Promise<void>;
     submitting: boolean;
     hideReview?: boolean;
 }
@@ -22,6 +35,7 @@ export default function TaskActionModal({
     direction,
     title,
     description,
+    departmentId,
     onSubmit,
     submitting,
     hideReview = false,
@@ -31,6 +45,17 @@ export default function TaskActionModal({
     const [score, setScore] = useState(0);
     const [files, setFiles] = useState<File[]>([]);
     const [error, setError] = useState("");
+    const [employees, setEmployees] = useState<Employee[]>([]);
+    const [selectedEmployees, setSelectedEmployees] = useState<number[]>([]);
+    const [employeesLoading, setEmployeesLoading] = useState(false);
+
+    const isFinal =
+        (direction === "next" && title.includes("تکمیل")) ||
+        direction === "complete";
+    const isCancel = direction === "cancel";
+    const needsReview =
+        !hideReview && (isFinal || !["next", "prev"].includes(direction));
+    const needsNextAssignee = direction === "next" && !isFinal;
 
     useEffect(() => {
         if (!isOpen) {
@@ -39,14 +64,66 @@ export default function TaskActionModal({
             setScore(0);
             setFiles([]);
             setError("");
+            setSelectedEmployees([]);
         }
     }, [isOpen]);
 
-    if (typeof document === "undefined") return null;
+    useEffect(() => {
+        if (!isOpen || !needsNextAssignee || !departmentId) {
+            setEmployees([]);
+            setEmployeesLoading(false);
+            return;
+        }
 
-    const isFinal = (direction === "next" && title.includes("تکمیل")) || direction === "complete";
-    const isCancel = direction === "cancel";
-    const needsReview = !hideReview && (isFinal || !["next", "prev"].includes(direction));
+        let cancelled = false;
+
+        setEmployeesLoading(true);
+        setEmployees([]);
+
+        axiosInstance
+            .get("/department/api/v1/department_employee/list/")
+            .then(({ data }) => {
+                const list = Array.isArray(data) ? data : data?.results ?? [];
+
+                if (!cancelled) {
+                    setEmployees(
+                        list
+                            .filter(
+                                (item: any) =>
+                                    Number(item.department?.id ?? item.department) ===
+                                    Number(departmentId)
+                            )
+                            .map((item: any) => ({
+                                id: Number(
+                                    item.employee?.id ?? item.employee
+                                ),
+                                name:
+                                    item.employee_name ??
+                                    item.employee?.full_name ??
+                                    item.employee?.name ??
+                                    `کارمند ${item.employee?.id ?? item.employee}`,
+                            }))
+                            .filter(
+                                (employee: Employee) =>
+                                    Number.isFinite(employee.id) &&
+                                    employee.id > 0
+                            )
+                    );
+                }
+            })
+            .catch(() => {
+                if (!cancelled) setEmployees([]);
+            })
+            .finally(() => {
+                if (!cancelled) setEmployeesLoading(false);
+            });
+
+        return () => {
+            cancelled = true;
+        };
+    }, [isOpen, needsNextAssignee, departmentId]);
+
+    if (typeof document === "undefined") return null;
 
     async function submit() {
         if (needsReview && score < 1) {
@@ -59,6 +136,21 @@ export default function TaskActionModal({
             return;
         }
 
+        if (needsNextAssignee && selectedEmployees.length === 0) {
+            setError("لطفاً کارمند مرحله بعد را انتخاب کنید");
+            return;
+        }
+
+        if (needsNextAssignee && employeesLoading) {
+            setError("لطفاً منتظر دریافت فهرست کارمندان بمانید");
+            return;
+        }
+
+        if (needsNextAssignee && employees.length === 0) {
+            setError("برای دپارتمان فعلی کارمندی پیدا نشد");
+            return;
+        }
+
         setError("");
 
         await onSubmit({
@@ -66,6 +158,9 @@ export default function TaskActionModal({
             files,
             score: needsReview ? score : 0,
             score_reason: needsReview ? reason.trim() : "",
+            next_assigned_employee: needsNextAssignee
+                ? selectedEmployees
+                : [],
         });
     }
 
@@ -144,6 +239,50 @@ export default function TaskActionModal({
                                 </div>
                             )}
 
+                            {needsNextAssignee && (
+                                <div className="mb-4">
+                                    <div className="mb-2 flex items-center gap-1.5 text-[11px] font-extrabold text-gray-600 dark:text-gray-300">
+                                        <UsersIcon />
+                                        انتخاب همکاران مرحله بعد
+                                    </div>
+
+                                    {employeesLoading ? (
+                                        <div className="flex items-center gap-2 rounded-2xl border border-gray-200 px-3 py-4 text-[11px] text-gray-400 dark:border-white/[.08]">
+                                            <Loader2 size={15} className="animate-spin" />
+                                            در حال دریافت همکاران دپارتمان...
+                                        </div>
+                                    ) : employees.length === 0 ? (
+                                        <p className="rounded-xl bg-amber-500/10 px-3 py-2 text-[10.5px] font-bold text-amber-600">
+                                            برای دپارتمان فعلی کارمندی پیدا نشد.
+                                        </p>
+                                    ) : (
+                                        <div className="flex flex-col gap-2">
+                                            {employees.map((employee) => (
+                                                <label
+                                                    key={employee.id}
+                                                    className="flex cursor-pointer items-center gap-3 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-[11px] font-bold text-gray-700 dark:border-white/[.08] dark:bg-white/[.03] dark:text-gray-200"
+                                                >
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={selectedEmployees.includes(employee.id)}
+                                                        disabled={submitting}
+                                                        onChange={(e) =>
+                                                            setSelectedEmployees((current) =>
+                                                                e.target.checked
+                                                                    ? [...current, employee.id]
+                                                                    : current.filter((id) => id !== employee.id)
+                                                            )
+                                                        }
+                                                        className="h-4 w-4 accent-indigo-600"
+                                                    />
+                                                    {employee.name}
+                                                </label>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
                             <div>
                                 <div className="mb-2 flex items-center gap-1.5 text-[11px] font-extrabold text-gray-600 dark:text-gray-300">
                                     <FileText size={13} />
@@ -188,4 +327,10 @@ export default function TaskActionModal({
         </AnimatePresence>,
         document.body
     );
+}
+
+function UsersIcon() {
+    return <span className="inline-flex h-[13px] w-[13px] items-center justify-center">
+        <User2 />
+    </span>;
 }

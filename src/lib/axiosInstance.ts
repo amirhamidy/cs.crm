@@ -6,7 +6,9 @@ import {
   refreshAccessToken,
 } from "@/lib/clientAuth";
 
-type RetriableConfig = InternalAxiosRequestConfig & { _retry?: boolean };
+type RetriableConfig = InternalAxiosRequestConfig & {
+  _retry?: boolean;
+};
 
 const AUTH_PATHS = ["/auth/login/", "/auth/refresh/", "/auth/logout/"];
 
@@ -25,11 +27,8 @@ function redirectToLogin() {
   window.location.replace("/login/");
 }
 
-axiosInstance.interceptors.request.use((config) => {
+axiosInstance.interceptors.request.use(async (config) => {
   config.baseURL = getApiUrl();
-
-  const access = getAccessToken();
-  if (access) config.headers.Authorization = `Bearer ${access}`;
 
   if (config.data instanceof FormData) {
     delete config.headers["Content-Type"];
@@ -38,8 +37,41 @@ axiosInstance.interceptors.request.use((config) => {
     config.headers["Content-Type"] = "application/json";
   }
 
+  const access = getAccessToken();
+
+  if (access) {
+    try {
+      const token = await refreshAccessTokenIfNeeded(access);
+      config.headers.Authorization = `Bearer ${token ?? access}`;
+    } catch {
+      config.headers.Authorization = `Bearer ${getAccessToken() ?? access}`;
+    }
+  }
+
   return config;
 });
+
+async function refreshAccessTokenIfNeeded(access: string) {
+  const parts = access.split(".");
+
+  if (parts.length !== 3) return null;
+
+  try {
+    const payload = JSON.parse(
+      atob(parts[1].replace(/-/g, "+").replace(/_/g, "/")),
+    );
+
+    if (typeof payload.exp !== "number") return null;
+
+    if (payload.exp * 1000 - Date.now() > 60_000) {
+      return null;
+    }
+
+    return await refreshAccessToken();
+  } catch {
+    return null;
+  }
+}
 
 axiosInstance.interceptors.response.use(
   (response) => response,
@@ -80,6 +112,7 @@ axiosInstance.interceptors.response.use(
     }
 
     original.headers.Authorization = `Bearer ${token}`;
+
     return axiosInstance(original);
   },
 );

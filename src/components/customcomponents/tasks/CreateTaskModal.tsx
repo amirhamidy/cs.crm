@@ -20,6 +20,7 @@ import type { Customer } from "@/types/customer";
 
 interface Case { id: number; title: string; customer: number }
 interface Department { id: number; name: string }
+interface DepartmentStep { id: number; department: number; name: string; order: number }
 interface DepartmentEmployee {
     id: number;
     employee: number;
@@ -231,12 +232,14 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess }: Props) {
 
     const [cases, setCases] = useState<Case[]>([]);
     const [departments, setDepartments] = useState<Department[]>([]);
+    const [departmentSteps, setDepartmentSteps] = useState<DepartmentStep[]>([]);
     const [employees, setEmployees] = useState<DepartmentEmployee[]>([]);
     const [customers, setCustomers] = useState<Customer[]>([]);
 
     const [selectedCustomer, setSelectedCustomer] = useState<number | null>(null);
     const [selectedCase, setSelectedCase] = useState<number | null>(null);
     const [selectedDepartment, setSelectedDepartment] = useState<number | null>(null);
+    const [selectedStep, setSelectedStep] = useState<number | null>(null);
     const [selectedEmployees, setSelectedEmployees] = useState<number[]>([]);
     const [title, setTitle] = useState("");
     const [description, setDescription] = useState("");
@@ -245,17 +248,23 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess }: Props) {
     useEffect(() => {
         if (!isOpen) return;
         axiosInstance.get("/tasks/api/v1/cases/").then((r) => setCases(r.data.results ?? r.data)).catch(() => setCases([]));
-        axiosInstance.get("/department/api/v1/department/list/").then((r) => setDepartments(r.data.results ?? r.data)).catch(() => setDepartments([]));
+        axiosInstance.get("/department/api/v1/department/list/").then((r) => setDepartments(extractList<Department>(r.data))).catch(() => setDepartments([]));
+        axiosInstance.get("/department/api/v1/department_step/").then((r) => setDepartmentSteps(extractList<DepartmentStep>(r.data))).catch(() => setDepartmentSteps([]));
         axiosInstance.get("/department/api/v1/department_employee/list/").then((r) => setEmployees(r.data.results ?? r.data)).catch(() => setEmployees([]));
         axiosInstance.get(apiRoutes.customers).then((r) => setCustomers(extractList<Customer>(r.data))).catch(() => setCustomers([]));
     }, [isOpen]);
 
-    useEffect(() => { setSelectedEmployees([]); }, [selectedDepartment]);
+    useEffect(() => { setSelectedEmployees([]); setSelectedStep(null); }, [selectedDepartment]);
     useEffect(() => { setSelectedCase(null); }, [selectedCustomer]);
 
     const filteredEmployees = useMemo(
         () => selectedDepartment ? employees.filter((e) => e.department === selectedDepartment) : employees,
         [employees, selectedDepartment]
+    );
+
+    const filteredSteps = useMemo(
+        () => selectedDepartment ? departmentSteps.filter((step) => step.department === selectedDepartment).sort((a, b) => a.order - b.order) : [],
+        [departmentSteps, selectedDepartment]
     );
 
     const filteredCases = useMemo(
@@ -266,7 +275,7 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess }: Props) {
     const canSubmit = title.trim().length > 0 && selectedCase !== null && selectedDepartment !== null && selectedEmployees.length > 0 && !submitting;
 
     function resetAll() {
-        setSelectedCustomer(null); setSelectedCase(null); setSelectedDepartment(null); setSelectedEmployees([]);
+        setSelectedCustomer(null); setSelectedCase(null); setSelectedDepartment(null); setSelectedStep(null); setSelectedEmployees([]);
         setTitle(""); setDescription(""); setFiles([]); setSubmitError("");
     }
 
@@ -293,6 +302,7 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess }: Props) {
             formData.append("description", description);
             formData.append("case", String(selectedCase));
             formData.append("department", String(selectedDepartment));
+            if (selectedStep !== null) formData.append("current_step", String(selectedStep));
             selectedEmployees.forEach((id) => formData.append("assigned_employee", String(id)));
             files.forEach((f) => formData.append("files", f));
             await axiosInstance.post("/tasks/api/v1/tasks/create/", formData);
@@ -385,6 +395,16 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess }: Props) {
                                 options={departments.map((d) => ({ id: d.id, label: d.name }))}
                                 value={selectedDepartment}
                                 onChange={(id) => { setSelectedDepartment(id as number); setSubmitError(""); }}
+                            />
+
+                            <NiceSelect
+                                label="مرحله شروع وظیفه (اختیاری)"
+                                placeholder={selectedDepartment ? "انتخاب مرحله شروع" : "ابتدا دپارتمان را انتخاب کنید"}
+                                emptyText="مرحله‌ای برای این دپارتمان یافت نشد"
+                                disabled={!selectedDepartment || filteredSteps.length === 0}
+                                options={filteredSteps.map((step) => ({ id: step.id, label: step.name }))}
+                                value={selectedStep}
+                                onChange={(id) => { setSelectedStep(id as number); setSubmitError(""); }}
                             />
 
                             <NiceSelect

@@ -18,6 +18,7 @@ export type DepartmentEmployeeInfo = {
   employee_name: string;
   department: number;
   department_name: string;
+  is_manager: boolean;
   created_at?: string;
   updated_at?: string;
 };
@@ -25,6 +26,7 @@ export type DepartmentEmployeeInfo = {
 export type CurrentDepartment = {
   id: number;
   name: string;
+  isManager: boolean;
 };
 
 let employeeListCache: EmployeeInfo[] | null = null;
@@ -42,7 +44,7 @@ async function fetchEmployeeList(): Promise<EmployeeInfo[]> {
     .then((response) => {
       const data = response.data;
 
-      const list = Array.isArray(data) ? data : ((data as any)?.results ?? []);
+      const list = Array.isArray(data) ? data : (data as any)?.results ?? [];
 
       employeeListCache = list;
       employeeRequest = null;
@@ -68,7 +70,7 @@ async function fetchDepartmentEmployees(): Promise<DepartmentEmployeeInfo[]> {
     .then((response) => {
       const data = response.data;
 
-      const list = Array.isArray(data) ? data : ((data as any)?.results ?? []);
+      const list = Array.isArray(data) ? data : (data as any)?.results ?? [];
 
       departmentEmployeeCache = list;
       departmentEmployeeRequest = null;
@@ -138,6 +140,7 @@ export function useCurrentEmployee() {
           .map((item) => ({
             id: Number(item.department),
             name: item.department_name,
+            isManager: item.is_manager === true,
           }));
 
         setEmployee(currentEmployee);
@@ -181,7 +184,13 @@ export function useEmployeeNames() {
   useEffect(() => {
     let mounted = true;
     fetchEmployeeList()
-      .then((list) => mounted && setNames(Object.fromEntries(list.map((e) => [e.username, e.full_name]))))
+      .then(
+        (list) =>
+          mounted &&
+          setNames(
+            Object.fromEntries(list.map((e) => [e.username, e.full_name])),
+          ),
+      )
       .catch(() => {});
     return () => {
       mounted = false;
