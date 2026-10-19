@@ -1,9 +1,17 @@
 "use client";
 
-import { memo, useEffect, useState, useRef, useCallback, useMemo } from "react";
-import type { ReactNode, MouseEvent as ReactMouseEvent } from "react";
-import { motion, AnimatePresence, animate } from "framer-motion";
-import { useTheme } from "next-themes";
+import {
+    memo,
+    useCallback,
+    useEffect,
+    useMemo,
+    useRef,
+    useState,
+    useSyncExternalStore,
+} from "react";
+import type { ReactNode } from "react";
+import { createPortal } from "react-dom";
+import { motion, AnimatePresence } from "framer-motion";
 import {
     Phone,
     Trash2,
@@ -17,11 +25,18 @@ import {
     Check,
     Power,
     SlidersHorizontal,
+    Crown,
+    Building2,
+    X,
 } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
 import type { ApiEmployee, ApiUser } from "@/types/users";
 import EditUserModal from "@/components/admin/users/EditUserModal";
 import AdjustScoreModal from "@/components/admin/users/AdjustScoreModal";
+
+/* -------------------------------------------------------------------------- */
+/*                                   Types                                    */
+/* -------------------------------------------------------------------------- */
 
 export interface UserInfo {
     id: number;
@@ -47,122 +62,79 @@ interface UserCardProps {
 }
 
 type Placement = "left" | "right";
+type ActionKey = "toggleActive" | "edit" | "adjustScore" | "manager" | "delete";
 
-const SPRING = { type: "spring" as const, stiffness: 420, damping: 26 };
+type DepartmentMembership = {
+    id: number;
+    employee: number;
+    employee_name: string;
+    department: number;
+    department_name: string;
+    created_at?: string;
+    updated_at?: string;
+    is_manager?: boolean;
+};
+
+/* -------------------------------------------------------------------------- */
+/*                                  Constants                                 */
+/* -------------------------------------------------------------------------- */
+
 const EMPTY_TITLES: string[] = [];
+
+const SWEEP_GRADIENTS: Record<string, string> = {
+    edit: "linear-gradient(90deg, #3b82f6, #8b5cf6)",
+    adjustScore: "linear-gradient(90deg, #f59e0b, #10b981)",
+    manager: "linear-gradient(90deg, #f59e0b, #f97316)",
+    delete: "#ef4444",
+};
+
+const SHEET_TONES = {
+    blue: "border-blue-500/15 bg-blue-500/[0.08] text-blue-600 dark:border-blue-500/20 dark:bg-blue-500/[0.12] dark:text-blue-400",
+    emerald:
+        "border-emerald-500/15 bg-emerald-500/[0.08] text-emerald-600 dark:border-emerald-500/20 dark:bg-emerald-500/[0.12] dark:text-emerald-400",
+    amber:
+        "border-amber-500/15 bg-amber-500/[0.08] text-amber-600 dark:border-amber-500/20 dark:bg-amber-500/[0.12] dark:text-amber-400",
+    rose: "border-rose-500/15 bg-rose-500/[0.08] text-rose-600 dark:border-rose-500/20 dark:bg-rose-500/[0.12] dark:text-rose-400",
+} as const;
+
+const SHEET_DISABLED =
+    "cursor-not-allowed border-black/[0.06] bg-black/[0.03] text-gray-400 opacity-50 dark:border-white/[0.06] dark:bg-white/[0.03]";
+
+const PANEL_BASE =
+    "w-full rounded-[2rem] border border-slate-900/[0.08] bg-white p-5 shadow-2xl dark:border-white/[0.08] dark:bg-slate-900";
+
+const SOFT_BUTTON =
+    "rounded-2xl bg-slate-900/5 py-2.5 text-[12.5px] font-bold text-slate-600 disabled:opacity-50 dark:bg-white/5 dark:text-slate-300";
+
+/* -------------------------------------------------------------------------- */
+/*                                  Helpers                                   */
+/* -------------------------------------------------------------------------- */
+
+let dateFormatter: Intl.DateTimeFormat | null = null;
 
 function formatDate(iso?: string | null) {
     if (!iso) return "نامشخص";
-    return new Date(iso).toLocaleDateString("fa-IR", {
-        year: "numeric",
-        month: "short",
-        day: "numeric",
-    });
-}
-
-function Avatar({ name, id }: { name: string; id: number }) {
-    const hue = (Math.abs(id) * 53) % 360;
-    return (
-        <div
-            className="flex h-11 w-11 shrink-0 select-none items-center justify-center rounded-2xl text-[15px] font-extrabold text-white"
-            style={{
-                background: `linear-gradient(135deg, oklch(55% 0.18 ${hue}), oklch(45% 0.22 ${(hue + 30) % 360}))`,
-            }}
-        >
-            {name?.charAt(0) ?? "؟"}
-        </div>
-    );
-}
-
-function StatusSwitch({
-    isActive,
-    loading,
-    disabled,
-    isDark,
-    title,
-    onToggle,
-}: {
-    isActive: boolean;
-    loading: boolean;
-    disabled: boolean;
-    isDark: boolean;
-    title?: string;
-    onToggle: () => void;
-}) {
-    const trackBg = isActive
-        ? isDark
-            ? "rgba(16, 185, 129, 0.2)"
-            : "rgba(16, 185, 129, 0.14)"
-        : isDark
-            ? "rgba(148, 163, 184, 0.16)"
-            : "#e9ecf1";
-
-    const trackBorder = isActive
-        ? isDark
-            ? "rgba(16, 185, 129, 0.4)"
-            : "rgba(16, 185, 129, 0.3)"
-        : isDark
-            ? "rgba(148, 163, 184, 0.3)"
-            : "rgba(148, 163, 184, 0.35)";
-
-    const knobBg = isActive ? "#10b981" : isDark ? "#64748b" : "#94a3b8";
-
-    return (
-        <button
-            type="button"
-            dir="ltr"
-            title={title}
-            aria-pressed={isActive}
-            disabled={disabled || loading}
-            onClick={(e) => {
-                e.stopPropagation();
-                if (!disabled && !loading) onToggle();
-            }}
-            className="relative inline-flex h-7 w-[52px] shrink-0 items-center rounded-full transition-colors duration-300 focus:outline-none"
-            style={{
-                backgroundColor: trackBg,
-                border: `1.5px solid ${trackBorder}`,
-                cursor: disabled ? "not-allowed" : loading ? "wait" : "pointer",
-                opacity: disabled ? 0.55 : 1,
-            }}
-        >
-            <motion.span
-                initial={false}
-                animate={{ x: isActive ? 0 : 24, backgroundColor: knobBg }}
-                transition={{ type: "spring", stiffness: 500, damping: 32 }}
-                className="absolute left-[1.5px] top-[1.5px] flex h-6 w-6 items-center justify-center rounded-full text-white"
-                style={{ boxShadow: "0 2px 6px rgba(15,23,42,0.22)" }}
-            >
-                {loading ? (
-                    <Loader2 size={12} className="animate-spin" />
-                ) : isActive ? (
-                    <Check size={13} strokeWidth={3.2} />
-                ) : (
-                    <Power size={12} strokeWidth={2.6} />
-                )}
-            </motion.span>
-        </button>
-    );
-}
-
-function extractUserList(data: unknown): ApiUser[] {
-    if (Array.isArray(data)) return data as ApiUser[];
-    if (data && typeof data === "object") {
-        const record = data as Record<string, unknown>;
-        if (Array.isArray(record.results)) return record.results as ApiUser[];
-        if (Array.isArray(record.data)) return record.data as ApiUser[];
-        if (Array.isArray(record.users)) return record.users as ApiUser[];
+    const date = new Date(iso);
+    if (Number.isNaN(date.getTime())) return "نامشخص";
+    if (!dateFormatter) {
+        dateFormatter = new Intl.DateTimeFormat("fa-IR", {
+            year: "numeric",
+            month: "short",
+            day: "numeric",
+        });
     }
-    return [];
+    return dateFormatter.format(date);
 }
 
-function extractEmployeeList(data: unknown): ApiEmployee[] {
-    if (Array.isArray(data)) return data as ApiEmployee[];
+function extractList<T>(data: unknown, extraKey?: string): T[] {
+    if (Array.isArray(data)) return data as T[];
     if (data && typeof data === "object") {
         const record = data as Record<string, unknown>;
-        if (Array.isArray(record.results)) return record.results as ApiEmployee[];
-        if (Array.isArray(record.data)) return record.data as ApiEmployee[];
-        if (Array.isArray(record.employees)) return record.employees as ApiEmployee[];
+        const keys = extraKey ? ["results", "data", extraKey] : ["results", "data"];
+        for (const key of keys) {
+            const value = record[key];
+            if (Array.isArray(value)) return value as T[];
+        }
     }
     return [];
 }
@@ -195,139 +167,699 @@ function getErrorMessage(error: unknown, fallback: string) {
     return fallback;
 }
 
-const SWEEP_COLORS: Record<string, string> = {
-    delete: "#ef4444",
-    edit: "linear-gradient(90deg, #3b82f6, #8b5cf6)",
-    adjustScore: "linear-gradient(90deg, #f59e0b, #10b981)",
-};
+/* ---- logged-in user id (بدون JSON.parse تکراری و بدون خطای hydration) ---- */
 
-function SweepButton({
-    actionKey,
-    icon,
-    offset,
-    delay,
-    disabled,
-    isDark,
-    iconBg,
-    iconBorder,
-    iconColor,
-    onEnter,
-    onLeave,
-    onClick,
-    spring,
-}: {
-    actionKey: string;
-    icon: ReactNode;
-    offset: { x: number; y: number };
-    delay: number;
-    disabled: boolean;
-    isDark: boolean;
-    iconBg: string;
-    iconBorder: string;
-    iconColor: string;
-    onEnter: () => void;
-    onLeave: () => void;
-    onClick: (e: ReactMouseEvent) => void;
-    spring: typeof SPRING;
-}) {
-    const spanRef = useRef<HTMLSpanElement>(null);
-    const iconWrapRef = useRef<HTMLSpanElement>(null);
-    const animatingRef = useRef(false);
-    const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+let lastRawUser: string | null = null;
+let lastLoggedUserId: number | null = null;
+
+function readLoggedUserId(): number | null {
+    if (typeof window === "undefined") return null;
+    try {
+        const raw = window.localStorage.getItem("user");
+        if (raw === lastRawUser) return lastLoggedUserId;
+        lastRawUser = raw;
+        const parsed = raw ? JSON.parse(raw) : null;
+        lastLoggedUserId = typeof parsed?.id === "number" ? parsed.id : null;
+    } catch {
+        lastRawUser = null;
+        lastLoggedUserId = null;
+    }
+    return lastLoggedUserId;
+}
+
+const subscribeNoop = () => () => { };
+const getServerLoggedUserId = () => null;
+
+function useLoggedUserId() {
+    return useSyncExternalStore(
+        subscribeNoop,
+        readLoggedUserId,
+        getServerLoggedUserId
+    );
+}
+
+/* ---- یک بار mount می‌شود و بعد نگه داشته می‌شود ---- */
+
+function useMountedOnce(flag: boolean) {
+    const ref = useRef(false);
+    if (flag) ref.current = true;
+    return ref.current;
+}
+
+/* ---- Escape + قفل اسکرول برای مودال‌ها ---- */
+
+function useModalBehavior(onClose: () => void, locked: boolean) {
+    const onCloseRef = useRef(onClose);
+    const lockedRef = useRef(locked);
 
     useEffect(() => {
-        const timers = timersRef.current;
+        onCloseRef.current = onClose;
+        lockedRef.current = locked;
+    });
+
+    useEffect(() => {
+        const onKeyDown = (e: KeyboardEvent) => {
+            if (e.key === "Escape" && !lockedRef.current) onCloseRef.current();
+        };
+        document.addEventListener("keydown", onKeyDown);
+
+        const previousOverflow = document.body.style.overflow;
+        document.body.style.overflow = "hidden";
+
         return () => {
-            timers.forEach((timer) => clearTimeout(timer));
+            document.removeEventListener("keydown", onKeyDown);
+            document.body.style.overflow = previousOverflow;
+        };
+    }, []);
+}
+
+/* -------------------------------------------------------------------------- */
+/*                              Small components                              */
+/* -------------------------------------------------------------------------- */
+
+const Avatar = memo(function Avatar({ name, id }: { name: string; id: number }) {
+    const hue = (Math.abs(id) * 53) % 360;
+    return (
+        <div
+            className="flex h-11 w-11 shrink-0 select-none items-center justify-center rounded-2xl text-[15px] font-extrabold text-white"
+            style={{
+                background: `linear-gradient(135deg, oklch(55% 0.18 ${hue}), oklch(45% 0.22 ${(hue + 30) % 360}))`,
+            }}
+        >
+            {name?.charAt(0) ?? "؟"}
+        </div>
+    );
+});
+
+function StatusSwitch({
+    isActive,
+    loading,
+    disabled,
+    title,
+    onToggle,
+}: {
+    isActive: boolean;
+    loading: boolean;
+    disabled: boolean;
+    title?: string;
+    onToggle: () => void;
+}) {
+    const trackClass = isActive
+        ? "border-emerald-500/30 bg-emerald-500/[0.14] dark:border-emerald-500/40 dark:bg-emerald-500/20"
+        : "border-slate-400/35 bg-[#e9ecf1] dark:border-slate-400/30 dark:bg-slate-400/[0.16]";
+
+    const knobClass = isActive
+        ? "translate-x-0 bg-emerald-500"
+        : "translate-x-6 bg-slate-400 dark:bg-slate-500";
+
+    return (
+        <button
+            type="button"
+            role="switch"
+            aria-checked={isActive}
+            dir="ltr"
+            title={title}
+            disabled={disabled || loading}
+            onClick={(e) => {
+                e.stopPropagation();
+                if (!disabled && !loading) onToggle();
+            }}
+            className={`relative inline-flex h-7 w-[52px] shrink-0 items-center rounded-full border-[1.5px] transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60 ${trackClass} ${disabled
+                ? "cursor-not-allowed opacity-55"
+                : loading
+                    ? "cursor-wait"
+                    : "cursor-pointer"
+                }`}
+        >
+            <span
+                className={`absolute left-[1.5px] top-[1.5px] flex h-6 w-6 items-center justify-center rounded-full text-white shadow-[0_2px_6px_rgba(15,23,42,0.22)] transition-[transform,background-color] duration-200 ${knobClass}`}
+            >
+                {loading ? (
+                    <Loader2 size={12} className="animate-spin" />
+                ) : isActive ? (
+                    <Check size={13} strokeWidth={3.2} />
+                ) : (
+                    <Power size={12} strokeWidth={2.6} />
+                )}
+            </span>
+        </button>
+    );
+}
+
+function ActionButton({
+    sweepKey,
+    icon,
+    label,
+    disabled,
+    onClick,
+}: {
+    sweepKey: string;
+    icon: ReactNode;
+    label: string;
+    disabled: boolean;
+    onClick: () => void;
+}) {
+    return (
+        <button
+            type="button"
+            aria-label={label}
+            aria-disabled={disabled}
+            onClick={(e) => {
+                e.stopPropagation();
+                if (!disabled) onClick();
+            }}
+            className={`relative flex h-11 w-11 items-center justify-center overflow-hidden rounded-full border-[1.5px] border-black/[0.14] bg-[#e2e2e2] transition-[color,transform] duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/60 dark:border-white/[0.13] dark:bg-[#1e1e1e] ${disabled
+                ? "cursor-not-allowed text-gray-400 opacity-45 dark:text-slate-500"
+                : "cursor-pointer text-gray-700 active:scale-95 group-hover/btn:text-white dark:text-gray-200"
+                }`}
+        >
+            {!disabled && (
+                <span
+                    aria-hidden
+                    className="pointer-events-none absolute inset-0 origin-left scale-x-0 rounded-full transition-transform duration-300 ease-out group-hover/btn:scale-x-100"
+                    style={{ background: SWEEP_GRADIENTS[sweepKey] ?? "#6366f1" }}
+                />
+            )}
+            <span className="relative z-10 flex items-center justify-center">
+                {icon}
+            </span>
+        </button>
+    );
+}
+
+/* -------------------------------------------------------------------------- */
+/*                         Modal infrastructure (Portal)                      */
+/* -------------------------------------------------------------------------- */
+
+function Portal({ children }: { children: ReactNode }) {
+    if (typeof document === "undefined") return null;
+    return createPortal(children, document.body);
+}
+
+function ModalFrame({
+    onClose,
+    locked = false,
+    label,
+    position = "center",
+    className = "",
+    children,
+}: {
+    onClose: () => void;
+    locked?: boolean;
+    label: string;
+    position?: "center" | "bottom";
+    className?: string;
+    children: ReactNode;
+}) {
+    useModalBehavior(onClose, locked);
+
+    return (
+        <Portal>
+            <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.15 }}
+                onClick={() => {
+                    if (!locked) onClose();
+                }}
+                role="dialog"
+                aria-modal="true"
+                aria-label={label}
+                dir="rtl"
+                className={`fixed inset-0 z-[100] flex justify-center bg-black/60 ${position === "bottom" ? "items-end" : "items-center p-4"
+                    } ${className}`}
+            >
+                {children}
+            </motion.div>
+        </Portal>
+    );
+}
+
+/* -------------------------------------------------------------------------- */
+/*                          Department manager modal                          */
+/* -------------------------------------------------------------------------- */
+
+function DepartmentManagerModal({
+    employeeId,
+    employeeName,
+    onClose,
+}: {
+    employeeId: number;
+    employeeName: string;
+    onClose: () => void;
+}) {
+    const [memberships, setMemberships] = useState<DepartmentMembership[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [loadError, setLoadError] = useState("");
+    const [savingId, setSavingId] = useState<number | null>(null);
+    const [actionError, setActionError] = useState("");
+
+    useEffect(() => {
+        let alive = true;
+
+        axiosInstance
+            .get("/department/api/v1/department_employee/list/")
+            .then((res) => {
+                if (!alive) return;
+                setMemberships(extractList<DepartmentMembership>(res.data));
+            })
+            .catch((err) => {
+                if (!alive) return;
+                setLoadError(
+                    getErrorMessage(err, "دریافت لیست دپارتمان‌ها با خطا مواجه شد")
+                );
+            })
+            .finally(() => {
+                if (!alive) return;
+                setLoading(false);
+            });
+
+        return () => {
+            alive = false;
         };
     }, []);
 
-    const runSweep = useCallback(() => {
-        if (disabled || animatingRef.current) return;
-        const bg = spanRef.current;
-        const iconEl = iconWrapRef.current;
-        if (!bg || !iconEl) return;
+    const myMemberships = useMemo(
+        () => memberships.filter((item) => Number(item.employee) === Number(employeeId)),
+        [memberships, employeeId]
+    );
 
-        animatingRef.current = true;
-        bg.style.transformOrigin = "0% 50%";
-        animate(bg, { scaleX: [0, 1] }, { duration: 0.4, ease: [0.4, 0, 0.2, 1] });
+    const managersByDepartment = useMemo(() => {
+        const map: Record<number, string[]> = {};
+        memberships.forEach((item) => {
+            if (!item.is_manager) return;
+            const key = Number(item.department);
+            if (!map[key]) map[key] = [];
+            map[key].push(item.employee_name);
+        });
+        return map;
+    }, [memberships]);
 
-        timersRef.current.push(
-            setTimeout(() => {
-                animate(iconEl, { color: "#ffffff" }, { duration: 0.08, ease: "easeIn" });
-            }, 300)
-        );
+    const handleToggleManager = async (membership: DepartmentMembership) => {
+        if (savingId !== null) return;
 
-        timersRef.current.push(
-            setTimeout(() => {
-                bg.style.transformOrigin = "100% 50%";
-                animate(bg, { scaleX: [1, 0] }, { duration: 0.4, ease: [0.4, 0, 0.2, 1] });
+        const nextValue = !membership.is_manager;
+        setSavingId(membership.id);
+        setActionError("");
 
-                animate(
-                    iconEl,
-                    { color: iconColor },
-                    { duration: 0.4, ease: [0.4, 0, 0.2, 1] }
-                );
-            }, 400)
-        );
+        try {
+            await axiosInstance.patch(
+                `/department/api/v1/department_employee/${membership.id}/update/`,
+                {
+                    department: membership.department,
+                    is_manager: nextValue,
+                }
+            );
 
-        timersRef.current.push(
-            setTimeout(() => {
-                animatingRef.current = false;
-            }, 820)
-        );
-    }, [disabled, iconColor]);
+            setMemberships((prev) =>
+                prev.map((item) =>
+                    item.id === membership.id ? { ...item, is_manager: nextValue } : item
+                )
+            );
+        } catch (err) {
+            setActionError(
+                getErrorMessage(err, "تغییر وضعیت مدیر دپارتمان با خطا مواجه شد")
+            );
+        } finally {
+            setSavingId(null);
+        }
+    };
+
+    const busy = savingId !== null;
 
     return (
-        <motion.button
-            type="button"
-            initial={{ x: 0, y: 0, scale: 0, opacity: 0 }}
-            animate={{ x: offset.x, y: offset.y, scale: 1, opacity: 1 }}
-            exit={{ x: 0, y: 0, scale: 0, opacity: 0 }}
-            transition={{ ...spring, delay }}
-            whileTap={disabled ? {} : { scale: 0.96 }}
-            onMouseEnter={() => {
-                runSweep();
-                onEnter();
-            }}
-            onMouseLeave={onLeave}
-            onClick={onClick}
-            className="relative flex h-11 w-11 items-center justify-center overflow-hidden rounded-full"
-            style={{
-                backgroundColor: iconBg,
-                border: `1.5px solid ${iconBorder}`,
-                cursor: disabled ? "not-allowed" : "pointer",
-                opacity: disabled ? 0.45 : 1,
-            }}
-        >
-            <span
-                ref={spanRef}
-                aria-hidden
-                className="pointer-events-none absolute inset-0 rounded-full"
-                style={{
-                    background: SWEEP_COLORS[actionKey] || "#6366f1",
-                    transform: "scaleX(0)",
-                    transformOrigin: "0% 50%",
-                }}
-            />
-            <span
-                ref={iconWrapRef}
-                className="relative z-10 flex items-center justify-center"
-                style={{
-                    color: disabled ? (isDark ? "#64748b" : "#9ca3af") : iconColor,
-                }}
+        <ModalFrame onClose={onClose} locked={busy} label="مدیر دپارتمان">
+            <motion.div
+                initial={{ opacity: 0, scale: 0.96, y: 12 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.96, y: 12 }}
+                transition={{ duration: 0.16 }}
+                onClick={(e) => e.stopPropagation()}
+                className={`${PANEL_BASE} max-w-[420px]`}
             >
-                {icon}
-            </span>
-        </motion.button>
+                <div className="mb-4 flex items-center justify-between gap-2.5">
+                    <div className="flex min-w-0 items-center gap-2.5">
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-amber-500/10 dark:bg-amber-500/[0.14]">
+                            <Crown size={16} className="text-amber-500" />
+                        </div>
+                        <div className="min-w-0">
+                            <h3 className="text-[14px] font-extrabold text-gray-900 dark:text-white">
+                                مدیر دپارتمان
+                            </h3>
+                            <p className="truncate text-[11px] text-gray-500 dark:text-gray-400">
+                                {employeeName}
+                            </p>
+                        </div>
+                    </div>
+
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        disabled={busy}
+                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-black/5 text-gray-500 transition-colors disabled:opacity-50 dark:bg-white/10 dark:text-gray-300"
+                        aria-label="بستن"
+                    >
+                        <X size={15} />
+                    </button>
+                </div>
+
+                <p className="mb-3 text-[11.5px] leading-6 text-gray-500 dark:text-gray-400">
+                    با روشن کردن سوییچ هر دپارتمان، این کارمند مدیر همان دپارتمان می‌شود.
+                </p>
+
+                <div className="max-h-[340px] overflow-y-auto">
+                    {loading ? (
+                        <div className="flex items-center justify-center py-10">
+                            <Loader2 size={22} className="animate-spin text-indigo-500" />
+                        </div>
+                    ) : loadError ? (
+                        <div className="flex items-center gap-1.5 rounded-2xl p-3 text-[12px] font-semibold text-red-500">
+                            <AlertCircle size={15} className="shrink-0" />
+                            <span>{loadError}</span>
+                        </div>
+                    ) : myMemberships.length === 0 ? (
+                        <div className="rounded-2xl bg-black/[0.03] p-4 text-center text-[12px] text-gray-500 dark:bg-white/[0.03] dark:text-gray-400">
+                            این کاربر عضو هیچ دپارتمانی نیست
+                        </div>
+                    ) : (
+                        <div className="flex flex-col gap-2">
+                            {myMemberships.map((membership) => {
+                                const isManager = Boolean(membership.is_manager);
+                                const managers =
+                                    managersByDepartment[Number(membership.department)] ?? [];
+
+                                return (
+                                    <div
+                                        key={membership.id}
+                                        className={`flex items-center justify-between gap-3 rounded-2xl border p-3 ${isManager
+                                            ? "border-amber-500/30 bg-amber-500/[0.08] dark:bg-amber-500/10"
+                                            : "border-black/[0.06] bg-black/[0.03] dark:border-white/[0.06] dark:bg-white/[0.03]"
+                                            }`}
+                                    >
+                                        <div className="flex min-w-0 flex-col gap-1">
+                                            <div className="flex items-center gap-1.5">
+                                                <Building2
+                                                    size={14}
+                                                    className="shrink-0 text-gray-400 dark:text-gray-500"
+                                                />
+                                                <span className="truncate text-[13px] font-extrabold text-gray-800 dark:text-gray-100">
+                                                    {membership.department_name}
+                                                </span>
+                                                {isManager && (
+                                                    <span className="flex shrink-0 items-center gap-1 rounded-lg bg-amber-500/[0.16] px-1.5 py-0.5 text-[10px] font-bold text-amber-600 dark:text-amber-400">
+                                                        <Crown size={10} />
+                                                        مدیر
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <span className="truncate text-[10.5px] text-gray-500 dark:text-gray-400">
+                                                {managers.length > 0
+                                                    ? `مدیر فعلی: ${managers.join("، ")}`
+                                                    : "مدیری برای این دپارتمان تعیین نشده"}
+                                            </span>
+                                        </div>
+
+                                        <StatusSwitch
+                                            isActive={isManager}
+                                            loading={savingId === membership.id}
+                                            disabled={busy && savingId !== membership.id}
+                                            title={
+                                                isManager
+                                                    ? "حذف از مدیریت این دپارتمان"
+                                                    : "تعیین به عنوان مدیر این دپارتمان"
+                                            }
+                                            onToggle={() => handleToggleManager(membership)}
+                                        />
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
+                </div>
+
+                {actionError && (
+                    <p className="mt-3 text-[11.5px] font-semibold text-red-500">
+                        {actionError}
+                    </p>
+                )}
+
+                <div className="mt-5">
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        disabled={busy}
+                        className={`w-full ${SOFT_BUTTON}`}
+                    >
+                        بستن
+                    </button>
+                </div>
+            </motion.div>
+        </ModalFrame>
     );
 }
+
+/* -------------------------------------------------------------------------- */
+/*                            Confirm delete dialog                           */
+/* -------------------------------------------------------------------------- */
+
+function ConfirmDeleteDialog({
+    name,
+    isDeleting,
+    error,
+    onCancel,
+    onConfirm,
+}: {
+    name: string;
+    isDeleting: boolean;
+    error: string;
+    onCancel: () => void;
+    onConfirm: () => void;
+}) {
+    return (
+        <ModalFrame onClose={onCancel} locked={isDeleting} label="حذف کاربر">
+            <motion.div
+                initial={{ opacity: 0, scale: 0.96, y: 12 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.96, y: 12 }}
+                transition={{ duration: 0.16 }}
+                onClick={(e) => e.stopPropagation()}
+                className={`${PANEL_BASE} max-w-[360px]`}
+            >
+                <div className="mb-4 flex items-center gap-2.5">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-red-500/[0.08] dark:bg-red-500/[0.14]">
+                        <Trash2 size={16} className="text-red-500" />
+                    </div>
+                    <h3 className="text-[14px] font-extrabold text-gray-900 dark:text-white">
+                        حذف کاربر
+                    </h3>
+                </div>
+
+                <p className="text-[12.5px] leading-6 text-gray-600 dark:text-gray-400">
+                    آیا از حذف حساب{" "}
+                    <span className="font-extrabold text-gray-900 dark:text-white">
+                        «{name}»
+                    </span>{" "}
+                    اطمینان دارید؟ این عملیات قابل بازگشت نیست.
+                </p>
+
+                {error && (
+                    <p className="mt-3 text-[11.5px] font-semibold text-red-500">{error}</p>
+                )}
+
+                <div className="mt-5 flex gap-2">
+                    <button
+                        type="button"
+                        onClick={onCancel}
+                        disabled={isDeleting}
+                        className={`flex-1 ${SOFT_BUTTON}`}
+                    >
+                        انصراف
+                    </button>
+
+                    <button
+                        type="button"
+                        onClick={onConfirm}
+                        disabled={isDeleting}
+                        className="flex flex-1 items-center justify-center gap-1.5 rounded-2xl bg-gradient-to-br from-red-500 to-red-600 py-2.5 text-[12.5px] font-bold text-white shadow-[0_10px_24px_rgba(239,68,68,0.22)] disabled:opacity-60"
+                    >
+                        {isDeleting ? (
+                            <Loader2 size={15} className="animate-spin" />
+                        ) : (
+                            <Trash2 size={14} />
+                        )}
+                        {isDeleting ? "در حال حذف..." : "حذف کن"}
+                    </button>
+                </div>
+            </motion.div>
+        </ModalFrame>
+    );
+}
+
+/* -------------------------------------------------------------------------- */
+/*                                Mobile sheet                                */
+/* -------------------------------------------------------------------------- */
+
+function SheetButton({
+    tone,
+    icon,
+    label,
+    disabled = false,
+    onClick,
+}: {
+    tone: keyof typeof SHEET_TONES;
+    icon: ReactNode;
+    label: string;
+    disabled?: boolean;
+    onClick: () => void;
+}) {
+    return (
+        <button
+            type="button"
+            disabled={disabled}
+            onClick={onClick}
+            className={`flex w-full items-center gap-3 rounded-2xl border p-3.5 text-[13.5px] font-bold transition-transform ${disabled ? SHEET_DISABLED : `${SHEET_TONES[tone]} active:scale-[0.98]`
+                }`}
+        >
+            {icon}
+            <span>{label}</span>
+        </button>
+    );
+}
+
+function MobileSheet({
+    employee,
+    departmentName,
+    isActive,
+    togglingActive,
+    isSelf,
+    isAdmin,
+    canDelete,
+    deleteTooltipText,
+    onClose,
+    onToggleActive,
+    onEdit,
+    onAdjust,
+    onManager,
+    onRequestDelete,
+}: {
+    employee: ApiEmployee;
+    departmentName: string | null;
+    isActive: boolean;
+    togglingActive: boolean;
+    isSelf: boolean;
+    isAdmin: boolean;
+    canDelete: boolean;
+    deleteTooltipText: string;
+    onClose: () => void;
+    onToggleActive: () => void;
+    onEdit: () => void;
+    onAdjust: () => void;
+    onManager: () => void;
+    onRequestDelete: () => void;
+}) {
+    return (
+        <ModalFrame
+            onClose={onClose}
+            label="گزینه‌های کاربر"
+            position="bottom"
+            className="md:hidden"
+        >
+            <motion.div
+                initial={{ y: "100%" }}
+                animate={{ y: 0 }}
+                exit={{ y: "100%" }}
+                transition={{ type: "spring", damping: 30, stiffness: 340 }}
+                onClick={(e) => e.stopPropagation()}
+                className="w-full max-w-lg rounded-t-[28px] border-t border-black/[0.08] bg-white p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] shadow-2xl dark:border-white/10 dark:bg-[#12141c]"
+            >
+                <div className="mx-auto mb-4 h-1.5 w-12 rounded-full bg-gray-300 dark:bg-gray-700" />
+
+                <div className="mb-4 flex items-center justify-between border-b border-black/5 pb-3 dark:border-white/5">
+                    <div className="flex min-w-0 items-center gap-2.5">
+                        <Avatar name={employee.full_name || "؟"} id={employee.id} />
+                        <div className="min-w-0">
+                            <p className="truncate text-sm font-extrabold text-gray-800 dark:text-gray-100">
+                                {employee.full_name || "بدون نام"}
+                            </p>
+                            <p className="truncate text-[11px] text-gray-400 dark:text-gray-500">
+                                @{employee.username}
+                                {departmentName ? ` • ${departmentName}` : ""}
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="flex shrink-0 items-center gap-2">
+                        <span className="text-[11px] font-bold text-gray-500 dark:text-gray-400">
+                            {isActive ? "فعال" : "غیرفعال"}
+                        </span>
+                        <StatusSwitch
+                            isActive={isActive}
+                            loading={togglingActive}
+                            disabled={isSelf}
+                            title={
+                                isSelf
+                                    ? "امکان تغییر وضعیت حساب خود وجود ندارد"
+                                    : isActive
+                                        ? "حساب فعال است"
+                                        : "حساب غیرفعال است"
+                            }
+                            onToggle={onToggleActive}
+                        />
+                    </div>
+                </div>
+
+                <div className="flex flex-col gap-2">
+                    <SheetButton
+                        tone="blue"
+                        icon={<SquarePen size={18} />}
+                        label="ویرایش اطلاعات کاربر"
+                        onClick={onEdit}
+                    />
+                    <SheetButton
+                        tone="emerald"
+                        icon={<SlidersHorizontal size={18} />}
+                        label="تغییر امتیاز"
+                        disabled={isAdmin}
+                        onClick={onAdjust}
+                    />
+                    <SheetButton
+                        tone="amber"
+                        icon={<Crown size={18} />}
+                        label="تعیین مدیر دپارتمان"
+                        onClick={onManager}
+                    />
+
+                    <div className="flex flex-col gap-1.5 pt-1">
+                        <SheetButton
+                            tone="rose"
+                            icon={<Trash2 size={18} />}
+                            label="حذف کاربر"
+                            disabled={!canDelete}
+                            onClick={onRequestDelete}
+                        />
+
+                        {!canDelete && deleteTooltipText && (
+                            <div className="flex items-center gap-1.5 px-2 text-[11.5px] text-rose-500 dark:text-rose-400">
+                                <AlertCircle size={14} className="shrink-0" />
+                                <span>{deleteTooltipText}</span>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </motion.div>
+        </ModalFrame>
+    );
+}
+
+/* -------------------------------------------------------------------------- */
+/*                                  UserCard                                  */
+/* -------------------------------------------------------------------------- */
 
 function UserCard({
     employee,
     departmentName = null,
     activeTaskTitles = EMPTY_TITLES,
-    index,
     hasActiveTasks = false,
     userInfo = null,
     score = null,
@@ -335,23 +867,27 @@ function UserCard({
     onUpdated,
     onScoreChanged,
 }: UserCardProps) {
-    const { resolvedTheme } = useTheme();
-
-    const [mounted, setMounted] = useState(false);
-    useEffect(() => setMounted(true), []);
-    const isDark = mounted && resolvedTheme === "dark";
-
     const cardRef = useRef<HTMLDivElement>(null);
-    const [hovered, setHovered] = useState(false);
+    const aliveRef = useRef(true);
+
+    useEffect(() => {
+        aliveRef.current = true;
+        return () => {
+            aliveRef.current = false;
+        };
+    }, []);
+
     const [placement, setPlacement] = useState<Placement>("right");
-    const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
 
     const [showConfirm, setShowConfirm] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
     const [deleteError, setDeleteError] = useState("");
     const [showEdit, setShowEdit] = useState(false);
     const [showAdjust, setShowAdjust] = useState(false);
+    const [showManager, setShowManager] = useState(false);
     const [showMobileSheet, setShowMobileSheet] = useState(false);
+
+    const editMounted = useMountedOnce(showEdit);
 
     const phoneNumber = userInfo?.phone ?? null;
     const userId = userInfo?.id ?? employee.user_id ?? employee.user ?? null;
@@ -367,15 +903,14 @@ function UserCard({
         if (typeof userInfo?.isActive === "boolean") setIsActive(userInfo.isActive);
     }, [userInfo?.isActive]);
 
-    const showTaskTooltip = hovered && hasActiveTasks && activeTooltip === null;
     const isRight = placement === "right";
 
     const checkPosition = useCallback(() => {
-        if (!cardRef.current) return;
-        const parent = cardRef.current.parentElement;
-        if (!parent) return;
+        const card = cardRef.current;
+        const parent = card?.parentElement;
+        if (!card || !parent) return;
 
-        const cardRect = cardRef.current.getBoundingClientRect();
+        const cardRect = card.getBoundingClientRect();
         const parentRect = parent.getBoundingClientRect();
 
         const spaceRight = parentRect.right - cardRect.right;
@@ -384,18 +919,7 @@ function UserCard({
         setPlacement(spaceRight >= spaceLeft ? "right" : "left");
     }, []);
 
-    const loggedUserId = useMemo(() => {
-        if (typeof window === "undefined") return null;
-        try {
-            const raw = localStorage.getItem("user");
-            if (!raw) return null;
-            const parsed = JSON.parse(raw);
-            return typeof parsed?.id === "number" ? parsed.id : null;
-        } catch {
-            return null;
-        }
-    }, []);
-
+    const loggedUserId = useLoggedUserId();
     const isSelf = userId !== null && loggedUserId !== null && loggedUserId === userId;
 
     const isAdmin = employee.type === 1;
@@ -408,7 +932,12 @@ function UserCard({
         return "حذف کاربر";
     }, [isAdmin, isSelf, hasActiveTasks]);
 
-    const handleToggleActive = async () => {
+    const formattedDate = useMemo(
+        () => formatDate(employee.created_at),
+        [employee.created_at]
+    );
+
+    const handleToggleActive = useCallback(async () => {
         if (togglingActive || !userId || isSelf) return;
 
         const nextState = !isActive;
@@ -422,7 +951,7 @@ function UserCard({
                 is_active: nextState,
             });
 
-            setIsActive(nextState);
+            if (aliveRef.current) setIsActive(nextState);
             onUpdated({
                 ...employee,
                 is_active: nextState,
@@ -430,11 +959,11 @@ function UserCard({
         } catch (err) {
             console.error("خطا در تغییر وضعیت حساب:", err);
         } finally {
-            setTogglingActive(false);
+            if (aliveRef.current) setTogglingActive(false);
         }
-    };
+    }, [togglingActive, userId, isSelf, isActive, employee, phoneNumber, onUpdated]);
 
-    const handleDelete = async () => {
+    const handleDelete = useCallback(async () => {
         if (!canDelete) return;
         setIsDeleting(true);
         setDeleteError("");
@@ -445,8 +974,10 @@ function UserCard({
                 axiosInstance.get("/accounts/api/v1/employee/").catch(() => null),
             ]);
 
-            const users = usersRes ? extractUserList(usersRes.data) : [];
-            const employees = employeesRes ? extractEmployeeList(employeesRes.data) : [];
+            const users = usersRes ? extractList<ApiUser>(usersRes.data, "users") : [];
+            const employees = employeesRes
+                ? extractList<ApiEmployee>(employeesRes.data, "employees")
+                : [];
 
             const normalizedUsername = (employee.username || "").toLowerCase();
 
@@ -467,7 +998,9 @@ function UserCard({
             }
 
             if (employeeDeleteId) {
-                await axiosInstance.delete(`/accounts/api/v1/employee/${employeeDeleteId}/delete/`);
+                await axiosInstance.delete(
+                    `/accounts/api/v1/employee/${employeeDeleteId}/delete/`
+                );
             }
 
             if (userDeleteId && matchedUser?.type !== 1) {
@@ -475,198 +1008,157 @@ function UserCard({
             }
 
             onDelete(employee.id);
-            setShowConfirm(false);
+            if (aliveRef.current) setShowConfirm(false);
         } catch (err) {
-            setDeleteError(getErrorMessage(err, "حذف کاربر با خطا مواجه شد"));
+            if (aliveRef.current) {
+                setDeleteError(getErrorMessage(err, "حذف کاربر با خطا مواجه شد"));
+            }
         } finally {
-            setIsDeleting(false);
+            if (aliveRef.current) setIsDeleting(false);
         }
-    };
+    }, [canDelete, employee.id, employee.username, onDelete]);
 
-    const handleMouseEnter = () => {
-        if (typeof window !== "undefined" && window.innerWidth < 768) return;
-        checkPosition();
-        setHovered(true);
-    };
+    const closeSheetThen = useCallback((fn: () => void) => {
+        setShowMobileSheet(false);
+        fn();
+    }, []);
 
-    const handleMouseLeave = () => {
-        setHovered(false);
-        setActiveTooltip(null);
-    };
-
-    const borderColor = isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.06)";
-    const surfaceBg = isDark ? "rgba(255,255,255,0.02)" : "#fafafa";
-    const dividerColor = isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)";
-    const iconBg = isDark ? "#1e1e1e" : "#e2e2e2";
-    const iconBorder = isDark ? "rgba(255,255,255,0.13)" : "rgba(0,0,0,0.14)";
-    const iconColor = isDark ? "#e5e7eb" : "#374151";
-
-    const actionsContainerClass = isRight
-        ? "-right-[59px] top-1/2 -translate-y-1/2 flex-col gap-2.5 pl-6"
-        : "-left-[59px] top-1/2 -translate-y-1/2 flex-col gap-2.5 pr-6";
+    const actions: {
+        key: ActionKey;
+        tooltip: string;
+        disabled: boolean;
+        icon: ReactNode;
+        onClick: () => void;
+    }[] = [
+            {
+                key: "toggleActive",
+                tooltip: isSelf
+                    ? "امکان تغییر وضعیت حساب خود وجود ندارد"
+                    : isActive
+                        ? "غیرفعال‌سازی کاربر"
+                        : "فعال‌سازی کاربر",
+                disabled: isSelf,
+                icon: null,
+                onClick: handleToggleActive,
+            },
+            {
+                key: "edit",
+                tooltip: "ویرایش اطلاعات",
+                disabled: false,
+                icon: <SquarePen size={16} />,
+                onClick: () => setShowEdit(true),
+            },
+            {
+                key: "adjustScore",
+                tooltip: isAdmin ? "امتیاز مدیر سیستم قابل تغییر نیست" : "تغییر امتیاز",
+                disabled: isAdmin,
+                icon: <SlidersHorizontal size={16} />,
+                onClick: () => setShowAdjust(true),
+            },
+            {
+                key: "manager",
+                tooltip: "تعیین مدیر دپارتمان",
+                disabled: false,
+                icon: <Crown size={16} />,
+                onClick: () => setShowManager(true),
+            },
+            {
+                key: "delete",
+                tooltip: deleteTooltipText,
+                disabled: !canDelete,
+                icon: <Trash2 size={16} />,
+                onClick: () => setShowConfirm(true),
+            },
+        ];
 
     const tooltipPositionClass = isRight
         ? "left-full top-1/2 ml-2.5 -translate-y-1/2"
         : "right-full top-1/2 mr-2.5 -translate-y-1/2";
 
-    const tooltipOffsetX = isRight ? -4 : 4;
-    const tooltipOffsetY = 0;
-
-    const actions = [
-        {
-            key: "toggleActive",
-            tooltip: isSelf
-                ? "امکان تغییر وضعیت حساب خود وجود ندارد"
-                : isActive
-                    ? "غیرفعال‌سازی کاربر"
-                    : "فعال‌سازی کاربر",
-            disabled: isSelf,
-            delay: 0,
-            color: iconColor,
-            onClick: (e: ReactMouseEvent) => {
-                e.stopPropagation();
-                handleToggleActive();
-            },
-            icon: null as ReactNode,
-        },
-        {
-            key: "edit",
-            tooltip: "ویرایش اطلاعات",
-            disabled: false,
-            delay: 0.08,
-            color: iconColor,
-            onClick: (e: ReactMouseEvent) => {
-                e.stopPropagation();
-                setShowEdit(true);
-            },
-            icon: <SquarePen size={16} />,
-        },
-        {
-            key: "adjustScore",
-            tooltip: isAdmin ? "امتیاز مدیر سیستم قابل تغییر نیست" : "تغییر امتیاز",
-            disabled: isAdmin,
-            delay: 0.16,
-            color: iconColor,
-            onClick: (e: ReactMouseEvent) => {
-                e.stopPropagation();
-                if (!isAdmin) setShowAdjust(true);
-            },
-            icon: <SlidersHorizontal size={16} />,
-        },
-        {
-            key: "delete",
-            tooltip: deleteTooltipText,
-            disabled: !canDelete,
-            delay: 0.24,
-            color: iconColor,
-            onClick: (e: ReactMouseEvent) => {
-                e.stopPropagation();
-                if (canDelete) setShowConfirm(true);
-            },
-            icon: <Trash2 size={16} />,
-        },
-    ];
-
     return (
         <>
-            <motion.div
+            <div
                 ref={cardRef}
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                transition={{ duration: 0.25, delay: Math.min(index, 12) * 0.03 }}
-                onMouseEnter={handleMouseEnter}
-                onMouseLeave={handleMouseLeave}
-                className="user-card group relative z-[1] flex flex-col gap-3 overflow-visible rounded-2xl p-4 transition-[filter,box-shadow] duration-300 hover:z-50 hover:shadow-[0_0_0_1px_rgba(99,102,241,0.35),0_14px_40px_rgba(99,102,241,0.25)] dark:hover:shadow-[0_0_0_1px_rgba(129,140,248,0.45),0_14px_44px_rgba(99,102,241,0.35)]"
-                style={{
-                    border: `1px solid ${borderColor}`,
-                    background: surfaceBg,
-                    direction: "rtl",
-                }}
+                onMouseEnter={checkPosition}
+                dir="rtl"
+                className="user-card group/card relative z-[1] flex flex-col gap-3 rounded-2xl border border-black/[0.06] bg-[#fafafa] p-4 transition-shadow duration-200 hover:z-50 hover:shadow-[0_0_0_1px_rgba(99,102,241,0.35),0_14px_40px_rgba(99,102,241,0.25)] focus-within:z-50 dark:border-white/[0.06] dark:bg-white/[0.02] dark:hover:shadow-[0_0_0_1px_rgba(129,140,248,0.45),0_14px_44px_rgba(99,102,241,0.35)]"
             >
-                <svg
-                    className="pointer-events-none absolute inset-0 h-full w-full"
-                    style={{ borderRadius: "1rem", overflow: "visible" }}
+                {/* ---------- Desktop actions (pure CSS hover) ---------- */}
+                <div
+                    className={`peer pointer-events-none absolute top-1/2 z-40 hidden -translate-y-1/2 flex-col items-center gap-2.5 opacity-0 transition-opacity duration-150 group-focus-within/card:pointer-events-auto group-focus-within/card:opacity-100 group-hover/card:pointer-events-auto group-hover/card:opacity-100 md:flex ${isRight ? "-right-[59px] pl-6" : "-left-[59px] pr-6"
+                        }`}
                 >
-                    <defs>
-                        <linearGradient
-                            id={`emp-grad-${employee.id}`}
-                            x1="100%"
-                            y1="100%"
-                            x2="0%"
-                            y2="0%"
-                        >
-                            <stop offset="0%" stopColor="#6366f1" stopOpacity="0.5" />
-                            <stop offset="100%" stopColor="#8b5cf6" stopOpacity="0.5" />
-                        </linearGradient>
-                    </defs>
-                    <motion.rect
-                        x="1"
-                        y="1"
-                        width="calc(100% - 2px)"
-                        height="calc(100% - 2px)"
-                        rx="15"
-                        ry="15"
-                        fill="none"
-                        stroke={`url(#emp-grad-${employee.id})`}
-                        strokeWidth="1.2"
-                        pathLength="1"
-                        initial={{ pathLength: 0, opacity: 0 }}
-                        animate={
-                            hovered
-                                ? { pathLength: 1, opacity: 1 }
-                                : { pathLength: 0, opacity: 0 }
-                        }
-                        transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-                    />
-                </svg>
-
-                <AnimatePresence>
-                    {showTaskTooltip && (
+                    {actions.map((act) => (
                         <div
-                            className={`pointer-events-none absolute top-1/2 z-[70] -translate-y-1/2 ${isRight ? "left-full ml-[70px]" : "right-full mr-[70px]"
-                                }`}
+                            key={act.key}
+                            className="group/btn relative flex items-center justify-center"
                         >
-                            <motion.div
-                                initial={{ opacity: 0, x: isRight ? -6 : 6, scale: 0.96 }}
-                                animate={{ opacity: 1, x: 0, scale: 1 }}
-                                exit={{ opacity: 0, x: isRight ? -6 : 6, scale: 0.96 }}
-                                transition={{ duration: 0.15 }}
-                                className="w-56 rounded-2xl p-3 shadow-2xl"
-                                style={{
-                                    background: isDark ? "#0f172a" : "#1e293b",
-                                    border: "1px solid rgba(255,255,255,0.08)",
-                                }}
-                                dir="rtl"
-                            >
-                                <div className="flex items-center gap-1.5 border-b border-white/10 pb-1.5 text-[11px] font-extrabold text-rose-400">
-                                    <AlertCircle size={13} />
-                                    <span>لیست تسک‌های در حال انجام</span>
-                                </div>
-                                {activeTaskTitles.length > 0 ? (
-                                    <ul className="mt-2 space-y-1.5">
-                                        {activeTaskTitles.map((title, idx) => (
-                                            <li
-                                                key={`${title}-${idx}`}
-                                                className="flex items-start gap-1.5 text-[10.5px] leading-4 text-slate-300"
-                                            >
-                                                <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-rose-400" />
-                                                <span className="line-clamp-2 min-w-0 break-words">
-                                                    {title}
-                                                </span>
-                                            </li>
-                                        ))}
-                                    </ul>
-                                ) : (
-                                    <p className="mt-1.5 text-[10px] text-slate-400">
-                                        این کاربر تسک دارد ولی هیچ‌کدام در حال انجام نیست
-                                    </p>
-                                )}
-                            </motion.div>
-                        </div>
-                    )}
-                </AnimatePresence>
+                            {act.key === "toggleActive" ? (
+                                <StatusSwitch
+                                    isActive={isActive}
+                                    loading={togglingActive}
+                                    disabled={isSelf}
+                                    onToggle={handleToggleActive}
+                                />
+                            ) : (
+                                <ActionButton
+                                    sweepKey={act.key}
+                                    icon={act.icon}
+                                    label={act.tooltip}
+                                    disabled={act.disabled}
+                                    onClick={act.onClick}
+                                />
+                            )}
 
+                            <span
+                                role="tooltip"
+                                dir="rtl"
+                                className={`pointer-events-none absolute z-[60] whitespace-nowrap rounded-2xl border border-white/[0.08] bg-slate-800 px-3 py-2 text-center text-[11px] font-bold text-white opacity-0 shadow-xl transition-opacity duration-150 group-hover/btn:opacity-100 dark:bg-slate-900 ${tooltipPositionClass}`}
+                            >
+                                {act.tooltip}
+                            </span>
+                        </div>
+                    ))}
+                </div>
+
+                {/* ---------- Active tasks tooltip (pure CSS) ---------- */}
+                {hasActiveTasks && (
+                    <div
+                        className={`pointer-events-none absolute top-1/2 z-[70] hidden -translate-y-1/2 opacity-0 transition-opacity duration-150 group-hover/card:opacity-100 peer-hover:!opacity-0 md:block ${isRight ? "left-full ml-[70px]" : "right-full mr-[70px]"
+                            }`}
+                    >
+                        <div
+                            dir="rtl"
+                            className="w-56 rounded-2xl border border-white/[0.08] bg-slate-800 p-3 shadow-2xl dark:bg-slate-900"
+                        >
+                            <div className="flex items-center gap-1.5 border-b border-white/10 pb-1.5 text-[11px] font-extrabold text-rose-400">
+                                <AlertCircle size={13} />
+                                <span>لیست تسک‌های در حال انجام</span>
+                            </div>
+                            {activeTaskTitles.length > 0 ? (
+                                <ul className="mt-2 space-y-1.5">
+                                    {activeTaskTitles.map((title, idx) => (
+                                        <li
+                                            key={`${title}-${idx}`}
+                                            className="flex items-start gap-1.5 text-[10.5px] leading-4 text-slate-300"
+                                        >
+                                            <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-rose-400" />
+                                            <span className="line-clamp-2 min-w-0 break-words">
+                                                {title}
+                                            </span>
+                                        </li>
+                                    ))}
+                                </ul>
+                            ) : (
+                                <p className="mt-1.5 text-[10px] text-slate-400">
+                                    این کاربر تسک دارد ولی هیچ‌کدام در حال انجام نیست
+                                </p>
+                            )}
+                        </div>
+                    </div>
+                )}
+
+                {/* ---------- Top-left: mobile menu + score ---------- */}
                 <div className="absolute left-3 top-3 z-10 flex items-center gap-2">
                     <button
                         type="button"
@@ -674,7 +1166,7 @@ function UserCard({
                             e.stopPropagation();
                             setShowMobileSheet(true);
                         }}
-                        className="flex h-7 w-7 items-center justify-center rounded-full bg-black/5 text-gray-500 transition-colors active:scale-95 dark:bg-white/10 dark:text-gray-300 md:hidden"
+                        className="flex h-7 w-7 items-center justify-center rounded-full bg-black/5 text-gray-500 transition-transform active:scale-95 dark:bg-white/10 dark:text-gray-300 md:hidden"
                         aria-label="گزینه‌ها"
                     >
                         <MoreVertical size={15} />
@@ -682,15 +1174,7 @@ function UserCard({
 
                     {score !== null && (
                         <div
-                            className="flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-black"
-                            style={{
-                                background: isDark
-                                    ? "rgba(245,158,11,0.14)"
-                                    : "rgba(245,158,11,0.1)",
-                                border: `1px solid ${isDark ? "rgba(245,158,11,0.25)" : "rgba(245,158,11,0.3)"
-                                    }`,
-                                color: isDark ? "#fbbf24" : "#d97706",
-                            }}
+                            className="flex items-center gap-1 rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 text-[11px] font-black text-amber-600 dark:border-amber-500/25 dark:bg-amber-500/[0.14] dark:text-amber-400"
                             title="امتیاز عملکرد"
                         >
                             <Star size={12} fill="currentColor" />
@@ -699,6 +1183,7 @@ function UserCard({
                     )}
                 </div>
 
+                {/* ---------- Identity ---------- */}
                 <div className="flex items-center gap-3 pt-1">
                     <Avatar name={employee.full_name || "؟"} id={employee.id} />
                     <div className="flex min-w-0 flex-col gap-0.5">
@@ -711,10 +1196,8 @@ function UserCard({
                     </div>
                 </div>
 
-                <div
-                    className="flex flex-col gap-2 border-t pt-2.5"
-                    style={{ borderColor: dividerColor }}
-                >
+                {/* ---------- Details ---------- */}
+                <div className="flex flex-col gap-2 border-t border-black/5 pt-2.5 dark:border-white/5">
                     {phoneNumber && (
                         <div className="flex items-center gap-2 text-[11.5px] text-gray-400 dark:text-gray-500">
                             <Phone className="h-3.5 w-3.5 shrink-0" />
@@ -733,37 +1216,22 @@ function UserCard({
 
                         <div className="flex shrink-0 items-center gap-1.5">
                             <CalendarDays className="h-3.5 w-3.5" />
-                            <span>{formatDate(employee.created_at)}</span>
+                            <span>{formattedDate}</span>
                         </div>
                     </div>
 
                     <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
                         <span
-                            className="rounded-lg px-2 py-0.5 text-[10.5px] font-bold"
-                            style={
-                                isAdmin
-                                    ? {
-                                        background:
-                                            "linear-gradient(135deg, rgba(245,158,11,0.18), rgba(217,119,6,0.18))",
-                                        color: isDark ? "#fbbf24" : "#d97706",
-                                        border: "1px solid rgba(245,158,11,0.25)",
-                                    }
-                                    : {
-                                        background:
-                                            "linear-gradient(135deg, rgba(99,102,241,0.18), rgba(139,92,246,0.18))",
-                                        color: isDark ? "#a5b4fc" : "#6366f1",
-                                        border: "1px solid rgba(99,102,241,0.25)",
-                                    }
-                            }
+                            className={`rounded-lg border bg-gradient-to-br px-2 py-0.5 text-[10.5px] font-bold ${isAdmin
+                                ? "border-amber-500/25 from-amber-500/[0.18] to-amber-600/[0.18] text-amber-600 dark:text-amber-400"
+                                : "border-indigo-500/25 from-indigo-500/[0.18] to-violet-500/[0.18] text-indigo-500 dark:text-indigo-300"
+                                }`}
                         >
                             {isAdmin ? "مدیر کل" : "کاربر سامانه"}
                         </span>
 
                         {hasActiveTasks && (
-                            <span
-                                className="rounded-lg bg-rose-50 px-2 py-0.5 text-[10.5px] font-bold text-rose-600 dark:bg-rose-500/10 dark:text-rose-400"
-                                style={{ border: "1px solid rgba(244,63,94,0.25)" }}
-                            >
+                            <span className="rounded-lg border border-rose-500/25 bg-rose-50 px-2 py-0.5 text-[10.5px] font-bold text-rose-600 dark:bg-rose-500/10 dark:text-rose-400">
                                 {activeTaskTitles.length > 0
                                     ? `${activeTaskTitles.length} تسک فعال`
                                     : "دارای تسک"}
@@ -771,370 +1239,75 @@ function UserCard({
                         )}
                     </div>
                 </div>
+            </div>
 
-                <div className="hidden md:block">
-                    <AnimatePresence>
-                        {hovered && (
-                            <motion.div
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                exit={{ opacity: 0 }}
-                                transition={{ duration: 0.18, ease: "easeOut" }}
-                                className={`pointer-events-auto absolute z-40 flex items-center ${actionsContainerClass}`}
-                            >
-                                {actions.map((act) => (
-                                    <div key={act.key} className="relative flex items-center justify-center">
-                                        {act.key === "toggleActive" ? (
-                                            <motion.div
-                                                initial={{ scale: 0, opacity: 0 }}
-                                                animate={{ scale: 1, opacity: 1 }}
-                                                exit={{ scale: 0, opacity: 0 }}
-                                                transition={{ ...SPRING, delay: act.delay }}
-                                                onMouseEnter={() => setActiveTooltip(act.key)}
-                                                onMouseLeave={() => setActiveTooltip(null)}
-                                                className="flex items-center justify-center"
-                                            >
-                                                <StatusSwitch
-                                                    isActive={isActive}
-                                                    loading={togglingActive}
-                                                    disabled={isSelf}
-                                                    isDark={isDark}
-                                                    onToggle={handleToggleActive}
-                                                />
-                                            </motion.div>
-                                        ) : (
-                                            <SweepButton
-                                                actionKey={act.key}
-                                                icon={act.icon}
-                                                offset={{ x: 0, y: 0 }}
-                                                delay={act.delay}
-                                                disabled={act.disabled}
-                                                isDark={isDark}
-                                                iconBg={iconBg}
-                                                iconBorder={iconBorder}
-                                                iconColor={act.color}
-                                                spring={SPRING}
-                                                onEnter={() => setActiveTooltip(act.key)}
-                                                onLeave={() => setActiveTooltip(null)}
-                                                onClick={act.onClick}
-                                            />
-                                        )}
-
-                                        <AnimatePresence>
-                                            {activeTooltip === act.key && (
-                                                <div
-                                                    className={`pointer-events-none absolute z-[60] ${tooltipPositionClass}`}
-                                                >
-                                                    <motion.div
-                                                        initial={{
-                                                            opacity: 0,
-                                                            scale: 0.95,
-                                                            x: tooltipOffsetX,
-                                                            y: tooltipOffsetY,
-                                                        }}
-                                                        animate={{ opacity: 1, scale: 1, x: 0, y: 0 }}
-                                                        exit={{
-                                                            opacity: 0,
-                                                            scale: 0.95,
-                                                            x: tooltipOffsetX,
-                                                            y: tooltipOffsetY,
-                                                        }}
-                                                        transition={{ duration: 0.15 }}
-                                                        className="whitespace-nowrap rounded-2xl px-3 py-2 text-center shadow-xl"
-                                                        style={{
-                                                            background: isDark ? "#0f172a" : "#1e293b",
-                                                            border: "1px solid rgba(255,255,255,0.08)",
-                                                        }}
-                                                        dir="rtl"
-                                                    >
-                                                        <span className="text-[11px] font-bold text-white">
-                                                            {act.tooltip}
-                                                        </span>
-                                                    </motion.div>
-                                                </div>
-                                            )}
-                                        </AnimatePresence>
-                                    </div>
-                                ))}
-                            </motion.div>
-                        )}
-                    </AnimatePresence>
-                </div>
-            </motion.div>
-
+            {/* ---------- Mobile sheet ---------- */}
             <AnimatePresence>
                 {showMobileSheet && (
-                    <div
-                        className="fixed inset-0 z-50 flex items-end justify-center md:hidden"
-                        dir="rtl"
-                    >
-                        <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            onClick={() => setShowMobileSheet(false)}
-                            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-                        />
-                        <motion.div
-                            initial={{ y: "100%" }}
-                            animate={{ y: 0 }}
-                            exit={{ y: "100%" }}
-                            transition={{ type: "spring", damping: 28, stiffness: 320 }}
-                            className="relative z-10 w-full max-w-lg rounded-t-[28px] p-5 shadow-2xl"
-                            style={{
-                                background: isDark ? "#12141c" : "#ffffff",
-                                borderTop: `1px solid ${isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.08)"
-                                    }`,
-                            }}
-                        >
-                            <div className="mx-auto mb-4 h-1.5 w-12 rounded-full bg-gray-300 dark:bg-gray-700" />
-
-                            <div
-                                className="mb-4 flex items-center justify-between border-b pb-3"
-                                style={{ borderColor: dividerColor }}
-                            >
-                                <div className="flex items-center gap-2.5">
-                                    <Avatar name={employee.full_name || "؟"} id={employee.id} />
-                                    <div>
-                                        <p className="text-sm font-extrabold text-gray-800 dark:text-gray-100">
-                                            {employee.full_name || "بدون نام"}
-                                        </p>
-                                        <p className="text-[11px] text-gray-400 dark:text-gray-500">
-                                            @{employee.username} {departmentName ? `• ${departmentName}` : ""}
-                                        </p>
-                                    </div>
-                                </div>
-
-                                <div className="flex items-center gap-2">
-                                    <span className="text-[11px] font-bold text-gray-500 dark:text-gray-400">
-                                        {isActive ? "فعال" : "غیرفعال"}
-                                    </span>
-                                    <StatusSwitch
-                                        isActive={isActive}
-                                        loading={togglingActive}
-                                        disabled={isSelf}
-                                        isDark={isDark}
-                                        title={
-                                            isSelf
-                                                ? "امکان تغییر وضعیت حساب خود وجود ندارد"
-                                                : isActive
-                                                    ? "حساب فعال است"
-                                                    : "حساب غیرفعال است"
-                                        }
-                                        onToggle={handleToggleActive}
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="flex flex-col gap-2">
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        setShowMobileSheet(false);
-                                        setShowEdit(true);
-                                    }}
-                                    className="flex w-full items-center gap-3 rounded-2xl p-3.5 text-[13.5px] font-bold text-blue-600 transition-all active:scale-[0.98] dark:text-blue-400"
-                                    style={{
-                                        background: isDark
-                                            ? "rgba(59,130,246,0.12)"
-                                            : "rgba(59,130,246,0.08)",
-                                        border: `1px solid ${isDark ? "rgba(59,130,246,0.2)" : "rgba(59,130,246,0.14)"
-                                            }`,
-                                    }}
-                                >
-                                    <SquarePen size={18} />
-                                    <span>ویرایش اطلاعات کاربر</span>
-                                </button>
-
-                                <button
-                                    type="button"
-                                    disabled={isAdmin}
-                                    onClick={() => {
-                                        if (isAdmin) return;
-                                        setShowMobileSheet(false);
-                                        setShowAdjust(true);
-                                    }}
-                                    className={`flex w-full items-center gap-3 rounded-2xl p-3.5 text-[13.5px] font-bold transition-all ${isAdmin
-                                        ? "cursor-not-allowed text-gray-400 opacity-50"
-                                        : "text-emerald-600 active:scale-[0.98] dark:text-emerald-400"
-                                        }`}
-                                    style={{
-                                        background: isAdmin
-                                            ? isDark
-                                                ? "rgba(255,255,255,0.03)"
-                                                : "rgba(0,0,0,0.03)"
-                                            : isDark
-                                                ? "rgba(16,185,129,0.12)"
-                                                : "rgba(16,185,129,0.08)",
-                                        border: `1px solid ${isAdmin
-                                            ? isDark
-                                                ? "rgba(255,255,255,0.06)"
-                                                : "rgba(0,0,0,0.06)"
-                                            : isDark
-                                                ? "rgba(16,185,129,0.2)"
-                                                : "rgba(16,185,129,0.14)"
-                                            }`,
-                                    }}
-                                >
-                                    <SlidersHorizontal size={18} />
-                                    <span>تغییر امتیاز</span>
-                                </button>
-
-                                <div className="flex flex-col gap-1.5 pt-1">
-                                    <button
-                                        type="button"
-                                        disabled={!canDelete}
-                                        onClick={() => {
-                                            if (!canDelete) return;
-                                            setShowMobileSheet(false);
-                                            setShowConfirm(true);
-                                        }}
-                                        className={`flex w-full items-center gap-3 rounded-2xl p-3.5 text-[13.5px] font-bold transition-all ${!canDelete
-                                            ? "cursor-not-allowed text-gray-400 opacity-50"
-                                            : "text-rose-600 active:scale-[0.98] dark:text-rose-400"
-                                            }`}
-                                        style={{
-                                            background: !canDelete
-                                                ? isDark
-                                                    ? "rgba(255,255,255,0.03)"
-                                                    : "rgba(0,0,0,0.03)"
-                                                : isDark
-                                                    ? "rgba(239,68,68,0.12)"
-                                                    : "rgba(239,68,68,0.08)",
-                                            border: `1px solid ${!canDelete
-                                                ? isDark
-                                                    ? "rgba(255,255,255,0.06)"
-                                                    : "rgba(0,0,0,0.06)"
-                                                : isDark
-                                                    ? "rgba(239,68,68,0.2)"
-                                                    : "rgba(239,68,68,0.14)"
-                                                }`,
-                                        }}
-                                    >
-                                        <Trash2 size={18} />
-                                        <span>حذف کاربر</span>
-                                    </button>
-
-                                    {!canDelete && deleteTooltipText && (
-                                        <div className="flex items-center gap-1.5 px-2 text-[11.5px] text-rose-500 dark:text-rose-400">
-                                            <AlertCircle size={14} className="shrink-0" />
-                                            <span>{deleteTooltipText}</span>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        </motion.div>
-                    </div>
+                    <MobileSheet
+                        key="mobile-sheet"
+                        employee={employee}
+                        departmentName={departmentName}
+                        isActive={isActive}
+                        togglingActive={togglingActive}
+                        isSelf={isSelf}
+                        isAdmin={isAdmin}
+                        canDelete={canDelete}
+                        deleteTooltipText={deleteTooltipText}
+                        onClose={() => setShowMobileSheet(false)}
+                        onToggleActive={handleToggleActive}
+                        onEdit={() => closeSheetThen(() => setShowEdit(true))}
+                        onAdjust={() => {
+                            if (!isAdmin) closeSheetThen(() => setShowAdjust(true));
+                        }}
+                        onManager={() => closeSheetThen(() => setShowManager(true))}
+                        onRequestDelete={() => {
+                            if (canDelete) closeSheetThen(() => setShowConfirm(true));
+                        }}
+                    />
                 )}
             </AnimatePresence>
 
+            {/* ---------- Confirm delete ---------- */}
             <AnimatePresence>
                 {showConfirm && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        onClick={() => !isDeleting && setShowConfirm(false)}
-                        className="fixed inset-0 z-50 flex items-center justify-center p-4"
-                        style={{
-                            background: "rgba(0,0,0,0.55)",
-                            backdropFilter: "blur(6px)",
-                        }}
-                    >
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.95, y: 16 }}
-                            animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.95, y: 16 }}
-                            transition={{ duration: 0.18 }}
-                            onClick={(e) => e.stopPropagation()}
-                            className="w-full max-w-[360px] rounded-[2rem] p-5 shadow-2xl"
-                            style={{
-                                background: isDark ? "#0f172a" : "#ffffff",
-                                border: isDark
-                                    ? "1px solid rgba(255,255,255,0.08)"
-                                    : "1px solid rgba(15,23,42,0.08)",
-                            }}
-                            dir="rtl"
-                        >
-                            <div className="mb-4 flex items-center gap-2.5">
-                                <div
-                                    className="flex h-9 w-9 items-center justify-center rounded-2xl"
-                                    style={{
-                                        background: isDark
-                                            ? "rgba(239,68,68,0.14)"
-                                            : "rgba(239,68,68,0.08)",
-                                    }}
-                                >
-                                    <Trash2 size={16} className="text-red-500" />
-                                </div>
-                                <h3 className="text-[14px] font-extrabold text-gray-900 dark:text-white">
-                                    حذف کاربر
-                                </h3>
-                            </div>
-
-                            <p className="text-[12.5px] leading-6 text-gray-600 dark:text-gray-400">
-                                آیا از حذف حساب{" "}
-                                <span className="font-extrabold text-gray-900 dark:text-white">
-                                    «{employee.full_name || employee.username}»
-                                </span>{" "}
-                                اطمینان دارید؟ این عملیات قابل بازگشت نیست.
-                            </p>
-
-                            {deleteError && (
-                                <p className="mt-3 text-[11.5px] font-semibold text-red-500">
-                                    {deleteError}
-                                </p>
-                            )}
-
-                            <div className="mt-5 flex gap-2">
-                                <button
-                                    type="button"
-                                    onClick={() => setShowConfirm(false)}
-                                    disabled={isDeleting}
-                                    className="flex-1 rounded-2xl py-2.5 text-[12.5px] font-bold disabled:opacity-50"
-                                    style={{
-                                        background: isDark
-                                            ? "rgba(255,255,255,0.05)"
-                                            : "rgba(15,23,42,0.05)",
-                                        color: isDark ? "#cbd5e1" : "#475569",
-                                    }}
-                                >
-                                    انصراف
-                                </button>
-
-                                <button
-                                    type="button"
-                                    onClick={handleDelete}
-                                    disabled={isDeleting}
-                                    className="flex flex-1 items-center justify-center gap-1.5 rounded-2xl py-2.5 text-[12.5px] font-bold text-white disabled:opacity-60"
-                                    style={{
-                                        background: "linear-gradient(135deg, #ef4444, #dc2626)",
-                                        boxShadow: "0 10px 24px rgba(239,68,68,0.22)",
-                                    }}
-                                >
-                                    {isDeleting ? (
-                                        <Loader2 size={15} className="animate-spin" />
-                                    ) : (
-                                        <Trash2 size={14} />
-                                    )}
-                                    {isDeleting ? "در حال حذف..." : "حذف کن"}
-                                </button>
-                            </div>
-                        </motion.div>
-                    </motion.div>
+                    <ConfirmDeleteDialog
+                        key="confirm-delete"
+                        name={employee.full_name || employee.username}
+                        isDeleting={isDeleting}
+                        error={deleteError}
+                        onCancel={() => setShowConfirm(false)}
+                        onConfirm={handleDelete}
+                    />
                 )}
             </AnimatePresence>
 
-            <EditUserModal
-                isOpen={showEdit}
-                onClose={() => setShowEdit(false)}
-                employee={employee}
-                onUpdated={(updatedEmployee: ApiEmployee) => {
-                    onUpdated(updatedEmployee);
-                    setShowEdit(false);
-                }}
-            />
+            {/* ---------- Department manager ---------- */}
+            <AnimatePresence>
+                {showManager && (
+                    <DepartmentManagerModal
+                        key={`manager-modal-${employee.id}`}
+                        employeeId={employee.id}
+                        employeeName={employee.full_name || employee.username}
+                        onClose={() => setShowManager(false)}
+                    />
+                )}
+            </AnimatePresence>
 
+            {/* ---------- Edit (فقط بعد از اولین باز شدن mount می‌شود) ---------- */}
+            {editMounted && (
+                <EditUserModal
+                    isOpen={showEdit}
+                    onClose={() => setShowEdit(false)}
+                    employee={employee}
+                    onUpdated={(updatedEmployee: ApiEmployee) => {
+                        onUpdated(updatedEmployee);
+                        setShowEdit(false);
+                    }}
+                />
+            )}
+
+            {/* ---------- Adjust score ---------- */}
             <AnimatePresence>
                 {showAdjust && (
                     <AdjustScoreModal
