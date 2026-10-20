@@ -14,6 +14,8 @@ import {
   Boxes,
   ShoppingCart,
   ShieldCheck,
+  CreativeCommonsIcon,
+  Factory,
 } from "lucide-react";
 import { LucideIcon } from "lucide-react";
 
@@ -100,6 +102,11 @@ export const adminMenuItems: MenuItem[] = [
     href: "/admin/performance",
   },
   {
+    icon: Factory,
+    label: "تولید",
+    href: "/admin/production/machines",
+  },
+  {
     icon: CalendarCheck2,
     label: "تقویم",
     href: "/admin/calendar",
@@ -156,6 +163,11 @@ export const userMenuItems: MenuItem[] = [
     icon: UserRound,
     label: "مشتری",
     href: "/user/customer",
+  },
+  {
+    icon: Factory,
+    label: "تولید",
+    href: "/user/production/logs",
   },
   {
     icon: Boxes,
