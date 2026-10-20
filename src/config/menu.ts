@@ -165,11 +165,6 @@ export const userMenuItems: MenuItem[] = [
     href: "/user/customer",
   },
   {
-    icon: Factory,
-    label: "تولید",
-    href: "/user/production/logs",
-  },
-  {
     icon: Boxes,
     label: "انبارداری",
     href: "/user/warehouse",
