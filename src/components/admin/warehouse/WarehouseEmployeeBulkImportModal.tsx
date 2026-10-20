@@ -17,13 +17,14 @@ interface Props {
     isOpen: boolean;
     onClose: () => void;
     performedById?: number | null;
+    warehouseId?: number | null;
     onCompleted?: () => void;
 }
 
 function getErrorMessage(err: unknown, fallback: string) {
     const data = (err as AxiosError<Record<string, unknown>>).response?.data;
     if (!data) return fallback;
-    for (const key of ["detail", "message", "error", "non_field_errors", "file"]) {
+    for (const key of ["detail", "message", "error", "non_field_errors", "file", "performed_by_id", "warehouse_id"]) {
         const v = data[key];
         if (typeof v === "string") return v;
         if (Array.isArray(v) && typeof v[0] === "string") return v[0];
@@ -35,6 +36,7 @@ export default function WarehouseEmployeeBulkImportModal({
     isOpen,
     onClose,
     performedById,
+    warehouseId,
     onCompleted,
 }: Props) {
     const { resolvedTheme } = useTheme();
@@ -90,12 +92,15 @@ export default function WarehouseEmployeeBulkImportModal({
         form.append("file", file);
         form.append("performed_by_id", String(performedById));
 
+        const url =
+            warehouseId != null
+                ? `/warehouse/api/v1/products/bulk-import/${warehouseId}/`
+                : "/warehouse/api/v1/products/bulk-import/";
+
         try {
-            await axiosInstance.post(
-                "/warehouse/api/v1/products/bulk-import/",
-                form,
-                { headers: { "Content-Type": "multipart/form-data" } }
-            );
+            await axiosInstance.post(url, form, {
+                headers: { "Content-Type": "multipart/form-data" },
+            });
             setSuccess(true);
             setTimeout(() => {
                 reset();
@@ -162,7 +167,9 @@ export default function WarehouseEmployeeBulkImportModal({
                                         ثبت گروهی محصولات
                                     </h3>
                                     <p className="text-[10.5px] text-gray-400 dark:text-gray-500">
-                                        آپلود فایل اکسل / CSV
+                                        {warehouseId != null
+                                            ? "ثبت کالا همراه با موجودی اول دوره در این انبار"
+                                            : "آپلود فایل اکسل / CSV"}
                                     </p>
                                 </div>
                             </div>
@@ -177,7 +184,6 @@ export default function WarehouseEmployeeBulkImportModal({
                             </button>
                         </div>
 
-                        {/* Drop zone */}
                         <div
                             onClick={() => !loading && inputRef.current?.click()}
                             onDragOver={(e) => {
@@ -254,6 +260,9 @@ export default function WarehouseEmployeeBulkImportModal({
                                     </p>
                                     <p className="text-[10.5px] text-gray-400 dark:text-gray-500">
                                         پشتیبانی از .xlsx، .xls، .csv
+                                    </p>
+                                    <p className="text-[10.5px] text-gray-400 dark:text-gray-500">
+                                        ستون اختیاری «کد قفسه» (یا قفسه / shelf / code_shelf) پشتیبانی می‌شود
                                     </p>
                                 </>
                             )}

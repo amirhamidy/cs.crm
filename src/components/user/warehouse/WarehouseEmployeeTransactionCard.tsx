@@ -107,6 +107,14 @@ export default function WarehouseEmployeeTransactionCard({
                         <h3 className="truncate text-[13px] font-extrabold text-gray-900 dark:text-white">
                             {transaction.product_name || "محصول نامشخص"}
                         </h3>
+                        {(transaction as { shelf_code?: string | null }).shelf_code && (
+                            <p className="mt-0.5 text-[10.5px] font-bold text-indigo-500 dark:text-indigo-400">
+                                قفسه{" "}
+                                <span dir="ltr">
+                                    {(transaction as { shelf_code?: string | null }).shelf_code}
+                                </span>
+                            </p>
+                        )}
                         <div className="mt-1 flex items-center gap-2">
                             <span
                                 className="inline-flex items-center gap-1 rounded-xl px-2 py-0.5 text-[10.5px] font-extrabold"

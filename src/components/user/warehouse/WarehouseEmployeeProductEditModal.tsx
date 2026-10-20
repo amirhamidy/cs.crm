@@ -19,6 +19,11 @@ import {
     ApiProduct,
     unitDetailKey,
 } from "@/types/warehouse";
+import {
+    SHELF_CODE_MAX_LENGTH,
+    normalizeShelfCode,
+} from "@/utils/warehouseShelf";
+import type { WithShelf } from "@/types/warehouseShelf";
 
 interface Props {
     isOpen: boolean;
@@ -413,6 +418,7 @@ export default function WarehouseEmployeeProductEditModal({
     onUpdated,
 }: Props) {
     const [name, setName] = useState("");
+    const [shelfCode, setShelfCode] = useState("");
     const [salePrice, setSalePrice] = useState("");
     const [categoryId, setCategoryId] = useState("");
     const [quantityPerUnit, setQuantityPerUnit] = useState("");
@@ -427,6 +433,7 @@ export default function WarehouseEmployeeProductEditModal({
         ] as { quantity_per_unit?: number } | null | undefined;
 
         setName(product.name ?? "");
+        setShelfCode((product as WithShelf<ApiProduct>).shelf_code ?? "");
         setSalePrice(formatNumber(String(product.sale_price ?? "")));
         setCategoryId(
             product.category_detail?.id
@@ -474,12 +481,19 @@ export default function WarehouseEmployeeProductEditModal({
             return;
         }
 
+        const normalizedShelf = normalizeShelfCode(shelfCode);
+        if (normalizedShelf.length > SHELF_CODE_MAX_LENGTH) {
+            setError(`کد قفسه نباید بیشتر از ${SHELF_CODE_MAX_LENGTH} کاراکتر باشد`);
+            return;
+        }
+
         setLoading(true);
         setError("");
 
         try {
             const payload: Record<string, unknown> = {
                 name: name.trim(),
+                shelf_code: normalizedShelf,
                 sale_price: priceValue,
                 category: Number(categoryId),
                 unit_type: product.unit_type,
@@ -576,6 +590,18 @@ export default function WarehouseEmployeeProductEditModal({
                                     setError("");
                                 }}
                                 dir="rtl"
+                            />
+
+                            <FloatingInput
+                                label="کد قفسه (اختیاری)"
+                                id="edit_product_shelf_code"
+                                maxLength={SHELF_CODE_MAX_LENGTH}
+                                value={shelfCode}
+                                onValueChange={(v) => {
+                                    setShelfCode(v.toUpperCase());
+                                    setError("");
+                                }}
+                                dir="ltr"
                             />
 
                             <FloatingInput

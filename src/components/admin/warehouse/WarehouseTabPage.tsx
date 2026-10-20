@@ -53,6 +53,9 @@ import WarehouseEmployeeOrderTaskCard from "@/components/user/warehouse/Warehous
 import WarehouseEmployeeStockLedger from "@/components/user/warehouse/Warehouseemployeestockledger";
 import OrderInvoiceCard from "@/components/user/warehouse/OrderInvoiceCard";
 import OrderInvoiceModal from "@/components/user/warehouse/OrderInvoiceModal";
+import ShelfFilterBar from "@/components/user/warehouse/ShelfFilterBar";
+import { useWarehouseShelves } from "@/hooks/useWarehouseShelves";
+import { useShelfProducts } from "@/hooks/useShelfProducts";
 import { buildSalesInvoices, getOrderTaskTitle, paginate } from "@/utils/warehouseEmployee";
 import type { SalesInvoice } from "@/utils/warehouseEmployee";
 import useWarehouseAccess from "@/hooks/useWarehouseAccess";
@@ -100,6 +103,7 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
     const warehouseId =
         warehouseParam && Number.isFinite(Number(warehouseParam)) ? Number(warehouseParam) : null;
     const currentPage = Math.max(1, Number(searchParams.get("page")) || 1);
+    const shelfCode = (searchParams.get("shelf") ?? "").trim();
     const productParam = Number(searchParams.get("product"));
     const ledgerProductId = Number.isFinite(productParam) && productParam > 0 ? productParam : null;
 
@@ -129,6 +133,7 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
     const [showAddStaffModal, setShowAddStaffModal] = useState(false);
     const [limitsStock, setLimitsStock] = useState<ApiStockInfo | null>(null);
     const [statusOpen, setStatusOpen] = useState(false);
+    const [shelfReloadKey, setShelfReloadKey] = useState(0);
 
     const tabAllowed = tab === "staff" ? isAdmin : hasFullWarehouseAccess || LIMITED_TABS.includes(tab);
 
@@ -154,7 +159,21 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
         [basePath, warehouseId],
     );
 
-    const goToPage = useCallback((page: number) => router.push(buildUrl(tab, page)), [router, buildUrl, tab]);
+    const shelfQuery = useMemo(
+        () => (shelfCode ? `&shelf=${encodeURIComponent(shelfCode)}` : ""),
+        [shelfCode],
+    );
+
+    const goToPage = useCallback(
+        (page: number) => router.push(buildUrl(tab, page, tab === "products" ? shelfQuery : "")),
+        [router, buildUrl, tab, shelfQuery],
+    );
+
+    const handleShelfChange = useCallback(
+        (code: string) =>
+            router.push(buildUrl("products", 1, code ? `&shelf=${encodeURIComponent(code)}` : "")),
+        [router, buildUrl],
+    );
 
     const goToTab = useCallback((target: Tab) => router.push(buildUrl(target)), [router, buildUrl]);
 
@@ -224,7 +243,23 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
         [qualityTasks],
     );
 
-    const paginatedProducts = { items: products, totalPages: data.totalPages };
+    const shelfFilterActive = tab === "products" && shelfCode !== "";
+
+    const { shelves, loading: shelvesLoading } = useWarehouseShelves(
+        tab === "products" && hasFullWarehouseAccess && ready,
+        shelfReloadKey,
+    );
+
+    const shelfProducts = useShelfProducts({
+        shelfCode,
+        page: currentPage,
+        enabled: shelfFilterActive && hasFullWarehouseAccess && ready,
+        reloadKey: shelfReloadKey,
+    });
+
+    const paginatedProducts = shelfFilterActive
+        ? { items: shelfProducts.items, totalPages: shelfProducts.totalPages }
+        : { items: products, totalPages: data.totalPages };
     const paginatedTasks = { items: taskItems, totalPages: data.totalPages };
     const paginatedStock = { items: stockInfos, totalPages: data.totalPages };
     const paginatedTransactions = { items: transactions, totalPages: data.totalPages };
@@ -235,6 +270,7 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
 
     const refresh = useCallback(() => {
         void reload(true);
+        setShelfReloadKey((key) => key + 1);
     }, [reload]);
 
     const archiveLoading = refreshing;
@@ -251,6 +287,7 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
 
     const handleProductCreated = useCallback(() => {
         setProductWizardOpen(false);
+        setShelfReloadKey((key) => key + 1);
         goOrReload("products");
     }, [goOrReload]);
 
@@ -446,8 +483,8 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
                             whileTap={{ scale: 0.96 }}
                             onClick={() => setStatusOpen(true)}
                             className={`flex h-10 items-center justify-center gap-2 rounded-2xl px-4 text-[12.5px] font-bold transition-colors ${warehouse.is_active
-                                    ? "text-amber-500 hover:bg-amber-500/10"
-                                    : "text-emerald-500 hover:bg-emerald-500/10"
+                                ? "text-amber-500 hover:bg-amber-500/10"
+                                : "text-emerald-500 hover:bg-emerald-500/10"
                                 }`}
                         >
                             {warehouse.is_active ? <PowerOff size={14} /> : <Power size={14} />}
@@ -610,6 +647,19 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
                                     </div>
                                 </div>
 
+                                <ShelfFilterBar
+                                    shelves={shelves}
+                                    value={shelfCode}
+                                    onChange={handleShelfChange}
+                                    loading={shelvesLoading}
+                                />
+
+                                {shelfFilterActive && shelfProducts.error && (
+                                    <p className="text-center text-[12px] font-semibold text-red-500">
+                                        {shelfProducts.error}
+                                    </p>
+                                )}
+
                                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                                     {paginatedProducts.items.length
                                         ? paginatedProducts.items.map((product, index) => (
@@ -627,7 +677,13 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
                                                 onDeleted={refresh}
                                             />
                                         ))
-                                        : renderEmpty("محصولی برای نمایش وجود ندارد")}
+                                        : renderEmpty(
+                                            shelfFilterActive
+                                                ? shelfProducts.loading
+                                                    ? "در حال دریافت محصولات قفسه..."
+                                                    : "محصولی در این قفسه یافت نشد"
+                                                : "محصولی برای نمایش وجود ندارد",
+                                        )}
                                 </div>
 
                                 <Pagination
@@ -760,6 +816,7 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
                                                 isStaff={!!myStaff}
                                                 staffId={myStaff?.id ?? null}
                                                 canChangeStatus={hasFullWarehouseAccess}
+                                                warehouseId={warehouseId}
                                                 onRefresh={refresh}
                                             />
                                         ))
@@ -1015,6 +1072,7 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
                             isOpen={bulkImportOpen}
                             onClose={() => setBulkImportOpen(false)}
                             performedById={myStaff.id}
+                            warehouseId={warehouseId}
                             onCompleted={refresh}
                         />
                     )}

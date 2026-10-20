@@ -29,6 +29,10 @@ import type {
     ApiStockInfo,
     ApiWarehouseStaff,
 } from "@/types/warehouse";
+import {
+    SHELF_CODE_MAX_LENGTH,
+    normalizeShelfCode,
+} from "@/utils/warehouseShelf";
 
 interface WarehouseEmployeeProductWizardModalProps {
     isOpen: boolean;
@@ -44,6 +48,7 @@ type Step = 1 | 2 | 3 | 4;
 
 type FormState = {
     name: string;
+    shelfCode: string;
     salePrice: string;
     category: string;
     unitType: string;
@@ -502,6 +507,7 @@ export default function WarehouseEmployeeProductWizardModal({
 
     const [form, setForm] = useState<FormState>({
         name: "",
+        shelfCode: "",
         salePrice: "",
         category: "",
         unitType: "",
@@ -528,6 +534,7 @@ export default function WarehouseEmployeeProductWizardModal({
         );
         setForm({
             name: "",
+            shelfCode: "",
             salePrice: "",
             category: "",
             unitType: "",
@@ -564,6 +571,9 @@ export default function WarehouseEmployeeProductWizardModal({
 
         if (!form.category)
             return setError("دسته‌بندی را انتخاب کنید"), false;
+
+        if (normalizeShelfCode(form.shelfCode).length > SHELF_CODE_MAX_LENGTH)
+            return setError(`کد قفسه نباید بیشتر از ${SHELF_CODE_MAX_LENGTH} کاراکتر باشد`), false;
 
         return true;
     }
@@ -626,11 +636,14 @@ export default function WarehouseEmployeeProductWizardModal({
         try {
             const unitType = form.unitType as ApiProduct["unit_type"];
 
-            const initPayload: ApiProductInitDraft = {
+            const shelfCode = normalizeShelfCode(form.shelfCode);
+
+            const initPayload: ApiProductInitDraft & { shelf_code?: string } = {
                 name: form.name.trim(),
                 sale_price: parseNumber(form.salePrice),
                 category: Number(form.category),
                 unit_type: unitType,
+                ...(shelfCode ? { shelf_code: shelfCode } : {}),
             };
 
             const initResponse = await axiosInstance.post<ApiProduct>(
@@ -921,6 +934,18 @@ export default function WarehouseEmployeeProductWizardModal({
                                                 value={form.name}
                                                 onValueChange={(v) =>
                                                     updateField("name", v)
+                                                }
+                                                disabled={loading}
+                                            />
+
+                                            <FloatingInput
+                                                id="product-shelf-code"
+                                                label="کد قفسه (اختیاری)"
+                                                dir="ltr"
+                                                maxLength={SHELF_CODE_MAX_LENGTH}
+                                                value={form.shelfCode}
+                                                onValueChange={(v) =>
+                                                    updateField("shelfCode", v.toUpperCase())
                                                 }
                                                 disabled={loading}
                                             />

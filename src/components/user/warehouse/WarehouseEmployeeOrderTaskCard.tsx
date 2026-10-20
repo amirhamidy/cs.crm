@@ -11,7 +11,9 @@ import {
     ClipboardList,
     Clock3,
     FileText,
+    MapPin,
     Package,
+    PackagePlus,
     Paperclip,
     User,
     XCircle,
@@ -19,6 +21,12 @@ import {
 import { ApiOrderTask, ApiProduct } from "@/types/warehouse";
 import WarehouseEmployeeOrderTaskStatusModal from "./WarehouseEmployeeOrderTaskStatusModal";
 import OrderTaskAttachmentsModal from "./OrderTaskAttachmentsModal";
+import AddItemsToOrderModal from "./AddItemsToOrderModal";
+import {
+    formatQuantity,
+    getOrderItems,
+    resolveOrderWarehouseId,
+} from "@/utils/warehouseShelf";
 import {
     formatDate,
     formatNumber,
@@ -33,6 +41,7 @@ interface Props {
     isStaff: boolean;
     staffId: number | string | null;
     canChangeStatus: boolean;
+    warehouseId?: number | null;
     onUpdate?: (orderTask: ApiOrderTask) => void;
     onRefresh?: () => Promise<void> | void;
 }
@@ -52,6 +61,7 @@ export default function WarehouseEmployeeOrderTaskCard({
     isStaff,
     staffId,
     canChangeStatus,
+    warehouseId,
     onUpdate,
     onRefresh,
 }: Props) {
@@ -60,6 +70,7 @@ export default function WarehouseEmployeeOrderTaskCard({
     const [hovered, setHovered] = useState(false);
     const [modalOpen, setModalOpen] = useState(false);
     const [attachmentsOpen, setAttachmentsOpen] = useState(false);
+    const [addItemsOpen, setAddItemsOpen] = useState(false);
 
     const assignedEmployee = Array.isArray(orderTask.assigned_employee)
         ? orderTask.assigned_employee[0]
@@ -143,6 +154,17 @@ export default function WarehouseEmployeeOrderTaskCard({
 
     const canComplete = canChangeStatus && orderTask.status !== "completed" && orderTask.status !== "cancelled";
     const canCancel = canChangeStatus && orderTask.status !== "completed" && orderTask.status !== "cancelled";
+
+    const orderItems = getOrderItems(orderTask);
+    const visibleItems = orderItems.slice(0, 4);
+    const hiddenItemsCount = Math.max(0, orderItems.length - visibleItems.length);
+    const resolvedWarehouseId = warehouseId ?? resolveOrderWarehouseId(orderTask);
+    const canAddItems = canChangeStatus && String(orderTask.status) === "in_progress";
+
+    const handleItemsAdded = (updated: ApiOrderTask) => {
+        if (onUpdate) onUpdate(updated);
+        if (onRefresh) void onRefresh();
+    };
 
     const customerName = orderTask.customer?.full_name || "نامشخص";
     const departmentName = orderTask.department?.name || "نامشخص";
@@ -273,6 +295,49 @@ export default function WarehouseEmployeeOrderTaskCard({
                     )}
                 </div>
 
+                {orderItems.length > 0 && (
+                    <div className="relative z-[1] mt-3 rounded-2xl bg-gray-50 p-2.5 dark:bg-white/[0.03]">
+                        <p className="mb-1.5 text-[9.5px] font-bold text-gray-400 dark:text-white/40">
+                            اقلام فاکتور ({formatQuantity(orderItems.length)})
+                        </p>
+                        <div className="space-y-1.5">
+                            {visibleItems.map((item) => (
+                                <div
+                                    key={item.id}
+                                    className="flex items-center justify-between gap-2"
+                                >
+                                    <div className="min-w-0 flex-1">
+                                        <p className="truncate text-[11px] font-extrabold text-gray-800 dark:text-gray-100">
+                                            {item.name_product || "محصول نامشخص"}
+                                        </p>
+                                        {item.shelf_code && (
+                                            <p className="mt-0.5 flex items-center gap-1 text-[9.5px] font-bold text-indigo-500 dark:text-indigo-400">
+                                                <MapPin size={9} />
+                                                <span dir="ltr">{item.shelf_code}</span>
+                                            </p>
+                                        )}
+                                    </div>
+                                    <div className="shrink-0 text-left">
+                                        <p className="text-[11px] font-black text-gray-900 dark:text-white">
+                                            {formatQuantity(item.quantity)}
+                                        </p>
+                                        {item.display_status && (
+                                            <p className="text-[9px] font-semibold text-gray-400 dark:text-white/40">
+                                                {item.display_status}
+                                            </p>
+                                        )}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                        {hiddenItemsCount > 0 && (
+                            <p className="mt-1.5 text-[10px] font-bold text-gray-400 dark:text-white/40">
+                                و {formatQuantity(hiddenItemsCount)} قلم دیگر
+                            </p>
+                        )}
+                    </div>
+                )}
+
                 <div className="relative z-[1] mt-3 grid grid-cols-2 gap-1.5">
                     <div className="flex items-center gap-1.5 rounded-xl bg-gray-50 px-2 py-1.5 dark:bg-white/[0.03]">
                         <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-indigo-100 dark:bg-indigo-500/10">
@@ -352,21 +417,35 @@ export default function WarehouseEmployeeOrderTaskCard({
                         )}
                     </div>
 
-                    {(canComplete || canCancel) && (
-                        <motion.button
-                            type="button"
-                            whileTap={{ scale: 0.96 }}
-                            onClick={() => setModalOpen(true)}
-                            className="flex items-center gap-1 rounded-xl px-2.5 py-1.5 text-[10.5px] font-extrabold text-white transition-shadow"
-                            style={{
-                                background: `linear-gradient(135deg, ${currentStatus.gradient[0]}, ${currentStatus.gradient[1]})`,
-                                boxShadow: `0 4px 12px -2px ${currentStatus.gradient[1]}60`,
-                            }}
-                        >
-                            <ArrowRight size={11} />
-                            تغییر وضعیت
-                        </motion.button>
-                    )}
+                    <div className="flex items-center gap-1.5">
+                        {canAddItems && (
+                            <motion.button
+                                type="button"
+                                whileTap={{ scale: 0.96 }}
+                                onClick={() => setAddItemsOpen(true)}
+                                className="flex items-center gap-1 rounded-xl border border-indigo-200 bg-indigo-50 px-2.5 py-1.5 text-[10.5px] font-extrabold text-indigo-600 transition-colors hover:bg-indigo-100 dark:border-indigo-400/20 dark:bg-indigo-500/10 dark:text-indigo-300"
+                            >
+                                <PackagePlus size={11} />
+                                افزودن کالا
+                            </motion.button>
+                        )}
+
+                        {(canComplete || canCancel) && (
+                            <motion.button
+                                type="button"
+                                whileTap={{ scale: 0.96 }}
+                                onClick={() => setModalOpen(true)}
+                                className="flex items-center gap-1 rounded-xl px-2.5 py-1.5 text-[10.5px] font-extrabold text-white transition-shadow"
+                                style={{
+                                    background: `linear-gradient(135deg, ${currentStatus.gradient[0]}, ${currentStatus.gradient[1]})`,
+                                    boxShadow: `0 4px 12px -2px ${currentStatus.gradient[1]}60`,
+                                }}
+                            >
+                                <ArrowRight size={11} />
+                                تغییر وضعیت
+                            </motion.button>
+                        )}
+                    </div>
                 </div>
             </motion.article>
 
@@ -377,6 +456,15 @@ export default function WarehouseEmployeeOrderTaskCard({
                 canManage={canChangeStatus && isStaff}
                 onClose={() => setAttachmentsOpen(false)}
                 onChanged={refresh}
+            />
+
+            <AddItemsToOrderModal
+                isOpen={addItemsOpen}
+                orderTaskId={orderTask.id}
+                orderTaskTitle={orderTask.title || undefined}
+                warehouseId={resolvedWarehouseId}
+                onClose={() => setAddItemsOpen(false)}
+                onAdded={handleItemsAdded}
             />
 
             <AnimatePresence>

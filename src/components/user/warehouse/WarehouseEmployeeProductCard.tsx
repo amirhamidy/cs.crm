@@ -9,6 +9,7 @@ import {
     Boxes,
     CalendarDays,
     Loader2,
+    MapPin,
     Package,
     Pencil,
     Scale,
@@ -26,6 +27,7 @@ import {
     ApiWarehouseStaff,
     UNIT_TYPE_LABELS,
 } from "@/types/warehouse";
+import type { WithShelf } from "@/types/warehouseShelf";
 import WarehouseEmployeeProductEditModal from "./WarehouseEmployeeProductEditModal";
 import WarehouseEmployeeStockModal from "./WarehouseEmployeeStockModal";
 import WarehouseEmployeeInitialStockModal from "./WarehouseEmployeeInitialStockModal";
@@ -193,6 +195,8 @@ export default function WarehouseEmployeeProductCard({
 
     const [start, end] =
         AVATAR_GRADIENTS[product.id % AVATAR_GRADIENTS.length];
+
+    const shelfCode = ((product as WithShelf<ApiProduct>).shelf_code ?? "").trim();
 
     const isCritical =
         !!stockInfo && stockInfo.current_quantity <= stockInfo.minimum_stock;
@@ -404,6 +408,14 @@ export default function WarehouseEmployeeProductCard({
                             <Package size={9} />
                             شناسه کالا #{product.id}
                         </div>
+
+                        {shelfCode && (
+                            <div className="mt-1 flex items-center gap-1.5 text-[10.5px] font-extrabold text-indigo-500 dark:text-indigo-400">
+                                <MapPin size={10} />
+                                <span>قفسه</span>
+                                <span dir="ltr">{shelfCode}</span>
+                            </div>
+                        )}
                     </div>
                 </div>
 
