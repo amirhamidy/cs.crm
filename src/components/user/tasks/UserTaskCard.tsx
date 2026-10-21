@@ -74,6 +74,7 @@ interface Props {
     isLastStage: boolean;
     onUpdated: (task: UserTask) => void;
     employeesMap?: Record<number, string>;
+    staffId: number;
 }
 
 interface DeadlineResponse {
@@ -231,6 +232,7 @@ export default function UserTaskCard({
     isLastStage,
     onUpdated,
     employeesMap = {},
+    staffId,
 }: Props) {
     const ext = task as unknown as TaskWithSchedule;
     const hasCase = Boolean(ext.case);
@@ -454,9 +456,10 @@ export default function UserTaskCard({
     }
 
     async function submitSale(data: {
+        task_id: number;
         warehouse_id: number;
-        product_id: number;
-        quantity: number;
+        staff_id: number;
+        items: Array<{ product_id: number; quantity: number }>;
         note: string;
         file?: File;
         started_at?: string;
@@ -470,35 +473,15 @@ export default function UserTaskCard({
         try {
             const form = new FormData();
 
+            form.append("task_id", String(data.task_id));
             form.append("warehouse_id", String(data.warehouse_id));
-            form.append("task_id", String(task.id));
+            form.append("staff_id", String(data.staff_id));
+            form.append("items", JSON.stringify(data.items));
 
-            form.append(
-                "items",
-                JSON.stringify([
-                    {
-                        product_id: data.product_id,
-                        quantity: data.quantity,
-                        reason: "sale",
-                    },
-                ])
-            );
-
-            if (data.note) {
-                form.append("note", data.note);
-            }
-
-            if (data.file) {
-                form.append("file", data.file);
-            }
-
-            if (data.started_at) {
-                form.append("started_at", data.started_at);
-            }
-
-            if (data.deadline) {
-                form.append("deadline", data.deadline);
-            }
+            if (data.note) form.append("note", data.note);
+            if (data.file) form.append("file", data.file);
+            if (data.started_at) form.append("started_at", data.started_at);
+            if (data.deadline) form.append("deadline", data.deadline);
 
             await axiosInstance.post(
                 "/warehouse/api/v1/order_task/create/",
@@ -875,6 +858,7 @@ export default function UserTaskCard({
                     onClose={() => setOpenModal(null)}
                     taskId={task.id}
                     onSubmit={submitSale}
+                    staffId={staffId}
                     submitting={submitting}
                 />
             )}

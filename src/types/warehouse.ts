@@ -337,3 +337,36 @@ export interface ApiStockInfo {
   created_at: string;
   updated_at: string;
 }
+
+
+export interface ApiOrderTaskItem {
+    id: number;
+    product: number | { id: number };
+    product_name: string;
+    shelf_code: string;
+    quantity: number;
+    available_quantity: number | null;
+    is_sufficient: boolean | null;
+    completed_quantity: number;
+    product_sale_price: string | number | null;
+    status: string;
+    status_display: string;
+    error_message: string | null;
+    stock_transaction_id: number | null;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface ApiOrderTask {
+    id: number;
+    task: number;
+    warehouse_name: string;
+    warehouse_code: string;
+    items?: ApiOrderTaskItem[];
+    title: string;
+    description: string;
+    note: string | null;
+    file: string | null;
+    status_display: string;
+    created_at: string;
+}

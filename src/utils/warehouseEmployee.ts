@@ -404,15 +404,20 @@ export const getTransactionQuantity = (transaction: ApiStockTransaction) => {
 
 export interface SalesInvoiceLine {
   id: number;
+  productId: number | null;
   productName: string;
   caseTitle: string;
   unitPrice: number;
   quantity: number;
   lineTotal: number;
+  shelfCode: string;
+  stockTransactionId: number | null;
 }
 
 export interface SalesInvoice {
+  archiveId: number;
   orderTaskId: number;
+  taskId: number | null;
   invoiceNumber: string;
   status: string;
   title: string;
@@ -422,6 +427,8 @@ export interface SalesInvoice {
   archivedAt: string;
   performedByName: string;
   assignedEmployees: string[];
+  warehouseName: string;
+  warehouseCode: string;
   lines: SalesInvoiceLine[];
   total: number;
   totalQuantity: number;
@@ -430,54 +437,65 @@ export interface SalesInvoice {
 export const buildSalesInvoices = (
   items: ApiArchivedOrderTask[],
 ): SalesInvoice[] => {
-  const groups = new Map<number, ApiArchivedOrderTask[]>();
+  return items
+    .map((item) => {
+      const archive = item as unknown as Record<string, any>;
+      const archivedItems = Array.isArray(archive.items) ? archive.items : [];
+      const lines: SalesInvoiceLine[] = archivedItems
+        .filter((row: Record<string, any>) => row.status === "success")
+        .map((row: Record<string, any>) => {
+          const unitPrice = Number(row.product_sale_price ?? 0);
+          const quantity = Number(row.completed_quantity ?? row.quantity ?? 0);
 
-  for (const item of items) {
-    const list = groups.get(item.order_task) ?? [];
-    list.push(item);
-    groups.set(item.order_task, list);
-  }
+          return {
+            id: Number(row.id),
+            productId: row.product_id == null ? null : Number(row.product_id),
+            productName: row.product_name || "کالای نامشخص",
+            caseTitle: archive.case?.title ?? "—",
+            unitPrice,
+            quantity,
+            lineTotal: unitPrice * quantity,
+            shelfCode: String(row.shelf_code ?? ""),
+            stockTransactionId:
+              row.stock_transaction_id == null
+                ? null
+                : Number(row.stock_transaction_id),
+          };
+        });
 
-  return Array.from(groups.entries())
-    .map(([orderTaskId, rows]) => {
-      const first = rows[0];
-
-      const lines: SalesInvoiceLine[] = rows.map((r) => {
-        const unitPrice = Number(r.product_sale_price ?? 0);
-        const quantity = Number(r.completed_quantity ?? r.quantity ?? 0);
-
-        return {
-          id: r.id,
-          productName: r.product_name || "کالای نامشخص",
-          caseTitle: r.case?.title ?? "—",
-          unitPrice,
-          quantity,
-          lineTotal: unitPrice * quantity,
-        };
-      });
-
-      const total = lines.reduce((s, l) => s + l.lineTotal, 0);
-      const totalQuantity = lines.reduce((s, l) => s + l.quantity, 0);
+      const total = lines.reduce((sum, line) => sum + line.lineTotal, 0);
+      const totalQuantity = lines.reduce((sum, line) => sum + line.quantity, 0);
+      const archiveId = Number(archive.id);
 
       return {
-        orderTaskId,
-        invoiceNumber: `INV-${String(orderTaskId).padStart(4, "0")}`,
-        status: first.status ?? "—",
-        title: first.title ?? "—",
-        customerName: first.customer?.full_name ?? "—",
-        customerId: first.customer?.id ?? null,
-        departmentName: first.department?.name ?? "—",
-        archivedAt: first.archived_at,
-        performedByName: first.performed_by?.full_name ?? "—",
-        assignedEmployees: rows
-          .flatMap((r) => r.assigned_employees ?? [])
-          .map((e) => e.full_name)
-          .filter((v, i, a) => a.indexOf(v) === i),
+        archiveId,
+        orderTaskId: Number(archive.order_task ?? 0),
+        taskId: archive.task_id == null ? null : Number(archive.task_id),
+        invoiceNumber: `INV-${String(archiveId).padStart(4, "0")}`,
+        status: String(archive.status ?? "—"),
+        title: String(archive.title ?? "—"),
+        customerName: archive.customer?.full_name ?? "—",
+        customerId:
+          archive.customer?.id == null ? null : Number(archive.customer.id),
+        departmentName: archive.department?.name ?? "—",
+        archivedAt: String(archive.archived_at ?? ""),
+        performedByName: archive.performed_by?.full_name ?? "—",
+        assignedEmployees: (archive.assigned_employees ?? [])
+          .map((employee: Record<string, unknown>) =>
+            String(employee.full_name ?? ""),
+          )
+          .filter(
+            (name: string, index: number, names: string[]) =>
+              Boolean(name) && names.indexOf(name) === index,
+          ),
+        warehouseName: String(archive.warehouse_name ?? "—"),
+        warehouseCode: String(archive.warehouse_code ?? "—"),
         lines,
         total,
         totalQuantity,
       };
     })
+    .filter((invoice) => Number.isFinite(invoice.archiveId))
     .sort(
       (a, b) =>
         new Date(b.archivedAt).getTime() - new Date(a.archivedAt).getTime(),

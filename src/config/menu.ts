@@ -17,6 +17,7 @@ import {
   CreativeCommonsIcon,
   Factory,
 } from "lucide-react";
+import { FileSignature } from "lucide-react";
 import { LucideIcon } from "lucide-react";
 
 export interface MenuItem {
@@ -85,6 +86,11 @@ export const adminMenuItems: MenuItem[] = [
     icon: Users,
     label: "منابع انسانی",
     href: "/admin/human-resources",
+  },
+  {
+    icon: Users,
+    label: "صورت جلسه",
+    href: "/admin/minutes/",
   },
   {
     icon: Building2,
@@ -156,8 +162,8 @@ export const userMenuItems: MenuItem[] = [
   },
   {
     icon: Archive,
-    label: "بایگانی تیکت‌ها",
-    href: "/user/Ticketarchive",
+    label: "صورت جلسه",
+    href: "/user/minutes/",
   },
   {
     icon: UserRound,

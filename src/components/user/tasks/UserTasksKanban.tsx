@@ -261,6 +261,7 @@ export default function UserTasksKanban() {
     const activeStages = activeGroup?.stages ?? [];
     const mobileStage = activeStages.find((s) => s.id === activeMobileStageId) ?? activeStages[0];
     const mobileStageIndex = mobileStage ? activeStages.findIndex((s) => s.id === mobileStage.id) : 0;
+    const staffId = employee?.id ?? 0;
 
     return (
         <div className="flex flex-col gap-4" dir="rtl">
@@ -316,7 +317,7 @@ export default function UserTasksKanban() {
                         {mobileStage && (
                             <AnimatePresence mode="wait">
                                 <motion.div key={mobileStage.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
-                                    <StageColumn stage={mobileStage} tasks={grouped[mobileStage.id] ?? []} accent={accentForId(mobileStage.id)} index={mobileStageIndex} isLast={mobileStageIndex === activeStages.length - 1} onUpdated={handleUpdated} employeesMap={employeesMap} />
+                                    <StageColumn stage={mobileStage} tasks={grouped[mobileStage.id] ?? []} accent={accentForId(mobileStage.id)} index={mobileStageIndex} isLast={mobileStageIndex === activeStages.length - 1} onUpdated={handleUpdated} employeesMap={employeesMap} staffId={staffId} />
                                 </motion.div>
                             </AnimatePresence>
                         )}
@@ -325,7 +326,7 @@ export default function UserTasksKanban() {
                     <Swiper modules={[FreeMode]} freeMode slidesPerView="auto" spaceBetween={14} className="!w-full !overflow-hidden">
                         {activeStages.map((stage, index) => (
                             <SwiperSlide key={stage.id} className="!w-[320px] !overflow-visible">
-                                <StageColumn stage={stage} tasks={grouped[stage.id] ?? []} accent={accentForId(stage.id)} index={index} isLast={index === activeStages.length - 1} onUpdated={handleUpdated} employeesMap={employeesMap} />
+                                <StageColumn stage={stage} tasks={grouped[stage.id] ?? []} accent={accentForId(stage.id)} index={index} isLast={index === activeStages.length - 1} onUpdated={handleUpdated} employeesMap={employeesMap} staffId={staffId} />
                             </SwiperSlide>
                         ))}
                     </Swiper>
@@ -335,7 +336,7 @@ export default function UserTasksKanban() {
     );
 }
 
-function StageColumn({ stage, tasks, accent, index, isLast, onUpdated, employeesMap }: { stage: KanbanStage; tasks: UserTask[]; accent: string; index: number; isLast: boolean; onUpdated: (task: UserTask) => void; employeesMap: Record<number, string> }) {
+function StageColumn({ stage, tasks, accent, index, isLast, onUpdated, employeesMap, staffId }: { stage: KanbanStage; tasks: UserTask[]; accent: string; index: number; isLast: boolean; onUpdated: (task: UserTask) => void; employeesMap: Record<number, string>; staffId: number }) {
     return (
         <motion.div layout initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="relative flex min-w-0 flex-col rounded-[1.45rem] border bg-white shadow-[0_5px_20px_rgba(15,23,42,.03)] dark:bg-white/[.025]" style={{ borderColor: `${accent}28` }}>
             {!isLast && <div className="pointer-events-none absolute top-7 z-20 flex h-5 w-5 items-center justify-center rounded-full border bg-white shadow-sm dark:bg-[#0f172a]" style={{ insetInlineEnd: -10, borderColor: `${accent}35`, color: accent }}><ChevronLeft size={10} /></div>}
@@ -350,7 +351,7 @@ function StageColumn({ stage, tasks, accent, index, isLast, onUpdated, employees
             </div>
             <div className="h-px" style={{ background: `${accent}18` }} />
             {tasks.length ? (
-                <TaskCardSwiper tasks={tasks} accent={accent} isLastStage={isLast} onUpdated={onUpdated} employeesMap={employeesMap} />
+                <TaskCardSwiper tasks={tasks} accent={accent} isLastStage={isLast} onUpdated={onUpdated} employeesMap={employeesMap} staffId={staffId} />
             ) : (
                 <div className="flex h-28 flex-col items-center justify-center gap-1.5 text-center"><Plus size={16} className="text-gray-300" /><p className="text-[11px] text-gray-400">وظیفه‌ای در این مرحله نیست</p></div>
             )}

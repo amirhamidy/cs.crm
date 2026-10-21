@@ -1009,7 +1009,7 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
                                             {paginatedInvoices.items.length
                                                 ? paginatedInvoices.items.map((invoice: SalesInvoice, index: number) => (
                                                     <OrderInvoiceCard
-                                                        key={invoice.orderTaskId}
+                                                        key={invoice.archiveId}
                                                         invoice={invoice}
                                                         index={index}
                                                         onOpen={setSelectedInvoice}

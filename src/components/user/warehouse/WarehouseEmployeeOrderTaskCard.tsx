@@ -84,25 +84,41 @@ export default function WarehouseEmployeeOrderTaskCard({
         task_title?: string;
     };
 
-    const productName = useMemo(() => {
-        const rawProduct = orderData.product;
+    const orderItems = getOrderItems(orderTask);
 
+    const productName = useMemo(() => {
+        if (orderItems.length > 0) {
+            const first = orderItems[0] as any;
+            const name = first.name_product || first.product_name;
+            if (orderItems.length > 1) {
+                return `${name} و ${orderItems.length - 1} قلم دیگر`;
+            }
+            return name || "محصول نامشخص";
+        }
+        const rawProduct = orderData.product;
         if (typeof rawProduct === "number") {
             const found = (products ?? []).find((p) => p.id === rawProduct);
             if (found) return found.name;
         }
-
-        if (rawProduct && typeof rawProduct === "object") {
-            const obj = rawProduct as Record<string, unknown>;
-            if (obj.title) return String(obj.title);
-            if (obj.name) return String(obj.name);
-        }
-
         if (orderData.product_name) return orderData.product_name;
-        if (orderData.product_title) return orderData.product_title;
-
         return "محصول نامشخص";
-    }, [orderData.product, orderData.product_name, orderData.product_title, products ?? []]);
+    }, [orderItems, orderData.product, orderData.product_name, products]);
+
+    const totalQty = useMemo(() => {
+        if (orderItems.length > 0) {
+            return orderItems.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
+        }
+        return Number(orderTask.quantity ?? 0);
+    }, [orderItems, orderTask.quantity]);
+
+    const totalCompleted = useMemo(() => {
+        if (orderItems.length > 0) {
+            return orderItems.reduce((sum, item) => sum + Number(item.completed_quantity || 0), 0);
+        }
+        return Number(orderTask.completed_quantity ?? 0);
+    }, [orderItems, orderTask.completed_quantity]);
+
+    const progress = totalQty > 0 ? Math.min(100, Math.round((totalCompleted / totalQty) * 100)) : 0;
 
     const statusTone = getStatusTone(orderTask.status);
     const statusLabel = getStatusLabel(orderTask.status);
@@ -138,10 +154,6 @@ export default function WarehouseEmployeeOrderTaskCard({
     const StatusIcon = currentStatus.icon;
     const [start, end] = AVATAR_GRADIENTS[orderTask.id % AVATAR_GRADIENTS.length];
 
-    const qty = Number(orderTask.quantity ?? 0);
-    const completed = Number(orderTask.completed_quantity ?? 0);
-    const progress = qty > 0 ? Math.min(100, Math.round((completed / qty) * 100)) : 0;
-
     const refresh = async () => {
         if (onRefresh) {
             await onRefresh();
@@ -155,7 +167,6 @@ export default function WarehouseEmployeeOrderTaskCard({
     const canComplete = canChangeStatus && orderTask.status !== "completed" && orderTask.status !== "cancelled";
     const canCancel = canChangeStatus && orderTask.status !== "completed" && orderTask.status !== "cancelled";
 
-    const orderItems = getOrderItems(orderTask);
     const visibleItems = orderItems.slice(0, 4);
     const hiddenItemsCount = Math.max(0, orderItems.length - visibleItems.length);
     const resolvedWarehouseId = warehouseId ?? resolveOrderWarehouseId(orderTask);
@@ -265,19 +276,19 @@ export default function WarehouseEmployeeOrderTaskCard({
                                 تعداد
                             </p>
                             <p className="mt-0.5 text-[13px] font-black text-gray-900 dark:text-white">
-                                {formatNumber(qty)}
+                                {formatNumber(totalQty)}
                             </p>
                         </div>
                     </div>
 
-                    {orderTask.completed_quantity !== null && orderTask.completed_quantity !== undefined && (
+                    {totalCompleted !== null && totalCompleted !== undefined && (
                         <div className="mt-2.5">
                             <div className="mb-1 flex items-center justify-between">
                                 <span className="text-[9.5px] font-bold text-gray-400 dark:text-white/40">
                                     پیشرفت انجام
                                 </span>
                                 <span className="text-[10.5px] font-black" style={{ color: currentStatus.text }}>
-                                    {formatNumber(completed)} از {formatNumber(qty)} ({progress}٪)
+                                    {formatNumber(totalCompleted)} از {formatNumber(totalQty)} ({progress}٪)
                                 </span>
                             </div>
                             <div className="h-1.5 overflow-hidden rounded-full bg-gray-200 dark:bg-white/10">
@@ -301,34 +312,37 @@ export default function WarehouseEmployeeOrderTaskCard({
                             اقلام فاکتور ({formatQuantity(orderItems.length)})
                         </p>
                         <div className="space-y-1.5">
-                            {visibleItems.map((item) => (
-                                <div
-                                    key={item.id}
-                                    className="flex items-center justify-between gap-2"
-                                >
-                                    <div className="min-w-0 flex-1">
-                                        <p className="truncate text-[11px] font-extrabold text-gray-800 dark:text-gray-100">
-                                            {item.name_product || "محصول نامشخص"}
-                                        </p>
-                                        {item.shelf_code && (
-                                            <p className="mt-0.5 flex items-center gap-1 text-[9.5px] font-bold text-indigo-500 dark:text-indigo-400">
-                                                <MapPin size={9} />
-                                                <span dir="ltr">{item.shelf_code}</span>
+                            {visibleItems.map((item) => {
+                                const itemAny = item as any;
+                                return (
+                                    <div
+                                        key={item.id}
+                                        className="flex items-center justify-between gap-2"
+                                    >
+                                        <div className="min-w-0 flex-1">
+                                            <p className="truncate text-[11px] font-extrabold text-gray-800 dark:text-gray-100">
+                                                {itemAny.name_product || itemAny.product_name || "محصول نامشخص"}
                                             </p>
-                                        )}
-                                    </div>
-                                    <div className="shrink-0 text-left">
-                                        <p className="text-[11px] font-black text-gray-900 dark:text-white">
-                                            {formatQuantity(item.quantity)}
-                                        </p>
-                                        {item.display_status && (
-                                            <p className="text-[9px] font-semibold text-gray-400 dark:text-white/40">
-                                                {item.display_status}
+                                            {item.shelf_code && (
+                                                <p className="mt-0.5 flex items-center gap-1 text-[9.5px] font-bold text-indigo-500 dark:text-indigo-400">
+                                                    <MapPin size={9} />
+                                                    <span dir="ltr">{item.shelf_code}</span>
+                                                </p>
+                                            )}
+                                        </div>
+                                        <div className="shrink-0 text-left">
+                                            <p className="text-[11px] font-black text-gray-900 dark:text-white">
+                                                {formatQuantity(item.quantity)}
                                             </p>
-                                        )}
+                                            {itemAny.display_status && (
+                                                <p className="text-[9px] font-semibold text-gray-400 dark:text-white/40">
+                                                    {itemAny.display_status}
+                                                </p>
+                                            )}
+                                        </div>
                                     </div>
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
                         {hiddenItemsCount > 0 && (
                             <p className="mt-1.5 text-[10px] font-bold text-gray-400 dark:text-white/40">

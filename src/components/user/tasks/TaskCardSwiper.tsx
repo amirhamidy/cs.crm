@@ -16,9 +16,17 @@ interface Props {
     isLastStage: boolean;
     onUpdated: (task: UserTask) => void;
     employeesMap: Record<number, string>;
+    staffId: number; // این خط اضافه شود
 }
 
-export default function TaskCardSwiper({ tasks, accent, isLastStage, onUpdated, employeesMap }: Props) {
+export default function TaskCardSwiper({
+    tasks,
+    accent,
+    isLastStage,
+    onUpdated,
+    employeesMap,
+    staffId, // این خط اضافه شود
+}: Props) {
     const [swiper, setSwiper] = useState<SwiperType | null>(null);
 
     return (
@@ -34,7 +42,14 @@ export default function TaskCardSwiper({ tasks, accent, isLastStage, onUpdated, 
             >
                 {tasks.map((task) => (
                     <SwiperSlide key={task.id}>
-                        <UserTaskCard task={task} accent={accent} isLastStage={isLastStage} onUpdated={onUpdated} employeesMap={employeesMap} />
+                        <UserTaskCard
+                            task={task}
+                            accent={accent}
+                            isLastStage={isLastStage}
+                            onUpdated={onUpdated}
+                            employeesMap={employeesMap}
+                            staffId={staffId} // این خط اضافه شود
+                        />
                     </SwiperSlide>
                 ))}
             </Swiper>

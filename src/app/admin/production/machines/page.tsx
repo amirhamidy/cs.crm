@@ -29,6 +29,7 @@ import {
     Info,
     Sparkles,
     Eye,
+    CalendarCogIcon,
 } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
 import {
@@ -427,8 +428,8 @@ function JalaliDatePicker({
                 type="button"
                 onClick={() => setOpen((v) => !v)}
                 className={`flex h-[52px] w-full items-center gap-2.5 rounded-2xl border px-4 text-right transition-all duration-200 ${open
-                        ? "border-blue-500 bg-blue-50/50 dark:border-blue-500/50 dark:bg-blue-500/[0.06]"
-                        : "border-gray-100 bg-gray-50 hover:border-gray-200 dark:border-white/[0.06] dark:bg-white/[0.03] dark:hover:border-white/[0.12]"
+                    ? "border-blue-500 bg-blue-50/50 dark:border-blue-500/50 dark:bg-blue-500/[0.06]"
+                    : "border-gray-100 bg-gray-50 hover:border-gray-200 dark:border-white/[0.06] dark:bg-white/[0.03] dark:hover:border-white/[0.12]"
                     }`}
             >
                 <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-blue-500/10">
@@ -522,12 +523,12 @@ function JalaliDatePicker({
                                             disabled={day === null}
                                             onClick={() => day && handleSelectDay(day)}
                                             className={`aspect-square rounded-lg text-[11.5px] font-bold transition-colors ${day === null
-                                                    ? "invisible"
-                                                    : isSelected
-                                                        ? "bg-blue-600 text-white shadow-sm"
-                                                        : isToday
-                                                            ? "border border-blue-400 bg-blue-50 text-blue-600 dark:border-blue-500/40 dark:bg-blue-500/10 dark:text-blue-300"
-                                                            : "text-gray-600 hover:bg-gray-100 dark:text-white/70 dark:hover:bg-white/[0.06] dark:hover:text-white"
+                                                ? "invisible"
+                                                : isSelected
+                                                    ? "bg-blue-600 text-white shadow-sm"
+                                                    : isToday
+                                                        ? "border border-blue-400 bg-blue-50 text-blue-600 dark:border-blue-500/40 dark:bg-blue-500/10 dark:text-blue-300"
+                                                        : "text-gray-600 hover:bg-gray-100 dark:text-white/70 dark:hover:bg-white/[0.06] dark:hover:text-white"
                                                 }`}
                                         >
                                             {day !== null ? toPersianDigits(day) : ""}
@@ -696,8 +697,8 @@ function NiceSelect({
                 disabled={disabled}
                 onClick={() => setOpen((v) => !v)}
                 className={`flex h-[52px] w-full items-center gap-2.5 rounded-2xl border px-3 text-right transition-all duration-200 ${open
-                        ? "border-blue-500 bg-blue-50/50 dark:border-blue-500/50 dark:bg-blue-500/[0.06]"
-                        : "border-gray-100 bg-gray-50 hover:border-gray-200 dark:border-white/[0.06] dark:bg-white/[0.03] dark:hover:border-white/[0.12]"
+                    ? "border-blue-500 bg-blue-50/50 dark:border-blue-500/50 dark:bg-blue-500/[0.06]"
+                    : "border-gray-100 bg-gray-50 hover:border-gray-200 dark:border-white/[0.06] dark:bg-white/[0.03] dark:hover:border-white/[0.12]"
                     } ${disabled ? "cursor-not-allowed opacity-40" : "cursor-pointer"}`}
             >
                 {selected ? (
@@ -779,8 +780,8 @@ function NiceSelect({
                                                 setOpen(false);
                                             }}
                                             className={`flex w-full items-center gap-2.5 rounded-2xl px-2.5 py-2 text-right transition-colors ${active
-                                                    ? "bg-blue-50 dark:bg-blue-500/10"
-                                                    : "hover:bg-gray-50 dark:hover:bg-white/[0.04]"
+                                                ? "bg-blue-50 dark:bg-blue-500/10"
+                                                : "hover:bg-gray-50 dark:hover:bg-white/[0.04]"
                                                 }`}
                                         >
                                             <span
@@ -794,8 +795,8 @@ function NiceSelect({
                                             <span className="min-w-0 flex-1">
                                                 <span
                                                     className={`block truncate text-[12.5px] font-bold ${active
-                                                            ? "text-blue-600 dark:text-blue-400"
-                                                            : "text-gray-900 dark:text-white"
+                                                        ? "text-blue-600 dark:text-blue-400"
+                                                        : "text-gray-900 dark:text-white"
                                                         }`}
                                                 >
                                                     {option.label}
@@ -1767,9 +1768,9 @@ export default function AdminProductionManagementPage() {
         { key: "dashboard", label: "داشبورد", icon: <BarChart3 size={14} /> },
         { key: "machines", label: "ماشین‌آلات", icon: <Factory size={14} /> },
         { key: "logs", label: "سوابق تولید", icon: <ClipboardList size={14} /> },
-        { key: "monthly", label: "گزارش ماهانه", icon: <CalendarDays size={14} /> },
-        { key: "machineSummary", label: "روند تولید ماشین", icon: <LineChart size={14} /> },
-        { key: "machineMonthly", label: "ماهانه ماشین", icon: <Users size={14} /> },
+        { key: "monthly", label: "عملکرد نیرو", icon: <Users size={14} /> },
+        { key: "machineSummary", label: "عملکرد ماشین", icon: <CalendarCogIcon  size={14} /> },
+        { key: "machineMonthly", label: " عملکرد ماهانه ماشین ", icon: <CalendarCogIcon size={14} /> },
     ];
 
     return (
@@ -1797,7 +1798,7 @@ export default function AdminProductionManagementPage() {
                         className="flex h-11 items-center gap-2 rounded-full bg-emerald-600 px-5 text-[12.5px] font-bold text-white transition-colors hover:bg-emerald-500"
                     >
                         <ClipboardList size={15} />
-                        ثبت لاگ جدید
+                        ثبت عملکرد جدید
                     </motion.button>
                     <motion.button
                         type="button"
@@ -1820,8 +1821,8 @@ export default function AdminProductionManagementPage() {
                         type="button"
                         onClick={() => setActiveTab(t.key)}
                         className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-[12px] font-bold transition-all ${activeTab === t.key
-                                ? "bg-white text-blue-600 shadow-sm dark:bg-white/[0.06] dark:text-blue-400"
-                                : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                            ? "bg-white text-blue-600 shadow-sm dark:bg-white/[0.06] dark:text-blue-400"
+                            : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
                             }`}
                     >
                         {t.icon}
@@ -1933,8 +1934,8 @@ export default function AdminProductionManagementPage() {
                                         <div className="flex items-center justify-between">
                                             <span
                                                 className={`rounded-lg border px-2 py-0.5 text-[10.5px] font-bold ${m.is_active
-                                                        ? "border-emerald-500/25 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
-                                                        : "border-slate-400/30 bg-slate-400/10 text-slate-500 dark:text-slate-400"
+                                                    ? "border-emerald-500/25 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                                                    : "border-slate-400/30 bg-slate-400/10 text-slate-500 dark:text-slate-400"
                                                     }`}
                                             >
                                                 {m.is_active ? "فعال" : "غیرفعال"}
@@ -1991,8 +1992,8 @@ export default function AdminProductionManagementPage() {
                                     animate={{ opacity: 1, y: 0 }}
                                     transition={{ delay: Math.min(index, 8) * 0.03 }}
                                     className={`flex flex-col gap-3 rounded-2xl border p-4 transition-shadow duration-200 ${m.is_active
-                                            ? "border-black/[0.06] bg-[#fafafa] hover:shadow-[0_0_0_1px_rgba(99,102,241,0.35),0_14px_40px_rgba(99,102,241,0.25)] dark:border-white/[0.06] dark:bg-white/[0.02] dark:hover:shadow-[0_0_0_1px_rgba(129,140,248,0.45),0_14px_44px_rgba(99,102,241,0.35)]"
-                                            : "border-slate-300/40 bg-slate-50 opacity-75 dark:border-white/[0.08] dark:bg-white/[0.015]"
+                                        ? "border-black/[0.06] bg-[#fafafa] hover:shadow-[0_0_0_1px_rgba(99,102,241,0.35),0_14px_40px_rgba(99,102,241,0.25)] dark:border-white/[0.06] dark:bg-white/[0.02] dark:hover:shadow-[0_0_0_1px_rgba(129,140,248,0.45),0_14px_44px_rgba(99,102,241,0.35)]"
+                                        : "border-slate-300/40 bg-slate-50 opacity-75 dark:border-white/[0.08] dark:bg-white/[0.015]"
                                         }`}
                                 >
                                     <div className="flex items-center justify-between gap-3">
@@ -2068,8 +2069,8 @@ export default function AdminProductionManagementPage() {
                                     <div className="flex items-center justify-between">
                                         <span
                                             className={`rounded-lg border px-2 py-0.5 text-[10.5px] font-bold ${m.is_active
-                                                    ? "border-emerald-500/25 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
-                                                    : "border-slate-400/30 bg-slate-400/10 text-slate-500 dark:text-slate-400"
+                                                ? "border-emerald-500/25 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                                                : "border-slate-400/30 bg-slate-400/10 text-slate-500 dark:text-slate-400"
                                                 }`}
                                         >
                                             {m.is_active ? "فعال" : "غیرفعال"}
@@ -2773,8 +2774,8 @@ export default function AdminProductionManagementPage() {
                                     <div
                                         key={mch.machine_id}
                                         className={`overflow-hidden rounded-2xl border bg-white dark:bg-white/[0.02] ${mch.is_active
-                                                ? "border-black/[0.06] dark:border-white/[0.06]"
-                                                : "border-slate-300/40 opacity-75 dark:border-white/[0.08]"
+                                            ? "border-black/[0.06] dark:border-white/[0.06]"
+                                            : "border-slate-300/40 opacity-75 dark:border-white/[0.08]"
                                             }`}
                                     >
                                         <div className="flex flex-col gap-2 border-b border-black/5 bg-gray-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between dark:border-white/5 dark:bg-white/[0.03]">
@@ -2793,8 +2794,8 @@ export default function AdminProductionManagementPage() {
                                                         </p>
                                                         <span
                                                             className={`rounded-md border px-1.5 py-0.5 text-[9.5px] font-bold ${mch.is_active
-                                                                    ? "border-emerald-500/25 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
-                                                                    : "border-slate-400/30 bg-slate-400/10 text-slate-500 dark:text-slate-400"
+                                                                ? "border-emerald-500/25 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                                                                : "border-slate-400/30 bg-slate-400/10 text-slate-500 dark:text-slate-400"
                                                                 }`}
                                                         >
                                                             {mch.is_active ? "فعال" : "غیرفعال"}
