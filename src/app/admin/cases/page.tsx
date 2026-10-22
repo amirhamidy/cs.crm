@@ -1,27 +1,24 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import {
-    ClipboardList,
-    Loader,
-    Plus,
-    RefreshCw,
-} from "lucide-react";
+import { ClipboardList, Loader, Plus, RefreshCw } from "lucide-react";
 import { useTheme } from "next-themes";
 import axiosInstance from "@/lib/axiosInstance";
 import { apiRoutes } from "@/lib/apiRoutes";
+import { casesApi, customersApi } from "@/lib/api";
 import { extractCaseId, fetchAllTasks } from "@/lib/fetchAllTasks";
 import type { Department } from "@/types/department";
 import type { Employee } from "@/types/employee";
 import type { TaskItem } from "@/types/task";
-import CreateCaseModal from "@/components/user/cases/CreateCaseModal";
 import type { CaseItem } from "@/types/case";
 import type { Customer } from "@/types/customer";
+import CreateCaseModal from "@/components/user/cases/CreateCaseModal";
 import EditCaseModal from "@/components/user/cases/EditCaseModal";
 import CaseCard from "@/components/user/cases/CaseCard";
 import EditTaskModal from "@/components/customcomponents/tasks/EditTaskModal";
 import CaseTasksModal from "@/components/customcomponents/cases/CaseTasksModal";
+import Pagination from "@/components/ui/Pagination";
 
 type ListResponse<T> = T[] | { results?: T[]; data?: T[] };
 
@@ -34,11 +31,15 @@ function extractList<T>(data: ListResponse<T> | undefined | null): T[] {
     return [];
 }
 
+const PAGE_SIZE = 12;
+
 export default function UserCasesPage() {
     const { resolvedTheme } = useTheme();
     const isDark = resolvedTheme === "dark";
 
     const [cases, setCases] = useState<CaseItem[]>([]);
+    const [totalCount, setTotalCount] = useState(0);
+    const [page, setPage] = useState(1);
     const [customers, setCustomers] = useState<Customer[]>([]);
     const [departments, setDepartments] = useState<Department[]>([]);
     const [employees, setEmployees] = useState<Employee[]>([]);
@@ -57,51 +58,91 @@ export default function UserCasesPage() {
         useState<CaseItem | null>(null);
     const [tasksRefreshKey, setTasksRefreshKey] = useState(0);
 
-    const fetchData = useCallback(async () => {
-        try {
-            setLoading(true);
+    const requestId = useRef(0);
+    const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
+
+    /* ───────── data ───────── */
+
+    const fetchCases = useCallback(
+        async (opts: { silent?: boolean } = {}) => {
+            const id = ++requestId.current;
+            if (!opts.silent) setLoading(true);
             setError("");
-            const [casesRes, customersRes, departmentsRes, employeesRes, allTasks] =
-                await Promise.all([
-                    axiosInstance.get<ListResponse<CaseItem>>(apiRoutes.cases),
-                    axiosInstance.get<ListResponse<Customer>>(apiRoutes.customers),
-                    axiosInstance.get<ListResponse<Department>>(apiRoutes.departments),
-                    axiosInstance.get<ListResponse<Employee>>(
-                        "/accounts/api/v1/employee/list/"
+
+            try {
+                const data = await casesApi.list({
+                    page,
+                    page_size: PAGE_SIZE,
+                });
+                const caseList = data.results;
+
+                const customerIds = [...new Set(caseList.map((c) => Number(c.customer)))];
+
+                const [detailed, pageCustomers] = await Promise.all([
+                    Promise.all(
+                        caseList.map(async (item) => {
+                            try {
+                                const detail = await casesApi.get(Number(item.id));
+                                return { ...item, ...detail };
+                            } catch {
+                                return item;
+                            }
+                        })
                     ),
-                    fetchAllTasks(),
+                    customersApi.getMany(customerIds),
                 ]);
 
-            const caseList = extractList<CaseItem>(casesRes.data);
+                if (id !== requestId.current) return;
 
-            const detailedCases = await Promise.all(
-                caseList.map(async (item) => {
-                    try {
-                        const detailRes = await axiosInstance.get<CaseItem>(
-                            `/tasks/api/v1/cases/${item.id}/`
-                        );
-                        return { ...item, ...detailRes.data };
-                    } catch {
-                        return item;
-                    }
-                })
-            );
+                setCases(detailed);
+                setCustomers(pageCustomers);
+                setTotalCount(data.count);
+            } catch {
+                if (id !== requestId.current) return;
+                setError("دریافت اطلاعات با خطا مواجه شد");
+            } finally {
+                if (id === requestId.current) setLoading(false);
+            }
+        },
+        [page]
+    );
 
-            setCases(detailedCases);
-            setCustomers(extractList(customersRes.data));
+    const fetchTasks = useCallback(async () => {
+        try {
+            setTasks(await fetchAllTasks());
+        } catch {
+            /* وظایف مکمل‌اند */
+        }
+    }, []);
+
+    const fetchMeta = useCallback(async () => {
+        try {
+            const [departmentsRes, employeesRes] = await Promise.all([
+                axiosInstance.get<ListResponse<Department>>(apiRoutes.departments),
+                axiosInstance.get<ListResponse<Employee>>(
+                    "/accounts/api/v1/employee/list/"
+                ),
+            ]);
             setDepartments(extractList(departmentsRes.data));
             setEmployees(extractList(employeesRes.data));
-            setTasks(allTasks);
         } catch {
-            setError("دریافت اطلاعات با خطا مواجه شد");
-        } finally {
-            setLoading(false);
+            /* مکمل */
         }
     }, []);
 
     useEffect(() => {
-        fetchData();
-    }, [fetchData]);
+        fetchCases();
+    }, [fetchCases]);
+
+    useEffect(() => {
+        fetchMeta();
+        fetchTasks();
+    }, [fetchMeta, fetchTasks]);
+
+    const refreshAll = useCallback(() => {
+        fetchCases();
+        fetchTasks();
+    }, [fetchCases, fetchTasks]);
 
     const tasksByCase = useMemo(() => {
         const map = new Map<string, TaskItem[]>();
@@ -122,6 +163,8 @@ export default function UserCasesPage() {
         ]);
     }, []);
 
+    /* ───────── handlers ───────── */
+
     const handleDeleteCase = useCallback(
         async (item: CaseItem) => {
             const id = Number(item.id);
@@ -135,16 +178,22 @@ export default function UserCasesPage() {
 
             try {
                 setDeletingId(id);
-                await axiosInstance.delete(`/tasks/api/v1/cases/${id}/delete/`);
-                setCases((prev) => prev.filter((c) => Number(c.id) !== id));
+                await casesApi.remove(id);
+
+                // آخرین آیتم صفحه حذف شد → یه صفحه برگرد
+                if (cases.length === 1 && page > 1) {
+                    setPage((p) => p - 1);
+                } else {
+                    fetchCases({ silent: true });
+                }
             } catch {
-                await fetchData();
+                await fetchCases({ silent: true });
                 throw new Error("خطا در حذف پرونده");
             } finally {
                 setDeletingId(null);
             }
         },
-        [fetchData, syncCaseTasks]
+        [cases.length, page, fetchCases, syncCaseTasks]
     );
 
     const handleEditCase = useCallback((item: CaseItem) => {
@@ -153,10 +202,16 @@ export default function UserCasesPage() {
     }, []);
 
     const handleCaseUpdate = useCallback(() => {
-        fetchData();
+        fetchCases({ silent: true });
         setEditCaseModalOpen(false);
         setEditingCase(null);
-    }, [fetchData]);
+    }, [fetchCases]);
+
+    const handleCaseCreated = useCallback(() => {
+        // پرونده جدید بالای لیسته، پس برو صفحه اول
+        if (page !== 1) setPage(1);
+        else fetchCases({ silent: true });
+    }, [page, fetchCases]);
 
     const handleDeleteTask = useCallback(async (taskId: number) => {
         try {
@@ -176,20 +231,28 @@ export default function UserCasesPage() {
     }, []);
 
     const handleTaskUpdate = useCallback(() => {
-        fetchData();
+        fetchCases({ silent: true });
+        fetchTasks();
         setTasksRefreshKey((k) => k + 1);
         setEditTaskModalOpen(false);
         setEditingTask(null);
-    }, [fetchData]);
+    }, [fetchCases, fetchTasks]);
 
     const handleOpenTasksModal = useCallback((item: CaseItem) => {
         setSelectedCaseForTasks(item);
         setTasksModalOpen(true);
     }, []);
 
+    const goToPage = (p: number) => {
+        if (p < 1 || p > totalPages || p === page) return;
+        setPage(p);
+        window.scrollTo({ top: 0, behavior: "smooth" });
+    };
+
+    /* ───────── render ───────── */
+
     return (
         <div className="flex flex-col gap-5 p-3 sm:p-4 md:p-6" dir="rtl">
-            {/* Header */}
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-start gap-3">
                     <div className="min-w-0">
@@ -199,14 +262,14 @@ export default function UserCasesPage() {
                         <p className="mt-0.5 text-[11.5px] text-gray-500 dark:text-gray-400">
                             {loading
                                 ? "در حال بارگذاری..."
-                                : `${cases.length} پرونده و ${tasks.length} وظیفه`}
+                                : `${totalCount} پرونده و ${tasks.length} وظیفه`}
                         </p>
                     </div>
                 </div>
 
                 <div className="flex items-center gap-2">
                     <button
-                        onClick={fetchData}
+                        onClick={refreshAll}
                         disabled={loading}
                         type="button"
                         title="بارگذاری مجدد"
@@ -235,12 +298,11 @@ export default function UserCasesPage() {
                 </div>
             </div>
 
-            {/* Error */}
             {error && !loading && (
                 <div className="flex flex-col items-start gap-3 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-[12.5px] text-rose-600 dark:border-rose-500/20 dark:bg-rose-500/10 dark:text-rose-300 sm:flex-row sm:items-center sm:justify-between">
                     <span>{error}</span>
                     <button
-                        onClick={fetchData}
+                        onClick={() => fetchCases()}
                         type="button"
                         className="rounded-xl bg-rose-600 px-3 py-1.5 text-[11.5px] font-bold text-white transition-colors hover:bg-rose-500"
                     >
@@ -249,7 +311,6 @@ export default function UserCasesPage() {
                 </div>
             )}
 
-            {/* Loading */}
             {loading && (
                 <div className="flex flex-col items-center justify-center gap-3 py-16">
                     <Loader size={24} className="animate-spin text-indigo-500" />
@@ -259,8 +320,7 @@ export default function UserCasesPage() {
                 </div>
             )}
 
-            {/* Empty State */}
-            {!loading && cases.length === 0 && (
+            {!loading && !error && cases.length === 0 && (
                 <div className="flex flex-col items-center justify-center gap-2 py-16">
                     <ClipboardList
                         size={28}
@@ -272,10 +332,10 @@ export default function UserCasesPage() {
                 </div>
             )}
 
-            {/* Cases Grid */}
             {!loading && cases.length > 0 && (
                 <motion.div
                     layout
+                    key={`grid-${page}`}
                     className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3"
                 >
                     <AnimatePresence mode="popLayout">
@@ -303,12 +363,19 @@ export default function UserCasesPage() {
                 </motion.div>
             )}
 
-            {/* Modals */}
+            {!loading && totalPages > 1 && (
+                <Pagination
+                    page={page}
+                    totalPages={totalPages}
+                    onChange={goToPage}
+                />
+            )}
+
+            {/* دیگه prop مشتری‌ها به CreateCaseModal داده نمیشه */}
             <CreateCaseModal
                 open={caseModalOpen}
                 onClose={() => setCaseModalOpen(false)}
-                onCreated={fetchData}
-                customers={customers}
+                onCreated={handleCaseCreated}
             />
 
             {editCaseModalOpen && editingCase && (

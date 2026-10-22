@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "next-themes";
 import {
@@ -14,15 +14,19 @@ import {
 import CustomerCard from "./CustomerCard";
 import AddCustomerModal from "./AddCustomerModal";
 import ImportExcelModal from "./ImportExcelModal";
+import Pagination from "@/components/ui/Pagination";
 import { Customer } from "@/types/customer";
-import axiosInstance from "@/lib/axiosInstance";
-
-interface CaseItem {
-    id: number;
-    customer: number;
-}
+import { customersApi, casesApi } from "@/lib/api";
 
 type FilterType = "all" | "potential" | "active";
+
+const PAGE_SIZE = 20;
+
+const STATUS_BY_FILTER: Record<FilterType, 1 | 2 | undefined> = {
+    all: undefined,
+    potential: 1,
+    active: 2,
+};
 
 export default function CustomersPage() {
     const { resolvedTheme } = useTheme();
@@ -34,119 +38,133 @@ export default function CustomersPage() {
     const isDark = mounted && resolvedTheme === "dark";
 
     const [customers, setCustomers] = useState<Customer[]>([]);
+    const [totalCount, setTotalCount] = useState(0);
+    const [counts, setCounts] = useState({ all: 0, potential: 0, active: 0 });
     const [customersWithCase, setCustomersWithCase] = useState<Set<number>>(
         new Set()
     );
     const [loading, setLoading] = useState(true);
-    const [filterLoading, setFilterLoading] = useState(false);
     const [showAdd, setShowAdd] = useState(false);
     const [showImport, setShowImport] = useState(false);
     const [filter, setFilter] = useState<FilterType>("all");
+    const [page, setPage] = useState(1);
 
-    const fetchData = useCallback(async () => {
-        setLoading(true);
+    const requestId = useRef(0);
 
+    const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
+
+    const fetchCounts = useCallback(async () => {
         try {
-            const [customersRes, casesRes] = await Promise.all([
-                axiosInstance.get<Customer[]>(
-                    "/customers/api/v1/customers/"
-                ),
-                axiosInstance.get<CaseItem[]>(
-                    "/tasks/api/v1/cases/"
-                ),
+            const [all, potential, active] = await Promise.all([
+                customersApi.list({ page: 1, page_size: 1 }),
+                customersApi.list({ page: 1, page_size: 1, status: 1 }),
+                customersApi.list({ page: 1, page_size: 1, status: 2 }),
             ]);
-
-            setCustomers(customersRes.data);
-
-            const ids = new Set(
-                casesRes.data.map((c) => c.customer)
-            );
-
-            setCustomersWithCase(ids);
+            setCounts({
+                all: all.count,
+                potential: potential.count,
+                active: active.count,
+            });
         } catch {
-            setCustomers([]);
-            setCustomersWithCase(new Set());
-        } finally {
-            setLoading(false);
+            /* شمارنده‌ها اختیاری‌اند */
         }
     }, []);
 
-    useEffect(() => {
-        fetchData();
-    }, [fetchData]);
-
-    const handleDeleted = useCallback((id: number) => {
-        setCustomers((prev) =>
-            prev.filter((c) => c.id !== id)
-        );
+    const fetchCases = useCallback(async () => {
+        try {
+            const cases = await casesApi.listAll();
+            setCustomersWithCase(new Set(cases.map((c) => Number(c.customer))));
+        } catch {
+            setCustomersWithCase(new Set());
+        }
     }, []);
+
+    const fetchCustomers = useCallback(async () => {
+        const id = ++requestId.current;
+        setLoading(true);
+
+        try {
+            const data = await customersApi.list({
+                page,
+                page_size: PAGE_SIZE,
+                status: STATUS_BY_FILTER[filter],
+            });
+
+            if (id !== requestId.current) return;
+
+            setCustomers(data.results);
+            setTotalCount(data.count);
+        } catch {
+            if (id !== requestId.current) return;
+            setCustomers([]);
+            setTotalCount(0);
+        } finally {
+            if (id === requestId.current) setLoading(false);
+        }
+    }, [page, filter]);
+
+    useEffect(() => {
+        fetchCustomers();
+    }, [fetchCustomers]);
+
+    useEffect(() => {
+        fetchCases();
+        fetchCounts();
+    }, [fetchCases, fetchCounts]);
+
+    const refreshAll = useCallback(() => {
+        fetchCustomers();
+        fetchCases();
+        fetchCounts();
+    }, [fetchCustomers, fetchCases, fetchCounts]);
+
+    const handleDeleted = useCallback(() => {
+        if (customers.length === 1 && page > 1) {
+            setPage((p) => p - 1);
+        } else {
+            fetchCustomers();
+        }
+        fetchCounts();
+    }, [customers.length, page, fetchCustomers, fetchCounts]);
 
     const handleAdded = useCallback(() => {
-        fetchData();
-    }, [fetchData]);
+        refreshAll();
+    }, [refreshAll]);
 
-    const handleEdited = useCallback((updated: Customer) => {
-        setCustomers((prev) =>
-            prev.map((c) =>
-                c.id === updated.id ? updated : c
-            )
-        );
-    }, []);
+    const handleEdited = useCallback(
+        (updated: Customer) => {
+            setCustomers((prev) =>
+                prev.map((c) => (c.id === updated.id ? updated : c))
+            );
+            fetchCounts();
+        },
+        [fetchCounts]
+    );
 
     const handleFilterChange = (newFilter: FilterType) => {
         if (newFilter === filter) return;
-
-        setFilterLoading(true);
         setFilter(newFilter);
-
-        setTimeout(() => {
-            setFilterLoading(false);
-        }, 400);
+        setPage(1);
     };
 
-    const filteredCustomers = customers.filter((customer) => {
-        return (
-            filter === "all" ||
-            (filter === "potential" &&
-                customer.status === 1) ||
-            (filter === "active" &&
-                customer.status === 2)
-        );
-    });
-
-    const potentialCount = customers.filter(
-        (c) => c.status === 1
-    ).length;
-
-    const activeCount = customers.filter(
-        (c) => c.status === 2
-    ).length;
+    const goToPage = (p: number) => {
+        if (p < 1 || p > totalPages || p === page) return;
+        setPage(p);
+        window.scrollTo({ top: 0, behavior: "smooth" });
+    };
 
     const filterOptions = [
-        {
-            value: "all" as FilterType,
-            label: "همه",
-            count: customers.length,
-        },
+        { value: "all" as FilterType, label: "همه", count: counts.all },
         {
             value: "potential" as FilterType,
             label: "بالقوه",
-            count: potentialCount,
+            count: counts.potential,
         },
-        {
-            value: "active" as FilterType,
-            label: "فعال",
-            count: activeCount,
-        },
+        { value: "active" as FilterType, label: "فعال", count: counts.active },
     ];
 
-    const isLoading = loading || filterLoading;
-
     return (
-        <div
-            className="flex flex-col gap-5 p-3 sm:p-4 md:p-6"
-            dir="rtl"
-        >
+        <div className="flex flex-col gap-5 p-3 sm:p-4 md:p-6" dir="rtl">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-start gap-3">
                     <div
@@ -157,10 +175,7 @@ export default function CustomersPage() {
                                 : "rgba(99,102,241,0.08)",
                         }}
                     >
-                        <Users
-                            size={18}
-                            className="text-indigo-500"
-                        />
+                        <Users size={18} className="text-indigo-500" />
                     </div>
 
                     <div className="min-w-0">
@@ -169,36 +184,30 @@ export default function CustomersPage() {
                         </h1>
 
                         <p className="mt-0.5 text-[11.5px] text-gray-500 dark:text-gray-400">
-                            {isLoading
+                            {loading
                                 ? "در حال بارگذاری..."
-                                : `${filteredCustomers.length} مشتری ثبت شده`}
+                                : `${totalCount} مشتری ثبت شده`}
                         </p>
                     </div>
                 </div>
 
                 <div className="flex items-center gap-2">
                     <button
-                        onClick={fetchData}
-                        disabled={isLoading}
+                        onClick={refreshAll}
+                        disabled={loading}
                         className="flex h-10 w-10 items-center justify-center rounded-2xl transition-colors disabled:opacity-50"
                         style={{
                             background: isDark
                                 ? "rgba(255,255,255,0.05)"
                                 : "rgba(15,23,42,0.05)",
-                            color: isDark
-                                ? "#cbd5e1"
-                                : "#475569",
+                            color: isDark ? "#cbd5e1" : "#475569",
                         }}
                         title="بارگذاری مجدد"
                         type="button"
                     >
                         <RefreshCw
                             size={15}
-                            className={
-                                isLoading
-                                    ? "animate-spin"
-                                    : ""
-                            }
+                            className={loading ? "animate-spin" : ""}
                         />
                     </button>
 
@@ -231,11 +240,7 @@ export default function CustomersPage() {
                             : "rgba(0,0,0,0.03)",
                     }}
                 >
-                    <Filter
-                        size={13}
-                        className="text-gray-400"
-                    />
-
+                    <Filter size={13} className="text-gray-400" />
                     <span className="text-[11px] font-bold text-gray-400">
                         فیلتر:
                     </span>
@@ -245,12 +250,10 @@ export default function CustomersPage() {
                     {filterOptions.map((opt) => (
                         <button
                             key={opt.value}
-                            onClick={() =>
-                                handleFilterChange(opt.value)
-                            }
+                            onClick={() => handleFilterChange(opt.value)}
                             className={`flex h-9 items-center gap-1.5 rounded-xl px-3.5 text-[11.5px] font-bold transition-all duration-200 ${filter === opt.value
-                                ? "bg-indigo-600 text-white shadow-sm"
-                                : "text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                                    ? "bg-indigo-600 text-white shadow-sm"
+                                    : "text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
                                 }`}
                             style={{
                                 background:
@@ -266,8 +269,8 @@ export default function CustomersPage() {
 
                             <span
                                 className={`rounded-lg px-1.5 py-0.5 text-[10px] font-bold ${filter === opt.value
-                                    ? "bg-white/20 text-white"
-                                    : "bg-gray-200/50 text-gray-400 dark:bg-white/10 dark:text-gray-500"
+                                        ? "bg-white/20 text-white"
+                                        : "bg-gray-200/50 text-gray-400 dark:bg-white/10 dark:text-gray-500"
                                     }`}
                             >
                                 {opt.count}
@@ -277,43 +280,30 @@ export default function CustomersPage() {
                 </div>
             </div>
 
-            {isLoading ? (
+            {loading ? (
                 <div className="flex flex-col items-center justify-center gap-3 py-16">
                     <Loader
                         size={24}
                         className="animate-spin text-indigo-500"
                     />
-
                     <p className="text-[12.5px] text-gray-500 dark:text-gray-400">
-                        {loading
-                            ? "در حال دریافت لیست مشتریان..."
-                            : "در حال اعمال فیلتر..."}
+                        در حال دریافت لیست مشتریان...
                     </p>
                 </div>
             ) : (
                 <AnimatePresence mode="wait">
-                    {filteredCustomers.length === 0 ? (
+                    {customers.length === 0 ? (
                         <motion.div
                             key="empty"
-                            initial={{
-                                opacity: 0,
-                                y: 8,
-                            }}
-                            animate={{
-                                opacity: 1,
-                                y: 0,
-                            }}
-                            exit={{
-                                opacity: 0,
-                                y: 8,
-                            }}
+                            initial={{ opacity: 0, y: 8 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: 8 }}
                             className="flex flex-col items-center justify-center gap-2 py-16"
                         >
                             <Users
                                 size={28}
                                 className="text-gray-300 dark:text-gray-700"
                             />
-
                             <p className="text-[12.5px] text-gray-500 dark:text-gray-400">
                                 {filter === "all"
                                     ? "هنوز مشتری‌ای ثبت نشده"
@@ -325,28 +315,34 @@ export default function CustomersPage() {
                     ) : (
                         <motion.div
                             layout
-                            key="grid"
+                            key={`grid-${filter}-${page}`}
                             className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4"
                         >
                             <AnimatePresence mode="popLayout">
-                                {filteredCustomers.map(
-                                    (customer, i) => (
-                                        <CustomerCard
-                                            key={customer.id}
-                                            customer={customer}
-                                            index={i}
-                                            hasActiveCase={customersWithCase.has(
-                                                customer.id
-                                            )}
-                                            onDeleted={handleDeleted}
-                                            onEdited={handleEdited}
-                                        />
-                                    )
-                                )}
+                                {customers.map((customer, i) => (
+                                    <CustomerCard
+                                        key={customer.id}
+                                        customer={customer}
+                                        index={i}
+                                        hasActiveCase={customersWithCase.has(
+                                            customer.id
+                                        )}
+                                        onDeleted={handleDeleted}
+                                        onEdited={handleEdited}
+                                    />
+                                ))}
                             </AnimatePresence>
                         </motion.div>
                     )}
                 </AnimatePresence>
+            )}
+
+            {!loading && totalPages > 1 && (
+                <Pagination
+                    page={page}
+                    totalPages={totalPages}
+                    onChange={goToPage}
+                />
             )}
 
             <AddCustomerModal
