@@ -1,7 +1,17 @@
 import axiosInstance from "@/lib/axiosInstance";
 import type { CaseItem } from "@/types/case";
-import type { Paginated, PageParams } from "@/types/pagination";
+import type { PageParams } from "@/types/pagination";
+import {
+  dedupe,
+  fetchAllPages,
+  getOne,
+  invalidate,
+  toPaginated,
+  type Paginated,
+  type RawList,
+} from "./_core";
 
+const KEY = "cases:";
 const BASE = "/tasks/api/v1/cases/";
 
 export interface CaseListParams extends PageParams {
@@ -16,44 +26,29 @@ export interface CreateCasePayload {
   description: string;
 }
 
+const list = (params: CaseListParams = {}): Promise<Paginated<CaseItem>> =>
+  dedupe(`${KEY}list:${JSON.stringify(params)}`, async () => {
+    const res = await axiosInstance.get<RawList<CaseItem>>(BASE, { params });
+    return toPaginated<CaseItem>(res.data);
+  });
+
 export const casesApi = {
-  list: async (params: CaseListParams = {}) => {
-    const { data } = await axiosInstance.get<Paginated<CaseItem>>(BASE, {
-      params,
-    });
-    return data;
-  },
+  list,
 
-  listAll: async (): Promise<CaseItem[]> => {
-    const first = await casesApi.list({ page: 1, page_size: 100 });
-    if (!first.next || first.results.length === 0) return first.results;
+  listAll: () => fetchAllPages<CaseItem>((p) => list({ ...p, page_size: 100 })),
 
-    const size = first.results.length;
-    const pages = Math.ceil(first.count / size);
-
-    const rest = await Promise.all(
-      Array.from({ length: pages - 1 }, (_, i) =>
-        casesApi.list({ page: i + 2, page_size: 100 }),
-      ),
-    );
-
-    return [first, ...rest].flatMap((p) => p.results);
-  },
-
-  get: async (id: number) => {
-    const { data } = await axiosInstance.get<CaseItem>(`${BASE}${id}/`);
-    return data;
-  },
+  get: (id: number) => dedupe(`${KEY}get:${id}`, () => getOne<CaseItem>(`${BASE}${id}/`)),
 
   create: async (payload: CreateCasePayload) => {
-    const { data } = await axiosInstance.post<CaseItem>(
-      `${BASE}create/`,
-      payload,
-    );
+    const { data } = await axiosInstance.post<CaseItem>(`${BASE}create/`, payload);
+    invalidate(KEY);
     return data;
   },
 
   remove: async (id: number) => {
     await axiosInstance.delete(`${BASE}${id}/delete/`);
+    invalidate(KEY);
   },
+
+  invalidate: () => invalidate(KEY),
 };
