@@ -91,7 +91,7 @@ export default function UserTasksKanban() {
 
     useEffect(() => {
         departmentsApi.list()
-            .then((res) => setDepartments(unwrapList(res)))
+            .then((res) => setDepartments(unwrapList(res as unknown as DepartmentAPIItem[])))
             .catch(() => setDepartments([]));
 
         accountsApi.employees.all()
@@ -112,7 +112,7 @@ export default function UserTasksKanban() {
     useEffect(() => {
         departmentsApi.steps()
             .then((res) => {
-                const mapped = unwrapList<KanbanStage>(res)
+                const mapped = unwrapList<KanbanStage>(res as unknown as KanbanStage[])
                     .map((stage) => ({
                         ...stage,
                         name: stage.name ?? stage.title ?? `مرحله ${stage.id}`,
@@ -146,7 +146,7 @@ export default function UserTasksKanban() {
             .then(async (res) => {
                 if (cancelled) return;
 
-                const data = unwrapList<UserTask>(res);
+                const data = unwrapList<UserTask>(res as unknown as UserTask[]);
 
                 const employeeTasks = data.filter(
                     (task) =>

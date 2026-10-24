@@ -6,6 +6,7 @@ import {
   cached,
   dedupe,
   fetchAllPages,
+  fetchPage,
   invalidate,
   listAll as listAllPages,
   toPaginated,
@@ -80,7 +81,15 @@ const ARCHIVE_URL = "/tasks/api/v1/task_archive/";
 const archiveAll = <T = unknown>() =>
   cached(`${KEY}archive:`, () => listAllPages<T>(ARCHIVE_URL), TTL);
 
+const archivePage = <T = unknown>(params: PageParams = {}, signal?: AbortSignal) =>
+  fetchPage<T>(ARCHIVE_URL, params as Record<string, unknown>, signal);
+
+const page = (params: TaskListParams = {}, signal?: AbortSignal) =>
+  fetchPage<TaskItem>(apiRoutes.tasks, params as Record<string, unknown>, signal);
+
 export const tasksApi = {
+  page,
+  archivePage,
   list,
   listAll,
   archiveAll,
@@ -92,8 +101,9 @@ export const tasksApi = {
     }),
 
   logs: async <T = unknown>(id: number | string) => {
-    const res = await axiosInstance.get<T>(`/tasks/api/v1/tasks/${id}/logs/`);
-    return res.data;
+    const res = await axiosInstance.get(`/tasks/api/v1/tasks/${id}/logs/`);
+    const d = res.data;
+    return (Array.isArray(d) ? d : (d?.results ?? [])) as T;
   },
 
   stepDeadline: async <T = unknown>(id: number | string, step: number | string) => {

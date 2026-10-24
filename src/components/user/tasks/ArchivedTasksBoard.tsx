@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Pagination from "@/components/ui/Pagination";
+import { usePagination } from "@/hooks/usePagination";
 import { AnimatePresence, motion } from "framer-motion";
 import { Archive, CheckCircle2, Filter, Loader2, PackageCheck, XCircle } from "lucide-react";
 import { tasksApi } from "@/lib/api/tasks";
@@ -103,10 +105,12 @@ export default function ArchivedTasksBoard() {
         [tasks, departmentFilter, statusFilter]
     );
 
+    const pager = usePagination(filteredTasks, 20, `${departmentFilter}|${statusFilter}`);
+
     const groupedTasks = useMemo(
         () =>
             Object.values(
-                filteredTasks.reduce<
+                pager.pageItems.reduce<
                     Record<
                         string,
                         {
@@ -126,7 +130,7 @@ export default function ArchivedTasksBoard() {
                     return groups;
                 }, {})
             ),
-        [filteredTasks]
+        [pager.pageItems]
     );
 
     const handleReopened = (taskId: number) =>
@@ -300,6 +304,7 @@ export default function ArchivedTasksBoard() {
                             </AnimatePresence>
                         </motion.section>
                     ))}
+                    {pager.totalPages > 1 && <Pagination page={pager.page} totalPages={pager.totalPages} onChange={pager.setPage} />}
                 </div>
             )}
         </div>

@@ -1,6 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import Pagination from "@/components/ui/Pagination";
+import { usePagination } from "@/hooks/usePagination";
 import {
     Archive,
     CalendarDays,
@@ -304,6 +306,7 @@ export default function InternalTaskArchive() {
         dateFilter,
         statusFilter,
     ]);
+    const pager = usePagination(filteredTasks, 12, `${search}|${typeFilter}|${dateFilter}|${statusFilter}`);
 
     const routineCount = useMemo(
         () =>
@@ -545,7 +548,7 @@ export default function InternalTaskArchive() {
                 </div>
             ) : (
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                    {filteredTasks.map((task, index) => (
+                    {pager.pageItems.map((task, index) => (
                         <InternalTaskArchiveCard
                             key={task.id}
                             task={task}
@@ -557,6 +560,7 @@ export default function InternalTaskArchive() {
                     ))}
                 </div>
             )}
+            {pager.totalPages > 1 && <Pagination page={pager.page} totalPages={pager.totalPages} onChange={pager.setPage} />}
         </div>
     );
 }

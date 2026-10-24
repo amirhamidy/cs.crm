@@ -1,9 +1,12 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Pagination from "@/components/ui/Pagination";
+import { usePaginatedList } from "@/hooks/usePaginatedList";
+import { internalTasksApi } from "@/lib/api";
 import { Inbox, LayoutGrid, Loader } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
-import { fetchEmployeeList, fetchInternalTasks } from "./Api";
+import { fetchEmployeeList } from "./Api";
 import type { EmployeeListItem, InternalTask } from "./types";
 import ReceivedTaskCard from "./Receivedtaskcard";
 
@@ -60,29 +63,24 @@ function normalizeTasks(data: unknown) {
 
 export default function ReceivedTicketsBoard() {
     const { userId } = useAuthStore();
-    const [tasks, setTasks] = useState<InternalTask[]>([]);
     const [employees, setEmployees] = useState<EmployeeListItem[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-
-    const loadTasks = async () => {
-        try {
-            setLoading(true);
-            setError(null);
-            const [tasksResponse, employeesResponse] = await Promise.all([fetchInternalTasks(), fetchEmployeeList()]);
-            setTasks(normalizeTasks(tasksResponse.data));
-            setEmployees(Array.isArray(employeesResponse.data) ? employeesResponse.data : []);
-        } catch {
-            setTasks([]);
-            setEmployees([]);
-            setError("دریافت تیکت‌ها با خطا مواجه شد.");
-        } finally {
-            setLoading(false);
-        }
-    };
+    const list = usePaginatedList(
+        (params, signal) => internalTasksApi.page(params, signal),
+        { pageSize: 12 },
+    );
+    const [local, setLocal] = useState<Map<number, InternalTask>>(new Map());
+    const tasks = useMemo(() => normalizeTasks(list.data), [list.data]);
+    const loading = list.loading && list.data.length === 0;
+    const error = list.error ? "دریافت تیکت‌ها با خطا مواجه شد." : null;
 
     useEffect(() => {
-        void loadTasks();
+        setLocal(new Map());
+    }, [list.data]);
+
+    useEffect(() => {
+        fetchEmployeeList()
+            .then(res => setEmployees(Array.isArray(res.data) ? res.data : []))
+            .catch(() => setEmployees([]));
     }, []);
 
     const employeeNames = useMemo(() => {
@@ -96,6 +94,7 @@ export default function ReceivedTicketsBoard() {
     const receivedTasks = useMemo(() => {
         if (!userId) return [];
         return tasks
+            .map(task => local.get(task.id) ?? task)
             .filter(task =>
                 task.status === "in_progress" &&
                 task.assigned_to.some(assigned => Number(assigned.id) === Number(userId))
@@ -112,10 +111,11 @@ export default function ReceivedTicketsBoard() {
                     };
                 }),
             }));
-    }, [tasks, userId, employees, employeeNames]);
+    }, [tasks, local, userId, employees, employeeNames]);
 
     const handleUpdated = (updatedTask: InternalTask) => {
-        setTasks(previous => previous.map(task => task.id === updatedTask.id ? { ...task, ...updatedTask } : task));
+        setLocal(previous => new Map(previous).set(updatedTask.id, updatedTask));
+        list.refetch();
     };
 
     if (loading) {
@@ -134,7 +134,7 @@ export default function ReceivedTicketsBoard() {
                 </div>
                 <div>
                     <h3 className="text-[14px] font-extrabold text-gray-900 dark:text-white">تیکت‌های دریافت شده</h3>
-                    <p className="text-[11px] text-gray-400 dark:text-gray-600">{receivedTasks.length} تیکت</p>
+                    <p className="text-[11px] text-gray-400 dark:text-gray-600">{list.count} تیکت</p>
                 </div>
             </div>
 
@@ -143,7 +143,7 @@ export default function ReceivedTicketsBoard() {
                     <p className="text-[12px] font-semibold text-red-500">{error}</p>
                     <button
                         type="button"
-                        onClick={() => void loadTasks()}
+                        onClick={() => list.refetch()}
                         className="rounded-xl bg-red-500/10 px-3 py-1.5 text-[11px] font-bold text-red-500 transition-colors hover:bg-red-500/20"
                     >
                         تلاش مجدد
@@ -168,6 +168,7 @@ export default function ReceivedTicketsBoard() {
                     ))}
                 </div>
             )}
+            {list.totalPages > 1 && <Pagination page={list.page} totalPages={list.totalPages} onChange={list.setPage} />}
         </div>
     );
 }

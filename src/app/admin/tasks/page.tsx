@@ -1,12 +1,15 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Archive, Check, ClipboardList, Eye, Loader, Plus, RefreshCw } from "lucide-react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import axiosInstance from "@/lib/axiosInstance";
 import { apiRoutes } from "@/lib/apiRoutes";
+import { tasksApi } from "@/lib/api";
+import { usePaginatedList } from "@/hooks/usePaginatedList";
+import Pagination from "@/components/ui/Pagination";
 import { Task, TaskStatus } from "@/types/task";
 import { Department } from "@/types/department";
 import SuspenseWrapper from "@/components/SuspenseWrapper";
@@ -36,11 +39,18 @@ function AdminTasksPageContent() {
     const { resolvedTheme } = useTheme();
     const isDark = resolvedTheme === "dark";
 
-    const [tasks, setTasks] = useState<Task[]>([]);
+    const list = usePaginatedList<Task>((params, signal) => tasksApi.page({ ...params, status: ACTIVE_STATUS } as never, signal), { pageSize: 12 });
+    const [removed, setRemoved] = useState<Set<number>>(new Set());
+    const [patched, setPatched] = useState<Map<number, Task>>(new Map());
+    const tasks = useMemo(
+        () => list.data.filter((t) => !removed.has(t.id) && t.status === ACTIVE_STATUS).map((t) => patched.get(t.id) ?? t),
+        [list.data, removed, patched]
+    );
     const [customers, setCustomers] = useState<Customer[]>([]);
     const [departments, setDepartments] = useState<Department[]>([]);
     const [employees, setEmployees] = useState<Employee[]>([]);
-    const [loading, setLoading] = useState(true);
+    const [metaLoading, setMetaLoading] = useState(true);
+    const loading = metaLoading || (list.loading && list.data.length === 0);
     const [showCreate, setShowCreate] = useState(false);
     const [showCreateNoCase, setShowCreateNoCase] = useState(false);
     const [editingTask, setEditingTask] = useState<Task | null>(null);
@@ -49,28 +59,28 @@ function AdminTasksPageContent() {
 
     const fetchAll = useCallback(async () => {
         try {
-            setLoading(true);
+            setMetaLoading(true);
+            setRemoved(new Set());
+            setPatched(new Map());
+            list.refetch();
 
-            const [tasksRes, customersRes, departmentsRes, employeesRes] = await Promise.all([
-                axiosInstance.get<ListResponse<Task>>(apiRoutes.tasks),
+            const [customersRes, departmentsRes, employeesRes] = await Promise.all([
                 axiosInstance.get<ListResponse<Customer>>(apiRoutes.customers),
                 axiosInstance.get<ListResponse<Department>>(apiRoutes.departments),
                 axiosInstance.get<ListResponse<Employee>>(apiRoutes.employees),
             ]);
 
-            setTasks(extractList(tasksRes.data).filter((task) => task.status === ACTIVE_STATUS));
             setCustomers(extractList(customersRes.data));
             setDepartments(extractList(departmentsRes.data));
             setEmployees(extractList(employeesRes.data));
         } catch {
-            setTasks([]);
             setCustomers([]);
             setDepartments([]);
             setEmployees([]);
         } finally {
-            setLoading(false);
+            setMetaLoading(false);
         }
-    }, []);
+    }, [list.refetch]);
 
     useEffect(() => {
         fetchAll();
@@ -94,7 +104,7 @@ function AdminTasksPageContent() {
         async (taskId: number): Promise<boolean> => {
             try {
                 await axiosInstance.delete(apiRoutes.deleteTask(taskId));
-                setTasks((prev) => prev.filter((t) => t.id !== taskId));
+                setRemoved((prev) => new Set(prev).add(taskId));
                 return true;
             } catch {
                 await fetchAll();
@@ -120,9 +130,8 @@ function AdminTasksPageContent() {
     }, [fetchAll]);
 
     const handleTaskUpdated = useCallback((updated: Task) => {
-        setTasks((prev) =>
-            updated.status !== ACTIVE_STATUS ? prev.filter((t) => t.id !== updated.id) : prev.map((t) => (t.id === updated.id ? updated : t))
-        );
+        if (updated.status !== ACTIVE_STATUS) setRemoved((prev) => new Set(prev).add(updated.id));
+        else setPatched((prev) => new Map(prev).set(updated.id, updated));
     }, []);
 
     const handleTaskViewed = useCallback(
@@ -150,7 +159,7 @@ function AdminTasksPageContent() {
 
                     <div className="min-w-0">
                         <h1 className="text-[15px] font-extrabold text-gray-900 dark:text-white">وظایف در حال انجام</h1>
-                        <p className="mt-0.5 text-[11.5px] text-gray-500 dark:text-gray-400">{loading ? "در حال بارگذاری..." : `${tasks.length} وظیفه`}</p>
+                        <p className="mt-0.5 text-[11.5px] text-gray-500 dark:text-gray-400">{loading ? "در حال بارگذاری..." : `${list.count} وظیفه`}</p>
                     </div>
                 </div>
 
@@ -284,6 +293,8 @@ function AdminTasksPageContent() {
                     </AnimatePresence>
                 </motion.div>
             )}
+
+            {list.totalPages > 1 && <Pagination page={list.page} totalPages={list.totalPages} onChange={list.setPage} />}
 
             <AnimatePresence>
                 {showCreate && <CreateTaskModal isOpen={showCreate} onClose={() => setShowCreate(false)} onSuccess={handleCreateSuccess} />}

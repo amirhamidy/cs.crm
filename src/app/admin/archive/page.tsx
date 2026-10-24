@@ -1,18 +1,15 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Archive, ArrowRight, Ban, CheckCircle2, ClipboardList, Layers3, Loader, RefreshCw, ShoppingBag } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
-import axiosInstance from "@/lib/axiosInstance";
-import { apiRoutes } from "@/lib/apiRoutes";
-import { Task, TaskStatus } from "@/types/task";
+import { tasksApi } from "@/lib/api";
+import { usePaginatedList } from "@/hooks/usePaginatedList";
+import Pagination from "@/components/ui/Pagination";
+import { Task } from "@/types/task";
 import TaskCard from "@/components/customcomponents/tasks/TaskCard";
-
-type ListResponse<T> = T[] | { results?: T[]; data?: T[] };
-
-const ACTIVE_STATUS = "in_progress" as TaskStatus;
 
 type ArchiveFilter = "all" | "completed" | "sold" | "cancelled";
 
@@ -23,43 +20,20 @@ const archiveFilters: { id: ArchiveFilter; label: string; icon: typeof Layers3; 
     { id: "cancelled", label: "لغو شده", icon: Ban, color: "#fb7185" },
 ];
 
-function extractList<T>(data: ListResponse<T>): T[] {
-    if (Array.isArray(data)) return data;
-    if (data && typeof data === "object") {
-        if (Array.isArray((data as any).results)) return (data as any).results;
-        if (Array.isArray((data as any).data)) return (data as any).data;
-    }
-    return [];
-}
-
 export default function AdminArchivedTasksPage() {
     const router = useRouter();
     const { resolvedTheme } = useTheme();
     const isDark = resolvedTheme === "dark";
 
-    const [tasks, setTasks] = useState<Task[]>([]);
-    const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState<ArchiveFilter>("all");
-
-    const fetchAll = useCallback(async () => {
-        try {
-            setLoading(true);
-            const res = await axiosInstance.get<ListResponse<Task>>(apiRoutes.tasks);
-            setTasks(extractList(res.data).filter((task) => task.status !== ACTIVE_STATUS));
-        } catch {
-            setTasks([]);
-        } finally {
-            setLoading(false);
-        }
-    }, []);
-
-    useEffect(() => {
-        fetchAll();
-    }, [fetchAll]);
+    const list = usePaginatedList<Task>((params, signal) => tasksApi.archivePage<Task>(params, signal), { pageSize: 12 });
+    const loading = list.loading;
+    const tasks = list.data;
+    const fetchAll = list.refetch;
 
     const filteredTasks = useMemo(() => (filter === "all" ? tasks : tasks.filter((task) => task.status === filter)), [tasks, filter]);
 
-    const getCount = (id: ArchiveFilter) => (id === "all" ? tasks.length : tasks.filter((task) => task.status === id).length);
+    const getCount = (id: ArchiveFilter) => (id === "all" ? list.count : tasks.filter((task) => task.status === id).length);
 
     return (
         <div className="flex flex-col gap-5 p-3 sm:p-4 md:p-6" dir="rtl">
@@ -71,7 +45,7 @@ export default function AdminArchivedTasksPage() {
 
                     <div className="min-w-0">
                         <h1 className="text-[15px] font-extrabold text-gray-900 dark:text-white">بایگانی تسک‌ها</h1>
-                        <p className="mt-0.5 text-[11.5px] text-gray-500 dark:text-gray-400">{loading ? "در حال بارگذاری..." : `${filteredTasks.length} تسک`}</p>
+                        <p className="mt-0.5 text-[11.5px] text-gray-500 dark:text-gray-400">{loading ? "در حال بارگذاری..." : `${list.count} تسک`}</p>
                     </div>
                 </div>
 
@@ -133,7 +107,7 @@ export default function AdminArchivedTasksPage() {
                 </div>
             )}
 
-            {!loading && filteredTasks.length === 0 && (
+            {!loading && !list.error && filteredTasks.length === 0 && (
                 <div className="flex flex-col items-center justify-center gap-2 py-16">
                     <ClipboardList size={28} className="text-gray-300 dark:text-gray-700" />
                     <p className="text-[12.5px] text-gray-500 dark:text-gray-400">تسکی در این وضعیت یافت نشد</p>
@@ -151,6 +125,8 @@ export default function AdminArchivedTasksPage() {
                     </AnimatePresence>
                 </motion.div>
             )}
+
+            {list.totalPages > 1 && <Pagination page={list.page} totalPages={list.totalPages} onChange={list.setPage} />}
         </div>
     );
 }

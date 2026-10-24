@@ -1,11 +1,14 @@
 "use client";
 
 import { JSX, memo, useEffect, useMemo, useState } from "react";
+import Pagination from "@/components/ui/Pagination";
+import { usePaginatedList } from "@/hooks/usePaginatedList";
+import { internalTasksApi } from "@/lib/api";
 import { AnimatePresence, motion } from "framer-motion";
 import { Ban, CheckCircle2, ClipboardX, Clock3, Inbox, LayoutGrid, Loader, Loader2, MessageSquareText, Plus, RefreshCw, RotateCcw, Ticket, Trash2, Users, X } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useAuthStore } from "@/store/authStore";
-import { deleteInternalTask, fetchEmployeeList, fetchInternalTasks, reopenInternalTask, patchInternalTaskDeadline, fetchInternalTaskDeadline } from "./Api";
+import { deleteInternalTask, fetchEmployeeList, reopenInternalTask, patchInternalTaskDeadline, fetchInternalTaskDeadline } from "./Api";
 import InternalTaskActionModal from "./InternalTaskActionModal";
 import type { EmployeeListItem, InternalTask, InternalTaskStatus, EmployeeRef } from "./types";
 import AdminInternalTaskChatModal from "./AdminInternalTaskChatModal";
@@ -321,49 +324,50 @@ const AdminInternalTaskCard = memo(function AdminInternalTaskCard({
 
 export default function AdminInternalTasksBoard(): JSX.Element {
     const currentUsername = useAuthStore(state => state.username);
-    const [tasks, setTasks] = useState<InternalTask[]>([]);
+    const list = usePaginatedList(
+        (params, signal) => internalTasksApi.page(params, signal),
+        { pageSize: 12 },
+    );
+    const tasks = useMemo(() => normalizeTasks(list.data), [list.data]);
     const [employees, setEmployees] = useState<AdminEmployee[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [refreshing, setRefreshing] = useState(false);
-    const [error, setError] = useState<string | null>(null);
+    const [employeesLoading, setEmployeesLoading] = useState(true);
+    const [employeesError, setEmployeesError] = useState(false);
+    const loading = employeesLoading || (list.loading && list.data.length === 0);
+    const refreshing = list.loading && list.data.length > 0;
+    const error = employeesError || list.error ? "دریافت گفتگوهای کارکنان با خطا مواجه شد." : null;
     const [selectedTask, setSelectedTask] = useState<InternalTask | null>(null);
     const [createOpen, setCreateOpen] = useState(false);
     const [deleteLoadingId, setDeleteLoadingId] = useState<number | null>(null);
 
-    async function loadData(initial = false) {
+    async function loadEmployees() {
         try {
-            initial ? setLoading(true) : setRefreshing(true);
-            setError(null);
-            const [tasksResponse, employeesResponse] = await Promise.all([fetchInternalTasks(), fetchEmployeeList()]);
-            setTasks(normalizeTasks(tasksResponse.data));
-            setEmployees(Array.isArray(employeesResponse.data) ? employeesResponse.data : []);
+            setEmployeesError(false);
+            const response = await fetchEmployeeList();
+            setEmployees(Array.isArray(response.data) ? response.data : []);
         } catch {
-            setError("دریافت گفتگوهای کارکنان با خطا مواجه شد.");
+            setEmployeesError(true);
         } finally {
-            setLoading(false);
-            setRefreshing(false);
+            setEmployeesLoading(false);
         }
     }
 
-    useEffect(() => { void loadData(true); }, []);
+    function loadData() {
+        void loadEmployees();
+        list.refetch();
+    }
+
+    useEffect(() => { void loadEmployees(); }, []);
 
     const sortedTasks = useMemo(() => [...tasks].sort((a, b) => new Date(b.updated_at || b.created_at || 0).getTime() - new Date(a.updated_at || a.created_at || 0).getTime()), [tasks]);
 
     function handleUpdated(updatedTask: InternalTask) {
-        setTasks(previous => previous.map(task => Number(task.id) === Number(updatedTask.id) ? updatedTask : task));
         setSelectedTask(previous => previous && Number(previous.id) === Number(updatedTask.id) ? updatedTask : previous);
+        list.refetch();
     }
 
-    function handleCreated(createdTask: InternalTask) {
-        const normalized = normalizeTask(createdTask);
-        if (!normalized) {
-            void loadData();
-            setCreateOpen(false);
-            return;
-        }
-        setTasks(previous => [{ ...normalized, assigned_to: resolveAssignedTo(normalized.assigned_to, employees) }, ...previous.filter(task => task.id !== normalized.id)]);
+    function handleCreated() {
         setCreateOpen(false);
-        void loadData();
+        list.refetch();
     }
 
     async function handleDelete(taskId: number) {
@@ -372,7 +376,7 @@ export default function AdminInternalTasksBoard(): JSX.Element {
         try {
             setDeleteLoadingId(id);
             await deleteInternalTask(id);
-            setTasks(previous => previous.filter(task => task.id !== id));
+            list.refetch();
             setSelectedTask(previous => previous && Number(previous.id) === id ? null : previous);
         } finally {
             setDeleteLoadingId(null);
@@ -387,14 +391,14 @@ export default function AdminInternalTasksBoard(): JSX.Element {
                 <div className="flex items-center gap-2.5"><div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-indigo-500/10"><Ticket size={17} className="text-indigo-500" /></div><div><h3 className="text-[14px] font-extrabold text-gray-900 dark:text-white">گفتگوهای کارکنان</h3><p className="text-[11px] text-gray-400 dark:text-gray-600">مشاهده گفتگوهای داخلی و فایل‌های رد و بدل شده</p></div></div>
                 <div className="flex shrink-0 items-center gap-2">
                     <button type="button" onClick={() => setCreateOpen(true)} className="flex items-center gap-1.5 rounded-2xl bg-indigo-600 px-3.5 py-2 text-[11.5px] font-bold text-white transition-colors hover:bg-indigo-500"><Plus size={13} />تیکت جدید</button>
-                    <button type="button" onClick={() => void loadData()} disabled={refreshing} className="flex h-9 w-9 items-center justify-center rounded-2xl bg-gray-100 text-gray-500 transition-colors hover:bg-gray-200 disabled:opacity-40 dark:bg-white/[0.05] dark:text-gray-400 dark:hover:bg-white/[0.08]" title="به‌روزرسانی"><RefreshCw size={14} className={refreshing ? "animate-spin" : ""} /></button>
+                    <button type="button" onClick={() => loadData()} disabled={refreshing} className="flex h-9 w-9 items-center justify-center rounded-2xl bg-gray-100 text-gray-500 transition-colors hover:bg-gray-200 disabled:opacity-40 dark:bg-white/[0.05] dark:text-gray-400 dark:hover:bg-white/[0.08]" title="به‌روزرسانی"><RefreshCw size={14} className={refreshing ? "animate-spin" : ""} /></button>
                 </div>
             </div>
 
-            {error && <div className="flex items-center justify-between gap-3 rounded-2xl border border-red-500/20 bg-red-500/5 px-4 py-3"><p className="text-[12px] font-semibold text-red-500">{error}</p><button type="button" onClick={() => void loadData()} className="rounded-xl bg-red-500/10 px-3 py-1.5 text-[11px] font-bold text-red-500">تلاش مجدد</button></div>}
+            {error && <div className="flex items-center justify-between gap-3 rounded-2xl border border-red-500/20 bg-red-500/5 px-4 py-3"><p className="text-[12px] font-semibold text-red-500">{error}</p><button type="button" onClick={() => loadData()} className="rounded-xl bg-red-500/10 px-3 py-1.5 text-[11px] font-bold text-red-500">تلاش مجدد</button></div>}
 
             <div className="flex items-center gap-2">
-                <div className="flex items-center gap-2 rounded-2xl bg-indigo-500/[0.07] px-3 py-2"><MessageSquareText size={13} className="text-indigo-500" /><span className="text-[11px] font-bold text-indigo-500">{tasks.length} گفتگو</span></div>
+                <div className="flex items-center gap-2 rounded-2xl bg-indigo-500/[0.07] px-3 py-2"><MessageSquareText size={13} className="text-indigo-500" /><span className="text-[11px] font-bold text-indigo-500">{list.count} گفتگو</span></div>
                 <div className="flex items-center gap-2 rounded-2xl bg-gray-100 px-3 py-2 dark:bg-white/[0.05]"><Users size={13} className="text-gray-400" /><span className="text-[11px] font-bold text-gray-400">{employees.length} کارمند</span></div>
             </div>
 
@@ -405,6 +409,7 @@ export default function AdminInternalTasksBoard(): JSX.Element {
                     </div>
                 </AnimatePresence>
             )}
+            {list.totalPages > 1 && <Pagination page={list.page} totalPages={list.totalPages} onChange={list.setPage} />}
 
             {selectedTask && <AdminInternalTaskChatModal open={true} task={selectedTask} employees={employees} onClose={() => setSelectedTask(null)} onUpdated={handleUpdated} />}
             <CreateTicketModal isOpen={createOpen} onClose={() => setCreateOpen(false)} employees={employees} onCreated={handleCreated} />

@@ -26,7 +26,7 @@ import {
     Hash,
 } from "lucide-react";
 import { useTheme } from "next-themes";
-import axiosInstance from "@/lib/axiosInstance";
+import { tasksApi } from "@/lib/api";
 import {
     toJalali,
     toPersianDigits,
@@ -231,9 +231,9 @@ export default function AdminTaskNotesModal({
         setLoading(true);
         setError(null);
 
-        axiosInstance
-            .get<TaskLog[]>(`/tasks/api/v1/tasks/${taskId}/logs/`)
-            .then((res) => setLogs(res.data ?? []))
+        tasksApi
+            .logs<TaskLog[]>(taskId)
+            .then((res) => setLogs(Array.isArray(res) ? res : []))
             .catch(() => setError("خطا در دریافت یادداشت‌ها"))
             .finally(() => setLoading(false));
     }, [taskId]);
