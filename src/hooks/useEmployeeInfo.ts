@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import axiosInstance from "@/lib/axiosInstance";
+import { accountsApi } from "@/lib/api";
 
 export type EmployeeInfo = {
   id: number;
@@ -9,18 +9,14 @@ export type EmployeeInfo = {
   updated_at?: string;
 };
 
-const employeeCache: Record<number, EmployeeInfo> = {};
-
 export function useEmployeeInfo(id: number | null | undefined) {
   const [data, setData] = useState<EmployeeInfo | null>(() => {
-    if (typeof id === "number" && employeeCache[id]) {
-      return employeeCache[id];
-    }
+    if (typeof id === "number") return accountsApi.employees.peek(id) ?? null;
     return null;
   });
 
   const [loading, setLoading] = useState<boolean>(() => {
-    return typeof id === "number" && !employeeCache[id];
+    return typeof id === "number" && !accountsApi.employees.peek(id);
   });
 
   const [error, setError] = useState<string | null>(null);
@@ -35,7 +31,7 @@ export function useEmployeeInfo(id: number | null | undefined) {
       return;
     }
 
-    const cachedEmployee = employeeCache[id];
+    const cachedEmployee = accountsApi.employees.peek(id);
 
     if (cachedEmployee) {
       setData(cachedEmployee);
@@ -47,25 +43,19 @@ export function useEmployeeInfo(id: number | null | undefined) {
     setLoading(true);
     setError(null);
 
-    axiosInstance
-      .get<EmployeeInfo>(`/accounts/api/v1/employee/${id}/`)
-      .then((response) => {
+    accountsApi.employees
+      .get(id)
+      .then((employee) => {
         if (!mounted) return;
-
-        const employee = response.data;
-
-        employeeCache[id] = employee;
         setData(employee);
       })
       .catch(() => {
         if (!mounted) return;
-
         setData(null);
         setError("دریافت اطلاعات کارمند انجام نشد");
       })
       .finally(() => {
         if (!mounted) return;
-
         setLoading(false);
       });
 
@@ -81,22 +71,10 @@ export function useEmployeeInfo(id: number | null | undefined) {
   };
 }
 
-export async function getEmployeeInfo(id: number) {
-  if (employeeCache[id]) {
-    return employeeCache[id];
-  }
-
-  const response = await axiosInstance.get<EmployeeInfo>(
-    `/accounts/api/v1/employee/${id}/`,
-  );
-
-  employeeCache[id] = response.data;
-
-  return response.data;
+export async function getEmployeeInfo(id: number): Promise<EmployeeInfo> {
+  return accountsApi.employees.get(id);
 }
 
 export function clearEmployeeInfoCache() {
-  Object.keys(employeeCache).forEach((key) => {
-    delete employeeCache[Number(key)];
-  });
+  accountsApi.clearCache();
 }

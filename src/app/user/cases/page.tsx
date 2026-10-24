@@ -370,7 +370,6 @@ export default function UserCasesPage() {
                 open={caseModalOpen}
                 onClose={() => setCaseModalOpen(false)}
                 onCreated={fetchData}
-                customers={customers}
             />
 
             {editCaseModalOpen && editingCase && (

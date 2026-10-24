@@ -9,3 +9,7 @@ export interface PageParams {
   page?: number;
   page_size?: number;
 }
+
+export interface SearchParams extends PageParams {
+  search?: string;
+}

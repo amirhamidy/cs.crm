@@ -1,4 +1,4 @@
-import axiosInstance from "@/lib/axiosInstance";
+import { accountsApi, departmentsApi } from "@/lib/api";
 import {
   DepartmentAPIItem,
   EmployeeAPIItem,
@@ -7,82 +7,59 @@ import {
 } from "./types";
 
 export const departmentApi = {
-  getDepartments: () =>
-    axiosInstance
-      .get<DepartmentAPIItem[]>(`/department/api/v1/department/list/`)
-      .then((r) => r.data),
+  getDepartments: async (): Promise<DepartmentAPIItem[]> =>
+    (await departmentsApi.list()).map((d) => ({
+      id: d.id,
+      name: d.name,
+      order: d.order ?? 0,
+    })),
 
   createDepartment: (payload: { name: string; order: number }) =>
-    axiosInstance
-      .post<DepartmentAPIItem>(`/department/api/v1/department/create/`, payload)
-      .then((r) => r.data),
+    departmentsApi.create<DepartmentAPIItem>(payload),
 
   updateDepartment: (id: number, payload: { name: string; order: number }) =>
-    axiosInstance
-      .put<DepartmentAPIItem>(
-        `/department/api/v1/department/${id}/update/`,
-        payload,
-      )
-      .then((r) => r.data),
+    departmentsApi.update<DepartmentAPIItem>(id, payload),
 
-  deleteDepartment: (id: number) =>
-    axiosInstance
-      .delete(`/department/api/v1/department/${id}/delete/`)
-      .then((r) => r.data),
+  deleteDepartment: (id: number) => departmentsApi.remove(id),
 
-  getSteps: () =>
-    axiosInstance
-      .get<StageAPIItem[]>(`/department/api/v1/department_step/`)
-      .then((r) => r.data),
+  getSteps: async (): Promise<StageAPIItem[]> =>
+    (await departmentsApi.steps()).map((s) => ({
+      id: s.id,
+      department: s.department ?? 0,
+      name: s.name,
+      description: s.description ?? undefined,
+      order: s.order ?? 0,
+    })),
 
   createStep: (payload: {
     department: number;
     name: string;
     description?: string;
     order: number;
-  }) =>
-    axiosInstance
-      .post<StageAPIItem>(`/department/api/v1/department_step/create/`, payload)
-      .then((r) => r.data),
+  }) => departmentsApi.createStep<StageAPIItem>(payload),
 
   updateStep: (
     id: number,
     payload: { name: string; description?: string; order: number },
-  ) =>
-    axiosInstance
-      .put<StageAPIItem>(
-        `/department/api/v1/department_step/${id}/update/`,
-        payload,
-      )
-      .then((r) => r.data),
+  ) => departmentsApi.updateStep<StageAPIItem>(id, payload),
 
-  deleteStep: (id: number) =>
-    axiosInstance
-      .delete(`/department/api/v1/department_step/${id}/delete/`)
-      .then((r) => r.data),
+  deleteStep: (id: number) => departmentsApi.removeStep(id),
 
-  getEmployees: () =>
-    axiosInstance
-      .get<EmployeeAPIItem[]>(`/accounts/api/v1/employee/list/`)
-      .then((r) => r.data),
+  getEmployees: async (): Promise<EmployeeAPIItem[]> =>
+    (await accountsApi.employees.all()).map((e) => ({
+      id: e.id,
+      full_name: e.full_name,
+      username: e.username,
+      created_at: e.created_at,
+      updated_at: e.updated_at,
+    })),
 
-  getAssignments: () =>
-    axiosInstance
-      .get<
-        DepartmentEmployeeAPIItem[]
-      >(`/department/api/v1/department_employee/list/`)
-      .then((r) => r.data),
+  getAssignments: async (): Promise<DepartmentEmployeeAPIItem[]> =>
+    departmentsApi.employees(),
 
   assignEmployee: (payload: { employee: number; department: number }) =>
-    axiosInstance
-      .post<DepartmentEmployeeAPIItem>(
-        `/department/api/v1/department_employee/create/`,
-        payload,
-      )
-      .then((r) => r.data),
+    departmentsApi.assign<DepartmentEmployeeAPIItem>(payload),
 
   removeEmployee: (assignmentId: number) =>
-    axiosInstance
-      .delete(`/department/api/v1/department_employee/${assignmentId}/delete/`)
-      .then((r) => r.data),
+    departmentsApi.unassign(assignmentId),
 };

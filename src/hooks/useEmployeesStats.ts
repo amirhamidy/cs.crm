@@ -1,16 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
-import axiosInstance from "@/lib/axiosInstance";
+import { accountsApi } from "@/lib/api";
+import type { ApiEmployee } from "@/types/users";
 
 export function useEmployeesStats() {
-  const [data, setData] = useState<any[]>([]);
+  const [data, setData] = useState<ApiEmployee[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    axiosInstance
-      .get("/accounts/api/v1/employee/list/")
-      .then((res) =>
-        setData(Array.isArray(res.data) ? res.data : (res.data?.results ?? [])),
-      )
+    accountsApi.employees
+      .all()
+      .then(setData)
+      .catch(() => setData([]))
       .finally(() => setLoading(false));
   }, []);
 

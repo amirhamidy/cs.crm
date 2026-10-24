@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import axiosInstance from "@/lib/axiosInstance";
+import { accountsApi } from "@/lib/api";
 
 export interface AuthMe {
   id: number;
@@ -74,10 +75,7 @@ export function usePurchasingAccess() {
     setState((prev) => ({ ...prev, loading: true, error: null }));
 
     try {
-      const meResponse = await axiosInstance.get<AuthMe>(
-        "/accounts/api/v1/auth/me/",
-      );
-      const me = meResponse.data;
+      const me = await accountsApi.me();
 
       if (me.type === 1) {
         const purchasingResponse = await axiosInstance.get(
@@ -108,20 +106,14 @@ export function usePurchasingAccess() {
         return;
       }
 
-      const [employeeListResponse, purchasingListResponse] = await Promise.all([
-        axiosInstance.get("/accounts/api/v1/employee/list/"),
+      const [matchedEmployee, purchasingListResponse] = await Promise.all([
+        accountsApi.employees.byUsername(me.username),
         axiosInstance.get("/purchasing/api/v1/employees/"),
       ]);
 
-      const employeeList = normalizeList<EmployeeAccount>(
-        employeeListResponse.data,
-      );
       const purchasingList = normalizeList<PurchasingEmployeeItem>(
         purchasingListResponse.data,
       );
-
-      const matchedEmployee =
-        employeeList.find((item) => item.username === me.username) ?? null;
 
       if (!matchedEmployee) {
         setState({

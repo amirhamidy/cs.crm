@@ -1,15 +1,11 @@
 import axiosInstance from "@/lib/axiosInstance";
+import type { Paginated } from "@/types/pagination";
 
-export interface Paginated<T> {
-  count: number;
-  next: string | null;
-  previous: string | null;
-  results: T[];
-}
+export type { Paginated };
 
 export type RawList<T> = T[] | Partial<Paginated<T>> | null | undefined;
 
-type Params = Record<string, unknown>;
+type Params = object;
 type Id = number | string;
 type MaybeId = Id | null | undefined;
 
@@ -118,12 +114,29 @@ export async function fetchAllPages<T>(
 }
 
 export function listAll<T>(url: string, params: Params = {}, pageSize = 100) {
-  return fetchAllPages<T>(async (p) => {
-    const r = await axiosInstance.get<RawList<T>>(url, {
-      params: { ...params, ...p, page_size: pageSize },
-    });
-    return toPaginated<T>(r.data);
+  return fetchAllPages<T>((p) =>
+    fetchPage<T>(url, { ...params, ...p, page_size: pageSize }),
+  );
+}
+
+export function cleanParams(params: Params = {}): Params {
+  return Object.fromEntries(
+    Object.entries(params).filter(
+      ([, v]) => v !== undefined && v !== null && v !== "",
+    ),
+  );
+}
+
+export async function fetchPage<T>(
+  url: string,
+  params: Params = {},
+  signal?: AbortSignal,
+): Promise<Paginated<T>> {
+  const r = await axiosInstance.get<RawList<T>>(url, {
+    params: cleanParams(params),
+    signal,
   });
+  return toPaginated<T>(r.data);
 }
 
 export async function getOne<T>(url: string, params: Params = {}) {
@@ -172,6 +185,7 @@ export function createSearch<T>({
     );
   };
 }
+
 export function withSignal<T>(promise: Promise<T>, signal?: AbortSignal): Promise<T> {
   if (!signal) return promise;
   if (signal.aborted) return Promise.reject(new DOMException("Aborted", "AbortError"));

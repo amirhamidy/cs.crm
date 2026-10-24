@@ -1,4 +1,5 @@
 import axiosInstance from "@/lib/axiosInstance";
+import { accountsApi, departmentsApi } from "@/lib/api";
 
 export interface HumanResourceFile {
   id: number;
@@ -109,13 +110,23 @@ export const updateStep = (
 
 export const deleteStep = (id: number) => api.delete(`/document/steps/${id}/`);
 
-export const getDepartments = () =>
-  api.get<Department[]>("/department/api/v1/department/list/");
+const wrap = <T>(data: T) => ({ data });
 
-export const getDepartmentEmployees = () =>
-  api.get<DepartmentEmployee[]>("/department/api/v1/department_employee/list/");
+export const getDepartments = async () =>
+  wrap<Department[]>(
+    (await departmentsApi.list()).map((d) => ({
+      id: d.id,
+      name: d.name,
+      order: d.order ?? 0,
+      created_at: d.created_at ?? "",
+      updated_at: d.updated_at ?? "",
+    })),
+  );
 
-export const getEmployees = () =>
-  api.get<Employee[]>("/accounts/api/v1/employee/list/");
+export const getDepartmentEmployees = async () =>
+  wrap<DepartmentEmployee[]>(await departmentsApi.employees());
 
-export const getMe = () => api.get<CurrentUser>("/accounts/api/v1/auth/me/");
+export const getEmployees = async () =>
+  wrap<Employee[]>(await accountsApi.employees.all());
+
+export const getMe = async () => wrap<CurrentUser>(await accountsApi.me());

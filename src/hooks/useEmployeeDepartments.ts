@@ -1,18 +1,12 @@
 import { useState, useEffect } from "react";
-import axiosInstance from "@/lib/axiosInstance";
+import { departmentsApi } from "@/lib/api";
 
 interface DepartmentMap {
   [employeeId: number]: string;
 }
 
-let departmentCache: DepartmentMap | null = null;
-let inFlight: Promise<DepartmentMap> | null = null;
-
 async function fetchDepartments(): Promise<DepartmentMap> {
-  const res = await axiosInstance.get(
-    "/department/api/v1/department_employee/list/",
-  );
-  const data = Array.isArray(res.data) ? res.data : (res.data.results ?? []);
+  const data = await departmentsApi.employees();
   const map: DepartmentMap = {};
   for (const item of data) {
     if (map[item.employee] === undefined) {
@@ -28,21 +22,11 @@ export function useEmployeeDepartments() {
 
   useEffect(() => {
     let active = true;
-    if (departmentCache) {
-      setDepartments(departmentCache);
-      setLoading(false);
-      return;
-    }
-    if (!inFlight)
-      inFlight = fetchDepartments().catch((e) => {
-        inFlight = null;
-        throw e;
-      });
-    inFlight
+    fetchDepartments()
       .then((map) => {
-        departmentCache = map;
         if (active) setDepartments(map);
       })
+      .catch(() => undefined)
       .finally(() => active && setLoading(false));
     return () => {
       active = false;
