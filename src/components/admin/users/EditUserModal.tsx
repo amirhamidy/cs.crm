@@ -3,8 +3,7 @@
 import { useState, useEffect, InputHTMLAttributes, forwardRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Loader, User } from "lucide-react";
-import axiosInstance from "@/lib/axiosInstance";
-import type { AxiosError } from "axios";
+import { accountsApi } from "@/lib/api";
 import type { ApiEmployee, ApiUser } from "@/types/users";
 
 interface EditUserModalProps {
@@ -59,7 +58,7 @@ const FloatingInput = forwardRef<HTMLInputElement, FloatingInputProps>(
 FloatingInput.displayName = "FloatingInput";
 
 function getErrorMessage(err: unknown, fallback: string) {
-    const error = err as AxiosError<Record<string, unknown>>;
+    const error = err as { response?: { data?: Record<string, unknown> } };
     const data = error.response?.data;
     if (!data) return fallback;
     const keys = ["detail", "phone_number", "full_name", "user", "username", "message", "error", "non_field_errors"];
@@ -69,17 +68,6 @@ function getErrorMessage(err: unknown, fallback: string) {
         if (Array.isArray(val) && typeof val[0] === "string") return val[0];
     }
     return fallback;
-}
-
-function extractUserList(data: unknown): ApiUser[] {
-    if (Array.isArray(data)) return data as ApiUser[];
-    if (data && typeof data === "object") {
-        const record = data as Record<string, unknown>;
-        if (Array.isArray(record.results)) return record.results as ApiUser[];
-        if (Array.isArray(record.data)) return record.data as ApiUser[];
-        if (Array.isArray(record.users)) return record.users as ApiUser[];
-    }
-    return [];
 }
 
 export default function EditUserModal({
@@ -108,10 +96,9 @@ export default function EditUserModal({
 
         const fetchUserData = async () => {
             try {
-                const res = await axiosInstance.get("/accounts/api/v1/user/list/");
+                const users = await accountsApi.users.lookup(employee.username?.trim() ?? "");
                 if (!mounted) return;
 
-                const users = extractUserList(res.data);
                 const targetUsername = employee.username?.trim().toLowerCase();
                 const found = users.find(
                     (u) => u.username?.trim().toLowerCase() === targetUsername
@@ -157,12 +144,9 @@ export default function EditUserModal({
                 employeePayload.user = employee.user;
             }
 
-            const employeePromise = axiosInstance.put<ApiEmployee>(
-                `/accounts/api/v1/employee/${employee.id}/update/`,
-                employeePayload
-            );
+            const employeePromise = accountsApi.employees.update(employee.id, employeePayload);
 
-            let userPromise = Promise.resolve();
+            let userPromise: Promise<unknown> = Promise.resolve();
 
             if (matchedUser?.id) {
                 const userPayload = {
@@ -171,20 +155,15 @@ export default function EditUserModal({
                     type: matchedUser.type,
                     is_active: matchedUser.is_active,
                 };
-                userPromise = axiosInstance.put(
-                    `/accounts/api/v1/user/${matchedUser.id}/update/`,
-                    userPayload
-                );
+                userPromise = accountsApi.users.update(matchedUser.id, userPayload);
             }
 
-            const [employeeRes] = await Promise.all([employeePromise, userPromise]);
-
-            const updatedData = employeeRes && "data" in employeeRes ? employeeRes.data : {};
+            const [updatedData] = await Promise.all([employeePromise, userPromise]);
 
             onUpdated({
                 ...employee,
                 ...updatedData,
-                full_name: (updatedData as ApiEmployee)?.full_name ?? fullName.trim(),
+                full_name: updatedData?.full_name ?? fullName.trim(),
             });
             onClose();
         } catch (err) {

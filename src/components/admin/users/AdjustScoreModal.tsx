@@ -4,7 +4,7 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { Loader2, Plus, Minus, SlidersHorizontal } from "lucide-react";
 import { useTheme } from "next-themes";
-import axiosInstance from "@/lib/axiosInstance";
+import { scoreApi } from "@/lib/api";
 
 type AdjustAction = "add" | "deduct";
 
@@ -71,15 +71,12 @@ export default function AdjustScoreModal({
 
         setLoading(true);
         try {
-            await axiosInstance.post(
-                `/score/api/v1/admin/employees/${employeeId}/adjust/`,
-                {
-                    employee: employeeId,
-                    action,
-                    amount: numeric,
-                    reason: reason.trim(),
-                }
-            );
+            await scoreApi.adjust(employeeId, {
+                employee: employeeId,
+                action,
+                amount: numeric,
+                reason: reason.trim(),
+            });
             onSuccess(action, numeric);
             setAmount("");
             setReason("");

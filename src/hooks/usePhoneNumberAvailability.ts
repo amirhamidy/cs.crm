@@ -1,13 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import axiosInstance from "@/lib/axiosInstance";
-
-type ApiUser = {
-  id: number;
-  username: string;
-  phone_number: string | null;
-};
+import { accountsApi } from "@/lib/api";
 
 type AvailabilityResult = {
   usernameExists: boolean;
@@ -41,32 +35,6 @@ function normalizePhoneNumber(value: string) {
   }
 
   return digits;
-}
-
-function extractUsers(data: unknown): ApiUser[] {
-  if (Array.isArray(data)) {
-    return data as ApiUser[];
-  }
-
-  if (!data || typeof data !== "object") {
-    return [];
-  }
-
-  const response = data as Record<string, unknown>;
-
-  if (Array.isArray(response.results)) {
-    return response.results as ApiUser[];
-  }
-
-  if (Array.isArray(response.data)) {
-    return response.data as ApiUser[];
-  }
-
-  if (Array.isArray(response.users)) {
-    return response.users as ApiUser[];
-  }
-
-  return [];
 }
 
 export function useUserAvailability(username: string, phoneNumber: string) {
@@ -110,22 +78,25 @@ export function useUserAvailability(username: string, phoneNumber: string) {
       setError("");
 
       try {
-        const { data } = await axiosInstance.get<ApiUser[]>(
-          "/accounts/api/v1/user/list/",
-        );
-
-        const users = extractUsers(data);
+        const [usernameMatches, phoneMatches] = await Promise.all([
+          currentUsername.length > 0
+            ? accountsApi.users.lookup(currentUsername)
+            : Promise.resolve([]),
+          currentPhoneNumber.length === 11
+            ? accountsApi.users.lookup(currentPhoneNumber)
+            : Promise.resolve([]),
+        ]);
 
         const nextUsernameExists =
           currentUsername.length > 0 &&
-          users.some(
+          usernameMatches.some(
             (user) =>
               normalizeUsername(user.username ?? "") === currentUsername,
           );
 
         const nextPhoneNumberExists =
           currentPhoneNumber.length === 11 &&
-          users.some(
+          phoneMatches.some(
             (user) =>
               normalizePhoneNumber(user.phone_number ?? "") ===
               currentPhoneNumber,

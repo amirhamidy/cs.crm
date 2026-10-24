@@ -139,6 +139,14 @@ const listUsers = (
 const allUsers = () =>
   cached(`${KEY}users:all`, () => listAll<ApiUser>(URLS.users), TTL);
 
+const lookupUsers = (term: string) =>
+  cached(
+    `${KEY}users:lookup:${term}`,
+    async () =>
+      (await listUsers({ page: 1, page_size: 100, search: term })).results,
+    10_000,
+  );
+
 const userSearch = createSearch<ApiUser>({
   key: `${KEY}users:`,
   url: URLS.users,
@@ -190,6 +198,7 @@ export const accountsApi = {
     list: listUsers,
     all: allUsers,
     search: userSearch,
+    lookup: lookupUsers,
 
     create: async <R = ApiUser>(payload: UserPayload) => {
       const { data } = await axiosInstance.post<R>(URLS.userCreate, payload);

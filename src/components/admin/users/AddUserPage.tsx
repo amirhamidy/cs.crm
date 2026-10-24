@@ -18,7 +18,7 @@ import {
     UserPlus,
     X,
 } from "lucide-react";
-import axiosInstance from "@/lib/axiosInstance";
+import { accountsApi } from "@/lib/api";
 import { parseApiErrors, type FieldErrors } from "@/lib/parseApiErrors";
 
 type Step1Form = {
@@ -51,12 +51,6 @@ interface NotificationProps {
 interface FloatingInputProps extends InputHTMLAttributes<HTMLInputElement> {
     label: string;
     id: string;
-}
-
-interface UserListItem {
-    id: number;
-    username: string;
-    phone_number?: string | null;
 }
 
 const PHONE_REGEX = /^09\d{9}$/;
@@ -156,30 +150,6 @@ function normalizeUsername(value: string) {
     return value.trim().toLowerCase();
 }
 
-function extractUsers(data: unknown): UserListItem[] {
-    if (Array.isArray(data)) {
-        return data as UserListItem[];
-    }
-
-    if (data && typeof data === "object") {
-        const response = data as Record<string, unknown>;
-
-        if (Array.isArray(response.results)) {
-            return response.results as UserListItem[];
-        }
-
-        if (Array.isArray(response.data)) {
-            return response.data as UserListItem[];
-        }
-
-        if (Array.isArray(response.users)) {
-            return response.users as UserListItem[];
-        }
-    }
-
-    return [];
-}
-
 export default function AddUserModal({ onClose, onSuccess, onNotify }: Props) {
     const [step, setStep] = useState<1 | 2>(1);
     const [step1, setStep1] = useState<Step1Form>(INITIAL_STEP1);
@@ -244,32 +214,28 @@ export default function AddUserModal({ onClose, onSuccess, onNotify }: Props) {
         }));
     }
 
-    async function getUsers() {
-        const { data } = await axiosInstance.get(
-            "/accounts/api/v1/user/list/"
-        );
-
-        return extractUsers(data);
-    }
-
     async function validateAvailability(
         username: string,
         phoneNumber: string
     ) {
         try {
-            const users = await getUsers();
             const normalizedUsername = normalizeUsername(username);
             const normalizedPhoneNumber = normalizePhoneNumber(phoneNumber);
 
+            const [usernameMatches, phoneMatches] = await Promise.all([
+                accountsApi.users.lookup(normalizedUsername),
+                accountsApi.users.lookup(normalizedPhoneNumber),
+            ]);
+
             const nextErrors: Step1Errors = {};
 
-            const usernameExists = users.some(
+            const usernameExists = usernameMatches.some(
                 (user) =>
                     normalizeUsername(user.username ?? "") ===
                     normalizedUsername
             );
 
-            const phoneNumberExists = users.some(
+            const phoneNumberExists = phoneMatches.some(
                 (user) =>
                     normalizePhoneNumber(user.phone_number ?? "") ===
                     normalizedPhoneNumber
@@ -354,7 +320,9 @@ export default function AddUserModal({ onClose, onSuccess, onNotify }: Props) {
 
     async function getUserByUsername(username: string) {
         try {
-            const users = await getUsers();
+            const users = await accountsApi.users.lookup(
+                normalizeUsername(username)
+            );
 
             return (
                 users.find(
@@ -370,7 +338,7 @@ export default function AddUserModal({ onClose, onSuccess, onNotify }: Props) {
 
     async function deleteUserById(userId: number) {
         try {
-            await axiosInstance.delete(`/accounts/api/v1/user/${userId}/delete/`);
+            await accountsApi.users.remove(userId);
         } catch {
             return;
         }
@@ -428,7 +396,7 @@ export default function AddUserModal({ onClose, onSuccess, onNotify }: Props) {
         setApiError({});
 
         try {
-            await axiosInstance.post("/accounts/api/v1/user/create/", {
+            await accountsApi.users.create({
                 username,
                 phone_number: phoneNumber,
                 password: step1.password,
@@ -469,15 +437,12 @@ export default function AddUserModal({ onClose, onSuccess, onNotify }: Props) {
                 return;
             }
 
-            const { data: createData } = await axiosInstance.post(
-                "/accounts/api/v1/user/create/",
-                {
-                    username,
-                    phone_number: phoneNumber,
-                    password: step1.password,
-                    type: 2,
-                }
-            );
+            const createData = await accountsApi.users.create<unknown>({
+                username,
+                phone_number: phoneNumber,
+                password: step1.password,
+                type: 2,
+            });
 
             userId = await resolveUserId(createData, username);
 
@@ -487,7 +452,7 @@ export default function AddUserModal({ onClose, onSuccess, onNotify }: Props) {
                 return;
             }
 
-            await axiosInstance.post("/accounts/api/v1/employee/create/", {
+            await accountsApi.employees.create({
                 user: userId,
                 full_name: step2.full_name.trim(),
             });

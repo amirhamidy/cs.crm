@@ -23,3 +23,10 @@ export type {
   EmployeePayload,
   UserPayload,
 } from "./accounts";
+export { scoreApi } from "./score";
+export type { EmployeeScore, AdjustScorePayload } from "./score";
+export { internalTasksApi } from "./internalTasks";
+export type {
+  InternalTaskSummary,
+  InternalTaskListParams,
+} from "./internalTasks";

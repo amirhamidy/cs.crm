@@ -29,8 +29,8 @@ import {
     Building2,
     X,
 } from "lucide-react";
-import axiosInstance from "@/lib/axiosInstance";
-import type { ApiEmployee, ApiUser } from "@/types/users";
+import { accountsApi, departmentsApi } from "@/lib/api";
+import type { ApiEmployee } from "@/types/users";
 import EditUserModal from "@/components/admin/users/EditUserModal";
 import AdjustScoreModal from "@/components/admin/users/AdjustScoreModal";
 
@@ -124,19 +124,6 @@ function formatDate(iso?: string | null) {
         });
     }
     return dateFormatter.format(date);
-}
-
-function extractList<T>(data: unknown, extraKey?: string): T[] {
-    if (Array.isArray(data)) return data as T[];
-    if (data && typeof data === "object") {
-        const record = data as Record<string, unknown>;
-        const keys = extraKey ? ["results", "data", extraKey] : ["results", "data"];
-        for (const key of keys) {
-            const value = record[key];
-            if (Array.isArray(value)) return value as T[];
-        }
-    }
-    return [];
 }
 
 function getErrorMessage(error: unknown, fallback: string) {
@@ -418,11 +405,11 @@ function DepartmentManagerModal({
     useEffect(() => {
         let alive = true;
 
-        axiosInstance
-            .get("/department/api/v1/department_employee/list/")
-            .then((res) => {
+        departmentsApi
+            .employees()
+            .then((list) => {
                 if (!alive) return;
-                setMemberships(extractList<DepartmentMembership>(res.data));
+                setMemberships(list);
             })
             .catch((err) => {
                 if (!alive) return;
@@ -464,13 +451,10 @@ function DepartmentManagerModal({
         setActionError("");
 
         try {
-            await axiosInstance.patch(
-                `/department/api/v1/department_employee/${membership.id}/update/`,
-                {
-                    department: membership.department,
-                    is_manager: nextValue,
-                }
-            );
+            await departmentsApi.updateAssignment(membership.id, {
+                department: membership.department,
+                is_manager: nextValue,
+            });
 
             setMemberships((prev) =>
                 prev.map((item) =>
@@ -944,7 +928,7 @@ function UserCard({
         setTogglingActive(true);
 
         try {
-            await axiosInstance.put(`/accounts/api/v1/user/${userId}/update/`, {
+            await accountsApi.users.update(userId, {
                 username: employee.username,
                 phone_number: phoneNumber || "",
                 type: employee.type ?? 2,
@@ -969,25 +953,15 @@ function UserCard({
         setDeleteError("");
 
         try {
-            const [usersRes, employeesRes] = await Promise.all([
-                axiosInstance.get("/accounts/api/v1/user/list/").catch(() => null),
-                axiosInstance.get("/accounts/api/v1/employee/").catch(() => null),
+            const normalizedUsername = (employee.username || "").trim().toLowerCase();
+
+            const [users, matchedEmployee] = await Promise.all([
+                accountsApi.users.lookup(normalizedUsername).catch(() => []),
+                accountsApi.employees.get(employee.id).catch(() => null),
             ]);
-
-            const users = usersRes ? extractList<ApiUser>(usersRes.data, "users") : [];
-            const employees = employeesRes
-                ? extractList<ApiEmployee>(employeesRes.data, "employees")
-                : [];
-
-            const normalizedUsername = (employee.username || "").toLowerCase();
 
             const matchedUser = users.find(
                 (user) => user.username?.trim().toLowerCase() === normalizedUsername
-            );
-            const matchedEmployee = employees.find(
-                (item) =>
-                    item.username?.trim().toLowerCase() === normalizedUsername ||
-                    item.id === employee.id
             );
 
             const employeeDeleteId = matchedEmployee?.id;
@@ -998,13 +972,11 @@ function UserCard({
             }
 
             if (employeeDeleteId) {
-                await axiosInstance.delete(
-                    `/accounts/api/v1/employee/${employeeDeleteId}/delete/`
-                );
+                await accountsApi.employees.remove(employeeDeleteId);
             }
 
             if (userDeleteId && matchedUser?.type !== 1) {
-                await axiosInstance.delete(`/accounts/api/v1/user/${userDeleteId}/delete/`);
+                await accountsApi.users.remove(userDeleteId);
             }
 
             onDelete(employee.id);

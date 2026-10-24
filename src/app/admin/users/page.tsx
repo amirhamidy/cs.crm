@@ -2,128 +2,83 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence } from "framer-motion";
-import { Loader2, RefreshCw, UserPlus, Users } from "lucide-react";
+import { Loader2, RefreshCw, Search, UserPlus, Users } from "lucide-react";
 import { useTheme } from "next-themes";
-import type { AxiosError } from "axios";
 
-import axiosInstance from "@/lib/axiosInstance";
+import {
+    accountsApi,
+    departmentsApi,
+    internalTasksApi,
+    scoreApi,
+    tasksApi,
+} from "@/lib/api";
+import { usePaginatedList } from "@/hooks/usePaginatedList";
+import Pagination from "@/components/ui/Pagination";
 import UserCard from "@/components/admin/users/UserCard";
 import type { UserInfo } from "@/components/admin/users/UserCard";
 import AddUserModal from "@/components/admin/users/AddUserPage";
 import type { ApiEmployee, ApiUser } from "@/types/users";
 
-interface TaskItem {
-    id: number;
-    title?: string | null;
-    status?: string | null;
-    assigned_employee?: number | string | { id: number | string } | Array<number | string | { id: number | string }> | null;
-}
-
-interface InternalTaskItem {
-    id: number;
-    title?: string | null;
-    status?: string | null;
-    assigned_to?: number | string | { id: number | string } | Array<number | string | { id: number | string }> | null;
-    created_by?: string | null;
-}
-
-interface DepartmentEmployeeItem {
-    id: number;
-    employee: number;
-    employee_name?: string | null;
-    department?: number | null;
-    department_name?: string | null;
-}
-
-type TasksResponse = TaskItem[] | { results?: TaskItem[] };
-type InternalTasksResponse = InternalTaskItem[] | { results?: InternalTaskItem[] };
-type DepartmentEmployeesResponse = DepartmentEmployeeItem[] | { results?: DepartmentEmployeeItem[] };
+const PAGE_SIZE = 20;
 
 const GRID_CLASS =
     "grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 [&:has(.user-card:hover)_.user-card:not(:hover)]:[filter:opacity(0.3)]";
 
 const EMPTY_TITLES: string[] = [];
 
-const extractEmployeeIds = (value: TaskItem["assigned_employee"] | InternalTaskItem["assigned_to"]): number[] => {
+const extractEmployeeIds = (value: unknown): number[] => {
     if (!value) return [];
     if (Array.isArray(value)) {
-        return value.map((item) => (typeof item === "object" && item !== null ? Number(item.id) : Number(item))).filter((id) => !Number.isNaN(id));
+        return value
+            .map((item) => (typeof item === "object" && item !== null ? Number((item as { id?: unknown }).id) : Number(item)))
+            .filter((id) => !Number.isNaN(id));
     }
     if (typeof value === "object") {
-        const id = Number(value.id);
+        const id = Number((value as { id?: unknown }).id);
         return Number.isNaN(id) ? [] : [id];
     }
     const id = Number(value);
     return Number.isNaN(id) ? [] : [id];
 };
 
-const extractDepartmentEmployees = (data: DepartmentEmployeesResponse): DepartmentEmployeeItem[] => {
-    if (Array.isArray(data)) return data;
-    return data?.results ?? [];
-};
-
-const extractUsers = (data: ApiUser[] | { results?: ApiUser[] }): ApiUser[] => {
-    if (Array.isArray(data)) return data;
-    return data?.results ?? [];
-};
+const getErrorDetail = (err: unknown) =>
+    (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail ?? "خطا در دریافت لیست کاربران";
 
 export default function UsersPage() {
     const { resolvedTheme } = useTheme();
     const isDark = resolvedTheme === "dark";
 
-    const [employees, setEmployees] = useState<ApiEmployee[]>([]);
+    const list = usePaginatedList<ApiEmployee>(
+        (params, signal) => accountsApi.employees.list(params, signal),
+        { pageSize: PAGE_SIZE },
+    );
+    const { refetch, setPage } = list;
+
+    const [overrides, setOverrides] = useState<Map<number, ApiEmployee>>(new Map());
     const [adminUsers, setAdminUsers] = useState<ApiUser[]>([]);
     const [userInfoMap, setUserInfoMap] = useState<Map<string, UserInfo>>(new Map());
     const [scoreMap, setScoreMap] = useState<Map<number, number>>(new Map());
     const [departmentNames, setDepartmentNames] = useState<Map<number, string>>(new Map());
     const [employeesWithTasks, setEmployeesWithTasks] = useState<Set<number>>(new Set());
+    const [taskCreators, setTaskCreators] = useState<Set<string>>(new Set());
     const [activeTasks, setActiveTasks] = useState<Map<number, string[]>>(new Map());
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState("");
+    const [metaLoading, setMetaLoading] = useState(true);
+    const [metaError, setMetaError] = useState("");
     const [showAddModal, setShowAddModal] = useState(false);
 
-    const loadScores = useCallback(async (list: ApiEmployee[]) => {
-        const targets = list.filter((employee) => employee.id && employee.type !== 1);
-        const results = await Promise.allSettled(
-            targets.map((employee) =>
-                axiosInstance.get(`/score/api/v1/employees/${employee.id}/`)
-            )
-        );
-
-        const next = new Map<number, number>();
-        results.forEach((result, idx) => {
-            if (result.status !== "fulfilled") return;
-            const data = result.value.data;
-            const value =
-                typeof data?.score === "number"
-                    ? data.score
-                    : typeof data?.total_score === "number"
-                        ? data.total_score
-                        : null;
-            if (value !== null) next.set(targets[idx].id, value);
-        });
-
-        setScoreMap(next);
-    }, []);
-
-    const fetchData = useCallback(async () => {
-        setLoading(true);
-        setError("");
+    const loadMeta = useCallback(async () => {
+        setMetaLoading(true);
+        setMetaError("");
 
         try {
-            const [employeesRes, usersRes, tasksRes, internalTasksRes, departmentEmployeesRes] = await Promise.all([
-                axiosInstance.get<ApiEmployee[]>("/accounts/api/v1/employee/list/"),
-                axiosInstance.get<ApiUser[]>("/accounts/api/v1/user/list/"),
-                axiosInstance.get<TasksResponse>("/tasks/api/v1/tasks/").catch(() => ({ data: [] as TaskItem[] })),
-                axiosInstance.get<InternalTasksResponse>("/tasks/api/v1/internal-tasks/").catch(() => ({ data: [] as InternalTaskItem[] })),
-                axiosInstance.get<DepartmentEmployeesResponse>("/department/api/v1/department_employee/list/").catch(() => ({ data: [] as DepartmentEmployeeItem[] })),
+            const [userList, departmentEmployeeList, tasks, internalTasks] = await Promise.all([
+                accountsApi.users.all(),
+                departmentsApi.employees().catch(() => []),
+                tasksApi.listAll().catch(() => []),
+                internalTasksApi.all().catch(() => []),
             ]);
 
-            const employeeList = Array.isArray(employeesRes.data) ? employeesRes.data : [];
-            const userList = extractUsers(usersRes.data);
             const adminList = userList.filter((user) => Number(user.type) === 1);
-            const adminUsernames = new Set(adminList.map((user) => user.username.trim().toLowerCase()));
-            const filteredEmployeeList = employeeList.filter((employee) => !adminUsernames.has(employee.username.trim().toLowerCase()));
 
             const infoMap = new Map<string, UserInfo>();
             for (const user of userList) {
@@ -135,27 +90,15 @@ export default function UsersPage() {
                 });
             }
 
-            setEmployees(filteredEmployeeList);
-            setAdminUsers(adminList);
-            setUserInfoMap(infoMap);
-
-            const departmentEmployeeList = extractDepartmentEmployees(departmentEmployeesRes.data);
             const departmentMap = new Map<number, string>();
             for (const item of departmentEmployeeList) {
                 if (item.employee && item.department_name?.trim()) {
                     departmentMap.set(Number(item.employee), item.department_name.trim());
                 }
             }
-            setDepartmentNames(departmentMap);
 
-            const usernameToId = new Map<string, number>();
-            for (const emp of employeeList) {
-                if (emp.username) usernameToId.set(emp.username.trim().toLowerCase(), emp.id);
-            }
-
-            const tasks = Array.isArray(tasksRes.data) ? tasksRes.data : tasksRes.data?.results ?? [];
-            const internalTasks = Array.isArray(internalTasksRes.data) ? internalTasksRes.data : internalTasksRes.data?.results ?? [];
             const taskOwnerIds = new Set<number>();
+            const creators = new Set<string>();
             const activeTaskMap = new Map<number, string[]>();
 
             for (const task of tasks) {
@@ -171,66 +114,125 @@ export default function UsersPage() {
             }
 
             for (const task of internalTasks) {
-                const ids = extractEmployeeIds(task.assigned_to);
-                for (const id of ids) taskOwnerIds.add(id);
+                for (const id of extractEmployeeIds(task.assigned_to)) taskOwnerIds.add(id);
                 const createdByUsername = task.created_by?.trim().toLowerCase();
-                if (createdByUsername) {
-                    const creatorId = usernameToId.get(createdByUsername);
-                    if (creatorId !== undefined) taskOwnerIds.add(creatorId);
-                }
+                if (createdByUsername) creators.add(createdByUsername);
             }
 
+            setAdminUsers(adminList);
+            setUserInfoMap(infoMap);
+            setDepartmentNames(departmentMap);
             setEmployeesWithTasks(taskOwnerIds);
+            setTaskCreators(creators);
             setActiveTasks(activeTaskMap);
-
-            loadScores(filteredEmployeeList);
         } catch (err) {
-            const errRes = err as AxiosError<{ detail?: string }>;
-            setError(errRes.response?.data?.detail ?? "خطا در دریافت لیست کاربران");
-            setEmployees([]);
+            setMetaError(getErrorDetail(err));
             setAdminUsers([]);
             setUserInfoMap(new Map());
-            setScoreMap(new Map());
             setDepartmentNames(new Map());
             setEmployeesWithTasks(new Set());
+            setTaskCreators(new Set());
             setActiveTasks(new Map());
         } finally {
-            setLoading(false);
+            setMetaLoading(false);
         }
-    }, [loadScores]);
-
-    useEffect(() => {
-        fetchData();
-    }, [fetchData]);
-
-    const handleDelete = useCallback((id: number) => {
-        setEmployees((prev) => prev.filter((item) => item.id !== id));
-        setDepartmentNames((prev) => {
-            const next = new Map(prev);
-            next.delete(id);
-            return next;
-        });
-        setActiveTasks((prev) => {
-            const next = new Map(prev);
-            next.delete(id);
-            return next;
-        });
-        setEmployeesWithTasks((prev) => {
-            const next = new Set(prev);
-            next.delete(id);
-            return next;
-        });
     }, []);
 
+    useEffect(() => {
+        loadMeta();
+    }, [loadMeta]);
+
+    useEffect(() => {
+        setOverrides(new Map());
+    }, [list.data]);
+
+    const adminUsernames = useMemo(
+        () => new Set(adminUsers.map((user) => user.username.trim().toLowerCase())),
+        [adminUsers]
+    );
+
+    const employees = useMemo(
+        () =>
+            list.data
+                .filter((employee) => !adminUsernames.has(employee.username.trim().toLowerCase()))
+                .map((employee) => overrides.get(employee.id) ?? employee),
+        [list.data, adminUsernames, overrides]
+    );
+
+    useEffect(() => {
+        let alive = true;
+        const targets = employees.filter((employee) => employee.id && employee.type !== 1);
+
+        Promise.allSettled(targets.map((employee) => scoreApi.employee(employee.id))).then((results) => {
+            if (!alive) return;
+            const next = new Map<number, number>();
+            results.forEach((result, idx) => {
+                if (result.status !== "fulfilled") return;
+                const data = result.value;
+                const value =
+                    typeof data?.score === "number"
+                        ? data.score
+                        : typeof data?.total_score === "number"
+                            ? data.total_score
+                            : null;
+                if (value !== null) next.set(targets[idx].id, value);
+            });
+            setScoreMap(next);
+        });
+
+        return () => {
+            alive = false;
+        };
+    }, [employees]);
+
+    const handleRefresh = useCallback(() => {
+        accountsApi.invalidate();
+        departmentsApi.invalidate();
+        internalTasksApi.invalidate();
+        tasksApi.invalidate();
+        scoreApi.invalidate();
+        refetch();
+        loadMeta();
+    }, [refetch, loadMeta]);
+
+    const handleDelete = useCallback(
+        (id: number) => {
+            setDepartmentNames((prev) => {
+                const next = new Map(prev);
+                next.delete(id);
+                return next;
+            });
+            setActiveTasks((prev) => {
+                const next = new Map(prev);
+                next.delete(id);
+                return next;
+            });
+            setEmployeesWithTasks((prev) => {
+                const next = new Set(prev);
+                next.delete(id);
+                return next;
+            });
+            refetch();
+        },
+        [refetch]
+    );
+
     const handleUpdated = useCallback((updatedEmployee: ApiEmployee) => {
-        setEmployees((prev) => prev.map((item) => (item.id === updatedEmployee.id ? updatedEmployee : item)));
+        setOverrides((prev) => new Map(prev).set(updatedEmployee.id, updatedEmployee));
     }, []);
 
     const handleNoop = useCallback(() => undefined, []);
 
+    const searchTerm = list.search.trim().toLowerCase();
+
+    const visibleAdmins = useMemo(() => {
+        if (list.page !== list.totalPages) return [];
+        return adminUsers.filter((user) => !searchTerm || user.username.toLowerCase().includes(searchTerm));
+    }, [adminUsers, list.page, list.totalPages, searchTerm]);
+
     const adminEmployees = useMemo<ApiEmployee[]>(
         () =>
-            adminUsers.map((user) => ({
+            visibleAdmins.map((user) => ({
                 id: -user.id,
                 full_name: user.username,
                 username: user.username,
@@ -240,8 +242,12 @@ export default function UsersPage() {
                 created_at: user.created_at,
                 updated_at: user.updated_at,
             })) as ApiEmployee[],
-        [adminUsers]
+        [visibleAdmins]
     );
+
+    const loading = metaLoading || (list.loading && list.data.length === 0 && !list.error);
+    const error = metaError || (list.error ? getErrorDetail(list.error) : "");
+    const totalUsers = list.count + adminUsers.length;
 
     return (
         <div className="flex flex-col gap-5 p-3 sm:p-4 md:p-6" dir="rtl">
@@ -256,15 +262,29 @@ export default function UsersPage() {
                     <div className="min-w-0">
                         <h1 className="text-[15px] font-extrabold text-gray-900 dark:text-white">مدیریت کاربران</h1>
                         <p className="mt-0.5 text-[11.5px] text-gray-500 dark:text-gray-400">
-                            {loading ? "در حال بارگذاری..." : `${employees.length + adminUsers.length} کاربر ثبت شده`}
+                            {loading ? "در حال بارگذاری..." : `${totalUsers} کاربر ثبت شده`}
                         </p>
                     </div>
                 </div>
 
                 <div className="flex items-center gap-2">
+                    <div className="relative">
+                        <Search size={14} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                        <input
+                            type="text"
+                            value={list.search}
+                            onChange={(event) => list.setSearch(event.target.value)}
+                            placeholder="جستجوی کاربر..."
+                            className="h-10 w-40 rounded-2xl border-0 pl-3 pr-9 text-[12.5px] outline-none sm:w-52"
+                            style={{
+                                background: isDark ? "rgba(255,255,255,0.05)" : "rgba(15,23,42,0.05)",
+                                color: isDark ? "#e2e8f0" : "#0f172a",
+                            }}
+                        />
+                    </div>
                     <button
                         type="button"
-                        onClick={fetchData}
+                        onClick={handleRefresh}
                         disabled={loading}
                         className="flex h-10 w-10 items-center justify-center rounded-2xl transition-colors disabled:opacity-50"
                         style={{
@@ -273,7 +293,7 @@ export default function UsersPage() {
                         }}
                         title="بارگذاری مجدد"
                     >
-                        <RefreshCw size={15} className={loading ? "animate-spin" : ""} />
+                        <RefreshCw size={15} className={loading || list.loading ? "animate-spin" : ""} />
                     </button>
                     <button
                         type="button"
@@ -302,20 +322,20 @@ export default function UsersPage() {
                     }}
                 >
                     <p className="text-[12.5px] font-semibold text-red-500">{error}</p>
-                    <button type="button" onClick={fetchData} className="text-[12px] font-bold text-indigo-500 hover:underline">
+                    <button type="button" onClick={handleRefresh} className="text-[12px] font-bold text-indigo-500 hover:underline">
                         تلاش مجدد
                     </button>
                 </div>
             )}
 
-            {!loading && !error && employees.length === 0 && adminUsers.length === 0 && (
+            {!loading && !error && employees.length === 0 && adminEmployees.length === 0 && (
                 <div className="flex flex-col items-center justify-center gap-2 py-16">
                     <Users size={28} className="text-gray-300 dark:text-gray-700" />
-                    <p className="text-[12.5px] text-gray-500 dark:text-gray-400">هنوز کاربری ثبت نشده</p>
+                    <p className="text-[12.5px] text-gray-500 dark:text-gray-400">{searchTerm ? "کاربری با این مشخصات پیدا نشد" : "هنوز کاربری ثبت نشده"}</p>
                 </div>
             )}
 
-            {!loading && !error && (employees.length > 0 || adminUsers.length > 0) && (
+            {!loading && !error && (employees.length > 0 || adminEmployees.length > 0) && (
                 <div className={GRID_CLASS}>
                     <AnimatePresence>
                         {employees.map((employee, index) => (
@@ -325,7 +345,7 @@ export default function UsersPage() {
                                 departmentName={departmentNames.get(employee.id) ?? null}
                                 activeTaskTitles={activeTasks.get(employee.id) ?? EMPTY_TITLES}
                                 index={adminUsers.length + index}
-                                hasActiveTasks={employeesWithTasks.has(employee.id)}
+                                hasActiveTasks={employeesWithTasks.has(employee.id) || taskCreators.has(employee.username.trim().toLowerCase())}
                                 userInfo={userInfoMap.get(employee.username.trim().toLowerCase()) ?? null}
                                 score={scoreMap.get(employee.id) ?? null}
                                 onDelete={handleDelete}
@@ -350,13 +370,20 @@ export default function UsersPage() {
                 </div>
             )}
 
+            {!loading && !error && list.totalPages > 1 && (
+                <Pagination page={list.page} totalPages={list.totalPages} onChange={setPage} />
+            )}
+
             <AnimatePresence>
                 {showAddModal && (
                     <AddUserModal
                         onClose={() => setShowAddModal(false)}
                         onSuccess={() => {
                             setShowAddModal(false);
-                            fetchData();
+                            accountsApi.invalidate();
+                            setPage(1);
+                            refetch();
+                            loadMeta();
                         }}
                     />
                 )}
