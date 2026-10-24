@@ -15,7 +15,7 @@ import {
     UserPlus,
 } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
-import { apiRoutes } from "@/lib/apiRoutes";
+import { customersApi, casesApi, tasksApi, accountsApi, departmentsApi } from "@/lib/api";
 import type { Customer } from "@/types/customer";
 import { useAuthStore } from "@/store/authStore";
 
@@ -504,18 +504,18 @@ export default function CreateTaskModal({
             try {
                 const [customersRes, casesRes, tasksRes, employeesRes] =
                     await Promise.all([
-                        axiosInstance.get(apiRoutes.customers),
-                        axiosInstance.get("/tasks/api/v1/cases/"),
-                        axiosInstance.get(apiRoutes.tasks),
-                        axiosInstance.get("/accounts/api/v1/employee/list/"),
+                        customersApi.listAll(),
+                        casesApi.listAll(),
+                        tasksApi.listAll(),
+                        accountsApi.employees.all(),
                     ]);
 
                 if (!isCurrentRequest()) return;
 
-                const allCustomers = extractList<Customer>(customersRes.data);
-                const allCases = extractList<Case>(casesRes.data);
-                const allTasks = extractList<TaskItem>(tasksRes.data);
-                const employees = extractList<Employee>(employeesRes.data);
+                const allCustomers = extractList<Customer>(customersRes);
+                const allCases = extractList<Case>(casesRes);
+                const allTasks = extractList<TaskItem>(tasksRes);
+                const employees = extractList<Employee>(employeesRes);
 
                 let empId: number | null = null;
 
@@ -612,11 +612,11 @@ export default function CreateTaskModal({
         loadData();
 
         if (initialDepartments.length === 0) {
-            axiosInstance
-                .get("/department/api/v1/department/list/")
+            departmentsApi
+                .list()
                 .then((response) => {
                     if (!isCurrentRequest()) return;
-                    setDepartmentList(extractList<Department>(response.data));
+                    setDepartmentList(extractList<Department>(response));
                 })
                 .catch(() => {
                     if (isCurrentRequest()) setDepartmentList([]);
@@ -625,11 +625,11 @@ export default function CreateTaskModal({
             setDepartmentList(initialDepartments);
         }
 
-        axiosInstance
-            .get("/department/api/v1/department_employee/list/")
+        departmentsApi
+            .employees()
             .then((response) => {
                 if (!isCurrentRequest()) return;
-                setEmployeeList(extractList<DepartmentEmployee>(response.data));
+                setEmployeeList(extractList<DepartmentEmployee>(response));
             })
             .catch(() => {
                 if (isCurrentRequest()) setEmployeeList(initialEmployees);

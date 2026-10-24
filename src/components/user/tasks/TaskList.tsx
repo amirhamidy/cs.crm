@@ -1,7 +1,7 @@
 "use client";
 
 import TaskCard, { ApiTask } from "@/components/user/tasks/TaskCard";
-import axiosInstance from "@/lib/axiosInstance";
+import { tasksApi } from "@/lib/api";
 import { useEffect, useState } from "react";
 
 export default function TaskList({ initialTasks = [] }: { initialTasks?: ApiTask[] }) {
@@ -13,8 +13,7 @@ export default function TaskList({ initialTasks = [] }: { initialTasks?: ApiTask
         if (initialTasks.length > 0) return;
         const fetchTasks = async () => {
             try {
-                const res = await axiosInstance.get("/tasks/api/v1/tasks/");
-                const data: ApiTask[] = Array.isArray(res.data) ? res.data : res.data.results ?? [];
+                const data = (await tasksApi.listAll()) as unknown as ApiTask[];
                 setTasks(data);
             } catch {
                 setError("دریافت تسک‌ها با خطا مواجه شد");

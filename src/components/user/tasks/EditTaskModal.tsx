@@ -18,6 +18,7 @@ import {
     Users,
 } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
+import { casesApi, departmentsApi, accountsApi } from "@/lib/api";
 import { apiRoutes } from "@/lib/apiRoutes";
 import type { CaseItem } from "@/types/case";
 import type { Customer } from "@/types/customer";
@@ -378,9 +379,6 @@ function getFileSize(size: number) {
     return `${(size / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-const getListData = <T,>(data: T[] | { results?: T[] }): T[] =>
-    Array.isArray(data) ? data : data?.results ?? [];
-
 export default function EditTaskModal({
     task,
     customers,
@@ -454,15 +452,15 @@ export default function EditTaskModal({
             setExistingFiles([]);
         }
 
-        axiosInstance
-            .get(apiRoutes.cases)
-            .then((res) => setCases(getListData<CaseItem>(res.data)))
+        casesApi
+            .listAll()
+            .then((res) => setCases(res as unknown as CaseItem[]))
             .catch(() => { });
 
-        axiosInstance
-            .get("/department/api/v1/department_employee/list/")
+        departmentsApi
+            .employees()
             .then((res) => {
-                const list = getListData<DepartmentEmployee>(res.data);
+                const list = res as unknown as DepartmentEmployee[];
                 const pending = initialEmployeeIds.current;
 
                 const missingIds = pending.filter(
@@ -476,7 +474,7 @@ export default function EditTaskModal({
 
                 Promise.allSettled(
                     missingIds.map((id) =>
-                        axiosInstance.get(`/accounts/api/v1/employee/${id}/`)
+                        accountsApi.employees.get(id)
                     )
                 ).then((results) => {
                     setResolvedNames((prev) => {
@@ -484,7 +482,7 @@ export default function EditTaskModal({
                         results.forEach((r, idx) => {
                             if (r.status === "fulfilled") {
                                 next[missingIds[idx]] = extractEmployeeName(
-                                    r.value.data,
+                                    r.value,
                                     missingIds[idx]
                                 );
                             }

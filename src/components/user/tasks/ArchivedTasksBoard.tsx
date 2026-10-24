@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Archive, CheckCircle2, Filter, Loader2, PackageCheck, XCircle } from "lucide-react";
-import axiosInstance from "@/lib/axiosInstance";
+import { tasksApi } from "@/lib/api/tasks";
 import { useCurrentEmployee } from "@/hooks/usecurrentemployee";
 import ArchivedTaskCard from "./ArchivedTaskCard";
 
@@ -68,12 +68,12 @@ export default function ArchivedTasksBoard() {
         setLoading(true);
         setError(null);
 
-        axiosInstance
-            .get<ArchiveTask[]>("/tasks/api/v1/task_archive/")
-            .then(({ data }) => {
+        tasksApi
+            .archiveAll<ArchiveTask>()
+            .then((data) => {
                 if (!mounted) return;
                 setTasks(
-                    (Array.isArray(data) ? data : []).filter((task) =>
+                    data.filter((task) =>
                         departmentIds.includes(Number(task.department_id))
                     )
                 );

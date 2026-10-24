@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 
 import axiosInstance from "@/lib/axiosInstance";
+import { tasksApi, casesApi, customersApi } from "@/lib/api";
 
 import TaskCaseDescriptionModal from "./TaskCaseDescriptionModal";
 import TaskNotesModal from "./TaskNotesModal";
@@ -274,9 +275,9 @@ export default function UserTaskCard({
     const DeadlineIcon = dState.icon;
 
     const fetchLog = useCallback(() => {
-        axiosInstance
-            .get<LatestLog[]>(`/tasks/api/v1/tasks/${task.id}/logs/`)
-            .then((r) => setLatestLog(r.data?.[0] ?? null))
+        tasksApi
+            .logs<LatestLog[]>(task.id)
+            .then((r) => setLatestLog(r?.[0] ?? null))
             .catch(() => setLatestLog(null));
     }, [task.id]);
 
@@ -285,32 +286,30 @@ export default function UserTaskCard({
     }, [fetchLog]);
 
     useEffect(() => {
-        axiosInstance
-            .get<DeadlineResponse>(
-                `/tasks/api/v1/tasks/${task.id}/steps/${task.current_step}/deadline/`
-            )
-            .then((r) => setSchedule(r.data))
+        tasksApi
+            .stepDeadline<DeadlineResponse>(task.id, task.current_step)
+            .then((r) => setSchedule(r))
             .catch(() => undefined);
     }, [task.id, task.current_step]);
 
     useEffect(() => {
         if (!ext.case || customerName) return;
 
-        axiosInstance
-            .get(`/tasks/api/v1/cases/${ext.case}/`)
-            .then(async ({ data }) => {
+        casesApi
+            .get(Number(ext.case))
+            .then(async (caseData) => {
+                const data = caseData as unknown as { customer_name?: string; customer?: number };
                 if (data.customer_name) {
                     return setCustomerName(data.customer_name);
                 }
 
                 if (data.customer) {
-                    const r = await axiosInstance.get(
-                        `/customers/api/v1/customers/${data.customer}/`
-                    );
+                    const r = (await customersApi.get(data.customer)) as unknown as {
+                        full_name?: string;
+                        name?: string;
+                    };
 
-                    setCustomerName(
-                        r.data.full_name ?? r.data.name ?? null
-                    );
+                    setCustomerName(r.full_name ?? r.name ?? null);
                 }
             })
             .catch(() => undefined);
@@ -320,9 +319,9 @@ export default function UserTaskCard({
         try {
             if (!ext.case) return;
 
-            const { data } = await axiosInstance.get(
-                `/tasks/api/v1/cases/${ext.case}/`
-            );
+            const data = (await casesApi.get(Number(ext.case))) as unknown as {
+                customer?: number;
+            };
 
             if (data.customer) {
                 await axiosInstance.patch(

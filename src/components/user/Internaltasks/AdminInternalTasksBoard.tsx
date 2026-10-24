@@ -18,6 +18,9 @@ function normalizeDateValue(value: unknown): string | null {
     if (!value) return null;
     if (typeof value === "string") return value.trim() || null;
     if (value instanceof Date && !Number.isNaN(value.getTime())) return value.toISOString();
+    if (typeof value === "object" && value !== null && "deadline" in value) {
+        return normalizeDateValue((value as { deadline?: unknown }).deadline);
+    }
     return null;
 }
 
@@ -37,7 +40,7 @@ function normalizeTask(item: unknown): InternalTask | null {
         created_by: createdBy,
         created_at: typeof task.created_at === "string" && task.created_at.trim() ? task.created_at : new Date().toISOString(),
         updated_at: typeof task.updated_at === "string" ? task.updated_at : undefined,
-        started_at: normalizeDateValue(task.started_at),
+        started_at: normalizeDateValue(task.started_at ?? (task.deadline as unknown as { started_at?: unknown } | null)?.started_at),
         deadline: normalizeDateValue(task.deadline),
         assigned_to: Array.isArray(task.assigned_to) ? task.assigned_to : [],
         attachments: Array.isArray(task.attachments) ? task.attachments : [],

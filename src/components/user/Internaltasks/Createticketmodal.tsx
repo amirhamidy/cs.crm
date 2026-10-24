@@ -4,7 +4,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Check, Loader, Send, UserRound, X } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useAuthStore } from "@/store/authStore";
-import api from "@/lib/axiosInstance";
+import { accountsApi } from "@/lib/api/accounts";
 import { createInternalTask } from "./Api";
 import type { InternalTask } from "./types";
 
@@ -57,20 +57,16 @@ export default function CreateTicketModal({
             setError("");
             setLoading(false);
 
-            const usersRequest = api.get<UserListItem[]>(
-                "/accounts/api/v1/user/list/",
-            );
+            const usersRequest = accountsApi.users.all() as Promise<UserListItem[]>;
 
             const employeesRequest = employeesProp
-                ? Promise.resolve({ data: employeesProp })
-                : api.get<EmployeeListItem[]>(
-                      "/accounts/api/v1/employee/list/",
-                  );
+                ? Promise.resolve(employeesProp)
+                : (accountsApi.employees.all() as Promise<EmployeeListItem[]>);
 
             Promise.all([usersRequest, employeesRequest])
-                .then(([userRes, empRes]) => {
-                    setUsers(Array.isArray(userRes.data) ? userRes.data : []);
-                    setEmployees(Array.isArray(empRes.data) ? empRes.data : []);
+                .then(([userList, empList]) => {
+                    setUsers(Array.isArray(userList) ? userList : []);
+                    setEmployees(Array.isArray(empList) ? empList : []);
                 })
                 .catch(() => {
                     setUsers([]);

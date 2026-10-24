@@ -7,6 +7,7 @@ import {
   dedupe,
   fetchAllPages,
   invalidate,
+  listAll as listAllPages,
   toPaginated,
   withSignal,
   type Paginated,
@@ -73,9 +74,34 @@ const listAll = (caseId?: string | number) =>
     TTL,
   );
 
+const ARCHIVE_URL = "/tasks/api/v1/task_archive/";
+
+/** All pages of /tasks/api/v1/task_archive/ as a plain array. */
+const archiveAll = <T = unknown>() =>
+  cached(`${KEY}archive:`, () => listAllPages<T>(ARCHIVE_URL), TTL);
+
 export const tasksApi = {
   list,
   listAll,
+  archiveAll,
+
+  get: <T = TaskItem>(id: number | string) =>
+    dedupe(`${KEY}get:${id}`, async () => {
+      const res = await axiosInstance.get<T>(`/tasks/api/v1/tasks/${id}/`);
+      return res.data;
+    }),
+
+  logs: async <T = unknown>(id: number | string) => {
+    const res = await axiosInstance.get<T>(`/tasks/api/v1/tasks/${id}/logs/`);
+    return res.data;
+  },
+
+  stepDeadline: async <T = unknown>(id: number | string, step: number | string) => {
+    const res = await axiosInstance.get<T>(
+      `/tasks/api/v1/tasks/${id}/steps/${step}/deadline/`,
+    );
+    return res.data;
+  },
 
   remove: async (id: number) => {
     await axiosInstance.delete(`/tasks/api/v1/tasks/${id}/delete/`);

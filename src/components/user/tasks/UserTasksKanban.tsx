@@ -7,7 +7,7 @@ import { Swiper, SwiperSlide } from "swiper/react";
 import { FreeMode } from "swiper/modules";
 import "swiper/css";
 import "swiper/css/free-mode";
-import axiosInstance from "@/lib/axiosInstance";
+import { tasksApi, departmentsApi, accountsApi } from "@/lib/api";
 import TaskCardSwiper from "./TaskCardSwiper";
 import type { UserTask, UserStage, EmployeeAPIItem, DepartmentAPIItem, DepartmentEmployeeAPIItem } from "./types";
 import { useCurrentEmployee } from "@/hooks/usecurrentemployee";
@@ -90,29 +90,29 @@ export default function UserTasksKanban() {
     const isMobile = useMediaQuery("(max-width: 767px)");
 
     useEffect(() => {
-        axiosInstance.get("/department/api/v1/department/list/")
-            .then((res) => setDepartments(unwrapList(res.data)))
+        departmentsApi.list()
+            .then((res) => setDepartments(unwrapList(res)))
             .catch(() => setDepartments([]));
 
-        axiosInstance.get("/accounts/api/v1/employee/list/")
+        accountsApi.employees.all()
             .then((res) => {
                 const map: Record<number, string> = {};
-                unwrapList<EmployeeAPIItem>(res.data).forEach((emp) => {
+                unwrapList<EmployeeAPIItem>(res).forEach((emp) => {
                     map[emp.id] = emp.full_name || emp.username;
                 });
                 setEmployeesMap(map);
             })
             .catch(() => setEmployeesMap({}));
 
-        axiosInstance.get("/department/api/v1/department_employee/list/")
-            .then((res) => setDeptEmployees(unwrapList(res.data)))
+        departmentsApi.employees()
+            .then((res) => setDeptEmployees(unwrapList(res)))
             .catch(() => setDeptEmployees([]));
     }, []);
 
     useEffect(() => {
-        axiosInstance.get("/department/api/v1/department_step/")
+        departmentsApi.steps()
             .then((res) => {
-                const mapped = unwrapList<KanbanStage>(res.data)
+                const mapped = unwrapList<KanbanStage>(res)
                     .map((stage) => ({
                         ...stage,
                         name: stage.name ?? stage.title ?? `مرحله ${stage.id}`,
@@ -142,11 +142,11 @@ export default function UserTasksKanban() {
         let cancelled = false;
         setLoading(true);
 
-        axiosInstance.get("/tasks/api/v1/tasks/")
+        tasksApi.listAll()
             .then(async (res) => {
                 if (cancelled) return;
 
-                const data = unwrapList<UserTask>(res.data);
+                const data = unwrapList<UserTask>(res);
 
                 const employeeTasks = data.filter(
                     (task) =>
@@ -159,13 +159,11 @@ export default function UserTasksKanban() {
                         if (task.description?.trim()) return task;
 
                         try {
-                            const detail = await axiosInstance.get<UserTask>(
-                                `/tasks/api/v1/tasks/${task.id}/`
-                            );
+                            const detail = await tasksApi.get<UserTask>(task.id);
 
                             return {
                                 ...task,
-                                description: detail.data.description ?? "",
+                                description: detail.description ?? "",
                             };
                         } catch {
                             return task;

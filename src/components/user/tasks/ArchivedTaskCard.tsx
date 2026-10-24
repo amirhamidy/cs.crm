@@ -17,6 +17,7 @@ import {
     User,
 } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
+import { departmentsApi } from "@/lib/api";
 import { useCurrentEmployee } from "@/hooks/usecurrentemployee";
 import AdminTaskNotesModal from "@/components/customcomponents/tasks/AdminTaskNotesModal";
 
@@ -186,19 +187,14 @@ export default function ArchivedTaskCard({ task, onReopened }: Props) {
         setOptionsLoading(true);
 
         Promise.all([
-            axiosInstance.get("/department/api/v1/department_employee/list/"),
-            axiosInstance.get("/department/api/v1/department_step/"),
+            departmentsApi.employees(),
+            departmentsApi.steps(),
         ])
             .then(([employeeResponse, stepResponse]) => {
                 if (cancelled) return;
 
-                const employeeData = Array.isArray(employeeResponse.data)
-                    ? employeeResponse.data
-                    : (employeeResponse.data?.results ?? []);
-
-                const stepData = Array.isArray(stepResponse.data)
-                    ? stepResponse.data
-                    : (stepResponse.data?.results ?? []);
+                const employeeData = employeeResponse as unknown as DepartmentEmployee[];
+                const stepData = stepResponse as unknown as DepartmentStep[];
 
                 // Only load employees from the task's own department
                 setDepartmentEmployees(

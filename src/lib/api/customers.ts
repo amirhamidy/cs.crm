@@ -13,6 +13,7 @@ import {
   dedupe,
   getOne,
   invalidate,
+  listAll as listAllPages,
   normalizeQuery,
   toPaginated,
   uniqueIds,
@@ -118,8 +119,20 @@ const getMany = async (
     .filter((c): c is Customer => Boolean(c));
 };
 
+const allCustomers = () =>
+  cached(
+    `${KEY}all:`,
+    async () => {
+      const data = await listAllPages<Customer>(BASE);
+      remember(data);
+      return data;
+    },
+    COUNTS_TTL,
+  );
+
 export const customersApi = {
   list,
+  listAll: allCustomers,
   get,
   counts,
   search,

@@ -1,14 +1,24 @@
-import axiosInstance from "@/lib/axiosInstance";
-import type { AxiosResponse } from "axios";
+/**
+ * Compatibility shim. Real logic lives in `@/lib/api/internalTasks`.
+ * List functions fetch ALL pages and return `{ data: T[] }` so existing
+ * consumers keep working and no longer break on paginated responses.
+ */
 import type {
   EmployeeListItem,
   InternalTask,
   InternalTaskArchive,
   InternalTaskAttachment,
+  InternalTaskDeadline,
   InternalTaskRoutine,
   InternalTaskStatus,
-  InternalTaskDeadline,
 } from "./types";
+import { internalTasksApi as api } from "@/lib/api/internalTasks";
+import type {
+  CreateInternalTaskRoutinePayload,
+  UpdateInternalTaskRoutinePayload,
+} from "@/types/internalTask";
+
+export type { CreateInternalTaskRoutinePayload, UpdateInternalTaskRoutinePayload };
 
 export type InternalTaskDeadlinePayload = {
   started_at: string;
@@ -23,139 +33,67 @@ export type InternalTaskDeadlineResponse = {
 
 export type UpdateInternalTaskPayload = { status: InternalTaskStatus };
 
-let internalTasksRequest: Promise<AxiosResponse<InternalTask[]>> | null = null;
+type Res<T> = Promise<{ data: T }>;
+const local = (p: Promise<unknown>) => p as unknown as Res<InternalTask>;
 
-export function fetchInternalTasks() {
-  if (internalTasksRequest) return internalTasksRequest;
-  const request = axiosInstance.get<InternalTask[]>(
-    "/tasks/api/v1/internal_task/",
-  );
-  internalTasksRequest = request;
-  request.then(
-    () => {
-      if (internalTasksRequest === request) internalTasksRequest = null;
-    },
-    () => {
-      if (internalTasksRequest === request) internalTasksRequest = null;
-    },
-  );
-  return request;
-}
+const wrap = async <T>(p: Promise<unknown[]>) => ({ data: (await p) as T[] });
 
-export function fetchInternalTaskArchive() {
-  return axiosInstance.get<InternalTaskArchive[]>(
-    "/tasks/api/v1/internal_task_archive/",
-  );
-}
+export const fetchInternalTasks = () => wrap<InternalTask>(api.allFull());
+export const fetchInternalTaskArchive = () =>
+  wrap<InternalTaskArchive>(api.archiveAll());
+export const fetchInternalTaskRoutines = () =>
+  wrap<InternalTaskRoutine>(api.routinesAll());
+export const fetchEmployeeList = () =>
+  wrap<EmployeeListItem>(api.employeesAll());
 
-export function fetchInternalTaskRoutines() {
-  return axiosInstance.get<InternalTaskRoutine[]>(
-    "/tasks/api/v1/internal_task_routine/",
-  );
-}
-
-export function fetchEmployeeList() {
-  return axiosInstance.get<EmployeeListItem[]>(
-    "/accounts/api/v1/employee/list/",
-  );
-}
-
-export function createInternalTask(data: {
+export const createInternalTask = (data: {
   title: string;
   description: string;
   assigned_to: number[];
   created_by: number;
-}) {
-  return axiosInstance.post<InternalTask>(
-    "/tasks/api/v1/internal_task/create/",
-    {
-      title: data.title,
-      description: data.description,
-      status: "in_progress",
-      assigned_to: data.assigned_to,
-      created_by: data.created_by,
-    },
-  );
-}
+}) => local(api.create(data));
 
-export function updateInternalTaskStatus(
+export const updateInternalTaskStatus = (
   id: number,
   payload: UpdateInternalTaskPayload,
-) {
-  return axiosInstance.patch<InternalTask>(
-    `/tasks/api/v1/internal_task/${id}/update/`,
-    { status: payload.status },
-  );
-}
+) => local(api.updateStatus(id, payload.status));
 
-export function reopenInternalTask(id: number) {
-  return axiosInstance.post<InternalTask>(
-    `/tasks/api/v1/internal_task/${id}/reopen/`,
-  );
-}
+export const reopenInternalTask = (id: number) => local(api.reopen(id));
 
-export function fetchInternalTaskDeadline(id: number) {
-  return axiosInstance.get<InternalTaskDeadline>(
-    `/tasks/api/v1/internal_task/${id}/deadline/`,
-  );
-}
+export const fetchInternalTaskDeadline = (id: number) =>
+  api.getDeadline(id) as Promise<{ data: InternalTaskDeadline }>;
 
-export function patchInternalTaskDeadline(
+export const patchInternalTaskDeadline = (
   id: number,
   payload: InternalTaskDeadlinePayload,
-) {
-  return axiosInstance.patch<InternalTaskDeadlineResponse>(
-    `/tasks/api/v1/internal_task/${id}/deadline/patch/`,
-    {
-      started_at: payload.started_at,
-      deadline: payload.deadline,
-    },
-  );
-}
+) => api.patchDeadline(id, payload) as Promise<{ data: InternalTaskDeadlineResponse }>;
 
-export function uploadInternalTaskAttachments(
+export const uploadInternalTaskAttachments = (
   id: number,
   files: File[],
   note: string,
-) {
-  const formData = new FormData();
-  files.forEach((file) => formData.append("files", file));
-  if (note.trim()) formData.append("note", note.trim());
-  return axiosInstance.post<InternalTaskAttachment[]>(
-    `/tasks/api/v1/internal_task/${id}/attachments/`,
-    formData,
-  );
-}
+) =>
+  api.uploadAttachments(id, files, note) as Promise<{
+    data: InternalTaskAttachment[];
+  }>;
 
-export function completeInternalTask(id: number, files: File[], note: string) {
-  const formData = new FormData();
-  files.forEach((file) => formData.append("files", file));
-  if (note.trim()) formData.append("note", note.trim());
-  return axiosInstance.post<InternalTask>(
-    `/tasks/api/v1/internal_task/${id}/complete/`,
-    formData,
-  );
-}
+export const completeInternalTask = (id: number, files: File[], note: string) =>
+  local(api.complete(id, files, note));
 
-export function cancelInternalTask(id: number, files: File[], note: string) {
-  const formData = new FormData();
-  files.forEach((file) => formData.append("files", file));
-  if (note.trim()) formData.append("note", note.trim());
-  return axiosInstance.post<InternalTask>(
-    `/tasks/api/v1/internal_task/${id}/cancel/`,
-    formData,
-  );
-}
+export const cancelInternalTask = (id: number, files: File[], note: string) =>
+  local(api.cancel(id, files, note));
 
-export function getInternalTaskAttachmentUrl(
-  taskId: number,
-  attachmentId: number,
-) {
-  return `/tasks/api/v1/internal_task/${taskId}/attachments/${attachmentId}/`;
-}
+export const getInternalTaskAttachmentUrl = api.attachmentUrl;
 
-export function deleteInternalTask(id: number) {
-  return axiosInstance.delete<void>(
-    `/tasks/api/v1/internal_task/${id}/delete/`,
-  );
-}
+export const deleteInternalTask = (id: number) => api.remove(id);
+
+export const createInternalTaskRoutine = (
+  data: CreateInternalTaskRoutinePayload,
+) => api.createRoutine(data);
+
+export const updateInternalTaskRoutine = (
+  id: number,
+  payload: UpdateInternalTaskRoutinePayload,
+) => api.updateRoutine(id, payload);
+
+export const deleteInternalTaskRoutine = (id: number) => api.removeRoutine(id);
