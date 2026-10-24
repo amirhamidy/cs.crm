@@ -1,9 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import axiosInstance from "@/lib/axiosInstance";
+import { listAll } from "@/lib/api";
 import { ApiTask } from "@/types/warehouse";
-import { extractList } from "@/utils/warehouseEmployee";
 import { scopeStocks } from "@/lib/warehouseScope";
 
 export interface ApiOrderTaskStockProduct {
@@ -42,20 +41,16 @@ export function useOrderTaskLookups(
       setError(null);
 
       try {
-        const [tasksRes, productsRes] = await Promise.all([
-          axiosInstance.get("/tasks/api/v1/tasks/"),
-          axiosInstance.get("/warehouse/api/v1/process/stock/", {
-            params:
-              warehouseId != null ? { warehouse_id: warehouseId } : undefined,
-          }),
+        const [taskList, stockList] = await Promise.all([
+          listAll<ApiTask>("/tasks/api/v1/tasks/"),
+          listAll<ApiOrderTaskStockProduct>("/warehouse/api/v1/process/stock/",
+            warehouseId != null ? { warehouse_id: warehouseId } : {},
+          ),
         ]);
 
         if (!mounted) return;
 
-        setTasks(extractList<ApiTask>(tasksRes.data));
-        const stockList = extractList<ApiOrderTaskStockProduct>(
-          productsRes.data,
-        );
+        setTasks(taskList);
         setProducts(
           warehouseId != null ? scopeStocks(stockList, warehouseId) : stockList,
         );

@@ -1,4 +1,5 @@
 import axiosInstance from "@/lib/axiosInstance";
+import { PAGE_SIZE } from "@/lib/warehouseApi";
 import type { ApiOrderTask, ApiProduct } from "@/types/warehouse";
 import type {
   AddItemInput,
@@ -61,9 +62,11 @@ export async function fetchProductsByShelf(
   shelfCode: string,
   page: number,
   signal?: AbortSignal,
+  search?: string,
 ): Promise<{ items: ApiProduct[]; count: number }> {
-  const query: Record<string, string | number> = { shelf_code: shelfCode };
+  const query: Record<string, string | number> = { shelf_code: shelfCode, page_size: PAGE_SIZE };
   if (page > 1) query.page = page;
+  if (search?.trim()) query.search = search.trim();
 
   const { data } = await axiosInstance.get(`${BASE}/products/`, { params: query, signal });
 

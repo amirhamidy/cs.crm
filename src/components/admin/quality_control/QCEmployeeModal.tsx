@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { AlertCircle, Check, Loader2, Search, UserPlus, X } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
+import { listAll } from "@/lib/api";
 import type { ApiQualityControlEmployee, ApiUser } from "@/types/quality_control";
 import { gradientOf, initialOf } from "./qcUtils";
 
@@ -14,9 +15,6 @@ interface Props {
     onClose: () => void;
     onCreated: () => void;
 }
-
-const getList = (data: unknown): ApiUser[] =>
-    Array.isArray(data) ? data : ((data as { results?: ApiUser[]; data?: ApiUser[] } | null)?.results ?? (data as { data?: ApiUser[] } | null)?.data ?? []);
 
 export default function QCEmployeeModal({ isOpen, existingEmployees, names, onClose, onCreated }: Props) {
     const [users, setUsers] = useState<ApiUser[]>([]);
@@ -33,9 +31,8 @@ export default function QCEmployeeModal({ isOpen, existingEmployees, names, onCl
         setSelected(null);
         setError("");
         setFetching(true);
-        axiosInstance
-            .get("/accounts/api/v1/user/list/")
-            .then((r) => mounted && setUsers(getList(r.data)))
+        listAll<ApiUser>("/accounts/api/v1/user/list/")
+            .then((list) => mounted && setUsers(list))
             .catch(() => mounted && setError("دریافت لیست کاربران انجام نشد"))
             .finally(() => mounted && setFetching(false));
         return () => {

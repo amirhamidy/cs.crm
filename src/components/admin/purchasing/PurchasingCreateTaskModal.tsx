@@ -13,6 +13,7 @@ import {
     X,
 } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
+import { listAll } from "@/lib/api";
 import type { ApiPurchasingStep, ApiPurchasingTask } from "@/types/purchasing";
 
 interface Product {
@@ -66,21 +67,6 @@ const gradientOf = (seed: number) =>
 
 const initialOf = (text: string) =>
     (text || "").trim().charAt(0) || "؟";
-
-const normalizeList = <T,>(value: unknown): T[] => {
-    if (Array.isArray(value)) return value as T[];
-
-    if (
-        value &&
-        typeof value === "object" &&
-        "results" in value &&
-        Array.isArray((value as { results?: unknown }).results)
-    ) {
-        return (value as { results: T[] }).results;
-    }
-
-    return [];
-};
 
 function errorText(error: unknown) {
     const data = (
@@ -460,24 +446,19 @@ export default function PurchasingCreateTaskModal({
 
         let cancelled = false;
 
+        // لیست‌ها صفحه‌بندی شده‌اند؛ برای انتخاب کالا/انبار همهٔ صفحات لازم است.
         Promise.all([
-            axiosInstance.get("/warehouse/api/v1/products/"),
-            axiosInstance.get("/warehouse/api/v1/process/stock/"),
+            listAll<Product>("/warehouse/api/v1/products/"),
+            listAll<{
+                warehouse?: number;
+                warehouse_name?: string;
+                warehouse_code?: string;
+            }>("/warehouse/api/v1/process/stock/"),
         ])
-            .then(([productsResponse, stockResponse]) => {
+            .then(([productList, stockList]) => {
                 if (cancelled) return;
 
-                const productList = normalizeList<Product>(
-                    productsResponse.data
-                );
-
                 setProducts(productList);
-
-                const stockList = normalizeList<{
-                    warehouse?: number;
-                    warehouse_name?: string;
-                    warehouse_code?: string;
-                }>(stockResponse.data);
 
                 const map = new Map<number, Warehouse>();
 

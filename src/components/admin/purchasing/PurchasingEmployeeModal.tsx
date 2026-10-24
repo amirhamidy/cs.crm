@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { AlertCircle, Check, Loader2, Search, UserPlus, X } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
+import { listAll } from "@/lib/api";
 import type { ApiPurchasingEmployee } from "@/types/purchasing";
 
 interface EmployeeItem {
@@ -29,9 +30,6 @@ const G = [
     "from-rose-500 to-pink-500",
 ];
 
-const normalizeList = <T,>(value: unknown): T[] =>
-    Array.isArray(value) ? (value as T[]) : ((value as { results?: T[] } | null)?.results ?? []);
-
 export default function PurchasingEmployeeModal({ open, existingEmployees, onClose, onSaved }: Props) {
     const [employees, setEmployees] = useState<EmployeeItem[]>([]);
     const [search, setSearch] = useState("");
@@ -47,12 +45,11 @@ export default function PurchasingEmployeeModal({ open, existingEmployees, onClo
         setSelected(null);
         setError("");
         setFetching(true);
-        axiosInstance
-            .get("/accounts/api/v1/employee/list/")
-            .then((res) => {
+        listAll<EmployeeItem>("/accounts/api/v1/employee/list/")
+            .then((list) => {
                 if (!mounted) return;
                 const existing = new Set(existingEmployees.map((x) => x.employee));
-                setEmployees(normalizeList<EmployeeItem>(res.data).filter((x) => !existing.has(x.id)));
+                setEmployees(list.filter((x) => !existing.has(x.id)));
             })
             .catch(() => mounted && setError("دریافت لیست کارکنان انجام نشد."))
             .finally(() => mounted && setFetching(false));

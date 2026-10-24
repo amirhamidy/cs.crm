@@ -77,9 +77,15 @@ const listAll = (caseId?: string | number) =>
 
 const ARCHIVE_URL = "/tasks/api/v1/task_archive/";
 
-/** All pages of /tasks/api/v1/task_archive/ as a plain array. */
-const archiveAll = <T = unknown>() =>
-  cached(`${KEY}archive:`, () => listAllPages<T>(ARCHIVE_URL), TTL);
+/** All pages of /tasks/api/v1/task_archive/ as a plain array (optionally server-side searched). */
+const archiveAll = <T = unknown>(search?: string) => {
+  const q = search?.trim().replace(/\s+/g, " ") ?? "";
+  return cached(
+    `${KEY}archive:${q}`,
+    () => listAllPages<T>(ARCHIVE_URL, q ? { search: q } : {}),
+    TTL,
+  );
+};
 
 const archivePage = <T = unknown>(params: PageParams = {}, signal?: AbortSignal) =>
   fetchPage<T>(ARCHIVE_URL, params as Record<string, unknown>, signal);
@@ -100,11 +106,16 @@ export const tasksApi = {
       return res.data;
     }),
 
-  logs: async <T = unknown>(id: number | string) => {
-    const res = await axiosInstance.get(`/tasks/api/v1/tasks/${id}/logs/`);
-    const d = res.data;
-    return (Array.isArray(d) ? d : (d?.results ?? [])) as T;
-  },
+  /** همهٔ لاگ‌های یک تسک (همهٔ صفحات) — برای یادداشت‌ها و «آخرین لاگ». */
+  logs: async <T = unknown>(id: number | string) =>
+    (await listAllPages<unknown>(`/tasks/api/v1/tasks/${id}/logs/`)) as unknown as T,
+
+  /** یک صفحه از لاگ‌ها با صفحه‌بندی و جستجوی سمت سرور. */
+  logsPage: <T = unknown>(
+    id: number | string,
+    params: PageParams & { search?: string } = {},
+    signal?: AbortSignal,
+  ) => fetchPage<T>(`/tasks/api/v1/tasks/${id}/logs/`, params as Record<string, unknown>, signal),
 
   stepDeadline: async <T = unknown>(id: number | string, step: number | string) => {
     const res = await axiosInstance.get<T>(

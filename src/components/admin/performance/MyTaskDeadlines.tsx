@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { CalendarClock, Clock, Loader2, UserRound } from "lucide-react";
 import { useTheme } from "next-themes";
 import api from "@/lib/axiosInstance";
+import { listAll } from "@/lib/api";
 import { toJalali, toPersianDigits, JALALI_MONTHS, pad2 } from "@/lib/jalali";
 
 interface Task {
@@ -50,13 +51,10 @@ export default function MyTaskDeadlines() {
 
         async function load() {
             try {
-                const [{ data: taskData }, { data: employeeData }] = await Promise.all([
-                    api.get("/tasks/api/v1/tasks/"),
-                    api.get("/accounts/api/v1/employee/list/"),
+                const [source, employeeSource] = await Promise.all([
+                    listAll<Task>("/tasks/api/v1/tasks/"),
+                    listAll<Employee>("/accounts/api/v1/employee/list/"),
                 ]);
-
-                const source: Task[] = Array.isArray(taskData) ? taskData : [];
-                const employeeSource: Employee[] = Array.isArray(employeeData) ? employeeData : [];
 
                 const results = await Promise.all(
                     source

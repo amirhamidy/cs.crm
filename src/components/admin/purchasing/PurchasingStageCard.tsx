@@ -5,6 +5,8 @@ import { ChevronLeft, Loader, Pencil, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { createPortal } from "react-dom";
 import { toPersianDigits } from "@/lib/jalali";
+import Pagination from "@/components/ui/Pagination";
+import { usePagination } from "@/hooks/usePagination";
 import type {
     ApiPurchasingStep,
     ApiPurchasingTask,
@@ -12,6 +14,8 @@ import type {
 } from "@/types/purchasing";
 import { PURCHASING_TASK_STATUS_META } from "@/types/purchasing";
 import PurchasingTaskCard from "./PurchasingTaskCard";
+
+const STAGE_PAGE_SIZE = 6;
 
 interface Props {
     step: ApiPurchasingStep;
@@ -46,6 +50,9 @@ export default function PurchasingStageCard({
     const [tooltipPosition, setTooltipPosition] = useState({ top: 0, left: 0 });
 
     const hasDependencies = tasks.length > 0;
+
+    // هر مرحله جدا صفحه‌بندی می‌شود تا ستون‌ها با زیاد شدن تسک‌ها طولانی نشوند.
+    const { page, setPage, totalPages, pageItems } = usePagination(tasks, STAGE_PAGE_SIZE, String(step.id));
 
     const statusCounts = tasks.reduce<Record<string, number>>((acc, task) => {
         if (task.status) acc[task.status] = (acc[task.status] ?? 0) + 1;
@@ -238,8 +245,8 @@ export default function PurchasingStageCard({
                         </p>
                     </div>
                 ) : (
-                    <div className="scrollbar-thin flex max-h-[420px] flex-col gap-2 overflow-y-auto p-2">
-                        {tasks.map((task, taskIndex) => (
+                    <div className="scrollbar-thin flex max-h-[520px] flex-col gap-2 overflow-y-auto p-2">
+                        {pageItems.map((task, taskIndex) => (
                             <motion.div
                                 key={task.id}
                                 initial={{ opacity: 0, y: 5 }}
@@ -261,6 +268,9 @@ export default function PurchasingStageCard({
                                 />
                             </motion.div>
                         ))}
+                        {totalPages > 1 && (
+                            <Pagination compact page={page} totalPages={totalPages} onChange={setPage} />
+                        )}
                     </div>
                 )}
             </motion.div>

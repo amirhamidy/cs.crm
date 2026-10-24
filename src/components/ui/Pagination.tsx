@@ -23,11 +23,42 @@ export default function Pagination({
     page,
     totalPages,
     onChange,
+    compact = false,
 }: {
     page: number;
     totalPages: number;
     onChange: (p: number) => void;
+    /** نسخهٔ کوچک برای ستون‌های باریک (فقط قبلی / شماره صفحه / بعدی) */
+    compact?: boolean;
 }) {
+    if (compact) {
+        return (
+            <div className="flex items-center justify-center gap-2 pt-1">
+                <button
+                    type="button"
+                    onClick={() => onChange(page - 1)}
+                    disabled={page <= 1}
+                    className={`flex h-7 w-7 items-center justify-center rounded-lg text-gray-500 transition-colors disabled:opacity-40 dark:text-gray-400 ${base}`}
+                    title="صفحه قبل"
+                >
+                    <ChevronRight size={13} />
+                </button>
+                <span className="min-w-[56px] text-center text-[10.5px] font-bold text-gray-500 dark:text-gray-400">
+                    {page.toLocaleString("fa-IR")} از {totalPages.toLocaleString("fa-IR")}
+                </span>
+                <button
+                    type="button"
+                    onClick={() => onChange(page + 1)}
+                    disabled={page >= totalPages}
+                    className={`flex h-7 w-7 items-center justify-center rounded-lg text-gray-500 transition-colors disabled:opacity-40 dark:text-gray-400 ${base}`}
+                    title="صفحه بعد"
+                >
+                    <ChevronLeft size={13} />
+                </button>
+            </div>
+        );
+    }
+
     return (
         <div className="flex items-center justify-center gap-1.5 pt-2">
             <button

@@ -1,11 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Archive, ClipboardList, Loader, Plus, RefreshCw } from "lucide-react";
 import { useRouter } from "next/navigation";
 import axiosInstance from "@/lib/axiosInstance";
 import { apiRoutes } from "@/lib/apiRoutes";
+import { listAll, tasksApi } from "@/lib/api";
+import { usePaginatedList } from "@/hooks/usePaginatedList";
+import Pagination from "@/components/ui/Pagination";
 import { useAuthStore } from "@/store/authStore";
 import type { Task, TaskStatus } from "@/types/task";
 import type { Customer } from "@/types/customer";
@@ -16,17 +19,7 @@ import CreateTaskModal from "@/components/user/tasks/CreateTaskModal";
 import CreateNoCaseTaskModal from "@/components/customcomponents/tasks/CreateNoCaseTaskModal";
 import EditTaskModal from "@/components/user/tasks/EditTaskModal";
 
-type ListResponse<T> = T[] | { results?: T[]; data?: T[] };
 const ACTIVE_STATUS = "in_progress" as TaskStatus;
-
-function extractList<T>(data: ListResponse<T> | undefined | null): T[] {
-    if (Array.isArray(data)) return data;
-    if (data && typeof data === "object") {
-        if (Array.isArray(data.results)) return data.results;
-        if (Array.isArray(data.data)) return data.data;
-    }
-    return [];
-}
 
 function parseAssignedEmployees(raw: unknown): number[] {
     const ids: number[] = [];
@@ -48,101 +41,98 @@ function parseAssignedEmployees(raw: unknown): number[] {
     return ids;
 }
 
+const PAGE_SIZE = 12;
+
 export default function UserTasksPage() {
     const router = useRouter();
-    const [tasks, setTasks] = useState<Task[]>([]);
     const [customers, setCustomers] = useState<Customer[]>([]);
     const [departments, setDepartments] = useState<Department[]>([]);
     const [employees, setEmployees] = useState<Employee[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [search, setSearch] = useState("");
+    const [metaLoading, setMetaLoading] = useState(true);
     const [showCreate, setShowCreate] = useState(false);
     const [showCreateNoCase, setShowCreateNoCase] = useState(false);
     const [editingTask, setEditingTask] = useState<Task | null>(null);
+    const [removed, setRemoved] = useState<Set<number>>(new Set());
     const userId = useAuthStore((s) => s.userId);
     const username = useAuthStore((s) => s.username);
-    const fetchPromiseRef = useRef<Promise<void> | null>(null);
 
-    const fetchAll = useCallback(async () => {
-        if (fetchPromiseRef.current) return fetchPromiseRef.current;
+    // empId کارمند فعلی؛ برای محدود کردن به وظایف خودش
+    const empId = useMemo(() => {
+        const matched = employees.find((emp: any) =>
+            (username && emp.username === username) ||
+            (userId && Number(emp.user_id ?? emp.user ?? emp.user_detail?.id) === Number(userId)) ||
+            (userId && Number(emp.id) === Number(userId))
+        );
+        return matched ? Number(matched.id) : null;
+    }, [employees, username, userId]);
 
-        const request = (async () => {
-            try {
-                setLoading(true);
-                const [tasksRes, customersRes, departmentsRes, employeesRes] = await Promise.all([
-                    axiosInstance.get<ListResponse<Task>>(apiRoutes.tasks),
-                    axiosInstance.get<ListResponse<Customer>>(apiRoutes.customers),
-                    axiosInstance.get<ListResponse<Department>>(apiRoutes.departments),
-                    axiosInstance.get<ListResponse<Employee>>("/accounts/api/v1/employee/list/"),
-                ]);
+    // صفحه‌بندی و جستجو سمت سرور؛ جزئیات فقط برای همین صفحه (حداکثر ۱۲ مورد) خوانده می‌شود.
+    const list = usePaginatedList<Task>(
+        async (params, signal) => {
+            const res = await tasksApi.page({ ...params, status: ACTIVE_STATUS } as never, signal);
+            const detailed = await Promise.all(
+                res.results.map(async (task) => {
+                    try {
+                        const { data } = await axiosInstance.get<Task>(`/tasks/api/v1/tasks/${task.id}/`, { signal });
+                        return { ...task, ...data };
+                    } catch {
+                        return task;
+                    }
+                })
+            );
+            return { ...res, results: detailed };
+        },
+        { pageSize: PAGE_SIZE, enabled: !metaLoading }
+    );
 
-                const employeeList = extractList<Employee>(employeesRes.data);
-                const taskList = extractList<Task>(tasksRes.data);
-                const matchedEmployee = employeeList.find((emp: any) =>
-                    (username && emp.username === username) ||
-                    (userId && Number(emp.user_id ?? emp.user ?? emp.user_detail?.id) === Number(userId)) ||
-                    (userId && Number(emp.id) === Number(userId))
-                );
-                const empId = matchedEmployee ? Number(matchedEmployee.id) : null;
+    const tasks = useMemo(() => {
+        const mine = empId
+            ? list.data.filter((task: any) => {
+                const assigned = parseAssignedEmployees(task.assigned_employee);
+                const creatorId = Number(task.created_by ?? task.creator ?? task.user);
+                return assigned.includes(empId) || (!!userId && creatorId === Number(userId));
+            })
+            : list.data;
+        return mine.filter((task) => task.status === ACTIVE_STATUS && !removed.has(task.id));
+    }, [list.data, empId, userId, removed]);
 
-                const detailedTasks = await Promise.all(
-                    taskList.map(async (task) => {
-                        try {
-                            const { data } = await axiosInstance.get<Task>(`/tasks/api/v1/tasks/${task.id}/`);
-                            return { ...task, ...data };
-                        } catch {
-                            return task;
-                        }
-                    })
-                );
+    const loading = metaLoading || (list.loading && list.data.length === 0);
 
-                const scoped = empId
-                    ? detailedTasks.filter((task: any) => {
-                        const assigned = parseAssignedEmployees(task.assigned_employee);
-                        const creatorId = Number(task.created_by ?? task.creator ?? task.user);
-                        return assigned.includes(empId) || (!!userId && creatorId === Number(userId));
-                    })
-                    : detailedTasks;
-
-                setTasks(scoped.filter((task) => task.status === ACTIVE_STATUS));
-                setCustomers(extractList<Customer>(customersRes.data));
-                setDepartments(extractList<Department>(departmentsRes.data));
-                setEmployees(employeeList);
-            } catch {
-                setTasks([]);
-                setCustomers([]);
-                setDepartments([]);
-                setEmployees([]);
-            } finally {
-                setLoading(false);
-            }
-        })();
-
-        fetchPromiseRef.current = request;
+    const fetchMeta = useCallback(async () => {
         try {
-            await request;
+            setMetaLoading(true);
+            const [customerList, departmentList, employeeList] = await Promise.all([
+                listAll<Customer>(apiRoutes.customers),
+                listAll<Department>(apiRoutes.departments),
+                listAll<Employee>("/accounts/api/v1/employee/list/"),
+            ]);
+            setCustomers(customerList);
+            setDepartments(departmentList);
+            setEmployees(employeeList);
+        } catch {
+            setCustomers([]);
+            setDepartments([]);
+            setEmployees([]);
         } finally {
-            if (fetchPromiseRef.current === request) fetchPromiseRef.current = null;
+            setMetaLoading(false);
         }
-    }, [userId, username]);
+    }, []);
 
     useEffect(() => {
-        void fetchAll();
-    }, [fetchAll]);
+        void fetchMeta();
+    }, [fetchMeta]);
 
-    const filteredTasks = useMemo(() => {
-        const query = search.trim().toLowerCase();
-        if (!query) return tasks;
-        return tasks.filter((task) =>
-            task.title?.toLowerCase().includes(query) ||
-            task.description?.toLowerCase().includes(query)
-        );
-    }, [tasks, search]);
+    const fetchAll = useCallback(async () => {
+        setRemoved(new Set());
+        tasksApi.invalidate();
+        list.refetch();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [list.refetch]);
 
     const handleDelete = useCallback(async (taskId: number) => {
         try {
             await axiosInstance.delete(apiRoutes.deleteTask(taskId));
-            setTasks((prev) => prev.filter((task) => task.id !== taskId));
+            setRemoved((prev) => new Set(prev).add(taskId));
         } catch {
             await fetchAll();
             throw new Error("delete failed");
@@ -174,7 +164,7 @@ export default function UserTasksPage() {
                     <div className="min-w-0">
                         <h1 className="text-[14px] font-extrabold text-gray-900 dark:text-white">وظایف در حال انجام</h1>
                         <p className="mt-0.5 text-[11.5px] text-gray-400 dark:text-gray-500">
-                            {loading ? "در حال بارگذاری..." : `${filteredTasks.length} وظیفه`}
+                            {loading ? "در حال بارگذاری..." : `${list.count} وظیفه`}
                         </p>
                     </div>
                 </div>
@@ -183,8 +173,8 @@ export default function UserTasksPage() {
                     <button type="button" onClick={() => router.push("/user/Ticketarchive")} className="flex h-9 items-center gap-1.5 rounded-xl bg-gray-100 px-3 text-[11.5px] font-bold text-gray-500 transition-colors hover:bg-gray-200 dark:bg-white/5 dark:text-gray-400 dark:hover:bg-white/10">
                         <Archive size={13} /> بایگانی
                     </button>
-                    <button type="button" onClick={() => void fetchAll()} disabled={loading} className="flex h-9 w-9 items-center justify-center rounded-xl text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 disabled:opacity-40 dark:text-gray-500 dark:hover:bg-white/5 dark:hover:text-gray-300" title="بارگذاری مجدد">
-                        <RefreshCw size={13} className={loading ? "animate-spin" : ""} />
+                    <button type="button" onClick={() => void fetchAll()} disabled={list.loading} className="flex h-9 w-9 items-center justify-center rounded-xl text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 disabled:opacity-40 dark:text-gray-500 dark:hover:bg-white/5 dark:hover:text-gray-300" title="بارگذاری مجدد">
+                        <RefreshCw size={13} className={list.loading ? "animate-spin" : ""} />
                     </button>
                     <button type="button" onClick={() => setShowCreate(true)} className="flex h-9 flex-1 items-center justify-center gap-2 rounded-xl bg-blue-600 px-3.5 py-2 text-[12.5px] font-bold text-white transition-all duration-200 hover:bg-blue-100 hover:text-blue-600 dark:bg-blue-500 dark:hover:bg-blue-500/15 dark:hover:text-blue-300 sm:flex-none">
                         <Plus size={13} strokeWidth={2.5} /><span className="whitespace-nowrap">افزودن وظیفه</span>
@@ -195,26 +185,28 @@ export default function UserTasksPage() {
                 </div>
             </div>
 
-            <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="جستجو در عنوان یا توضیحات..." className="w-full rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 text-[12.5px] text-gray-700 outline-none transition-colors focus:border-indigo-400 dark:border-white/10 dark:bg-white/[0.03] dark:text-gray-200" />
+            <input value={list.search} onChange={(e) => list.setSearch(e.target.value)} placeholder="جستجو در عنوان یا توضیحات..." className="w-full rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 text-[12.5px] text-gray-700 outline-none transition-colors focus:border-indigo-400 dark:border-white/10 dark:bg-white/[0.03] dark:text-gray-200" />
 
             {loading ? (
                 <div className="flex flex-col items-center justify-center gap-3 py-16">
                     <Loader size={22} className="animate-spin text-indigo-500" />
                     <p className="text-[12.5px] text-gray-400 dark:text-gray-500">در حال دریافت لیست وظایف...</p>
                 </div>
-            ) : filteredTasks.length === 0 ? (
+            ) : tasks.length === 0 ? (
                 <div className="flex flex-col items-center justify-center gap-3 py-20">
                     <p className="text-[13px] text-gray-400 dark:text-gray-500">تسک در حال انجامی برای شما یافت نشد</p>
                 </div>
             ) : (
                 <motion.div layout className="grid grid-cols-1 gap-3 lg:grid-cols-2 xl:grid-cols-3">
                     <AnimatePresence mode="popLayout">
-                        {filteredTasks.map((task) => (
+                        {tasks.map((task) => (
                             <TaskCard key={task.id} task={task} employees={employees} onEdit={() => setEditingTask(task)} onDelete={handleDelete} />
                         ))}
                     </AnimatePresence>
                 </motion.div>
             )}
+
+            {list.totalPages > 1 && <Pagination page={list.page} totalPages={list.totalPages} onChange={list.setPage} />}
 
             <AnimatePresence>
                 {showCreate && <CreateTaskModal open={showCreate} onClose={() => setShowCreate(false)} onSuccess={handleCreateSuccess} departments={departments} />}

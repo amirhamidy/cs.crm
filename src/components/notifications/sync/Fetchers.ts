@@ -1,12 +1,11 @@
-import axiosInstance from "@/lib/axiosInstance";
-import { unwrapList } from "./Normalize";
+import { fetchAllPages, fetchPage } from "@/lib/api/_core";
 
+// لیست‌ها صفحه‌بندی شده‌اند؛ برای تشخیص تغییرات (نوتیفیکیشن) همهٔ صفحات لازم است
+// وگرنه تغییر در آیتم‌های بعد از صفحهٔ اول هیچ‌وقت دیده نمی‌شود.
 async function getList(url: string, signal: AbortSignal): Promise<unknown[]> {
-  const response = await axiosInstance.get<unknown>(url, {
-    signal,
-  });
-
-  return unwrapList(response.data);
+  return fetchAllPages<unknown>((p) =>
+    fetchPage<unknown>(url, { ...p, page_size: 100 }, signal),
+  );
 }
 
 export const fetchInternalTasks = (signal: AbortSignal) =>

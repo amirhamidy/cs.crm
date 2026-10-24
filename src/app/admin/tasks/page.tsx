@@ -7,7 +7,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import axiosInstance from "@/lib/axiosInstance";
 import { apiRoutes } from "@/lib/apiRoutes";
-import { tasksApi } from "@/lib/api";
+import { listAll, tasksApi } from "@/lib/api";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import Pagination from "@/components/ui/Pagination";
 import { Task, TaskStatus } from "@/types/task";
@@ -20,18 +20,7 @@ import EditTaskModal from "@/components/customcomponents/tasks/EditTaskModal";
 import type { Customer } from "@/types/customer";
 import type { Employee } from "@/types/employee";
 
-type ListResponse<T> = T[] | { results?: T[]; data?: T[] };
-
 const ACTIVE_STATUS = "in_progress" as TaskStatus;
-
-function extractList<T>(data: ListResponse<T>): T[] {
-    if (Array.isArray(data)) return data;
-    if (data && typeof data === "object") {
-        if (Array.isArray((data as any).results)) return (data as any).results;
-        if (Array.isArray((data as any).data)) return (data as any).data;
-    }
-    return [];
-}
 
 function AdminTasksPageContent() {
     const router = useRouter();
@@ -64,15 +53,15 @@ function AdminTasksPageContent() {
             setPatched(new Map());
             list.refetch();
 
-            const [customersRes, departmentsRes, employeesRes] = await Promise.all([
-                axiosInstance.get<ListResponse<Customer>>(apiRoutes.customers),
-                axiosInstance.get<ListResponse<Department>>(apiRoutes.departments),
-                axiosInstance.get<ListResponse<Employee>>(apiRoutes.employees),
+            const [customerList, departmentList, employeeList] = await Promise.all([
+                listAll<Customer>(apiRoutes.customers),
+                listAll<Department>(apiRoutes.departments),
+                listAll<Employee>(apiRoutes.employees),
             ]);
 
-            setCustomers(extractList(customersRes.data));
-            setDepartments(extractList(departmentsRes.data));
-            setEmployees(extractList(employeesRes.data));
+            setCustomers(customerList);
+            setDepartments(departmentList);
+            setEmployees(employeeList);
         } catch {
             setCustomers([]);
             setDepartments([]);
@@ -204,6 +193,13 @@ function AdminTasksPageContent() {
                     </button>
                 </div>
             </div>
+
+            <input
+                value={list.search}
+                onChange={(e) => list.setSearch(e.target.value)}
+                placeholder="جستجو در عنوان، توضیحات، پرونده، مشتری یا دپارتمان..."
+                className="w-full rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 text-[12.5px] text-gray-700 outline-none transition-colors focus:border-indigo-400 dark:border-white/10 dark:bg-white/[0.03] dark:text-gray-200"
+            />
 
             {loading && (
                 <div className="flex flex-col items-center justify-center gap-3 py-16">

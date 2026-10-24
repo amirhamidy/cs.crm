@@ -63,21 +63,43 @@ export async function fetchPage<T>(
     page: number;
     pageSize?: number;
     params?: Params;
+    search?: string;
+    ordering?: string;
     newestFirst?: boolean;
+    signal?: AbortSignal;
   },
 ): Promise<PageResult<T>> {
   const pageSize = opts.pageSize ?? PAGE_SIZE;
   const page = Math.max(1, Math.floor(opts.page) || 1);
+  const search = opts.search?.trim().replace(/\s+/g, " ");
+  const ordering = opts.ordering ?? (opts.newestFirst ? "-created_at" : undefined);
 
-  const { data } = await axiosInstance.get(url, {
-    params: {
-      ...(opts.params ?? {}),
-      ...(opts.newestFirst ? { ordering: "-created_at" } : {}),
-      page,
-      page_size: pageSize,
-    },
-  });
+  const request = (target: number) =>
+    axiosInstance.get(url, {
+      params: {
+        ...(opts.params ?? {}),
+        ...(search ? { search } : {}),
+        ...(ordering ? { ordering } : {}),
+        page: target,
+        page_size: pageSize,
+      },
+      signal: opts.signal,
+    });
 
+  let response;
+  let usedPage = page;
+
+  try {
+    response = await request(page);
+  } catch (error) {
+    // صفحه‌ی خارج از محدوده (مثلاً بعد از حذف آخرین آیتم یا محدود شدن جستجو) → 404
+    const status = (error as { response?: { status?: number } })?.response?.status;
+    if (status !== 404 || page === 1) throw error;
+    usedPage = 1;
+    response = await request(1);
+  }
+
+  const data = response.data;
   const list = extractList<T>(data);
   const serverCount =
     data && !Array.isArray(data) && typeof data.count === "number"
@@ -89,7 +111,7 @@ export async function fetchPage<T>(
       items: list,
       total: serverCount,
       totalPages: Math.max(1, Math.ceil(serverCount / pageSize)),
-      page,
+      page: usedPage,
     };
   }
 

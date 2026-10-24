@@ -13,7 +13,7 @@ import {
     TrendingUp,
     Building2,
 } from "lucide-react";
-import axiosInstance from "@/lib/axiosInstance";
+import { listAll } from "@/lib/api";
 import { useCurrentEmployee } from "@/hooks/usecurrentemployee";
 
 type TaskStatus = "sold" | "in_progress" | "completed" | "cancelled";
@@ -138,14 +138,9 @@ export default function TasksWidget() {
         let cancelled = false;
         setLoading(true);
 
-        axiosInstance
-            .get<Task[]>("/tasks/api/v1/tasks/")
-            .then((res) => {
+        listAll<Task>("/tasks/api/v1/tasks/")
+            .then((allTasks) => {
                 if (cancelled) return;
-
-                const allTasks = Array.isArray(res.data)
-                    ? res.data
-                    : (res.data as any).results ?? [];
 
                 const myTasks = allTasks.filter((task: Task) =>
                     task.assigned_employee.includes(employee.id),

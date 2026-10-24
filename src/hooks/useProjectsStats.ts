@@ -1,16 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
-import axiosInstance from "@/lib/axiosInstance";
+import { tasksApi } from "@/lib/api";
 
 export function useProjectsStats() {
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    axiosInstance
-      .get("/tasks/api/v1/tasks/")
-      .then((res) =>
-        setData(Array.isArray(res.data) ? res.data : (res.data?.results ?? [])),
-      )
+    tasksApi
+      .listAll()
+      .then((list) => setData(list as any[]))
       .finally(() => setLoading(false));
   }, []);
 

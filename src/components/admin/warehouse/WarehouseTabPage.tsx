@@ -1,6 +1,6 @@
 "use client";
 
-import { ComponentType, useCallback, useEffect, useMemo, useState } from "react";
+import { ComponentType, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import {
@@ -54,15 +54,15 @@ import WarehouseEmployeeStockLedger from "@/components/user/warehouse/Warehousee
 import OrderInvoiceCard from "@/components/user/warehouse/OrderInvoiceCard";
 import OrderInvoiceModal from "@/components/user/warehouse/OrderInvoiceModal";
 import ShelfFilterBar from "@/components/user/warehouse/ShelfFilterBar";
+import SearchInput from "@/components/ui/SearchInput";
 import { useWarehouseShelves } from "@/hooks/useWarehouseShelves";
 import { useShelfProducts } from "@/hooks/useShelfProducts";
-import { buildSalesInvoices, getOrderTaskTitle, paginate } from "@/utils/warehouseEmployee";
+import { buildSalesInvoices, getOrderTaskTitle } from "@/utils/warehouseEmployee";
 import type { SalesInvoice } from "@/utils/warehouseEmployee";
 import useWarehouseAccess from "@/hooks/useWarehouseAccess";
 import useWarehouses from "@/hooks/useWarehouses";
 import useWarehouseTab from "@/hooks/useWarehouseTab";
 import type { WarehouseTab as Tab } from "@/hooks/useWarehouseTab";
-import { PAGE_SIZE } from "@/lib/warehouseApi";
 import type { ApiStockInfo, ApiWarehouseTask } from "@/types/warehouse";
 
 interface AdminCategory {
@@ -87,6 +87,34 @@ const TABS: Array<[Tab, string, ComponentType<{ size?: number }>]> = [
 
 const LIMITED_TABS: Tab[] = ["orders", "stock", "tasks"];
 
+const SEARCH_TABS: Tab[] = [
+    "products",
+    "tasks",
+    "stock",
+    "transactions",
+    "orders",
+    "deadlines",
+    "categories",
+    "staff",
+    "task-archive",
+    "invoices",
+];
+
+const SEARCH_PLACEHOLDERS: Partial<Record<Tab, string>> = {
+    products: "جستجوی نام محصول یا کد قفسه...",
+    tasks: "جستجو در وظایف انبار...",
+    stock: "جستجوی نام کالا یا کد قفسه...",
+    transactions: "جستجو در تراکنش‌ها (کالا، یادداشت، انباردار)...",
+    orders: "جستجو در درخواست‌های داخلی...",
+    deadlines: "جستجوی عنوان سفارش...",
+    categories: "جستجوی دسته‌بندی...",
+    staff: "جستجوی انباردار...",
+    "task-archive": "جستجو در بایگانی وظایف...",
+    invoices: "جستجو در فاکتورها (عنوان، کالا، انبار)...",
+};
+
+const normalizeSearch = (value: string) => value.trim().replace(/\s+/g, " ");
+
 export default function WarehouseTabPage({ tab }: { tab: Tab }) {
     const { resolvedTheme } = useTheme();
     const isDark = resolvedTheme === "dark";
@@ -104,6 +132,7 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
         warehouseParam && Number.isFinite(Number(warehouseParam)) ? Number(warehouseParam) : null;
     const currentPage = Math.max(1, Number(searchParams.get("page")) || 1);
     const shelfCode = (searchParams.get("shelf") ?? "").trim();
+    const searchQuery = normalizeSearch(searchParams.get("q") ?? "");
     const productParam = Number(searchParams.get("product"));
     const ledgerProductId = Number.isFinite(productParam) && productParam > 0 ? productParam : null;
 
@@ -134,6 +163,8 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
     const [limitsStock, setLimitsStock] = useState<ApiStockInfo | null>(null);
     const [statusOpen, setStatusOpen] = useState(false);
     const [shelfReloadKey, setShelfReloadKey] = useState(0);
+    const [searchInput, setSearchInput] = useState(searchQuery);
+    const lastPushedSearch = useRef(searchQuery);
 
     const tabAllowed = tab === "staff" ? isAdmin : hasFullWarehouseAccess || LIMITED_TABS.includes(tab);
 
@@ -149,6 +180,8 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
         tab,
         warehouseId: warehouseId ?? 0,
         page: currentPage,
+        search: SEARCH_TABS.includes(tab) ? searchQuery : "",
+        shelfCode: tab === "products" ? shelfCode : "",
         hasFullAccess: hasFullWarehouseAccess,
         employeeId,
     });
@@ -164,16 +197,52 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
         [shelfCode],
     );
 
+    const searchUrlQuery = useMemo(
+        () => (searchQuery ? `&q=${encodeURIComponent(searchQuery)}` : ""),
+        [searchQuery],
+    );
+
+    const currentExtra = useMemo(
+        () => `${tab === "products" ? shelfQuery : ""}${SEARCH_TABS.includes(tab) ? searchUrlQuery : ""}`,
+        [tab, shelfQuery, searchUrlQuery],
+    );
+
     const goToPage = useCallback(
-        (page: number) => router.push(buildUrl(tab, page, tab === "products" ? shelfQuery : "")),
-        [router, buildUrl, tab, shelfQuery],
+        (page: number) => router.push(buildUrl(tab, page, currentExtra)),
+        [router, buildUrl, tab, currentExtra],
     );
 
     const handleShelfChange = useCallback(
         (code: string) =>
-            router.push(buildUrl("products", 1, code ? `&shelf=${encodeURIComponent(code)}` : "")),
-        [router, buildUrl],
+            router.push(buildUrl("products", 1, `${code ? `&shelf=${encodeURIComponent(code)}` : ""}${searchUrlQuery}`)),
+        [router, buildUrl, searchUrlQuery],
     );
+
+    useEffect(() => {
+        if (searchQuery !== lastPushedSearch.current) {
+            lastPushedSearch.current = searchQuery;
+            setSearchInput(searchQuery);
+        }
+    }, [searchQuery]);
+
+    useEffect(() => {
+        if (!SEARCH_TABS.includes(tab)) return;
+        const next = normalizeSearch(searchInput);
+        if (next === lastPushedSearch.current) return;
+
+        const timer = setTimeout(() => {
+            lastPushedSearch.current = next;
+            router.replace(
+                buildUrl(
+                    tab,
+                    1,
+                    `${tab === "products" ? shelfQuery : ""}${next ? `&q=${encodeURIComponent(next)}` : ""}`,
+                ),
+            );
+        }, 400);
+
+        return () => clearTimeout(timer);
+    }, [searchInput, tab, router, buildUrl, shelfQuery]);
 
     const goToTab = useCallback((target: Tab) => router.push(buildUrl(target)), [router, buildUrl]);
 
@@ -184,6 +253,7 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
         },
         [tab, currentPage, reload, router, buildUrl],
     );
+
 
     useEffect(() => {
         if (warehouseForbidden) router.replace(basePath);
@@ -200,18 +270,15 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
     }, [ready, warehouseId, tabAllowed, isAdmin, router, buildUrl]);
 
     const salesInvoices = useMemo(() => buildSalesInvoices(data.archived), [data.archived]);
-    const paginatedInvoices = useMemo(
-        () => paginate(salesInvoices, currentPage, PAGE_SIZE),
-        [salesInvoices, currentPage],
-    );
+    const paginatedInvoices = { items: salesInvoices, totalPages: data.totalPages };
 
-    const totalPages = tab === "invoices" ? paginatedInvoices.totalPages : data.totalPages;
+    const totalPages = data.totalPages;
 
     useEffect(() => {
         if (!loading && warehouseId !== null && currentPage > totalPages) {
-            router.replace(buildUrl(tab, totalPages));
+            router.replace(buildUrl(tab, totalPages, currentExtra));
         }
-    }, [loading, warehouseId, currentPage, totalPages, router, buildUrl, tab]);
+    }, [loading, warehouseId, currentPage, totalPages, router, buildUrl, tab, currentExtra]);
 
     const products = data.products;
     const stockInfos = data.stockInfos;
@@ -255,6 +322,7 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
         page: currentPage,
         enabled: shelfFilterActive && hasFullWarehouseAccess && ready,
         reloadKey: shelfReloadKey,
+        search: searchQuery,
     });
 
     const paginatedProducts = shelfFilterActive
@@ -348,10 +416,10 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
     const renderEmpty = useCallback(
         (text: string) => (
             <p className="col-span-full py-16 text-center text-[12.5px]" style={{ color: muted(isDark) }}>
-                {text}
+                {searchQuery ? `نتیجه‌ای برای «${searchQuery}» پیدا نشد` : text}
             </p>
         ),
-        [isDark],
+        [isDark, searchQuery],
     );
 
     const pageBg = isDark ? "#0f172a" : "#f8fafc";
@@ -428,7 +496,7 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
         deadlines: tab === "deadlines" ? data.total : 0,
         categories: tab === "categories" ? data.total : 0,
         staff: tab === "staff" ? data.total : 0,
-        invoices: tab === "invoices" ? salesInvoices.length : 0,
+        invoices: tab === "invoices" ? data.total : 0,
         "task-archive": 0,
     };
 
@@ -550,6 +618,15 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
                     );
                 })}
             </div>
+
+            {SEARCH_TABS.includes(tab) && (
+                <SearchInput
+                    value={searchInput}
+                    onChange={setSearchInput}
+                    placeholder={SEARCH_PLACEHOLDERS[tab] ?? "جستجو..."}
+                    className="w-full sm:max-w-md"
+                />
+            )}
 
             {error && (
                 <div
@@ -936,16 +1013,25 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
                                 </div>
 
                                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                                    {(Array.isArray(warehouseStaff) ? warehouseStaff : []).map((staffMember, idx) => (
-                                        <WarehouseStaffCard
-                                            key={staffMember.id}
-                                            staff={staffMember}
-                                            index={idx}
-                                            onDelete={handleDeleteStaff}
-                                            onUpdated={refresh}
-                                        />
-                                    ))}
+                                    {warehouseStaff.length
+                                        ? warehouseStaff.map((staffMember, idx) => (
+                                            <WarehouseStaffCard
+                                                key={staffMember.id}
+                                                staff={staffMember}
+                                                index={idx}
+                                                onDelete={handleDeleteStaff}
+                                                onUpdated={refresh}
+                                            />
+                                        ))
+                                        : renderEmpty("هنوز انباردار ثبت نشده")}
                                 </div>
+
+                                <Pagination
+                                    currentPage={currentPage}
+                                    totalPages={data.totalPages}
+                                    onPageChange={goToPage}
+                                    isDark={isDark}
+                                />
                             </div>
                         )}
 

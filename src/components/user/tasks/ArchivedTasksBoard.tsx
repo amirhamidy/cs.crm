@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Pagination from "@/components/ui/Pagination";
 import { usePagination } from "@/hooks/usePagination";
 import { AnimatePresence, motion } from "framer-motion";
-import { Archive, CheckCircle2, Filter, Loader2, PackageCheck, XCircle } from "lucide-react";
+import { Archive, CheckCircle2, Filter, Loader2, PackageCheck, Search, X, XCircle } from "lucide-react";
 import { tasksApi } from "@/lib/api/tasks";
 import { useCurrentEmployee } from "@/hooks/usecurrentemployee";
 import ArchivedTaskCard from "./ArchivedTaskCard";
@@ -48,6 +48,16 @@ export default function ArchivedTasksBoard() {
     const [error, setError] = useState<string | null>(null);
     const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
     const [departmentFilter, setDepartmentFilter] = useState<DepartmentFilter>("all");
+    const [search, setSearch] = useState("");
+    const [appliedSearch, setAppliedSearch] = useState("");
+
+    // جستجو سمت سرور (با نرمال‌سازی فارسی/عربی و ارقام) و با تأخیر ۳۰۰ms
+    useEffect(() => {
+        const q = search.trim().replace(/\s+/g, " ");
+        if (q === appliedSearch) return;
+        const timer = setTimeout(() => setAppliedSearch(q), 300);
+        return () => clearTimeout(timer);
+    }, [search, appliedSearch]);
 
     useEffect(() => {
         if (employeeLoading) return;
@@ -71,7 +81,7 @@ export default function ArchivedTasksBoard() {
         setError(null);
 
         tasksApi
-            .archiveAll<ArchiveTask>()
+            .archiveAll<ArchiveTask>(appliedSearch)
             .then((data) => {
                 if (!mounted) return;
                 setTasks(
@@ -92,7 +102,7 @@ export default function ArchivedTasksBoard() {
         return () => {
             mounted = false;
         };
-    }, [employeeLoading, employeeError, departmentIds]);
+    }, [employeeLoading, employeeError, departmentIds, appliedSearch]);
 
     const filteredTasks = useMemo(
         () =>
@@ -105,7 +115,7 @@ export default function ArchivedTasksBoard() {
         [tasks, departmentFilter, statusFilter]
     );
 
-    const pager = usePagination(filteredTasks, 20, `${departmentFilter}|${statusFilter}`);
+    const pager = usePagination(filteredTasks, 20, `${departmentFilter}|${statusFilter}|${appliedSearch}`);
 
     const groupedTasks = useMemo(
         () =>
@@ -197,6 +207,21 @@ export default function ArchivedTasksBoard() {
                     <div className="mb-3 flex items-center gap-2 text-[10px] font-black text-gray-500 dark:text-gray-400">
                         <Filter size={13} />
                         فیلتر آرشیو
+                    </div>
+
+                    <div className="relative mb-3">
+                        <Search size={14} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                        <input
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                            placeholder="جستجو در عنوان، مشتری، دپارتمان، مرحله..."
+                            className="h-10 w-full rounded-xl border border-gray-200 bg-white pl-9 pr-9 text-[11.5px] font-semibold text-gray-700 outline-none transition-colors focus:border-indigo-400 dark:border-white/10 dark:bg-white/[0.03] dark:text-gray-200"
+                        />
+                        {search && (
+                            <button type="button" onClick={() => setSearch("")} className="absolute left-2.5 top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded-full text-gray-400 hover:text-gray-600">
+                                <X size={12} />
+                            </button>
+                        )}
                     </div>
 
                     <div className="flex flex-wrap gap-2">

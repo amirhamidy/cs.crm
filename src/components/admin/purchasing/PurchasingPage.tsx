@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { CheckCircle2, Clock3, Loader2, RefreshCw, ShieldCheck, ShoppingCart, UserCheck, Users, XCircle, type LucideIcon } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
+import { purchasingApi, type PurchasingCounts } from "@/lib/api";
 import { toPersianDigits } from "@/lib/jalali";
 import type { ApiPurchasingEmployee, ApiPurchasingStep, ApiPurchasingTask, ApiTaskAttachment } from "@/types/purchasing";
 import PurchasingEmployeesBar from "./Purchasingemployeesbar";
@@ -14,9 +15,6 @@ import StepFormModal from "./StepFormModal";
 import PurchasingCreateTaskModal from "./PurchasingCreateTaskModal";
 import PurchasingDeleteModal from "./PurchasingDeleteModal";
 import { usePurchasingAccess } from "@/hooks/usePurchasingAccess";
-
-const normalizeList = <T,>(value: unknown): T[] =>
-    Array.isArray(value) ? (value as T[]) : ((value as { results?: T[] } | null)?.results ?? []);
 
 function errorText(error: unknown, fallback: string) {
     const data = (error as { response?: { data?: { detail?: string; message?: string } } }).response?.data;
@@ -44,7 +42,9 @@ export default function PurchasingPage() {
 
     const [employees, setEmployees] = useState<ApiPurchasingEmployee[]>([]);
     const [steps, setSteps] = useState<ApiPurchasingStep[]>([]);
-    const [tasks, setTasks] = useState<ApiPurchasingTask[]>([]);
+    const [activeTasks, setActiveTasks] = useState<ApiPurchasingTask[]>([]);
+    const [archiveCounts, setArchiveCounts] = useState<Pick<PurchasingCounts, "completed" | "cancelled">>({ completed: 0, cancelled: 0 });
+    const [archiveVersion, setArchiveVersion] = useState(0);
     const [attachments, setAttachments] = useState<ApiTaskAttachment[]>([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
@@ -61,16 +61,19 @@ export default function PurchasingPage() {
         else setLoading(true);
         setError("");
         try {
-            const [e, s, t, a] = await Promise.all([
-                axiosInstance.get("/purchasing/api/v1/employees/"),
-                axiosInstance.get("/purchasing/api/v1/steps/"),
-                axiosInstance.get("/purchasing/api/v1/tasks/"),
-                axiosInstance.get("/purchasing/api/v1/task-attachments/"),
+            const [e, st, active, counts, a] = await Promise.all([
+                purchasingApi.employees(),
+                purchasingApi.steps(),
+                purchasingApi.activeTasks(),
+                purchasingApi.archiveCounts(),
+                purchasingApi.attachments(),
             ]);
-            setEmployees(normalizeList<ApiPurchasingEmployee>(e.data));
-            setSteps(normalizeList<ApiPurchasingStep>(s.data).sort((x, y) => x.order - y.order));
-            setTasks(normalizeList<ApiPurchasingTask>(t.data));
-            setAttachments(normalizeList<ApiTaskAttachment>(a.data));
+            setEmployees(e);
+            setSteps(st);
+            setActiveTasks(active);
+            setArchiveCounts(counts);
+            setAttachments(a);
+            setArchiveVersion((v) => v + 1);
         } catch (err) {
             setError(errorText(err, "دریافت اطلاعات خرید انجام نشد"));
         } finally {
@@ -83,16 +86,14 @@ export default function PurchasingPage() {
         loadAll();
     }, [loadAll]);
 
-    const activeTasks = useMemo(() => tasks.filter((t) => t.status !== "completed" && t.status !== "cancelled"), [tasks]);
-
     const stats = useMemo(
         () => ({
             active: activeTasks.length,
-            completed: tasks.filter((t) => t.status === "completed").length,
-            cancelled: tasks.filter((t) => t.status === "cancelled").length,
+            completed: archiveCounts.completed,
+            cancelled: archiveCounts.cancelled,
             members: employees.filter((e) => e.is_active !== false).length,
         }),
-        [tasks, activeTasks, employees]
+        [activeTasks, archiveCounts, employees]
     );
 
     const closeStepModal = () => {
@@ -232,7 +233,7 @@ export default function PurchasingPage() {
                         }}
                     />
 
-                    <PurchasingArchivePanel tasks={tasks} steps={steps} attachments={attachments} />
+                    <PurchasingArchivePanel steps={steps} attachments={attachments} refreshKey={archiveVersion} />
                 </>
             )}
 
@@ -262,7 +263,7 @@ export default function PurchasingPage() {
             <PurchasingCreateTaskModal
                 open={createTaskModalOpen}
                 steps={steps}
-                tasks={tasks}
+                tasks={activeTasks}
                 onClose={() => setCreateTaskModalOpen(false)}
                 onSaved={() => {
                     setCreateTaskModalOpen(false);

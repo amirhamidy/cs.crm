@@ -23,6 +23,7 @@ import {
 import { useTheme } from "next-themes";
 import { createPortal } from "react-dom";
 import { tasksApi } from "@/lib/api";
+import Pagination from "@/components/ui/Pagination";
 import { toJalali, toPersianDigits, JALALI_MONTHS, pad2 } from "@/lib/jalali";
 import { useEmployeeInfo } from "@/hooks/useEmployeeInfo";
 import { resolveMediaUrl } from "@/lib/media";
@@ -220,23 +221,36 @@ function LogItem({ log, isLast, isDark }: { log: TaskLog; isLast: boolean; isDar
     );
 }
 
+const LOGS_PAGE_SIZE = 10;
+
 export default function TaskLogsModal({ isOpen, onClose, taskId, taskTitle }: Props) {
     const { resolvedTheme } = useTheme();
     const isDark = resolvedTheme === "dark";
 
     const [logs, setLogs] = useState<TaskLog[]>([]);
+    const [page, setPage] = useState(1);
+    const [total, setTotal] = useState(0);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const totalPages = Math.max(1, Math.ceil(total / LOGS_PAGE_SIZE));
 
     const fetchLogs = useCallback(() => {
         setLoading(true);
         setError(null);
         tasksApi
-            .logs<TaskLog[]>(taskId)
-            .then((res) => setLogs(Array.isArray(res) ? res : []))
+            .logsPage<TaskLog>(taskId, { page, page_size: LOGS_PAGE_SIZE })
+            .then((res) => {
+                setLogs(res.results);
+                setTotal(res.count);
+            })
             .catch(() => setError("خطا در دریافت تاریخچه"))
             .finally(() => setLoading(false));
-    }, [taskId]);
+    }, [taskId, page]);
+
+    // هر بار که مودال برای تسک دیگری باز شد از صفحهٔ اول شروع کن
+    useEffect(() => {
+        if (isOpen) setPage(1);
+    }, [isOpen, taskId]);
 
     useEffect(() => {
         if (isOpen) fetchLogs();
@@ -348,6 +362,9 @@ export default function TaskLogsModal({ isOpen, onClose, taskId, taskTitle }: Pr
                                 {logs.map((log, i) => (
                                     <LogItem key={log.id} log={log} isLast={i === logs.length - 1} isDark={isDark} />
                                 ))}
+                                {totalPages > 1 && (
+                                    <Pagination compact page={page} totalPages={totalPages} onChange={setPage} />
+                                )}
                             </div>
                         )}
                     </div>
