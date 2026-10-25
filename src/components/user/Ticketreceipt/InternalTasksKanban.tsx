@@ -1,6 +1,7 @@
 "use client";
 
 import axiosInstance from "@/lib/axiosInstance";
+import { listAll } from "@/lib/api";
 import { useAuthStore } from "@/store/authStore";
 import { Loader2 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
@@ -29,12 +30,6 @@ export interface InternalTask {
   created_at: string;
 }
 
-type InternalTasksApiResponse =
-  | InternalTask[]
-  | {
-      results: InternalTask[];
-    };
-
 const COLUMNS: { key: TaskStatus; label: string }[] = [
   { key: "todo", label: "انجام نشده" },
   { key: "in_progress", label: "در حال انجام" },
@@ -54,13 +49,8 @@ export default function InternalTasksKanban() {
     setLoading(true);
 
     try {
-      const response = await axiosInstance.get<InternalTasksApiResponse>(
-        "/tasks/api/v1/internal-tasks/",
-      );
-
-      const data = response.data;
-
-      setTasks(Array.isArray(data) ? data : (data.results ?? []));
+      const all = await listAll<InternalTask>("/tasks/api/v1/internal-tasks/");
+      setTasks(all);
     } catch (error) {
       console.error("fetchTasks error:", error);
       setTasks([]);

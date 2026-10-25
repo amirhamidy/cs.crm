@@ -17,6 +17,7 @@ import {
     Briefcase,
 } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
+import { listAll } from "@/lib/api";
 
 interface Department { id: number; name: string }
 interface DepartmentStep { id: number; department: number; name: string; order: number }
@@ -44,16 +45,6 @@ const GRADIENTS = [
 
 const gradientOf = (seed: number) => GRADIENTS[Math.abs(seed) % GRADIENTS.length];
 const initialOf = (text: string) => (text || "").trim().charAt(0) || "؟";
-
-function extractList<T>(data: unknown): T[] {
-    if (Array.isArray(data)) return data as T[];
-    if (data && typeof data === "object") {
-        const obj = data as { results?: T[]; data?: T[] };
-        if (Array.isArray(obj.results)) return obj.results;
-        if (Array.isArray(obj.data)) return obj.data;
-    }
-    return [];
-}
 
 function FloatingInput({ label, id, value, onChange }: {
     label: string; id: string; value: string; onChange: (v: string) => void;
@@ -265,16 +256,13 @@ export default function CreateNoCaseTaskModal({ isOpen, onClose, onSuccess }: Pr
     useEffect(() => {
         if (!isOpen) return;
 
-        axiosInstance.get("/department/api/v1/department/list/")
-            .then((r) => setDepartments(extractList<Department>(r.data)))
+        listAll<Department>("/department/api/v1/department/list/").then((all) => setDepartments(all))
             .catch(() => setDepartments([]));
 
-        axiosInstance.get("/department/api/v1/department_step/")
-            .then((r) => setDepartmentSteps(extractList<DepartmentStep>(r.data)))
+        listAll<DepartmentStep>("/department/api/v1/department_step/").then((all) => setDepartmentSteps(all))
             .catch(() => setDepartmentSteps([]));
 
-        axiosInstance.get("/department/api/v1/department_employee/list/")
-            .then((r) => setEmployees(extractList<DepartmentEmployee>(r.data)))
+        listAll<DepartmentEmployee>("/department/api/v1/department_employee/list/").then((all) => setEmployees(all))
             .catch(() => setEmployees([]));
     }, [isOpen]);
 

@@ -12,23 +12,11 @@ import type { Employee } from "@/types/employee";
 import type { CaseItem } from "@/types/case";
 import type { TaskItem } from "@/types/task";
 import axiosInstance from "@/lib/axiosInstance";
+import { listAll } from "@/lib/api";
 import { apiRoutes } from "@/lib/apiRoutes";
 import { useAuthStore } from "@/store/authStore";
 
-type ListResponse<T> = T[] | { results?: T[]; data?: T[] };
-
 type FilterType = "all" | "potential" | "active";
-
-function extractList<T>(data: ListResponse<T> | undefined | null): T[] {
-    if (Array.isArray(data)) return data;
-
-    if (data && typeof data === "object") {
-        if (Array.isArray(data.results)) return data.results;
-        if (Array.isArray(data.data)) return data.data;
-    }
-
-    return [];
-}
 
 function parseAssignedEmployees(raw: unknown): number[] {
     const ids: number[] = [];
@@ -112,40 +100,16 @@ export default function CustomersPage() {
 
         try {
             const [
-                customersRes,
-                casesRes,
-                tasksRes,
-                employeesRes,
+                allCustomers,
+                allCases,
+                allTasks,
+                employeeList,
             ] = await Promise.all([
-                axiosInstance.get<ListResponse<Customer>>(
-                    "/customers/api/v1/customers/"
-                ),
-                axiosInstance.get<ListResponse<CaseItem>>(
-                    "/tasks/api/v1/cases/"
-                ),
-                axiosInstance.get<ListResponse<TaskItem>>(
-                    apiRoutes.tasks
-                ),
-                axiosInstance.get<ListResponse<Employee>>(
-                    "/accounts/api/v1/employee/list/"
-                ),
+                listAll<Customer>("/customers/api/v1/customers/"),
+                listAll<CaseItem>("/tasks/api/v1/cases/"),
+                listAll<TaskItem>(apiRoutes.tasks),
+                listAll<Employee>("/accounts/api/v1/employee/list/"),
             ]);
-
-            const allCustomers = extractList<Customer>(
-                customersRes.data
-            );
-
-            const allCases = extractList<CaseItem>(
-                casesRes.data
-            );
-
-            const allTasks = extractList<TaskItem>(
-                tasksRes.data
-            );
-
-            const employeeList = extractList<Employee>(
-                employeesRes.data
-            );
 
             let empId: number | null = null;
 

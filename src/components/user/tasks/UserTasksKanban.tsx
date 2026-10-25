@@ -244,6 +244,23 @@ export default function UserTasksKanban() {
         setTasks((prev) => prev.map((t) => t.id === updated.id ? updated : t));
     }
 
+    // بعد از انتقال به دپارتمان دیگر: اگر کاربر هنوز مسئول تسک است (مثلاً مدیر
+    // دپارتمان مقصد هم هست) تسک در جای جدیدش می‌ماند، وگرنه از لیست حذف می‌شود.
+    function handleTransferred(updated: UserTask) {
+        const stillMine =
+            !!employee &&
+            updated.status === "in_progress" &&
+            extractAssignedEmployeeIds(updated).includes(employee.id);
+
+        if (!stillMine) {
+            setTasks((prev) => prev.filter((t) => t.id !== updated.id));
+            return;
+        }
+
+        setTasks((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
+        setActiveDeptId(extractDeptId(updated));
+    }
+
     if (loading || stagesLoading || employeeLoading) {
         return <div className="flex h-64 items-center justify-center"><Loader size={22} className="animate-spin text-indigo-500" /></div>;
     }
@@ -315,7 +332,7 @@ export default function UserTasksKanban() {
                         {mobileStage && (
                             <AnimatePresence mode="wait">
                                 <motion.div key={mobileStage.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
-                                    <StageColumn stage={mobileStage} tasks={grouped[mobileStage.id] ?? []} accent={accentForId(mobileStage.id)} index={mobileStageIndex} isLast={mobileStageIndex === activeStages.length - 1} onUpdated={handleUpdated} employeesMap={employeesMap} staffId={staffId} />
+                                    <StageColumn stage={mobileStage} tasks={grouped[mobileStage.id] ?? []} accent={accentForId(mobileStage.id)} index={mobileStageIndex} isLast={mobileStageIndex === activeStages.length - 1} onUpdated={handleUpdated} onTransferred={handleTransferred} employeesMap={employeesMap} staffId={staffId} />
                                 </motion.div>
                             </AnimatePresence>
                         )}
@@ -324,7 +341,7 @@ export default function UserTasksKanban() {
                     <Swiper modules={[FreeMode]} freeMode slidesPerView="auto" spaceBetween={14} className="!w-full !overflow-hidden">
                         {activeStages.map((stage, index) => (
                             <SwiperSlide key={stage.id} className="!w-[320px] !overflow-visible">
-                                <StageColumn stage={stage} tasks={grouped[stage.id] ?? []} accent={accentForId(stage.id)} index={index} isLast={index === activeStages.length - 1} onUpdated={handleUpdated} employeesMap={employeesMap} staffId={staffId} />
+                                <StageColumn stage={stage} tasks={grouped[stage.id] ?? []} accent={accentForId(stage.id)} index={index} isLast={index === activeStages.length - 1} onUpdated={handleUpdated} onTransferred={handleTransferred} employeesMap={employeesMap} staffId={staffId} />
                             </SwiperSlide>
                         ))}
                     </Swiper>
@@ -334,7 +351,7 @@ export default function UserTasksKanban() {
     );
 }
 
-function StageColumn({ stage, tasks, accent, index, isLast, onUpdated, employeesMap, staffId }: { stage: KanbanStage; tasks: UserTask[]; accent: string; index: number; isLast: boolean; onUpdated: (task: UserTask) => void; employeesMap: Record<number, string>; staffId: number }) {
+function StageColumn({ stage, tasks, accent, index, isLast, onUpdated, onTransferred, employeesMap, staffId }: { stage: KanbanStage; tasks: UserTask[]; accent: string; index: number; isLast: boolean; onUpdated: (task: UserTask) => void; onTransferred: (task: UserTask) => void; employeesMap: Record<number, string>; staffId: number }) {
     return (
         <motion.div layout initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="relative flex min-w-0 flex-col rounded-[1.45rem] border bg-white shadow-[0_5px_20px_rgba(15,23,42,.03)] dark:bg-white/[.025]" style={{ borderColor: `${accent}28` }}>
             {!isLast && <div className="pointer-events-none absolute top-7 z-20 flex h-5 w-5 items-center justify-center rounded-full border bg-white shadow-sm dark:bg-[#0f172a]" style={{ insetInlineEnd: -10, borderColor: `${accent}35`, color: accent }}><ChevronLeft size={10} /></div>}
@@ -349,7 +366,7 @@ function StageColumn({ stage, tasks, accent, index, isLast, onUpdated, employees
             </div>
             <div className="h-px" style={{ background: `${accent}18` }} />
             {tasks.length ? (
-                <TaskCardSwiper tasks={tasks} accent={accent} isLastStage={isLast} onUpdated={onUpdated} employeesMap={employeesMap} staffId={staffId} />
+                <TaskCardSwiper tasks={tasks} accent={accent} isLastStage={isLast} onUpdated={onUpdated} onTransferred={onTransferred} employeesMap={employeesMap} staffId={staffId} />
             ) : (
                 <div className="flex h-28 flex-col items-center justify-center gap-1.5 text-center"><Plus size={16} className="text-gray-300" /><p className="text-[11px] text-gray-400">وظیفه‌ای در این مرحله نیست</p></div>
             )}

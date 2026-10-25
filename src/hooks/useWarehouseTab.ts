@@ -3,19 +3,19 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   PAGE_SIZE,
+  PRODUCTS_PAGE_SIZE,
   WAREHOUSE_ENDPOINTS as EP,
   fetchAll,
-  fetchAllWarehouseProducts,
   fetchNewest,
   fetchPage,
   fetchWarehousePage,
   fetchWarehouseProductsPage,
+  fetchStocksForProducts,
   fetchWarehouseStocks,
-  isForeignToWarehouse,
   warehouseParams,
 } from "@/lib/warehouseApi";
+import { cached } from "@/lib/api/_core";
 import { listAllByStatus } from "@/lib/api";
-import { productIdsOf } from "@/lib/warehouseScope";
 import { paginate, sameId } from "@/utils/warehouseEmployee";
 import type {
   ApiArchivedOrderTask,
@@ -133,7 +133,6 @@ async function loadTab(args: LoadArgs): Promise<TabData> {
     (await listAllByStatus<ApiWarehouseTask>(EP.tasks, "pending", wp)).filter(
       (task) =>
         task.quality_control_id != null &&
-        !isForeignToWarehouse(task, warehouseId) &&
         (taskFilter ? taskFilter(task) : true),
     ).length;
 
@@ -153,47 +152,46 @@ async function loadTab(args: LoadArgs): Promise<TabData> {
 
   switch (tab) {
     case "overview": {
-      const stocks = await fetchWarehouseStocks(warehouseId);
-      const productIds = productIdsOf(stocks);
+      // موجودی و محصولات برای آمار کلی لازم‌اند؛ کش کوتاه‌مدت از خواندن مجدد در هر ورود جلوگیری می‌کند
+      const [stocks, products] = await Promise.all([
+        cached(`wh:${warehouseId}:stocks`, () => fetchWarehouseStocks(warehouseId), 30_000),
+        cached(`wh:${warehouseId}:products`, () => fetchAll<ApiProduct>(EP.products, wp), 30_000),
+      ]);
 
-      const [products, tasks, orderTasks, transactions, pending] =
-        await Promise.all([
-          fetchAllWarehouseProducts(warehouseId, productIds),
-          fetchAll<ApiWarehouseTask>(EP.tasks, wp),
-          fetchAll<ApiOrderTask>(EP.orderTasks, wp),
-          // نمای کلی فقط ۲۰ تراکنش آخر را نشان می‌دهد؛ کل لیست لازم نیست
-          fetchNewest<ApiStockTransaction>(EP.transactions, wp, 20),
-          pendingQuality(),
-        ]);
-
-      const mine = <T,>(items: T[]) =>
-        items.filter((item) => !isForeignToWarehouse(item, warehouseId));
+      const [tasks, orderTasks, transactions, pending] = await Promise.all([
+        fetchAll<ApiWarehouseTask>(EP.tasks, wp),
+        // فقط سفارش‌های اخیر لازم است (۲۰ مورد فعال نمایش داده می‌شود)
+        fetchNewest<ApiOrderTask>(EP.orderTasks, wp, 60),
+        fetchNewest<ApiStockTransaction>(EP.transactions, wp, 20),
+        pendingQuality(),
+      ]);
 
       Object.assign(data, {
         products,
         stockInfos: stocks,
-        transactions: mine(transactions),
-        tasks: mine(tasks),
-        orderTasks: mine(orderTasks),
+        transactions,
+        tasks: tasks.filter((t) => (taskFilter ? taskFilter(t) : true)),
+        orderTasks,
         pendingQualityCount: pending,
       });
       break;
     }
 
     case "products": {
-      const [stocks, categories] = await Promise.all([
-        fetchWarehouseStocks(warehouseId),
+      const [categories, res] = await Promise.all([
         fetchAll<ApiCategory>(EP.categories),
+        fetchWarehouseProductsPage(warehouseId, {
+          page,
+          shelfCode,
+          pageSize: PRODUCTS_PAGE_SIZE,
+        }),
       ]);
 
-      const res = await fetchWarehouseProductsPage(
-        warehouseId,
-        productIdsOf(stocks),
-        { page, shelfCode },
-      );
-
       data.products = res.items;
-      data.stockInfos = stocks;
+      data.stockInfos = await fetchStocksForProducts(
+        warehouseId,
+        res.items.map((p) => p.id),
+      );
       data.categories = categories;
       setPaged(res);
       break;
@@ -247,24 +245,16 @@ async function loadTab(args: LoadArgs): Promise<TabData> {
     }
 
     case "deadlines": {
-      // مهلت‌ها رکورد انبار ندارند؛ با سفارش‌های همین انبار join می‌شوند
-      // (سفارش‌ها همزمان برای نمایش عنوان کارت‌ها هم لازم‌اند).
-      const [orderTasks, deadlines] = await Promise.all([
-        fetchAll<ApiOrderTask>(EP.orderTasks, wp),
-        fetchAll<ApiOrderTaskDeadline>(EP.deadlines),
+      // فقط یک صفحهٔ مهلت‌ها (فیلتر انبار سمت سرور) + سفارش‌های همان انبار برای عنوان کارت‌ها
+      const [orderTasks, res] = await Promise.all([
+        fetchNewest<ApiOrderTask>(EP.orderTasks, wp, 100),
+        fetchPage<ApiOrderTaskDeadline>(EP.deadlines, {
+          page,
+          params: { order_task__warehouse: warehouseId },
+        }),
       ]);
-
-      const scopedOrders = orderTasks.filter(
-        (order) => !isForeignToWarehouse(order, warehouseId),
-      );
-      const orderIds = new Set(scopedOrders.map((order) => order.id));
-      const scoped = deadlines.filter((deadline) =>
-        orderIds.has(Number(deadline.order_task)),
-      );
-
-      const res = paginate(byNewestId(scoped), page, PAGE_SIZE);
       data.deadlines = res.items;
-      data.orderTasks = scopedOrders;
+      data.orderTasks = orderTasks;
       setPaged(res);
       break;
     }

@@ -6,7 +6,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Swiper, SwiperSlide } from "swiper/react";
 import "swiper/css";
 import { Building2, Users, ArrowRight, Loader, AlertCircle, ListChecks } from "lucide-react";
-import axiosInstance from "@/lib/axiosInstance";
+import { listAll } from "@/lib/api";
 import { useDepartmentStore } from "@/components/admin/departments/departmentStore";
 import { Stage, Employee, Task } from "@/components/admin/departments/types";
 import StagesPanel from "@/components/admin/departments/StagesPanel";
@@ -45,9 +45,7 @@ function DepartmentDetailPage() {
     const fetchTasks = useCallback(async () => {
         setTasksLoading(true);
         try {
-            const res = await axiosInstance.get("/tasks/api/v1/tasks/");
-            const data = res.data;
-            setTasks(Array.isArray(data) ? data : (data?.results ?? []));
+            setTasks(await listAll<Task>("/tasks/api/v1/tasks/"));
         } catch {
             setTasks([]);
         } finally {

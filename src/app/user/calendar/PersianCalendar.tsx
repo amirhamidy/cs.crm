@@ -17,6 +17,7 @@ import {
     Plus,
 } from "lucide-react";
 import api from "@/lib/axiosInstance";
+import { listAll } from "@/lib/api";
 import { toJalali, toGregorian, jalaliMonthLength, jalaliWeekday, toPersianDigits, JALALI_MONTHS, pad2 } from "@/lib/jalali";
 import CalendarNoteModal, {
     CalendarNote,
@@ -264,16 +265,16 @@ export default function PersianCalendar() {
         const fetchData = async () => {
             setLoading(true);
             try {
-                const [calendarRes, notesRes] = await Promise.all([
+                const [calendarRes, allNotes] = await Promise.all([
                     api.get<CalendarResponse>(`/appraisal/api/v1/calendar/?start=${startISO}&end=${endISO}`),
-                    api.get("/note/api/v1/"),
+                    listAll<CalendarNote>("/note/api/v1/"),
                 ]);
                 if (cancelled) return;
                 const data = calendarRes.data;
                 const events = Array.isArray(data?.events) ? data.events : [];
                 setCalendarRange({ start: data?.start ?? startISO, end: data?.end ?? endISO, events });
                 setCalendarEvents(events);
-                setNotes(Array.isArray(notesRes.data) ? notesRes.data : []);
+                setNotes(allNotes);
             } catch (error) {
                 if (!cancelled) {
                     console.error("Calendar fetch error:", error);

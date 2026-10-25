@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { listAll } from "@/lib/api";
 import { ApiTask } from "@/types/warehouse";
-import { scopeStocks } from "@/lib/warehouseScope";
 
 export interface ApiOrderTaskStockProduct {
   id: number;
@@ -51,9 +50,7 @@ export function useOrderTaskLookups(
         if (!mounted) return;
 
         setTasks(taskList);
-        setProducts(
-          warehouseId != null ? scopeStocks(stockList, warehouseId) : stockList,
-        );
+        setProducts(stockList);
       } catch {
         if (!mounted) return;
 

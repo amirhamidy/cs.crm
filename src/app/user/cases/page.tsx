@@ -13,6 +13,7 @@ import {
 import { useTheme } from "next-themes";
 import axiosInstance from "@/lib/axiosInstance";
 import { apiRoutes } from "@/lib/apiRoutes";
+import { listAll } from "@/lib/api";
 import { extractCaseId, fetchAllTasks } from "@/lib/fetchAllTasks";
 import type { Department } from "@/types/department";
 import type { Employee } from "@/types/employee";
@@ -24,17 +25,6 @@ import EditCaseModal from "@/components/user/cases/EditCaseModal";
 import CaseCard from "@/components/user/cases/CaseCard";
 import EditTaskModal from "@/components/customcomponents/tasks/EditTaskModal";
 import CaseTasksModal from "@/components/customcomponents/cases/CaseTasksModal";
-
-type ListResponse<T> = T[] | { results?: T[]; data?: T[] };
-
-function extractList<T>(data: ListResponse<T> | undefined | null): T[] {
-    if (Array.isArray(data)) return data;
-    if (data && typeof data === "object") {
-        if (Array.isArray(data.results)) return data.results;
-        if (Array.isArray(data.data)) return data.data;
-    }
-    return [];
-}
 
 export default function UserCasesPage() {
     const { resolvedTheme } = useTheme();
@@ -63,18 +53,14 @@ export default function UserCasesPage() {
         try {
             setLoading(true);
             setError("");
-            const [casesRes, customersRes, departmentsRes, employeesRes, allTasks] =
+            const [caseList, customerList, departmentList, employeeList, allTasks] =
                 await Promise.all([
-                    axiosInstance.get<ListResponse<CaseItem>>(apiRoutes.cases),
-                    axiosInstance.get<ListResponse<Customer>>(apiRoutes.customers),
-                    axiosInstance.get<ListResponse<Department>>(apiRoutes.departments),
-                    axiosInstance.get<ListResponse<Employee>>(
-                        "/accounts/api/v1/employee/list/"
-                    ),
+                    listAll<CaseItem>(apiRoutes.cases),
+                    listAll<Customer>(apiRoutes.customers),
+                    listAll<Department>(apiRoutes.departments),
+                    listAll<Employee>("/accounts/api/v1/employee/list/"),
                     fetchAllTasks(),
                 ]);
-
-            const caseList = extractList<CaseItem>(casesRes.data);
 
             const detailedCases = await Promise.all(
                 caseList.map(async (item) => {
@@ -90,9 +76,9 @@ export default function UserCasesPage() {
             );
 
             setCases(detailedCases);
-            setCustomers(extractList(customersRes.data));
-            setDepartments(extractList(departmentsRes.data));
-            setEmployees(extractList(employeesRes.data));
+            setCustomers(customerList);
+            setDepartments(departmentList);
+            setEmployees(employeeList);
             setTasks(allTasks);
         } catch {
             setError("دریافت اطلاعات با خطا مواجه شد");

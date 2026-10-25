@@ -1,11 +1,6 @@
 import axiosInstance from "@/lib/axiosInstance";
 import { dedupe } from "@/lib/api/_core";
 import { extractList } from "@/utils/warehouseEmployee";
-import {
-  productBelongs,
-  readWarehouseId,
-  scopeStocks,
-} from "@/lib/warehouseScope";
 import type {
   ApiProduct,
   ApiStockInfo,
@@ -40,6 +35,8 @@ export const WAREHOUSE_ENDPOINTS = {
 export const WAREHOUSE_QUERY_KEY = "warehouse_id";
 
 export const PAGE_SIZE = 8;
+/** تعداد محصول در هر صفحه (ادمین و یوزر) */
+export const PRODUCTS_PAGE_SIZE = 40;
 
 /** سقف page_size در بک‌اند (بیشتر از این را بک‌اند خودش ۱۰۰ می‌کند). */
 export const MAX_PAGE_SIZE = 100;
@@ -302,30 +299,10 @@ export async function fetchNewest<T extends { id: number; created_at?: string | 
 }
 
 /* ------------------------------------------------------------------ */
-/*  جداسازی انبارها                                                    */
+/*  لیست‌های انبار (فیلتر انبار کاملاً با بک‌اند است)                    */
 /* ------------------------------------------------------------------ */
 
-/** رکوردی که صراحتاً مال انبار دیگری است (یعنی بک‌اند فیلتر warehouse_id را اعمال نکرده). */
-export const isForeignToWarehouse = (record: unknown, warehouseId: number) => {
-  const own = readWarehouseId(record);
-  return own !== undefined && own !== warehouseId;
-};
-
-/** حالت امن: endpointهایی که فیلتر انبار را سمت سرور اعمال نمی‌کنند (به‌صورت خودکار تشخیص داده می‌شود). */
-const clientScopedUrls = new Set<string>();
-
-/** (endpoint + انبار)هایی که یک‌بار، با بررسی صفحهٔ اول و آخر، اعمال فیلتر انبار در آن‌ها تأیید شده است. */
-const verifiedScopes = new Set<string>();
-
-/**
- * یک صفحه از لیستِ وابسته به انبار.
- *
- *  - حالت عادی: `warehouse_id` به بک‌اند می‌رود و صفحه‌بندی/جستجو کاملاً سمت سرور است.
- *  - اگر در پاسخ رکوردی از انبار دیگر دیده شود، آن endpoint به «حالت امن» می‌رود:
- *    همهٔ صفحات خوانده، سمت کلاینت فیلتر و بعد صفحه‌بندی می‌شود (نتیجه در هر دو حالت درست است).
- *  - `clientFilter` (مثلاً «فقط وظایف من») همیشه حالت امن را اجباری می‌کند،
- *    چون فیلتر سمت کلاینت روی یک صفحه، صفحه‌ها را ناقص می‌کند.
- */
+/** یک صفحه از لیست وابسته به انبار؛ `warehouse_id` به بک‌اند می‌رود. */
 export async function fetchWarehousePage<T>(
   url: string,
   warehouseId: number,
@@ -335,105 +312,43 @@ export async function fetchWarehousePage<T>(
     search?: string;
     params?: Params;
     signal?: AbortSignal;
+    /** فیلتر دسترسی کاربر (نه فیلتر انبار) */
     clientFilter?: (row: T) => boolean;
   },
 ): Promise<PageResult<T>> {
-  const pageSize = Math.min(MAX_PAGE_SIZE, Math.max(1, opts.pageSize ?? PAGE_SIZE));
-  const page = Math.max(1, Math.floor(opts.page) || 1);
   const params: Params = { ...warehouseParams(warehouseId), ...(opts.params ?? {}) };
 
-  if (!opts.clientFilter && !clientScopedUrls.has(url)) {
-    const scopeKey = `${url}|${warehouseId}`;
-    const res = await fetchPage<T>(url, {
-      page,
-      pageSize,
+  if (!opts.clientFilter) {
+    return fetchPage<T>(url, {
+      page: opts.page,
+      pageSize: opts.pageSize,
       search: opts.search,
       params,
       signal: opts.signal,
     });
-
-    let leaked = res.items.some((row) => isForeignToWarehouse(row, warehouseId));
-
-    // اولین بار: اگر بک‌اند فیلتر را نادیده بگیرد ممکن است صفحهٔ جاری تصادفاً تمیز باشد
-    // ولی تعداد کل غلط باشد؛ برای اطمینان صفحهٔ آخر هم یک‌بار بررسی می‌شود.
-    if (!leaked && !verifiedScopes.has(scopeKey)) {
-      if (res.totalPages > 1 && res.page !== res.totalPages) {
-        const last = await fetchPage<T>(url, {
-          page: res.totalPages,
-          pageSize,
-          search: opts.search,
-          params,
-          signal: opts.signal,
-        });
-        leaked = last.items.some((row) => isForeignToWarehouse(row, warehouseId));
-      }
-      if (!leaked) verifiedScopes.add(scopeKey);
-    }
-
-    if (!leaked) return res;
-
-    clientScopedUrls.add(url);
   }
 
   const search = normalizeSearch(opts.search);
   const all = (
     await fetchAll<T>(url, { ...params, search: search || undefined }, opts.signal)
-  ).filter(
-    (row) =>
-      !isForeignToWarehouse(row, warehouseId) &&
-      (opts.clientFilter ? opts.clientFilter(row) : true),
-  );
-
-  return sliceLocal(sortNewestFirst(all), page, pageSize);
+  ).filter(opts.clientFilter);
+  const pageSize = Math.min(MAX_PAGE_SIZE, Math.max(1, opts.pageSize ?? PAGE_SIZE));
+  return sliceLocal(sortNewestFirst(all), Math.max(1, opts.page) || 1, pageSize);
 }
-
-/* ------------------------------------------------------------------ */
-/*  موجودی‌ها و محصولات انبار                                          */
-/* ------------------------------------------------------------------ */
 
 /** همهٔ موجودی‌های یک انبار (لیست مرجع؛ درخواست‌های هم‌زمان یکی می‌شوند). */
 export function fetchWarehouseStocks(
   warehouseId: number,
   signal?: AbortSignal,
 ): Promise<ApiStockInfo[]> {
-  return dedupe(`warehouse-stocks:${warehouseId}`, async () =>
-    scopeStocks(
-      await fetchAll<ApiStockInfo>(
-        WAREHOUSE_ENDPOINTS.stock,
-        warehouseParams(warehouseId),
-        signal,
-      ),
-      warehouseId,
-    ),
+  return dedupe(`warehouse-stocks:${warehouseId}`, () =>
+    fetchAll<ApiStockInfo>(WAREHOUSE_ENDPOINTS.stock, warehouseParams(warehouseId), signal),
   );
 }
 
-/** محصول رکورد انبار ندارد؛ تعلق آن به انبار با «وجود در موجودی همان انبار» سنجیده می‌شود. */
-const productsClientMode = new Set<number>();
-const productsVerified = new Set<number>();
-
-/** همهٔ محصولات یک انبار (برای نمای کلی). */
-export async function fetchAllWarehouseProducts(
+/** یک صفحه از محصولات انبار، با جستجو و فیلتر قفسه سمت سرور. */
+export function fetchWarehouseProductsPage(
   warehouseId: number,
-  stockProductIds: Set<number>,
-  signal?: AbortSignal,
-): Promise<ApiProduct[]> {
-  const all = await fetchAll<ApiProduct>(
-    WAREHOUSE_ENDPOINTS.products,
-    warehouseParams(warehouseId),
-    signal,
-  );
-  return all.filter((p) => productBelongs(p, warehouseId, stockProductIds));
-}
-
-/**
- * یک صفحه از محصولات انبار، با جستجو و فیلتر قفسه سمت سرور.
- * اگر بک‌اند `warehouse_id` را روی محصولات اعمال نکند (محصولی بیرون از موجودی این انبار
- * یا تعدادی بیشتر از موجودی‌ها)، خودکار به حالت امن می‌رود.
- */
-export async function fetchWarehouseProductsPage(
-  warehouseId: number,
-  stockProductIds: Set<number>,
   opts: {
     page: number;
     pageSize?: number;
@@ -442,77 +357,50 @@ export async function fetchWarehouseProductsPage(
     signal?: AbortSignal;
   },
 ): Promise<PageResult<ApiProduct>> {
-  const pageSize = Math.min(MAX_PAGE_SIZE, Math.max(1, opts.pageSize ?? PAGE_SIZE));
-  const page = Math.max(1, Math.floor(opts.page) || 1);
-  const search = normalizeSearch(opts.search);
   const shelfCode = (opts.shelfCode ?? "").trim();
-  const params: Params = {
-    ...warehouseParams(warehouseId),
-    shelf_code: shelfCode || undefined,
-  };
-  const belongs = (p: ApiProduct) => productBelongs(p, warehouseId, stockProductIds);
+  return fetchPage<ApiProduct>(WAREHOUSE_ENDPOINTS.products, {
+    page: opts.page,
+    pageSize: opts.pageSize,
+    search: opts.search,
+    params: {
+      ...warehouseParams(warehouseId),
+      shelf_code: shelfCode || undefined,
+    },
+    signal: opts.signal,
+  });
+}
 
-  if (!productsClientMode.has(warehouseId)) {
-    // یک‌بار برای هر انبار: تعداد محصولاتِ فیلتر‌شده نباید از تعداد موجودی‌های همان انبار بیشتر باشد
-    if (!productsVerified.has(warehouseId)) {
-      const scopedCount = await fetchCount(
-        WAREHOUSE_ENDPOINTS.products,
-        warehouseParams(warehouseId),
-        opts.signal,
-      );
-      if (scopedCount > stockProductIds.size) productsClientMode.add(warehouseId);
-      else productsVerified.add(warehouseId);
-    }
-  }
-
-  if (!productsClientMode.has(warehouseId)) {
-    const res = await fetchPage<ApiProduct>(WAREHOUSE_ENDPOINTS.products, {
-      page,
-      pageSize,
-      search,
-      params,
-      signal: opts.signal,
-    });
-
-    if (res.items.every(belongs)) return res;
-
-    productsClientMode.add(warehouseId);
-  }
-
-  const all = (
-    await fetchAll<ApiProduct>(
-      WAREHOUSE_ENDPOINTS.products,
-      { ...params, search: search || undefined },
-      opts.signal,
-    )
-  ).filter(belongs);
-
-  return sliceLocal(all, page, pageSize);
+/** موجودیِ چند محصول (صفحهٔ جاری) در یک انبار؛ فیلتر `product` به بک‌اند. */
+export async function fetchStocksForProducts(
+  warehouseId: number,
+  productIds: number[],
+  signal?: AbortSignal,
+): Promise<ApiStockInfo[]> {
+  if (!productIds.length) return [];
+  const rows = await Promise.all(
+    productIds.map((id) =>
+      fetchPage<ApiStockInfo>(WAREHOUSE_ENDPOINTS.stock, {
+        page: 1,
+        pageSize: 5,
+        params: { ...warehouseParams(warehouseId), product: id },
+        signal,
+      }),
+    ),
+  );
+  return rows.flatMap((r) => r.items);
 }
 
 /** تراکنش‌های یک محصول در یک انبار (برای گردش کالا). */
-let transactionProductFilterIgnored = false;
-
 export async function fetchProductTransactions(
   warehouseId: number,
   productId: number,
   signal?: AbortSignal,
 ): Promise<ApiStockTransaction[]> {
-  const wp = warehouseParams(warehouseId);
-  const mine = (t: ApiStockTransaction) =>
-    Number(t.product) === productId && !isForeignToWarehouse(t, warehouseId);
-
-  const rows = await fetchAll<ApiStockTransaction>(
+  return fetchAll<ApiStockTransaction>(
     WAREHOUSE_ENDPOINTS.transactions,
-    transactionProductFilterIgnored ? wp : { ...wp, product: productId },
+    { ...warehouseParams(warehouseId), product: productId },
     signal,
   );
-
-  if (!transactionProductFilterIgnored && rows.some((t) => Number(t.product) !== productId)) {
-    transactionProductFilterIgnored = true;
-  }
-
-  return rows.filter(mine);
 }
 
 export async function fetchWarehouses(): Promise<ApiWarehouse[]> {

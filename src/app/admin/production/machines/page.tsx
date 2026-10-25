@@ -32,6 +32,7 @@ import {
     CalendarCogIcon,
 } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
+import { listAll } from "@/lib/api";
 import {
     toPersianDigits,
     toJalali,
@@ -233,16 +234,6 @@ const GRADIENTS = [
 
 const gradientOf = (seed: number) => GRADIENTS[Math.abs(seed) % GRADIENTS.length];
 const initialOf = (text: string) => (text || "").trim().charAt(0) || "؟";
-
-function extractList<T>(data: unknown): T[] {
-    if (Array.isArray(data)) return data as T[];
-    if (data && typeof data === "object") {
-        const obj = data as { results?: T[]; data?: T[] };
-        if (Array.isArray(obj.results)) return obj.results;
-        if (Array.isArray(obj.data)) return obj.data;
-    }
-    return [];
-}
 
 function parseBackendError(error: unknown, fallback: string): string {
     const data = (error as { response?: { data?: unknown } })?.response?.data;
@@ -1155,10 +1146,9 @@ function LogModal({
 
     useEffect(() => {
         let alive = true;
-        axiosInstance
-            .get("/accounts/api/v1/employee/list/")
-            .then((res) => {
-                if (alive) setEmployees(extractList<EmployeeItem>(res.data));
+        listAll<EmployeeItem>("/accounts/api/v1/employee/list/")
+            .then((all) => {
+                if (alive) setEmployees(all);
             })
             .catch(() => {
                 if (alive) setError("دریافت لیست کارمندان انجام نشد");
@@ -1565,14 +1555,14 @@ export default function AdminProductionManagementPage() {
 
     const fetchData = useCallback(async () => {
         try {
-            const [machRes, logsRes, empRes] = await Promise.all([
-                axiosInstance.get("/production/api/v1/machine/"),
-                axiosInstance.get("/production/api/v1/log/"),
-                axiosInstance.get("/accounts/api/v1/employee/list/"),
+            const [mach, logsAll, emp] = await Promise.all([
+                listAll<Machine>("/production/api/v1/machine/"),
+                listAll<ProductionLog>("/production/api/v1/log/"),
+                listAll<EmployeeItem>("/accounts/api/v1/employee/list/"),
             ]);
-            setMachines(extractList<Machine>(machRes.data));
-            setLogs(extractList<ProductionLog>(logsRes.data));
-            setEmployees(extractList<EmployeeItem>(empRes.data));
+            setMachines(mach);
+            setLogs(logsAll);
+            setEmployees(emp);
         } catch (err) {
             setPageError(parseBackendError(err, "دریافت اطلاعات تولید با خطا مواجه شد"));
         } finally {

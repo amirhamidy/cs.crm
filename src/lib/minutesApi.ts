@@ -1,5 +1,6 @@
 import axios from "axios";
 import axiosInstance from "@/lib/axiosInstance";
+import { listAll } from "@/lib/api";
 import type {
   MeetingCreatePayload,
   MeetingDetail,
@@ -24,20 +25,13 @@ const publicClient = axios.create({
   headers: { "Content-Type": "application/json" },
 });
 
-const unwrap = <T,>(data: T[] | { results?: T[] } | null | undefined): T[] =>
-  Array.isArray(data) ? data : data?.results ?? [];
-
 export const minutesApi = {
   /* ---------- Meetings ---------- */
   async listMeetings(params: { status?: MeetingStatus | ""; search?: string } = {}) {
     const query: Record<string, string> = {};
     if (params.status) query.status = params.status;
     if (params.search?.trim()) query.search = params.search.trim();
-    const res = await axiosInstance.get<MeetingListItem[] | { results?: MeetingListItem[] }>(
-      `${BASE}/meeting/list/`,
-      { params: query }
-    );
-    return unwrap(res.data);
+    return listAll<MeetingListItem>(`${BASE}/meeting/list/`, query);
   },
 
   async getMeeting(id: number) {
@@ -71,11 +65,7 @@ export const minutesApi = {
 
   /* ---------- Signers ---------- */
   async mySignatures(pendingOnly = false) {
-    const res = await axiosInstance.get<SignerItem[] | { results?: SignerItem[] }>(
-      `${BASE}/signer/my/`,
-      { params: pendingOnly ? { pending: 1 } : undefined }
-    );
-    return unwrap(res.data);
+    return listAll<SignerItem>(`${BASE}/signer/my/`, pendingOnly ? { pending: 1 } : {});
   },
 
   async createSigner(payload: SignerCreatePayload) {

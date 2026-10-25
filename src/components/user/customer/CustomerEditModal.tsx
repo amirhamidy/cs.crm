@@ -20,21 +20,12 @@ import {
     Plus,
 } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
+import { listAll } from "@/lib/api";
 import type { Customer, CustomerFormData } from "@/types/customer";
 
 interface CaseResource {
     id: number;
     title: string;
-}
-
-function extractList<T>(data: unknown): T[] {
-    if (Array.isArray(data)) return data as T[];
-    if (data && typeof data === "object") {
-        const obj = data as { results?: T[]; data?: T[] };
-        if (Array.isArray(obj.results)) return obj.results;
-        if (Array.isArray(obj.data)) return obj.data;
-    }
-    return [];
 }
 
 const STATUS_OPTIONS = [
@@ -562,8 +553,8 @@ export default function CustomerEditModal({
     const fetchResourcesList = useCallback(async () => {
         try {
             setLoadingResources(true);
-            const res = await axiosInstance.get("/tasks/api/v1/cases/resources/");
-            setResources(extractList<CaseResource>(res.data));
+            const all = await listAll<CaseResource>("/tasks/api/v1/cases/resources/");
+            setResources(all);
         } catch {
             setResources([]);
         } finally {

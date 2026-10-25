@@ -16,6 +16,7 @@ import {
     StickyNote,
 } from "lucide-react";
 import api from "@/lib/axiosInstance";
+import { listAll } from "@/lib/api";
 import {
     toJalali,
     toGregorian,
@@ -129,15 +130,6 @@ function buildMonth(jy: number, jm: number): MonthData {
         startISO: toISODate(jalaliToDate(jy, jm, 1)),
         endISO: toISODate(jalaliToDate(jy, jm, length)),
     };
-}
-function extractArray<T>(data: unknown): T[] {
-    if (Array.isArray(data)) return data as T[];
-    if (data && typeof data === "object") {
-        const record = data as Record<string, unknown>;
-        if (Array.isArray(record.results)) return record.results as T[];
-        if (Array.isArray(record.data)) return record.data as T[];
-    }
-    return [];
 }
 const DayCell = memo(function DayCell({
     day,
@@ -355,10 +347,9 @@ export default function PersianCalendar() {
     const endISO = visibleMonths[visibleMonths.length - 1]?.endISO ?? "";
     useEffect(() => {
         let cancelled = false;
-        api
-            .get("/note/api/v1/")
-            .then((res) => {
-                if (!cancelled) setNotes(extractArray<CalendarNote>(res.data));
+        listAll<CalendarNote>("/note/api/v1/")
+            .then((all) => {
+                if (!cancelled) setNotes(all);
             })
             .catch((error) => console.error("Notes fetch error:", error));
         return () => {

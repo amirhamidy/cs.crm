@@ -10,6 +10,7 @@ import {
     ClipboardList,
     ArrowLeftCircle,
     ArrowRightCircle,
+    ArrowLeftRight,
     ShoppingBag,
     XCircle,
     Ban,
@@ -73,6 +74,7 @@ function formatJalaliDate(iso?: string | null) {
 const ACTION_META: Record<string, { label: string; color: string; bg: string; icon: React.ElementType }> = {
     advanced: { label: "انتقال به مرحله بعد", color: "#6366f1", bg: "rgba(99,102,241,0.12)", icon: ArrowLeftCircle },
     reverted: { label: "بازگشت به مرحله قبل", color: "#ec4899", bg: "rgba(236,72,153,0.12)", icon: ArrowRightCircle },
+    transferred: { label: "انتقال به دپارتمان دیگر", color: "#0ea5e9", bg: "rgba(14,165,233,0.12)", icon: ArrowLeftRight },
     sold: { label: "فروش ثبت شد", color: "#f59e0b", bg: "rgba(245,158,11,0.12)", icon: ShoppingBag },
     unsold: { label: "فروش لغو شد", color: "#64748b", bg: "rgba(100,116,139,0.12)", icon: XCircle },
     cancelled: { label: "تسک لغو شد", color: "#ef4444", bg: "rgba(239,68,68,0.12)", icon: Ban },
@@ -157,7 +159,7 @@ function LogItem({ log, isLast, isDark }: { log: TaskLog; isLast: boolean; isDar
 
                 <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
                     <span className="text-[10.5px] font-bold" style={{ color: isDark ? "#64748b" : "#94a3b8" }}>
-                        مرحله:
+                        {log.action === "transferred" ? "مرحله‌ی دپارتمان قبلی:" : "مرحله:"}
                     </span>
                     <span
                         className="rounded-lg px-2 py-0.5 text-[10.5px] font-bold"

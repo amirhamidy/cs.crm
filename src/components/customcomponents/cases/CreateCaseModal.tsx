@@ -12,6 +12,7 @@ import {
     X,
 } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
+import { listAll } from "@/lib/api";
 import axios from "axios";
 import { apiRoutes } from "@/lib/apiRoutes";
 import type { Customer } from "@/types/customer";
@@ -22,16 +23,6 @@ type CreateCaseModalProps = {
     onCreated: () => Promise<void> | void;
     customers?: Customer[];
 };
-
-function extractList<T>(data: unknown): T[] {
-    if (Array.isArray(data)) return data as T[];
-    if (data && typeof data === "object") {
-        const obj = data as { results?: T[]; data?: T[] };
-        if (Array.isArray(obj.results)) return obj.results;
-        if (Array.isArray(obj.data)) return obj.data;
-    }
-    return [];
-}
 
 function customerDisplayName(c: Customer) {
     return c.full_name?.trim() || [c.first_name, c.last_name].filter(Boolean).join(" ").trim() || c.company_name?.trim() || `مشتری #${c.id}`;
@@ -126,8 +117,8 @@ export default function CreateCaseModal({
         (async () => {
             try {
                 setLoadingCustomers(true);
-                const res = await axiosInstance.get(apiRoutes.customers);
-                if (alive) setCustomers(extractList<Customer>(res.data));
+                const all = await listAll<Customer>(apiRoutes.customers);
+                if (alive) setCustomers(all);
             } catch {
                 if (alive) setCustomers([]);
             } finally {

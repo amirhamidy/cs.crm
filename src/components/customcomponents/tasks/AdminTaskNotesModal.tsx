@@ -14,6 +14,7 @@ import {
     FileText,
     ArrowLeftCircle,
     ArrowRightCircle,
+    ArrowLeftRight,
     User,
     Calendar,
     Clock3,
@@ -85,6 +86,12 @@ const ACTION_META: Record<
         color: "#ec4899",
         bg: "rgba(236,72,153,0.14)",
         icon: ArrowRightCircle,
+    },
+    transferred: {
+        label: "انتقال به دپارتمان دیگر",
+        color: "#0ea5e9",
+        bg: "rgba(14,165,233,0.14)",
+        icon: ArrowLeftRight,
     },
     sold: {
         label: "فروش ثبت شد",
@@ -487,7 +494,9 @@ export default function AdminTaskNotesModal({
                                                                         size={10}
                                                                     />
                                                                     <span>
-                                                                        مرحله:
+                                                                        {log.action === "transferred"
+                                                                            ? "مرحله‌ی دپارتمان قبلی:"
+                                                                            : "مرحله:"}
                                                                     </span>
                                                                     <span className="text-black dark:text-white">
                                                                         {

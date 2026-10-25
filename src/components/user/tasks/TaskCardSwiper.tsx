@@ -15,6 +15,7 @@ interface Props {
     accent: string;
     isLastStage: boolean;
     onUpdated: (task: UserTask) => void;
+    onTransferred?: (task: UserTask) => void;
     employeesMap: Record<number, string>;
     staffId: number; // این خط اضافه شود
 }
@@ -24,6 +25,7 @@ export default function TaskCardSwiper({
     accent,
     isLastStage,
     onUpdated,
+    onTransferred,
     employeesMap,
     staffId, // این خط اضافه شود
 }: Props) {
@@ -47,6 +49,7 @@ export default function TaskCardSwiper({
                             accent={accent}
                             isLastStage={isLastStage}
                             onUpdated={onUpdated}
+                            onTransferred={onTransferred}
                             employeesMap={employeesMap}
                             staffId={staffId} // این خط اضافه شود
                         />

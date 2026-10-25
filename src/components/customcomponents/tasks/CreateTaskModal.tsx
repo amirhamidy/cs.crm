@@ -15,6 +15,7 @@ import {
     UserPlus,
 } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
+import { listAll } from "@/lib/api";
 import { apiRoutes } from "@/lib/apiRoutes";
 import type { Customer } from "@/types/customer";
 
@@ -48,16 +49,6 @@ const initialOf = (text: string) => (text || "").trim().charAt(0) || "؟";
 
 function customerDisplayName(c: Customer) {
     return c.full_name?.trim() || [c.first_name, c.last_name].filter(Boolean).join(" ").trim() || c.company_name?.trim() || `مشتری #${c.id}`;
-}
-
-function extractList<T>(data: unknown): T[] {
-    if (Array.isArray(data)) return data as T[];
-    if (data && typeof data === "object") {
-        const obj = data as { results?: T[]; data?: T[] };
-        if (Array.isArray(obj.results)) return obj.results;
-        if (Array.isArray(obj.data)) return obj.data;
-    }
-    return [];
 }
 
 function FloatingInput({ label, id, value, onChange }: {
@@ -247,11 +238,11 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess }: Props) {
 
     useEffect(() => {
         if (!isOpen) return;
-        axiosInstance.get("/tasks/api/v1/cases/").then((r) => setCases(r.data.results ?? r.data)).catch(() => setCases([]));
-        axiosInstance.get("/department/api/v1/department/list/").then((r) => setDepartments(extractList<Department>(r.data))).catch(() => setDepartments([]));
-        axiosInstance.get("/department/api/v1/department_step/").then((r) => setDepartmentSteps(extractList<DepartmentStep>(r.data))).catch(() => setDepartmentSteps([]));
-        axiosInstance.get("/department/api/v1/department_employee/list/").then((r) => setEmployees(r.data.results ?? r.data)).catch(() => setEmployees([]));
-        axiosInstance.get(apiRoutes.customers).then((r) => setCustomers(extractList<Customer>(r.data))).catch(() => setCustomers([]));
+        listAll<Case>("/tasks/api/v1/cases/").then((all) => setCases(all)).catch(() => setCases([]));
+        listAll<Department>("/department/api/v1/department/list/").then((all) => setDepartments(all)).catch(() => setDepartments([]));
+        listAll<DepartmentStep>("/department/api/v1/department_step/").then((all) => setDepartmentSteps(all)).catch(() => setDepartmentSteps([]));
+        listAll<DepartmentEmployee>("/department/api/v1/department_employee/list/").then((all) => setEmployees(all)).catch(() => setEmployees([]));
+        listAll<Customer>(apiRoutes.customers).then((all) => setCustomers(all)).catch(() => setCustomers([]));
     }, [isOpen]);
 
     useEffect(() => { setSelectedEmployees([]); setSelectedStep(null); }, [selectedDepartment]);

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence } from "framer-motion";
 import { Award, Loader2, Plus, Minus, RefreshCw, Users } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
+import { listAll } from "@/lib/api";
 import { useAuthStore } from "@/store/authStore";
 import AdjustScoreModal from "@/components/admin/users/AdjustScoreModal";
 
@@ -18,10 +19,6 @@ type Assignment = {
 };
 type Score = { score?: number; total_score?: number };
 type Action = "add" | "deduct";
-
-function list<T>(data: T[] | { results?: T[] } | undefined): T[] {
-  return Array.isArray(data) ? data : data?.results ?? [];
-}
 
 export default function DepartmentScoreManager() {
   const username = useAuthStore((state) => state.username);
@@ -67,12 +64,10 @@ export default function DepartmentScoreManager() {
     else setLoading(true);
     setError("");
     try {
-      const [employeeResponse, assignmentResponse] = await Promise.all([
-        axiosInstance.get("/accounts/api/v1/employee/list/"),
-        axiosInstance.get("/department/api/v1/department_employee/list/"),
+      const [employeeList, assignmentList] = await Promise.all([
+        listAll<Employee>("/accounts/api/v1/employee/list/"),
+        listAll<Assignment>("/department/api/v1/department_employee/list/"),
       ]);
-      const employeeList = list<Employee>(employeeResponse.data);
-      const assignmentList = list<Assignment>(assignmentResponse.data);
       setEmployees(employeeList);
       setAssignments(assignmentList);
       const current = employeeList.find((employee) => employee.username === username);

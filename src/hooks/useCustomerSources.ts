@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import axiosInstance from "@/lib/axiosInstance";
+import { listAll } from "@/lib/api";
 import { AxiosResponse } from "axios";
 
 export type TimeRange = "weekly" | "monthly" | "yearly";
@@ -162,16 +163,10 @@ export function useCustomerSources() {
         setLoading(true);
         setError(null);
 
-        const [listRes, resourcesRes] = await Promise.all([
-          axiosInstance.get<CustomerListItem[]>("/customers/api/v1/customers/"),
-          axiosInstance.get<Resource[]>("/tasks/api/v1/cases/resources/"),
+        const [customers, resources] = await Promise.all([
+          listAll<CustomerListItem>("/customers/api/v1/customers/"),
+          listAll<Resource>("/tasks/api/v1/cases/resources/"),
         ]);
-
-        const customers = Array.isArray(listRes.data) ? listRes.data : [];
-
-        const resources = Array.isArray(resourcesRes.data)
-          ? resourcesRes.data
-          : [];
 
         const detailResults = await Promise.allSettled(
           customers.map((customer) =>

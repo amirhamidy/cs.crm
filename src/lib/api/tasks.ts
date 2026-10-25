@@ -1,6 +1,10 @@
 import axiosInstance from "@/lib/axiosInstance";
 import { apiRoutes } from "@/lib/apiRoutes";
-import type { TaskItem } from "@/types/task";
+import type {
+  TaskItem,
+  TransferTaskPayload,
+  TransferTaskResponse,
+} from "@/types/task";
 import type { PageParams } from "@/types/pagination";
 import {
   cached,
@@ -33,6 +37,70 @@ export interface FetchAllTasksOptions {
   caseId?: string | number | null;
   signal?: AbortSignal;
   fresh?: boolean;
+}
+
+/**
+ * پیام خطای قابل‌نمایش برای انتقال تسک.
+ * ساختارهای ممکن (طبق مستندات):
+ *  - 400 → { department: ["..."] }
+ *  - 400 → ["..."]  (خطای منطقی سرویس)
+ *  - 403/404 → { detail: "..." }
+ */
+export function parseTransferError(error: unknown): string {
+  const fallback = "انتقال تسک انجام نشد؛ لطفاً دوباره تلاش کنید";
+  const err = error as {
+    response?: { status?: number; data?: unknown };
+    message?: string;
+  };
+
+  if (!err?.response) {
+    return "اتصال به سرور برقرار نشد؛ اینترنت خود را بررسی کنید";
+  }
+
+  const { status, data } = err.response;
+
+  const first = (value: unknown): string | null => {
+    if (typeof value === "string") return value.trim() || null;
+    if (Array.isArray(value)) {
+      for (const item of value) {
+        const found = first(item);
+        if (found) return found;
+      }
+    }
+    return null;
+  };
+
+  const fromBody = (() => {
+    if (!data) return null;
+    if (typeof data === "string") {
+      // پاسخ HTML (مثلاً خطای ۵۰۰ سرور) نباید به کاربر نشان داده شود
+      return data.trim().startsWith("<") ? null : first(data);
+    }
+    if (Array.isArray(data)) return first(data);
+    if (typeof data === "object") {
+      const body = data as Record<string, unknown>;
+      return (
+        first(body.department) ??
+        first(body.detail) ??
+        first(body.non_field_errors) ??
+        first(body.message) ??
+        first(body.error) ??
+        first(body.note) ??
+        first(body.files) ??
+        first(Object.values(body))
+      );
+    }
+    return null;
+  })();
+
+  if (fromBody) return fromBody;
+
+  if (status === 403) return "شما اجازه‌ی انتقال این تسک را ندارید";
+  if (status === 404) return "تسک پیدا نشد یا به آن دسترسی ندارید";
+  if (status === 401) return "نشست شما منقضی شده؛ لطفاً دوباره وارد شوید";
+  if (status && status >= 500) return "خطای سرور؛ لطفاً دوباره تلاش کنید";
+
+  return fallback;
 }
 
 export function extractCaseId(task: TaskItem): string | null {
@@ -127,6 +195,34 @@ export const tasksApi = {
   remove: async (id: number) => {
     await axiosInstance.delete(`/tasks/api/v1/tasks/${id}/delete/`);
     invalidate(KEY);
+  },
+
+  /**
+   * انتقال تسک به دپارتمان دیگر
+   * POST /tasks/api/v1/tasks/{id}/transfer/   (multipart/form-data)
+   *
+   * Content-Type عمداً دستی تنظیم نمی‌شود؛ axiosInstance برای FormData
+   * آن را حذف می‌کند تا مرورگر boundary را خودش بگذارد.
+   */
+  transfer: async (
+    id: number | string,
+    { department, note, files = [] }: TransferTaskPayload,
+  ): Promise<TransferTaskResponse> => {
+    const form = new FormData();
+    form.append("department", String(department));
+
+    const trimmed = note?.trim();
+    if (trimmed) form.append("note", trimmed);
+
+    files.forEach((file) => form.append("files", file));
+
+    const { data } = await axiosInstance.post<TransferTaskResponse>(
+      apiRoutes.transferTask(Number(id)),
+      form,
+    );
+
+    invalidate(KEY);
+    return data;
   },
 
   invalidate: () => invalidate(KEY),

@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import axiosInstance from "@/lib/axiosInstance";
+import { listAll } from "@/lib/api";
 import { useCurrentEmployee } from "@/hooks/usecurrentemployee";
 import { toPersianDigits } from "@/lib/jalali";
 
@@ -51,12 +52,12 @@ export default function UserProductionLogsPage() {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [logsRes, machRes] = await Promise.all([
-        axiosInstance.get<ProductionLog[]>("/production/api/v1/log/"),
-        axiosInstance.get("/production/api/v1/machine/?is_active=true"),
+      const [allLogs, allMachines] = await Promise.all([
+        listAll<ProductionLog>("/production/api/v1/log/"),
+        listAll<any>("/production/api/v1/machine/", { is_active: true }),
       ]);
-      setLogs(logsRes.data || []);
-      setMachines(machRes.data || []);
+      setLogs(allLogs);
+      setMachines(allMachines);
     } catch (err) {
       console.error(err);
     } finally {

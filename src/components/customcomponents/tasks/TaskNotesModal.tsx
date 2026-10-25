@@ -14,6 +14,7 @@ import {
     FileText,
     ArrowLeftCircle,
     ArrowRightCircle,
+    ArrowLeftRight,
     User,
     Calendar,
     Clock3,
@@ -80,6 +81,12 @@ const ACTION_META: Record<
         color: "#ec4899",
         bg: "rgba(236,72,153,0.14)",
         icon: ArrowRightCircle,
+    },
+    transferred: {
+        label: "انتقال به دپارتمان دیگر",
+        color: "#0ea5e9",
+        bg: "rgba(14,165,233,0.14)",
+        icon: ArrowLeftRight,
     },
     sold: {
         label: "فروش ثبت شد",
@@ -376,7 +383,7 @@ export default function TaskNotesModal({ isOpen, onClose, taskId, taskTitle }: P
                                                         {log.step_name && (
                                                             <div className="flex items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-[10px] font-bold bg-white/[0.04] text-gray-500 dark:text-gray-400">
                                                                 <Layers3 size={10} />
-                                                                <span>مرحله:</span>
+                                                                <span>{log.action === "transferred" ? "مرحله‌ی دپارتمان قبلی:" : "مرحله:"}</span>
                                                                 <span className="text-gray-200 dark:text-white">{log.step_name}</span>
                                                             </div>
                                                         )}

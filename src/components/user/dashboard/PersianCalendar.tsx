@@ -10,6 +10,7 @@ import {
     Layers3,
 } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
+import { listAll } from "@/lib/api";
 import CalendarNoteModal, { CalendarNote } from "./CalendarNoteModal";
 
 interface CalendarEvent {
@@ -126,12 +127,12 @@ export default function PersianCalendar() {
         setLoading(true);
         try {
             const { start, end } = getMonthRange(currentMonth);
-            const [calendarRes, notesRes] = await Promise.all([
+            const [calendarRes, allNotes] = await Promise.all([
                 axiosInstance.get(`/appraisal/api/v1/calendar/?start=${toDateKey(start)}&end=${toDateKey(end)}`),
-                axiosInstance.get("/note/api/v1/"),
+                listAll<CalendarNote>("/note/api/v1/"),
             ]);
             setCalendarEvents(Array.isArray(calendarRes.data?.events) ? calendarRes.data.events : []);
-            setNotes(Array.isArray(notesRes.data) ? notesRes.data : []);
+            setNotes(allNotes);
         } catch {
             setCalendarEvents([]);
             setNotes([]);

@@ -28,11 +28,10 @@ import {
     fetchWarehouseProductsPage,
     fetchWarehouseStocks,
 } from "@/lib/warehouseApi";
-import { productIdsOf } from "@/lib/warehouseScope";
 import type { ApiStockInfo } from "@/types/warehouse";
 
 /** تعداد محصول در هر صفحهٔ لیست کناری */
-const PRODUCT_LIST_PAGE_SIZE = 20;
+const PRODUCT_LIST_PAGE_SIZE = 40;
 
 interface Product {
     id: number;
@@ -234,14 +233,11 @@ export default function WarehouseEmployeeStockLedger({
         };
     }, [warehouseId]);
 
-    const stockProductIds = useMemo(() => productIdsOf(stocks), [stocks]);
-
     // لیست محصولات: صفحه‌بندی و جستجو سمت سرور
     const list = usePaginatedList<Product>(
         async (params, signal) => {
             const res = await fetchWarehouseProductsPage(
                 warehouseId as number,
-                stockProductIds,
                 {
                     page: params.page ?? 1,
                     pageSize: PRODUCT_LIST_PAGE_SIZE,

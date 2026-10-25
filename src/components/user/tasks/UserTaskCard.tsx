@@ -7,6 +7,7 @@ import { motion } from "framer-motion";
 import {
     AlarmClock,
     ArrowLeftCircle,
+    ArrowLeftRight,
     ArrowRightCircle,
     Ban,
     Building2,
@@ -33,6 +34,7 @@ import TaskNotesModal from "./TaskNotesModal";
 import TaskActionModal from "./TaskActionModal";
 import SoldOrderTaskModal from "./SoldOrderTaskModal";
 import TaskLogsModal from "./TaskLogsModal";
+import TaskTransferModal from "./TaskTransferModal";
 import ActionBtn from "./ActionBtn";
 
 import {
@@ -43,6 +45,7 @@ import {
 } from "@/lib/jalali";
 
 import type { UserTask } from "./types";
+import type { TransferTaskResponse } from "@/types/task";
 
 const GRADIENTS = [
     ["#6366f1", "#8b5cf6"],
@@ -74,6 +77,8 @@ interface Props {
     accent?: string;
     isLastStage: boolean;
     onUpdated: (task: UserTask) => void;
+    /** بعد از انتقال موفق تسک به دپارتمان دیگر */
+    onTransferred?: (task: UserTask) => void;
     employeesMap?: Record<number, string>;
     staffId: number;
 }
@@ -232,6 +237,7 @@ export default function UserTaskCard({
     accent = "#6366f1",
     isLastStage,
     onUpdated,
+    onTransferred,
     employeesMap = {},
     staffId,
 }: Props) {
@@ -250,6 +256,7 @@ export default function UserTaskCard({
 
     const [openModal, setOpenModal] = useState<ModalType | null>(null);
     const [logsOpen, setLogsOpen] = useState(false);
+    const [transferOpen, setTransferOpen] = useState(false);
     const [notesOpen, setNotesOpen] = useState(false);
     const [caseDescOpen, setCaseDescOpen] = useState(false);
     const [submitting, setSubmitting] = useState(false);
@@ -268,6 +275,10 @@ export default function UserTaskCard({
     const isSold = status === "sold";
     const isCancelled = status === "cancelled";
     const isCompleted = (status as string) === "completed";
+
+    // فقط کارمندِ مسئولِ فعلیِ تسک در حال انجام می‌تواند آن را منتقل کند
+    const canTransfer =
+        isActive && staffId > 0 && assigneeIds.includes(Number(staffId));
 
     const deadline = formatJalali(schedule.deadline);
     const started = formatJalali(schedule.started_at);
@@ -452,6 +463,27 @@ export default function UserTaskCard({
         } finally {
             setSubmitting(false);
         }
+    }
+
+    function handleTransferred(response: TransferTaskResponse) {
+        const { name_department, name_step_current, ...rest } = response;
+
+        const merged = {
+            ...task,
+            ...rest,
+            department_name:
+                response.department_name ??
+                name_department ??
+                task.department_name,
+            current_step_name:
+                name_step_current ??
+                response.current_step_name ??
+                task.current_step_name,
+            attachments: response.attachments ?? task.attachments,
+        } as unknown as UserTask;
+
+        // اگر والد هندلر مخصوص انتقال نداده باشد، همان به‌روزرسانی عادی انجام می‌شود
+        (onTransferred ?? onUpdated)(merged);
     }
 
     async function submitSale(data: {
@@ -786,6 +818,18 @@ export default function UserTaskCard({
                             </div>
 
                             <div className="mt-1.5 flex flex-col gap-1.5">
+                                {canTransfer && (
+                                    <ActionBtn
+                                        rippleKey={`transfer-${task.id}`}
+                                        active={false}
+                                        onClick={() => setTransferOpen(true)}
+                                        color="indigo"
+                                        icon={<ArrowLeftRight size={13} />}
+                                        label="انتقال به دپارتمان دیگر"
+                                        full
+                                    />
+                                )}
+
                                 <ActionBtn
                                     rippleKey={`complete-${task.id}`}
                                     active={false}
@@ -859,6 +903,22 @@ export default function UserTaskCard({
                     onSubmit={submitSale}
                     staffId={staffId}
                     submitting={submitting}
+                />
+            )}
+
+            {canTransfer && (
+                <TaskTransferModal
+                    isOpen={transferOpen}
+                    onClose={() => setTransferOpen(false)}
+                    taskId={task.id}
+                    taskTitle={task.title}
+                    currentDepartmentId={
+                        Number.isFinite(departmentId) && departmentId > 0
+                            ? departmentId
+                            : undefined
+                    }
+                    currentDepartmentName={task.department_name}
+                    onTransferred={handleTransferred}
                 />
             )}
 

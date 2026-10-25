@@ -26,7 +26,7 @@ import { Department } from "@/components/admin/departments/types";
 import DepartmentCard from "@/components/admin/departments/DepartmentCard";
 import DeleteModal from "@/components/admin/departments/DeleteModal";
 import AddDepartmentModal from "@/components/admin/departments/AddDepartmentDrawer";
-import axiosInstance from "@/lib/axiosInstance";
+import { listAll } from "@/lib/api";
 
 interface FloatingInputProps
     extends InputHTMLAttributes<HTMLInputElement> {
@@ -157,10 +157,8 @@ export default function DepartmentsPage() {
 
     const fetchTasks = async () => {
         try {
-            const response = await axiosInstance.get(
-                "/tasks/api/v1/tasks/"
-            );
-            setTasks(extractTasks(response.data));
+            const all = await listAll<unknown>("/tasks/api/v1/tasks/");
+            setTasks(extractTasks(all));
         } catch {
             setTasks([]);
         }
