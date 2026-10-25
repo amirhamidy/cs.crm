@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Archive, Check, ClipboardList, Eye, Loader, Plus, RefreshCw } from "lucide-react";
+import { Archive, Check, ClipboardList, Eye, Plus, RefreshCw } from "lucide-react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import axiosInstance from "@/lib/axiosInstance";
@@ -10,6 +10,7 @@ import { apiRoutes } from "@/lib/apiRoutes";
 import { listAll, tasksApi } from "@/lib/api";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import Pagination from "@/components/ui/Pagination";
+import CardSkeletonGrid from "@/components/ui/CardSkeletonGrid";
 import { Task, TaskStatus } from "@/types/task";
 import { Department } from "@/types/department";
 import SuspenseWrapper from "@/components/SuspenseWrapper";
@@ -28,7 +29,7 @@ function AdminTasksPageContent() {
     const { resolvedTheme } = useTheme();
     const isDark = resolvedTheme === "dark";
 
-    const list = usePaginatedList<Task>((params, signal) => tasksApi.page({ ...params, status: ACTIVE_STATUS } as never, signal), { pageSize: 12 });
+    const list = usePaginatedList<Task>((params, signal) => tasksApi.page({ ...params, status: ACTIVE_STATUS } as never, signal), { pageSize: 12, scrollTop: true });
     const [removed, setRemoved] = useState<Set<number>>(new Set());
     const [patched, setPatched] = useState<Map<number, Task>>(new Map());
     const tasks = useMemo(
@@ -39,7 +40,7 @@ function AdminTasksPageContent() {
     const [departments, setDepartments] = useState<Department[]>([]);
     const [employees, setEmployees] = useState<Employee[]>([]);
     const [metaLoading, setMetaLoading] = useState(true);
-    const loading = metaLoading || (list.loading && list.data.length === 0);
+    const loading = metaLoading || list.loading;
     const [showCreate, setShowCreate] = useState(false);
     const [showCreateNoCase, setShowCreateNoCase] = useState(false);
     const [editingTask, setEditingTask] = useState<Task | null>(null);
@@ -201,12 +202,7 @@ function AdminTasksPageContent() {
                 className="w-full rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 text-[12.5px] text-gray-700 outline-none transition-colors focus:border-indigo-400 dark:border-white/10 dark:bg-white/[0.03] dark:text-gray-200"
             />
 
-            {loading && (
-                <div className="flex flex-col items-center justify-center gap-3 py-16">
-                    <Loader size={24} className="animate-spin text-indigo-500" />
-                    <p className="text-[12.5px] text-gray-500 dark:text-gray-400">در حال دریافت لیست وظایف...</p>
-                </div>
-            )}
+            {loading && <CardSkeletonGrid count={6} />}
 
             {!loading && tasks.length === 0 && (
                 <div className="flex flex-col items-center justify-center gap-2 py-16">
@@ -216,8 +212,8 @@ function AdminTasksPageContent() {
             )}
 
             {!loading && tasks.length > 0 && (
-                <motion.div layout className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                    <AnimatePresence mode="popLayout">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                    <>
                         {tasks.map((task, index) => {
                             const isHighlighted = highlightedTaskId === task.id;
                             const isViewed = viewedTaskId === task.id;
@@ -225,7 +221,6 @@ function AdminTasksPageContent() {
                             return (
                                 <motion.div
                                     key={task.id}
-                                    layout
                                     className="relative"
                                     animate={{ scale: isHighlighted ? [1, 1.012, 1] : 1 }}
                                     transition={isHighlighted ? { duration: 1.4, repeat: Infinity, ease: "easeInOut" } : { duration: 0.2 }}
@@ -286,8 +281,8 @@ function AdminTasksPageContent() {
                                 </motion.div>
                             );
                         })}
-                    </AnimatePresence>
-                </motion.div>
+                    </>
+                </div>
             )}
 
             {list.totalPages > 1 && <Pagination page={list.page} totalPages={list.totalPages} onChange={list.setPage} />}

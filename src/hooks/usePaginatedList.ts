@@ -20,6 +20,8 @@ interface Options<F extends ListFilters> {
   delay?: number;
   enabled?: boolean;
   initialPage?: number;
+  /** با تغییر صفحه، صفحه از بالا نمایش داده شود (به‌جای ماندن کنار صفحه‌بندی) */
+  scrollTop?: boolean;
 }
 
 const normalize = (q: string) => q.trim().replace(/\s+/g, " ");
@@ -35,6 +37,7 @@ export function usePaginatedList<T, F extends ListFilters = ListFilters>(
     delay = 300,
     enabled = true,
     initialPage = 1,
+    scrollTop = false,
   } = opts;
 
   const [page, setPageState] = useState(initialPage);
@@ -75,6 +78,17 @@ export function usePaginatedList<T, F extends ListFilters = ListFilters>(
   }, [search, delay, appliedSearch]);
 
   const filtersKey = JSON.stringify(filters);
+
+  const firstPage = useRef(true);
+  useEffect(() => {
+    if (firstPage.current) {
+      firstPage.current = false;
+      return;
+    }
+    if (scrollTop && typeof window !== "undefined") {
+      window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+    }
+  }, [page, scrollTop]);
 
   useEffect(() => {
     if (!enabled) {

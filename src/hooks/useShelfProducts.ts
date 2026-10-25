@@ -12,7 +12,12 @@ type Options = {
   reloadKey?: number;
 };
 
-export function useShelfProducts({ shelfCode, page, enabled, reloadKey = 0 }: Options) {
+export function useShelfProducts({
+  shelfCode,
+  page,
+  enabled,
+  reloadKey = 0,
+}: Options) {
   const [items, setItems] = useState<ApiProduct[]>([]);
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -31,7 +36,7 @@ export function useShelfProducts({ shelfCode, page, enabled, reloadKey = 0 }: Op
     setError("");
 
     fetchProductsByShelf(shelfCode, page, controller.signal)
-      .then((result) => {
+      .then((result: { items: ApiProduct[]; count: number }) => {
         if (controller.signal.aborted) return;
         setItems(result.items);
         setTotalPages(Math.max(1, Math.ceil(result.count / PAGE_SIZE)));

@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import Pagination from "@/components/ui/Pagination";
-import { usePagination } from "@/hooks/usePagination";
-import { AnimatePresence, motion } from "framer-motion";
+import CardSkeletonGrid from "@/components/ui/CardSkeletonGrid";
+import { usePaginatedList } from "@/hooks/usePaginatedList";
 import { Archive, CheckCircle2, Filter, Loader2, PackageCheck, Search, X, XCircle } from "lucide-react";
 import { tasksApi } from "@/lib/api/tasks";
 import { useCurrentEmployee } from "@/hooks/usecurrentemployee";
@@ -41,86 +41,84 @@ const STATUS_FILTERS = [
     { key: "cancelled" as StatusFilter, label: "لغو شده", icon: XCircle },
 ];
 
+const ARCHIVE_PAGE_SIZE = 12;
+
+/** اگر بک‌اند فیلتر department_id/status را اعمال نکند، خودکار به «حالت امن» می‌رود. */
+let archiveSafeMode = false;
+
 export default function ArchivedTasksBoard() {
     const { departments, departmentIds, loading: employeeLoading, error: employeeError } = useCurrentEmployee();
-    const [tasks, setTasks] = useState<ArchiveTask[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
     const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
     const [departmentFilter, setDepartmentFilter] = useState<DepartmentFilter>("all");
-    const [search, setSearch] = useState("");
-    const [appliedSearch, setAppliedSearch] = useState("");
 
-    // جستجو سمت سرور (با نرمال‌سازی فارسی/عربی و ارقام) و با تأخیر ۳۰۰ms
-    useEffect(() => {
-        const q = search.trim().replace(/\s+/g, " ");
-        if (q === appliedSearch) return;
-        const timer = setTimeout(() => setAppliedSearch(q), 300);
-        return () => clearTimeout(timer);
-    }, [search, appliedSearch]);
+    // اگر کاربر فقط عضو یک دپارتمان است، همان به سرور فرستاده می‌شود
+    const effectiveDepartment =
+        departmentFilter !== "all"
+            ? departmentFilter
+            : departmentIds.length === 1
+                ? Number(departmentIds[0])
+                : undefined;
 
-    useEffect(() => {
-        if (employeeLoading) return;
+    const allowed = useMemo(() => departmentIds.map(Number), [departmentIds]);
 
-        if (employeeError) {
-            setTasks([]);
-            setLoading(false);
-            setError(employeeError);
-            return;
-        }
+    const list = usePaginatedList<ArchiveTask, { department_id?: number; status?: string }>(
+        async (params, signal) => {
+            const { department_id, status, search } = params;
+            const page = params.page ?? 1;
+            const pageSize = params.page_size ?? ARCHIVE_PAGE_SIZE;
 
-        if (!departmentIds.length) {
-            setTasks([]);
-            setLoading(false);
-            setError(null);
-            return;
-        }
+            const matches = (task: ArchiveTask) =>
+                (!status || task.status === status) &&
+                (department_id
+                    ? Number(task.department_id) === department_id
+                    : allowed.includes(Number(task.department_id)));
 
-        let mounted = true;
-        setLoading(true);
-        setError(null);
-
-        tasksApi
-            .archiveAll<ArchiveTask>(appliedSearch)
-            .then((data) => {
-                if (!mounted) return;
-                setTasks(
-                    data.filter((task) =>
-                        departmentIds.includes(Number(task.department_id))
-                    )
+            if (!archiveSafeMode) {
+                const res = await tasksApi.archivePage<ArchiveTask>(
+                    { page, page_size: pageSize, search, department_id, status } as never,
+                    signal
                 );
-            })
-            .catch(() => {
-                if (!mounted) return;
-                setTasks([]);
-                setError("دریافت تسک‌های آرشیو شده انجام نشد");
-            })
-            .finally(() => {
-                if (mounted) setLoading(false);
-            });
+                if (res.results.every(matches)) return res;
+                archiveSafeMode = true;
+            }
 
-        return () => {
-            mounted = false;
-        };
-    }, [employeeLoading, employeeError, departmentIds, appliedSearch]);
-
-    const filteredTasks = useMemo(
-        () =>
-            tasks.filter(
-                (task) =>
-                    (departmentFilter === "all" ||
-                        Number(task.department_id) === departmentFilter) &&
-                    (statusFilter === "all" || task.status === statusFilter)
-            ),
-        [tasks, departmentFilter, statusFilter]
+            const all = (await tasksApi.archiveAll<ArchiveTask>(search)).filter(matches);
+            const start = (page - 1) * pageSize;
+            return {
+                count: all.length,
+                next: start + pageSize < all.length ? "client" : null,
+                previous: page > 1 ? "client" : null,
+                results: all.slice(start, start + pageSize),
+            };
+        },
+        {
+            pageSize: ARCHIVE_PAGE_SIZE,
+            scrollTop: true,
+            enabled: !employeeLoading && !employeeError && allowed.length > 0,
+            filters: { department_id: effectiveDepartment, status: statusFilter === "all" ? undefined : statusFilter },
+        }
     );
 
-    const pager = usePagination(filteredTasks, 20, `${departmentFilter}|${statusFilter}|${appliedSearch}`);
+    // وقتی فیلتر دپارتمان/وضعیت عوض می‌شود، صفحه از ۱ شروع می‌شود (هوک انجام می‌دهد)
+    const applyStatus = (value: StatusFilter) => {
+        setStatusFilter(value);
+        list.setFilters({ status: value === "all" ? undefined : value });
+    };
+    const applyDepartment = (value: DepartmentFilter) => {
+        setDepartmentFilter(value);
+        list.setFilters({
+            department_id: value === "all" ? (allowed.length === 1 ? allowed[0] : undefined) : value,
+        });
+    };
+
+    const loading = list.loading;
+    const error = employeeError ?? (list.error ? "دریافت تسک‌های آرشیو شده انجام نشد" : null);
+    const tasks = list.data;
 
     const groupedTasks = useMemo(
         () =>
             Object.values(
-                pager.pageItems.reduce<
+                tasks.reduce<
                     Record<
                         string,
                         {
@@ -140,13 +138,12 @@ export default function ArchivedTasksBoard() {
                     return groups;
                 }, {})
             ),
-        [pager.pageItems]
+        [tasks]
     );
 
-    const handleReopened = (taskId: number) =>
-        setTasks((items) => items.filter((task) => task.task_id !== taskId));
+    const handleReopened = () => list.refetch();
 
-    if (employeeLoading || loading) {
+    if (employeeLoading) {
         return (
             <div className="flex min-h-[320px] items-center justify-center" dir="rtl">
                 <div className="flex flex-col items-center gap-3">
@@ -193,7 +190,7 @@ export default function ArchivedTasksBoard() {
                     <div className="flex items-center gap-2">
                         <div className="flex h-9 items-center gap-1.5 rounded-xl bg-indigo-500/10 px-3 text-[10px] font-black text-indigo-500">
                             <Archive size={12} />
-                            {filteredTasks.length} تسک
+                            {list.count} تسک
                         </div>
                         {departments.length > 1 && (
                             <div className="rounded-xl bg-gray-100 px-3 py-2 text-[10px] font-bold text-gray-500 dark:bg-white/[.04] dark:text-gray-400">
@@ -212,13 +209,13 @@ export default function ArchivedTasksBoard() {
                     <div className="relative mb-3">
                         <Search size={14} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
                         <input
-                            value={search}
-                            onChange={(e) => setSearch(e.target.value)}
+                            value={list.search}
+                            onChange={(e) => list.setSearch(e.target.value)}
                             placeholder="جستجو در عنوان، مشتری، دپارتمان، مرحله..."
                             className="h-10 w-full rounded-xl border border-gray-200 bg-white pl-9 pr-9 text-[11.5px] font-semibold text-gray-700 outline-none transition-colors focus:border-indigo-400 dark:border-white/10 dark:bg-white/[0.03] dark:text-gray-200"
                         />
-                        {search && (
-                            <button type="button" onClick={() => setSearch("")} className="absolute left-2.5 top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded-full text-gray-400 hover:text-gray-600">
+                        {list.search && (
+                            <button type="button" onClick={() => list.setSearch("")} className="absolute left-2.5 top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded-full text-gray-400 hover:text-gray-600">
                                 <X size={12} />
                             </button>
                         )}
@@ -227,7 +224,7 @@ export default function ArchivedTasksBoard() {
                     <div className="flex flex-wrap gap-2">
                         <button
                             type="button"
-                            onClick={() => setDepartmentFilter("all")}
+                            onClick={() => applyDepartment("all")}
                             className={`rounded-xl px-3 py-2 text-[9.5px] font-extrabold transition ${departmentFilter === "all"
                                     ? "bg-indigo-500 text-white shadow-lg shadow-indigo-500/20"
                                     : "bg-gray-100 text-gray-500 hover:bg-gray-200 dark:bg-white/[.04] dark:text-gray-400 dark:hover:bg-white/[.07]"
@@ -240,7 +237,7 @@ export default function ArchivedTasksBoard() {
                             <button
                                 key={department.id}
                                 type="button"
-                                onClick={() => setDepartmentFilter(department.id)}
+                                onClick={() => applyDepartment(department.id)}
                                 className={`rounded-xl px-3 py-2 text-[9.5px] font-extrabold transition ${departmentFilter === department.id
                                         ? "bg-indigo-500 text-white shadow-lg shadow-indigo-500/20"
                                         : "bg-gray-100 text-gray-500 hover:bg-gray-200 dark:bg-white/[.04] dark:text-gray-400 dark:hover:bg-white/[.07]"
@@ -258,7 +255,7 @@ export default function ArchivedTasksBoard() {
                                 <button
                                     key={key}
                                     type="button"
-                                    onClick={() => setStatusFilter(key)}
+                                    onClick={() => applyStatus(key)}
                                     className={`flex items-center gap-1.5 rounded-xl px-3 py-2 text-[9.5px] font-extrabold transition ${active
                                             ? "bg-gray-900 text-white dark:bg-white dark:text-gray-900"
                                             : "bg-gray-100 text-gray-500 hover:bg-gray-200 dark:bg-white/[.04] dark:text-gray-400 dark:hover:bg-white/[.07]"
@@ -273,10 +270,10 @@ export default function ArchivedTasksBoard() {
                 </div>
             </div>
 
-            {!filteredTasks.length ? (
-                <motion.div
-                    initial={{ opacity: 0, y: 8 }}
-                    animate={{ opacity: 1, y: 0 }}
+            {loading ? (
+                <CardSkeletonGrid count={8} className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4" />
+            ) : !tasks.length ? (
+                <div
                     className="flex min-h-[280px] flex-col items-center justify-center rounded-[1.7rem] border border-dashed border-gray-200 bg-white/60 px-5 dark:border-white/[.07] dark:bg-white/[.02]"
                 >
                     <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gray-100 dark:bg-white/[.04]">
@@ -288,17 +285,11 @@ export default function ArchivedTasksBoard() {
                     <p className="mt-1.5 text-center text-[10px] font-medium text-gray-400">
                         برای دپارتمان یا وضعیت انتخاب‌شده تسکی وجود ندارد.
                     </p>
-                </motion.div>
+                </div>
             ) : (
                 <div className="space-y-7">
                     {groupedTasks.map((department) => (
-                        <motion.section
-                            key={department.departmentId}
-                            layout
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            className="space-y-3"
-                        >
+                        <section key={department.departmentId} className="space-y-3">
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-2">
                                     <div className="h-7 w-1 rounded-full bg-indigo-500" />
@@ -316,22 +307,21 @@ export default function ArchivedTasksBoard() {
                                 </span>
                             </div>
 
-                            <AnimatePresence mode="popLayout">
-                                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
-                                    {department.tasks.map((task) => (
-                                        <ArchivedTaskCard
-                                            key={task.id}
-                                            task={task}
-                                            onReopened={handleReopened}
-                                        />
-                                    ))}
-                                </div>
-                            </AnimatePresence>
-                        </motion.section>
+                            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+                                {department.tasks.map((task) => (
+                                    <ArchivedTaskCard
+                                        key={task.id}
+                                        task={task}
+                                        onReopened={handleReopened}
+                                    />
+                                ))}
+                            </div>
+                        </section>
                     ))}
-                    {pager.totalPages > 1 && <Pagination page={pager.page} totalPages={pager.totalPages} onChange={pager.setPage} />}
                 </div>
             )}
+
+            {list.totalPages > 1 && <Pagination page={list.page} totalPages={list.totalPages} onChange={list.setPage} />}
         </div>
     );
 }

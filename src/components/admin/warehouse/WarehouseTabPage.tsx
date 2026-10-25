@@ -53,6 +53,7 @@ import WarehouseEmployeeOrderTaskCard from "@/components/user/warehouse/Warehous
 import WarehouseEmployeeStockLedger from "@/components/user/warehouse/Warehouseemployeestockledger";
 import OrderInvoiceCard from "@/components/user/warehouse/OrderInvoiceCard";
 import OrderInvoiceModal from "@/components/user/warehouse/OrderInvoiceModal";
+import CardSkeletonGrid from "@/components/ui/CardSkeletonGrid";
 import ShelfFilterBar from "@/components/user/warehouse/ShelfFilterBar";
 import { useWarehouseShelves } from "@/hooks/useWarehouseShelves";
 import { buildSalesInvoices, getOrderTaskTitle } from "@/utils/warehouseEmployee";
@@ -421,9 +422,7 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
     const titleClass = "text-[14px] font-extrabold text-gray-900 dark:text-white";
     const subtitleClass = "mt-1 text-[11.5px] text-gray-500 dark:text-gray-400";
     const spinner = (
-        <div className="flex items-center justify-center py-20">
-            <Loader2 size={22} className="animate-spin" style={{ color: "#6366f1" }} />
-        </div>
+        <CardSkeletonGrid count={8} className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3" />
     );
 
     return (

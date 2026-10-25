@@ -2,13 +2,14 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Archive, ClipboardList, Loader, Plus, RefreshCw } from "lucide-react";
+import { Archive, ClipboardList, Plus, RefreshCw } from "lucide-react";
 import { useRouter } from "next/navigation";
 import axiosInstance from "@/lib/axiosInstance";
 import { apiRoutes } from "@/lib/apiRoutes";
 import { listAll, tasksApi } from "@/lib/api";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import Pagination from "@/components/ui/Pagination";
+import CardSkeletonGrid from "@/components/ui/CardSkeletonGrid";
 import { useAuthStore } from "@/store/authStore";
 import type { Task, TaskStatus } from "@/types/task";
 import type { Customer } from "@/types/customer";
@@ -82,7 +83,7 @@ export default function UserTasksPage() {
             );
             return { ...res, results: detailed };
         },
-        { pageSize: PAGE_SIZE, enabled: !metaLoading }
+        { pageSize: PAGE_SIZE, enabled: !metaLoading, scrollTop: true }
     );
 
     const tasks = useMemo(() => {
@@ -96,7 +97,7 @@ export default function UserTasksPage() {
         return mine.filter((task) => task.status === ACTIVE_STATUS && !removed.has(task.id));
     }, [list.data, empId, userId, removed]);
 
-    const loading = metaLoading || (list.loading && list.data.length === 0);
+    const loading = metaLoading || list.loading;
 
     const fetchMeta = useCallback(async () => {
         try {
@@ -188,22 +189,17 @@ export default function UserTasksPage() {
             <input value={list.search} onChange={(e) => list.setSearch(e.target.value)} placeholder="جستجو در عنوان یا توضیحات..." className="w-full rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 text-[12.5px] text-gray-700 outline-none transition-colors focus:border-indigo-400 dark:border-white/10 dark:bg-white/[0.03] dark:text-gray-200" />
 
             {loading ? (
-                <div className="flex flex-col items-center justify-center gap-3 py-16">
-                    <Loader size={22} className="animate-spin text-indigo-500" />
-                    <p className="text-[12.5px] text-gray-400 dark:text-gray-500">در حال دریافت لیست وظایف...</p>
-                </div>
+                <CardSkeletonGrid count={6} className="grid grid-cols-1 gap-3 lg:grid-cols-2 xl:grid-cols-3" />
             ) : tasks.length === 0 ? (
                 <div className="flex flex-col items-center justify-center gap-3 py-20">
                     <p className="text-[13px] text-gray-400 dark:text-gray-500">تسک در حال انجامی برای شما یافت نشد</p>
                 </div>
             ) : (
-                <motion.div layout className="grid grid-cols-1 gap-3 lg:grid-cols-2 xl:grid-cols-3">
-                    <AnimatePresence mode="popLayout">
-                        {tasks.map((task) => (
-                            <TaskCard key={task.id} task={task} employees={employees} onEdit={() => setEditingTask(task)} onDelete={handleDelete} />
-                        ))}
-                    </AnimatePresence>
-                </motion.div>
+                <div className="grid grid-cols-1 gap-3 lg:grid-cols-2 xl:grid-cols-3">
+                    {tasks.map((task) => (
+                        <TaskCard key={task.id} task={task} employees={employees} onEdit={() => setEditingTask(task)} onDelete={handleDelete} />
+                    ))}
+                </div>
             )}
 
             {list.totalPages > 1 && <Pagination page={list.page} totalPages={list.totalPages} onChange={list.setPage} />}

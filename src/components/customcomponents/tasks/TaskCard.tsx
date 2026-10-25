@@ -290,11 +290,6 @@ export default function TaskCard({
     return (
         <>
             <motion.div
-                layout
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                transition={{ duration: 0.2, delay: index * 0.05 }}
                 onHoverStart={() => setHovered(true)}
                 onHoverEnd={() => setHovered(false)}
                 className="relative flex min-h-[130px] flex-col gap-3 overflow-hidden rounded-2xl p-4"
