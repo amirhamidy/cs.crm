@@ -1,12 +1,24 @@
 import axiosInstance from "@/lib/axiosInstance";
-import { JALALI_MONTHS, toJalali, toPersianDigits } from "@/lib/jalali";
+import { toPersianDigits } from "@/lib/jalali";
 
-const TIME_ZONE = "Asia/Tehran";
-const DAY_MS = 86_400_000;
-const DETAIL_CONCURRENCY = 8;
+/* ------------------------------------------------------------------ */
+/*  Dashboard API  (/dashboard/api/v1/...)                             */
+/* ------------------------------------------------------------------ */
+
+const BASE = "/dashboard/api/v1";
 const CACHE_TTL_MS = 30_000;
 
+export type Period = "weekly" | "monthly" | "yearly";
+export const PERIODS: Period[] = ["weekly", "monthly", "yearly"];
 
+export const dashboardRoutes = {
+  summary: `${BASE}/summary/`,
+  salesChart: `${BASE}/sales-chart/`,
+  customerSources: `${BASE}/customer-sources/`,
+  cancelledByDepartment: `${BASE}/cancelled-by-department/`,
+  topExperts: `${BASE}/top-experts/`,
+  overview: `${BASE}/overview/`,
+};
 
 export class DashboardAuthError extends Error {
   constructor() {
@@ -15,319 +27,167 @@ export class DashboardAuthError extends Error {
   }
 }
 
-interface ApiListResponse<T> {
-  results?: T[];
-  next?: string | null;
+/** کاربر به این بخش دسترسی ندارد (مثلاً کارمند برای endpoint مخصوص ادمین) */
+export class DashboardForbiddenError extends Error {
+  constructor() {
+    super("FORBIDDEN");
+    this.name = "DashboardForbiddenError";
+  }
 }
 
-function memo<T>(loader: () => Promise<T>) {
-  let entry: { at: number; promise: Promise<T> } | null = null;
-
-  return () => {
-    if (entry && Date.now() - entry.at < CACHE_TTL_MS) return entry.promise;
-
-    const promise = loader();
-    entry = { at: Date.now(), promise };
-
-    promise.catch(() => {
-      if (entry?.promise === promise) entry = null;
-    });
-
-    return promise;
-  };
-}
-
-async function fetchJson<T>(path: string): Promise<T> {
+async function fetchJson<T>(
+  path: string,
+  params?: Record<string, string | number>,
+): Promise<T> {
   try {
-    const response = await axiosInstance.get<T>(path);
+    const response = await axiosInstance.get<T>(path, { params });
     return response.data;
   } catch (error) {
-    const status = (error as { response?: { status?: number } })?.response?.status;
+    const status = (error as { response?: { status?: number } })?.response
+      ?.status;
 
     if (status === 401) throw new DashboardAuthError();
+    if (status === 403) throw new DashboardForbiddenError();
 
     throw error;
   }
 }
 
-function toRelativePath(url: string): string | null {
-  try {
-    const parsed = new URL(url, window.location.origin);
-    return `${parsed.pathname}${parsed.search}`;
-  } catch {
-    return null;
+/** کش کوتاه‌مدت برای جلوگیری از درخواست تکراری (مثلاً StrictMode) */
+const cache = new Map<string, { at: number; promise: Promise<unknown> }>();
+
+function cached<T>(key: string, loader: () => Promise<T>): Promise<T> {
+  const hit = cache.get(key);
+
+  if (hit && Date.now() - hit.at < CACHE_TTL_MS) {
+    return hit.promise as Promise<T>;
   }
+
+  const promise = loader();
+  cache.set(key, { at: Date.now(), promise });
+
+  promise.catch(() => {
+    if (cache.get(key)?.promise === promise) cache.delete(key);
+  });
+
+  return promise;
 }
 
-async function fetchList<T>(path: string): Promise<T[]> {
-  const items: T[] = [];
-  const visited = new Set<string>();
-  let url: string | null = path;
+/** هر سه بازه را موازی می‌گیرد و در قالب {weekly, monthly, yearly} برمی‌گرداند */
+async function fetchAllPeriods<T>(
+  loader: (period: Period) => Promise<T>,
+): Promise<Record<Period, T>> {
+  const [weekly, monthly, yearly] = await Promise.all(PERIODS.map(loader));
 
-  while (url && !visited.has(url) && visited.size < 50) {
-    visited.add(url);
-
-    const data: T[] | ApiListResponse<T> = await fetchJson(url);
-
-    if (Array.isArray(data)) {
-      items.push(...data);
-      break;
-    }
-
-    items.push(...(data.results ?? []));
-    url = data.next ? toRelativePath(data.next) : null;
-  }
-
-  return items;
-}
-
-async function mapWithConcurrency<T, R>(
-  items: T[],
-  limit: number,
-  worker: (item: T) => Promise<R>,
-): Promise<R[]> {
-  const results = new Array<R>(items.length);
-  let cursor = 0;
-
-  async function run() {
-    while (cursor < items.length) {
-      const index = cursor++;
-      results[index] = await worker(items[index]);
-    }
-  }
-
-  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, run));
-
-  return results;
+  return { weekly, monthly, yearly };
 }
 
 /* ------------------------------------------------------------------ */
-/*  Raw data (cached per request)                                      */
+/*  Raw API types                                                      */
 /* ------------------------------------------------------------------ */
 
-const getTasks = memo(() =>
-  fetchList<{
-    id: number;
-    status: "in_progress" | "completed" | "cancelled" | "sold";
-    created_at: string;
-    department_name?: string;
-  }>("/tasks/api/v1/tasks/"),
-);
+type ChangeDirection = "up" | "down" | "flat";
 
-const getCustomers = memo(() =>
-  fetchList<{
-    id: number;
-    status: number;
-    created_by_username: string;
-    created_at: string;
-  }>("/customers/api/v1/customers/"),
-);
-
-const getEmployees = memo(() =>
-  fetchList<{
-    id: number;
-    username: string;
-    full_name: string;
-    created_at: string;
-  }>("/accounts/api/v1/employee/list/"),
-);
-
-const getDepartments = memo(() =>
-  fetchList<{
-    id: number;
-    name?: string;
-    title?: string;
-    department_name?: string;
-  }>("/department/api/v1/department/list/"),
-);
-
-const getDepartmentEmployees = memo(() =>
-  fetchList<{
-    id: number;
-    employee: number;
-    department_name: string;
-  }>("/department/api/v1/department_employee/list/"),
-);
-
-const getResources = memo(() =>
-  fetchList<{ id: number; title: string }>("/tasks/api/v1/cases/resources/"),
-);
-
-
-
-const dayFormatter = new Intl.DateTimeFormat("en-CA", {
-  timeZone: TIME_ZONE,
-  year: "numeric",
-  month: "2-digit",
-  day: "2-digit",
-});
-
-function tehranDayNumber(date: Date): number {
-  const [year, month, day] = dayFormatter.format(date).split("-").map(Number);
-
-  return Math.floor(Date.UTC(year, month - 1, day) / DAY_MS);
+interface ApiChange {
+  percent: number;
+  direction: ChangeDirection;
 }
 
-function parseDayNumber(value: string): number | null {
-  const date = new Date(value);
-
-  return Number.isNaN(date.getTime()) ? null : tehranDayNumber(date);
-}
-
-function dayNumberToParts(dayNumber: number) {
-  const date = new Date(dayNumber * DAY_MS);
-
-  return {
-    year: date.getUTCFullYear(),
-    month: date.getUTCMonth() + 1,
-    day: date.getUTCDate(),
-    weekday: date.getUTCDay(), 
+export interface ApiSummary {
+  employees: { count: number; change: ApiChange };
+  active_customers: {
+    count: number;
+    total: number;
+    percent: number;
+    change: ApiChange;
   };
+  projects_in_progress: { count: number; change: ApiChange };
 }
 
-function jalaliOf(dayNumber: number) {
-  const { year, month, day } = dayNumberToParts(dayNumber);
-
-  return toJalali(year, month, day);
+interface ApiSalesChart {
+  period: Period;
+  total: number;
+  empty?: boolean;
+  points: { key: string; label: string; value: number }[];
 }
 
-const WEEK_DAYS = [
-  "یکشنبه",
-  "دوشنبه",
-  "سه‌شنبه",
-  "چهارشنبه",
-  "پنجشنبه",
-  "جمعه",
-  "شنبه",
-];
+interface ApiCustomerSources {
+  period: Period;
+  total: number;
+  items: { name: string; count: number; percent: number }[];
+}
+
+interface ApiCancelledByDepartment {
+  period: Period;
+  total: number;
+  items: { department_id: number; name: string; count: number }[];
+}
+
+type ApiTopExperts = {
+  period: Period;
+  total: number;
+  items: Record<string, unknown>[];
+};
 
 /* ------------------------------------------------------------------ */
-/*  Stats cards                                                        */
+/*  Summary cards                                                      */
 /* ------------------------------------------------------------------ */
 
-export async function getProjectsStats() {
-  const data = await getTasks();
-  const inProgress = data.filter((task) => task.status === "in_progress");
+function signedChange(change?: ApiChange): number {
+  if (!change) return 0;
 
-  const departments = new Set(
-    inProgress.map((task) => task.department_name).filter(Boolean),
+  const percent = Math.abs(Number(change.percent) || 0);
+
+  if (change.direction === "down") return -percent;
+  if (change.direction === "up") return percent;
+
+  return 0;
+}
+
+export async function getSummary() {
+  const data = await cached("summary", () =>
+    fetchJson<ApiSummary>(dashboardRoutes.summary),
   );
 
   return {
-    total: inProgress.length,
-    deptCount: departments.size,
-    hasProjects: inProgress.length > 0,
+    employees: {
+      total: data.employees.count,
+      change: signedChange(data.employees.change),
+    },
+    customers: {
+      active: data.active_customers.count,
+      total: data.active_customers.total,
+      activePct: data.active_customers.percent,
+      change: signedChange(data.active_customers.change),
+    },
+    projects: {
+      total: data.projects_in_progress.count,
+      change: signedChange(data.projects_in_progress.change),
+    },
   };
-}
-
-export async function getCustomersStats() {
-  const data = await getCustomers();
-
-  const total = data.length;
-  const active = data.filter((customer) => customer.status === 2).length;
-  const activePct = total > 0 ? Math.round((active / total) * 100) : 0;
-
-  return { total, activePct, potentialPct: 100 - activePct };
-}
-
-export async function getEmployeesStats() {
-  const data = await getEmployees();
-
-  const today = dayNumberToParts(tehranDayNumber(new Date()));
-  const thisMonthStart = Date.UTC(today.year, today.month - 1, 1);
-  const lastMonthStart = Date.UTC(today.year, today.month - 2, 1);
-
-  let thisMonth = 0;
-  let lastMonth = 0;
-
-  for (const employee of data) {
-    const day = parseDayNumber(employee.created_at);
-
-    if (day === null) continue;
-
-    const time = day * DAY_MS;
-
-    if (time >= thisMonthStart) thisMonth += 1;
-    else if (time >= lastMonthStart) lastMonth += 1;
-  }
-
-  const growth =
-    lastMonth === 0
-      ? thisMonth > 0
-        ? 100
-        : 0
-      : Math.round(((thisMonth - lastMonth) / lastMonth) * 100);
-
-  return { total: data.length, growth };
 }
 
 /* ------------------------------------------------------------------ */
 /*  Sales chart                                                        */
 /* ------------------------------------------------------------------ */
 
+function formatLabel(label: string | number) {
+  const text = String(label);
+
+  return /^\d+$/.test(text) ? toPersianDigits(text) : text;
+}
+
 export async function getSalesChartData() {
-  const tasks = await getTasks();
+  return fetchAllPeriods(async (period) => {
+    const data = await cached(`sales:${period}`, () =>
+      fetchJson<ApiSalesChart>(dashboardRoutes.salesChart, { period }),
+    );
 
-  const soldPerDay = new Map<number, number>();
-
-  for (const task of tasks) {
-    if (task.status !== "sold") continue;
-
-    const day = parseDayNumber(task.created_at);
-
-    if (day === null) continue;
-
-    soldPerDay.set(day, (soldPerDay.get(day) ?? 0) + 1);
-  }
-
-  const today = tehranDayNumber(new Date());
-
-  const weekly = Array.from({ length: 7 }, (_, index) => {
-    const day = today - 6 + index;
-    const count = soldPerDay.get(day) ?? 0;
-
-    return {
-      name: WEEK_DAYS[dayNumberToParts(day).weekday],
-      sales: count,
-    };
+    return (data.points ?? []).map((point) => ({
+      name: formatLabel(point.label),
+      sales: Number(point.value) || 0,
+    }));
   });
-
-  const monthly = Array.from({ length: 30 }, (_, index) => {
-    const day = today - 29 + index;
-    const count = soldPerDay.get(day) ?? 0;
-    const [, , jalaliDay] = jalaliOf(day);
-
-    return {
-      name: toPersianDigits(jalaliDay),
-      sales: count,
-    };
-  });
-
-  const monthTotals = new Map<number, number>();
-
-  for (let month = 1; month <= 12; month += 1) monthTotals.set(month, 0);
-
-  soldPerDay.forEach((count, day) => {
-    if (day < today - 364 || day > today) return;
-
-    const [, month] = jalaliOf(day);
-
-    monthTotals.set(month, (monthTotals.get(month) ?? 0) + count);
-  });
-
-  const [, currentMonth] = jalaliOf(today);
-
-  const yearly = Array.from({ length: 12 }, (_, index) => {
-    const month = ((currentMonth + index) % 12) + 1;
-    const count = monthTotals.get(month) ?? 0;
-
-    return {
-      name: JALALI_MONTHS[month - 1],
-      sales: count,
-    };
-  });
-
-  return { weekly, monthly, yearly };
 }
 
 /* ------------------------------------------------------------------ */
@@ -335,160 +195,19 @@ export async function getSalesChartData() {
 /* ------------------------------------------------------------------ */
 
 export async function getCancelledTasksByDepartment() {
-  const [tasks, departments] = await Promise.all([
-    getTasks(),
-    getDepartments(),
-  ]);
+  return fetchAllPeriods(async (period) => {
+    const data = await cached(`cancelled:${period}`, () =>
+      fetchJson<ApiCancelledByDepartment>(
+        dashboardRoutes.cancelledByDepartment,
+        { period },
+      ),
+    );
 
-  const allDepartments = Array.from(
-    new Set(
-      departments
-        .map(
-          (department) =>
-            department.name?.trim() ||
-            department.title?.trim() ||
-            department.department_name?.trim(),
-        )
-        .filter(Boolean),
-    ),
-  ) as string[];
-
-  const today = tehranDayNumber(new Date());
-
-  const buildRange = (days: number) => {
-    const counts: Record<string, number> = {};
-
-    for (const task of tasks) {
-      if (task.status !== "cancelled") continue;
-
-      const day = parseDayNumber(task.created_at);
-
-      if (day === null || day < today - (days - 1) || day > today) continue;
-
-      const department = task.department_name?.trim() || "نامشخص";
-
-      counts[department] = (counts[department] ?? 0) + 1;
-    }
-
-    return allDepartments.map((department) => ({
-      stage: department,
-      issues: counts[department] ?? 0,
+    return (data.items ?? []).map((item) => ({
+      stage: item.name,
+      issues: Number(item.count) || 0,
     }));
-  };
-
-  return {
-    weekly: buildRange(7),
-    monthly: buildRange(30),
-    yearly: buildRange(365),
-  };
-}
-
-/* ------------------------------------------------------------------ */
-/*  Top users                                                          */
-/* ------------------------------------------------------------------ */
-
-export async function getTopUsers() {
-  const [customers, employees, departmentEmployees] = await Promise.all([
-    getCustomers(),
-    getEmployees(),
-    getDepartmentEmployees(),
-  ]);
-
-  const nameMap = new Map(
-    employees.map((employee) => [employee.username, employee.full_name]),
-  );
-
-  const usernameById = new Map(
-    employees.map((employee) => [employee.id, employee.username]),
-  );
-
-  const roleMap = new Map<string, string>();
-
-  departmentEmployees.forEach((item) => {
-    const username = usernameById.get(item.employee);
-
-    if (username && !roleMap.has(username)) {
-      roleMap.set(username, item.department_name);
-    }
   });
-
-  const buildRange = (days: number) => {
-    const now = Date.now();
-    const rangeStart = now - days * DAY_MS;
-    const midpoint = rangeStart + (now - rangeStart) / 2;
-
-    const currentCounts = new Map<string, number>();
-    const previousCounts = new Map<string, number>();
-
-    customers.forEach((customer) => {
-      if (customer.status !== 2) return;
-
-      const createdAt = new Date(customer.created_at).getTime();
-
-      if (
-        Number.isNaN(createdAt) ||
-        createdAt < rangeStart ||
-        createdAt > now
-      ) {
-        return;
-      }
-
-      const username = customer.created_by_username || "نامشخص";
-      const target = createdAt >= midpoint ? currentCounts : previousCounts;
-
-      target.set(username, (target.get(username) ?? 0) + 1);
-    });
-
-    const usernames = new Set([
-      ...currentCounts.keys(),
-      ...previousCounts.keys(),
-    ]);
-
-    return Array.from(usernames)
-      .map((username, index) => {
-        const current = currentCounts.get(username) ?? 0;
-        const previous = previousCounts.get(username) ?? 0;
-
-        let trend: "up" | "down" | "same" = "same";
-        let trendPct = 0;
-
-        if (current > previous) {
-          trend = "up";
-          trendPct =
-            previous === 0
-              ? 100
-              : Math.round(((current - previous) / previous) * 100);
-        } else if (current < previous) {
-          trend = "down";
-          trendPct =
-            previous === 0
-              ? 0
-              : Math.round(((previous - current) / previous) * 100);
-        }
-
-        return {
-          id: index + 1,
-          name:
-            username === "admin"
-              ? "مدیر سیستم"
-              : nameMap.get(username) ?? username,
-          username,
-          role: roleMap.get(username) ?? "کارشناس فروش",
-          avatar: username.charAt(0).toUpperCase(),
-          count: current + previous,
-          trend,
-          trendPct,
-        };
-      })
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 5);
-  };
-
-  return {
-    weekly: buildRange(7),
-    monthly: buildRange(30),
-    yearly: buildRange(365),
-  };
 }
 
 /* ------------------------------------------------------------------ */
@@ -506,97 +225,122 @@ const SOURCE_COLORS = [
   "#06b6d4",
 ];
 
-interface CustomerDetail {
-  id: number;
-  source: string | null;
-  created_at: string;
+export async function getCustomerSourcesData() {
+  return fetchAllPeriods(async (period) => {
+    const data = await cached(`sources:${period}`, () =>
+      fetchJson<ApiCustomerSources>(dashboardRoutes.customerSources, {
+        period,
+      }),
+    );
+
+    return (data.items ?? []).map((item, index) => {
+      const color = SOURCE_COLORS[index % SOURCE_COLORS.length];
+
+      return {
+        resourceId: index + 1,
+        name: item.name,
+        value: Number(item.count) || 0,
+        color,
+        glow: `${color}20`,
+      };
+    });
+  });
 }
 
-export async function getCustomerSourcesData() {
-  const [customers, resources] = await Promise.all([
-    getCustomers(),
-    getResources(),
-  ]);
+/* ------------------------------------------------------------------ */
+/*  Top experts                                                        */
+/* ------------------------------------------------------------------ */
 
-  const cutoff = Date.now() - 366 * DAY_MS;
+const TOP_EXPERTS_LIMIT = 5;
 
-  const recent = customers.filter((customer) => {
-    const time = new Date(customer.created_at).getTime();
+function pick<T>(source: Record<string, unknown>, keys: string[]): T | undefined {
+  for (const key of keys) {
+    const value = source[key];
 
-    return !Number.isNaN(time) && time >= cutoff;
-  });
-
-  const details = await mapWithConcurrency(
-    recent,
-    DETAIL_CONCURRENCY,
-    async (customer) => {
-      try {
-        return await fetchJson<CustomerDetail>(
-          `/customers/api/v1/customers/${customer.id}/`,
-        );
-      } catch (error) {
-        if (error instanceof DashboardAuthError) throw error;
-
-        return null;
-      }
-    },
-  );
-
-  const validDetails = details.filter(
-    (item): item is CustomerDetail => item !== null,
-  );
-
-  if (recent.length > 0 && validDetails.length === 0) {
-    throw new Error("Could not load any customer details");
+    if (value !== undefined && value !== null && value !== "") {
+      return value as T;
+    }
   }
 
-  const resourceMap = new Map(
-    resources.map((resource) => [resource.id, resource.title]),
+  return undefined;
+}
+
+/**
+ * ساختار آیتم‌های top-experts در نمونه‌ی ارسال‌شده خالی بود،
+ * بنابراین چند نام فیلد رایج پشتیبانی می‌شود.
+ */
+function mapExpert(item: Record<string, unknown>, index: number) {
+  const username =
+    pick<string>(item, ["username", "user_name"]) ?? "";
+
+  const name =
+    pick<string>(item, ["name", "full_name", "employee_name"]) ??
+    (username === "admin" ? "مدیر سیستم" : username) ??
+    "نامشخص";
+
+  const count = Number(
+    pick<number>(item, [
+      "count",
+      "customers_count",
+      "customer_count",
+      "total",
+      "value",
+    ]) ?? 0,
   );
 
-  const buildRange = (days: number) => {
-    const now = Date.now();
-    const start = now - days * DAY_MS;
-    const counts = new Map<number, number>();
+  const change = item.change as Partial<ApiChange> | undefined;
 
-    validDetails.forEach((customer) => {
-      if (!customer.source) return;
+  let trend: "up" | "down" | "same" = "same";
+  let trendPct = 0;
 
-      const createdAt = new Date(customer.created_at).getTime();
+  if (change && typeof change === "object") {
+    trendPct = Math.abs(Number(change.percent) || 0);
+    trend =
+      change.direction === "up"
+        ? "up"
+        : change.direction === "down"
+          ? "down"
+          : "same";
+  } else {
+    const direction = pick<string>(item, ["trend", "direction"]);
+    trendPct = Math.abs(
+      Number(pick<number>(item, ["trend_percent", "trendPct", "percent"]) ?? 0),
+    );
+    trend =
+      direction === "up" ? "up" : direction === "down" ? "down" : "same";
+  }
 
-      if (Number.isNaN(createdAt) || createdAt < start || createdAt > now) {
-        return;
-      }
+  if (trendPct === 0) trend = "same";
 
-      const sourceId = Number.parseInt(customer.source, 10);
-
-      if (Number.isNaN(sourceId)) return;
-
-      counts.set(sourceId, (counts.get(sourceId) ?? 0) + 1);
-    });
-
-    return Array.from(counts.entries())
-      .map(([resourceId, value]) => {
-        const color =
-          SOURCE_COLORS[
-            (((resourceId - 1) % SOURCE_COLORS.length) + SOURCE_COLORS.length) %
-              SOURCE_COLORS.length
-          ];
-
-        return {
-          resourceId,
-          name: resourceMap.get(resourceId) ?? "نامشخص",
-          value,
-          color,
-          glow: `${color}20`,
-        };
-      })
-      .sort((a, b) => b.value - a.value || a.name.localeCompare(b.name, "fa"));
-  };
+  const label = String(name || "نامشخص");
 
   return {
-    weekly: buildRange(7),
-    monthly: buildRange(30),
-    yearly: buildRange(365),
+    id: Number(pick<number>(item, ["id", "employee_id", "user_id"]) ?? index + 1),
+    name: label,
+    username,
+    role:
+      pick<string>(item, [
+        "role",
+        "department",
+        "department_name",
+        "position",
+      ]) ?? "کارشناس فروش",
+    avatar: pick<string>(item, ["avatar"]) ?? label.charAt(0).toUpperCase(),
+    count,
+    trend,
+    trendPct,
   };
+}
+
+export async function getTopUsers() {
+  return fetchAllPeriods(async (period) => {
+    const data = await cached(`experts:${period}`, () =>
+      fetchJson<ApiTopExperts>(dashboardRoutes.topExperts, {
+        period,
+        limit: TOP_EXPERTS_LIMIT,
+      }),
+    );
+
+    return (data.items ?? []).map(mapExpert);
+  });
 }

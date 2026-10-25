@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
     Factory,
@@ -32,7 +33,10 @@ import {
     CalendarCogIcon,
 } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
+import TimePicker from "@/components/TimePicker";
+import ProductionBarChart from "@/components/charts/ProductionBarChart";
 import { listAll } from "@/lib/api";
+import { calcHoursWorked, toHHMM } from "@/lib/productionTime";
 import {
     toPersianDigits,
     toJalali,
@@ -64,6 +68,8 @@ interface ProductionLog {
     machine_name: string;
     machine_code: string;
     hours_worked: string;
+    start_time?: string | null;
+    end_time?: string | null;
     produced_qty: number;
     waste_qty: number;
     note: string;
@@ -634,6 +640,24 @@ function NumberField({
     );
 }
 
+function TimeField({
+    label,
+    value,
+    onChange,
+    required,
+}: {
+    label: string;
+    value: string;
+    onChange: (v: string) => void;
+    required?: boolean;
+}) {
+    return (
+        <Field label={label + (required ? " *" : "")}>
+            <TimePicker value={value} onChange={onChange} />
+        </Field>
+    );
+}
+
 function NiceSelect({
     label,
     options,
@@ -949,28 +973,38 @@ function ModalShell({
         indigo: "bg-indigo-50 dark:bg-indigo-500/10",
     }[iconTone];
 
-    return (
+    return createPortal(
         <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center px-4"
-            style={{ background: "rgba(0,0,0,0.45)", backdropFilter: "blur(3px)" }}
+            transition={{ duration: 0.18, ease: "easeOut" }}
+            className="fixed inset-0 z-[99999] flex items-center justify-center px-4"
+            style={{ isolation: "isolate" }}
             onClick={() => {
                 if (!locked) onClose();
             }}
+            dir="rtl"
         >
             <motion.div
-                initial={{ opacity: 0, y: 16 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 16 }}
-                transition={{ duration: 0.3, ease: "easeOut" }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.18 }}
+                className="absolute inset-0 bg-black/45"
+                style={{ backdropFilter: "blur(5px)", WebkitBackdropFilter: "blur(5px)", pointerEvents: "none" }}
+            />
+            <motion.div
+                initial={{ opacity: 0, y: 16, scale: 0.97 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 16, scale: 0.97 }}
+                transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
                 onClick={(e) => e.stopPropagation()}
                 dir="rtl"
                 role="dialog"
                 aria-modal="true"
                 aria-label={title}
-                className={`flex max-h-[90vh] w-full ${maxWidth} flex-col overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-sm dark:border-white/[0.06] dark:bg-[#0f172a]`}
+                className={`relative flex max-h-[90vh] w-full ${maxWidth} flex-col overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-[0_24px_70px_rgba(0,0,0,0.22)] dark:border-white/[0.06] dark:bg-[#0f172a]`}
             >
                 <div className="flex shrink-0 items-center justify-between px-8 pb-6 pt-8">
                     <div className="flex items-center gap-2.5">
@@ -1001,7 +1035,8 @@ function ModalShell({
 
                 <div className="flex shrink-0 items-center gap-2 px-8 pb-8 pt-5">{footer}</div>
             </motion.div>
-        </motion.div>
+        </motion.div>,
+        document.body
     );
 }
 
@@ -1137,7 +1172,8 @@ function LogModal({
     const [date, setDate] = useState(() => todayGregorian());
     const [employeeId, setEmployeeId] = useState<number | null>(null);
     const [machineId, setMachineId] = useState<number | null>(null);
-    const [hours, setHours] = useState("8");
+    const [startTime, setStartTime] = useState("");
+    const [endTime, setEndTime] = useState("");
     const [produced, setProduced] = useState("");
     const [waste, setWaste] = useState("0");
     const [note, setNote] = useState("");
@@ -1179,11 +1215,19 @@ function LogModal({
         [machines]
     );
 
+    const selectedMachine = machines.find((m) => m.id === machineId);
+    const hours = calcHoursWorked(startTime, endTime);
+    const expectedProd = selectedMachine && hours !== null ? hours * Number(selectedMachine.std_production_per_hour || 0) : null;
+    const expectedWasteVal = selectedMachine && hours !== null ? hours * Number(selectedMachine.std_waste_per_hour || 0) : null;
+    const liveEff = expectedProd && produced !== "" ? Math.round((Number(produced) / expectedProd) * 1000) / 10 : null;
+
     const canSubmit =
         employeeId !== null &&
         machineId !== null &&
         produced !== "" &&
-        hours !== "" &&
+        hours !== null &&
+        startTime !== "" &&
+        endTime !== "" &&
         date !== "" &&
         !saving;
 
@@ -1198,7 +1242,9 @@ function LogModal({
                 date,
                 employee: employeeId,
                 machine: machineId,
-                hours_worked: hours,
+                start_time: startTime,
+                end_time: endTime,
+                hours_worked: String(hours),
                 produced_qty: Number(produced),
                 waste_qty: Number(waste || 0),
                 note: note.trim(),
@@ -1247,7 +1293,7 @@ function LogModal({
                         type="button"
                         onClick={onClose}
                         disabled={saving}
-                        className={`h-11 px-6 ${SOFT_BUTTON}`}
+                        className="flex h-11 flex-1 items-center justify-center rounded-full border border-gray-100 bg-gray-50 text-[13px] font-bold text-gray-500 transition-colors hover:text-gray-700 disabled:opacity-40 dark:border-white/[0.06] dark:bg-white/[0.03] dark:text-white/50 dark:hover:text-white/80"
                     >
                         انصراف
                     </button>
@@ -1290,20 +1336,20 @@ function LogModal({
                     placeholder="انتخاب تاریخ"
                     required
                 />
-                <NumberField
-                    label="ساعت کار (تا ۲۴)"
-                    value={hours}
-                    onChange={setHours}
-                    step="0.01"
-                    min="0.01"
-                    max="24"
-                />
+                <TimeField label="ساعت شروع" value={startTime} onChange={setStartTime} required />
+                <TimeField label="ساعت پایان" value={endTime} onChange={setEndTime} required />
             </div>
 
             <div className="grid grid-cols-2 gap-3">
                 <NumberField label="تعداد تولید شده" value={produced} onChange={setProduced} min="0" />
                 <NumberField label="مقدار ضایعات" value={waste} onChange={setWaste} min="0" />
             </div>
+
+            {expectedProd !== null && (
+                <div className="rounded-2xl border border-blue-500/20 bg-blue-500/[0.06] px-4 py-3 text-[12px] font-bold text-blue-600 dark:text-blue-300">
+                    تولید مورد انتظار: {toPersianDigits(expectedProd.toFixed(2))} | ضایعات مورد انتظار: {toPersianDigits((expectedWasteVal ?? 0).toFixed(2))} | راندمان: {liveEff === null ? "—" : toPersianDigits(String(liveEff)) + "٪"}
+                </div>
+            )}
 
             <FloatingInput
                 id="log_note"
@@ -2191,6 +2237,11 @@ export default function AdminProductionManagementPage() {
                                                 </td>
                                                 <td className="whitespace-nowrap px-4 py-3 text-gray-500 dark:text-gray-400">
                                                     {toPersianDigits(log.hours_worked)} ساعت
+                                                    {toHHMM(log.start_time) && (
+                                                        <div className="font-mono text-[10px] text-gray-400" dir="ltr">
+                                                            {toPersianDigits(toHHMM(log.start_time))} → {toPersianDigits(toHHMM(log.end_time))}
+                                                        </div>
+                                                    )}
                                                 </td>
                                                 <td className="px-4 py-3 font-black text-emerald-600 dark:text-emerald-400">
                                                     {toPersianDigits(log.produced_qty.toLocaleString())}
@@ -2345,6 +2396,18 @@ export default function AdminProductionManagementPage() {
                                     icon={<BarChart3 size={16} />}
                                 />
                             </div>
+
+                            <ProductionBarChart
+                                title="تولید واقعی در برابر انتظاری (نیرو)"
+                                subtitle="گزارش ماهانه به تفکیک کارمند"
+                                data={monthlyReport.employees.map((e) => ({
+                                    name: e.employee_name,
+                                    a: Number(e.produced),
+                                    b: Number(e.expected_production),
+                                }))}
+                                seriesA={{ label: "تولید واقعی", color: "#3b82f6" }}
+                                seriesB={{ label: "تولید انتظاری", color: "#8b5cf6" }}
+                            />
 
                             {monthlyReport.employees.length === 0 ? (
                                 <div className="rounded-2xl border border-dashed border-gray-200 py-10 text-center text-[12px] text-gray-400 dark:border-white/[0.1]">
@@ -2565,6 +2628,28 @@ export default function AdminProductionManagementPage() {
                                 />
                             </div>
 
+                            <ProductionBarChart
+                                tabs={[{ id: 0, label: "روز" }, { id: 1, label: "هفته" }, { id: 2, label: "ماه" }, { id: 3, label: "سال" }]}
+                                activeTab={summaryGroupBy}
+                                onTab={setSummaryGroupBy}
+                                title="روند تولید واقعی و انتظاری"
+                                subtitle="مجموع همه ماشین‌ها در هر دوره"
+                                data={(() => {
+                                    const map = new Map<string, { name: string; a: number; b: number }>();
+                                    summaryReport.machines.forEach((m) =>
+                                        m.periods.forEach((p) => {
+                                            const cur = map.get(p.key) ?? { name: p.label, a: 0, b: 0 };
+                                            cur.a += Number(p.produced);
+                                            cur.b += Number(p.expected_production);
+                                            map.set(p.key, cur);
+                                        }),
+                                    );
+                                    return Array.from(map.values());
+                                })()}
+                                seriesA={{ label: "تولید واقعی", color: "#3b82f6" }}
+                                seriesB={{ label: "تولید انتظاری", color: "#a66cff" }}
+                            />
+
                             {summaryReport.machines.length === 0 ? (
                                 <div className="rounded-2xl border border-dashed border-gray-200 py-10 text-center text-[12px] text-gray-400 dark:border-white/[0.1]">
                                     در این بازه هیچ رکوردی ثبت نشده است.
@@ -2752,6 +2837,32 @@ export default function AdminProductionManagementPage() {
                                     }
                                     tone="emerald"
                                     icon={<BarChart3 size={16} />}
+                                />
+                            </div>
+
+                            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                                <ProductionBarChart
+                                    title="تولید ماهانه ماشین‌ها"
+                                    subtitle="واقعی در برابر انتظاری"
+                                    data={machineMonthlyReport.machines.map((m) => ({
+                                        name: m.machine_name,
+                                        a: Number(m.produced),
+                                        b: Number(m.expected_production),
+                                    }))}
+                                    seriesA={{ label: "تولید واقعی", color: "#3b82f6" }}
+                                    seriesB={{ label: "تولید انتظاری", color: "#8b5cf6" }}
+                                />
+                                <ProductionBarChart
+                                    title="انحراف از مقدار انتظاری"
+                                    subtitle="تفاوت تولید و ضایعات با مقدار انتظاری (واقعی − انتظاری)"
+                                    signed
+                                    data={machineMonthlyReport.machines.map((m) => ({
+                                        name: m.machine_name,
+                                        a: Number((Number(m.produced) - Number(m.expected_production)).toFixed(1)),
+                                        b: Number((Number(m.waste) - Number(m.expected_waste)).toFixed(1)),
+                                    }))}
+                                    seriesA={{ label: "انحراف تولید", color: "#3b82f6" }}
+                                    seriesB={{ label: "انحراف ضایعات", color: "#8b5cf6" }}
                                 />
                             </div>
 

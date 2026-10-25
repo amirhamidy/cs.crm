@@ -7,12 +7,11 @@ import CategoryChart from "@/components/charts/CategoryChart";
 import VisitsChart from "@/components/charts/VisitsChart";
 import UsersCard from "@/components/charts/UsersCard";
 import {
+    DashboardForbiddenError,
     getCancelledTasksByDepartment,
     getCustomerSourcesData,
-    getCustomersStats,
-    getEmployeesStats,
-    getProjectsStats,
     getSalesChartData,
+    getSummary,
     getTopUsers,
 } from "@/lib/dashboard";
 
@@ -63,6 +62,7 @@ function SectionError({
 
 type LoadState<T> =
     | { status: "loading" }
+    | { status: "forbidden" }
     | { status: "error" }
     | { status: "ready"; data: T };
 
@@ -77,6 +77,11 @@ function useSection<T>(loader: () => Promise<T>, label: string): LoadState<T> {
                 if (active) setState({ status: "ready", data });
             })
             .catch((error) => {
+                if (error instanceof DashboardForbiddenError) {
+                    if (active) setState({ status: "forbidden" });
+                    return;
+                }
+
                 console.error(`[dashboard] ${label} failed`, error);
                 if (active) setState({ status: "error" });
             });
@@ -89,70 +94,43 @@ function useSection<T>(loader: () => Promise<T>, label: string): LoadState<T> {
     return state;
 }
 
-async function loadStats() {
-    const [employees, customers, projects] = await Promise.allSettled([
-        getEmployeesStats(),
-        getCustomersStats(),
-        getProjectsStats(),
-    ]);
-
-    return { employees, customers, projects };
-}
-
 export function StatsSection() {
-    const state = useSection(loadStats, "stats section");
+    const state = useSection(getSummary, "stats section");
 
     if (state.status === "loading") return <StatsSkeleton />;
+    if (state.status === "forbidden") return null;
     if (state.status === "error") {
         return <SectionError title="آمار کلی" className="h-28" />;
     }
 
     const { employees, customers, projects } = state.data;
-    const cards: React.ComponentProps<typeof StatsCard>[] = [];
 
-    if (employees.status === "fulfilled") {
-        cards.push({
+    const cards: React.ComponentProps<typeof StatsCard>[] = [
+        {
             title: "تعداد کارمندان",
-            value: `${employees.value.total.toLocaleString("fa-IR")} نفر`,
-            change: String(employees.value.growth),
+            value: `${employees.total.toLocaleString("fa-IR")} نفر`,
+            change: String(employees.change),
             icon: "users",
             gradient: "from-blue-500 to-blue-600",
-        });
-    }
-
-    if (customers.status === "fulfilled") {
-        cards.push({
+        },
+        {
             title: "مشتریان فعال",
-            value: `${customers.value.activePct.toLocaleString("fa-IR")}٪`,
-            change: String(
-                customers.value.activePct - customers.value.potentialPct,
-            ),
+            value: `${customers.active.toLocaleString("fa-IR")} مشتری (${customers.activePct.toLocaleString("fa-IR")}٪)`,
+            change: String(customers.change),
             icon: "shoppingCart",
             gradient: "from-green-500 to-green-600",
-        });
-    }
-
-    if (projects.status === "fulfilled" && projects.value.hasProjects) {
-        cards.push({
+        },
+        {
             title: "پروژه‌های در حال انجام",
-            value: `${projects.value.total.toLocaleString("fa-IR")} پروژه`,
-            change: String(projects.value.deptCount),
+            value: `${projects.total.toLocaleString("fa-IR")} پروژه`,
+            change: String(projects.change),
             icon: "package",
             gradient: "from-purple-500 to-purple-600",
-        });
-    }
-
-    if (cards.length === 0) {
-        return <SectionError title="آمار کلی" className="h-28" />;
-    }
+        },
+    ];
 
     return (
-        <div
-            className={`grid gap-3 ${cards.length >= 3
-                    ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
-                    : "grid-cols-1 sm:grid-cols-2"
-                }`}
-        >
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {cards.map((card, index) => (
                 <StatsCard key={card.title} {...card} index={index} />
             ))}
@@ -164,6 +142,7 @@ export function SalesSection() {
     const state = useSection(getSalesChartData, "sales section");
 
     if (state.status === "loading") return <ChartSkeleton />;
+    if (state.status === "forbidden") return null;
     if (state.status === "error") return <SectionError title="نمودار فروش" />;
 
     return <SalesChart data={state.data} />;
@@ -173,6 +152,7 @@ export function SourcesSection() {
     const state = useSection(getCustomerSourcesData, "sources section");
 
     if (state.status === "loading") return <ChartSkeleton />;
+    if (state.status === "forbidden") return null;
     if (state.status === "error") return <SectionError title="منابع مشتری" />;
 
     return <CategoryChart data={state.data} />;
@@ -182,6 +162,7 @@ export function CancelledSection() {
     const state = useSection(getCancelledTasksByDepartment, "cancelled section");
 
     if (state.status === "loading") return <ChartSkeleton />;
+    if (state.status === "forbidden") return null;
     if (state.status === "error") {
         return <SectionError title="تسک‌های لغوشده" />;
     }
@@ -193,6 +174,7 @@ export function TopUsersSection() {
     const state = useSection(getTopUsers, "top users section");
 
     if (state.status === "loading") return <ChartSkeleton />;
+    if (state.status === "forbidden") return null;
     if (state.status === "error") {
         return <SectionError title="برترین کارشناسان" />;
     }

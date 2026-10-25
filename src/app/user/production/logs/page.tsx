@@ -1,5 +1,6 @@
 "use client";
 
+import TimePicker from "@/components/TimePicker";
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
@@ -11,6 +12,7 @@ import axiosInstance from "@/lib/axiosInstance";
 import { listAll } from "@/lib/api";
 import { useCurrentEmployee } from "@/hooks/usecurrentemployee";
 import { toPersianDigits } from "@/lib/jalali";
+import { calcHoursWorked, formatHoursWorked, toHHMM } from "@/lib/productionTime";
 
 interface ProductionLog {
   id: number;
@@ -21,6 +23,8 @@ interface ProductionLog {
   machine_name: string;
   machine_code: string;
   hours_worked: string;
+  start_time?: string | null;
+  end_time?: string | null;
   produced_qty: number;
   waste_qty: number;
   note: string;
@@ -42,7 +46,8 @@ export default function UserProductionLogsPage() {
   const [showModal, setShowModal] = useState(false);
   const [formDate, setFormDate] = useState(new Date().toISOString().split("T")[0]);
   const [formMachine, setFormMachine] = useState<number | "">("");
-  const [formHours, setFormHours] = useState("8");
+  const [formStart, setFormStart] = useState("");
+  const [formEnd, setFormEnd] = useState("");
   const [formProduced, setFormProduced] = useState("");
   const [formWaste, setFormWaste] = useState("0");
   const [formNote, setFormNote] = useState("");
@@ -70,8 +75,13 @@ export default function UserProductionLogsPage() {
   }, []);
 
   const handleCreate = async () => {
+    const hours = calcHoursWorked(formStart, formEnd);
     if (!employeeId || !formMachine || !formProduced) {
       setError("لطفاً ماشین و تعداد تولید را به طور صحیح وارد کنید.");
+      return;
+    }
+    if (!formStart || !formEnd || hours === null) {
+      setError("ساعت شروع و پایان کار را وارد کنید.");
       return;
     }
 
@@ -82,7 +92,9 @@ export default function UserProductionLogsPage() {
         date: formDate,
         employee: employeeId,
         machine: Number(formMachine),
-        hours_worked: formHours,
+        start_time: formStart,
+        end_time: formEnd,
+        hours_worked: String(hours),
         produced_qty: Number(formProduced),
         waste_qty: Number(formWaste),
         note: formNote.trim(),
@@ -169,7 +181,13 @@ export default function UserProductionLogsPage() {
                     <td className="p-4 text-gray-600 dark:text-gray-300">
                       {log.machine_name} <span className="text-[10px] text-gray-400 font-mono">({log.machine_code})</span>
                     </td>
-                    <td className="p-4">{toPersianDigits(log.hours_worked)} ساعت</td>
+                    <td className="p-4">{toPersianDigits(log.hours_worked)} ساعت
+                      {toHHMM(log.start_time) && (
+                        <div className="font-mono text-[10px] text-gray-400" dir="ltr">
+                          {toPersianDigits(toHHMM(log.start_time))} → {toPersianDigits(toHHMM(log.end_time))}
+                        </div>
+                      )}
+                    </td>
                     <td className="p-4 font-black text-emerald-600">{toPersianDigits(log.produced_qty.toLocaleString())}</td>
                     <td className="p-4 text-gray-400">{toPersianDigits(Number(log.expected_production).toFixed(1))}</td>
                     <td className="p-4 font-bold text-red-500">{toPersianDigits(log.waste_qty)}</td>
@@ -255,17 +273,18 @@ export default function UserProductionLogsPage() {
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-[11.5px] font-bold text-gray-400 mb-1">ساعت کار (تا 24)</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      max="24"
-                      min="0.01"
-                      value={formHours}
-                      onChange={(e) => setFormHours(e.target.value)}
-                      className="h-11 w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 text-xs font-bold text-gray-900 outline-none focus:border-indigo-500 dark:border-white/[0.08] dark:bg-white/[0.03] dark:text-white"
-                    />
+                    <label className="block text-[11.5px] font-bold text-gray-400 mb-1">ساعت شروع *</label>
+                    <TimePicker value={formStart} onChange={setFormStart} />
                   </div>
+                  <div>
+                    <label className="block text-[11.5px] font-bold text-gray-400 mb-1">ساعت پایان *</label>
+                    <TimePicker value={formEnd} onChange={setFormEnd} />
+                  </div>
+                  {formStart && formEnd && (
+                    <p className="col-span-2 text-[11.5px] font-bold text-indigo-500">
+                      مدت کار: {toPersianDigits(formatHoursWorked(formStart, formEnd))} ساعت
+                    </p>
+                  )}
                   <div>
                     <label className="block text-[11.5px] font-bold text-gray-400 mb-1">تعداد تولید شده</label>
                     <input
