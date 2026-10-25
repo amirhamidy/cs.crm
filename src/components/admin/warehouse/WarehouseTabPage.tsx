@@ -55,14 +55,12 @@ import OrderInvoiceCard from "@/components/user/warehouse/OrderInvoiceCard";
 import OrderInvoiceModal from "@/components/user/warehouse/OrderInvoiceModal";
 import ShelfFilterBar from "@/components/user/warehouse/ShelfFilterBar";
 import { useWarehouseShelves } from "@/hooks/useWarehouseShelves";
-import { useShelfProducts } from "@/hooks/useShelfProducts";
-import { buildSalesInvoices, getOrderTaskTitle, paginate } from "@/utils/warehouseEmployee";
+import { buildSalesInvoices, getOrderTaskTitle } from "@/utils/warehouseEmployee";
 import type { SalesInvoice } from "@/utils/warehouseEmployee";
 import useWarehouseAccess from "@/hooks/useWarehouseAccess";
 import useWarehouses from "@/hooks/useWarehouses";
 import useWarehouseTab from "@/hooks/useWarehouseTab";
 import type { WarehouseTab as Tab } from "@/hooks/useWarehouseTab";
-import { PAGE_SIZE } from "@/lib/warehouseApi";
 import type { ApiStockInfo, ApiWarehouseTask } from "@/types/warehouse";
 
 interface AdminCategory {
@@ -151,6 +149,7 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
         page: currentPage,
         hasFullAccess: hasFullWarehouseAccess,
         employeeId,
+        shelfCode,
     });
 
     const buildUrl = useCallback(
@@ -200,12 +199,8 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
     }, [ready, warehouseId, tabAllowed, isAdmin, router, buildUrl]);
 
     const salesInvoices = useMemo(() => buildSalesInvoices(data.archived), [data.archived]);
-    const paginatedInvoices = useMemo(
-        () => paginate(salesInvoices, currentPage, PAGE_SIZE),
-        [salesInvoices, currentPage],
-    );
 
-    const totalPages = tab === "invoices" ? paginatedInvoices.totalPages : data.totalPages;
+    const totalPages = data.totalPages;
 
     useEffect(() => {
         if (!loading && warehouseId !== null && currentPage > totalPages) {
@@ -233,15 +228,8 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
         [products],
     );
 
-    const qualityTasks = useMemo(
-        () => taskItems.filter((task) => task.quality_control_id !== null),
-        [taskItems],
-    );
-
-    const pendingQualityTasks = useMemo(
-        () => qualityTasks.filter((task) => task.status === "pending"),
-        [qualityTasks],
-    );
+    // شمارندهٔ وظایف کنترل کیفیت در انتظار از کل انبار محاسبه می‌شود (نه فقط صفحهٔ جاری)
+    const pendingQualityCount = data.pendingQualityCount;
 
     const shelfFilterActive = tab === "products" && shelfCode !== "";
 
@@ -250,16 +238,7 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
         shelfReloadKey,
     );
 
-    const shelfProducts = useShelfProducts({
-        shelfCode,
-        page: currentPage,
-        enabled: shelfFilterActive && hasFullWarehouseAccess && ready,
-        reloadKey: shelfReloadKey,
-    });
-
-    const paginatedProducts = shelfFilterActive
-        ? { items: shelfProducts.items, totalPages: shelfProducts.totalPages }
-        : { items: products, totalPages: data.totalPages };
+    const paginatedProducts = { items: products, totalPages: data.totalPages };
     const paginatedTasks = { items: taskItems, totalPages: data.totalPages };
     const paginatedStock = { items: stockInfos, totalPages: data.totalPages };
     const paginatedTransactions = { items: transactions, totalPages: data.totalPages };
@@ -428,7 +407,7 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
         deadlines: tab === "deadlines" ? data.total : 0,
         categories: tab === "categories" ? data.total : 0,
         staff: tab === "staff" ? data.total : 0,
-        invoices: tab === "invoices" ? salesInvoices.length : 0,
+        invoices: tab === "invoices" ? data.total : 0,
         "task-archive": 0,
     };
 
@@ -538,12 +517,12 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
                                     {count}
                                 </span>
                             )}
-                            {id === "tasks" && pendingQualityTasks.length > 0 && (
+                            {id === "tasks" && pendingQualityCount > 0 && (
                                 <span
                                     className="flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[9px] text-white"
                                     style={{ background: "#8b5cf6" }}
                                 >
-                                    {pendingQualityTasks.length}
+                                    {pendingQualityCount}
                                 </span>
                             )}
                         </button>
@@ -585,7 +564,7 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
                                     orderTasks={orderTasks}
                                 />
 
-                                {pendingQualityTasks.length > 0 && (
+                                {pendingQualityCount > 0 && (
                                     <div
                                         className="rounded-3xl border p-4"
                                         style={{
@@ -605,7 +584,7 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
                                                     وظایف کنترل کیفیت
                                                 </p>
                                                 <p className="mt-1 text-[10.5px] text-gray-500 dark:text-gray-400">
-                                                    {pendingQualityTasks.length} وظیفه کنترل کیفیت در انتظار انجام است
+                                                    {pendingQualityCount} وظیفه کنترل کیفیت در انتظار انجام است
                                                 </p>
                                             </div>
                                         </div>
@@ -654,12 +633,6 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
                                     loading={shelvesLoading}
                                 />
 
-                                {shelfFilterActive && shelfProducts.error && (
-                                    <p className="text-center text-[12px] font-semibold text-red-500">
-                                        {shelfProducts.error}
-                                    </p>
-                                )}
-
                                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                                     {paginatedProducts.items.length
                                         ? paginatedProducts.items.map((product, index) => (
@@ -679,9 +652,7 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
                                         ))
                                         : renderEmpty(
                                             shelfFilterActive
-                                                ? shelfProducts.loading
-                                                    ? "در حال دریافت محصولات قفسه..."
-                                                    : "محصولی در این قفسه یافت نشد"
+                                                ? "محصولی در این قفسه یافت نشد"
                                                 : "محصولی برای نمایش وجود ندارد",
                                         )}
                                 </div>
@@ -704,7 +675,7 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
                                     </div>
 
                                     <div className="flex flex-wrap items-center gap-2">
-                                        {hasFullWarehouseAccess && qualityTasks.length > 0 && (
+                                        {hasFullWarehouseAccess && pendingQualityCount > 0 && (
                                             <div
                                                 className="flex items-center gap-2 rounded-xl px-3 py-2"
                                                 style={{
@@ -714,7 +685,7 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
                                             >
                                                 <ShieldCheck size={15} />
                                                 <span className="text-[10.5px] font-extrabold">
-                                                    {qualityTasks.length} وظیفه کنترل کیفیت
+                                                    {pendingQualityCount} وظیفه کنترل کیفیت در انتظار
                                                 </span>
                                             </div>
                                         )}
@@ -866,9 +837,7 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
 
                         {tab === "ledger" && hasFullWarehouseAccess && (
                             <WarehouseEmployeeStockLedger
-                                products={products}
-                                stockInfos={stockInfos}
-                                transactions={transactions}
+                                warehouseId={warehouseId}
                                 defaultProductId={ledgerProductId}
                             />
                         )}
@@ -1006,8 +975,8 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
                                 ) : (
                                     <>
                                         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                                            {paginatedInvoices.items.length
-                                                ? paginatedInvoices.items.map((invoice: SalesInvoice, index: number) => (
+                                            {salesInvoices.length
+                                                ? salesInvoices.map((invoice: SalesInvoice, index: number) => (
                                                     <OrderInvoiceCard
                                                         key={invoice.archiveId}
                                                         invoice={invoice}
@@ -1020,7 +989,7 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
 
                                         <Pagination
                                             currentPage={currentPage}
-                                            totalPages={paginatedInvoices.totalPages}
+                                            totalPages={data.totalPages}
                                             onPageChange={goToPage}
                                             isDark={isDark}
                                         />

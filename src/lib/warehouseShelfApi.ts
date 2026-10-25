@@ -1,5 +1,5 @@
 import axiosInstance from "@/lib/axiosInstance";
-import type { ApiOrderTask, ApiProduct } from "@/types/warehouse";
+import type { ApiOrderTask } from "@/types/warehouse";
 import type {
   AddItemInput,
   PicklistPage,
@@ -55,24 +55,4 @@ export async function addItemsToOrder(
     { headers: { "Content-Type": "application/json" } },
   );
   return data;
-}
-
-export async function fetchProductsByShelf(
-  shelfCode: string,
-  page: number,
-  signal?: AbortSignal,
-): Promise<{ items: ApiProduct[]; count: number }> {
-  const query: Record<string, string | number> = { shelf_code: shelfCode };
-  if (page > 1) query.page = page;
-
-  const { data } = await axiosInstance.get(`${BASE}/products/`, { params: query, signal });
-
-  if (Array.isArray(data)) {
-    return { items: data as ApiProduct[], count: data.length };
-  }
-
-  const results = Array.isArray(data?.results) ? (data.results as ApiProduct[]) : [];
-  const count = typeof data?.count === "number" ? data.count : results.length;
-
-  return { items: results, count };
 }

@@ -5,8 +5,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { AlertCircle, CalendarDays, Check, ChevronDown, ClipboardList, Loader2, Package, Paperclip, Pencil, Plus, Search, ShoppingBag, Star, Trash2, Upload, X } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
 import type { ApiStockInfo, ApiWarehouse } from "@/types/warehouse";
-import { fetchWarehouses } from "@/lib/warehouseApi";
-import { scopeStocks } from "@/lib/warehouseScope";
+import { fetchWarehouseStocks, fetchWarehouses } from "@/lib/warehouseApi";
 import TimeRangeModal from "./TimeRangeModal";
 
 interface OrderItem {
@@ -216,12 +215,10 @@ export default function SoldOrderTaskModal({ isOpen, onClose, taskId, staffId, o
         if (!isOpen || warehouseId == null) return;
         let mounted = true;
         setStockLoading(true);
-        axiosInstance
-            .get("/warehouse/api/v1/process/stock/", { params: { warehouse_id: warehouseId } })
-            .then(({ data }) => {
+        fetchWarehouseStocks(warehouseId)
+            .then((list) => {
                 if (!mounted) return;
-                const list: ApiStockInfo[] = Array.isArray(data) ? data : data?.results ?? [];
-                setProducts(scopeStocks(list, warehouseId));
+                setProducts(list);
             })
             .catch((e) => mounted && setError(parseError(e)))
             .finally(() => mounted && setStockLoading(false));

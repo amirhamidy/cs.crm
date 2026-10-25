@@ -21,6 +21,18 @@ import {
     paginate,
     PAGE_SIZE,
 } from "@/utils/warehouseEmployee";
+import Pagination from "@/components/ui/Pagination";
+import { usePaginatedList } from "@/hooks/usePaginatedList";
+import {
+    fetchProductTransactions,
+    fetchWarehouseProductsPage,
+    fetchWarehouseStocks,
+} from "@/lib/warehouseApi";
+import { productIdsOf } from "@/lib/warehouseScope";
+import type { ApiStockInfo } from "@/types/warehouse";
+
+/** تعداد محصول در هر صفحهٔ لیست کناری */
+const PRODUCT_LIST_PAGE_SIZE = 20;
 
 interface Product {
     id: number;
@@ -30,6 +42,7 @@ interface Product {
 interface StockInfo {
     id: number;
     product: number;
+    product_name?: string | null;
     initial_quantity?: number | string | null;
     current_quantity?: number | string | null;
     created_at?: string | null;
@@ -70,9 +83,7 @@ interface LedgerEvent {
 }
 
 interface WarehouseEmployeeStockLedgerProps {
-    products: Product[];
-    stockInfos: StockInfo[];
-    transactions: Transaction[];
+    warehouseId: number | null;
     defaultProductId?: number | null;
 }
 
@@ -182,20 +193,74 @@ function buildDescription(event: LedgerEvent): string {
 }
 
 export default function WarehouseEmployeeStockLedger({
-    products,
-    stockInfos,
-    transactions,
+    warehouseId,
     defaultProductId = null,
 }: WarehouseEmployeeStockLedgerProps) {
     const { resolvedTheme } = useTheme();
     const isDark = resolvedTheme === "dark";
 
-    const [query, setQuery] = useState("");
     const [selectedProductId, setSelectedProductId] = useState<number | null>(
         defaultProductId
     );
     const [kindFilter, setKindFilter] = useState<"all" | EventKind>("all");
     const [currentPage, setCurrentPage] = useState(1);
+
+    const [stocks, setStocks] = useState<ApiStockInfo[]>([]);
+    const [stocksLoaded, setStocksLoaded] = useState(false);
+    const [transactions, setTransactions] = useState<Transaction[]>([]);
+    const [txLoading, setTxLoading] = useState(false);
+    const [txError, setTxError] = useState(false);
+
+    // موجودی‌های انبار: برای نمایش موجودی کنار هر محصول و تشخیص محصولات این انبار
+    useEffect(() => {
+        if (warehouseId == null) return;
+
+        let alive = true;
+        setStocksLoaded(false);
+
+        fetchWarehouseStocks(warehouseId)
+            .then((list) => {
+                if (alive) setStocks(list);
+            })
+            .catch(() => {
+                if (alive) setStocks([]);
+            })
+            .finally(() => {
+                if (alive) setStocksLoaded(true);
+            });
+
+        return () => {
+            alive = false;
+        };
+    }, [warehouseId]);
+
+    const stockProductIds = useMemo(() => productIdsOf(stocks), [stocks]);
+
+    // لیست محصولات: صفحه‌بندی و جستجو سمت سرور
+    const list = usePaginatedList<Product>(
+        async (params, signal) => {
+            const res = await fetchWarehouseProductsPage(
+                warehouseId as number,
+                stockProductIds,
+                {
+                    page: params.page ?? 1,
+                    pageSize: PRODUCT_LIST_PAGE_SIZE,
+                    search: params.search,
+                    signal,
+                }
+            );
+            return {
+                count: res.total,
+                next: null,
+                previous: null,
+                results: res.items,
+            };
+        },
+        {
+            pageSize: PRODUCT_LIST_PAGE_SIZE,
+            enabled: warehouseId != null && stocksLoaded,
+        }
+    );
 
     useEffect(() => {
         if (defaultProductId != null) {
@@ -204,30 +269,62 @@ export default function WarehouseEmployeeStockLedger({
     }, [defaultProductId]);
 
     useEffect(() => {
-        if (selectedProductId == null && products.length > 0) {
-            setSelectedProductId(products[0].id);
+        if (selectedProductId == null && list.data.length > 0) {
+            setSelectedProductId(list.data[0].id);
         }
-    }, [products, selectedProductId]);
+    }, [list.data, selectedProductId]);
 
     useEffect(() => {
         setCurrentPage(1);
     }, [selectedProductId, kindFilter]);
 
+    // گردش کالای محصول انتخاب‌شده (همهٔ صفحات همان محصول؛ فیلتر ورودی/خروجی و صفحه‌بندی جدول روی همین مجموعه)
+    useEffect(() => {
+        if (warehouseId == null || selectedProductId == null) {
+            setTransactions([]);
+            setTxLoading(false);
+            setTxError(false);
+            return;
+        }
+
+        const controller = new AbortController();
+        setTxLoading(true);
+        setTxError(false);
+
+        fetchProductTransactions(warehouseId, selectedProductId, controller.signal)
+            .then((rows) => {
+                if (!controller.signal.aborted) {
+                    setTransactions(rows as unknown as Transaction[]);
+                }
+            })
+            .catch(() => {
+                if (controller.signal.aborted) return;
+                setTransactions([]);
+                setTxError(true);
+            })
+            .finally(() => {
+                if (!controller.signal.aborted) setTxLoading(false);
+            });
+
+        return () => controller.abort();
+    }, [warehouseId, selectedProductId]);
+
     const stockByProduct = useMemo(
-        () => new Map<number, StockInfo>(stockInfos.map((s) => [s.product, s])),
-        [stockInfos]
+        () => new Map<number, StockInfo>(stocks.map((s) => [s.product, s])),
+        [stocks]
     );
 
-    const filteredProducts = useMemo(() => {
-        const q = query.trim();
-        if (!q) return products;
-        return products.filter((p) => p.name?.includes(q));
-    }, [products, query]);
+    const selectedProduct = useMemo<Product | null>(() => {
+        if (selectedProductId == null) return null;
 
-    const selectedProduct = useMemo(
-        () => products.find((p) => p.id === selectedProductId) ?? null,
-        [products, selectedProductId]
-    );
+        const fromList = list.data.find((p) => p.id === selectedProductId);
+        if (fromList) return fromList;
+
+        const stock = stockByProduct.get(selectedProductId);
+        return stock
+            ? { id: selectedProductId, name: stock.product_name ?? undefined }
+            : null;
+    }, [selectedProductId, list.data, stockByProduct]);
 
     const selectedStock =
         selectedProductId != null
@@ -289,24 +386,28 @@ export default function WarehouseEmployeeStockLedger({
                         className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
                     />
                     <input
-                        value={query}
-                        onChange={(e) => setQuery(e.target.value)}
+                        value={list.search}
+                        onChange={(e) => list.setSearch(e.target.value)}
                         placeholder="جستجوی محصول..."
                         className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pr-9 pl-3 text-sm font-medium text-slate-900 outline-none transition-all placeholder:text-slate-400 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 dark:border-white/10 dark:bg-white/5 dark:text-slate-100 dark:focus:border-indigo-500"
                     />
                 </div>
 
                 <div className="flex max-h-[600px] flex-col gap-1.5 overflow-y-auto pr-1 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-slate-200 dark:scrollbar-thumb-white/10">
-                    {filteredProducts.length === 0 && (
+                    {list.data.length === 0 && (
                         <div className="flex flex-col items-center justify-center py-10 text-slate-400">
                             <Boxes size={24} className="mb-2 opacity-50" />
                             <span className="text-xs font-medium">
-                                محصولی یافت نشد
+                                {list.loading || !stocksLoaded
+                                    ? "در حال دریافت محصولات..."
+                                    : list.error
+                                        ? "دریافت محصولات انجام نشد"
+                                        : "محصولی یافت نشد"}
                             </span>
                         </div>
                     )}
 
-                    {filteredProducts.map((product) => {
+                    {list.data.map((product) => {
                         const active = product.id === selectedProductId;
                         const stock = stockByProduct.get(product.id);
                         const [start, end] =
@@ -359,6 +460,15 @@ export default function WarehouseEmployeeStockLedger({
                         );
                     })}
                 </div>
+
+                {list.totalPages > 1 && (
+                    <Pagination
+                        compact
+                        page={list.page}
+                        totalPages={list.totalPages}
+                        onChange={list.setPage}
+                    />
+                )}
             </div>
 
             <div className="flex flex-col gap-5">
@@ -447,7 +557,11 @@ export default function WarehouseEmployeeStockLedger({
                                                     colSpan={5}
                                                     className="py-12 text-center text-sm text-slate-400"
                                                 >
-                                                    رویدادی برای نمایش وجود ندارد
+                                                    {txLoading
+                                                        ? "در حال دریافت گردش کالا..."
+                                                        : txError
+                                                            ? "دریافت گردش کالا انجام نشد"
+                                                            : "رویدادی برای نمایش وجود ندارد"}
                                                 </td>
                                             </tr>
                                         ) : (

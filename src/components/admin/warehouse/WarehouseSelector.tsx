@@ -9,8 +9,12 @@ import { useTheme } from "next-themes";
 import useWarehouses from "@/hooks/useWarehouses";
 import useWarehouseAccess from "@/hooks/useWarehouseAccess";
 import { useCurrentEmployee } from "@/hooks/usecurrentemployee";
-import axiosInstance from "@/lib/axiosInstance";
-import { apiErrorMessage, createWarehouse } from "@/lib/warehouseApi";
+import {
+    WAREHOUSE_ENDPOINTS,
+    apiErrorMessage,
+    createWarehouse,
+    fetchAll,
+} from "@/lib/warehouseApi";
 import { cardBg, cardBorder, cardShadow, muted } from "@/components/admin/warehouse/WarehouseCards";
 import { EditWarehouseModal, WarehouseStatusModal } from "@/components/admin/warehouse/WarehouseFormModals";
 import type { ApiWarehouse } from "@/types/warehouse";
@@ -192,11 +196,9 @@ export default function WarehouseSelector() {
         let active = true;
         setStaffLoading(true);
 
-        axiosInstance
-            .get<StaffItem[]>("/warehouse/api/v1/staff/")
-            .then((res) => {
+        fetchAll<StaffItem>(WAREHOUSE_ENDPOINTS.staff)
+            .then((staffList) => {
                 if (!active) return;
-                const staffList = Array.isArray(res.data) ? res.data : [];
                 const currentStaff = staffList.find(
                     (s) =>
                         s.is_active &&

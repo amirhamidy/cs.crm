@@ -1,16 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import axiosInstance from "@/lib/axiosInstance";
-import { WAREHOUSE_ENDPOINTS } from "@/lib/warehouseApi";
+import { WAREHOUSE_ENDPOINTS, fetchAll } from "@/lib/warehouseApi";
 import { useCurrentEmployee } from "@/hooks/usecurrentemployee";
 import { useAuthStore } from "@/store/authStore";
 import type { ApiWarehouseStaff } from "@/types/warehouse";
-import {
-  extractList,
-  findEmployeeStaff,
-  getEmployeeId,
-} from "@/utils/warehouseEmployee";
+import { findEmployeeStaff, getEmployeeId } from "@/utils/warehouseEmployee";
 
 /**
  * فقط سطح دسترسی کاربر به انبار را مشخص می‌کند
@@ -33,10 +28,10 @@ export default function useWarehouseAccess() {
     let alive = true;
     setStaffLoading(true);
 
-    axiosInstance
-      .get(WAREHOUSE_ENDPOINTS.staff)
-      .then((res) => {
-        if (alive) setStaff(extractList<ApiWarehouseStaff>(res.data));
+    // همهٔ صفحات: اگر انباردار بیشتر از یک صفحه باشد، رکورد کاربر جاری ممکن است در صفحهٔ اول نباشد
+    fetchAll<ApiWarehouseStaff>(WAREHOUSE_ENDPOINTS.staff)
+      .then((list) => {
+        if (alive) setStaff(list);
       })
       .catch(() => {
         if (alive) setStaff([]);

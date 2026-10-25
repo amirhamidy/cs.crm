@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Check, CheckSquare, Loader, Square, UserPlus, Warehouse as WarehouseIcon, X } from "lucide-react";
 import { useTheme } from "next-themes";
 import axiosInstance from "@/lib/axiosInstance";
+import { WAREHOUSE_ENDPOINTS, fetchAll } from "@/lib/warehouseApi";
 
 interface Employee {
     id: number;
@@ -51,13 +52,13 @@ export default function AddWarehouseStaffModal({
     const fetchInitialData = async () => {
         setFetching(true);
         try {
-            const [empRes, whRes] = await Promise.all([
-                axiosInstance.get("/accounts/api/v1/employee/list/"),
-                axiosInstance.get("/warehouse/api/v1/warehouse/"),
+            const [employeeList, warehouseList] = await Promise.all([
+                fetchAll<Employee>("/accounts/api/v1/employee/list/"),
+                fetchAll<Warehouse>(WAREHOUSE_ENDPOINTS.warehouses),
             ]);
 
-            setEmployees(Array.isArray(empRes.data) ? empRes.data : []);
-            setWarehouses(Array.isArray(whRes.data) ? whRes.data : []);
+            setEmployees(employeeList);
+            setWarehouses(warehouseList);
         } catch {
             setEmployees([]);
             setWarehouses([]);
