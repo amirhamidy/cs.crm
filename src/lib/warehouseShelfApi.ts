@@ -1,5 +1,5 @@
 import axiosInstance from "@/lib/axiosInstance";
-import type { ApiOrderTask, ApiProduct } from "@/types/warehouse";
+import type { ApiOrderTask } from "@/types/warehouse";
 import type {
   AddItemInput,
   PicklistPage,
@@ -10,15 +10,9 @@ import type {
 
 const BASE = "/warehouse/api/v1";
 
-export async function fetchShelves(
-  signal?: AbortSignal,
-): Promise<ShelfSummary[]> {
-  const { data } = await axiosInstance.get(`${BASE}/products/shelves/`, {
-    signal,
-  });
-  const list = Array.isArray(data)
-    ? data
-    : (data as { results?: unknown })?.results;
+export async function fetchShelves(signal?: AbortSignal): Promise<ShelfSummary[]> {
+  const { data } = await axiosInstance.get(`${BASE}/products/shelves/`, { signal });
+  const list = Array.isArray(data) ? data : (data as { results?: unknown })?.results;
   return Array.isArray(list) ? (list as ShelfSummary[]) : [];
 }
 
@@ -45,34 +39,7 @@ export async function fetchPicklist(
     return { items: data as PicklistProduct[], count: data.length };
   }
 
-  const results = Array.isArray(data?.results)
-    ? (data.results as PicklistProduct[])
-    : [];
-  const count = typeof data?.count === "number" ? data.count : results.length;
-
-  return { items: results, count };
-}
-
-export async function fetchProductsByShelf(
-  shelfCode: string,
-  page: number = 1,
-  signal?: AbortSignal,
-): Promise<{ items: ApiProduct[]; count: number }> {
-  const { data } = await axiosInstance.get(`${BASE}/products/`, {
-    params: {
-      shelf_code: shelfCode,
-      page: page > 1 ? page : undefined,
-    },
-    signal,
-  });
-
-  if (Array.isArray(data)) {
-    return { items: data as ApiProduct[], count: data.length };
-  }
-
-  const results = Array.isArray(data?.results)
-    ? (data.results as ApiProduct[])
-    : [];
+  const results = Array.isArray(data?.results) ? (data.results as PicklistProduct[]) : [];
   const count = typeof data?.count === "number" ? data.count : results.length;
 
   return { items: results, count };
