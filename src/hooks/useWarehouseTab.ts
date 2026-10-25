@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { cached, invalidate } from "@/lib/api/_core";
 import {
   PAGE_SIZE,
   WAREHOUSE_ENDPOINTS as EP,
@@ -16,7 +15,7 @@ import {
   readWarehouseId,
   scopeStocks,
 } from "@/lib/warehouseScope";
-import { sameId } from "@/utils/warehouseEmployee";
+import { paginate, sameId } from "@/utils/warehouseEmployee";
 import type {
   ApiArchivedOrderTask,
   ApiCategory,
@@ -98,122 +97,90 @@ interface LoadArgs {
   tab: WarehouseTab;
   warehouseId: number;
   page: number;
-  search: string;
-  shelfCode: string;
   hasFullAccess: boolean;
   employeeId: number | string | null;
 }
 
-const LOOKUP_KEY = "warehouse:";
-const LOOKUP_TTL = 30_000;
-
-/**
- * لیست‌های کمکی (فقط برای نمایش نام / موجودی کنار آیتم‌های هر صفحه).
- * کش کوتاه‌مدت دارند تا با هر بار جستجو یا عوض شدن صفحه دوباره کامل دانلود نشوند؛
- * بعد از هر بروزرسانی (reload(true)) پاک می‌شوند.
- */
-const lookupStocks = (warehouseId: number) =>
-  cached(
-    `${LOOKUP_KEY}stocks:${warehouseId}`,
-    async () =>
-      scopeStocks(
-        await fetchAll<ApiStockInfo>(EP.stock, warehouseParams(warehouseId)),
-        warehouseId,
-      ),
-    LOOKUP_TTL,
-  );
-
-const lookupCategories = () =>
-  cached(
-    `${LOOKUP_KEY}categories`,
-    () => fetchAll<ApiCategory>(EP.categories),
-    LOOKUP_TTL,
-  );
-
-const lookupProducts = (warehouseId: number) =>
-  cached(
-    `${LOOKUP_KEY}products:${warehouseId}`,
-    async () => {
-      const [stocks, products] = await Promise.all([
-        lookupStocks(warehouseId),
-        fetchAll<ApiProduct>(EP.products, warehouseParams(warehouseId)),
-      ]);
-      const productIds = productIdsOf(stocks);
-      return products.filter((product) =>
-        productBelongs(product, warehouseId, productIds),
-      );
-    },
-    LOOKUP_TTL,
-  );
-
-const lookupOrders = (warehouseId: number) =>
-  cached(
-    `${LOOKUP_KEY}orders:${warehouseId}`,
-    async () => {
-      const [stocks, orders] = await Promise.all([
-        lookupStocks(warehouseId),
-        fetchAll<ApiOrderTask>(EP.orderTasks, warehouseParams(warehouseId)),
-      ]);
-      const productIds = productIdsOf(stocks);
-      return orders.filter((order) =>
-        belongsToWarehouse(order, warehouseId, productIds),
-      );
-    },
-    LOOKUP_TTL,
-  );
-
-/** مکمل فیلتر warehouse_id بک‌اند: فقط رکوردی که فیلد انبارش صراحتاً انبار دیگری است حذف می‌شود */
-const inScope = <T,>(items: T[], warehouseId: number): T[] =>
-  items.filter((item) => {
-    const own = readWarehouseId(item);
-    return own === undefined || own === warehouseId;
+const byNewest = <T extends { id: number; created_at?: string | null }>(
+  items: T[],
+): T[] =>
+  [...items].sort((a, b) => {
+    const ta = new Date(a.created_at ?? "").getTime();
+    const tb = new Date(b.created_at ?? "").getTime();
+    if (!Number.isNaN(ta) && !Number.isNaN(tb) && ta !== tb) return tb - ta;
+    return b.id - a.id;
   });
 
 /**
- * همه‌ی تب‌هایی که لیست دارند صفحه‌بندی و جستجو را از سرور می‌گیرند
- * (page / page_size / search). فقط «نمای کلی» و «گردش محصول» به داده‌ی کامل نیاز دارند.
+ * همه‌ی داده‌های وابسته به انبار از اینجا رد می‌شوند:
+ *  - موجودی‌ها: فقط موجودی‌های همین انبار
+ *  - هر چیز دیگر (محصول، تراکنش، وظیفه، سفارش، بایگانی): بر اساس فیلد انبار خودش
+ *    یا (اگر نداشت) بر اساس این‌که محصولش در موجودی همین انبار باشد.
  */
-async function loadTab(args: LoadArgs): Promise<TabData> {
-  const { tab, warehouseId, page, search, shelfCode, hasFullAccess, employeeId } =
-    args;
-  const data: TabData = { ...EMPTY_TAB_DATA };
+async function loadScope(warehouseId: number) {
   const wp = warehouseParams(warehouseId);
+  const rawStocks = await fetchAll<ApiStockInfo>(EP.stock, wp);
+
+  if (
+    process.env.NODE_ENV !== "production" &&
+    rawStocks.length > 0 &&
+    readWarehouseId(rawStocks[0]) === undefined
+  ) {
+    console.warn(
+      "[warehouse] رکورد موجودی فیلد warehouse ندارد؛ جداسازی انبارها فقط به فیلتر query بک‌اند وابسته است.",
+    );
+  }
+
+  const stocks = scopeStocks(rawStocks, warehouseId);
+  const productIds = productIdsOf(stocks);
+
+  const inWarehouse = <T>(items: T[], keepUnattributed = false) =>
+    items.filter((item) =>
+      belongsToWarehouse(item, warehouseId, productIds, keepUnattributed),
+    );
+
+  const products = async () =>
+    (await fetchAll<ApiProduct>(EP.products, wp)).filter((product) =>
+      productBelongs(product, warehouseId, productIds),
+    );
+
+  return { wp, stocks, productIds, inWarehouse, products };
+}
+
+async function loadTab(args: LoadArgs): Promise<TabData> {
+  const { tab, warehouseId, page, hasFullAccess, employeeId } = args;
+  const data: TabData = { ...EMPTY_TAB_DATA };
 
   const setPaged = (r: { total: number; totalPages: number }) => {
     data.total = r.total;
     data.totalPages = r.totalPages;
   };
 
+  if (tab === "categories") {
+    const res = await fetchPage<ApiCategory>(EP.categories, { page });
+    data.categories = res.items;
+    setPaged(res);
+    return data;
+  }
+
+  if (tab === "staff") {
+    const res = await fetchPage<ApiWarehouseStaff>(EP.staff, { page });
+    data.staffList = res.items;
+    setPaged(res);
+    return data;
+  }
+
+  const scope = await loadScope(warehouseId);
+  const { wp, stocks, inWarehouse } = scope;
+
   switch (tab) {
-    case "categories": {
-      const res = await fetchPage<ApiCategory>(EP.categories, { page, search });
-      data.categories = res.items;
-      setPaged(res);
-      return data;
-    }
-
-    case "staff": {
-      const res = await fetchPage<ApiWarehouseStaff>(EP.staff, { page, search });
-      data.staffList = res.items;
-      setPaged(res);
-      return data;
-    }
-
     case "overview": {
-      const [stocks, products, transactions, tasks, orderTasks] =
-        await Promise.all([
-          lookupStocks(warehouseId),
-          lookupProducts(warehouseId),
-          fetchAll<ApiStockTransaction>(EP.transactions, wp),
-          fetchAll<ApiWarehouseTask>(EP.tasks, wp),
-          fetchAll<ApiOrderTask>(EP.orderTasks, wp),
-        ]);
-
-      const productIds = productIdsOf(stocks);
-      const inWarehouse = <T,>(items: T[], keepUnattributed = false) =>
-        items.filter((item) =>
-          belongsToWarehouse(item, warehouseId, productIds, keepUnattributed),
-        );
+      const [products, transactions, tasks, orderTasks] = await Promise.all([
+        scope.products(),
+        fetchAll<ApiStockTransaction>(EP.transactions, wp),
+        fetchAll<ApiWarehouseTask>(EP.tasks, wp),
+        fetchAll<ApiOrderTask>(EP.orderTasks, wp),
+      ]);
 
       Object.assign(data, {
         products,
@@ -222,63 +189,28 @@ async function loadTab(args: LoadArgs): Promise<TabData> {
         tasks: inWarehouse(tasks, true),
         orderTasks: inWarehouse(orderTasks),
       });
-      return data;
-    }
-
-    case "ledger": {
-      const [stocks, products, transactions] = await Promise.all([
-        lookupStocks(warehouseId),
-        lookupProducts(warehouseId),
-        fetchAll<ApiStockTransaction>(EP.transactions, wp),
-      ]);
-
-      const productIds = productIdsOf(stocks);
-
-      Object.assign(data, {
-        products,
-        stockInfos: stocks,
-        transactions: transactions.filter((item) =>
-          belongsToWarehouse(item, warehouseId, productIds),
-        ),
-      });
-      return data;
+      break;
     }
 
     case "products": {
-      const [stocks, categories, res] = await Promise.all([
-        lookupStocks(warehouseId),
-        lookupCategories(),
-        fetchPage<ApiProduct>(EP.products, {
-          page: shelfCode ? 1 : page,
-          pageSize: shelfCode ? 1 : undefined,
-          params: wp,
-          search,
-          newestFirst: true,
-        }),
+      const [products, categories] = await Promise.all([
+        scope.products(),
+        fetchAll<ApiCategory>(EP.categories),
       ]);
 
-      const productIds = productIdsOf(stocks);
-
-      data.products = shelfCode
-        ? []
-        : res.items.filter((product) =>
-            productBelongs(product, warehouseId, productIds),
-          );
+      const res = paginate(byNewest(products), page, PAGE_SIZE);
+      data.products = res.items;
       data.stockInfos = stocks;
       data.categories = categories;
       setPaged(res);
-      return data;
+      break;
     }
 
     case "tasks": {
-      const res = await fetchPage<ApiWarehouseTask>(EP.tasks, {
-        page,
-        params: wp,
-        search,
-        newestFirst: true,
-      });
-
-      let tasks = inScope(res.items, warehouseId);
+      let tasks = inWarehouse(
+        await fetchAll<ApiWarehouseTask>(EP.tasks, wp),
+        true,
+      );
 
       if (!hasFullAccess) {
         tasks = tasks.filter(
@@ -288,100 +220,97 @@ async function loadTab(args: LoadArgs): Promise<TabData> {
         );
       }
 
-      data.tasks = tasks;
+      const res = paginate(byNewest(tasks), page, PAGE_SIZE);
+      data.tasks = res.items;
       setPaged(res);
-      return data;
+      break;
     }
 
     case "stock": {
-      const res = await fetchPage<ApiStockInfo>(EP.stock, {
-        page,
-        params: wp,
-        search,
-      });
-
-      data.stockInfos = scopeStocks(res.items, warehouseId);
+      const res = paginate(stocks, page, PAGE_SIZE);
+      data.stockInfos = res.items;
       setPaged(res);
-      return data;
+      break;
     }
 
     case "transactions": {
-      const res = await fetchPage<ApiStockTransaction>(EP.transactions, {
-        page,
-        params: wp,
-        search,
-        newestFirst: true,
-      });
-
-      data.transactions = inScope(res.items, warehouseId);
+      const transactions = inWarehouse(
+        await fetchAll<ApiStockTransaction>(EP.transactions, wp),
+      );
+      const res = paginate(byNewest(transactions), page, PAGE_SIZE);
+      data.transactions = res.items;
       setPaged(res);
-      return data;
+      break;
     }
 
     case "orders": {
-      const [products, stocks, res] = await Promise.all([
-        lookupProducts(warehouseId),
-        lookupStocks(warehouseId),
-        fetchPage<ApiOrderTask>(EP.orderTasks, {
-          page,
-          params: wp,
-          search,
-          newestFirst: true,
-        }),
+      const [orderTasks, products] = await Promise.all([
+        fetchAll<ApiOrderTask>(EP.orderTasks, wp),
+        scope.products(),
       ]);
 
-      data.orderTasks = inScope(res.items, warehouseId);
+      const res = paginate(byNewest(inWarehouse(orderTasks)), page, PAGE_SIZE);
+      data.orderTasks = res.items;
       data.products = products;
       data.stockInfos = stocks;
       setPaged(res);
-      return data;
+      break;
     }
 
     case "deadlines": {
-      const [orderTasks, res] = await Promise.all([
-        lookupOrders(warehouseId),
-        fetchPage<ApiOrderTaskDeadline>(EP.deadlines, {
-          page,
-          params: wp,
-          search,
-          ordering: "-id",
-        }),
+      const [deadlines, orderTasks] = await Promise.all([
+        fetchAll<ApiOrderTaskDeadline>(EP.deadlines),
+        fetchAll<ApiOrderTask>(EP.orderTasks, wp),
       ]);
 
-      const orderIds = new Set(orderTasks.map((order) => order.id));
+      const scopedOrders = inWarehouse(orderTasks);
+      const orderIds = new Set(scopedOrders.map((order) => order.id));
 
-      data.deadlines = res.items.filter((deadline) =>
+      const scopedDeadlines = deadlines.filter((deadline) =>
         orderIds.has(Number(deadline.order_task)),
       );
-      data.orderTasks = orderTasks;
+
+      const res = paginate(
+        byNewest(scopedDeadlines as never[]),
+        page,
+        PAGE_SIZE,
+      );
+      data.deadlines = res.items as unknown as ApiOrderTaskDeadline[];
+      data.orderTasks = scopedOrders;
       setPaged(res);
-      return data;
+      break;
+    }
+
+    case "ledger": {
+      const [products, transactions] = await Promise.all([
+        scope.products(),
+        fetchAll<ApiStockTransaction>(EP.transactions, wp),
+      ]);
+
+      Object.assign(data, {
+        products,
+        stockInfos: stocks,
+        transactions: inWarehouse(transactions),
+      });
+      break;
     }
 
     case "task-archive": {
-      const res = await fetchPage<ApiWarehouseTaskArchive>(EP.taskArchive, {
-        page,
-        params: wp,
-        search,
-        ordering: "-archived_at",
-      });
-
-      data.taskArchive = inScope(res.items, warehouseId);
+      const archive = inWarehouse(
+        await fetchAll<ApiWarehouseTaskArchive>(EP.taskArchive, wp),
+        true,
+      );
+      const res = paginate(byNewest(archive as never[]), page, PAGE_SIZE);
+      data.taskArchive = res.items as unknown as ApiWarehouseTaskArchive[];
       setPaged(res);
-      return data;
+      break;
     }
 
     case "invoices": {
-      const res = await fetchPage<ApiArchivedOrderTask>(EP.archive, {
-        page,
-        params: wp,
-        search,
-        ordering: "-archived_at",
-      });
-
-      data.archived = inScope(res.items, warehouseId);
-      setPaged(res);
-      return data;
+      data.archived = inWarehouse(
+        await fetchAll<ApiArchivedOrderTask>(EP.archive, wp),
+      );
+      break;
     }
   }
 
@@ -389,16 +318,7 @@ async function loadTab(args: LoadArgs): Promise<TabData> {
 }
 
 export default function useWarehouseTab(args: LoadArgs & { enabled: boolean }) {
-  const {
-    enabled,
-    tab,
-    warehouseId,
-    page,
-    search,
-    shelfCode,
-    hasFullAccess,
-    employeeId,
-  } = args;
+  const { enabled, tab, warehouseId, page, hasFullAccess, employeeId } = args;
 
   const [data, setData] = useState<TabData>(EMPTY_TAB_DATA);
   const [loading, setLoading] = useState(true);
@@ -410,8 +330,6 @@ export default function useWarehouseTab(args: LoadArgs & { enabled: boolean }) {
     async (silent = false) => {
       if (!enabled) return;
 
-      if (silent) invalidate(LOOKUP_KEY);
-
       const id = ++requestId.current;
       if (silent) setRefreshing(true);
       else setLoading(true);
@@ -422,8 +340,6 @@ export default function useWarehouseTab(args: LoadArgs & { enabled: boolean }) {
           tab,
           warehouseId,
           page,
-          search,
-          shelfCode,
           hasFullAccess,
           employeeId,
         });
@@ -440,7 +356,7 @@ export default function useWarehouseTab(args: LoadArgs & { enabled: boolean }) {
         }
       }
     },
-    [enabled, tab, warehouseId, page, search, shelfCode, hasFullAccess, employeeId],
+    [enabled, tab, warehouseId, page, hasFullAccess, employeeId],
   );
 
   useEffect(() => {

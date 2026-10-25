@@ -10,10 +10,9 @@ type Options = {
   page: number;
   enabled: boolean;
   reloadKey?: number;
-  search?: string;
 };
 
-export function useShelfProducts({ shelfCode, page, enabled, reloadKey = 0, search = "" }: Options) {
+export function useShelfProducts({ shelfCode, page, enabled, reloadKey = 0 }: Options) {
   const [items, setItems] = useState<ApiProduct[]>([]);
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -31,7 +30,7 @@ export function useShelfProducts({ shelfCode, page, enabled, reloadKey = 0, sear
     setLoading(true);
     setError("");
 
-    fetchProductsByShelf(shelfCode, page, controller.signal, search)
+    fetchProductsByShelf(shelfCode, page, controller.signal)
       .then((result) => {
         if (controller.signal.aborted) return;
         setItems(result.items);
@@ -48,7 +47,7 @@ export function useShelfProducts({ shelfCode, page, enabled, reloadKey = 0, sear
       });
 
     return () => controller.abort();
-  }, [enabled, shelfCode, page, reloadKey, search]);
+  }, [enabled, shelfCode, page, reloadKey]);
 
   return { items, totalPages, loading, error };
 }
