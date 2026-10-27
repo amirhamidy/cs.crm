@@ -566,12 +566,15 @@ interface AddCustomerModalProps {
     isOpen: boolean;
     onClose: () => void;
     onAdded: () => void;
+    /** در سمت کارمند اجازه می‌دهد شماره تکراری ثبت شود */
+    allowDuplicatePhone?: boolean;
 }
 
 export default function AddCustomerModal({
     isOpen,
     onClose,
     onAdded,
+    allowDuplicatePhone = false,
 }: AddCustomerModalProps) {
     const [form, setForm] = useState<CustomerFormData>(EMPTY_FORM);
     const [loading, setLoading] = useState(false);
@@ -649,6 +652,8 @@ export default function AddCustomerModal({
             setForm((f) => ({ ...f, phone_number: val }));
             setError(null);
 
+            if (allowDuplicatePhone) return;
+
             if (phoneDebounceRef.current)
                 clearTimeout(phoneDebounceRef.current);
 
@@ -663,7 +668,7 @@ export default function AddCustomerModal({
                 checkPhoneAvailability(val);
             }, 600);
         },
-        [checkPhoneAvailability]
+        [allowDuplicatePhone, checkPhoneAvailability]
     );
 
     const handleSourceChange = useCallback((id: number) => {
@@ -738,32 +743,36 @@ export default function AddCustomerModal({
             return;
         }
 
-        if (phoneAvailability === "taken") {
-            setError("این شماره قبلاً ثبت شده است");
-            return;
-        }
+        if (!allowDuplicatePhone) {
+            if (phoneAvailability === "taken") {
+                setError("این شماره قبلاً ثبت شده است");
+                return;
+            }
 
-        if (phoneAvailability === "checking") {
-            setError("لطفاً صبر کن، در حال بررسی شماره...");
-            return;
+            if (phoneAvailability === "checking") {
+                setError("لطفاً صبر کن، در حال بررسی شماره...");
+                return;
+            }
         }
 
         setLoading(true);
         setError(null);
 
         try {
-            const customersList = await getCustomersList();
-            const taken = customersList.some(
-                (c) =>
-                    normalizePhoneNumber(c.phone_number ?? "") ===
-                    normalizedPhone
-            );
+            if (!allowDuplicatePhone) {
+                const customersList = await getCustomersList();
+                const taken = customersList.some(
+                    (c) =>
+                        normalizePhoneNumber(c.phone_number ?? "") ===
+                        normalizedPhone
+                );
 
-            if (taken) {
-                setPhoneAvailability("taken");
-                setError("این شماره قبلاً ثبت شده است");
-                setLoading(false);
-                return;
+                if (taken) {
+                    setPhoneAvailability("taken");
+                    setError("این شماره قبلاً ثبت شده است");
+                    setLoading(false);
+                    return;
+                }
             }
 
             await axiosInstance.post<Customer>(
@@ -796,8 +805,9 @@ export default function AddCustomerModal({
         setError(null);
     };
 
-    const phoneInputBorderClass =
-        phoneAvailability === "taken"
+    const phoneInputBorderClass = allowDuplicatePhone
+        ? ""
+        : phoneAvailability === "taken"
             ? "!border-red-400 dark:!border-red-500"
             : phoneAvailability === "available"
                 ? "!border-green-400 dark:!border-green-500"
@@ -873,47 +883,49 @@ export default function AddCustomerModal({
                                         onChange={handlePhoneChange}
                                         className={`text-left ${phoneInputBorderClass}`}
                                     />
-                                    <AnimatePresence mode="wait">
-                                        {phoneAvailability === "checking" && (
-                                            <motion.span
-                                                key="checking"
-                                                initial={{ opacity: 0, y: -4 }}
-                                                animate={{ opacity: 1, y: 0 }}
-                                                exit={{ opacity: 0 }}
-                                                className="flex items-center gap-1.5 pr-1 text-[11px] text-gray-400"
-                                            >
-                                                <Loader
-                                                    size={10}
-                                                    className="animate-spin"
-                                                />
-                                                در حال بررسی...
-                                            </motion.span>
-                                        )}
-                                        {phoneAvailability === "taken" && (
-                                            <motion.span
-                                                key="taken"
-                                                initial={{ opacity: 0, y: -4 }}
-                                                animate={{ opacity: 1, y: 0 }}
-                                                exit={{ opacity: 0 }}
-                                                className="flex items-center gap-1.5 pr-1 text-[11px] font-semibold text-red-500 dark:text-red-400"
-                                            >
-                                                <AlertCircle size={11} />
-                                                این شماره قبلاً ثبت شده
-                                            </motion.span>
-                                        )}
-                                        {phoneAvailability === "available" && (
-                                            <motion.span
-                                                key="available"
-                                                initial={{ opacity: 0, y: -4 }}
-                                                animate={{ opacity: 1, y: 0 }}
-                                                exit={{ opacity: 0 }}
-                                                className="flex items-center gap-1.5 pr-1 text-[11px] font-semibold text-green-500 dark:text-green-400"
-                                            >
-                                                <CheckCircle2 size={11} />
-                                                شماره در دسترس است
-                                            </motion.span>
-                                        )}
-                                    </AnimatePresence>
+                                    {!allowDuplicatePhone && (
+                                        <AnimatePresence mode="wait">
+                                            {phoneAvailability === "checking" && (
+                                                <motion.span
+                                                    key="checking"
+                                                    initial={{ opacity: 0, y: -4 }}
+                                                    animate={{ opacity: 1, y: 0 }}
+                                                    exit={{ opacity: 0 }}
+                                                    className="flex items-center gap-1.5 pr-1 text-[11px] text-gray-400"
+                                                >
+                                                    <Loader
+                                                        size={10}
+                                                        className="animate-spin"
+                                                    />
+                                                    در حال بررسی...
+                                                </motion.span>
+                                            )}
+                                            {phoneAvailability === "taken" && (
+                                                <motion.span
+                                                    key="taken"
+                                                    initial={{ opacity: 0, y: -4 }}
+                                                    animate={{ opacity: 1, y: 0 }}
+                                                    exit={{ opacity: 0 }}
+                                                    className="flex items-center gap-1.5 pr-1 text-[11px] font-semibold text-red-500 dark:text-red-400"
+                                                >
+                                                    <AlertCircle size={11} />
+                                                    این شماره قبلاً ثبت شده
+                                                </motion.span>
+                                            )}
+                                            {phoneAvailability === "available" && (
+                                                <motion.span
+                                                    key="available"
+                                                    initial={{ opacity: 0, y: -4 }}
+                                                    animate={{ opacity: 1, y: 0 }}
+                                                    exit={{ opacity: 0 }}
+                                                    className="flex items-center gap-1.5 pr-1 text-[11px] font-semibold text-green-500 dark:text-green-400"
+                                                >
+                                                    <CheckCircle2 size={11} />
+                                                    شماره در دسترس است
+                                                </motion.span>
+                                            )}
+                                        </AnimatePresence>
+                                    )}
                                 </div>
                             </div>
 
@@ -1002,10 +1014,11 @@ export default function AddCustomerModal({
                                                 type="submit"
                                                 disabled={
                                                     loading ||
-                                                    phoneAvailability ===
-                                                    "taken" ||
-                                                    phoneAvailability ===
-                                                    "checking"
+                                                    (!allowDuplicatePhone &&
+                                                        (phoneAvailability ===
+                                                            "taken" ||
+                                                            phoneAvailability ===
+                                                                "checking"))
                                                 }
                                                 whileTap={{ scale: 0.97 }}
                                                 className="flex w-full items-center justify-center gap-2 rounded-full bg-blue-600 py-3 text-sm font-bold text-white transition-colors hover:bg-blue-500 disabled:opacity-50"

@@ -1,6 +1,7 @@
 import axiosInstance from "@/lib/axiosInstance";
 import { accountsApi, departmentsApi, listAll, toPaginated } from "@/lib/api";
 import type { Paginated } from "@/types/pagination";
+import { resolveFileUrl } from "./hrUtils";
 
 /* -------------------------------------------------------------------------- */
 /*                                   Types                                    */
@@ -29,6 +30,12 @@ export interface HumanResource {
   steps: HumanResourceStep[];
   created_at: string;
   updated_at: string;
+  /**
+   * اگر بک‌اند فیلد `files` را داخل خود سند برگردانده باشد true است.
+   * در غیر این صورت کارت فایل‌ها را جداگانه از
+   * `GET /document/api/v1/{id}/files/` می‌گیرد.
+   */
+  filesEmbedded?: boolean;
 }
 
 export interface Department {
@@ -87,22 +94,48 @@ export type DocumentList<T> = Paginated<T>;
 /* -------------------------------------------------------------------------- */
 
 /**
- * مسیر درست پایه‌ی سرویس اسناد روی بک‌اند:
+ * مسیر پایه‌ی سرویس اسناد روی بک‌اند:
  *   https://api.radcosys.ir/document/api/v1/
  *
- * قبلاً در این فایل مسیرها بدون `/api/v1` بودند (مثل `/document/`) و همه‌ی
- * درخواست‌ها با ۴۰۴ پاسخ می‌گرفتند که باعث خطای کلاینت در صفحه‌ی
- * منابع انسانی می‌شد.
+ *   POST /document/api/v1/                      { title }
+ *   POST /document/api/v1/{document_id}/files/  multipart: title + file
  */
 const DOC = "/document/api/v1";
 
 const api = axiosInstance;
 
-/** همه‌ی توابع این ماژول شکل `{ data }` برمی‌گردانند (سازگار با مصرف‌کننده‌ها). */
+/** همه‌ی توابع لیستی این ماژول شکل `{ data }` برمی‌گردانند. */
 const wrap = <T>(data: T) => ({ data });
 
-/** اگر بک‌اند آرایه‌ی خام بدهد یا `{count, results}`، هر دو حالت را آرایه می‌کند. */
 const unwrapList = <T,>(data: unknown): T[] => toPaginated<T>(data).results;
+
+/* -------------------------------------------------------------------------- */
+/*                               Normalizers                                  */
+/* -------------------------------------------------------------------------- */
+/*
+ * پاسخ بک‌اند همیشه به یک شکل ثابت تبدیل می‌شود تا کارت‌ها و مودال‌ها
+ * هیچ‌وقت با `files` / `steps` ناموجود کرش نکنند و لینک فایل‌ها (که ممکن
+ * است نسبی یا http باشد) همیشه درست باز شود.
+ */
+
+const normalizeFile = (f: HumanResourceFile): HumanResourceFile => ({
+  ...f,
+  title: f.title ?? "",
+  file: resolveFileUrl(f.file),
+  step: f.step ?? null,
+});
+
+const normalizeStep = (s: HumanResourceStep): HumanResourceStep => ({
+  ...s,
+  files: Array.isArray(s.files) ? s.files.map(normalizeFile) : undefined,
+});
+
+export const normalizeDocument = (d: HumanResource): HumanResource => ({
+  ...d,
+  files: Array.isArray(d.files) ? d.files.map(normalizeFile) : [],
+  steps: Array.isArray(d.steps) ? d.steps.map(normalizeStep) : [],
+  filesEmbedded: Array.isArray(d.files),
+});
 
 /* -------------------------------------------------------------------------- */
 /*                                  Documents                                 */
@@ -110,7 +143,7 @@ const unwrapList = <T,>(data: unknown): T[] => toPaginated<T>(data).results;
 
 /** لیست همه‌ی اسناد (همه‌ی صفحات را خودکار می‌خواند). */
 export const getDocuments = async () =>
-  wrap(await listAll<HumanResource>(`${DOC}/`));
+  wrap((await listAll<HumanResource>(`${DOC}/`)).map(normalizeDocument));
 
 /** یک صفحه از لیست اسناد (برای جدول‌های صفحه‌بندی‌شده). */
 export const getDocumentsPage = async (
@@ -121,23 +154,37 @@ export const getDocumentsPage = async (
   } = {},
   signal?: AbortSignal,
 ) => {
-  const { data } = await api.get<unknown>(`${DOC}/`, { params, signal });
-  return toPaginated<HumanResource>(data);
+  const { data } = await api.get<unknown>(`${DOC}/`, {
+    // جدیدترین منبع اول بیاید تا منبع تازه‌ساخته‌شده در صفحه‌ی اول دیده شود.
+    // اگر بک‌اند ordering را پشتیبانی نکند، DRF این پارامتر را نادیده می‌گیرد.
+    params: { ordering: "-id", ...params },
+    signal,
+  });
+  const page = toPaginated<HumanResource>(data);
+  return { ...page, results: page.results.map(normalizeDocument) };
 };
 
 /** یک سند. */
-export const getDocument = (id: number) =>
-  api.get<HumanResource>(`${DOC}/${id}/`);
+export const getDocument = async (id: number) => {
+  const r = await api.get<HumanResource>(`${DOC}/${id}/`);
+  return { ...r, data: normalizeDocument(r.data) };
+};
 
-export const createDocument = (data: DocumentPayload) =>
-  api.post<HumanResource>(`${DOC}/`, data);
+export const createDocument = async (data: DocumentPayload) => {
+  const r = await api.post<HumanResource>(`${DOC}/`, data);
+  return { ...r, data: normalizeDocument(r.data) };
+};
 
-export const updateDocument = (id: number, data: DocumentPayload) =>
-  api.patch<HumanResource>(`${DOC}/${id}/`, data);
+export const updateDocument = async (id: number, data: DocumentPayload) => {
+  const r = await api.patch<HumanResource>(`${DOC}/${id}/`, data);
+  return { ...r, data: normalizeDocument(r.data) };
+};
 
 /** جایگزینی کامل سند (PUT). */
-export const replaceDocument = (id: number, data: DocumentPayload) =>
-  api.put<HumanResource>(`${DOC}/${id}/`, data);
+export const replaceDocument = async (id: number, data: DocumentPayload) => {
+  const r = await api.put<HumanResource>(`${DOC}/${id}/`, data);
+  return { ...r, data: normalizeDocument(r.data) };
+};
 
 export const deleteDocument = (id: number) => api.delete(`${DOC}/${id}/`);
 
@@ -147,7 +194,11 @@ export const deleteDocument = (id: number) => api.delete(`${DOC}/${id}/`);
 
 /** لیست فایل‌های یک سند (همه‌ی صفحات). */
 export const getDocumentFiles = async (documentId: number) =>
-  wrap(await listAll<HumanResourceFile>(`${DOC}/${documentId}/files/`));
+  wrap(
+    (await listAll<HumanResourceFile>(`${DOC}/${documentId}/files/`)).map(
+      normalizeFile,
+    ),
+  );
 
 /** یک صفحه از فایل‌های یک سند. */
 export const getDocumentFilesPage = async (
@@ -157,30 +208,34 @@ export const getDocumentFilesPage = async (
   const { data } = await api.get<unknown>(`${DOC}/${documentId}/files/`, {
     params,
   });
-  return toPaginated<HumanResourceFile>(data);
+  const page = toPaginated<HumanResourceFile>(data);
+  return { ...page, results: page.results.map(normalizeFile) };
 };
 
 /**
- * آپلود فایل روی یک سند.
- * نکته: بک‌اند `title` را اجباری کرده؛ اینجا اگر پاس نشود از `file.name`
- * استفاده می‌شود تا درخواست ۴۰۰ نگیرد.
+ * آپلود فایل روی یک سند:
+ *   POST /document/api/v1/{document_id}/files/
+ *   multipart/form-data  →  title (الزامی) + file (الزامی)
  */
-export const uploadDocumentFile = (
+export const uploadDocumentFile = async (
   documentId: number,
   file: File,
   title?: string,
 ) => {
   const formData = new FormData();
   formData.append("title", (title ?? file.name ?? "file").trim() || "file");
-  formData.append("file", file);
-  return api.post<HumanResourceFile>(
+  formData.append("file", file, file.name);
+  const r = await api.post<HumanResourceFile>(
     `${DOC}/${documentId}/files/`,
     formData,
   );
+  return { ...r, data: normalizeFile(r.data) };
 };
 
-export const getDocumentFile = (id: number) =>
-  api.get<HumanResourceFile>(`${DOC}/files/${id}/`);
+export const getDocumentFile = async (id: number) => {
+  const r = await api.get<HumanResourceFile>(`${DOC}/files/${id}/`);
+  return { ...r, data: normalizeFile(r.data) };
+};
 
 /**
  * ویرایش فایل. چون PATCH روی multipart است و بک‌اند هر دو فیلد را
@@ -189,8 +244,11 @@ export const getDocumentFile = (id: number) =>
  */
 export const updateDocumentFile = (id: number, payload: DocumentFilePayload) => {
   const formData = new FormData();
-  formData.append("title", (payload.title ?? payload.file?.name ?? "file").trim() || "file");
-  if (payload.file) formData.append("file", payload.file);
+  formData.append(
+    "title",
+    (payload.title ?? payload.file?.name ?? "file").trim() || "file",
+  );
+  if (payload.file) formData.append("file", payload.file, payload.file.name);
   return api.patch<HumanResourceFile>(`${DOC}/files/${id}/`, formData);
 };
 
@@ -198,7 +256,7 @@ export const updateDocumentFile = (id: number, payload: DocumentFilePayload) => 
 export const replaceDocumentFile = (id: number, payload: DocumentFilePayload) => {
   const formData = new FormData();
   formData.append("title", (payload.title ?? payload.file.name).trim() || "file");
-  formData.append("file", payload.file);
+  formData.append("file", payload.file, payload.file.name);
   return api.put<HumanResourceFile>(`${DOC}/files/${id}/`, formData);
 };
 
@@ -212,9 +270,9 @@ export const deleteDocumentFile = (id: number) =>
 /** لیست مراحل یک سند (همه‌ی صفحات + مرتب‌سازی بر اساس order). */
 export const getDocumentSteps = async (documentId: number) =>
   wrap(
-    (await listAll<HumanResourceStep>(`${DOC}/${documentId}/steps/`)).sort(
-      (a, b) => a.order - b.order,
-    ),
+    (await listAll<HumanResourceStep>(`${DOC}/${documentId}/steps/`))
+      .map(normalizeStep)
+      .sort((a, b) => a.order - b.order),
   );
 
 /** یک صفحه از مراحل یک سند. */
@@ -225,7 +283,8 @@ export const getDocumentStepsPage = async (
   const { data } = await api.get<unknown>(`${DOC}/${documentId}/steps/`, {
     params,
   });
-  return toPaginated<HumanResourceStep>(data);
+  const page = toPaginated<HumanResourceStep>(data);
+  return { ...page, results: page.results.map(normalizeStep) };
 };
 
 export const createStep = (documentId: number, data: DocumentStepPayload) =>
@@ -252,7 +311,11 @@ const stepFilesUrl = (documentId: number, stepId: number) =>
 
 /** فایل‌های یک مرحله (همه‌ی صفحات). */
 export const getStepFiles = async (documentId: number, stepId: number) =>
-  wrap(await listAll<HumanResourceFile>(stepFilesUrl(documentId, stepId)));
+  wrap(
+    (await listAll<HumanResourceFile>(stepFilesUrl(documentId, stepId))).map(
+      normalizeFile,
+    ),
+  );
 
 /** یک صفحه از فایل‌های یک مرحله. */
 export const getStepFilesPage = async (
@@ -265,7 +328,8 @@ export const getStepFilesPage = async (
     params,
     signal,
   });
-  return toPaginated<HumanResourceFile>(data);
+  const page = toPaginated<HumanResourceFile>(data);
+  return { ...page, results: page.results.map(normalizeFile) };
 };
 
 /** آپلود فایل روی یک مرحله. */
@@ -277,7 +341,7 @@ export const uploadStepFile = (
 ) => {
   const formData = new FormData();
   formData.append("title", (title ?? file.name ?? "file").trim() || "file");
-  formData.append("file", file);
+  formData.append("file", file, file.name);
   return api.post<HumanResourceFile>(stepFilesUrl(documentId, stepId), formData);
 };
 
@@ -289,7 +353,7 @@ export const updateStepFile = (
 ) => {
   const formData = new FormData();
   if (payload.title !== undefined) formData.append("title", payload.title);
-  if (payload.file) formData.append("file", payload.file);
+  if (payload.file) formData.append("file", payload.file, payload.file.name);
   return api.patch<HumanResourceFile>(
     `${stepFilesUrl(documentId, stepId)}${fileId}/patch/`,
     formData,
@@ -304,7 +368,7 @@ export const replaceStepFile = (
 ) => {
   const formData = new FormData();
   if (payload.title !== undefined) formData.append("title", payload.title);
-  if (payload.file) formData.append("file", payload.file);
+  if (payload.file) formData.append("file", payload.file, payload.file.name);
   return api.put<HumanResourceFile>(
     `${stepFilesUrl(documentId, stepId)}${fileId}/put/`,
     formData,
@@ -345,15 +409,16 @@ export const getMe = async () => wrap<CurrentUser>(await accountsApi.me());
 /*                                  Helpers                                   */
 /* -------------------------------------------------------------------------- */
 
+/** آرایه‌ی خام اسناد (بدون wrapper) برای استفاده در کدهای جدید. */
 export const fetchDocumentsList = async (): Promise<HumanResource[]> =>
-  listAll<HumanResource>(`${DOC}/`);
+  (await listAll<HumanResource>(`${DOC}/`)).map(normalizeDocument);
 
 /** آرایه‌ی خام مراحل یک سند (بدون wrapper). */
 export const fetchDocumentStepsList = async (
   documentId: number,
 ): Promise<HumanResourceStep[]> =>
-  (await listAll<HumanResourceStep>(`${DOC}/${documentId}/steps/`)).sort(
-    (a, b) => a.order - b.order,
-  );
+  (await listAll<HumanResourceStep>(`${DOC}/${documentId}/steps/`))
+    .map(normalizeStep)
+    .sort((a, b) => a.order - b.order);
 
 export { unwrapList };

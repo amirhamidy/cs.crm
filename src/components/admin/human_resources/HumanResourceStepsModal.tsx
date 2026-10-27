@@ -54,6 +54,9 @@ export default function HumanResourceStepsModal({ open, document, canManage, onC
     const [filesError, setFilesError] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement | null>(null);
     const pendingStepId = useRef<number | null>(null);
+    const [pendingFile, setPendingFile] = useState<File | null>(null);
+    const [pendingName, setPendingName] = useState("");
+    const [pendingForStep, setPendingForStep] = useState<number | null>(null);
 
     const loadSteps = async () => {
         if (!document) return;
@@ -146,16 +149,29 @@ export default function HumanResourceStepsModal({ open, document, canManage, onC
         fileInputRef.current?.click();
     };
 
-    const handleFileSelected = async (e: ChangeEvent<HTMLInputElement>) => {
+    const handleFileSelected = (e: ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         e.target.value = "";
         const stepId = pendingStepId.current;
         pendingStepId.current = null;
         if (!document || !file || stepId == null) return;
+        setPendingFile(file);
+        setPendingName(file.name);
+        setPendingForStep(stepId);
+        setFilesError(null);
+    };
+
+    const confirmStepFile = async () => {
+        const stepId = pendingForStep;
+        if (!document || !pendingFile || stepId == null) return;
+        const name = pendingName.trim() || pendingFile.name;
         try {
             setUploadingStepId(stepId);
             setFilesError(null);
-            await uploadStepFile(document.id, stepId, file, file.name);
+            await uploadStepFile(document.id, stepId, pendingFile, name);
+            setPendingFile(null);
+            setPendingName("");
+            setPendingForStep(null);
             setExpandedStepId(stepId);
             await loadStepFiles(stepId);
             onChange();
@@ -164,6 +180,12 @@ export default function HumanResourceStepsModal({ open, document, canManage, onC
         } finally {
             setUploadingStepId(null);
         }
+    };
+
+    const cancelStepFile = () => {
+        setPendingFile(null);
+        setPendingName("");
+        setPendingForStep(null);
     };
 
     const removeStepFile = async (stepId: number, fileId: number) => {
@@ -283,6 +305,50 @@ export default function HumanResourceStepsModal({ open, document, canManage, onC
                                 )}
 
                                 <input ref={fileInputRef} type="file" className="hidden" onChange={handleFileSelected} />
+
+                                {pendingFile && (
+                                    <div className="mt-3 rounded-[1.4rem] border border-indigo-100 bg-indigo-50/60 p-3 dark:border-indigo-500/15 dark:bg-indigo-500/[0.06]">
+                                        <div className="mb-2 flex items-center gap-2 px-0.5">
+                                            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-white shadow-sm dark:bg-white/[0.06]">
+                                                <FileText size={12} className="text-indigo-500" />
+                                            </span>
+                                            <div className="min-w-0 flex-1">
+                                                <p className="truncate text-[11px] font-extrabold text-gray-800 dark:text-white">{pendingFile.name}</p>
+                                                <p className="text-[9.5px] font-semibold text-gray-400">نام نمایشی فایل را وارد کنید</p>
+                                            </div>
+                                        </div>
+                                        <div className="flex flex-col gap-2 sm:flex-row">
+                                            <input
+                                                autoFocus
+                                                value={pendingName}
+                                                onChange={(e) => setPendingName(e.target.value)}
+                                                onKeyDown={(e) => {
+                                                    if (e.key === "Enter") confirmStepFile();
+                                                    if (e.key === "Escape") cancelStepFile();
+                                                }}
+                                                placeholder="نام فایل..."
+                                                className="h-9 min-w-0 flex-1 rounded-xl border border-gray-100 bg-white px-3 text-[11px] font-bold text-gray-800 outline-none transition focus:border-indigo-400 dark:border-white/[0.06] dark:bg-white/[0.04] dark:text-white"
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={confirmStepFile}
+                                                disabled={uploadingStepId !== null}
+                                                className="flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-xl bg-indigo-600 px-4 text-[10.5px] font-extrabold text-white transition hover:bg-indigo-500 active:scale-[0.97] disabled:opacity-40"
+                                            >
+                                                {uploadingStepId !== null ? <Loader2 size={12} className="animate-spin" /> : <Upload size={12} />}
+                                                بارگذاری
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={cancelStepFile}
+                                                disabled={uploadingStepId !== null}
+                                                className="flex h-9 shrink-0 items-center justify-center rounded-xl bg-white px-4 text-[10.5px] font-extrabold text-gray-500 transition hover:text-gray-700 disabled:opacity-40 dark:bg-white/[0.05] dark:text-gray-300"
+                                            >
+                                                انصراف
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
 
                                 {filesError && (
                                     <div className="mt-3 flex items-center gap-2 rounded-xl bg-red-50 px-3 py-2 text-[10.5px] font-bold text-red-500 dark:bg-red-500/10 dark:text-red-400">

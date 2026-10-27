@@ -6,6 +6,7 @@ import { AlertCircle, FileText, Plus, Search, Users, X } from "lucide-react";
 import HumanResourceCard from "./HumanResourceCard";
 import HumanResourceForm from "./HumanResourceForm";
 import HumanResourceStepsModal from "./HumanResourceStepsModal";
+import HumanResourceFileModal from "./Humanresourcefilemodal";
 import {
     Department, DepartmentEmployee, HumanResource,
     getDepartmentEmployees, getDepartments, getDocumentsPage, getEmployees, getMe, deleteDocument,
@@ -27,6 +28,7 @@ export default function HumanResourcesPage({ canManage = false }: { canManage?: 
     const [formOpen, setFormOpen] = useState(false);
     const [editing, setEditing] = useState<HumanResource | null>(null);
     const [stepsDocument, setStepsDocument] = useState<HumanResource | null>(null);
+    const [fileDocument, setFileDocument] = useState<HumanResource | null>(null);
 
     // فهرست منابع انسانی سمت سرور صفحه‌بندی می‌شود؛ در هر بار فقط یک صفحه
     // (حداکثر ۱۲ مورد) از بک‌اند گرفته می‌شود و جستجو هم روی سرور انجام می‌شود.
@@ -92,6 +94,12 @@ export default function HumanResourcesPage({ canManage = false }: { canManage?: 
     const refresh = useCallback(() => {
         refetch();
     }, [refetch]);
+
+    // بعد از ایجاد/ویرایش به صفحه‌ی اول برمی‌گردیم تا منبع تازه دیده شود.
+    const handleSaved = useCallback(() => {
+        setPage(1);
+        refetch();
+    }, [setPage, refetch]);
 
     const handleDelete = useCallback(
         async (d: HumanResource) => {
@@ -232,6 +240,7 @@ export default function HumanResourcesPage({ canManage = false }: { canManage?: 
                                     onEdit={() => handleEdit(d)}
                                     onDelete={() => handleDelete(d)}
                                     onSteps={() => setStepsDocument(d)}
+                                    onAddFile={() => setFileDocument(d)}
                                     onChange={refresh}
                                 />
                             </motion.div>
@@ -253,6 +262,15 @@ export default function HumanResourcesPage({ canManage = false }: { canManage?: 
                         setFormOpen(false);
                         setEditing(null);
                     }}
+                    onSaved={handleSaved}
+                />
+            )}
+
+            {canManage && (
+                <HumanResourceFileModal
+                    open={!!fileDocument}
+                    document={fileDocument}
+                    onClose={() => setFileDocument(null)}
                     onSaved={refresh}
                 />
             )}

@@ -266,8 +266,14 @@ export default function CustomerCard({
     const [showMobileSheet, setShowMobileSheet] = useState(false);
     const [tooltipVisible, setTooltipVisible] = useState(false);
 
-    const [scores, setScores] = useState<ScoreItem[]>([]);
-    const [scoresLoading, setScoresLoading] = useState(true);
+    const [scoresPreview, setScoresPreview] = useState<{
+        count: number;
+        average: number;
+        reason: string;
+    } | null>(null);
+    const [previewLoading, setPreviewLoading] = useState(false);
+    const [showPreview, setShowPreview] = useState(false);
+    const previewLoaded = useRef(false);
 
     const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -287,37 +293,43 @@ export default function CustomerCard({
         let cancelled = false;
 
         const fetchScores = async () => {
-            setScoresLoading(true);
+            setPreviewLoading(true);
 
             try {
                 const { data } = await axiosInstance.get<ScoreItem[]>(
                     `/customers/api/v1/customers/${customer.id}/scores/`
                 );
 
-                if (!cancelled) {
-                    setScores(Array.isArray(data) ? data : []);
-                }
+                if (cancelled) return;
+
+                const list = Array.isArray(data) ? data : [];
+
+                setScoresPreview({
+                    count: list.length,
+                    average: list.length
+                        ? list.reduce((sum, s) => sum + Number(s.score || 0), 0) /
+                          list.length
+                        : 0,
+                    reason: list[0]?.reason ?? "",
+                });
             } catch {
                 if (!cancelled) {
-                    setScores([]);
+                    setScoresPreview(null);
                 }
             } finally {
-                if (!cancelled) {
-                    setScoresLoading(false);
-                }
+                if (!cancelled) setPreviewLoading(false);
             }
         };
 
-        fetchScores();
+        if (showPreview && !previewLoaded.current) {
+            previewLoaded.current = true;
+            fetchScores();
+        }
 
         return () => {
             cancelled = true;
         };
-    }, [customer.id]);
-
-    const average = scores.length
-        ? scores.reduce((sum, s) => sum + s.score, 0) / scores.length
-        : 0;
+    }, [showPreview, customer.id]);
 
     const handleDelete = async () => {
         setIsDeleting(true);
@@ -524,33 +536,6 @@ export default function CustomerCard({
                     >
                         <MoreVertical size={15} />
                     </button>
-
-                    <div
-                        className="flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-black"
-                        style={{
-                            background: isDark
-                                ? "rgba(245,158,11,0.14)"
-                                : "rgba(245,158,11,0.1)",
-                            border: `1px solid ${isDark
-                                    ? "rgba(245,158,11,0.25)"
-                                    : "rgba(245,158,11,0.3)"
-                                }`,
-                            color: isDark ? "#fbbf24" : "#d97706",
-                        }}
-                    >
-                        {scoresLoading ? (
-                            <Loader2 size={12} className="animate-spin" />
-                        ) : (
-                            <>
-                                <Star size={12} fill="currentColor" />
-                                <span>
-                                    {scores.length && average > 0
-                                        ? average.toFixed(1)
-                                        : "—"}
-                                </span>
-                            </>
-                        )}
-                    </div>
                 </div>
 
                 <div className="flex items-center gap-3 pt-1">
@@ -670,6 +655,10 @@ export default function CustomerCard({
                                                 title={action.title}
                                                 href={action.href}
                                                 onEnter={() => {
+                                                    if (action.key === "scores") {
+                                                        setShowPreview(true);
+                                                    }
+
                                                     if (
                                                         action.key === "delete" &&
                                                         hasActiveCase
@@ -677,12 +666,61 @@ export default function CustomerCard({
                                                         setTooltipVisible(true);
                                                     }
                                                 }}
-                                                onLeave={() =>
-                                                    setTooltipVisible(false)
-                                                }
+                                                onLeave={() => {
+                                                    if (action.key === "scores") {
+                                                        setShowPreview(false);
+                                                    }
+
+                                                    setTooltipVisible(false);
+                                                }}
                                                 onClick={action.onClick}
                                                 spring={spring}
                                             />
+
+                                            {action.key === "scores" && (
+                                                <AnimatePresence>
+                                                    {showPreview && (
+                                                        <motion.div
+                                                            initial={{ opacity: 0, scale: 0.95, y: 6 }}
+                                                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                                                            exit={{ opacity: 0, scale: 0.95 }}
+                                                            dir="rtl"
+                                                            className="pointer-events-none absolute left-1/2 top-0 z-50 flex w-44 -translate-x-1/2 flex-col gap-1.5 rounded-2xl px-3 py-2 shadow-xl"
+                                                            style={{
+                                                                marginTop: "-64px",
+                                                                background: isDark ? "#0f172a" : "#1e293b",
+                                                                border: "1px solid rgba(255,255,255,0.08)",
+                                                            }}
+                                                        >
+                                                            {previewLoading ? (
+                                                                <span className="flex items-center gap-1.5 text-[11px] text-slate-300">
+                                                                    <Loader2 size={11} className="animate-spin" />
+                                                                    در حال دریافت...
+                                                                </span>
+                                                            ) : scoresPreview && scoresPreview.count > 0 ? (
+                                                                <>
+                                                                    <span className="flex items-center gap-1 text-[12px] font-black text-amber-400">
+                                                                        <Star size={12} fill="currentColor" />
+                                                                        {scoresPreview.average.toFixed(1)}
+                                                                        <span className="text-[10px] font-medium text-slate-400">
+                                                                            از ۵ • {scoresPreview.count} نظر
+                                                                        </span>
+                                                                    </span>
+                                                                    {scoresPreview.reason && (
+                                                                        <span className="line-clamp-2 text-[10.5px] leading-relaxed text-slate-400">
+                                                                            {scoresPreview.reason}
+                                                                        </span>
+                                                                    )}
+                                                                </>
+                                                            ) : (
+                                                                <span className="text-[11px] text-slate-400">
+                                                                    هنوز نظری ثبت نشده
+                                                                </span>
+                                                            )}
+                                                        </motion.div>
+                                                    )}
+                                                </AnimatePresence>
+                                            )}
 
                                             {action.key === "delete" && (
                                                 <AnimatePresence>

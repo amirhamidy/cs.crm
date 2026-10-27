@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Users, Plus, Loader, RefreshCw, Filter, FileSpreadsheet } from "lucide-react";
+import { Users, Plus, Loader, RefreshCw, Filter, FileSpreadsheet, Search, X } from "lucide-react";
 import { useTheme } from "next-themes";
 import CustomerCard from "@/components/user/customer/CustomerCard";
 import AddCustomerModal from "@/components/user/customer/AddCustomerModal";
@@ -91,21 +91,40 @@ export default function CustomersPage() {
     const [showAdd, setShowAdd] = useState(false);
     const [showImport, setShowImport] = useState(false);
     const [filter, setFilter] = useState<FilterType>("all");
+    const [search, setSearch] = useState("");
+    const [appliedSearch, setAppliedSearch] = useState("");
 
     const userId = useAuthStore((state) => state.userId);
     const username = useAuthStore((state) => state.username);
 
-    const fetchData = useCallback(async () => {
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setAppliedSearch(search.trim().replace(/\s+/g, " "));
+        }, 400);
+
+        return () => clearTimeout(timer);
+    }, [search]);
+
+    const fetchCustomers = useCallback(async () => {
         setLoading(true);
 
         try {
-            const [
-                allCustomers,
-                allCases,
-                allTasks,
-                employeeList,
-            ] = await Promise.all([
-                listAll<Customer>("/customers/api/v1/customers/"),
+            const list = await listAll<Customer>(
+                "/customers/api/v1/customers/",
+                appliedSearch ? { search: appliedSearch } : {}
+            );
+
+            setCustomers(list);
+        } catch {
+            setCustomers([]);
+        } finally {
+            setLoading(false);
+        }
+    }, [appliedSearch]);
+
+    const fetchCases = useCallback(async () => {
+        try {
+            const [allCases, allTasks, employeeList] = await Promise.all([
                 listAll<CaseItem>("/tasks/api/v1/cases/"),
                 listAll<TaskItem>(apiRoutes.tasks),
                 listAll<Employee>("/accounts/api/v1/employee/list/"),
@@ -186,7 +205,6 @@ export default function CustomersPage() {
                     )
             );
 
-            const allowedCaseCustomerIds = new Set<number>();
             const activeCaseCustomerIds = new Set<number>();
 
             detailedCases.forEach((c: any) => {
@@ -222,55 +240,28 @@ export default function CustomersPage() {
                     isAssignedDirectly ||
                     hasTaskInCase
                 ) {
-                    allowedCaseCustomerIds.add(customerId);
                     activeCaseCustomerIds.add(customerId);
                 }
             });
 
-            const filteredCustomers = empId
-                ? allCustomers.filter((customer: any) => {
-                    const isCreator =
-                        username &&
-                        customer.created_by_username &&
-                        customer.created_by_username === username;
-
-                    const isAssigned =
-                        empId &&
-                        (
-                            parseAssignedEmployees(
-                                customer.assigned_employee
-                            ).includes(empId) ||
-                            parseAssignedEmployees(
-                                customer.employees
-                            ).includes(empId)
-                        );
-
-                    const hasPermittedCase =
-                        allowedCaseCustomerIds.has(
-                            Number(customer.id)
-                        );
-
-                    return (
-                        isCreator ||
-                        isAssigned ||
-                        hasPermittedCase
-                    );
-                })
-                : allCustomers;
-
-            setCustomers(filteredCustomers);
             setCustomersWithCase(activeCaseCustomerIds);
         } catch {
-            setCustomers([]);
             setCustomersWithCase(new Set());
-        } finally {
-            setLoading(false);
         }
     }, [userId, username]);
 
     useEffect(() => {
-        fetchData();
-    }, [fetchData]);
+        fetchCustomers();
+    }, [fetchCustomers]);
+
+    useEffect(() => {
+        fetchCases();
+    }, [fetchCases]);
+
+    const refresh = useCallback(() => {
+        fetchCustomers();
+        fetchCases();
+    }, [fetchCustomers, fetchCases]);
 
     const handleDeleted = useCallback((id: number) => {
         setCustomers((prev) =>
@@ -279,8 +270,8 @@ export default function CustomersPage() {
     }, []);
 
     const handleAdded = useCallback(() => {
-        fetchData();
-    }, [fetchData]);
+        refresh();
+    }, [refresh]);
 
     const handleEdited = useCallback((updated: Customer) => {
         setCustomers((prev) =>
@@ -383,7 +374,7 @@ export default function CustomersPage() {
 
                 <div className="flex items-center gap-2 sm:justify-end">
                     <button
-                        onClick={fetchData}
+                        onClick={refresh}
                         disabled={isLoading}
                         className="flex h-9 w-9 items-center justify-center rounded-xl text-gray-400 transition-colors hover:text-gray-600 disabled:opacity-40 dark:hover:text-gray-300"
                         style={{
@@ -429,60 +420,94 @@ export default function CustomersPage() {
                 </div>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-center gap-2">
+                    <div
+                        className="flex h-9 items-center gap-1.5 rounded-xl px-3"
+                        style={{
+                            background: isDark
+                                ? "rgba(255,255,255,0.04)"
+                                : "rgba(0,0,0,0.03)",
+                        }}
+                    >
+                        <Filter
+                            size={13}
+                            className="text-gray-400"
+                        />
+
+                        <span className="text-[11px] font-bold text-gray-400">
+                            فیلتر:
+                        </span>
+                    </div>
+
+                    <div className="flex gap-1.5">
+                        {filterOptions.map((option) => (
+                            <button
+                                key={option.value}
+                                onClick={() =>
+                                    handleFilterChange(
+                                        option.value
+                                    )
+                                }
+                                className={`flex h-9 items-center gap-1.5 rounded-xl px-3.5 text-[11.5px] font-bold transition-all duration-200 ${filter === option.value
+                                    ? "bg-indigo-600 text-white shadow-sm"
+                                    : "text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                                    }`}
+                                style={{
+                                    background:
+                                        filter === option.value
+                                            ? undefined
+                                            : isDark
+                                                ? "rgba(255,255,255,0.04)"
+                                                : "rgba(0,0,0,0.03)",
+                                }}
+                                type="button"
+                            >
+                                {option.label}
+
+                                <span
+                                    className={`rounded-lg px-1.5 py-0.5 text-[10px] font-bold ${filter === option.value
+                                        ? "bg-white/20 text-white"
+                                        : "bg-gray-200/50 text-gray-400 dark:bg-white/10 dark:text-gray-500"
+                                        }`}
+                                >
+                                    {option.count}
+                                </span>
+                            </button>
+                        ))}
+                    </div>
+                </div>
+
                 <div
-                    className="flex h-9 items-center gap-1.5 rounded-xl px-3"
+                    className="relative flex h-9 items-center gap-2 rounded-xl px-3 sm:w-64"
                     style={{
                         background: isDark
                             ? "rgba(255,255,255,0.04)"
                             : "rgba(0,0,0,0.03)",
                     }}
                 >
-                    <Filter
+                    <Search
                         size={13}
-                        className="text-gray-400"
+                        className="shrink-0 text-gray-400"
                     />
 
-                    <span className="text-[11px] font-bold text-gray-400">
-                        فیلتر:
-                    </span>
-                </div>
+                    <input
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                        placeholder="جستجوی نام، شماره یا شرکت..."
+                        className="min-w-0 flex-1 bg-transparent text-[11.5px] font-medium text-gray-700 outline-none placeholder:text-gray-400 dark:text-gray-200"
+                    />
 
-                <div className="flex gap-1.5">
-                    {filterOptions.map((option) => (
+                    {search && (
                         <button
-                            key={option.value}
-                            onClick={() =>
-                                handleFilterChange(
-                                    option.value
-                                )
-                            }
-                            className={`flex h-9 items-center gap-1.5 rounded-xl px-3.5 text-[11.5px] font-bold transition-all duration-200 ${filter === option.value
-                                ? "bg-indigo-600 text-white shadow-sm"
-                                : "text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-                                }`}
-                            style={{
-                                background:
-                                    filter === option.value
-                                        ? undefined
-                                        : isDark
-                                            ? "rgba(255,255,255,0.04)"
-                                            : "rgba(0,0,0,0.03)",
-                            }}
                             type="button"
+                            onClick={() => setSearch("")}
+                            className="shrink-0 text-gray-400 transition-colors hover:text-gray-600 dark:hover:text-gray-200"
+                            aria-label="پاک کردن جستجو"
                         >
-                            {option.label}
-
-                            <span
-                                className={`rounded-lg px-1.5 py-0.5 text-[10px] font-bold ${filter === option.value
-                                    ? "bg-white/20 text-white"
-                                    : "bg-gray-200/50 text-gray-400 dark:bg-white/10 dark:text-gray-500"
-                                    }`}
-                            >
-                                {option.count}
-                            </span>
+                            <X size={13} />
                         </button>
-                    ))}
+                    )}
                 </div>
             </div>
 
@@ -524,8 +549,10 @@ export default function CustomersPage() {
                             />
 
                             <p className="text-[12.5px] text-gray-400 dark:text-gray-500">
-                                {filter === "all"
-                                    ? "مشتری‌ای برای شما یافت نشد"
+                                {appliedSearch
+                                    ? "نتیجه‌ای برای جستجوی شما یافت نشد"
+                                    : filter === "all"
+                                        ? "مشتری‌ای برای شما یافت نشد"
                                     : filter === "potential"
                                         ? "مشتری بالقوه‌ای یافت نشد"
                                         : "مشتری فعالی یافت نشد"}
@@ -566,6 +593,7 @@ export default function CustomersPage() {
                 isOpen={showAdd}
                 onClose={() => setShowAdd(false)}
                 onAdded={handleAdded}
+                allowDuplicatePhone
             />
 
             <ImportExcelModal
