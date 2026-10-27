@@ -1,10 +1,33 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { GitBranch, Loader2, Plus, X } from "lucide-react";
+import {
+    AlertCircle,
+    ChevronDown,
+    Download,
+    FileText,
+    GitBranch,
+    Loader2,
+    Paperclip,
+    Plus,
+    Trash2,
+    Upload,
+    X,
+} from "lucide-react";
 import HumanResourceStepRoadmap from "./HumanResourceStepRoadmap";
-import { HumanResource, HumanResourceStep, createStep, deleteStep, getDocumentSteps, updateStep } from "./humanResourceApi";
+import {
+    HumanResource,
+    HumanResourceFile,
+    HumanResourceStep,
+    createStep,
+    deleteStep,
+    deleteStepFile,
+    getDocumentSteps,
+    getStepFiles,
+    updateStep,
+    uploadStepFile,
+} from "./humanResourceApi";
 
 interface Props {
     open: boolean;
@@ -23,6 +46,15 @@ export default function HumanResourceStepsModal({ open, document, canManage, onC
     const [editingInlineId, setEditingInlineId] = useState<number | null>(null);
     const [title, setTitle] = useState("");
 
+    // --- فایل‌های هر مرحله ---
+    const [filesByStep, setFilesByStep] = useState<Record<number, HumanResourceFile[]>>({});
+    const [filesLoadingId, setFilesLoadingId] = useState<number | null>(null);
+    const [expandedStepId, setExpandedStepId] = useState<number | null>(null);
+    const [uploadingStepId, setUploadingStepId] = useState<number | null>(null);
+    const [filesError, setFilesError] = useState<string | null>(null);
+    const fileInputRef = useRef<HTMLInputElement | null>(null);
+    const pendingStepId = useRef<number | null>(null);
+
     const loadSteps = async () => {
         if (!document) return;
         try {
@@ -33,12 +65,27 @@ export default function HumanResourceStepsModal({ open, document, canManage, onC
         }
     };
 
+    const loadStepFiles = async (stepId: number) => {
+        if (!document) return;
+        try {
+            setFilesLoadingId(stepId);
+            setFilesError(null);
+            const { data } = await getStepFiles(document.id, stepId);
+            setFilesByStep((prev) => ({ ...prev, [stepId]: data }));
+        } catch {
+            setFilesError("دریافت فایل‌های این مرحله با خطا مواجه شد.");
+        } finally {
+            setFilesLoadingId(null);
+        }
+    };
+
     useEffect(() => {
         if (open && document) loadSteps();
     }, [open, document]);
 
     const refresh = async () => {
         await loadSteps();
+        if (expandedStepId != null) await loadStepFiles(expandedStepId);
         onChange();
     };
 
@@ -68,6 +115,12 @@ export default function HumanResourceStepsModal({ open, document, canManage, onC
     const removeStep = async (id: number) => {
         if (!document || !confirm("آیا از حذف این مرحله مطمئن هستید؟")) return;
         await deleteStep(id);
+        setFilesByStep((prev) => {
+            const next = { ...prev };
+            delete next[id];
+            return next;
+        });
+        setExpandedStepId((prev) => (prev === id ? null : prev));
         const remaining = (await getDocumentSteps(document.id)).data.slice().sort(byOrder);
         await Promise.all(
             remaining
@@ -75,6 +128,56 @@ export default function HumanResourceStepsModal({ open, document, canManage, onC
                 .filter(Boolean)
         );
         await refresh();
+    };
+
+    // --- فایل‌های مرحله ---
+
+    const toggleStep = async (stepId: number) => {
+        if (expandedStepId === stepId) {
+            setExpandedStepId(null);
+            return;
+        }
+        setExpandedStepId(stepId);
+        if (!filesByStep[stepId]) await loadStepFiles(stepId);
+    };
+
+    const pickStepFile = (stepId: number) => {
+        pendingStepId.current = stepId;
+        fileInputRef.current?.click();
+    };
+
+    const handleFileSelected = async (e: ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        e.target.value = "";
+        const stepId = pendingStepId.current;
+        pendingStepId.current = null;
+        if (!document || !file || stepId == null) return;
+        try {
+            setUploadingStepId(stepId);
+            setFilesError(null);
+            await uploadStepFile(document.id, stepId, file, file.name);
+            setExpandedStepId(stepId);
+            await loadStepFiles(stepId);
+            onChange();
+        } catch {
+            setFilesError("بارگذاری فایل روی این مرحله با خطا مواجه شد.");
+        } finally {
+            setUploadingStepId(null);
+        }
+    };
+
+    const removeStepFile = async (stepId: number, fileId: number) => {
+        if (!document || !confirm("آیا از حذف این فایل مطمئن هستید؟")) return;
+        try {
+            await deleteStepFile(document.id, stepId, fileId);
+            setFilesByStep((prev) => ({
+                ...prev,
+                [stepId]: (prev[stepId] ?? []).filter((f) => f.id !== fileId),
+            }));
+            onChange();
+        } catch {
+            setFilesError("حذف فایل این مرحله با خطا مواجه شد.");
+        }
     };
 
     const orderedSteps = useMemo(() => steps.slice().sort(byOrder), [steps]);
@@ -113,7 +216,7 @@ export default function HumanResourceStepsModal({ open, document, canManage, onC
                                         {steps.length}
                                     </span>
                                 </div>
-                                <p className="mt-0.5 text-[11px] text-gray-400">مسیر انجام فرآیند</p>
+                                <p className="mt-0.5 text-[11px] text-gray-400">مسیر انجام فرآیند و فایل‌های هر مرحله</p>
                             </div>
                         </div>
                         <button type="button" onClick={onClose} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gray-100 text-gray-400 transition hover:text-gray-600 dark:bg-white/[0.05] dark:hover:text-gray-300">
@@ -179,20 +282,134 @@ export default function HumanResourceStepsModal({ open, document, canManage, onC
                                     </div>
                                 )}
 
-                                {canManage && orderedSteps.length > 0 && (
+                                <input ref={fileInputRef} type="file" className="hidden" onChange={handleFileSelected} />
+
+                                {filesError && (
+                                    <div className="mt-3 flex items-center gap-2 rounded-xl bg-red-50 px-3 py-2 text-[10.5px] font-bold text-red-500 dark:bg-red-500/10 dark:text-red-400">
+                                        <AlertCircle size={12} className="shrink-0" />
+                                        <span className="min-w-0 flex-1">{filesError}</span>
+                                    </div>
+                                )}
+
+                                {orderedSteps.length > 0 && (
                                     <div className="mt-4 overflow-hidden rounded-[1.4rem] border border-gray-100 dark:border-white/[0.06]">
-                                        <div className="border-b border-gray-100 bg-gray-50/70 px-3 py-2 dark:border-white/[0.06] dark:bg-white/[0.025]">
-                                            <p className="text-[10.5px] font-extrabold text-gray-500 dark:text-gray-400">لیست مراحل</p>
+                                        <div className="flex items-center justify-between gap-2 border-b border-gray-100 bg-gray-50/70 px-3 py-2 dark:border-white/[0.06] dark:bg-white/[0.025]">
+                                            <p className="text-[10.5px] font-extrabold text-gray-500 dark:text-gray-400">لیست مراحل و فایل‌ها</p>
+                                            <span className="text-[9px] font-semibold text-gray-400">برای دیدن فایل‌ها روی مرحله بزنید</span>
                                         </div>
                                         <div className="divide-y divide-gray-100 dark:divide-white/[0.05]">
-                                            {orderedSteps.map((step, i) => (
-                                                <div key={step.id} data-aos="fade-left" data-aos-delay={i * 40} className="flex items-center gap-2.5 px-3 py-2.5">
-                                                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-indigo-50 text-[10px] font-extrabold text-indigo-500 dark:bg-indigo-500/10 dark:text-indigo-400">
-                                                        {step.order}
-                                                    </span>
-                                                    <span className="min-w-0 flex-1 truncate text-[11.5px] font-bold text-gray-700 dark:text-gray-300">{step.title}</span>
-                                                </div>
-                                            ))}
+                                            {orderedSteps.map((step, i) => {
+                                                const isOpen = expandedStepId === step.id;
+                                                const stepFiles = filesByStep[step.id] ?? step.files ?? [];
+                                                const fileCount = stepFiles.length;
+                                                const isLoadingFiles = filesLoadingId === step.id;
+                                                const isUploading = uploadingStepId === step.id;
+
+                                                return (
+                                                    <div key={step.id} data-aos="fade-left" data-aos-delay={i * 40}>
+                                                        <div className="flex items-center gap-2 px-3 py-2.5">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => toggleStep(step.id)}
+                                                                className="flex min-w-0 flex-1 items-center gap-2.5 text-right"
+                                                            >
+                                                                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-indigo-50 text-[10px] font-extrabold text-indigo-500 dark:bg-indigo-500/10 dark:text-indigo-400">
+                                                                    {step.order}
+                                                                </span>
+                                                                <span className="min-w-0 flex-1 truncate text-[11.5px] font-bold text-gray-700 dark:text-gray-300">{step.title}</span>
+                                                                {fileCount > 0 && (
+                                                                    <span className="flex h-5 shrink-0 items-center gap-1 rounded-full bg-indigo-50 px-2 text-[9px] font-extrabold text-indigo-500 dark:bg-indigo-500/10 dark:text-indigo-400">
+                                                                        <Paperclip size={9} />
+                                                                        {fileCount}
+                                                                    </span>
+                                                                )}
+                                                                <ChevronDown size={13} className={`shrink-0 text-gray-300 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`} />
+                                                            </button>
+
+                                                            {canManage && (
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => pickStepFile(step.id)}
+                                                                    disabled={isUploading}
+                                                                    title="افزودن فایل به این مرحله"
+                                                                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-indigo-50 text-indigo-500 transition hover:bg-indigo-100 disabled:opacity-50 dark:bg-indigo-500/10 dark:text-indigo-400 dark:hover:bg-indigo-500/20"
+                                                                >
+                                                                    {isUploading ? <Loader2 size={11} className="animate-spin" /> : <Upload size={11} />}
+                                                                </button>
+                                                            )}
+                                                        </div>
+
+                                                        <AnimatePresence initial={false}>
+                                                            {isOpen && (
+                                                                <motion.div
+                                                                    initial={{ height: 0, opacity: 0 }}
+                                                                    animate={{ height: "auto", opacity: 1 }}
+                                                                    exit={{ height: 0, opacity: 0 }}
+                                                                    transition={{ duration: 0.2, ease: "easeOut" }}
+                                                                    className="overflow-hidden"
+                                                                >
+                                                                    <div className="space-y-1.5 px-3 pb-3 pt-0.5">
+                                                                        {isLoadingFiles ? (
+                                                                            <div className="flex h-12 items-center justify-center rounded-xl border border-dashed border-gray-200 dark:border-white/[0.07]">
+                                                                                <Loader2 size={14} className="animate-spin text-indigo-400" />
+                                                                            </div>
+                                                                        ) : fileCount > 0 ? (
+                                                                            stepFiles.map((f) => (
+                                                                                <motion.div
+                                                                                    key={f.id}
+                                                                                    initial={{ opacity: 0, y: 4 }}
+                                                                                    animate={{ opacity: 1, y: 0 }}
+                                                                                    className="flex items-center gap-2 rounded-xl bg-gray-50 px-2.5 py-2 dark:bg-white/[0.035]"
+                                                                                >
+                                                                                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-white shadow-sm dark:bg-white/[0.06]">
+                                                                                        <FileText size={11} className="text-indigo-500" />
+                                                                                    </span>
+                                                                                    <a
+                                                                                        href={f.file}
+                                                                                        target="_blank"
+                                                                                        rel="noreferrer"
+                                                                                        className="min-w-0 flex-1 truncate text-[10.5px] font-bold text-gray-600 transition hover:text-indigo-500 dark:text-gray-300"
+                                                                                    >
+                                                                                        {f.title?.trim() || "فایل مرحله"}
+                                                                                    </a>
+                                                                                    <a
+                                                                                        href={f.file}
+                                                                                        target="_blank"
+                                                                                        rel="noreferrer"
+                                                                                        title="دانلود فایل"
+                                                                                        className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-gray-400 transition hover:bg-indigo-50 hover:text-indigo-500 dark:hover:bg-indigo-500/10"
+                                                                                    >
+                                                                                        <Download size={11} />
+                                                                                    </a>
+                                                                                    {canManage && (
+                                                                                        <button
+                                                                                            type="button"
+                                                                                            onClick={() => removeStepFile(step.id, f.id)}
+                                                                                            title="حذف فایل"
+                                                                                            className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-gray-400 transition hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-500/10"
+                                                                                        >
+                                                                                            <Trash2 size={11} />
+                                                                                        </button>
+                                                                                    )}
+                                                                                </motion.div>
+                                                                            ))
+                                                                        ) : (
+                                                                            <div className="flex items-center gap-2 rounded-xl border border-dashed border-gray-200 px-2.5 py-2 dark:border-white/[0.07]">
+                                                                                <Paperclip size={11} className="shrink-0 text-gray-300" />
+                                                                                <span className="text-[10px] font-semibold text-gray-400">
+                                                                                    {canManage
+                                                                                        ? "فایلی برای این مرحله ثبت نشده؛ با دکمه بارگذاری اضافه کنید."
+                                                                                        : "فایلی برای این مرحله ثبت نشده است."}
+                                                                                </span>
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                </motion.div>
+                                                            )}
+                                                        </AnimatePresence>
+                                                    </div>
+                                                );
+                                            })}
                                         </div>
                                     </div>
                                 )}
