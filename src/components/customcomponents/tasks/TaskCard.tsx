@@ -5,7 +5,7 @@ import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import {
     Building2,
-    CalendarDays,
+    CalendarClock,
     ClipboardX,
     Clock,
     FolderKanban,
@@ -21,9 +21,9 @@ import {
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import type { Task, TaskStatus, TaskEmployeeRef } from "@/types/task";
-import { toJalali, toPersianDigits, JALALI_MONTHS, pad2 } from "@/lib/jalali";
 import AdminTaskNotesModal from "./AdminTaskNotesModal";
 import TimeRangeModal from "./TimeRangeModal";
+import TaskDeadlineModal, { fetchStepDeadline, type StepDeadline } from "./TaskDeadlineModal";
 import api from "@/lib/axiosInstance";
 import { useEmployeeInfo } from "@/hooks/useEmployeeInfo";
 import type { Employee } from "@/types/employee";
@@ -75,18 +75,6 @@ function isActiveUrgency(u: DeadlineUrgency): u is ActiveUrgency {
 interface TaskWithStep extends Omit<Task, "assigned_employee"> {
     current_step?: number | { id: number } | string | null;
     assigned_employee?: TaskEmployeeRef | TaskEmployeeRef[] | number | number[] | null;
-}
-
-interface StepDeadline {
-    started_at: string | null;
-    deadline: string | null;
-}
-
-function formatJalaliDate(iso?: string | null) {
-    if (!iso) return null;
-    const d = new Date(iso);
-    const [jy, jm, jd] = toJalali(d.getFullYear(), d.getMonth() + 1, d.getDate());
-    return `${toPersianDigits(jd)} ${JALALI_MONTHS[jm - 1]} ${toPersianDigits(jy)} ساعت ${toPersianDigits(pad2(d.getHours()))}:${toPersianDigits(pad2(d.getMinutes()))}`;
 }
 
 function getGradient(id: number) {
@@ -194,7 +182,7 @@ export default function TaskCard({
     const [notesModalOpen, setNotesModalOpen] = useState(false);
     const [timeError, setTimeError] = useState<string | null>(null);
     const [stepDeadline, setStepDeadline] = useState<StepDeadline | null>(null);
-    const [loadingDeadline, setLoadingDeadline] = useState(false);
+    const [deadlineModalOpen, setDeadlineModalOpen] = useState(false);
     const [, forceTick] = useState(0);
 
     const employeeIds = extractEmployeeIds(task.assigned_employee);
@@ -216,32 +204,19 @@ export default function TaskCard({
     const activeUrgency = isActiveUrgency(urgency) ? urgency : null;
     const accent = activeUrgency ? URGENCY_ACCENT[activeUrgency] : null;
 
-    useEffect(() => {
-        if (!stepId) return;
-        let cancelled = false;
-        setLoadingDeadline(true);
-
-        api.get(`/tasks/api/v1/tasks/${task.id}/steps/${stepId}/deadline/`)
-            .then(({ data }) => {
-                if (!cancelled) setStepDeadline({
-                    started_at: data?.started_at ?? null,
-                    deadline: data?.deadline ?? null,
-                });
-            })
-            .catch(() => !cancelled && setStepDeadline(null))
-            .finally(() => !cancelled && setLoadingDeadline(false));
-
-        return () => { cancelled = true; };
-    }, [task.id, stepId]);
+    // ددلاین دیگر موقع رندر کارت گرفته نمی‌شود؛ فقط با کلیک روی دکمه (مودال ددلاین) یا دکمهٔ تعیین بازه زمانی ریکوئست زده می‌شود.
+    const openTimeModal = () => {
+        setTimeModalOpen(true);
+        if (stepId && !stepDeadline) {
+            fetchStepDeadline(task.id, stepId).then(setStepDeadline).catch(() => undefined);
+        }
+    };
 
     useEffect(() => {
         if (!stepDeadline?.deadline || !isActiveTask) return;
         const timer = setInterval(() => forceTick((v) => v + 1), 60000);
         return () => clearInterval(timer);
     }, [stepDeadline?.deadline, isActiveTask]);
-
-    const startedAtLabel = formatJalaliDate(stepDeadline?.started_at);
-    const deadlineLabel = formatJalaliDate(stepDeadline?.deadline);
 
     async function handleDelete() {
         if (!onDelete) return;
@@ -360,9 +335,13 @@ export default function TaskCard({
                             <MessageSquareText size={14} />
                         </button>
 
+                        <button type="button" onClick={() => setDeadlineModalOpen(true)} className="flex h-7 w-7 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-400" title="مشاهده ددلاین">
+                            <CalendarClock size={11} />
+                        </button>
+
                         {!readOnly && (
                             <>
-                                <button onClick={() => setTimeModalOpen(true)} className="flex h-7 w-7 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-400" title="تعیین بازه زمانی">
+                                <button onClick={openTimeModal} className="flex h-7 w-7 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-400" title="تعیین بازه زمانی">
                                     <Clock size={11} />
                                 </button>
                                 <button onClick={() => onEdit?.(toTask(task))} className="flex h-7 w-7 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-400" title="ویرایش تسک">
@@ -394,27 +373,6 @@ export default function TaskCard({
                     {departmentName && <Chip isDark={isDark}><Building2 size={11} />{departmentName}</Chip>}
                     {caseTitle && <Chip isDark={isDark}><FolderKanban size={11} />{caseTitle}</Chip>}
                     {task.files?.length ? <Chip isDark={isDark}><Paperclip size={11} />{task.files.length}</Chip> : null}
-                </div>
-
-                <div
-                    className="flex flex-col gap-1.5 rounded-2xl px-3 py-2.5"
-                    style={{
-                        background: accent ? `color-mix(in srgb,${accent} 8%,transparent)` : isDark ? "rgba(99,102,241,.06)" : "rgba(99,102,241,.05)",
-                        border: `1px solid ${accent ? `color-mix(in srgb,${accent} 25%,transparent)` : isDark ? "rgba(99,102,241,.12)" : "rgba(99,102,241,.1)"}`,
-                    }}
-                >
-                    {loadingDeadline ? (
-                        <div className="flex items-center gap-2 text-[10.5px] text-slate-400">
-                            <Loader2 size={12} className="animate-spin" />در حال دریافت زمان‌بندی...
-                        </div>
-                    ) : startedAtLabel || deadlineLabel ? (
-                        <>
-                            {startedAtLabel && <div className="flex items-center gap-2 text-[11px] font-bold text-indigo-400"><CalendarDays size={13} />شروع: {startedAtLabel}</div>}
-                            {deadlineLabel && <div className="flex items-center gap-2 text-[11px] font-bold" style={{ color: accent ?? "#ef4444" }}><Clock size={13} />مهلت: {deadlineLabel}</div>}
-                        </>
-                    ) : (
-                        <div className="flex items-center gap-2 text-[10.5px] text-slate-400"><Clock size={12} />زمان‌بندی تعیین نشده</div>
-                    )}
                 </div>
             </motion.div>
 
@@ -492,6 +450,15 @@ export default function TaskCard({
                     onSubmit={handleTimeSubmit}
                 />
             )}
+
+            <TaskDeadlineModal
+                open={deadlineModalOpen}
+                onClose={() => setDeadlineModalOpen(false)}
+                taskId={task.id}
+                taskTitle={task.title}
+                stepId={stepId}
+                onLoaded={setStepDeadline}
+            />
 
             <AdminTaskNotesModal
                 isOpen={notesModalOpen}

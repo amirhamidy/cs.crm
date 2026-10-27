@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
     X,
@@ -15,7 +15,8 @@ import {
     UserPlus,
 } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
-import { listAll } from "@/lib/api";
+import { listAll, fetchPage } from "@/lib/api";
+import AsyncSelect, { type AsyncOption } from "@/components/customcomponents/shared/AsyncSelect";
 import { apiRoutes } from "@/lib/apiRoutes";
 import type { Customer } from "@/types/customer";
 
@@ -50,6 +51,9 @@ const initialOf = (text: string) => (text || "").trim().charAt(0) || "؟";
 function customerDisplayName(c: Customer) {
     return c.full_name?.trim() || [c.first_name, c.last_name].filter(Boolean).join(" ").trim() || c.company_name?.trim() || `مشتری #${c.id}`;
 }
+
+const customerToOption = (c: Customer): AsyncOption => ({ id: c.id, label: customerDisplayName(c), sub: c.phone_number || undefined });
+const caseToOption = (c: Case): AsyncOption => ({ id: c.id, label: c.title });
 
 function FloatingInput({ label, id, value, onChange }: {
     label: string; id: string; value: string; onChange: (v: string) => void;
@@ -221,13 +225,13 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess }: Props) {
     const [submitting, setSubmitting] = useState(false);
     const [submitError, setSubmitError] = useState("");
 
-    const [cases, setCases] = useState<Case[]>([]);
     const [departments, setDepartments] = useState<Department[]>([]);
     const [departmentSteps, setDepartmentSteps] = useState<DepartmentStep[]>([]);
     const [employees, setEmployees] = useState<DepartmentEmployee[]>([]);
-    const [customers, setCustomers] = useState<Customer[]>([]);
 
     const [selectedCustomer, setSelectedCustomer] = useState<number | null>(null);
+    const [selectedCustomerOpt, setSelectedCustomerOpt] = useState<AsyncOption | null>(null);
+    const [selectedCaseOpt, setSelectedCaseOpt] = useState<AsyncOption | null>(null);
     const [selectedCase, setSelectedCase] = useState<number | null>(null);
     const [selectedDepartment, setSelectedDepartment] = useState<number | null>(null);
     const [selectedStep, setSelectedStep] = useState<number | null>(null);
@@ -238,15 +242,25 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess }: Props) {
 
     useEffect(() => {
         if (!isOpen) return;
-        listAll<Case>("/tasks/api/v1/cases/").then((all) => setCases(all)).catch(() => setCases([]));
         listAll<Department>("/department/api/v1/department/list/").then((all) => setDepartments(all)).catch(() => setDepartments([]));
         listAll<DepartmentStep>("/department/api/v1/department_step/").then((all) => setDepartmentSteps(all)).catch(() => setDepartmentSteps([]));
         listAll<DepartmentEmployee>("/department/api/v1/department_employee/list/").then((all) => setEmployees(all)).catch(() => setEmployees([]));
-        listAll<Customer>(apiRoutes.customers).then((all) => setCustomers(all)).catch(() => setCustomers([]));
     }, [isOpen]);
 
     useEffect(() => { setSelectedEmployees([]); setSelectedStep(null); }, [selectedDepartment]);
-    useEffect(() => { setSelectedCase(null); }, [selectedCustomer]);
+    useEffect(() => { setSelectedCase(null); setSelectedCaseOpt(null); }, [selectedCustomer]);
+
+    // مشتری‌ها و پرونده‌ها صفحه‌به‌صفحه و با جستجوی سمت سرور خوانده می‌شوند (فقط وقتی دراپ‌دان باز شود)
+    const fetchCustomers = useCallback(
+        (p: { page: number; page_size: number; search?: string }, signal: AbortSignal) =>
+            fetchPage<Customer>(apiRoutes.customers, p, signal),
+        []
+    );
+    const fetchCases = useCallback(
+        (p: { page: number; page_size: number; search?: string }, signal: AbortSignal) =>
+            fetchPage<Case>(apiRoutes.cases, { ...p, customer: selectedCustomer }, signal),
+        [selectedCustomer]
+    );
 
     const filteredEmployees = useMemo(
         () => selectedDepartment ? employees.filter((e) => e.department === selectedDepartment) : employees,
@@ -258,15 +272,10 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess }: Props) {
         [departmentSteps, selectedDepartment]
     );
 
-    const filteredCases = useMemo(
-        () => selectedCustomer ? cases.filter((c) => c.customer === selectedCustomer) : cases,
-        [cases, selectedCustomer]
-    );
-
     const canSubmit = title.trim().length > 0 && selectedCase !== null && selectedDepartment !== null && selectedEmployees.length > 0 && !submitting;
 
     function resetAll() {
-        setSelectedCustomer(null); setSelectedCase(null); setSelectedDepartment(null); setSelectedStep(null); setSelectedEmployees([]);
+        setSelectedCustomer(null); setSelectedCustomerOpt(null); setSelectedCaseOpt(null); setSelectedCase(null); setSelectedDepartment(null); setSelectedStep(null); setSelectedEmployees([]);
         setTitle(""); setDescription(""); setFiles([]); setSubmitError("");
     }
 
@@ -356,21 +365,26 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess }: Props) {
                                 )}
                             </AnimatePresence>
 
-                            <NiceSelect
+                            <AsyncSelect
                                 label="مشتری" placeholder="انتخاب مشتری" emptyText="مشتری‌ای یافت نشد"
-                                options={customers.map((c) => ({ id: c.id, label: customerDisplayName(c), sub: c.phone_number || undefined }))}
+                                fetcher={fetchCustomers}
+                                toOption={customerToOption}
                                 value={selectedCustomer}
-                                onChange={(id) => { setSelectedCustomer(id as number); setSubmitError(""); }}
+                                selected={selectedCustomerOpt}
+                                onChange={(o) => { setSelectedCustomer(o.id); setSelectedCustomerOpt(o); setSubmitError(""); }}
                             />
 
-                            <NiceSelect
+                            <AsyncSelect
                                 label="پرونده"
                                 placeholder={selectedCustomer ? "انتخاب پرونده" : "ابتدا مشتری را انتخاب کنید"}
                                 emptyText="پرونده‌ای برای این مشتری یافت نشد"
                                 disabled={!selectedCustomer}
-                                options={filteredCases.map((c) => ({ id: c.id, label: c.title }))}
+                                fetcher={fetchCases}
+                                toOption={caseToOption}
+                                depsKey={selectedCustomer}
                                 value={selectedCase}
-                                onChange={(id) => { setSelectedCase(id as number); setSubmitError(""); }}
+                                selected={selectedCaseOpt}
+                                onChange={(o) => { setSelectedCase(o.id); setSelectedCaseOpt(o); setSubmitError(""); }}
                             />
 
                             <FloatingInput id="task_title" label="عنوان وظیفه" value={title}

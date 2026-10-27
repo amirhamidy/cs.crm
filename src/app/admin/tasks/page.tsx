@@ -7,7 +7,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import axiosInstance from "@/lib/axiosInstance";
 import { apiRoutes } from "@/lib/apiRoutes";
-import { listAll, tasksApi } from "@/lib/api";
+import { metaApi, tasksApi } from "@/lib/api";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import Pagination from "@/components/ui/Pagination";
 import CardSkeletonGrid from "@/components/ui/CardSkeletonGrid";
@@ -18,8 +18,6 @@ import TaskCard from "@/components/customcomponents/tasks/TaskCard";
 import CreateTaskModal from "@/components/customcomponents/tasks/CreateTaskModal";
 import CreateNoCaseTaskModal from "@/components/customcomponents/tasks/CreateNoCaseTaskModal";
 import EditTaskModal from "@/components/customcomponents/tasks/EditTaskModal";
-import type { Customer } from "@/types/customer";
-import type { Employee } from "@/types/employee";
 
 const ACTIVE_STATUS = "in_progress" as TaskStatus;
 
@@ -36,45 +34,26 @@ function AdminTasksPageContent() {
         () => list.data.filter((t) => !removed.has(t.id) && t.status === ACTIVE_STATUS).map((t) => patched.get(t.id) ?? t),
         [list.data, removed, patched]
     );
-    const [customers, setCustomers] = useState<Customer[]>([]);
     const [departments, setDepartments] = useState<Department[]>([]);
-    const [employees, setEmployees] = useState<Employee[]>([]);
-    const [metaLoading, setMetaLoading] = useState(true);
-    const loading = metaLoading || list.loading;
+    const loading = list.loading;
     const [showCreate, setShowCreate] = useState(false);
     const [showCreateNoCase, setShowCreateNoCase] = useState(false);
     const [editingTask, setEditingTask] = useState<Task | null>(null);
     const [highlightedTaskId, setHighlightedTaskId] = useState<number | null>(null);
     const [viewedTaskId, setViewedTaskId] = useState<number | null>(null);
 
-    const fetchAll = useCallback(async () => {
-        try {
-            setMetaLoading(true);
-            setRemoved(new Set());
-            setPatched(new Map());
-            list.refetch();
-
-            const [customerList, departmentList, employeeList] = await Promise.all([
-                listAll<Customer>(apiRoutes.customers),
-                listAll<Department>(apiRoutes.departments),
-                listAll<Employee>(apiRoutes.employees),
-            ]);
-
-            setCustomers(customerList);
-            setDepartments(departmentList);
-            setEmployees(employeeList);
-        } catch {
-            setCustomers([]);
-            setDepartments([]);
-            setEmployees([]);
-        } finally {
-            setMetaLoading(false);
-        }
+    // فقط لیست وظایفِ همین صفحه دوباره خوانده می‌شود؛ مشتری/کارمند/دپارتمان‌ها دیگر با هر رفرش گرفته نمی‌شوند.
+    const fetchAll = useCallback(() => {
+        setRemoved(new Set());
+        setPatched(new Map());
+        tasksApi.invalidate();
+        list.refetch();
     }, [list.refetch]);
 
+    // دپارتمان‌ها (کش‌شده) فقط برای مودال ویرایش؛ یک‌بار و بدون مسدود کردن لیست
     useEffect(() => {
-        fetchAll();
-    }, [fetchAll]);
+        metaApi.departments().then(setDepartments).catch(() => setDepartments([]));
+    }, []);
 
     useEffect(() => {
         const taskParam = searchParams.get("task");
@@ -247,7 +226,7 @@ function AdminTasksPageContent() {
                                     )}
 
                                     <div className={`relative z-20 ${isHighlighted ? "pointer-events-none [&_*:hover]:!border-transparent [&_*:hover]:!ring-0 [&_*:hover]:!shadow-none" : ""}`}>
-                                        <TaskCard task={task} index={index} employees={employees} onEdit={(t) => setEditingTask(t)} onDelete={handleDelete} onUpdated={handleTaskUpdated} />
+                                        <TaskCard task={task} index={index} onEdit={(t) => setEditingTask(t)} onDelete={handleDelete} onUpdated={handleTaskUpdated} />
                                     </div>
 
                                     <AnimatePresence>
@@ -297,7 +276,7 @@ function AdminTasksPageContent() {
 
             <AnimatePresence>
                 {editingTask && (
-                    <EditTaskModal task={editingTask} customers={customers} departments={departments} onClose={() => setEditingTask(null)} onSuccess={handleEditSuccess} />
+                    <EditTaskModal task={editingTask} departments={departments} onClose={() => setEditingTask(null)} onSuccess={handleEditSuccess} />
                 )}
             </AnimatePresence>
         </div>

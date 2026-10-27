@@ -2,11 +2,11 @@
 
 import { memo, useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Clock3, History, MessageSquareText, UserRound } from "lucide-react";
+import { CalendarClock, History, MessageSquareText, UserRound } from "lucide-react";
 import { JALALI_MONTHS, pad2, toJalali, toPersianDigits } from "@/lib/jalali";
 import type { EmployeeListItem, InternalTask } from "./types";
 import InternalTaskChatModal from "./InternalTaskChatModal";
-import api from "@/lib/axiosInstance";
+import InternalTaskDeadlineModal from "./InternalTaskDeadlineModal";
 
 interface ReceivedTaskCardProps {
     task: InternalTask;
@@ -36,6 +36,7 @@ function getDeadlineState(deadline?: string | null) {
 function ReceivedTaskCard({ task, employees, isRoutine = false, onUpdated }: ReceivedTaskCardProps) {
     const [currentTask, setCurrentTask] = useState(task);
     const [chatOpen, setChatOpen] = useState(false);
+    const [deadlineModalOpen, setDeadlineModalOpen] = useState(false);
     const [deadlineData, setDeadlineData] = useState({ started_at: task.started_at ?? null, deadline: task.deadline ?? null });
 
     useEffect(() => {
@@ -43,29 +44,13 @@ function ReceivedTaskCard({ task, employees, isRoutine = false, onUpdated }: Rec
         setDeadlineData({ started_at: task.started_at ?? null, deadline: task.deadline ?? null });
     }, [task]);
 
-    useEffect(() => {
-        let active = true;
-        (async () => {
-            try {
-                const { data } = await api.get(`/tasks/api/v1/internal_task/${task.id}/deadline/`);
-                const value = data?.data ?? data;
-                if (!active) return;
-                const started_at = value?.started_at ?? task.started_at ?? null;
-                const deadline = value?.deadline ?? task.deadline ?? null;
-                setDeadlineData({ started_at, deadline });
-                onUpdated({ ...task, started_at, deadline });
-            } catch { }
-        })();
-        return () => { active = false; };
-    }, [task.id]);
-
     const creator = employees.find(employee => employee.username.trim().toLowerCase() === currentTask.created_by.trim().toLowerCase());
     const creatorName = creator?.full_name || currentTask.created_by || "نامشخص";
     const isCompleted = currentTask.status === "completed";
     const isCancelled = currentTask.status === "cancelled";
     const deadlineState = getDeadlineState(deadlineData.deadline);
-    const deadlineDate = formatJalali(deadlineData.deadline);
-    const startedAtDate = formatJalali(deadlineData.started_at);
+    const isActive = !isCompleted && !isCancelled;
+    const showUrgency = isActive && deadlineData.deadline && deadlineState.label !== "در زمانبندی";
     const createdDate = formatJalali(currentTask.created_at);
 
     const statusBadge = isCompleted
@@ -89,6 +74,20 @@ function ReceivedTaskCard({ task, employees, isRoutine = false, onUpdated }: Rec
                         {statusBadge.label}
                     </span>
 
+                    <div className="flex items-center gap-1.5">
+                        {showUrgency && (
+                            <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-extrabold ${deadlineState.background} ${deadlineState.color}`}>
+                                {deadlineState.label}
+                            </span>
+                        )}
+                        <button
+                            type="button"
+                            onClick={() => setDeadlineModalOpen(true)}
+                            className="flex h-7 w-7 items-center justify-center rounded-xl bg-indigo-500/[0.08] text-indigo-500 transition-colors hover:bg-indigo-500/[0.14] dark:bg-indigo-500/10 dark:text-indigo-300"
+                            title="مشاهده ددلاین"
+                        >
+                            <CalendarClock size={11} />
+                        </button>
                     <button
                         type="button"
                         onClick={() => setChatOpen(true)}
@@ -97,6 +96,7 @@ function ReceivedTaskCard({ task, employees, isRoutine = false, onUpdated }: Rec
                         <MessageSquareText size={11} />
                         {currentTask.attachments.length}
                     </button>
+                    </div>
                 </div>
 
                 <h3 className="line-clamp-2 text-[14px] font-extrabold leading-snug text-gray-900 dark:text-white">
@@ -119,35 +119,6 @@ function ReceivedTaskCard({ task, employees, isRoutine = false, onUpdated }: Rec
                     <span>ایجاد: {createdDate}</span>
                 </div>
 
-                {(deadlineData.started_at || deadlineData.deadline) ? (
-                    <>
-                        {startedAtDate && (
-                            <div className="flex items-center gap-2 rounded-2xl bg-indigo-50 px-3 py-2.5 dark:bg-indigo-500/10">
-                                <Clock3 size={13} className="text-indigo-500 dark:text-indigo-400" />
-                                <div>
-                                    <p className="text-[11px] font-extrabold text-indigo-500 dark:text-indigo-400">زمان شروع</p>
-                                    <p className="mt-0.5 text-[10px] font-bold text-gray-500 dark:text-gray-400">{startedAtDate}</p>
-                                </div>
-                            </div>
-                        )}
-
-                        <div className={`flex items-center gap-2 rounded-2xl px-3 py-2.5 ${deadlineState.background}`}>
-                            <Clock3 size={13} className={deadlineState.color} />
-                            <div>
-                                <p className={`text-[11px] font-extrabold ${deadlineState.color}`}>{deadlineState.label}</p>
-                                {deadlineDate && (
-                                    <p className="mt-0.5 text-[10px] font-bold text-gray-500 dark:text-gray-400">{deadlineDate}</p>
-                                )}
-                            </div>
-                        </div>
-                    </>
-                ) : (
-                    <div className="flex items-center gap-2 rounded-2xl bg-gray-50 px-3 py-2.5 dark:bg-white/[0.03]">
-                        <Clock3 size={13} className="text-gray-400" />
-                        <span className="text-[11px] font-semibold text-gray-400">زمان‌بندی تعیین نشده</span>
-                    </div>
-                )}
-
                 <div className="relative z-10 flex flex-col gap-2 border-t border-black/5 pt-2.5 dark:border-white/[0.05]">
                     <button
                         type="button"
@@ -159,6 +130,14 @@ function ReceivedTaskCard({ task, employees, isRoutine = false, onUpdated }: Rec
                     </button>
                 </div>
             </motion.div>
+
+            <InternalTaskDeadlineModal
+                open={deadlineModalOpen}
+                onClose={() => setDeadlineModalOpen(false)}
+                taskId={task.id}
+                taskTitle={currentTask.title}
+                onLoaded={(d) => setDeadlineData({ started_at: d.started_at, deadline: d.deadline })}
+            />
 
             <InternalTaskChatModal
                 open={chatOpen}

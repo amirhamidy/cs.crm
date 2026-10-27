@@ -40,7 +40,8 @@ interface Option {
 
 interface EditTaskModalProps {
     task: TaskItem;
-    customers: Customer[];
+    /** دیگر لازم نیست؛ نام مشتری از خود پرونده خوانده می‌شود (برای سازگاری نگه داشته شده) */
+    customers?: Customer[];
     departments: Department[];
     onClose: () => void;
     onSuccess: () => void;
@@ -384,7 +385,6 @@ const getListData = <T,>(data: T[] | { results?: T[] }): T[] =>
 
 export default function EditTaskModal({
     task,
-    customers,
     departments,
     onClose,
     onSuccess,
@@ -601,16 +601,20 @@ export default function EditTaskModal({
                     item.customer && typeof item.customer === "object"
                         ? (item.customer as any).id
                         : item.customer;
-                const customer = customers.find(
-                    (c) => Number(c.id) === Number(customerId)
-                );
+                const rawCustomer = item.customer as unknown;
+                const customerName =
+                    (item as any).customer_name ??
+                    (item as any).customerName ??
+                    (rawCustomer && typeof rawCustomer === "object"
+                        ? (rawCustomer as any).full_name ?? (rawCustomer as any).name
+                        : undefined);
                 return {
                     id: Number(item.id),
                     label: item.title,
-                    sub: customer ? `مشتری: ${customer.full_name}` : undefined,
+                    sub: customerName ? `مشتری: ${customerName}` : undefined,
                 };
             }),
-        [cases, customers]
+        [cases]
     );
 
     const deptOptions = useMemo(

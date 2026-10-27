@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
     X,
@@ -15,9 +15,10 @@ import {
     UserPlus,
 } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
-import { customersApi, casesApi, tasksApi, accountsApi, departmentsApi } from "@/lib/api";
+import { departmentsApi, fetchPage } from "@/lib/api";
+import { apiRoutes } from "@/lib/apiRoutes";
+import AsyncSelect, { type AsyncOption } from "@/components/customcomponents/shared/AsyncSelect";
 import type { Customer } from "@/types/customer";
-import { useAuthStore } from "@/store/authStore";
 
 interface Case {
     id: number;
@@ -103,6 +104,14 @@ function customerDisplayName(c: Customer) {
     );
 }
 
+const customerToOption = (customer: Customer): AsyncOption => ({
+    id: customer.id,
+    label: customerDisplayName(customer),
+    sub: customer.phone_number || undefined,
+});
+
+const caseToOption = (item: Case): AsyncOption => ({ id: item.id, label: item.title });
+
 function extractList<T>(data: unknown): T[] {
     if (Array.isArray(data)) return data;
 
@@ -119,90 +128,9 @@ function extractList<T>(data: unknown): T[] {
     return [];
 }
 
-function parseAssignedEmployees(raw: unknown): number[] {
-    const ids: number[] = [];
 
-    if (Array.isArray(raw)) {
-        raw.forEach((item) => {
-            if (typeof item === "object" && item !== null) {
-                const value = item as Record<string, unknown>;
-                const id = Number(
-                    value.id ??
-                    value.employee ??
-                    value.user ??
-                    (typeof value.employee_detail === "object" &&
-                        value.employee_detail !== null
-                        ? (value.employee_detail as Record<string, unknown>).id
-                        : undefined)
-                );
 
-                if (!Number.isNaN(id) && id > 0) ids.push(id);
-            } else {
-                const id = Number(item);
-                if (!Number.isNaN(id) && id > 0) ids.push(id);
-            }
-        });
 
-        return ids;
-    }
-
-    if (raw && typeof raw === "object") {
-        const value = raw as Record<string, unknown>;
-        const id = Number(
-            value.id ??
-            value.employee ??
-            value.user ??
-            (typeof value.employee_detail === "object" &&
-                value.employee_detail !== null
-                ? (value.employee_detail as Record<string, unknown>).id
-                : undefined)
-        );
-
-        if (!Number.isNaN(id) && id > 0) ids.push(id);
-        return ids;
-    }
-
-    if (raw !== null && raw !== undefined) {
-        const id = Number(raw);
-        if (!Number.isNaN(id) && id > 0) ids.push(id);
-    }
-
-    return ids;
-}
-
-function extractCaseCustomerId(item: Case): number | null {
-    const raw = item?.customer;
-
-    if (raw !== null && raw !== undefined) {
-        const id =
-            typeof raw === "object"
-                ? Number((raw as { id?: number }).id)
-                : Number(raw);
-
-        return Number.isNaN(id) ? null : id;
-    }
-
-    return null;
-}
-
-function extractTaskCaseId(task: TaskItem): number | null {
-    const raw = task.case ?? task.case_id ?? task.caseId;
-
-    if (raw === null || raw === undefined) return null;
-
-    const id = typeof raw === "object" ? Number(raw?.id) : Number(raw);
-
-    return Number.isNaN(id) || id <= 0 ? null : id;
-}
-
-function getCreatorId(item: {
-    created_by?: number;
-    creator?: number;
-    user?: number;
-}) {
-    const id = Number(item.created_by ?? item.creator ?? item.user);
-    return Number.isNaN(id) ? null : id;
-}
 
 function FloatingInput({
     label,
@@ -476,19 +404,17 @@ export default function CreateTaskModal({
 }: Props) {
     const [submitting, setSubmitting] = useState(false);
     const [submitError, setSubmitError] = useState("");
-    const [cases, setCases] = useState<Case[]>([]);
-    const [customers, setCustomers] = useState<Customer[]>([]);
     const [departmentList, setDepartmentList] = useState<Department[]>(initialDepartments);
     const [employeeList, setEmployeeList] = useState<DepartmentEmployee[]>(initialEmployees);
     const [selectedCustomer, setSelectedCustomer] = useState<number | null>(null);
+    const [selectedCustomerOpt, setSelectedCustomerOpt] = useState<AsyncOption | null>(null);
+    const [selectedCaseOpt, setSelectedCaseOpt] = useState<AsyncOption | null>(null);
     const [selectedCase, setSelectedCase] = useState<number | null>(null);
     const [selectedDepartment, setSelectedDepartment] = useState<number | null>(null);
     const [selectedEmployees, setSelectedEmployees] = useState<number[]>([]);
     const [title, setTitle] = useState("");
     const [files, setFiles] = useState<File[]>([]);
 
-    const userId = useAuthStore((state) => state.userId);
-    const username = useAuthStore((state) => state.username);
     const requestIdRef = useRef(0);
 
     useEffect(() => {
@@ -499,117 +425,6 @@ export default function CreateTaskModal({
 
         const isCurrentRequest = () =>
             !cancelled && requestId === requestIdRef.current;
-
-        async function loadData() {
-            try {
-                const [customersRes, casesRes, tasksRes, employeesRes] =
-                    await Promise.all([
-                        customersApi.listAll(),
-                        casesApi.listAll(),
-                        tasksApi.listAll(),
-                        accountsApi.employees.all(),
-                    ]);
-
-                if (!isCurrentRequest()) return;
-
-                const allCustomers = extractList<Customer>(customersRes);
-                const allCases = extractList<Case>(casesRes);
-                const allTasks = extractList<TaskItem>(tasksRes);
-                const employees = extractList<Employee>(employeesRes);
-
-                let empId: number | null = null;
-
-                const matchedEmployee = employees.find(
-                    (employee) =>
-                        (username && employee.username === username) ||
-                        (userId &&
-                            Number(
-                                employee.user_id ??
-                                employee.user ??
-                                employee.user_detail?.id
-                            ) === Number(userId)) ||
-                        (userId && Number(employee.id) === Number(userId))
-                );
-
-                if (matchedEmployee) empId = Number(matchedEmployee.id);
-
-                const userTasks = empId
-                    ? allTasks.filter((task) => {
-                        const assignedList = parseAssignedEmployees(
-                            task.assigned_employee
-                        );
-                        const creatorId = getCreatorId(task);
-
-                        return (
-                            assignedList.includes(empId as number) ||
-                            (userId && creatorId === Number(userId))
-                        );
-                    })
-                    : allTasks;
-
-                const userTaskCaseIds = new Set<number>(
-                    userTasks
-                        .map((task) => extractTaskCaseId(task))
-                        .filter((id): id is number => id !== null)
-                );
-
-                const allowedCaseCustomerIds = new Set<number>();
-
-                allCases.forEach((item) => {
-                    const caseId = Number(item.id);
-                    const customerId = extractCaseCustomerId(item);
-
-                    if (!customerId) return;
-
-                    const assignedDirectly =
-                        empId !== null &&
-                        (parseAssignedEmployees(item.assigned_employee).includes(empId) ||
-                            parseAssignedEmployees(item.employees).includes(empId) ||
-                            (userId && getCreatorId(item) === Number(userId)));
-
-                    const hasTaskInCase = userTaskCaseIds.has(caseId);
-
-                    if (empId === null || assignedDirectly || hasTaskInCase) {
-                        allowedCaseCustomerIds.add(customerId);
-                    }
-                });
-
-                const filteredCustomers =
-                    empId !== null
-                        ? allCustomers.filter((customer: any) => {
-                            const isCreator =
-                                username &&
-                                customer.created_by_username &&
-                                customer.created_by_username === username;
-
-                            const isAssigned =
-                                parseAssignedEmployees(
-                                    customer.assigned_employee
-                                ).includes(empId as number) ||
-                                parseAssignedEmployees(
-                                    customer.employees
-                                ).includes(empId as number);
-
-                            const hasPermittedCase =
-                                allowedCaseCustomerIds.has(Number(customer.id));
-
-                            return isCreator || isAssigned || hasPermittedCase;
-                        })
-                        : allCustomers;
-
-                if (!isCurrentRequest()) return;
-
-                setCustomers(filteredCustomers);
-                setCases(allCases);
-            } catch {
-                if (isCurrentRequest()) {
-                    setCustomers([]);
-                    setCases([]);
-                }
-            }
-        }
-
-        loadData();
 
         if (initialDepartments.length === 0) {
             departmentsApi
@@ -638,7 +453,7 @@ export default function CreateTaskModal({
         return () => {
             cancelled = true;
         };
-    }, [open, userId, username, initialDepartments, initialEmployees]);
+    }, [open, initialDepartments, initialEmployees]);
 
     useEffect(() => {
         setSelectedEmployees([]);
@@ -646,15 +461,21 @@ export default function CreateTaskModal({
 
     useEffect(() => {
         setSelectedCase(null);
+        setSelectedCaseOpt(null);
     }, [selectedCustomer]);
 
-    const filteredCases = useMemo(() => {
-        if (!selectedCustomer) return [];
-
-        return cases.filter(
-            (item) => Number(item.customer) === Number(selectedCustomer)
-        );
-    }, [cases, selectedCustomer]);
+    // مشتری‌ها و پرونده‌ها صفحه‌به‌صفحه و با جستجوی سمت سرور خوانده می‌شوند (فقط وقتی دراپ‌دان باز شود).
+    // دسترسی کارمند به مشتری/پرونده را خود سرور اعمال می‌کند؛ دیگر هیچ فیلتر فرانتی روی «همهٔ» داده‌ها نداریم.
+    const fetchCustomers = useCallback(
+        (p: { page: number; page_size: number; search?: string }, signal: AbortSignal) =>
+            fetchPage<Customer>(apiRoutes.customers, p, signal),
+        []
+    );
+    const fetchCases = useCallback(
+        (p: { page: number; page_size: number; search?: string }, signal: AbortSignal) =>
+            fetchPage<Case>(apiRoutes.cases, { ...p, customer: selectedCustomer }, signal),
+        [selectedCustomer]
+    );
 
     const filteredEmployees = useMemo(() => {
         if (!selectedDepartment) return [];
@@ -673,6 +494,8 @@ export default function CreateTaskModal({
 
     function resetAll() {
         setSelectedCustomer(null);
+        setSelectedCustomerOpt(null);
+        setSelectedCaseOpt(null);
         setSelectedCase(null);
         setSelectedDepartment(null);
         setSelectedEmployees([]);
@@ -816,23 +639,22 @@ export default function CreateTaskModal({
                                     )}
                                 </AnimatePresence>
 
-                                <NiceSelect
+                                <AsyncSelect
                                     label="مشتری"
                                     placeholder="انتخاب مشتری"
                                     emptyText="مشتری‌ای برای شما یافت نشد"
-                                    options={customers.map((customer) => ({
-                                        id: customer.id,
-                                        label: customerDisplayName(customer),
-                                        sub: customer.phone_number || undefined,
-                                    }))}
+                                    fetcher={fetchCustomers}
+                                    toOption={customerToOption}
                                     value={selectedCustomer}
-                                    onChange={(id) => {
-                                        setSelectedCustomer(id as number);
+                                    selected={selectedCustomerOpt}
+                                    onChange={(option) => {
+                                        setSelectedCustomer(option.id);
+                                        setSelectedCustomerOpt(option);
                                         setSubmitError("");
                                     }}
                                 />
 
-                                <NiceSelect
+                                <AsyncSelect
                                     label="پرونده"
                                     placeholder={
                                         selectedCustomer
@@ -841,13 +663,14 @@ export default function CreateTaskModal({
                                     }
                                     emptyText="پرونده‌ای برای این مشتری یافت نشد"
                                     disabled={!selectedCustomer}
-                                    options={filteredCases.map((item) => ({
-                                        id: item.id,
-                                        label: item.title,
-                                    }))}
+                                    fetcher={fetchCases}
+                                    toOption={caseToOption}
+                                    depsKey={selectedCustomer}
                                     value={selectedCase}
-                                    onChange={(id) => {
-                                        setSelectedCase(id as number);
+                                    selected={selectedCaseOpt}
+                                    onChange={(option) => {
+                                        setSelectedCase(option.id);
+                                        setSelectedCaseOpt(option);
                                         setSubmitError("");
                                     }}
                                 />

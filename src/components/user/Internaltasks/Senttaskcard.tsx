@@ -3,15 +3,15 @@
 import { memo, useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
-    Ban, CalendarDays, CheckCircle2, ClipboardX, Clock, Loader, Loader2,
+    Ban, CalendarClock, CheckCircle2, ClipboardX, Clock, Loader, Loader2,
     MessageSquareText, RotateCcw, Trash2, UserRound, X,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useAuthStore } from "@/store/authStore";
 import type { InternalTask, InternalTaskStatus, EmployeeRef } from "./types";
-import { toJalali, toPersianDigits, JALALI_MONTHS, pad2 } from "@/lib/jalali";
 import api from "@/lib/axiosInstance";
 import InternalTimeRangeModal from "./InternalTimeRangeModal";
+import InternalTaskDeadlineModal from "./InternalTaskDeadlineModal";
 import InternalTaskChatModal from "./InternalTaskChatModal";
 import InternalTaskActionModal from "./InternalTaskActionModal";
 import { reopenInternalTask } from "./Api";
@@ -47,14 +47,6 @@ const URGENCY_LABEL = { overdue: "منقضی شده", critical: "فوری", soon
 interface StepDeadline {
     started_at: string | null;
     deadline: string | null;
-}
-
-function formatJalaliDate(iso?: string | null) {
-    if (!iso) return null;
-    const d = new Date(iso);
-    if (Number.isNaN(d.getTime())) return null;
-    const [jy, jm, jd] = toJalali(d.getFullYear(), d.getMonth() + 1, d.getDate());
-    return `${toPersianDigits(jd)} ${JALALI_MONTHS[jm - 1]} ${toPersianDigits(jy)} ساعت ${toPersianDigits(pad2(d.getHours()))}:${toPersianDigits(pad2(d.getMinutes()))}`;
 }
 
 function getGradient(id: number) {
@@ -93,6 +85,7 @@ function SentTaskCard({ task, index = 0, onDelete, onUpdated, isDeleting = false
     const userId = useAuthStore((state) => state.userId);
     const [hovered, setHovered] = useState(false);
     const [timeModalOpen, setTimeModalOpen] = useState(false);
+    const [deadlineModalOpen, setDeadlineModalOpen] = useState(false);
     const [showConfirm, setShowConfirm] = useState(false);
     const [deleting, setDeleting] = useState(false);
     const [deleteError, setDeleteError] = useState<string | null>(null);
@@ -126,36 +119,14 @@ function SentTaskCard({ task, index = 0, onDelete, onUpdated, isDeleting = false
     const accent = urgency && urgency !== "normal" ? URGENCY_ACCENT[urgency] : null;
 
     useEffect(() => {
-        let cancelled = false;
-        async function loadDeadline() {
-            try {
-                const { data } = await api.get(`/tasks/api/v1/internal_task/${task.id}/deadline/`);
-                const value = data?.data ?? data;
-                if (!cancelled && value) {
-                    setStepDeadline({
-                        started_at: value.started_at ?? task.started_at ?? null,
-                        deadline: value.deadline ?? task.deadline ?? null,
-                    });
-                }
-            } catch {
-                if (!cancelled) setStepDeadline({
-                    started_at: task.started_at ?? null,
-                    deadline: task.deadline ?? null,
-                });
-            }
-        }
-        void loadDeadline();
-        return () => { cancelled = true; };
-    }, [task.id, task.started_at, task.deadline]);
+        setStepDeadline({ started_at: task.started_at ?? null, deadline: task.deadline ?? null });
+    }, [task.started_at, task.deadline]);
 
     useEffect(() => {
         if (!stepDeadline.deadline || !isActiveTask) return;
         const interval = setInterval(() => forceTick(t => t + 1), 60000);
         return () => clearInterval(interval);
     }, [stepDeadline.deadline, isActiveTask]);
-
-    const startedAtLabel = formatJalaliDate(stepDeadline.started_at);
-    const deadlineLabel = formatJalaliDate(stepDeadline.deadline);
 
     async function handleDelete() {
         if (!onDelete) return;
@@ -265,7 +236,11 @@ function SentTaskCard({ task, index = 0, onDelete, onUpdated, isDeleting = false
                             className="flex h-7 w-7 items-center justify-center rounded-xl transition-colors"
                             style={{ background: isDark ? "rgba(99,102,241,.1)" : "rgba(99,102,241,.07)", color: isDark ? "#a5b4fc" : "#6366f1" }}
                             title="مشاهده گفتگو و فایل‌ها"><MessageSquareText size={11} /></button>
-                        <button type="button" onClick={() => setTimeModalOpen(true)}
+                        <button type="button" onClick={() => setDeadlineModalOpen(true)}
+                            className="flex h-7 w-7 items-center justify-center rounded-xl transition-colors"
+                            style={{ background: isDark ? "rgba(99,102,241,.1)" : "rgba(99,102,241,.07)", color: isDark ? "#a5b4fc" : "#6366f1" }}
+                            title="مشاهده ددلاین"><CalendarClock size={11} /></button>
+<button type="button" onClick={() => setTimeModalOpen(true)}
                             className="flex h-7 w-7 items-center justify-center rounded-xl transition-colors"
                             style={{ background: isDark ? "rgba(99,102,241,.1)" : "rgba(99,102,241,.07)", color: isDark ? "#a5b4fc" : "#6366f1" }}
                             title="تعیین بازه زمانی"><Clock size={11} /></button>
@@ -305,16 +280,6 @@ function SentTaskCard({ task, index = 0, onDelete, onUpdated, isDeleting = false
                         {reopening ? <Loader2 size={13} className="animate-spin" /> : <RotateCcw size={13} />}بازگشایی تیکت
                     </button>
                 )}
-
-                <div className="flex flex-col gap-1.5 rounded-[1.25rem] px-3 py-2.5" style={{
-                    background: accent ? `color-mix(in srgb, ${accent} 8%, transparent)` : isDark ? "rgba(99,102,241,.06)" : "rgba(99,102,241,.05)",
-                    border: accent ? `1px solid color-mix(in srgb, ${accent} 25%, transparent)` : isDark ? "1px solid rgba(99,102,241,.12)" : "1px solid rgba(99,102,241,.1)",
-                }}>
-                    {startedAtLabel || deadlineLabel ? <>
-                        {startedAtLabel && <div className="flex items-center gap-2 text-[11px] font-bold" style={{ color: accent ?? (isDark ? "#a5b4fc" : "#6366f1") }}><CalendarDays size={13} /><span>شروع: {startedAtLabel}</span></div>}
-                        {deadlineLabel && <div className="flex items-center gap-2 text-[11px] font-bold" style={{ color: accent ?? "#ef4444" }}><Clock size={13} /><span>مهلت: {deadlineLabel}</span></div>}
-                    </> : <div className="flex items-center gap-2 text-[10.5px] font-semibold" style={{ color: isDark ? "#64748b" : "#94a3b8" }}><Clock size={12} />زمان‌بندی تعیین نشده</div>}
-                </div>
             </motion.div>
 
             <AnimatePresence>
@@ -347,6 +312,13 @@ function SentTaskCard({ task, index = 0, onDelete, onUpdated, isDeleting = false
 
             {actionModal && <InternalTaskActionModal isOpen action={actionModal} task={task} onClose={() => setActionModal(null)} onDone={updatedTask => { onUpdated?.(updatedTask); setActionModal(null); }} />}
             <InternalTimeRangeModal open={timeModalOpen} initialStartedAt={stepDeadline.started_at} initialDeadline={stepDeadline.deadline} loading={savingTime} error={timeError} onClose={() => setTimeModalOpen(false)} onSubmit={handleTimeSubmit} />
+            <InternalTaskDeadlineModal
+                open={deadlineModalOpen}
+                onClose={() => setDeadlineModalOpen(false)}
+                taskId={task.id}
+                taskTitle={task.title}
+                onLoaded={(d) => setStepDeadline({ started_at: d.started_at, deadline: d.deadline })}
+            />
             <InternalTaskChatModal open={chatOpen} task={task} onClose={() => setChatOpen(false)} onUpdated={onUpdated || (() => { })} />
         </>
     );

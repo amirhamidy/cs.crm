@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
     Building2,
-    CalendarDays,
+    CalendarClock,
     ClipboardX,
     Clock,
     FolderKanban,
@@ -20,10 +20,10 @@ import {
 import { useTheme } from "next-themes";
 import type { Task, TaskStatus, TaskEmployeeRef } from "@/types/task";
 import type { Employee } from "@/types/employee";
-import { toJalali, toPersianDigits, JALALI_MONTHS, pad2 } from "@/lib/jalali";
 import { useEmployeeInfo } from "@/hooks/useEmployeeInfo";
 import AdminTaskNotesModal from "./TaskNotesModal";
 import TimeRangeModal from "./TimeRangeModal";
+import TaskDeadlineModal, { fetchStepDeadline, type StepDeadline } from "@/components/customcomponents/tasks/TaskDeadlineModal";
 import api from "@/lib/axiosInstance";
 
 const AVATAR_GRADIENTS = [
@@ -73,20 +73,6 @@ const URGENCY_LABEL: Record<Exclude<DeadlineUrgency, null | "normal">, string> =
 interface TaskWithStep extends Omit<Task, "assigned_employee"> {
     current_step?: number | { id: number } | string | null;
     assigned_employee?: TaskEmployeeRef | TaskEmployeeRef[] | number | number[] | null;
-}
-
-interface StepDeadline {
-    started_at: string | null;
-    deadline: string | null;
-}
-
-function formatJalaliDate(iso?: string | null) {
-    if (!iso) return null;
-    const d = new Date(iso);
-    const [jy, jm, jd] = toJalali(d.getFullYear(), d.getMonth() + 1, d.getDate());
-    return `${toPersianDigits(jd)} ${JALALI_MONTHS[jm - 1]} ${toPersianDigits(jy)} ساعت ${toPersianDigits(
-        pad2(d.getHours())
-    )}:${toPersianDigits(pad2(d.getMinutes()))}`;
 }
 
 function getGradient(id: number) {
@@ -211,7 +197,7 @@ export default function TaskCard({
     const [notesModalOpen, setNotesModalOpen] = useState(false);
     const [timeError, setTimeError] = useState<string | null>(null);
     const [stepDeadline, setStepDeadline] = useState<StepDeadline | null>(null);
-    const [loadingDeadline, setLoadingDeadline] = useState(false);
+    const [deadlineModalOpen, setDeadlineModalOpen] = useState(false);
     const [, forceTick] = useState(0);
 
     const employeeIds = extractEmployeeIds(task.assigned_employee);
@@ -234,38 +220,19 @@ export default function TaskCard({
     const accent =
         urgency && urgency !== "normal" ? URGENCY_ACCENT[urgency] : null;
 
-    useEffect(() => {
-        if (!stepId) return;
-        let cancelled = false;
-        setLoadingDeadline(true);
-        api
-            .get(`/tasks/api/v1/tasks/${task.id}/steps/${stepId}/deadline/`)
-            .then((res) => {
-                if (cancelled) return;
-                setStepDeadline({
-                    started_at: res.data?.started_at ?? null,
-                    deadline: res.data?.deadline ?? null,
-                });
-            })
-            .catch(() => {
-                if (!cancelled) setStepDeadline(null);
-            })
-            .finally(() => {
-                if (!cancelled) setLoadingDeadline(false);
-            });
-        return () => {
-            cancelled = true;
-        };
-    }, [task.id, stepId]);
+    // ددلاین دیگر موقع رندر کارت گرفته نمی‌شود؛ فقط با کلیک روی دکمه (مودال ددلاین) یا دکمهٔ تعیین بازه زمانی ریکوئست زده می‌شود.
+    const openTimeModal = () => {
+        setTimeModalOpen(true);
+        if (stepId && !stepDeadline) {
+            fetchStepDeadline(task.id, stepId).then(setStepDeadline).catch(() => undefined);
+        }
+    };
 
     useEffect(() => {
         if (!stepDeadline?.deadline || !isActiveTask) return;
         const interval = setInterval(() => forceTick((t) => t + 1), 60000);
         return () => clearInterval(interval);
     }, [stepDeadline?.deadline, isActiveTask]);
-
-    const startedAtLabel = formatJalaliDate(stepDeadline?.started_at);
-    const deadlineLabel = formatJalaliDate(stepDeadline?.deadline);
 
     async function handleDelete() {
         setDeleting(true);
@@ -442,10 +409,24 @@ export default function TaskCard({
                         >
                             <MessageSquareText size={14} className="text-indigo-400" />
                         </button>
+                        <button
+                            type="button"
+                            onClick={() => setDeadlineModalOpen(true)}
+                            className="flex h-7 w-7 items-center justify-center rounded-xl transition-colors"
+                            style={{
+                                background: isDark
+                                    ? "rgba(99,102,241,0.1)"
+                                    : "rgba(99,102,241,0.07)",
+                                color: isDark ? "#a5b4fc" : "#6366f1",
+                            }}
+                            title="مشاهده ددلاین"
+                        >
+                            <CalendarClock size={11} />
+                        </button>
                         {canManageDeadline && (
                             <button
                                 type="button"
-                                onClick={() => setTimeModalOpen(true)}
+                                onClick={openTimeModal}
                                 className="flex h-7 w-7 items-center justify-center rounded-xl transition-colors"
                                 style={{
                                     background: isDark
@@ -573,58 +554,6 @@ export default function TaskCard({
                         </Chip>
                     ) : null}
                 </div>
-
-                <div
-                    className="flex flex-col gap-1.5 rounded-2xl px-3 py-2.5"
-                    style={{
-                        background: accent
-                            ? `color-mix(in srgb, ${accent} 8%, transparent)`
-                            : isDark ? "rgba(99,102,241,0.06)" : "rgba(99,102,241,0.05)",
-                        border: accent
-                            ? `1px solid color-mix(in srgb, ${accent} 25%, transparent)`
-                            : isDark ? "1px solid rgba(99,102,241,0.12)" : "1px solid rgba(99,102,241,0.1)",
-                        transition: "background 0.4s ease, border-color 0.4s ease",
-                    }}
-                >
-                    {loadingDeadline ? (
-                        <div
-                            className="flex items-center gap-2 text-[10.5px] font-semibold"
-                            style={{ color: isDark ? "#94a3b8" : "#64748b" }}
-                        >
-                            <Loader2 size={12} className="animate-spin" />
-                            در حال دریافت زمان‌بندی...
-                        </div>
-                    ) : startedAtLabel || deadlineLabel ? (
-                        <>
-                            {startedAtLabel && (
-                                <div
-                                    className="flex items-center gap-2 text-[11px] font-bold"
-                                    style={{ color: accent ?? (isDark ? "#a5b4fc" : "#6366f1") }}
-                                >
-                                    <CalendarDays size={13} />
-                                    <span>شروع: {startedAtLabel}</span>
-                                </div>
-                            )}
-                            {deadlineLabel && (
-                                <div
-                                    className="flex items-center gap-2 text-[11px] font-bold"
-                                    style={{ color: accent ?? "#ef4444" }}
-                                >
-                                    <Clock size={13} />
-                                    <span>مهلت: {deadlineLabel}</span>
-                                </div>
-                            )}
-                        </>
-                    ) : (
-                        <div
-                            className="flex items-center gap-2 text-[10.5px] font-semibold"
-                            style={{ color: isDark ? "#64748b" : "#94a3b8" }}
-                        >
-                            <Clock size={12} />
-                            زمان‌بندی تعیین نشده
-                        </div>
-                    )}
-                </div>
             </motion.div>
 
             <AnimatePresence>
@@ -719,6 +648,15 @@ export default function TaskCard({
                     </motion.div>
                 )}
             </AnimatePresence>
+
+            <TaskDeadlineModal
+                open={deadlineModalOpen}
+                onClose={() => setDeadlineModalOpen(false)}
+                taskId={task.id}
+                taskTitle={task.title}
+                stepId={stepId}
+                onLoaded={setStepDeadline}
+            />
 
             <AnimatePresence>
                 {notesModalOpen && (
