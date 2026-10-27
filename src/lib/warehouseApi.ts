@@ -1,11 +1,13 @@
 import axiosInstance from "@/lib/axiosInstance";
 import { dedupe } from "@/lib/api/_core";
+import { listAllByStatus } from "@/lib/api";
 import { extractList } from "@/utils/warehouseEmployee";
 import type {
   ApiProduct,
   ApiStockInfo,
   ApiStockTransaction,
   ApiWarehouse,
+  ApiWarehouseTask,
   CreateWarehousePayload,
   UpdateStockLimitsPayload,
 } from "@/types/warehouse";
@@ -36,7 +38,7 @@ export const WAREHOUSE_QUERY_KEY = "warehouse_id";
 
 export const PAGE_SIZE = 8;
 /** تعداد محصول در هر صفحه (ادمین و یوزر) */
-export const PRODUCTS_PAGE_SIZE = 40;
+export const PRODUCTS_PAGE_SIZE = 15;
 
 /** سقف page_size در بک‌اند (بیشتر از این را بک‌اند خودش ۱۰۰ می‌کند). */
 export const MAX_PAGE_SIZE = 100;
@@ -370,24 +372,129 @@ export function fetchWarehouseProductsPage(
   });
 }
 
-/** موجودیِ چند محصول (صفحهٔ جاری) در یک انبار؛ فیلتر `product` به بک‌اند. */
+/** موجودیِ چند محصول (صفحهٔ جاری) در یک انبار.
+ * ابتدا با یک درخواست دسته‌ای `product__in` (سبک‌تر) و در صورت عدم پشتیبانی بک‌اند،
+ * به‌صورت موازی محدود (mapLimit) هر محصول را جدا می‌خواند.
+ */
 export async function fetchStocksForProducts(
   warehouseId: number,
   productIds: number[],
   signal?: AbortSignal,
 ): Promise<ApiStockInfo[]> {
   if (!productIds.length) return [];
-  const rows = await Promise.all(
-    productIds.map((id) =>
-      fetchPage<ApiStockInfo>(WAREHOUSE_ENDPOINTS.stock, {
-        page: 1,
-        pageSize: 5,
-        params: { ...warehouseParams(warehouseId), product: id },
+
+  const wanted = new Set(productIds);
+  const collected = new Map<number, ApiStockInfo>();
+
+  const productKeyOf = (row: ApiStockInfo): number | null => {
+    const raw = (row as unknown as { product?: number | { id: number } | null })
+      .product;
+    if (raw == null) return null;
+    return typeof raw === "object" ? raw.id : raw;
+  };
+
+  try {
+    const first = await fetchPage<ApiStockInfo>(WAREHOUSE_ENDPOINTS.stock, {
+      page: 1,
+      pageSize: MAX_PAGE_SIZE,
+      params: {
+        ...warehouseParams(warehouseId),
+        product__in: Array.from(wanted).join(","),
+      },
+      signal,
+    });
+
+    // اگر بک‌اند فیلتر product__in را نادیده بگیرد، ردیف‌های نامرتبط برمی‌گردند؛
+    // در آن حالت فقط ردیف‌های موردنظر را نگه می‌داریم.
+    for (const row of first.items) {
+      const key = productKeyOf(row);
+      if (key != null && wanted.has(key)) collected.set(key, row);
+    }
+
+    const maxPages = Math.min(first.totalPages, 5);
+    for (let p = 2; p <= maxPages && collected.size < wanted.size; p += 1) {
+      const next = await fetchPage<ApiStockInfo>(WAREHOUSE_ENDPOINTS.stock, {
+        page: p,
+        pageSize: MAX_PAGE_SIZE,
+        params: {
+          ...warehouseParams(warehouseId),
+          product__in: Array.from(wanted).join(","),
+        },
         signal,
-      }),
-    ),
+      });
+      for (const row of next.items) {
+        const key = productKeyOf(row);
+        if (key != null && wanted.has(key)) collected.set(key, row);
+      }
+    }
+  } catch {
+    // نادیده بگیر؛ سراغ مسیر جایگزین می‌رویم
+  }
+
+  const missing = Array.from(wanted).filter((id) => !collected.has(id));
+  if (!missing.length) return Array.from(collected.values());
+
+  // مسیر جایگزین: یک درخواست برای هر محصول باقی‌مانده (بدون فشار هم‌زمانی)
+  const rows = await mapLimit(missing, CONCURRENCY, (id) =>
+    fetchPage<ApiStockInfo>(WAREHOUSE_ENDPOINTS.stock, {
+      page: 1,
+      pageSize: 5,
+      params: { ...warehouseParams(warehouseId), product: id },
+      signal,
+    }),
   );
-  return rows.flatMap((r) => r.items);
+
+  for (const row of rows.flatMap((r) => r.items)) {
+    const key = productKeyOf(row);
+    if (key != null && wanted.has(key)) collected.set(key, row);
+  }
+
+  return Array.from(collected.values());
+}
+
+/** تعداد وظایف کنترل کیفیت در انتظار (pending) یک انبار. */
+export async function fetchPendingQualityCount(
+  warehouseId: number,
+  signal?: AbortSignal,
+  clientFilter?: (task: ApiWarehouseTask) => boolean,
+): Promise<number> {
+  const params: Params = {
+    ...warehouseParams(warehouseId),
+    status: "pending",
+    quality_control__isnull: false,
+  };
+
+  // تلاش اول: شمارش سمت سرور (سبک).
+  try {
+    const probe = await fetchPage<ApiWarehouseTask>(WAREHOUSE_ENDPOINTS.tasks, {
+      page: 1,
+      pageSize: 20,
+      params,
+      signal,
+    });
+    const supported =
+      probe.items.length === 0 ||
+      probe.items.every((task) => task.quality_control_id != null);
+    if (supported) {
+      if (!clientFilter) return probe.total;
+      if (probe.totalPages <= 1) {
+        return probe.items.filter(clientFilter).length;
+      }
+    }
+  } catch {
+    // نادیده بگیر؛ سراغ مسیر جایگزین می‌رویم
+  }
+
+  // مسیر جایگزین: خواندن وظایف pending و شمارش سمت کلاینت.
+  const all = await listAllByStatus<ApiWarehouseTask>(
+    WAREHOUSE_ENDPOINTS.tasks,
+    "pending",
+    warehouseParams(warehouseId),
+  );
+  return all.filter(
+    (task) =>
+      task.quality_control_id != null && (clientFilter ? clientFilter(task) : true),
+  ).length;
 }
 
 /** تراکنش‌های یک محصول در یک انبار (برای گردش کالا). */

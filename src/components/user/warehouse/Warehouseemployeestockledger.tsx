@@ -25,10 +25,9 @@ import Pagination from "@/components/ui/Pagination";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import {
     fetchProductTransactions,
+    fetchStocksForProducts,
     fetchWarehouseProductsPage,
-    fetchWarehouseStocks,
 } from "@/lib/warehouseApi";
-import type { ApiStockInfo } from "@/types/warehouse";
 
 /** تعداد محصول در هر صفحهٔ لیست کناری */
 const PRODUCT_LIST_PAGE_SIZE = 40;
@@ -204,34 +203,12 @@ export default function WarehouseEmployeeStockLedger({
     const [kindFilter, setKindFilter] = useState<"all" | EventKind>("all");
     const [currentPage, setCurrentPage] = useState(1);
 
-    const [stocks, setStocks] = useState<ApiStockInfo[]>([]);
-    const [stocksLoaded, setStocksLoaded] = useState(false);
+    const [stockByProduct, setStockByProduct] = useState<Map<number, StockInfo>>(
+        new Map()
+    );
     const [transactions, setTransactions] = useState<Transaction[]>([]);
     const [txLoading, setTxLoading] = useState(false);
     const [txError, setTxError] = useState(false);
-
-    // موجودی‌های انبار: برای نمایش موجودی کنار هر محصول و تشخیص محصولات این انبار
-    useEffect(() => {
-        if (warehouseId == null) return;
-
-        let alive = true;
-        setStocksLoaded(false);
-
-        fetchWarehouseStocks(warehouseId)
-            .then((list) => {
-                if (alive) setStocks(list);
-            })
-            .catch(() => {
-                if (alive) setStocks([]);
-            })
-            .finally(() => {
-                if (alive) setStocksLoaded(true);
-            });
-
-        return () => {
-            alive = false;
-        };
-    }, [warehouseId]);
 
     // لیست محصولات: صفحه‌بندی و جستجو سمت سرور
     const list = usePaginatedList<Product>(
@@ -254,9 +231,66 @@ export default function WarehouseEmployeeStockLedger({
         },
         {
             pageSize: PRODUCT_LIST_PAGE_SIZE,
-            enabled: warehouseId != null && stocksLoaded,
+            enabled: warehouseId != null,
         }
     );
+
+    // موجودیِ فقط محصولاتِ صفحهٔ جاری (نه کل موجودی انبار)
+    useEffect(() => {
+        if (warehouseId == null) return;
+
+        const ids = list.data.map((p) => p.id);
+        if (!ids.length) {
+            setStockByProduct(new Map());
+            return;
+        }
+
+        let alive = true;
+
+        fetchStocksForProducts(warehouseId, ids)
+            .then((rows) => {
+                if (!alive) return;
+                setStockByProduct(
+                    new Map(
+                        rows.map((s) => [s.product, s as unknown as StockInfo])
+                    )
+                );
+            })
+            .catch(() => {
+                if (alive) setStockByProduct(new Map());
+            });
+
+        return () => {
+            alive = false;
+        };
+    }, [warehouseId, list.data]);
+
+    // اگر محصول انتخاب‌شده در صفحهٔ جاری نباشد، موجودی همان محصول را جدا بگیر
+    useEffect(() => {
+        if (warehouseId == null || selectedProductId == null) return;
+        if (stockByProduct.has(selectedProductId)) return;
+
+        let alive = true;
+
+        fetchStocksForProducts(warehouseId, [selectedProductId])
+            .then((rows) => {
+                if (!alive || !rows.length) return;
+                setStockByProduct((prev) => {
+                    const next = new Map(prev);
+                    rows.forEach((s) =>
+                        next.set(s.product, s as unknown as StockInfo)
+                    );
+                    return next;
+                });
+            })
+            .catch(() => {
+                /* ignore */
+            });
+
+        return () => {
+            alive = false;
+        };
+    }, [warehouseId, selectedProductId, stockByProduct]);
 
     useEffect(() => {
         if (defaultProductId != null) {
@@ -304,11 +338,6 @@ export default function WarehouseEmployeeStockLedger({
 
         return () => controller.abort();
     }, [warehouseId, selectedProductId]);
-
-    const stockByProduct = useMemo(
-        () => new Map<number, StockInfo>(stocks.map((s) => [s.product, s])),
-        [stocks]
-    );
 
     const selectedProduct = useMemo<Product | null>(() => {
         if (selectedProductId == null) return null;
@@ -394,7 +423,7 @@ export default function WarehouseEmployeeStockLedger({
                         <div className="flex flex-col items-center justify-center py-10 text-slate-400">
                             <Boxes size={24} className="mb-2 opacity-50" />
                             <span className="text-xs font-medium">
-                                {list.loading || !stocksLoaded
+                                {list.loading
                                     ? "در حال دریافت محصولات..."
                                     : list.error
                                         ? "دریافت محصولات انجام نشد"

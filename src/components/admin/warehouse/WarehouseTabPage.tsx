@@ -9,7 +9,6 @@ import {
     ClipboardList,
     Archive,
     FileText,
-    LayoutGrid,
     Loader2,
     Package,
     PackagePlus,
@@ -27,7 +26,6 @@ import {
 } from "lucide-react";
 import { useTheme } from "next-themes";
 
-import WarehouseOverview from "@/components/admin/warehouse/Warehouseoverview";
 import AddCategoryModal from "@/components/admin/warehouse/AddCategoryModal";
 import WarehouseCategoryCard from "@/components/admin/warehouse/WarehouseCategoryCard";
 import WarehouseStaffCard, { type WarehouseStaff } from "@/components/admin/warehouse/WarehouseStaffCard";
@@ -70,7 +68,6 @@ interface AdminCategory {
 }
 
 const TABS: Array<[Tab, string, ComponentType<{ size?: number }>]> = [
-    ["overview", "نمای کلی", LayoutGrid],
     ["products", "محصولات", ShoppingBag],
     ["tasks", "وظایف انبار", ClipboardList],
     ["stock", "موجودی انبار", Boxes],
@@ -195,7 +192,7 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
 
     useEffect(() => {
         if (ready && warehouseId !== null && !tabAllowed) {
-            router.replace(buildUrl(isAdmin ? "overview" : "stock"));
+            router.replace(buildUrl("stock"));
         }
     }, [ready, warehouseId, tabAllowed, isAdmin, router, buildUrl]);
 
@@ -553,45 +550,6 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
                         exit={{ opacity: 0, y: -8 }}
                         transition={{ duration: 0.2 }}
                     >
-                        {tab === "overview" && hasFullWarehouseAccess && (
-                            <div className="space-y-6">
-                                <WarehouseOverview
-                                    products={products}
-                                    stockInfos={stockInfos}
-                                    transactions={transactions}
-                                    tasks={taskItems}
-                                    orderTasks={orderTasks}
-                                />
-
-                                {pendingQualityCount > 0 && (
-                                    <div
-                                        className="rounded-3xl border p-4"
-                                        style={{
-                                            background: isDark ? "rgba(139,92,246,.06)" : "rgba(139,92,246,.04)",
-                                            borderColor: "rgba(139,92,246,.12)",
-                                        }}
-                                    >
-                                        <div className="flex items-center gap-3">
-                                            <div
-                                                className="flex h-10 w-10 items-center justify-center rounded-xl"
-                                                style={{ background: "rgba(139,92,246,.1)", color: "#8b5cf6" }}
-                                            >
-                                                <ShieldCheck size={18} />
-                                            </div>
-                                            <div>
-                                                <p className="text-[12px] font-extrabold text-gray-900 dark:text-white">
-                                                    وظایف کنترل کیفیت
-                                                </p>
-                                                <p className="mt-1 text-[10.5px] text-gray-500 dark:text-gray-400">
-                                                    {pendingQualityCount} وظیفه کنترل کیفیت در انتظار انجام است
-                                                </p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                        )}
-
                         {tab === "products" && hasFullWarehouseAccess && (
                             <div className="space-y-5">
                                 <div className={sectionHeaderClass}>
