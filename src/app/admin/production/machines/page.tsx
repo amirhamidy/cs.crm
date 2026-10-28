@@ -35,7 +35,7 @@ import {
 import axiosInstance from "@/lib/axiosInstance";
 import TimePicker from "@/components/TimePicker";
 import ProductionBarChart from "@/components/charts/ProductionBarChart";
-import { listAll } from "@/lib/api";
+import { cached, listAll } from "@/lib/api";
 import { calcHoursWorked, toHHMM } from "@/lib/productionTime";
 import {
     toPersianDigits,
@@ -88,6 +88,16 @@ interface Option {
     id: number;
     label: string;
     sub?: string;
+}
+
+const EMPLOYEES_URL = "/accounts/api/v1/employee/list/";
+
+function fetchAllEmployeesCached(): Promise<EmployeeItem[]> {
+    return cached<EmployeeItem[]>(
+        "accounts:production:machines:employees",
+        () => listAll<EmployeeItem>(EMPLOYEES_URL),
+        5 * 60_000
+    );
 }
 
 interface MonthlyReportDay {
@@ -1182,7 +1192,7 @@ function LogModal({
 
     useEffect(() => {
         let alive = true;
-        listAll<EmployeeItem>("/accounts/api/v1/employee/list/")
+        fetchAllEmployeesCached()
             .then((all) => {
                 if (alive) setEmployees(all);
             })
@@ -1604,7 +1614,7 @@ export default function AdminProductionManagementPage() {
             const [mach, logsAll, emp] = await Promise.all([
                 listAll<Machine>("/production/api/v1/machine/"),
                 listAll<ProductionLog>("/production/api/v1/log/"),
-                listAll<EmployeeItem>("/accounts/api/v1/employee/list/"),
+                fetchAllEmployeesCached(),
             ]);
             setMachines(mach);
             setLogs(logsAll);

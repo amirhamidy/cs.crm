@@ -9,7 +9,7 @@ import AddCustomerModal from "./AddCustomerModal";
 import ImportExcelModal from "./ImportExcelModal";
 import Pagination from "@/components/ui/Pagination";
 import type { Customer, CustomerStatus } from "@/types/customer";
-import { customersApi, casesApi, type CustomerCounts } from "@/lib/api";
+import { cached, customersApi, casesApi, type CustomerCounts } from "@/lib/api";
 
 type FilterType = "all" | "potential" | "active";
 
@@ -56,7 +56,7 @@ export default function CustomersPage() {
 
     const fetchCases = useCallback(async () => {
         try {
-            const cases = await casesApi.listAll();
+            const cases = await cached("cases:list:for-customers", () => casesApi.listAll(), 60_000);
             setCustomersWithCase(new Set(cases.map((c) => Number(c.customer))));
         } catch {
             setCustomersWithCase(new Set());
@@ -98,6 +98,7 @@ export default function CustomersPage() {
 
     const refreshAll = useCallback(() => {
         customersApi.invalidate();
+        casesApi.invalidate();
         fetchCustomers();
         fetchCases();
         fetchCounts();

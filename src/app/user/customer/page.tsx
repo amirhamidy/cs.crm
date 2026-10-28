@@ -1,22 +1,37 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Users, Plus, Loader, RefreshCw, Filter, FileSpreadsheet, Search, X } from "lucide-react";
 import { useTheme } from "next-themes";
 import CustomerCard from "@/components/user/customer/CustomerCard";
 import AddCustomerModal from "@/components/user/customer/AddCustomerModal";
 import ImportExcelModal from "@/components/user/customer/ImportExcelModal";
-import { Customer } from "@/types/customer";
+import Pagination from "@/components/ui/Pagination";
+import { Customer, CustomerStatus } from "@/types/customer";
 import type { Employee } from "@/types/employee";
 import type { CaseItem } from "@/types/case";
 import type { TaskItem } from "@/types/task";
 import axiosInstance from "@/lib/axiosInstance";
-import { listAll } from "@/lib/api";
+import { cached, listAll, customersApi, casesApi, type CustomerCounts } from "@/lib/api";
 import { apiRoutes } from "@/lib/apiRoutes";
 import { useAuthStore } from "@/store/authStore";
 
 type FilterType = "all" | "potential" | "active";
+
+const PAGE_SIZE = 20;
+
+const STATUS_BY_FILTER: Record<FilterType, CustomerStatus | undefined> = {
+    all: undefined,
+    potential: 1,
+    active: 2,
+};
+
+const EMPTY_COUNTS: CustomerCounts = {
+    all: 0,
+    potential: 0,
+    active: 0,
+};
 
 function parseAssignedEmployees(raw: unknown): number[] {
     const ids: number[] = [];
@@ -87,7 +102,10 @@ export default function CustomersPage() {
         new Set()
     );
     const [loading, setLoading] = useState(true);
-    const [filterLoading, setFilterLoading] = useState(false);
+    const [totalCount, setTotalCount] = useState(0);
+    const [counts, setCounts] = useState<CustomerCounts>(EMPTY_COUNTS);
+    const [page, setPage] = useState(1);
+    const [casesTick, setCasesTick] = useState(0);
     const [showAdd, setShowAdd] = useState(false);
     const [showImport, setShowImport] = useState(false);
     const [filter, setFilter] = useState<FilterType>("all");
@@ -97,37 +115,74 @@ export default function CustomersPage() {
     const userId = useAuthStore((state) => state.userId);
     const username = useAuthStore((state) => state.username);
 
+    const requestId = useRef(0);
+    const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
+
     useEffect(() => {
         const timer = setTimeout(() => {
-            setAppliedSearch(search.trim().replace(/\s+/g, " "));
+            const next = search.trim().replace(/\s+/g, " ");
+
+            if (next === appliedSearch) return;
+
+            setAppliedSearch(next);
+            setPage(1);
         }, 400);
 
         return () => clearTimeout(timer);
-    }, [search]);
+    }, [search, appliedSearch]);
+
+    const fetchCounts = useCallback(async () => {
+        try {
+            setCounts(await customersApi.counts());
+        } catch {
+            // در صورت خطا شمارنده‌ها بدون تغییر می‌مانند
+        }
+    }, []);
 
     const fetchCustomers = useCallback(async () => {
+        const id = ++requestId.current;
         setLoading(true);
 
         try {
-            const list = await listAll<Customer>(
-                "/customers/api/v1/customers/",
-                appliedSearch ? { search: appliedSearch } : {}
-            );
+            const data = await customersApi.list({
+                page,
+                page_size: PAGE_SIZE,
+                status: STATUS_BY_FILTER[filter],
+                search: appliedSearch || undefined,
+            });
 
-            setCustomers(list);
+            if (id !== requestId.current) return;
+
+            setCustomers(data.results);
+            setTotalCount(data.count);
         } catch {
+            if (id !== requestId.current) return;
+
             setCustomers([]);
+            setTotalCount(0);
         } finally {
-            setLoading(false);
+            if (id === requestId.current) setLoading(false);
         }
-    }, [appliedSearch]);
+    }, [page, filter, appliedSearch]);
 
     const fetchCases = useCallback(async () => {
         try {
             const [allCases, allTasks, employeeList] = await Promise.all([
-                listAll<CaseItem>("/tasks/api/v1/cases/"),
-                listAll<TaskItem>(apiRoutes.tasks),
-                listAll<Employee>("/accounts/api/v1/employee/list/"),
+                cached<CaseItem[]>(
+                    "cases:customer-page:cases",
+                    () => listAll<CaseItem>("/tasks/api/v1/cases/"),
+                    60_000
+                ),
+                cached<TaskItem[]>(
+                    "tasks:customer-page:list",
+                    () => listAll<TaskItem>(apiRoutes.tasks),
+                    30_000
+                ),
+                cached<Employee[]>(
+                    "accounts:customer-page:employees",
+                    () => listAll<Employee>("/accounts/api/v1/employee/list/"),
+                    5 * 60_000
+                ),
             ]);
 
             let empId: number | null = null;
@@ -149,17 +204,30 @@ export default function CustomersPage() {
                 empId = Number(matchedEmployee.id);
             }
 
-            const detailedCases = await Promise.all(
-                allCases.map(async (c) => {
-                    try {
-                        const detailRes = await axiosInstance.get(
-                            `/tasks/api/v1/cases/${c.id}/`
-                        );
+            const pageCustomerIds = new Set(
+                customers.map((customer) => Number(customer.id))
+            );
 
-                        return {
-                            ...c,
-                            ...detailRes.data,
-                        };
+            const relevantCases = allCases.filter((c) => {
+                const customerId = extractCaseCustomerId(c);
+
+                return Boolean(customerId && pageCustomerIds.has(customerId));
+            });
+
+            const detailedCases = await Promise.all(
+                relevantCases.map(async (c) => {
+                    try {
+                        return await cached<CaseItem>(
+                            `cases:customer-page:detail:${c.id}`,
+                            async () => {
+                                const detailRes = await axiosInstance.get<CaseItem>(
+                                    `/tasks/api/v1/cases/${c.id}/`
+                                );
+
+                                return { ...c, ...detailRes.data };
+                            },
+                            60_000
+                        );
                     } catch {
                         return c;
                     }
@@ -248,7 +316,7 @@ export default function CustomersPage() {
         } catch {
             setCustomersWithCase(new Set());
         }
-    }, [userId, username]);
+    }, [userId, username, customers, casesTick]);
 
     useEffect(() => {
         fetchCustomers();
@@ -258,85 +326,75 @@ export default function CustomersPage() {
         fetchCases();
     }, [fetchCases]);
 
-    const refresh = useCallback(() => {
-        fetchCustomers();
-        fetchCases();
-    }, [fetchCustomers, fetchCases]);
+    useEffect(() => {
+        fetchCounts();
+    }, [fetchCounts]);
 
-    const handleDeleted = useCallback((id: number) => {
-        setCustomers((prev) =>
-            prev.filter((customer) => customer.id !== id)
-        );
-    }, []);
+    const refresh = useCallback(() => {
+        customersApi.invalidate();
+        casesApi.invalidate();
+        setCasesTick((tick) => tick + 1);
+        fetchCustomers();
+        fetchCounts();
+    }, [fetchCustomers, fetchCounts]);
+
+    const handleDeleted = useCallback(
+        (id: number) => {
+            customersApi.invalidate();
+            setCustomers((prev) =>
+                prev.filter((customer) => customer.id !== id)
+            );
+
+            if (customers.length === 1 && page > 1) {
+                setPage((p) => p - 1);
+            } else {
+                fetchCustomers();
+            }
+
+            fetchCounts();
+        },
+        [customers.length, page, fetchCustomers, fetchCounts]
+    );
 
     const handleAdded = useCallback(() => {
         refresh();
     }, [refresh]);
 
-    const handleEdited = useCallback((updated: Customer) => {
-        setCustomers((prev) =>
-            prev.map((customer) =>
-                customer.id === updated.id
-                    ? updated
-                    : customer
-            )
-        );
-    }, []);
+    const handleEdited = useCallback(
+        (updated: Customer) => {
+            customersApi.invalidate();
+            setCustomers((prev) =>
+                prev.map((customer) =>
+                    customer.id === updated.id
+                        ? updated
+                        : customer
+                )
+            );
+
+            fetchCounts();
+        },
+        [fetchCounts]
+    );
 
     const handleFilterChange = (newFilter: FilterType) => {
         if (newFilter === filter) return;
 
-        setFilterLoading(true);
         setFilter(newFilter);
-
-        setTimeout(() => {
-            setFilterLoading(false);
-        }, 400);
+        setPage(1);
     };
 
-    const filteredCustomers = customers.filter((customer) => {
-        if (filter === "all") {
-            return true;
-        }
+    const goToPage = (next: number) => {
+        if (next < 1 || next > totalPages || next === page) return;
 
-        if (filter === "potential") {
-            return customer.status === 1;
-        }
+        setPage(next);
+        window.scrollTo({ top: 0, behavior: "smooth" });
+    };
 
-        if (filter === "active") {
-            return customer.status === 2;
-        }
-
-        return true;
-    });
-
-    const potentialCount = customers.filter(
-        (customer) => customer.status === 1
-    ).length;
-
-    const activeCount = customers.filter(
-        (customer) => customer.status === 2
-    ).length;
-
-    const filterOptions = [
-        {
-            value: "all" as FilterType,
-            label: "همه",
-            count: customers.length,
-        },
-        {
-            value: "potential" as FilterType,
-            label: "بالقوه",
-            count: potentialCount,
-        },
-        {
-            value: "active" as FilterType,
-            label: "فعال",
-            count: activeCount,
-        },
+    const filterOptions: { value: FilterType; label: string; count: number }[] = [
+        { value: "all", label: "همه", count: counts.all },
+        { value: "potential", label: "بالقوه", count: counts.potential },
+        { value: "active", label: "فعال", count: counts.active },
     ];
-
-    const isLoading = loading || filterLoading;
 
     return (
         <div
@@ -365,9 +423,9 @@ export default function CustomersPage() {
                         </h1>
 
                         <p className="mt-0.5 text-[11.5px] text-gray-400 dark:text-gray-500">
-                            {isLoading
+                            {loading
                                 ? "در حال بارگذاری..."
-                                : `${filteredCustomers.length} مشتری ثبت شده`}
+                                : `${totalCount} مشتری ثبت شده`}
                         </p>
                     </div>
                 </div>
@@ -375,7 +433,7 @@ export default function CustomersPage() {
                 <div className="flex items-center gap-2 sm:justify-end">
                     <button
                         onClick={refresh}
-                        disabled={isLoading}
+                        disabled={loading}
                         className="flex h-9 w-9 items-center justify-center rounded-xl text-gray-400 transition-colors hover:text-gray-600 disabled:opacity-40 dark:hover:text-gray-300"
                         style={{
                             background: isDark
@@ -387,11 +445,7 @@ export default function CustomersPage() {
                     >
                         <RefreshCw
                             size={13}
-                            className={
-                                isLoading
-                                    ? "animate-spin"
-                                    : ""
-                            }
+                            className={loading ? "animate-spin" : ""}
                         />
                     </button>
 
@@ -511,7 +565,7 @@ export default function CustomersPage() {
                 </div>
             </div>
 
-            {isLoading ? (
+            {loading ? (
                 <div className="flex flex-col items-center justify-center gap-3 py-16">
                     <Loader
                         size={22}
@@ -519,14 +573,12 @@ export default function CustomersPage() {
                     />
 
                     <p className="text-[12.5px] text-gray-400 dark:text-gray-500">
-                        {loading
-                            ? "در حال دریافت لیست مشتریان..."
-                            : "در حال اعمال فیلتر..."}
+                        در حال دریافت لیست مشتریان...
                     </p>
                 </div>
             ) : (
                 <AnimatePresence mode="wait">
-                    {filteredCustomers.length === 0 ? (
+                    {customers.length === 0 ? (
                         <motion.div
                             key="empty"
                             initial={{
@@ -565,7 +617,7 @@ export default function CustomersPage() {
                             className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
                         >
                             <AnimatePresence mode="popLayout">
-                                {filteredCustomers.map(
+                                {customers.map(
                                     (customer, index) => (
                                         <CustomerCard
                                             key={customer.id}
@@ -587,6 +639,14 @@ export default function CustomersPage() {
                         </motion.div>
                     )}
                 </AnimatePresence>
+            )}
+
+            {!loading && totalPages > 1 && (
+                <Pagination
+                    page={page}
+                    totalPages={totalPages}
+                    onChange={goToPage}
+                />
             )}
 
             <AddCustomerModal

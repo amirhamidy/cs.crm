@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { apiRoutes } from "@/lib/apiRoutes";
-import { listAll } from "@/lib/api/_core";
+import { getTasks } from "@/lib/api/analyticsData";
 import { useCurrentEmployee } from "@/hooks/usecurrentemployee";
 
 export type TimeRange = "weekly" | "monthly" | "yearly";
@@ -114,7 +113,7 @@ export function useEmployeePerformance(
         setLoadingTasks(true);
         setError(null);
 
-        const data = await listAll<RawTask>(apiRoutes.tasks);
+        const data = await getTasks<RawTask>();
 
         if (!cancelled) {
           setTasks(data);

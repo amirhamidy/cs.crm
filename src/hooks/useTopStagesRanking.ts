@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
-import { apiRoutes } from "@/lib/apiRoutes";
-import { listAll } from "@/lib/api/_core";
+import {
+  getDepartmentSteps,
+  getDepartments,
+  getTasks,
+} from "@/lib/api/analyticsData";
 
 export type TimeRange = "weekly" | "monthly" | "yearly";
 
@@ -109,9 +112,9 @@ export function useTopStagesRanking() {
         setError(null);
 
         const [tasksRes, departmentsRes, stepsRes] = await Promise.all([
-          listAll<RawTask>(apiRoutes.tasks),
-          listAll<RawDepartment>(apiRoutes.departments),
-          listAll<RawDepartmentStep>(apiRoutes.departmentSteps),
+          getTasks<RawTask>(),
+          getDepartments<RawDepartment>(),
+          getDepartmentSteps<RawDepartmentStep>(),
         ]);
 
         if (cancelled) return;

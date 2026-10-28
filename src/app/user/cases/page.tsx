@@ -4,7 +4,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { AnimatePresence } from "framer-motion";
 import { ClipboardList, Plus, RefreshCw } from "lucide-react";
 import { useTheme } from "next-themes";
-import { casesApi, customersApi, metaApi, tasksApi, fetchAllTasks } from "@/lib/api";
+import { casesApi, customersApi, extractCaseId, metaApi, tasksApi, fetchAllTasks } from "@/lib/api";
 import type { Paginated } from "@/types/pagination";
 import type { Department } from "@/types/department";
 import type { Employee } from "@/types/employee";
@@ -70,16 +70,30 @@ export default function UserCasesPage() {
             })
             .catch(() => undefined);
 
-        Promise.allSettled(items.map((c) => fetchAllTasks({ caseId: c.id, fresh }))).then((results) => {
-            if (id !== requestId.current) return;
-            setTasksByCase((prev) => {
-                const next = new Map(prev);
-                results.forEach((res, i) => {
-                    if (res.status === "fulfilled") next.set(String(items[i].id), res.value);
+        const pageCaseIds = new Set(items.map((c) => String(c.id)));
+
+        fetchAllTasks({ fresh })
+            .then((allTasks) => {
+                if (id !== requestId.current) return;
+
+                const grouped = new Map<string, TaskItem[]>();
+                pageCaseIds.forEach((key) => grouped.set(key, []));
+
+                allTasks.forEach((task) => {
+                    const caseId = extractCaseId(task);
+                    if (caseId === null || caseId === "") return;
+
+                    const bucket = grouped.get(String(caseId));
+                    if (bucket) bucket.push(task);
                 });
-                return next;
-            });
-        });
+
+                setTasksByCase((prev) => {
+                    const next = new Map(prev);
+                    grouped.forEach((list, key) => next.set(key, list));
+                    return next;
+                });
+            })
+            .catch(() => undefined);
     }, []);
 
     const prefetch = useCallback((target: number) => {

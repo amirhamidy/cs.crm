@@ -1,6 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
-import { apiRoutes } from "@/lib/apiRoutes";
-import { listAll } from "@/lib/api/_core";
+import {
+  getCustomers,
+  getDepartmentSteps,
+  getDepartments,
+  getEmployees,
+  getTasks,
+  getUsers,
+} from "@/lib/api/analyticsData";
 
 export type TimeRange = "weekly" | "monthly" | "yearly";
 
@@ -246,12 +252,12 @@ export function useAnalytics(range: TimeRange = "monthly") {
           departmentsRes,
           stepsRes,
         ] = await Promise.all([
-          listAll<RawTask>(apiRoutes.tasks),
-          listAll<RawCustomer>(apiRoutes.customers),
-          listAll<RawEmployee>(apiRoutes.employees),
-          listAll<RawUser>(apiRoutes.users),
-          listAll<RawDepartment>(apiRoutes.departments),
-          listAll<RawDepartmentStep>(apiRoutes.departmentSteps),
+          getTasks<RawTask>(),
+          getCustomers<RawCustomer>(),
+          getEmployees<RawEmployee>(),
+          getUsers<RawUser>(),
+          getDepartments<RawDepartment>(),
+          getDepartmentSteps<RawDepartmentStep>(),
         ]);
 
         if (cancelled) return;
