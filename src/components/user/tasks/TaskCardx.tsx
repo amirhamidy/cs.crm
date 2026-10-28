@@ -22,8 +22,8 @@ import type { Task, TaskStatus, TaskEmployeeRef } from "@/types/task";
 import type { Employee } from "@/types/employee";
 import { useEmployeeInfo } from "@/hooks/useEmployeeInfo";
 import AdminTaskNotesModal from "./TaskNotesModal";
-import TimeRangeModal from "./TimeRangeModal";
-import TaskDeadlineModal, { fetchStepDeadline, type StepDeadline } from "@/components/customcomponents/tasks/TaskDeadlineModal";
+import TimeRangeModal from "@/components/tasks/TimeRangeModal";
+import TaskDeadlineModal, { fetchStepDeadline, type StepDeadline } from "@/components/tasks/TaskDeadlineModal";
 import api from "@/lib/axiosInstance";
 
 const AVATAR_GRADIENTS = [

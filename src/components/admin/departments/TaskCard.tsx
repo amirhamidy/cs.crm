@@ -21,8 +21,8 @@ import axiosInstance from "@/lib/axiosInstance";
 import { JALALI_MONTHS, pad2, toJalali, toPersianDigits } from "@/lib/jalali";
 import type { Task, TaskRelationId } from "./types";
 import TaskAssignees from "./TaskAssignees";
-import TimeRangeModal from "@/components/customcomponents/tasks/TimeRangeModal";
-import AdminTaskNotesModal from "@/components/customcomponents/tasks/AdminTaskNotesModal";
+import TimeRangeModal from "@/components/tasks/TimeRangeModal";
+import AdminTaskNotesModal from "@/components/tasks/AdminTaskNotesModal";
 
 type TaskAssigneeValue =
     | number

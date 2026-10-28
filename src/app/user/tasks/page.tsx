@@ -14,7 +14,7 @@ import type { Task, TaskStatus } from "@/types/task";
 import type { Department } from "@/types/department";
 import TaskCard from "@/components/user/tasks/TaskCardx";
 import CreateTaskModal from "@/components/user/tasks/CreateTaskModal";
-import CreateNoCaseTaskModal from "@/components/customcomponents/tasks/CreateNoCaseTaskModal";
+import CreateNoCaseTaskModal from "@/components/tasks/CreateNoCaseTaskModal";
 import EditTaskModal from "@/components/user/tasks/EditTaskModal";
 
 const ACTIVE_STATUS = "in_progress" as TaskStatus;

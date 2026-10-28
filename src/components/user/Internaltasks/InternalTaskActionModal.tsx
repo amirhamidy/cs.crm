@@ -10,7 +10,7 @@ import { cancelInternalTask, completeInternalTask } from "./Api";
 interface InternalTaskActionModalProps {
     isOpen: boolean;
     onClose: () => void;
-    task: InternalTask;
+    task: Pick<InternalTask, "id" | "title">;
     action: "complete" | "cancel";
     onDone: (task: InternalTask) => void;
 }

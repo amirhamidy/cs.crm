@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense } from "react";
-import PersianCalendar from "./PersianCalendar";
+import PersianCalendar from "../../../components/calendar/admin/PersianCalendar";
 
 export default function CalendarPage() {
   return (

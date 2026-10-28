@@ -17,7 +17,7 @@ import {
 import axiosInstance from "@/lib/axiosInstance";
 import { departmentsApi, fetchPage } from "@/lib/api";
 import { apiRoutes } from "@/lib/apiRoutes";
-import AsyncSelect, { type AsyncOption } from "@/components/customcomponents/shared/AsyncSelect";
+import AsyncSelect, { type AsyncOption } from "@/components/ui/AsyncSelect";
 import type { Customer } from "@/types/customer";
 
 interface Case {

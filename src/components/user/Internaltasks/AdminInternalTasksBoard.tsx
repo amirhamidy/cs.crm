@@ -13,7 +13,7 @@ import InternalTaskActionModal from "./InternalTaskActionModal";
 import type { EmployeeListItem, InternalTask, InternalTaskStatus, EmployeeRef } from "./types";
 import AdminInternalTaskChatModal from "./AdminInternalTaskChatModal";
 import CreateTicketModal from "./Createticketmodal";
-import InternalTimeRangeModal from "./InternalTimeRangeModal";
+import TimeRangeModal from "@/components/tasks/TimeRangeModal";
 import InternalTaskDeadlineModal from "./InternalTaskDeadlineModal";
 
 type AdminEmployee = EmployeeListItem & { id?: number; username?: string; full_name?: string };
@@ -282,7 +282,7 @@ const AdminInternalTaskCard = memo(function AdminInternalTaskCard({
                 />
             </div>
 
-            {timeModalOpen && isSent && <div onClick={event => event.stopPropagation()}><InternalTimeRangeModal open={timeModalOpen} initialStartedAt={schedule.started_at} initialDeadline={schedule.deadline} onClose={() => { if (!savingTime) setTimeModalOpen(false); }} onSubmit={handleTimeSubmit} /></div>}
+            {timeModalOpen && isSent && <div onClick={event => event.stopPropagation()}><TimeRangeModal open={timeModalOpen} initialStartedAt={schedule.started_at} initialDeadline={schedule.deadline} onClose={() => { if (!savingTime) setTimeModalOpen(false); }} onSubmit={handleTimeSubmit} /></div>}
 
             {actionModal && canAct && hasResponse && <div onClick={event => event.stopPropagation()}><InternalTaskActionModal isOpen={true} action={actionModal} task={task} onClose={() => setActionModal(null)} onDone={handleActionDone} /></div>}
 

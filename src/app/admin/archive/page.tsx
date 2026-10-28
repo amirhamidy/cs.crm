@@ -9,7 +9,7 @@ import { tasksApi } from "@/lib/api";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import Pagination from "@/components/ui/Pagination";
 import { Task } from "@/types/task";
-import TaskCard from "@/components/customcomponents/tasks/TaskCard";
+import TaskCard from "@/components/tasks/TaskCard";
 
 type ArchiveFilter = "all" | "completed" | "sold" | "cancelled";
 

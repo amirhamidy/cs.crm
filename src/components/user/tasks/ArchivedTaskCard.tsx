@@ -19,7 +19,7 @@ import {
 import axiosInstance from "@/lib/axiosInstance";
 import { departmentsApi } from "@/lib/api";
 import { useCurrentEmployee } from "@/hooks/usecurrentemployee";
-import AdminTaskNotesModal from "@/components/customcomponents/tasks/AdminTaskNotesModal";
+import AdminTaskNotesModal from "@/components/tasks/AdminTaskNotesModal";
 
 interface ArchiveTask {
     id: number;

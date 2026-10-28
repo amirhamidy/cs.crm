@@ -14,10 +14,10 @@ import CardSkeletonGrid from "@/components/ui/CardSkeletonGrid";
 import { Task, TaskStatus } from "@/types/task";
 import { Department } from "@/types/department";
 import SuspenseWrapper from "@/components/SuspenseWrapper";
-import TaskCard from "@/components/customcomponents/tasks/TaskCard";
-import CreateTaskModal from "@/components/customcomponents/tasks/CreateTaskModal";
-import CreateNoCaseTaskModal from "@/components/customcomponents/tasks/CreateNoCaseTaskModal";
-import EditTaskModal from "@/components/customcomponents/tasks/EditTaskModal";
+import TaskCard from "@/components/tasks/TaskCard";
+import CreateTaskModal from "@/components/tasks/CreateTaskModal";
+import CreateNoCaseTaskModal from "@/components/tasks/CreateNoCaseTaskModal";
+import EditTaskModal from "@/components/tasks/EditTaskModal";
 
 const ACTIVE_STATUS = "in_progress" as TaskStatus;
 

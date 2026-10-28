@@ -13,8 +13,8 @@ import type { Customer } from "@/types/customer";
 import CreateCaseModal from "@/components/user/cases/CreateCaseModal";
 import EditCaseModal from "@/components/user/cases/EditCaseModal";
 import CaseCard from "@/components/user/cases/CaseCard";
-import EditTaskModal from "@/components/customcomponents/tasks/EditTaskModal";
-import CaseTasksModal from "@/components/customcomponents/cases/CaseTasksModal";
+import EditTaskModal from "@/components/tasks/EditTaskModal";
+import CaseTasksModal from "@/components/cases/CaseTasksModal";
 import Pagination from "@/components/ui/Pagination";
 
 const PAGE_SIZE = 12;

@@ -10,7 +10,7 @@ import { useTheme } from "next-themes";
 import { useAuthStore } from "@/store/authStore";
 import type { InternalTask, InternalTaskStatus, EmployeeRef } from "./types";
 import api from "@/lib/axiosInstance";
-import InternalTimeRangeModal from "./InternalTimeRangeModal";
+import TimeRangeModal from "@/components/tasks/TimeRangeModal";
 import InternalTaskDeadlineModal from "./InternalTaskDeadlineModal";
 import InternalTaskChatModal from "./InternalTaskChatModal";
 import InternalTaskActionModal from "./InternalTaskActionModal";
@@ -311,7 +311,7 @@ function SentTaskCard({ task, index = 0, onDelete, onUpdated, isDeleting = false
             </AnimatePresence>
 
             {actionModal && <InternalTaskActionModal isOpen action={actionModal} task={task} onClose={() => setActionModal(null)} onDone={updatedTask => { onUpdated?.(updatedTask); setActionModal(null); }} />}
-            <InternalTimeRangeModal open={timeModalOpen} initialStartedAt={stepDeadline.started_at} initialDeadline={stepDeadline.deadline} loading={savingTime} error={timeError} onClose={() => setTimeModalOpen(false)} onSubmit={handleTimeSubmit} />
+            <TimeRangeModal open={timeModalOpen} initialStartedAt={stepDeadline.started_at} initialDeadline={stepDeadline.deadline} loading={savingTime} error={timeError} onClose={() => setTimeModalOpen(false)} onSubmit={handleTimeSubmit} />
             <InternalTaskDeadlineModal
                 open={deadlineModalOpen}
                 onClose={() => setDeadlineModalOpen(false)}

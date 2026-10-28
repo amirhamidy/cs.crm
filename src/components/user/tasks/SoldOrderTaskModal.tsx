@@ -6,7 +6,7 @@ import { AlertCircle, CalendarDays, Check, ChevronDown, ClipboardList, Loader2, 
 import axiosInstance from "@/lib/axiosInstance";
 import type { ApiStockInfo, ApiWarehouse } from "@/types/warehouse";
 import { fetchWarehouseStocks, fetchWarehouses } from "@/lib/warehouseApi";
-import TimeRangeModal from "./TimeRangeModal";
+import TimeRangeModal from "@/components/tasks/TimeRangeModal";
 
 interface OrderItem {
     id: string;

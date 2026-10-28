@@ -25,7 +25,7 @@ import {
     fetchInternalTasks,
 } from "./Api";
 import CreateTaskRoutineModal from "./Createtaskroutinemodal";
-import InternalTaskActionModal from "./Internaltaskactionmodal";
+import InternalTaskActionModal from "@/components/user/Internaltasks/InternalTaskActionModal";
 import type { InternalTask, InternalTaskRoutine } from "./Types";
 
 const NEVER_REPEAT_VALUE = 2147483647;

@@ -21,7 +21,7 @@ import {
     useOrderTaskLookups,
 } from "@/hooks/useOrderTaskLookups";
 import { ApiOrderTask, ApiTask } from "@/types/warehouse";
-import TimeRangeModal from "../tasks/TimeRangeModal";
+import TimeRangeModal from "@/components/tasks/TimeRangeModal";
 
 interface CreateOrderTaskModalProps {
     isOpen: boolean;

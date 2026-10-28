@@ -26,7 +26,7 @@ import {
     fetchInternalTaskRoutines,
     fetchInternalTasks,
 } from "./Api";
-import InternalTaskActionModal from "./Internaltaskactionmodal";
+import InternalTaskActionModal from "@/components/user/Internaltasks/InternalTaskActionModal";
 import EmployeeCreateTaskRoutineModal from "./EmployeeCreateTaskRoutineModal";
 import type {
     EmployeeListItem,
