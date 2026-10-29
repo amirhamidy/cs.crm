@@ -11,6 +11,7 @@ import {
   cached,
   createSearch,
   dedupe,
+  fetchPage,
   getOne,
   invalidate,
   listAll as listAllPages,
@@ -61,6 +62,16 @@ const list = async (params: CustomerListParams = {}): Promise<Paginated<Customer
     const res = await axiosInstance.get<RawList<Customer>>(BASE, { params: p });
     return toPaginated<Customer>(res.data);
   });
+  remember(data.results);
+  return data;
+};
+
+/** صفحه‌بندی سمت سرور با پشتیبانی از AbortSignal (برای usePaginatedList) */
+const page = async (
+  params: CustomerListParams = {},
+  signal?: AbortSignal,
+): Promise<Paginated<Customer>> => {
+  const data = await fetchPage<Customer>(BASE, cleanParams(params), signal);
   remember(data.results);
   return data;
 };
@@ -132,6 +143,7 @@ const allCustomers = () =>
 
 export const customersApi = {
   list,
+  page,
   listAll: allCustomers,
   get,
   counts,

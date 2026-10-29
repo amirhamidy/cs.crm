@@ -4,6 +4,7 @@ import type { PageParams } from "@/types/pagination";
 import {
   dedupe,
   fetchAllPages,
+  fetchPage,
   getOne,
   invalidate,
   toPaginated,
@@ -32,8 +33,13 @@ const list = (params: CaseListParams = {}): Promise<Paginated<CaseItem>> =>
     return toPaginated<CaseItem>(res.data);
   });
 
+/** صفحه‌بندی سمت سرور با پشتیبانی از AbortSignal (برای usePaginatedList) */
+const page = (params: CaseListParams = {}, signal?: AbortSignal) =>
+  fetchPage<CaseItem>(BASE, params, signal);
+
 export const casesApi = {
   list,
+  page,
 
   listAll: () => fetchAllPages<CaseItem>((p) => list({ ...p, page_size: 100 })),
 

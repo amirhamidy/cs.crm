@@ -28,6 +28,7 @@ export default function useWarehouseAccess() {
     let alive = true;
     setStaffLoading(true);
 
+    // TODO(backend-aggregate): endpoint staff فیلتر employee/me ندارد؛ با ?employee= یا /staff/me/ این دریافت کامل حذف می‌شود.
     // همهٔ صفحات: اگر انباردار بیشتر از یک صفحه باشد، رکورد کاربر جاری ممکن است در صفحهٔ اول نباشد
     fetchAll<ApiWarehouseStaff>(WAREHOUSE_ENDPOINTS.staff)
       .then((list) => {

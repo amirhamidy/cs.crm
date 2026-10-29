@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "next-themes";
 import { Users, Plus, Loader, RefreshCw, Filter, FileSpreadsheet } from "lucide-react";
@@ -8,6 +8,7 @@ import CustomerCard from "./CustomerCard";
 import AddCustomerModal from "./AddCustomerModal";
 import ImportExcelModal from "./ImportExcelModal";
 import Pagination from "@/components/ui/Pagination";
+import { usePaginatedList } from "@/hooks/usePaginatedList";
 import type { Customer, CustomerStatus } from "@/types/customer";
 import { cached, customersApi, casesApi, type CustomerCounts } from "@/lib/api";
 
@@ -32,19 +33,23 @@ export default function CustomersPage() {
     }, []);
     const isDark = mounted && resolvedTheme === "dark";
 
-    const [customers, setCustomers] = useState<Customer[]>([]);
-    const [totalCount, setTotalCount] = useState(0);
     const [counts, setCounts] = useState<CustomerCounts>(EMPTY_COUNTS);
     const [customersWithCase, setCustomersWithCase] = useState<Set<number>>(new Set());
-    const [loading, setLoading] = useState(true);
     const [showAdd, setShowAdd] = useState(false);
     const [showImport, setShowImport] = useState(false);
-    const [filter, setFilter] = useState<FilterType>("all");
-    const [page, setPage] = useState(1);
 
-    const requestId = useRef(0);
+    // صفحه‌بندی و فیلتر وضعیت سمت سرور
+    const list = usePaginatedList<Customer, { status?: CustomerStatus }>(
+        (params, signal) => customersApi.page(params, signal),
+        { pageSize: PAGE_SIZE, filters: { status: STATUS_BY_FILTER.all } },
+    );
+    const customers = list.data;
+    const page = list.page;
+    const totalCount = list.count;
+    const totalPages = list.totalPages;
+    const loading = list.loading;
 
-    const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
+    const filter: FilterType = list.filters.status === 1 ? "potential" : list.filters.status === 2 ? "active" : "all";
 
     const fetchCounts = useCallback(async () => {
         try {
@@ -63,80 +68,37 @@ export default function CustomersPage() {
         }
     }, []);
 
-    const fetchCustomers = useCallback(async () => {
-        const id = ++requestId.current;
-        setLoading(true);
-
-        try {
-            const data = await customersApi.list({
-                page,
-                page_size: PAGE_SIZE,
-                status: STATUS_BY_FILTER[filter],
-            });
-
-            if (id !== requestId.current) return;
-
-            setCustomers(data.results);
-            setTotalCount(data.count);
-        } catch {
-            if (id !== requestId.current) return;
-            setCustomers([]);
-            setTotalCount(0);
-        } finally {
-            if (id === requestId.current) setLoading(false);
-        }
-    }, [page, filter]);
-
-    useEffect(() => {
-        fetchCustomers();
-    }, [fetchCustomers]);
-
-    useEffect(() => {
-        fetchCases();
-        fetchCounts();
-    }, [fetchCases, fetchCounts]);
-
     const refreshAll = useCallback(() => {
         customersApi.invalidate();
         casesApi.invalidate();
-        fetchCustomers();
+        list.refetch();
         fetchCases();
         fetchCounts();
-    }, [fetchCustomers, fetchCases, fetchCounts]);
+    }, [list.refetch, fetchCases, fetchCounts]);
 
     const handleDeleted = useCallback(() => {
         customersApi.invalidate();
         if (customers.length === 1 && page > 1) {
-            setPage((p) => p - 1);
+            list.setPage(page - 1);
         } else {
-            fetchCustomers();
+            list.refetch();
         }
         fetchCounts();
-    }, [customers.length, page, fetchCustomers, fetchCounts]);
+    }, [customers.length, page, list.setPage, list.refetch, fetchCounts]);
 
     const handleAdded = useCallback(() => {
         refreshAll();
     }, [refreshAll]);
 
-    const handleEdited = useCallback(
-        (updated: Customer) => {
-            customersApi.invalidate();
-            setCustomers((prev) => prev.map((c) => (c.id === updated.id ? { ...c, ...updated } : c)));
-            fetchCounts();
-        },
-        [fetchCounts],
-    );
+    const handleEdited = useCallback(() => {
+        customersApi.invalidate();
+        list.refetch();
+        fetchCounts();
+    }, [list.refetch, fetchCounts]);
 
     const handleFilterChange = (newFilter: FilterType) => {
         if (newFilter === filter) return;
-        setFilter(newFilter);
-        setPage(1);
-    };
-
-    const goToPage = (p: number) => {
-        if (p < 1 || p > totalPages || p === page) return;
-        setPage(p);
-        window.scrollTo({ top: 0, behavior: "smooth" });
+        list.setFilters({ status: STATUS_BY_FILTER[newFilter] });
     };
 
     const filterOptions: { value: FilterType; label: string; count: number }[] = [
@@ -288,7 +250,7 @@ export default function CustomersPage() {
                 </AnimatePresence>
             )}
 
-            {!loading && totalPages > 1 && <Pagination page={page} totalPages={totalPages} onChange={goToPage} />}
+            {!loading && totalPages > 1 && <Pagination page={page} totalPages={totalPages} onChange={list.setPage} />}
 
             <AddCustomerModal isOpen={showAdd} onClose={() => setShowAdd(false)} onAdded={handleAdded} />
             <ImportExcelModal isOpen={showImport} onClose={() => setShowImport(false)} onSuccess={handleAdded} />

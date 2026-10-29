@@ -1,5 +1,6 @@
 import axios, { type InternalAxiosRequestConfig } from "axios";
 import { getApiUrl } from "@/lib/config";
+import { installRequestGovernor } from "@/lib/requestGovernor";
 import {
   clearSession,
   getAccessToken,
@@ -116,5 +117,8 @@ axiosInstance.interceptors.response.use(
     return axiosInstance(original);
   },
 );
+
+// سقف هم‌زمانی GET، dedupe درخواست‌های یکسان و اولویت پس‌زمینه؛ POST/PUT/DELETE دست‌نخورده.
+installRequestGovernor(axiosInstance, { maxConcurrent: 6, maxBackground: 2 });
 
 export default axiosInstance;

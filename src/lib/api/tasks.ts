@@ -233,3 +233,51 @@ export function fetchAllTasks({ caseId, signal, fresh }: FetchAllTasksOptions = 
   if (fresh) invalidate(allKey(id));
   return withSignal(listAll(id), signal);
 }
+
+/** null = هنوز بررسی نشده؛ true = بک‌اند فیلتر `case` را اعمال می‌کند. */
+let caseFilterWorks: boolean | null = null;
+
+async function probeCaseFilter(caseId: string, signal?: AbortSignal): Promise<boolean> {
+  if (caseFilterWorks !== null) return caseFilterWorks;
+  const first = await withSignal(list({ page: 1, page_size: 100, case: caseId }), signal);
+  const ignored = first.results.some((t) => {
+    const cid = extractCaseId(t);
+    return cid !== null && cid !== caseId;
+  });
+  caseFilterWorks = !ignored;
+  if (ignored) {
+    console.warn("[tasks] فیلتر case در بک‌اند اعمال نمی‌شود؛ یک دریافت مشترک برای همهٔ پرونده‌ها استفاده می‌شود.");
+  }
+  return caseFilterWorks;
+}
+
+/**
+ * وظایف فقط پرونده‌های داده‌شده (صفحهٔ جاری)، به‌جای دریافت همهٔ وظایف سیستم.
+ * هر پرونده با فیلتر `case` و کش جدا خوانده می‌شود؛ درخواست‌ها موازی‌اند.
+ */
+export async function fetchTasksForCases(
+  caseIds: Array<string | number>,
+  { signal, fresh }: { signal?: AbortSignal; fresh?: boolean } = {},
+): Promise<Map<string, TaskItem[]>> {
+  const ids = [...new Set(caseIds.map(String))];
+  if (ids.length === 0) return new Map();
+
+  if (fresh) ids.forEach((id) => invalidate(allKey(id)));
+  const filterWorks = await probeCaseFilter(ids[0], signal);
+
+  if (!filterWorks) {
+    // fallback: فیلتر نادیده گرفته می‌شود → یک دریافت کامل مشترک (کش‌شده) به‌جای یک دریافت کامل برای هر پرونده
+    const all = await fetchAllTasks({ signal, fresh });
+    const grouped = new Map<string, TaskItem[]>(ids.map((id) => [id, []]));
+    all.forEach((t) => {
+      const cid = extractCaseId(t);
+      if (cid !== null) grouped.get(cid)?.push(t);
+    });
+    return grouped;
+  }
+
+  const lists = await Promise.all(
+    ids.map((id) => withSignal(listAll(id), signal)),
+  );
+  return new Map(ids.map((id, i) => [id, lists[i]]));
+}

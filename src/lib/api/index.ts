@@ -1,5 +1,5 @@
 export * from "./_core";
-export { tasksApi, fetchAllTasks, extractCaseId, parseTransferError } from "./tasks";
+export { tasksApi, fetchAllTasks, fetchTasksForCases, extractCaseId, parseTransferError } from "./tasks";
 export type { TaskListParams, FetchAllTasksOptions } from "./tasks";
 export { metaApi } from "./meta";
 export { customersApi } from "./customers";

@@ -4,8 +4,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { AnimatePresence } from "framer-motion";
 import { ClipboardList, Plus, RefreshCw } from "lucide-react";
 import { useTheme } from "next-themes";
-import { casesApi, customersApi, extractCaseId, metaApi, tasksApi, fetchAllTasks } from "@/lib/api";
-import type { Paginated } from "@/types/pagination";
+import { casesApi, customersApi, extractCaseId, metaApi, tasksApi, fetchAllTasks, fetchTasksForCases } from "@/lib/api";
 import type { Department } from "@/types/department";
 import type { Employee } from "@/types/employee";
 import type { TaskItem } from "@/types/task";
@@ -18,30 +17,20 @@ import EditTaskModal from "@/components/tasks/EditTaskModal";
 import CaseTasksModal from "@/components/cases/CaseTasksModal";
 import Pagination from "@/components/ui/Pagination";
 import CardSkeletonGrid from "@/components/ui/CardSkeletonGrid";
+import { usePaginatedList } from "@/hooks/usePaginatedList";
 
 const PAGE_SIZE = 12;
-const PAGE_CACHE_TTL = 30_000;
-
-interface CachedPage {
-    data: Paginated<CaseItem>;
-    at: number;
-}
 
 export default function UserCasesPage() {
     const { resolvedTheme } = useTheme();
     const isDark = resolvedTheme === "dark";
 
-    const [cases, setCases] = useState<CaseItem[]>([]);
-    const [totalCount, setTotalCount] = useState(0);
-    const [page, setPage] = useState(1);
     const [customers, setCustomers] = useState<Customer[]>([]);
     const [departments, setDepartments] = useState<Department[]>([]);
     const [employees, setEmployees] = useState<Employee[]>([]);
     // وظایف فقط برای پرونده‌های همین صفحه (کلید = شناسهٔ پرونده)
     const [tasksByCase, setTasksByCase] = useState<Map<string, TaskItem[]>>(new Map());
-    const [loading, setLoading] = useState(true);
     const [isFetching, setIsFetching] = useState(false);
-    const [error, setError] = useState("");
     const [caseModalOpen, setCaseModalOpen] = useState(false);
     const [editingCase, setEditingCase] = useState<CaseItem | null>(null);
     const [editCaseModalOpen, setEditCaseModalOpen] = useState(false);
@@ -54,95 +43,48 @@ export default function UserCasesPage() {
     const [tasksRefreshKey, setTasksRefreshKey] = useState(0);
 
     const requestId = useRef(0);
-    const pageCache = useRef(new Map<number, CachedPage>());
-    const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
 
-    const clearPageCache = useCallback(() => pageCache.current.clear(), []);
+    // صفحه‌بندی و جستجوی سمت سرور
+    const list = usePaginatedList<CaseItem>((params, signal) => casesApi.page(params, signal), {
+        pageSize: PAGE_SIZE,
+        scrollTop: true,
+    });
+    const cases = list.data;
+    const page = list.page;
+    const totalCount = list.count;
+    const totalPages = list.totalPages;
+    const loading = list.loading && list.data.length === 0;
+    const error = list.error ? "دریافت اطلاعات با خطا مواجه شد" : "";
+    const refetchCases = list.refetch;
+    const setListPage = list.setPage;
 
     /** مشتری‌ها و وظایف پرونده‌های همین صفحه — بدون بلاک کردن نمایش کارت‌ها */
-    const hydratePage = useCallback((items: CaseItem[], id: number, fresh: boolean) => {
-        if (items.length === 0) return;
+    useEffect(() => {
+        if (cases.length === 0) {
+            setCustomers([]);
+            setTasksByCase(new Map());
+            return;
+        }
+
+        const id = ++requestId.current;
+        setIsFetching(true);
 
         customersApi
-            .getMany(items.map((c) => Number(c.customer)))
-            .then((list) => {
-                if (id === requestId.current) setCustomers(list);
+            .getMany(cases.map((c) => Number(c.customer)))
+            .then((pageCustomers) => {
+                if (id === requestId.current) setCustomers(pageCustomers);
+            })
+            .catch(() => undefined)
+            .finally(() => {
+                if (id === requestId.current) setIsFetching(false);
+            });
+
+        fetchTasksForCases(cases.map((c) => c.id))
+            .then((grouped) => {
+                if (id === requestId.current) setTasksByCase(grouped);
             })
             .catch(() => undefined);
-
-        const pageCaseIds = new Set(items.map((c) => String(c.id)));
-
-        fetchAllTasks({ fresh })
-            .then((allTasks) => {
-                if (id !== requestId.current) return;
-
-                const grouped = new Map<string, TaskItem[]>();
-                pageCaseIds.forEach((key) => grouped.set(key, []));
-
-                allTasks.forEach((task) => {
-                    const caseId = extractCaseId(task);
-                    if (caseId === null || caseId === "") return;
-
-                    const bucket = grouped.get(String(caseId));
-                    if (bucket) bucket.push(task);
-                });
-
-                setTasksByCase((prev) => {
-                    const next = new Map(prev);
-                    grouped.forEach((list, key) => next.set(key, list));
-                    return next;
-                });
-            })
-            .catch(() => undefined);
-    }, []);
-
-    const prefetch = useCallback((target: number) => {
-        if (target < 1 || pageCache.current.has(target)) return;
-        casesApi
-            .list({ page: target, page_size: PAGE_SIZE })
-            .then((data) => pageCache.current.set(target, { data, at: Date.now() }))
-            .catch(() => undefined);
-    }, []);
-
-    const fetchCases = useCallback(
-        async (opts: { silent?: boolean; fresh?: boolean } = {}) => {
-            const id = ++requestId.current;
-            const { silent = false, fresh = false } = opts;
-
-            if (fresh) clearPageCache();
-
-            const cached = pageCache.current.get(page);
-            const useCache = !!cached && Date.now() - cached.at < PAGE_CACHE_TTL;
-
-            if (!silent && !useCache) setLoading(true);
-            setIsFetching(!useCache);
-            setError("");
-
-            try {
-                const data = useCache ? cached!.data : await casesApi.list({ page, page_size: PAGE_SIZE });
-                if (id !== requestId.current) return;
-
-                pageCache.current.set(page, { data, at: Date.now() });
-                setCases(data.results);
-                setTotalCount(data.count);
-                setLoading(false);
-                setIsFetching(false);
-
-                hydratePage(data.results, id, fresh);
-                if (page * PAGE_SIZE < data.count) prefetch(page + 1);
-            } catch {
-                if (id !== requestId.current) return;
-                setError("دریافت اطلاعات با خطا مواجه شد");
-                setLoading(false);
-                setIsFetching(false);
-            }
-        },
-        [page, hydratePage, prefetch, clearPageCache],
-    );
-
-    useEffect(() => {
-        void fetchCases();
-    }, [fetchCases]);
+    }, [cases]);
 
     useEffect(() => {
         metaApi.departments().then(setDepartments).catch(() => undefined);
@@ -151,8 +93,8 @@ export default function UserCasesPage() {
 
     const refreshAll = useCallback(() => {
         tasksApi.invalidate();
-        void fetchCases({ fresh: true });
-    }, [fetchCases]);
+        refetchCases();
+    }, [refetchCases]);
 
     const syncCaseTasks = useCallback((caseId: string, fresh: TaskItem[]) => {
         setTasksByCase((prev) => new Map(prev).set(caseId, fresh));
@@ -182,18 +124,17 @@ export default function UserCasesPage() {
                 try {
                     await casesApi.remove(id);
                 } catch {
-                    await fetchCases({ silent: true, fresh: true });
+                    refetchCases();
                     throw new Error("خطا در حذف پرونده");
                 }
 
-                clearPageCache();
-                if (cases.length === 1 && page > 1) setPage((p) => p - 1);
-                else await fetchCases({ silent: true, fresh: true });
+                if (cases.length === 1 && page > 1) setListPage(page - 1);
+                else refetchCases();
             } finally {
                 setDeletingId(null);
             }
         },
-        [cases.length, page, fetchCases, syncCaseTasks, clearPageCache],
+        [cases.length, page, refetchCases, setListPage, syncCaseTasks],
     );
 
     const handleEditCase = useCallback((item: CaseItem) => {
@@ -202,16 +143,15 @@ export default function UserCasesPage() {
     }, []);
 
     const handleCaseUpdate = useCallback(() => {
-        void fetchCases({ silent: true, fresh: true });
+        refetchCases();
         setEditCaseModalOpen(false);
         setEditingCase(null);
-    }, [fetchCases]);
+    }, [refetchCases]);
 
     const handleCaseCreated = useCallback(() => {
-        clearPageCache();
-        if (page !== 1) setPage(1);
-        else void fetchCases({ silent: true, fresh: true });
-    }, [page, fetchCases, clearPageCache]);
+        if (page !== 1) setListPage(1);
+        else refetchCases();
+    }, [page, refetchCases, setListPage]);
 
     const handleDeleteTask = useCallback(async (taskId: number) => {
         setDeletingTaskId(taskId);
@@ -236,25 +176,16 @@ export default function UserCasesPage() {
 
     const handleTaskUpdate = useCallback(() => {
         tasksApi.invalidate();
-        void fetchCases({ silent: true, fresh: true });
+        refetchCases();
         setTasksRefreshKey((k) => k + 1);
         setEditTaskModalOpen(false);
         setEditingTask(null);
-    }, [fetchCases]);
+    }, [refetchCases]);
 
     const handleOpenTasksModal = useCallback((item: CaseItem) => {
         setSelectedCaseForTasks(item);
         setTasksModalOpen(true);
     }, []);
-
-    const goToPage = useCallback(
-        (p: number) => {
-            if (p < 1 || p > totalPages || p === page) return;
-            setPage(p);
-            window.scrollTo({ top: 0, behavior: "smooth" });
-        },
-        [page, totalPages],
-    );
 
     return (
         <div className="flex flex-col gap-5 p-3 sm:p-4 md:p-6" dir="rtl">
@@ -300,7 +231,7 @@ export default function UserCasesPage() {
                 <div className="flex flex-col items-start gap-3 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-[12.5px] text-rose-600 dark:border-rose-500/20 dark:bg-rose-500/10 dark:text-rose-300 sm:flex-row sm:items-center sm:justify-between">
                     <span>{error}</span>
                     <button
-                        onClick={() => void fetchCases()}
+                        onClick={() => refetchCases()}
                         type="button"
                         className="rounded-xl bg-rose-600 px-3 py-1.5 text-[11.5px] font-bold text-white transition-colors hover:bg-rose-500"
                     >
@@ -347,7 +278,7 @@ export default function UserCasesPage() {
                 </div>
             )}
 
-            {!loading && totalPages > 1 && <Pagination page={page} totalPages={totalPages} onChange={goToPage} />}
+            {!loading && totalPages > 1 && <Pagination page={page} totalPages={totalPages} onChange={setListPage} />}
 
             <CreateCaseModal open={caseModalOpen} onClose={() => setCaseModalOpen(false)} onCreated={handleCaseCreated} />
 

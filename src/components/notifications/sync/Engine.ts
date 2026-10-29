@@ -55,6 +55,7 @@ export function createSyncEngine({ userId, username }: EngineOptions) {
   let namesAt = 0;
   let employeeId: number | null = null;
   let employeesTriedAt = 0;
+  let onWindowLoad: (() => void) | null = null;
 
   const lastPollKey = `crm-notif-lastpoll:${userId}`;
   const store = () => useNotificationStore.getState();
@@ -404,10 +405,21 @@ export function createSyncEngine({ userId, username }: EngineOptions) {
 
       window.clearTimeout(pollTimer);
 
-      pollTimer = window.setTimeout(
-        () => void tick(3_000),
-        CFG.firstPollDelayMs,
-      );
+      // اولین poll بعد از load کامل صفحه + تأخیر، تا با رندر اولیه (LCP/TBT) رقابت نکند.
+      const firstPoll = () => {
+        if (stopped) return;
+        pollTimer = window.setTimeout(
+          () => void tick(3_000),
+          CFG.firstPollDelayMs,
+        );
+      };
+
+      if (document.readyState === "complete") {
+        firstPoll();
+      } else {
+        onWindowLoad = firstPoll;
+        window.addEventListener("load", onWindowLoad, { once: true });
+      }
     },
 
     stop() {
@@ -418,6 +430,11 @@ export function createSyncEngine({ userId, username }: EngineOptions) {
 
       window.clearTimeout(pollTimer);
       window.clearTimeout(routineTimer);
+
+      if (onWindowLoad) {
+        window.removeEventListener("load", onWindowLoad);
+        onWindowLoad = null;
+      }
 
       controller?.abort();
       controller = null;

@@ -159,10 +159,12 @@ export async function fetchPage<T>(
   url: string,
   params: Params = {},
   signal?: AbortSignal,
+  priority?: "low",
 ): Promise<Paginated<T>> {
   const r = await axiosInstance.get<RawList<T>>(url, {
     params: cleanParams(params),
     signal,
+    priority,
   });
   return toPaginated<T>(r.data);
 }

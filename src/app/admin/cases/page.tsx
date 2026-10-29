@@ -4,7 +4,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { AnimatePresence, motion } from "framer-motion";
 import { ClipboardList, Loader, Plus, RefreshCw } from "lucide-react";
 import { useTheme } from "next-themes";
-import { casesApi, customersApi, metaApi, tasksApi, fetchAllTasks, extractCaseId } from "@/lib/api";
+import { casesApi, customersApi, metaApi, tasksApi, fetchAllTasks, fetchTasksForCases, extractCaseId } from "@/lib/api";
 import type { Department } from "@/types/department";
 import type { Employee } from "@/types/employee";
 import type { TaskItem } from "@/types/task";
@@ -16,6 +16,7 @@ import CaseCard from "@/components/user/cases/CaseCard";
 import EditTaskModal from "@/components/tasks/EditTaskModal";
 import CaseTasksModal from "@/components/cases/CaseTasksModal";
 import Pagination from "@/components/ui/Pagination";
+import { usePaginatedList } from "@/hooks/usePaginatedList";
 
 const PAGE_SIZE = 12;
 
@@ -23,16 +24,12 @@ export default function UserCasesPage() {
     const { resolvedTheme } = useTheme();
     const isDark = resolvedTheme === "dark";
 
-    const [cases, setCases] = useState<CaseItem[]>([]);
-    const [totalCount, setTotalCount] = useState(0);
-    const [page, setPage] = useState(1);
     const [customers, setCustomers] = useState<Customer[]>([]);
     const [departments, setDepartments] = useState<Department[]>([]);
     const [employees, setEmployees] = useState<Employee[]>([]);
     const [tasks, setTasks] = useState<TaskItem[]>([]);
-    const [loading, setLoading] = useState(true);
+    const [taskTotal, setTaskTotal] = useState(0);
     const [isFetching, setIsFetching] = useState(false);
-    const [error, setError] = useState("");
     const [caseModalOpen, setCaseModalOpen] = useState(false);
     const [editingCase, setEditingCase] = useState<CaseItem | null>(null);
     const [editCaseModalOpen, setEditCaseModalOpen] = useState(false);
@@ -44,41 +41,69 @@ export default function UserCasesPage() {
     const [selectedCaseForTasks, setSelectedCaseForTasks] = useState<CaseItem | null>(null);
     const [tasksRefreshKey, setTasksRefreshKey] = useState(0);
 
+    // صفحه‌بندی و جستجوی سمت سرور
+    const list = usePaginatedList<CaseItem>((params, signal) => casesApi.page(params, signal), {
+        pageSize: PAGE_SIZE,
+        scrollTop: true,
+    });
+    const cases = list.data;
+    const page = list.page;
+    const totalCount = list.count;
+    const totalPages = list.totalPages;
+    const loading = list.loading && list.data.length === 0;
+    const error = list.error ? "دریافت اطلاعات با خطا مواجه شد" : "";
+    const refetchCases = list.refetch;
+    const setListPage = list.setPage;
+
     const requestId = useRef(0);
-    const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
 
-    const fetchCases = useCallback(
-        async (opts: { silent?: boolean } = {}) => {
-            const id = ++requestId.current;
-            if (!opts.silent) setLoading(true);
-            setIsFetching(true);
-            setError("");
-
-            try {
-                const data = await casesApi.list({ page, page_size: PAGE_SIZE });
-                const pageCustomers = await customersApi.getMany(data.results.map((c) => Number(c.customer)));
-
+    // اطلاعات مشتریانِ پرونده‌های صفحهٔ جاری
+    useEffect(() => {
+        if (cases.length === 0) {
+            setCustomers([]);
+            return;
+        }
+        const id = ++requestId.current;
+        setIsFetching(true);
+        customersApi
+            .getMany(cases.map((c) => Number(c.customer)))
+            .then((pageCustomers) => {
                 if (id !== requestId.current) return;
-
-                setCases(data.results);
                 setCustomers(pageCustomers);
-                setTotalCount(data.count);
-            } catch {
-                if (id !== requestId.current) return;
-                setError("دریافت اطلاعات با خطا مواجه شد");
-            } finally {
-                if (id === requestId.current) {
-                    setLoading(false);
-                    setIsFetching(false);
-                }
-            }
-        },
-        [page],
-    );
+            })
+            .catch(() => undefined)
+            .finally(() => {
+                if (id === requestId.current) setIsFetching(false);
+            });
+    }, [cases]);
 
-    const fetchTasks = useCallback((fresh = false) => {
-        fetchAllTasks({ fresh })
-            .then(setTasks)
+    const casesRef = useRef<CaseItem[]>([]);
+    casesRef.current = cases;
+
+    const tasksRequestId = useRef(0);
+
+    /** TODO(backend-aggregate): شمارش وظایف هر پرونده در لیست پرونده‌ها. فعلاً فقط برای پرونده‌های صفحهٔ جاری. */
+    const fetchTasks = useCallback((fresh = false, items: CaseItem[] = casesRef.current) => {
+        const id = ++tasksRequestId.current;
+
+        // تعداد کل وظایف (برای عنوان صفحه) با یک درخواست سبک؛ به‌جای دریافت همهٔ وظایف
+        tasksApi
+            .page({ page: 1, page_size: 1 })
+            .then((res) => {
+                if (id === tasksRequestId.current) setTaskTotal(res.count);
+            })
+            .catch(() => undefined);
+
+        if (items.length === 0) {
+            setTasks([]);
+            return;
+        }
+        fetchTasksForCases(items.map((c) => c.id), { fresh })
+            .then((grouped) => {
+                // پاسخ قدیمی (صفحهٔ قبلی) نادیده گرفته می‌شود؛ وظایف صفحه‌های قبل نگه داشته نمی‌شوند
+                if (id !== tasksRequestId.current) return;
+                setTasks([...grouped.values()].flat());
+            })
             .catch(() => undefined);
     }, []);
 
@@ -88,18 +113,12 @@ export default function UserCasesPage() {
     }, []);
 
     useEffect(() => {
-        fetchCases();
-    }, [fetchCases]);
+        fetchMeta();
+    }, [fetchMeta]);
 
     useEffect(() => {
-        fetchMeta();
-        fetchTasks();
-    }, [fetchMeta, fetchTasks]);
-
-    const refreshAll = useCallback(() => {
-        fetchCases();
-        fetchTasks(true);
-    }, [fetchCases, fetchTasks]);
+        fetchTasks(false, cases);
+    }, [cases, fetchTasks]);
 
     const tasksByCase = useMemo(() => {
         const map = new Map<string, TaskItem[]>();
@@ -133,17 +152,17 @@ export default function UserCasesPage() {
                 try {
                     await casesApi.remove(id);
                 } catch {
-                    await fetchCases({ silent: true });
+                    refetchCases();
                     throw new Error("خطا در حذف پرونده");
                 }
 
-                if (cases.length === 1 && page > 1) setPage((p) => p - 1);
-                else await fetchCases({ silent: true });
+                if (cases.length === 1 && page > 1) setListPage(page - 1);
+                else refetchCases();
             } finally {
                 setDeletingId(null);
             }
         },
-        [cases.length, page, fetchCases, syncCaseTasks],
+        [cases.length, page, refetchCases, setListPage, syncCaseTasks],
     );
 
     const handleEditCase = useCallback((item: CaseItem) => {
@@ -152,21 +171,22 @@ export default function UserCasesPage() {
     }, []);
 
     const handleCaseUpdate = useCallback(() => {
-        fetchCases({ silent: true });
+        refetchCases();
         setEditCaseModalOpen(false);
         setEditingCase(null);
-    }, [fetchCases]);
+    }, [refetchCases]);
 
     const handleCaseCreated = useCallback(() => {
-        if (page !== 1) setPage(1);
-        else fetchCases({ silent: true });
-    }, [page, fetchCases]);
+        if (page !== 1) setListPage(1);
+        else refetchCases();
+    }, [page, refetchCases, setListPage]);
 
     const handleDeleteTask = useCallback(async (taskId: number) => {
         setDeletingTaskId(taskId);
         try {
             await tasksApi.remove(taskId);
             setTasks((prev) => prev.filter((t) => t.id !== taskId));
+            setTaskTotal((n) => Math.max(0, n - 1));
         } catch {
             throw new Error("خطا در حذف وظیفه");
         } finally {
@@ -181,23 +201,17 @@ export default function UserCasesPage() {
 
     const handleTaskUpdate = useCallback(() => {
         tasksApi.invalidate();
-        fetchCases({ silent: true });
+        refetchCases();
         fetchTasks();
         setTasksRefreshKey((k) => k + 1);
         setEditTaskModalOpen(false);
         setEditingTask(null);
-    }, [fetchCases, fetchTasks]);
+    }, [refetchCases, fetchTasks]);
 
     const handleOpenTasksModal = useCallback((item: CaseItem) => {
         setSelectedCaseForTasks(item);
         setTasksModalOpen(true);
     }, []);
-
-    const goToPage = (p: number) => {
-        if (p < 1 || p > totalPages || p === page) return;
-        setPage(p);
-        window.scrollTo({ top: 0, behavior: "smooth" });
-    };
 
     return (
         <div className="flex flex-col gap-5 p-3 sm:p-4 md:p-6" dir="rtl">
@@ -206,14 +220,14 @@ export default function UserCasesPage() {
                     <div className="min-w-0">
                         <h1 className="text-[15px] font-extrabold text-gray-900 dark:text-white">پرونده‌ها</h1>
                         <p className="mt-0.5 text-[11.5px] text-gray-500 dark:text-gray-400">
-                            {loading ? "در حال بارگذاری..." : `${totalCount} پرونده و ${tasks.length} وظیفه`}
+                            {loading ? "در حال بارگذاری..." : `${totalCount} پرونده و ${taskTotal} وظیفه`}
                         </p>
                     </div>
                 </div>
 
                 <div className="flex items-center gap-2">
                     <button
-                        onClick={refreshAll}
+                        onClick={() => refetchCases()}
                         disabled={loading}
                         type="button"
                         title="بارگذاری مجدد"
@@ -241,7 +255,7 @@ export default function UserCasesPage() {
                 <div className="flex flex-col items-start gap-3 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-[12.5px] text-rose-600 dark:border-rose-500/20 dark:bg-rose-500/10 dark:text-rose-300 sm:flex-row sm:items-center sm:justify-between">
                     <span>{error}</span>
                     <button
-                        onClick={() => fetchCases()}
+                        onClick={() => refetchCases()}
                         type="button"
                         className="rounded-xl bg-rose-600 px-3 py-1.5 text-[11.5px] font-bold text-white transition-colors hover:bg-rose-500"
                     >
@@ -295,7 +309,7 @@ export default function UserCasesPage() {
                 </motion.div>
             )}
 
-            {!loading && totalPages > 1 && <Pagination page={page} totalPages={totalPages} onChange={goToPage} />}
+            {!loading && totalPages > 1 && <Pagination page={page} totalPages={totalPages} onChange={setListPage} />}
 
             <CreateCaseModal open={caseModalOpen} onClose={() => setCaseModalOpen(false)} onCreated={handleCaseCreated} />
 

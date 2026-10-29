@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Users, Plus, Loader, RefreshCw, Filter, FileSpreadsheet, Search, X } from "lucide-react";
 import { useTheme } from "next-themes";
@@ -8,6 +8,7 @@ import CustomerCard from "@/components/user/customer/CustomerCard";
 import AddCustomerModal from "@/components/user/customer/AddCustomerModal";
 import ImportExcelModal from "@/components/user/customer/ImportExcelModal";
 import Pagination from "@/components/ui/Pagination";
+import { usePaginatedList } from "@/hooks/usePaginatedList";
 import { Customer, CustomerStatus } from "@/types/customer";
 import type { Employee } from "@/types/employee";
 import type { CaseItem } from "@/types/case";
@@ -97,39 +98,38 @@ export default function CustomersPage() {
     const { resolvedTheme } = useTheme();
     const isDark = resolvedTheme === "dark";
 
-    const [customers, setCustomers] = useState<Customer[]>([]);
+    const list = usePaginatedList<Customer, { status?: CustomerStatus }>(
+        (params, signal) => customersApi.page(params, signal),
+        {
+            pageSize: PAGE_SIZE,
+            filters: { status: STATUS_BY_FILTER.all },
+            scrollTop: true,
+        }
+    );
+
+    const customers = list.data;
+    const loading = list.loading;
+    const totalCount = list.count;
+    const page = list.page;
+    const totalPages = list.totalPages;
+    const search = list.search;
+    const filter: FilterType =
+        list.filters.status === 1
+            ? "potential"
+            : list.filters.status === 2
+                ? "active"
+                : "all";
+
     const [customersWithCase, setCustomersWithCase] = useState<Set<number>>(
         new Set()
     );
-    const [loading, setLoading] = useState(true);
-    const [totalCount, setTotalCount] = useState(0);
     const [counts, setCounts] = useState<CustomerCounts>(EMPTY_COUNTS);
-    const [page, setPage] = useState(1);
     const [casesTick, setCasesTick] = useState(0);
     const [showAdd, setShowAdd] = useState(false);
     const [showImport, setShowImport] = useState(false);
-    const [filter, setFilter] = useState<FilterType>("all");
-    const [search, setSearch] = useState("");
-    const [appliedSearch, setAppliedSearch] = useState("");
 
     const userId = useAuthStore((state) => state.userId);
     const username = useAuthStore((state) => state.username);
-
-    const requestId = useRef(0);
-    const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
-
-    useEffect(() => {
-        const timer = setTimeout(() => {
-            const next = search.trim().replace(/\s+/g, " ");
-
-            if (next === appliedSearch) return;
-
-            setAppliedSearch(next);
-            setPage(1);
-        }, 400);
-
-        return () => clearTimeout(timer);
-    }, [search, appliedSearch]);
 
     const fetchCounts = useCallback(async () => {
         try {
@@ -138,32 +138,6 @@ export default function CustomersPage() {
             // در صورت خطا شمارنده‌ها بدون تغییر می‌مانند
         }
     }, []);
-
-    const fetchCustomers = useCallback(async () => {
-        const id = ++requestId.current;
-        setLoading(true);
-
-        try {
-            const data = await customersApi.list({
-                page,
-                page_size: PAGE_SIZE,
-                status: STATUS_BY_FILTER[filter],
-                search: appliedSearch || undefined,
-            });
-
-            if (id !== requestId.current) return;
-
-            setCustomers(data.results);
-            setTotalCount(data.count);
-        } catch {
-            if (id !== requestId.current) return;
-
-            setCustomers([]);
-            setTotalCount(0);
-        } finally {
-            if (id === requestId.current) setLoading(false);
-        }
-    }, [page, filter, appliedSearch]);
 
     const fetchCases = useCallback(async () => {
         try {
@@ -319,10 +293,6 @@ export default function CustomersPage() {
     }, [userId, username, customers, casesTick]);
 
     useEffect(() => {
-        fetchCustomers();
-    }, [fetchCustomers]);
-
-    useEffect(() => {
         fetchCases();
     }, [fetchCases]);
 
@@ -334,26 +304,23 @@ export default function CustomersPage() {
         customersApi.invalidate();
         casesApi.invalidate();
         setCasesTick((tick) => tick + 1);
-        fetchCustomers();
+        list.refetch();
         fetchCounts();
-    }, [fetchCustomers, fetchCounts]);
+    }, [list.refetch, fetchCounts]);
 
     const handleDeleted = useCallback(
-        (id: number) => {
+        (_id: number) => {
             customersApi.invalidate();
-            setCustomers((prev) =>
-                prev.filter((customer) => customer.id !== id)
-            );
 
             if (customers.length === 1 && page > 1) {
-                setPage((p) => p - 1);
+                list.setPage(page - 1);
             } else {
-                fetchCustomers();
+                list.refetch();
             }
 
             fetchCounts();
         },
-        [customers.length, page, fetchCustomers, fetchCounts]
+        [customers.length, page, list.setPage, list.refetch, fetchCounts]
     );
 
     const handleAdded = useCallback(() => {
@@ -361,33 +328,18 @@ export default function CustomersPage() {
     }, [refresh]);
 
     const handleEdited = useCallback(
-        (updated: Customer) => {
+        (_updated: Customer) => {
             customersApi.invalidate();
-            setCustomers((prev) =>
-                prev.map((customer) =>
-                    customer.id === updated.id
-                        ? updated
-                        : customer
-                )
-            );
-
+            list.refetch();
             fetchCounts();
         },
-        [fetchCounts]
+        [list.refetch, fetchCounts]
     );
 
     const handleFilterChange = (newFilter: FilterType) => {
         if (newFilter === filter) return;
 
-        setFilter(newFilter);
-        setPage(1);
-    };
-
-    const goToPage = (next: number) => {
-        if (next < 1 || next > totalPages || next === page) return;
-
-        setPage(next);
-        window.scrollTo({ top: 0, behavior: "smooth" });
+        list.setFilters({ status: STATUS_BY_FILTER[newFilter] });
     };
 
     const filterOptions: { value: FilterType; label: string; count: number }[] = [
@@ -547,7 +499,7 @@ export default function CustomersPage() {
 
                     <input
                         value={search}
-                        onChange={(e) => setSearch(e.target.value)}
+                        onChange={(e) => list.setSearch(e.target.value)}
                         placeholder="جستجوی نام، شماره یا شرکت..."
                         className="min-w-0 flex-1 bg-transparent text-[11.5px] font-medium text-gray-700 outline-none placeholder:text-gray-400 dark:text-gray-200"
                     />
@@ -555,7 +507,7 @@ export default function CustomersPage() {
                     {search && (
                         <button
                             type="button"
-                            onClick={() => setSearch("")}
+                            onClick={() => list.setSearch("")}
                             className="shrink-0 text-gray-400 transition-colors hover:text-gray-600 dark:hover:text-gray-200"
                             aria-label="پاک کردن جستجو"
                         >
@@ -601,7 +553,7 @@ export default function CustomersPage() {
                             />
 
                             <p className="text-[12.5px] text-gray-400 dark:text-gray-500">
-                                {appliedSearch
+                                {search.trim()
                                     ? "نتیجه‌ای برای جستجوی شما یافت نشد"
                                     : filter === "all"
                                         ? "مشتری‌ای برای شما یافت نشد"
@@ -645,7 +597,7 @@ export default function CustomersPage() {
                 <Pagination
                     page={page}
                     totalPages={totalPages}
-                    onChange={goToPage}
+                    onChange={list.setPage}
                 />
             )}
 
