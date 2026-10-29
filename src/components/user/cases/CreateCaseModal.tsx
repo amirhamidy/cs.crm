@@ -7,7 +7,7 @@ import React, {
     useState,
     forwardRef,
 } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, m } from "framer-motion";
 import {
     ArrowRight,
     Check,
@@ -128,13 +128,13 @@ export default function CreateCaseModal({
     const reqId = useRef(0);
     const fetchingRef = useRef(false);
 
-    /* debounce جستجو */
+    
     useEffect(() => {
         const t = setTimeout(() => setDebouncedQuery(customerQuery.trim()), 300);
         return () => clearTimeout(t);
     }, [customerQuery]);
 
-    /* لود یک صفحه از مشتری‌ها */
+    
     const loadPage = useCallback(async (p: number, q: string) => {
         const id = ++reqId.current;
         fetchingRef.current = true;
@@ -151,7 +151,7 @@ export default function CreateCaseModal({
 
             setCustomers((prev) => {
                 if (p === 1) return data.results;
-                // جلوگیری از آیتم تکراری (مثلاً وقتی مشتری جدید ثبت شده)
+                
                 const seen = new Set(prev.map((c) => c.id));
                 return [...prev, ...data.results.filter((c) => !seen.has(c.id))];
             });
@@ -174,13 +174,13 @@ export default function CreateCaseModal({
         }
     }, []);
 
-    /* با باز شدن مودال یا تغییر جستجو، از صفحه ۱ شروع کن */
+    
     useEffect(() => {
         if (!open) return;
         loadPage(1, debouncedQuery);
     }, [open, debouncedQuery, loadPage]);
 
-    /* اسکرول بی‌نهایت */
+    
     const handleListScroll = useCallback(
         (e: React.UIEvent<HTMLDivElement>) => {
             if (!hasMore || fetchingRef.current) return;
@@ -192,7 +192,7 @@ export default function CreateCaseModal({
         [hasMore, customerPage, debouncedQuery, loadPage]
     );
 
-    /* ریست بعد از بسته شدن */
+    
     useEffect(() => {
         if (open) return;
         const timer = setTimeout(() => {
@@ -253,7 +253,7 @@ export default function CreateCaseModal({
     return (
         <AnimatePresence>
             {open && (
-                <motion.div
+                <m.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
@@ -262,7 +262,7 @@ export default function CreateCaseModal({
                     onClick={() => !submitting && onClose()}
                     dir="rtl"
                 >
-                    <motion.div
+                    <m.div
                         initial={{ opacity: 0, y: 24, scale: 0.98 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: 16, scale: 0.98 }}
@@ -270,7 +270,7 @@ export default function CreateCaseModal({
                         onClick={(e) => e.stopPropagation()}
                         className="flex max-h-[92vh] w-full max-w-lg flex-col overflow-hidden rounded-t-4xl border border-gray-100 bg-white shadow-2xl sm:rounded-4xl dark:border-white/10 dark:bg-[#111113]"
                     >
-                        {/* Header */}
+                        
                         <div className="flex items-center justify-between gap-3 border-b border-gray-100 px-5 py-4 dark:border-white/10">
                             <div className="flex min-w-0 items-center gap-3">
                                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-blue-50 dark:bg-blue-500/10">
@@ -297,7 +297,7 @@ export default function CreateCaseModal({
                             </button>
                         </div>
 
-                        {/* Progress */}
+                        
                         <div className="flex items-center gap-2 px-5 pt-4">
                             {[0, 1].map((s) => (
                                 <div
@@ -310,11 +310,11 @@ export default function CreateCaseModal({
                             ))}
                         </div>
 
-                        {/* Body */}
+                        
                         <div className="flex-1 overflow-y-auto px-5 py-4">
                             <AnimatePresence mode="wait" initial={false}>
                                 {step === 0 ? (
-                                    <motion.div
+                                    <m.div
                                         key="step-0"
                                         initial={{ opacity: 0, x: 20 }}
                                         animate={{ opacity: 1, x: 0 }}
@@ -427,9 +427,9 @@ export default function CreateCaseModal({
                                                 </div>
                                             )}
                                         </div>
-                                    </motion.div>
+                                    </m.div>
                                 ) : (
-                                    <motion.div
+                                    <m.div
                                         key="step-1"
                                         initial={{ opacity: 0, x: -20 }}
                                         animate={{ opacity: 1, x: 0 }}
@@ -480,12 +480,12 @@ export default function CreateCaseModal({
                                                 {submitError}
                                             </div>
                                         )}
-                                    </motion.div>
+                                    </m.div>
                                 )}
                             </AnimatePresence>
                         </div>
 
-                        {/* Footer */}
+                        
                         <div className="dark:bg-white/2 flex items-center gap-3 border-t border-gray-100 bg-gray-50/50 px-5 py-4 dark:border-white/10">
                             {step === 1 && (
                                 <button
@@ -515,8 +515,8 @@ export default function CreateCaseModal({
                                 )}
                             </button>
                         </div>
-                    </motion.div>
-                </motion.div>
+                    </m.div>
+                </m.div>
             )}
         </AnimatePresence>
     );

@@ -1,6 +1,6 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { m } from "framer-motion";
 import { Archive, Clock3, Package, User } from "lucide-react";
 import { useTheme } from "next-themes";
 import { cardBg, cardBorder, cardShadow } from "@/components/admin/warehouse/WarehouseCards";
@@ -23,7 +23,7 @@ export default function WarehouseTaskArchiveCard({
     const date = item.archived_at ?? item.completed_at ?? item.created_at;
 
     return (
-        <motion.div
+        <m.div
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.2, delay: index * 0.04 }}
@@ -107,6 +107,6 @@ export default function WarehouseTaskArchiveCard({
                     )}
                 </span>
             </div>
-        </motion.div>
+        </m.div>
     );
 }

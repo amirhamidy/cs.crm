@@ -51,7 +51,7 @@ function toPersianDigits(value: string | number) {
     return String(value).replace(/\d/g, (digit) => "۰۱۲۳۴۵۶۷۸۹"[Number(digit)]);
 }
 
-/* ───────── کاشی وضعیت: عدد واقعی + فیلتر ───────── */
+
 const TILE_TONES = {
     all: {
         idle: "border-gray-200 bg-white text-gray-800 hover:border-gray-300 dark:border-white/[0.06] dark:bg-white/[0.03] dark:text-gray-100 dark:hover:border-white/[0.12]",
@@ -105,7 +105,7 @@ function StatusTile({
     );
 }
 
-/* ───────── کنترل انتخاب گروهی ───────── */
+
 function Segmented<T extends string>({
     icon,
     label,
@@ -165,7 +165,7 @@ export default function InternalTaskArchive() {
     const [statusFilter, setStatusFilter] =
         useState<StatusFilter>("all");
 
-    // صفحه‌بندی و جستجوی سمت سرور (فیلترهای نوع/تاریخ/وضعیت سمت کلاینت روی همین صفحه)
+    
     const list = usePaginatedList<InternalTaskArchiveType>(
         (params, signal) => internalTasksApi.archive(params, signal),
         { pageSize: 12, scrollTop: true },
@@ -179,7 +179,7 @@ export default function InternalTaskArchive() {
         ? "دریافت آرشیو تیکت‌ها با خطا مواجه شد."
         : null;
 
-    // روتین‌ها برای تفکیک «روتین» از «تیکت» به‌صورت کامل خوانده می‌شوند.
+    
     const loadRoutines = useCallback(async () => {
         try {
             const routineResponse = await fetchInternalTaskRoutines();
@@ -273,7 +273,7 @@ export default function InternalTaskArchive() {
                     }
                 }
 
-                // جستجو سمت سرور انجام می‌شود؛ اینجا فقط فیلترهای محلی اعمال می‌شوند.
+                
                 return true;
             });
     }, [
@@ -318,7 +318,7 @@ export default function InternalTaskArchive() {
         dateFilter !== "all" ||
         statusFilter !== "all";
 
-    /* توضیح دقیق فیلترهای فعال، به صورت متن ساده */
+    
     const activeFilterLabels = [
         search.trim() ? `جستجو: «${search.trim()}»` : null,
         statusFilter !== "all" ? `وضعیت: ${STATUS_LABELS[statusFilter]}` : null,
@@ -374,7 +374,7 @@ export default function InternalTaskArchive() {
                 </div>
             )}
 
-            {/* تعداد به تفکیک وضعیت (قابل کلیک برای فیلتر) */}
+            
             <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3">
                 <StatusTile
                     tone="all"
@@ -402,7 +402,7 @@ export default function InternalTaskArchive() {
                 />
             </div>
 
-            {/* جستجو و فیلترها */}
+            
             <div className="rounded-3xl border border-gray-200 bg-white p-3.5 shadow-sm dark:border-white/[0.06] dark:bg-white/[0.025]">
                 <div className="flex flex-col gap-4">
                     <div className="relative">
@@ -464,7 +464,7 @@ export default function InternalTaskArchive() {
                 </div>
             </div>
 
-            {/* خلاصه نتیجه: دقیقا چه چیزی نمایش داده می‌شود */}
+            { }
             <div className="flex flex-wrap items-center justify-between gap-2 px-1">
                 <div className="flex flex-wrap items-center gap-2">
                     <LayoutGrid

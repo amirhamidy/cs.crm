@@ -3,9 +3,9 @@ import { accountsApi, departmentsApi, listAll, toPaginated } from "@/lib/api";
 import type { Paginated } from "@/types/pagination";
 import { resolveFileUrl } from "./hrUtils";
 
-/* -------------------------------------------------------------------------- */
-/*                                   Types                                    */
-/* -------------------------------------------------------------------------- */
+
+
+
 
 export interface HumanResourceFile {
   id: number;
@@ -30,11 +30,7 @@ export interface HumanResource {
   steps: HumanResourceStep[];
   created_at: string;
   updated_at: string;
-  /**
-   * اگر بک‌اند فیلد `files` را داخل خود سند برگردانده باشد true است.
-   * در غیر این صورت کارت فایل‌ها را جداگانه از
-   * `GET /document/api/v1/{id}/files/` می‌گیرد.
-   */
+  
   filesEmbedded?: boolean;
 }
 
@@ -81,42 +77,32 @@ export interface DocumentStepPayload {
 }
 
 export interface DocumentFilePayload {
-  /** عنوان فایل؛ اگر ارسال نشود از نام فایل استفاده می‌شود. */
+  
   title?: string;
   file: File;
 }
 
-/** پاسخ استاندارد درخواست‌های لیست بک‌اند (DRF). */
+
 export type DocumentList<T> = Paginated<T>;
 
-/* -------------------------------------------------------------------------- */
-/*                              Base URL (fixed)                              */
-/* -------------------------------------------------------------------------- */
 
-/**
- * مسیر پایه‌ی سرویس اسناد روی بک‌اند:
- *   https://api.radcosys.ir/document/api/v1/
- *
- *   POST /document/api/v1/                      { title }
- *   POST /document/api/v1/{document_id}/files/  multipart: title + file
- */
+
+
+
+
 const DOC = "/document/api/v1";
 
 const api = axiosInstance;
 
-/** همه‌ی توابع لیستی این ماژول شکل `{ data }` برمی‌گردانند. */
+
 const wrap = <T>(data: T) => ({ data });
 
 const unwrapList = <T,>(data: unknown): T[] => toPaginated<T>(data).results;
 
-/* -------------------------------------------------------------------------- */
-/*                               Normalizers                                  */
-/* -------------------------------------------------------------------------- */
-/*
- * پاسخ بک‌اند همیشه به یک شکل ثابت تبدیل می‌شود تا کارت‌ها و مودال‌ها
- * هیچ‌وقت با `files` / `steps` ناموجود کرش نکنند و لینک فایل‌ها (که ممکن
- * است نسبی یا http باشد) همیشه درست باز شود.
- */
+
+
+
+
 
 const normalizeFile = (f: HumanResourceFile): HumanResourceFile => ({
   ...f,
@@ -137,15 +123,15 @@ export const normalizeDocument = (d: HumanResource): HumanResource => ({
   filesEmbedded: Array.isArray(d.files),
 });
 
-/* -------------------------------------------------------------------------- */
-/*                                  Documents                                 */
-/* -------------------------------------------------------------------------- */
 
-/** لیست همه‌ی اسناد (همه‌ی صفحات را خودکار می‌خواند). */
+
+
+
+
 export const getDocuments = async () =>
   wrap((await listAll<HumanResource>(`${DOC}/`)).map(normalizeDocument));
 
-/** یک صفحه از لیست اسناد (برای جدول‌های صفحه‌بندی‌شده). */
+
 export const getDocumentsPage = async (
   params: {
     page?: number;
@@ -155,8 +141,8 @@ export const getDocumentsPage = async (
   signal?: AbortSignal,
 ) => {
   const { data } = await api.get<unknown>(`${DOC}/`, {
-    // جدیدترین منبع اول بیاید تا منبع تازه‌ساخته‌شده در صفحه‌ی اول دیده شود.
-    // اگر بک‌اند ordering را پشتیبانی نکند، DRF این پارامتر را نادیده می‌گیرد.
+    
+    
     params: { ordering: "-id", ...params },
     signal,
   });
@@ -164,7 +150,7 @@ export const getDocumentsPage = async (
   return { ...page, results: page.results.map(normalizeDocument) };
 };
 
-/** یک سند. */
+
 export const getDocument = async (id: number) => {
   const r = await api.get<HumanResource>(`${DOC}/${id}/`);
   return { ...r, data: normalizeDocument(r.data) };
@@ -180,7 +166,7 @@ export const updateDocument = async (id: number, data: DocumentPayload) => {
   return { ...r, data: normalizeDocument(r.data) };
 };
 
-/** جایگزینی کامل سند (PUT). */
+
 export const replaceDocument = async (id: number, data: DocumentPayload) => {
   const r = await api.put<HumanResource>(`${DOC}/${id}/`, data);
   return { ...r, data: normalizeDocument(r.data) };
@@ -188,11 +174,11 @@ export const replaceDocument = async (id: number, data: DocumentPayload) => {
 
 export const deleteDocument = (id: number) => api.delete(`${DOC}/${id}/`);
 
-/* -------------------------------------------------------------------------- */
-/*                                   Files                                    */
-/* -------------------------------------------------------------------------- */
 
-/** لیست فایل‌های یک سند (همه‌ی صفحات). */
+
+
+
+
 export const getDocumentFiles = async (documentId: number) =>
   wrap(
     (await listAll<HumanResourceFile>(`${DOC}/${documentId}/files/`)).map(
@@ -200,7 +186,7 @@ export const getDocumentFiles = async (documentId: number) =>
     ),
   );
 
-/** یک صفحه از فایل‌های یک سند. */
+
 export const getDocumentFilesPage = async (
   documentId: number,
   params: { page?: number; page_size?: number; search?: string } = {},
@@ -212,11 +198,7 @@ export const getDocumentFilesPage = async (
   return { ...page, results: page.results.map(normalizeFile) };
 };
 
-/**
- * آپلود فایل روی یک سند:
- *   POST /document/api/v1/{document_id}/files/
- *   multipart/form-data  →  title (الزامی) + file (الزامی)
- */
+
 export const uploadDocumentFile = async (
   documentId: number,
   file: File,
@@ -237,11 +219,7 @@ export const getDocumentFile = async (id: number) => {
   return { ...r, data: normalizeFile(r.data) };
 };
 
-/**
- * ویرایش فایل. چون PATCH روی multipart است و بک‌اند هر دو فیلد را
- * الزامی گرفته، اگر فایل جدید نداشته باشید فقط `title` فرستاده می‌شود و
- * در صورت خطای ۴۰۰ باید فایل هم ارسال شود.
- */
+
 export const updateDocumentFile = (id: number, payload: DocumentFilePayload) => {
   const formData = new FormData();
   formData.append(
@@ -252,7 +230,7 @@ export const updateDocumentFile = (id: number, payload: DocumentFilePayload) => 
   return api.patch<HumanResourceFile>(`${DOC}/files/${id}/`, formData);
 };
 
-/** جایگزینی کامل فایل (PUT). */
+
 export const replaceDocumentFile = (id: number, payload: DocumentFilePayload) => {
   const formData = new FormData();
   formData.append("title", (payload.title ?? payload.file.name).trim() || "file");
@@ -263,11 +241,11 @@ export const replaceDocumentFile = (id: number, payload: DocumentFilePayload) =>
 export const deleteDocumentFile = (id: number) =>
   api.delete(`${DOC}/files/${id}/`);
 
-/* -------------------------------------------------------------------------- */
-/*                                   Steps                                    */
-/* -------------------------------------------------------------------------- */
 
-/** لیست مراحل یک سند (همه‌ی صفحات + مرتب‌سازی بر اساس order). */
+
+
+
+
 export const getDocumentSteps = async (documentId: number) =>
   wrap(
     (await listAll<HumanResourceStep>(`${DOC}/${documentId}/steps/`))
@@ -275,7 +253,7 @@ export const getDocumentSteps = async (documentId: number) =>
       .sort((a, b) => a.order - b.order),
   );
 
-/** یک صفحه از مراحل یک سند. */
+
 export const getDocumentStepsPage = async (
   documentId: number,
   params: { page?: number; page_size?: number; search?: string } = {},
@@ -296,20 +274,20 @@ export const getDocumentStep = (id: number) =>
 export const updateStep = (id: number, data: DocumentStepPayload) =>
   api.patch<HumanResourceStep>(`${DOC}/steps/${id}/`, data);
 
-/** جایگزینی کامل مرحله (PUT). */
+
 export const replaceStep = (id: number, data: DocumentStepPayload) =>
   api.put<HumanResourceStep>(`${DOC}/steps/${id}/`, data);
 
 export const deleteStep = (id: number) => api.delete(`${DOC}/steps/${id}/`);
 
-/* -------------------------------------------------------------------------- */
-/*                        Files of a step (backend-ready)                     */
-/* -------------------------------------------------------------------------- */
+
+
+
 
 const stepFilesUrl = (documentId: number, stepId: number) =>
   `${DOC}/${documentId}/steps/${stepId}/files/`;
 
-/** فایل‌های یک مرحله (همه‌ی صفحات). */
+
 export const getStepFiles = async (documentId: number, stepId: number) =>
   wrap(
     (await listAll<HumanResourceFile>(stepFilesUrl(documentId, stepId))).map(
@@ -317,7 +295,7 @@ export const getStepFiles = async (documentId: number, stepId: number) =>
     ),
   );
 
-/** یک صفحه از فایل‌های یک مرحله. */
+
 export const getStepFilesPage = async (
   documentId: number,
   stepId: number,
@@ -332,7 +310,7 @@ export const getStepFilesPage = async (
   return { ...page, results: page.results.map(normalizeFile) };
 };
 
-/** آپلود فایل روی یک مرحله. */
+
 export const uploadStepFile = (
   documentId: number,
   stepId: number,
@@ -382,9 +360,9 @@ export const deleteStepFile = (
 ) =>
   api.delete(`${stepFilesUrl(documentId, stepId)}${fileId}/delete/`);
 
-/* -------------------------------------------------------------------------- */
-/*                        Departments / Employees / Me                        */
-/* -------------------------------------------------------------------------- */
+
+
+
 
 export const getDepartments = async () =>
   wrap<Department[]>(
@@ -405,15 +383,15 @@ export const getEmployees = async () =>
 
 export const getMe = async () => wrap<CurrentUser>(await accountsApi.me());
 
-/* -------------------------------------------------------------------------- */
-/*                                  Helpers                                   */
-/* -------------------------------------------------------------------------- */
 
-/** آرایه‌ی خام اسناد (بدون wrapper) برای استفاده در کدهای جدید. */
+
+
+
+
 export const fetchDocumentsList = async (): Promise<HumanResource[]> =>
   (await listAll<HumanResource>(`${DOC}/`)).map(normalizeDocument);
 
-/** آرایه‌ی خام مراحل یک سند (بدون wrapper). */
+
 export const fetchDocumentStepsList = async (
   documentId: number,
 ): Promise<HumanResourceStep[]> =>

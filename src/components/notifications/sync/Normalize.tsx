@@ -114,7 +114,7 @@ export function normalizeRoutines(list: unknown[]): Routine[] {
     return out;
 }
 
-/** assigned_employee شناسه‌ی «کارمند» است (نه کاربر)؛ عدد ساده یا آبجکت را هندل می‌کند */
+
 function resolveAssigneeId(value: unknown): number {
     if (isRec(value)) {
         const raw = value.employee_id ?? value.employee ?? value.id ?? NaN;
@@ -208,7 +208,7 @@ export function buildNames(
     return { byId, byUserId, byUsername };
 }
 
-/** شناسه‌ی «کارمند» را از روی username کاربر لاگین‌شده پیدا می‌کند */
+
 export function resolveEmployeeId(
     list: unknown[],
     username: string | null,

@@ -64,6 +64,9 @@ export default function DepartmentScoreManager() {
     else setLoading(true);
     setError("");
     try {
+      
+      
+      
       const [employeeList, assignmentList] = await Promise.all([
         listAll<Employee>("/accounts/api/v1/employee/list/"),
         listAll<Assignment>("/department/api/v1/department_employee/list/"),

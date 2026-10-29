@@ -1,7 +1,7 @@
 "use client";
 import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { AnimatePresence, MotionConfig, motion } from "framer-motion";
+import { AnimatePresence, MotionConfig, m } from "framer-motion";
 import {
     CalendarCheck,
     CalendarClock,
@@ -673,7 +673,7 @@ export default function PersianCalendar() {
                                     {upcoming.map((item, i) => {
                                         const style = getTypeStyle(item.event.type);
                                         return (
-                                            <motion.li
+                                            <m.li
                                                 key={item.key}
                                                 initial={{ opacity: 0, x: 14 }}
                                                 animate={{ opacity: 1, x: 0 }}
@@ -713,7 +713,7 @@ export default function PersianCalendar() {
                                                         {item.rel}
                                                     </span>
                                                 </button>
-                                            </motion.li>
+                                            </m.li>
                                         );
                                     })}
                                 </ul>
@@ -815,7 +815,7 @@ export default function PersianCalendar() {
                                         {pickerOpen && pickerYear !== null && (
                                             <>
                                                 <div className="fixed inset-0 z-20" onClick={() => setPickerOpen(false)} />
-                                                <motion.div
+                                                <m.div
                                                     key="picker"
                                                     initial={{ opacity: 0, y: -8, scale: 0.96 }}
                                                     animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -847,14 +847,14 @@ export default function PersianCalendar() {
                                                     </div>
                                                     <div className="grid grid-cols-3 gap-1.5">
                                                         {JALALI_MONTHS.map((label, index) => {
-                                                            const m = index + 1;
-                                                            const active = pickerYear === currentJy && m === currentJm;
+                                                            const monthNum = index + 1;
+                                                            const active = pickerYear === currentJy && monthNum === currentJm;
                                                             return (
                                                                 <button
                                                                     key={label}
                                                                     type="button"
                                                                     onClick={() => {
-                                                                        goToMonth(pickerYear, m);
+                                                                        goToMonth(pickerYear, monthNum);
                                                                         setPickerOpen(false);
                                                                     }}
                                                                     className={`rounded-xl px-2 py-2.5 text-[11px] font-bold transition-[background-color,transform] active:scale-95 ${active
@@ -867,7 +867,7 @@ export default function PersianCalendar() {
                                                             );
                                                         })}
                                                     </div>
-                                                </motion.div>
+                                                </m.div>
                                             </>
                                         )}
                                     </AnimatePresence>
@@ -895,7 +895,7 @@ export default function PersianCalendar() {
                                                     }`}
                                             >
                                                 {view === value && (
-                                                    <motion.span
+                                                    <m.span
                                                         layoutId="view-pill"
                                                         transition={{ type: "spring", stiffness: 500, damping: 36 }}
                                                         className={`absolute inset-0 rounded-full ${GRADIENT}`}
@@ -935,7 +935,7 @@ export default function PersianCalendar() {
                                             }`}
                                     >
                                         {selected && (
-                                            <motion.span
+                                            <m.span
                                                 layoutId="qm-pill"
                                                 transition={{ type: "spring", stiffness: 500, damping: 38 }}
                                                 className={`absolute inset-0 rounded-full ${GRADIENT}`}

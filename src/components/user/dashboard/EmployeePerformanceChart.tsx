@@ -1,6 +1,6 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { m } from "framer-motion";
 import { CheckCircle2, Clock3, ListTodo, XCircle } from "lucide-react";
 import { useEmployeePerformance } from "@/hooks/useEmployeePerformance";
 
@@ -70,7 +70,7 @@ function PerformanceRow({
             </div>
 
             <div className="h-2 overflow-hidden rounded-full bg-muted">
-                <motion.div
+                <m.div
                     initial={{ width: 0 }}
                     animate={{ width: `${percent}%` }}
                     transition={{
@@ -111,7 +111,7 @@ export default function EmployeePerformanceCard() {
     }
 
     return (
-        <motion.div
+        <m.div
             dir="rtl"
             initial={{
                 opacity: 0,
@@ -255,6 +255,6 @@ export default function EmployeePerformanceCard() {
                     </span>
                 </div>
             )}
-        </motion.div>
+        </m.div>
     );
 }

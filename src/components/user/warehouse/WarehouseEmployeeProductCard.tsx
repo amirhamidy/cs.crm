@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, m } from "framer-motion";
 import { useTheme } from "next-themes";
 import {
     AlertTriangle,
@@ -252,7 +252,7 @@ export default function WarehouseEmployeeProductCard({
 
     return (
         <>
-            <motion.div
+            <m.div
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.96 }}
@@ -284,7 +284,7 @@ export default function WarehouseEmployeeProductCard({
                         </linearGradient>
                     </defs>
 
-                    <motion.rect
+                    <m.rect
                         x="1"
                         y="1"
                         width="calc(100% - 2px)"
@@ -600,7 +600,7 @@ export default function WarehouseEmployeeProductCard({
                                             : "rgba(15,23,42,.06)",
                                     }}
                                 >
-                                    <motion.div
+                                    <m.div
                                         initial={{ width: 0 }}
                                         animate={{
                                             width: `${stockPercentage}%`,
@@ -680,7 +680,7 @@ export default function WarehouseEmployeeProductCard({
                         {deleteError}
                     </p>
                 )}
-            </motion.div>
+            </m.div>
 
             <WarehouseEmployeeProductEditModal
                 isOpen={showEdit}
@@ -717,7 +717,7 @@ export default function WarehouseEmployeeProductCard({
 
             <AnimatePresence>
                 {showConfirm && (
-                    <motion.div
+                    <m.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
@@ -728,7 +728,7 @@ export default function WarehouseEmployeeProductCard({
                             backdropFilter: "blur(4px)",
                         }}
                     >
-                        <motion.div
+                        <m.div
                             initial={{ opacity: 0, scale: 0.96, y: 16 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.96, y: 16 }}
@@ -800,8 +800,8 @@ export default function WarehouseEmployeeProductCard({
                                     )}
                                 </button>
                             </div>
-                        </motion.div>
-                    </motion.div>
+                        </m.div>
+                    </m.div>
                 )}
             </AnimatePresence>
         </>

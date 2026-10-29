@@ -12,16 +12,11 @@ const G = [
 export const gradientOf = (n: number) => G[Math.abs(n) % G.length];
 export const initialOf = (t: string, f = "د") => t.trim().charAt(0) || f;
 
-/* -------------------------------------------------------------------------- */
-/*                               File URL helper                              */
-/* -------------------------------------------------------------------------- */
 
-/**
- * آدرس فایل را قابل‌باز‌شدن می‌کند:
- *  - مسیر نسبی (`/media/x.pdf`)  →  `https://api.radcosys.ir/media/x.pdf`
- *  - آدرس `http://` همان هاست API روی سایت https  →  `https://`
- *  - آدرس کامل هاست‌های دیگر (CDN / S3) دست‌نخورده می‌ماند.
- */
+
+
+
+
 export function resolveFileUrl(url?: string | null): string {
   if (!url) return "";
   if (/^(blob:|data:)/i.test(url)) return url;
@@ -44,9 +39,9 @@ export function resolveFileUrl(url?: string | null): string {
   return `${base}/${url.replace(/^\/+/, "")}`;
 }
 
-/* -------------------------------------------------------------------------- */
-/*                               Error extractor                              */
-/* -------------------------------------------------------------------------- */
+
+
+
 
 const FIELD_LABELS: Record<string, string> = {
   title: "عنوان",
@@ -54,7 +49,7 @@ const FIELD_LABELS: Record<string, string> = {
   order: "ترتیب",
 };
 
-/** خطای DRF / شبکه را به یک پیام فارسی قابل‌نمایش تبدیل می‌کند. */
+
 export function extractError(
   e: unknown,
   fallback = "عملیات انجام نشد، دوباره تلاش کنید.",
@@ -69,7 +64,7 @@ export function extractError(
 
   const pick = (v: unknown): string => {
     if (!v) return "";
-    if (typeof v === "string") return v.length > 300 ? "" : v; // صفحه‌ی HTML خطا را نشان نده
+    if (typeof v === "string") return v.length > 300 ? "" : v; 
     if (Array.isArray(v)) return v.map(pick).filter(Boolean).join("، ");
     if (typeof v === "object") {
       return Object.entries(v as Record<string, unknown>)

@@ -1,6 +1,6 @@
 "use client";
 
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, m } from "framer-motion";
 import { useTheme } from "next-themes";
 import {
   useCallback,
@@ -126,7 +126,7 @@ function CustomBarShape({
   const radius = Math.min(6, width / 2);
 
   return (
-    <motion.g
+    <m.g
       key={`${index}-${hoverKey}`}
       animate={isActive ? { scale: [1, 0.96, 1] } : { scale: 1 }}
       transition={{
@@ -173,7 +173,7 @@ function CustomBarShape({
         opacity={isActive ? 0.2 : 0.1}
         style={{ transition: "opacity 0.2s ease" }}
       />
-    </motion.g>
+    </m.g>
   );
 }
 
@@ -661,7 +661,7 @@ export default function SalesIssuesChart({
     : 0;
 
   return (
-    <motion.div
+    <m.div
       initial={{
         opacity: 0,
         y: 6,
@@ -709,7 +709,7 @@ export default function SalesIssuesChart({
             >
               {activeRange ===
                 range.key && (
-                  <motion.span
+                  <m.span
                     layoutId="salesIssuesRangeIndicator"
                     className="absolute inset-0 rounded-lg bg-white shadow-sm dark:bg-slate-800"
                     transition={{
@@ -737,7 +737,7 @@ export default function SalesIssuesChart({
       <div className="absolute left-2 top-14 z-20 min-w-[150px]">
         <AnimatePresence mode="wait">
           {activeBar && (
-            <motion.div
+            <m.div
               key={`${activeRange}-${activeBar.stage}`}
               initial={{
                 opacity: 0,
@@ -824,7 +824,7 @@ export default function SalesIssuesChart({
                   </div>
                 </>
               )}
-            </motion.div>
+            </m.div>
           )}
         </AnimatePresence>
       </div>
@@ -923,6 +923,6 @@ export default function SalesIssuesChart({
           </>
         )}
       </div>
-    </motion.div>
+    </m.div>
   );
 }

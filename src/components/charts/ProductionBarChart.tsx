@@ -1,6 +1,6 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { m } from "framer-motion";
 import { useTheme } from "next-themes";
 import { useMemo } from "react";
 import {
@@ -27,9 +27,9 @@ type Props = {
   seriesA: Series;
   seriesB: Series;
   emptyText?: string;
-  /** signed values (variance): negative bars rendered below the zero line */
+  
   signed?: boolean;
-  /** optional segmented range tabs (week/month/year) */
+  
   tabs?: { id: number; label: string }[];
   activeTab?: number | null;
   onTab?: (id: number) => void;
@@ -57,7 +57,7 @@ export default function ProductionBarChart({
   const tick = { fontSize: 11, fill: dark ? "#9ca3af" : "#6b7280" };
 
   return (
-    <motion.div
+    <m.div
       initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
@@ -150,6 +150,6 @@ export default function ProductionBarChart({
           </div>
         )}
       </div>
-    </motion.div>
+    </m.div>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { motion, AnimatePresence } from "framer-motion";
+import { m, AnimatePresence } from "framer-motion";
 import { useTheme } from "next-themes";
 import { Trash2 } from "lucide-react";
 
@@ -25,17 +25,17 @@ export default function CustomerDeleteModal({
     return (
         <AnimatePresence>
             {isOpen && (
-                <motion.div
+                <m.div
                     className="fixed inset-0 z-50 flex items-center justify-center px-4"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                 >
-                    <motion.div
+                    <m.div
                         className="absolute inset-0 bg-black/60 backdrop-blur-sm"
                         onClick={() => !isDeleting && onClose()}
                     />
-                    <motion.div
+                    <m.div
                         className={`relative z-10 w-full max-w-sm rounded-2xl p-6 shadow-2xl ${isDark ? "bg-[#13151f]" : "bg-white"
                             }`}
                         initial={{ scale: 0.9, opacity: 0, y: 20 }}
@@ -56,7 +56,7 @@ export default function CustomerDeleteModal({
                                 </p>
                             </div>
                             <div className="flex gap-3 w-full">
-                                <motion.button
+                                <m.button
                                     whileTap={{ scale: 0.96 }}
                                     onClick={onClose}
                                     disabled={isDeleting}
@@ -66,19 +66,19 @@ export default function CustomerDeleteModal({
                                         }`}
                                 >
                                     انصراف
-                                </motion.button>
-                                <motion.button
+                                </m.button>
+                                <m.button
                                     whileTap={{ scale: 0.96 }}
                                     onClick={onConfirm}
                                     disabled={isDeleting}
                                     className="flex-1 py-2.5 rounded-xl text-sm font-semibold bg-red-500 hover:bg-red-600 text-white transition-colors disabled:opacity-60"
                                 >
                                     {isDeleting ? "در حال حذف..." : "بله، حذف شود"}
-                                </motion.button>
+                                </m.button>
                             </div>
                         </div>
-                    </motion.div>
-                </motion.div>
+                    </m.div>
+                </m.div>
             )}
         </AnimatePresence>
     );

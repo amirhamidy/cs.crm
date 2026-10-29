@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, m } from "framer-motion";
 import { ExternalLink, Loader2, Paperclip, Trash2, Upload, X } from "lucide-react";
 import {
     apiErrorMessage,
@@ -80,7 +80,7 @@ export default function OrderTaskAttachmentsModal({
     return (
         <AnimatePresence>
             {isOpen && (
-                <motion.div
+                <m.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
@@ -88,7 +88,7 @@ export default function OrderTaskAttachmentsModal({
                     onClick={() => !busy && onClose()}
                     dir="rtl"
                 >
-                    <motion.div
+                    <m.div
                         initial={{ opacity: 0, scale: 0.95, y: 10 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.95, y: 10 }}
@@ -210,8 +210,8 @@ export default function OrderTaskAttachmentsModal({
                                 {error}
                             </p>
                         )}
-                    </motion.div>
-                </motion.div>
+                    </m.div>
+                </m.div>
             )}
         </AnimatePresence>
     );

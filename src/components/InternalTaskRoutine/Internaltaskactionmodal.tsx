@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, m } from "framer-motion";
 import { Ban, Check, CheckCircle2, FileUp, Loader, X } from "lucide-react";
 import { useTheme } from "next-themes";
 import type { InternalTask } from "./Types";
@@ -90,7 +90,7 @@ export default function InternalTaskActionModal({
 
     return (
         <AnimatePresence>
-            <motion.div
+            <m.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
@@ -100,7 +100,7 @@ export default function InternalTaskActionModal({
                     if (!loading) onClose();
                 }}
             >
-                <motion.div
+                <m.div
                     initial={{ scale: 0.94, y: 18 }}
                     animate={{ scale: 1, y: 0 }}
                     exit={{ scale: 0.94, y: 18 }}
@@ -234,8 +234,8 @@ export default function InternalTaskActionModal({
                             </button>
                         </div>
                     </form>
-                </motion.div>
-            </motion.div>
+                </m.div>
+            </m.div>
         </AnimatePresence>
     );
 }

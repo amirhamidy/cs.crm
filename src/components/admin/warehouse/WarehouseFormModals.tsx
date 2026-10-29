@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, m } from "framer-motion";
 import { Loader2, Power, PowerOff, X } from "lucide-react";
 import { apiErrorMessage, patchWarehouse, setWarehouseActive } from "@/lib/warehouseApi";
 import type { ApiWarehouse } from "@/types/warehouse";
@@ -23,7 +23,7 @@ function Shell({
     return (
         <AnimatePresence>
             {open && (
-                <motion.div
+                <m.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
@@ -31,7 +31,7 @@ function Shell({
                     onClick={() => !busy && onClose()}
                     dir="rtl"
                 >
-                    <motion.div
+                    <m.div
                         initial={{ opacity: 0, scale: 0.95, y: 10 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.95, y: 10 }}
@@ -39,8 +39,8 @@ function Shell({
                         className="w-full max-w-sm rounded-3xl bg-white p-5 shadow-2xl dark:bg-slate-900"
                     >
                         {children}
-                    </motion.div>
-                </motion.div>
+                    </m.div>
+                </m.div>
             )}
         </AnimatePresence>
     );

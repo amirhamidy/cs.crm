@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, m } from "framer-motion";
 import { useTheme } from "next-themes";
 import {
     CheckCircle2,
@@ -120,7 +120,7 @@ export default function WarehouseEmployeeBulkImportModal({
     return (
         <AnimatePresence>
             {isOpen && (
-                <motion.div
+                <m.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
@@ -131,7 +131,7 @@ export default function WarehouseEmployeeBulkImportModal({
                         backdropFilter: "blur(4px)",
                     }}
                 >
-                    <motion.div
+                    <m.div
                         initial={{ opacity: 0, scale: 0.96, y: 14 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.96, y: 14 }}
@@ -275,14 +275,14 @@ export default function WarehouseEmployeeBulkImportModal({
                         )}
 
                         {success && (
-                            <motion.div
+                            <m.div
                                 initial={{ opacity: 0, y: 4 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 className="mt-3 flex items-center justify-center gap-1.5 text-[12px] font-bold text-emerald-500"
                             >
                                 <CheckCircle2 size={14} />
                                 محصولات با موفقیت ثبت شدند
-                            </motion.div>
+                            </m.div>
                         )}
 
                         <div className="mt-4 flex gap-2">
@@ -308,8 +308,8 @@ export default function WarehouseEmployeeBulkImportModal({
                                 )}
                             </button>
                         </div>
-                    </motion.div>
-                </motion.div>
+                    </m.div>
+                </m.div>
             )}
         </AnimatePresence>
     );

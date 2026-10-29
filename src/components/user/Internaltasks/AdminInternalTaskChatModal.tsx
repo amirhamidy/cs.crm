@@ -7,7 +7,7 @@ import {
     useRef,
     useState,
 } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, m } from "framer-motion";
 import {
     Check,
     Download,
@@ -519,7 +519,7 @@ export default function AdminInternalTaskChatModal({
     return (
         <AnimatePresence>
             {open && (
-                <motion.div
+                <m.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
@@ -527,7 +527,7 @@ export default function AdminInternalTaskChatModal({
                     onMouseDown={onClose}
                     dir="rtl"
                 >
-                    <motion.div
+                    <m.div
                         initial={{
                             opacity: 0,
                             y: 24,
@@ -665,7 +665,7 @@ export default function AdminInternalTaskChatModal({
                                                                         employees
                                                                     );
                                                             return (
-                                                                <motion.div
+                                                                <m.div
                                                                     key={
                                                                         attachment.id
                                                                     }
@@ -760,6 +760,8 @@ export default function AdminInternalTaskChatModal({
                                                                                                 alt={
                                                                                                     fileName
                                                                                                 }
+                                                                                                loading="lazy"
+                                                                                                decoding="async"
                                                                                                 className="max-h-64 w-full object-cover transition-transform duration-300 hover:scale-[1.02]"
                                                                                             />
                                                                                         </button>
@@ -857,7 +859,7 @@ export default function AdminInternalTaskChatModal({
                                                                             </div>
                                                                         </div>
                                                                     </div>
-                                                                </motion.div>
+                                                                </m.div>
                                                             );
                                                         }
                                                     )}
@@ -876,7 +878,7 @@ export default function AdminInternalTaskChatModal({
                         <div className="shrink-0 border-t border-black/[0.06] bg-white/90 px-3 pb-3 pt-3 backdrop-blur-2xl dark:border-white/[0.06] dark:bg-[#151619]/95 sm:px-4">
                             <AnimatePresence>
                                 {selectedFiles.length > 0 && canParticipate && (
-                                    <motion.div
+                                    <m.div
                                         initial={{
                                             opacity: 0,
                                             height: 0,
@@ -917,7 +919,7 @@ export default function AdminInternalTaskChatModal({
                                                 ),
                                             )}
                                         </div>
-                                    </motion.div>
+                                    </m.div>
                                 )}
                             </AnimatePresence>
                             {canParticipate ? (
@@ -991,8 +993,8 @@ export default function AdminInternalTaskChatModal({
                                 </div>
                             )}
                         </div>
-                    </motion.div>
-                </motion.div>
+                    </m.div>
+                </m.div>
             )}
         </AnimatePresence>
     );

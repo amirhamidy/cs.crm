@@ -1,7 +1,8 @@
 "use client";
 
 import { memo, useEffect, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, m } from "framer-motion";
+import { useVisibleInterval } from "@/hooks/useVisibility";
 import {
     Ban, CalendarClock, CheckCircle2, ClipboardX, Clock, Loader, Loader2,
     MessageSquareText, RotateCcw, Trash2, UserRound, X,
@@ -12,7 +13,14 @@ import type { InternalTask, InternalTaskStatus, EmployeeRef } from "./types";
 import api from "@/lib/axiosInstance";
 import TimeRangeModal from "@/components/tasks/TimeRangeModal";
 import InternalTaskDeadlineModal from "./InternalTaskDeadlineModal";
-import InternalTaskChatModal from "./InternalTaskChatModal";
+import dynamic from "next/dynamic";
+import LazyLoading from "@/components/ui/LazyLoading";
+
+
+const InternalTaskChatModal = dynamic(() => import("./InternalTaskChatModal"), {
+    ssr: false,
+    loading: () => <LazyLoading />,
+});
 import InternalTaskActionModal from "./InternalTaskActionModal";
 import { reopenInternalTask } from "./Api";
 
@@ -122,11 +130,12 @@ function SentTaskCard({ task, index = 0, onDelete, onUpdated, isDeleting = false
         setStepDeadline({ started_at: task.started_at ?? null, deadline: task.deadline ?? null });
     }, [task.started_at, task.deadline]);
 
-    useEffect(() => {
-        if (!stepDeadline.deadline || !isActiveTask) return;
-        const interval = setInterval(() => forceTick(t => t + 1), 60000);
-        return () => clearInterval(interval);
-    }, [stepDeadline.deadline, isActiveTask]);
+    
+    useVisibleInterval(
+        () => forceTick((t) => t + 1),
+        60000,
+        Boolean(stepDeadline.deadline) && isActiveTask,
+    );
 
     async function handleDelete() {
         if (!onDelete) return;
@@ -184,7 +193,7 @@ function SentTaskCard({ task, index = 0, onDelete, onUpdated, isDeleting = false
 
     return (
         <>
-            <motion.div
+            <m.div
                 layout initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95 }} transition={{ duration: 0.2, delay: index * 0.05 }}
                 onHoverStart={() => setHovered(true)} onHoverEnd={() => setHovered(false)}
@@ -198,7 +207,7 @@ function SentTaskCard({ task, index = 0, onDelete, onUpdated, isDeleting = false
                 }}
             >
                 {urgency === "overdue" && (
-                    <motion.div className="pointer-events-none absolute inset-x-0 top-0 h-[2px]"
+                    <m.div className="pointer-events-none absolute inset-x-0 top-0 h-[2px]"
                         style={{ background: `linear-gradient(90deg,transparent,${accent},transparent)` }}
                         animate={{ opacity: [0.4, 1, 0.4] }} transition={{ duration: 2.2, repeat: Infinity }} />
                 )}
@@ -207,7 +216,7 @@ function SentTaskCard({ task, index = 0, onDelete, onUpdated, isDeleting = false
                     <defs><linearGradient id={`borderGrad-internal-${task.id}`} x1="100%" y1="100%" x2="0%" y2="0%">
                         <stop offset="0%" stopColor="#6366f1" /><stop offset="100%" stopColor="#8b5cf6" />
                     </linearGradient></defs>
-                    <motion.rect x="1" y="1" width="calc(100% - 2px)" height="calc(100% - 2px)" rx="30" ry="30"
+                    <m.rect x="1" y="1" width="calc(100% - 2px)" height="calc(100% - 2px)" rx="30" ry="30"
                         fill="none" stroke={`url(#borderGrad-internal-${task.id})`} strokeWidth="1.5" pathLength="1"
                         initial={{ pathLength: 0, opacity: 0 }}
                         animate={hovered ? { pathLength: 1, opacity: 1 } : { pathLength: 0, opacity: 0 }}
@@ -223,7 +232,7 @@ function SentTaskCard({ task, index = 0, onDelete, onUpdated, isDeleting = false
                         {accent && (
                             <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold"
                                 style={{ color: accent, background: `color-mix(in srgb, ${accent} 12%, transparent)`, border: `1px solid color-mix(in srgb, ${accent} 30%, transparent)` }}>
-                                <motion.span className="h-1.5 w-1.5 rounded-full" style={{ background: accent }}
+                                <m.span className="h-1.5 w-1.5 rounded-full" style={{ background: accent }}
                                     animate={urgency !== "soon" ? { opacity: [1, .3, 1] } : undefined}
                                     transition={{ duration: 1.6, repeat: Infinity }} />
                                 {URGENCY_LABEL[urgency as keyof typeof URGENCY_LABEL]}
@@ -280,14 +289,14 @@ function SentTaskCard({ task, index = 0, onDelete, onUpdated, isDeleting = false
                         {reopening ? <Loader2 size={13} className="animate-spin" /> : <RotateCcw size={13} />}بازگشایی تیکت
                     </button>
                 )}
-            </motion.div>
+            </m.div>
 
             <AnimatePresence>
                 {showConfirm && (
-                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                    <m.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                         className="fixed inset-0 z-50 flex items-center justify-center px-4"
                         style={{ background: "rgba(0,0,0,.45)", backdropFilter: "blur(3px)" }} onClick={closeConfirm}>
-                        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 16 }}
+                        <m.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 16 }}
                             onClick={e => e.stopPropagation()} dir="rtl"
                             className="flex w-full max-w-md flex-col overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-sm dark:border-white/[.06] dark:bg-[#0f172a]">
                             <div className="flex items-center justify-between px-8 pb-6 pt-8">
@@ -305,8 +314,8 @@ function SentTaskCard({ task, index = 0, onDelete, onUpdated, isDeleting = false
                                 <button type="button" onClick={closeConfirm} disabled={deleting} className="h-11 flex-1 rounded-full bg-gray-100 text-[13px] font-bold text-gray-600 dark:bg-white/[.05] dark:text-gray-300">انصراف</button>
                                 <button type="button" onClick={handleDelete} disabled={deleting} className="flex h-11 flex-1 items-center justify-center gap-2 rounded-full bg-red-600 text-[13px] font-bold text-white">{deleting ? <Loader size={14} className="animate-spin" /> : <><Trash2 size={13} />حذف کن</>}</button>
                             </div>
-                        </motion.div>
-                    </motion.div>
+                        </m.div>
+                    </m.div>
                 )}
             </AnimatePresence>
 
@@ -319,7 +328,7 @@ function SentTaskCard({ task, index = 0, onDelete, onUpdated, isDeleting = false
                 taskTitle={task.title}
                 onLoaded={(d) => setStepDeadline({ started_at: d.started_at, deadline: d.deadline })}
             />
-            <InternalTaskChatModal open={chatOpen} task={task} onClose={() => setChatOpen(false)} onUpdated={onUpdated || (() => { })} />
+            {chatOpen && <InternalTaskChatModal open={chatOpen} task={task} onClose={() => setChatOpen(false)} onUpdated={onUpdated || (() => { })} />}
         </>
     );
 }

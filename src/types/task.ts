@@ -59,17 +59,17 @@ export interface CreateTaskPayload {
 
 export type UpdateTaskPayload = Partial<CreateTaskPayload>;
 
-/** بدنه‌ی درخواست «انتقال تسک به دپارتمان دیگر» (multipart/form-data) */
+
 export interface TransferTaskPayload {
-  /** شناسه‌ی دپارتمان مقصد */
+  
   department: number;
-  /** توضیح کاربر؛ به متن خودکار لاگ اضافه می‌شود */
+  
   note?: string;
-  /** ضمیمه‌ها؛ روی لاگ انتقال ذخیره می‌شوند */
+  
   files?: File[];
 }
 
-/** پاسخ موفق انتقال؛ همان ساختار جزئیات تسک با مقادیر جدید */
+
 export interface TransferTaskResponse {
   id: number;
   title: string;
@@ -77,10 +77,10 @@ export interface TransferTaskResponse {
   case: number | null;
   department: number;
   department_name?: string;
-  /** برخی نسخه‌های بک‌اند نام دپارتمان را با این کلید برمی‌گردانند */
+  
   name_department?: string;
   current_step: number;
-  /** نام اولین مرحله‌ی دپارتمان جدید */
+  
   name_step_current?: string;
   current_step_name?: string;
   assigned_employee: number[];
@@ -92,7 +92,7 @@ export interface TransferTaskResponse {
   attachments?: unknown[];
 }
 
-/** پیام‌های خطای منطقی ۴۰۰ که بک‌اند ممکن است برگرداند */
+
 export type TransferTaskErrorBody =
   | { department: string[] }
   | { detail: string }

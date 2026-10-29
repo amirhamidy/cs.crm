@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, m } from "framer-motion";
 import {
     Ban,
     Calendar,
@@ -165,7 +165,7 @@ function NiceSelect({
             </label>
             <AnimatePresence>
                 {isOpen && (
-                    <motion.div
+                    <m.div
                         initial={{ opacity: 0, y: -10, scale: 0.95 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: -10, scale: 0.95 }}
@@ -190,7 +190,7 @@ function NiceSelect({
                                 {option.value === value && <Check size={14} />}
                             </button>
                         ))}
-                    </motion.div>
+                    </m.div>
                 )}
             </AnimatePresence>
         </div>
@@ -260,7 +260,7 @@ function TaskPicker({
             </button>
             <AnimatePresence>
                 {isOpen && (
-                    <motion.div
+                    <m.div
                         initial={{ opacity: 0, y: -10, scale: 0.97 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: -10, scale: 0.97 }}
@@ -306,7 +306,7 @@ function TaskPicker({
                                 ))
                             )}
                         </div>
-                    </motion.div>
+                    </m.div>
                 )}
             </AnimatePresence>
         </div>
@@ -479,7 +479,7 @@ export default function EmployeeCreateTaskRoutineModal({
     return (
         <AnimatePresence>
             {isOpen && (
-                <motion.div
+                <m.div
                     dir="rtl"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
@@ -493,7 +493,7 @@ export default function EmployeeCreateTaskRoutineModal({
                         if (!isSubmitting) onClose();
                     }}
                 >
-                    <motion.div
+                    <m.div
                         initial={{ opacity: 0, y: 20, scale: 0.97 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: 20, scale: 0.97 }}
@@ -727,8 +727,8 @@ export default function EmployeeCreateTaskRoutineModal({
                                 )}
                             </button>
                         </div>
-                    </motion.div>
-                </motion.div>
+                    </m.div>
+                </m.div>
             )}
         </AnimatePresence>
     );

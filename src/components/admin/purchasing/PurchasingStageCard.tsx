@@ -1,6 +1,6 @@
 "use client";
 
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, m } from "framer-motion";
 import { ChevronLeft, Loader, Pencil, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { createPortal } from "react-dom";
@@ -51,7 +51,7 @@ export default function PurchasingStageCard({
 
     const hasDependencies = tasks.length > 0;
 
-    // هر مرحله جدا صفحه‌بندی می‌شود تا ستون‌ها با زیاد شدن تسک‌ها طولانی نشوند.
+    
     const { page, setPage, totalPages, pageItems } = usePagination(tasks, STAGE_PAGE_SIZE, String(step.id));
 
     const statusCounts = tasks.reduce<Record<string, number>>((acc, task) => {
@@ -74,7 +74,7 @@ export default function PurchasingStageCard({
         tooltipVisible && hasDependencies && typeof document !== "undefined"
             ? createPortal(
                 <AnimatePresence>
-                    <motion.div
+                    <m.div
                         initial={{ opacity: 0, y: 5, scale: 0.95 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: 5, scale: 0.95 }}
@@ -91,7 +91,7 @@ export default function PurchasingStageCard({
                                 برای حذف، ابتدا وظایف این مرحله را حذف کنید
                             </span>
                         </div>
-                    </motion.div>
+                    </m.div>
                 </AnimatePresence>,
                 document.body
             )
@@ -99,7 +99,7 @@ export default function PurchasingStageCard({
 
     return (
         <>
-            <motion.div
+            <m.div
                 layout
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -247,7 +247,7 @@ export default function PurchasingStageCard({
                 ) : (
                     <div className="scrollbar-thin flex max-h-[520px] flex-col gap-2 overflow-y-auto p-2">
                         {pageItems.map((task, taskIndex) => (
-                            <motion.div
+                            <m.div
                                 key={task.id}
                                 initial={{ opacity: 0, y: 5 }}
                                 animate={{ opacity: 1, y: 0 }}
@@ -266,14 +266,14 @@ export default function PurchasingStageCard({
                                     )}
                                     onUpdated={onUpdated}
                                 />
-                            </motion.div>
+                            </m.div>
                         ))}
                         {totalPages > 1 && (
                             <Pagination compact page={page} totalPages={totalPages} onChange={setPage} />
                         )}
                     </div>
                 )}
-            </motion.div>
+            </m.div>
 
             {tooltip}
         </>

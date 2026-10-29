@@ -1,7 +1,7 @@
 "use client";
 
 import { ChangeEvent, KeyboardEvent, useEffect, useMemo, useRef, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, m } from "framer-motion";
 import { Check, Download, File, Loader2, MessageSquareText, Paperclip, Send, UserRound, X } from "lucide-react";
 import api from "@/lib/axiosInstance";
 import { useAuthStore } from "@/store/authStore";
@@ -471,7 +471,7 @@ export default function InternalTaskChatModal({ open, task, onClose, onUpdated }
     return (
         <AnimatePresence>
             {open && (
-                <motion.div
+                <m.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
@@ -479,7 +479,7 @@ export default function InternalTaskChatModal({ open, task, onClose, onUpdated }
                     onMouseDown={onClose}
                     dir="rtl"
                 >
-                    <motion.div
+                    <m.div
                         initial={{ opacity: 0, y: 24, scale: 0.97 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: 24, scale: 0.97 }}
@@ -588,7 +588,7 @@ export default function InternalTaskChatModal({ open, task, onClose, onUpdated }
                                                         );
 
                                                     return (
-                                                        <motion.div
+                                                        <m.div
                                                             key={attachment.id}
                                                             initial={{
                                                                 opacity: 0,
@@ -673,6 +673,8 @@ export default function InternalTaskChatModal({ open, task, onClose, onUpdated }
                                                                                             attachment.file
                                                                                         )}
                                                                                         alt={fileName}
+                                                                                        loading="lazy"
+                                                                                        decoding="async"
                                                                                         className="max-h-64 w-full object-cover transition-transform duration-300 hover:scale-[1.02]"
                                                                                     />
                                                                                 </button>
@@ -758,7 +760,7 @@ export default function InternalTaskChatModal({ open, task, onClose, onUpdated }
                                                                         )}
                                                                 </div>
                                                             </div>
-                                                        </motion.div>
+                                                        </m.div>
                                                     );
                                                 })}
                                             </div>
@@ -773,7 +775,7 @@ export default function InternalTaskChatModal({ open, task, onClose, onUpdated }
                         <div className="shrink-0 border-t border-black/[0.06] bg-white/90 px-3 pb-3 pt-3 backdrop-blur-2xl dark:border-white/[0.06] dark:bg-[#151619]/95 sm:px-4">
                             <AnimatePresence>
                                 {selectedFiles.length > 0 && (
-                                    <motion.div
+                                    <m.div
                                         initial={{ opacity: 0, height: 0 }}
                                         animate={{ opacity: 1, height: "auto" }}
                                         exit={{ opacity: 0, height: 0 }}
@@ -803,7 +805,7 @@ export default function InternalTaskChatModal({ open, task, onClose, onUpdated }
                                                 </div>
                                             ))}
                                         </div>
-                                    </motion.div>
+                                    </m.div>
                                 )}
                             </AnimatePresence>
 
@@ -857,8 +859,8 @@ export default function InternalTaskChatModal({ open, task, onClose, onUpdated }
                                 Enter برای ارسال · Shift + Enter برای خط جدید
                             </div>
                         </div>
-                    </motion.div>
-                </motion.div>
+                    </m.div>
+                </m.div>
             )}
         </AnimatePresence>
     );

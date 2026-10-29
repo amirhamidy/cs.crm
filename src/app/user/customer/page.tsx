@@ -1,13 +1,20 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { m, AnimatePresence } from "framer-motion";
 import { Users, Plus, Loader, RefreshCw, Filter, FileSpreadsheet, Search, X } from "lucide-react";
 import { useTheme } from "next-themes";
+import dynamic from "next/dynamic";
 import CustomerCard from "@/components/user/customer/CustomerCard";
-import AddCustomerModal from "@/components/user/customer/AddCustomerModal";
 import ImportExcelModal from "@/components/user/customer/ImportExcelModal";
+import LazyLoading from "@/components/ui/LazyLoading";
 import Pagination from "@/components/ui/Pagination";
+
+
+const AddCustomerModal = dynamic(() => import("@/components/user/customer/AddCustomerModal"), {
+    ssr: false,
+    loading: () => <LazyLoading />,
+});
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import { Customer, CustomerStatus } from "@/types/customer";
 import type { Employee } from "@/types/employee";
@@ -135,7 +142,7 @@ export default function CustomersPage() {
         try {
             setCounts(await customersApi.counts());
         } catch {
-            // در صورت خطا شمارنده‌ها بدون تغییر می‌مانند
+            
         }
     }, []);
 
@@ -531,7 +538,7 @@ export default function CustomersPage() {
             ) : (
                 <AnimatePresence mode="wait">
                     {customers.length === 0 ? (
-                        <motion.div
+                        <m.div
                             key="empty"
                             initial={{
                                 opacity: 0,
@@ -561,9 +568,9 @@ export default function CustomersPage() {
                                         ? "مشتری بالقوه‌ای یافت نشد"
                                         : "مشتری فعالی یافت نشد"}
                             </p>
-                        </motion.div>
+                        </m.div>
                     ) : (
-                        <motion.div
+                        <m.div
                             layout
                             key="grid"
                             className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
@@ -588,7 +595,7 @@ export default function CustomersPage() {
                                     )
                                 )}
                             </AnimatePresence>
-                        </motion.div>
+                        </m.div>
                     )}
                 </AnimatePresence>
             )}
@@ -601,12 +608,14 @@ export default function CustomersPage() {
                 />
             )}
 
-            <AddCustomerModal
-                isOpen={showAdd}
-                onClose={() => setShowAdd(false)}
-                onAdded={handleAdded}
-                allowDuplicatePhone
-            />
+            {showAdd && (
+                <AddCustomerModal
+                    isOpen={showAdd}
+                    onClose={() => setShowAdd(false)}
+                    onAdded={handleAdded}
+                    allowDuplicatePhone
+                />
+            )}
 
             <ImportExcelModal
                 isOpen={showImport}

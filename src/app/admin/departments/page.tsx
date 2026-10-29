@@ -8,7 +8,7 @@ import {
     InputHTMLAttributes,
     useMemo,
 } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { m, AnimatePresence } from "framer-motion";
 import { useTheme } from "next-themes";
 import {
     Plus,
@@ -183,8 +183,7 @@ export default function DepartmentsPage() {
 
     const handleAddDepartment = async (data: { name: string }) => {
         await addDepartment(data.name);
-        await fetchAll();
-        await fetchTasks();
+        await Promise.all([fetchAll(), fetchTasks()]);
     };
 
     const handleEditDepartment = async () => {
@@ -219,8 +218,7 @@ export default function DepartmentsPage() {
 
         try {
             await deleteDepartment(deleteTarget.id);
-            await fetchAll();
-            await fetchTasks();
+            await Promise.all([fetchAll(), fetchTasks()]);
         } finally {
             setDeleteLoading(false);
             setDeleteTarget(null);
@@ -311,7 +309,7 @@ export default function DepartmentsPage() {
 
                 <AnimatePresence>
                     {editDept && (
-                        <motion.div
+                        <m.div
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
@@ -326,7 +324,7 @@ export default function DepartmentsPage() {
                                 setEditDept(null)
                             }
                         >
-                            <motion.div
+                            <m.div
                                 initial={{
                                     opacity: 0,
                                     y: 16,
@@ -419,7 +417,7 @@ export default function DepartmentsPage() {
 
                                     <AnimatePresence mode="wait">
                                         {editSuccess ? (
-                                            <motion.div
+                                            <m.div
                                                 key="success"
                                                 initial={{
                                                     opacity: 0,
@@ -439,9 +437,9 @@ export default function DepartmentsPage() {
                                                     size={16}
                                                 />
                                                 تغییرات با موفقیت ذخیره شد
-                                            </motion.div>
+                                            </m.div>
                                         ) : (
-                                            <motion.div
+                                            <m.div
                                                 key="actions"
                                                 initial={{
                                                     opacity: 0,
@@ -469,7 +467,7 @@ export default function DepartmentsPage() {
                                                     انصراف
                                                 </button>
 
-                                                <motion.button
+                                                <m.button
                                                     type="button"
                                                     onClick={
                                                         handleEditDepartment
@@ -494,13 +492,13 @@ export default function DepartmentsPage() {
                                                         />
                                                     )}
                                                     ذخیره تغییرات
-                                                </motion.button>
-                                            </motion.div>
+                                                </m.button>
+                                            </m.div>
                                         )}
                                     </AnimatePresence>
                                 </div>
-                            </motion.div>
-                        </motion.div>
+                            </m.div>
+                        </m.div>
                     )}
                 </AnimatePresence>
 
@@ -540,8 +538,7 @@ export default function DepartmentsPage() {
                     <div className="flex items-center gap-2">
                         <button
                             onClick={async () => {
-                                await fetchAll();
-                                await fetchTasks();
+                                await Promise.all([fetchAll(), fetchTasks()]);
                             }}
                             disabled={loading}
                             className="flex h-10 w-10 items-center justify-center rounded-2xl transition-colors disabled:opacity-50"
@@ -612,7 +609,7 @@ export default function DepartmentsPage() {
 
                 {!loading &&
                     filteredDepartments.length > 0 && (
-                        <motion.div
+                        <m.div
                             layout
                             className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3"
                         >
@@ -667,7 +664,7 @@ export default function DepartmentsPage() {
                                     }
                                 )}
                             </AnimatePresence>
-                        </motion.div>
+                        </m.div>
                     )}
             </div>
         </>

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { motion } from "framer-motion";
+import { m } from "framer-motion";
 import {
     ChevronRight,
     ChevronLeft,
@@ -42,7 +42,7 @@ interface MonthData {
     endISO: string;
 }
 
-/* ───────────────────────── Helpers ───────────────────────── */
+
 
 const weekDays = ["شنبه", "یکشنبه", "دوشنبه", "سه‌شنبه", "چهارشنبه", "پنجشنبه", "جمعه"];
 const toISODate = (d: Date) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
@@ -61,13 +61,13 @@ const getSeasonName = (month: number) => (month <= 3 ? "بهار" : month <= 6 ?
 const getSeasonStartMonth = (month: number) => Math.floor((month - 1) / 3) * 3 + 1;
 const timeFmt = new Intl.DateTimeFormat("fa-IR", { hour: "2-digit", minute: "2-digit" });
 
-/** Frosted-blue surface used by every panel */
+
 const glass =
     "border border-white/70 bg-white/55 backdrop-blur-xl shadow-[0_10px_40px_-18px_rgba(37,99,235,0.35)] dark:border-white/[0.08] dark:bg-white/[0.04] dark:shadow-none";
 
 const focusRing = "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500";
 
-/* ───────────────────────── Day cell ───────────────────────── */
+
 
 function DayCell({ date, events, noteCount, isToday, compact, onSelect }: {
     date: Date;
@@ -85,7 +85,7 @@ function DayCell({ date, events, noteCount, isToday, compact, onSelect }: {
     const types = Array.from(new Set(events.map((e) => getEventType(e.type)))).slice(0, 4);
 
     return (
-        <motion.button
+        <m.button
             type="button"
             whileTap={{ scale: 0.97 }}
             onClick={() => onSelect(date)}
@@ -111,7 +111,7 @@ function DayCell({ date, events, noteCount, isToday, compact, onSelect }: {
                 )}
             </div>
 
-            {/* Event titles (roomy screens, month view) */}
+            
             {!compact && visible.length > 0 && (
                 <div className="hidden flex-col gap-1 sm:flex">
                     {visible.map((event) => {
@@ -127,7 +127,7 @@ function DayCell({ date, events, noteCount, isToday, compact, onSelect }: {
                 </div>
             )}
 
-            {/* Dots (mobile / season view) */}
+            
             {types.length > 0 && (
                 <div className={`mt-auto flex-wrap items-center gap-1 ${compact ? "flex" : "flex sm:hidden"}`}>
                     {types.map((type) => <span key={type} className={`h-1.5 w-1.5 rounded-full ${getTypeStyle(type).dot}`} />)}
@@ -136,11 +136,11 @@ function DayCell({ date, events, noteCount, isToday, compact, onSelect }: {
             )}
 
             {holiday && !compact && <span className="mt-auto hidden text-[8.5px] font-bold text-rose-400 sm:block">{friday ? "جمعه" : "تعطیل"}</span>}
-        </motion.button>
+        </m.button>
     );
 }
 
-/* ───────────────────────── Month grid ───────────────────────── */
+
 
 function CalendarMonthGrid({ month, eventsByDay, noteCountByDay, todayISO, compact, onSelectDate }: {
     month: MonthData;
@@ -195,7 +195,7 @@ function CalendarMonthGrid({ month, eventsByDay, noteCountByDay, todayISO, compa
     );
 }
 
-/* ───────────────────────── Page ───────────────────────── */
+
 
 export default function PersianCalendar() {
     const router = useRouter();
@@ -291,7 +291,7 @@ export default function PersianCalendar() {
         return () => { cancelled = true; };
     }, [startISO, endISO]);
 
-    // Deep links: ?note=ID or ?event=ID open the matching day
+    
     useEffect(() => {
         if (loading) return;
         const eventParam = searchParams.get("event");
@@ -406,15 +406,15 @@ export default function PersianCalendar() {
     return (
         <>
             <div dir="rtl" className="relative mx-auto w-full max-w-[1400px] overflow-hidden rounded-[2rem] border border-white/70 bg-gradient-to-br from-sky-50 via-blue-50 to-indigo-100 p-3 sm:p-5 dark:border-white/[0.07] dark:from-[#060d24] dark:via-[#0a1740] dark:to-[#0b1d4f]">
-                {/* ambient glow */}
+                
                 <div className="pointer-events-none absolute -right-24 -top-24 h-80 w-80 rounded-full bg-blue-500/25 blur-3xl dark:bg-blue-500/20" />
                 <div className="pointer-events-none absolute -bottom-32 left-1/4 h-96 w-96 rounded-full bg-cyan-400/20 blur-3xl dark:bg-cyan-500/10" />
                 <div className="pointer-events-none absolute left-0 top-1/3 h-72 w-72 rounded-full bg-indigo-500/15 blur-3xl" />
 
                 <div className="relative grid gap-4 lg:grid-cols-[300px_minmax(0,1fr)]">
-                    {/* ───── Sidebar ───── */}
+                    
                     <aside className="flex flex-col gap-4">
-                        {/* Today hero */}
+                        
                         <div className="relative overflow-hidden rounded-[1.75rem] bg-gradient-to-br from-blue-600 via-blue-500 to-cyan-400 p-5 text-white shadow-[0_24px_50px_-20px_rgba(37,99,235,0.8)]">
                             <div className="pointer-events-none absolute -left-8 -top-10 h-36 w-36 rounded-full bg-white/25 blur-2xl" />
                             <div className="pointer-events-none absolute -bottom-14 right-4 h-36 w-36 rounded-full bg-indigo-500/40 blur-3xl" />
@@ -432,7 +432,7 @@ export default function PersianCalendar() {
                             </button>
                         </div>
 
-                        {/* Stats */}
+                        
                         {!loading && (
                             <div className="grid grid-cols-3 gap-2">
                                 {stats.map(({ label, value, Icon, tone }) => (
@@ -445,7 +445,7 @@ export default function PersianCalendar() {
                             </div>
                         )}
 
-                        {/* Upcoming */}
+                        
                         <div className={`${glass} rounded-[1.5rem] p-4`}>
                             <h4 className="mb-3 text-[12.5px] font-extrabold text-slate-700 dark:text-slate-200">رویدادهای پیش رو</h4>
                             {loading ? (
@@ -481,7 +481,7 @@ export default function PersianCalendar() {
                             )}
                         </div>
 
-                        {/* Breakdown */}
+                        
                         {!loading && eventTypeCount.length > 0 && (
                             <div className={`${glass} rounded-[1.5rem] p-4`}>
                                 <h4 className="mb-3 text-[12.5px] font-extrabold text-slate-700 dark:text-slate-200">توزیع رویدادها</h4>
@@ -495,7 +495,7 @@ export default function PersianCalendar() {
                                                     <span className="text-slate-400">{toPersianDigits(count)}</span>
                                                 </div>
                                                 <div className="h-1.5 overflow-hidden rounded-full bg-slate-500/10">
-                                                    <motion.div initial={{ width: 0 }} animate={{ width: `${(count / maxTypeCount) * 100}%` }} transition={{ duration: 0.5, ease: "easeOut" }} className={`h-full rounded-full ${style.bar}`} />
+                                                    <m.div initial={{ width: 0 }} animate={{ width: `${(count / maxTypeCount) * 100}%` }} transition={{ duration: 0.5, ease: "easeOut" }} className={`h-full rounded-full ${style.bar}`} />
                                                 </div>
                                             </div>
                                         );
@@ -505,9 +505,9 @@ export default function PersianCalendar() {
                         )}
                     </aside>
 
-                    {/* ───── Main ───── */}
+                    
                     <main className="min-w-0 space-y-4">
-                        {/* Toolbar */}
+                        
                         <div className={`${glass} relative z-20 flex flex-wrap items-center justify-between gap-3 rounded-[1.75rem] px-4 py-3`}>
                             <div className="flex items-center gap-2">
                                 <button type="button" aria-label="قبلی" onClick={() => changeDate(1)} className={`flex h-10 w-10 items-center justify-center rounded-full border border-white/80 bg-white/70 text-slate-500 transition hover:bg-blue-500 hover:text-white dark:border-white/[0.08] dark:bg-white/[0.05] dark:text-slate-300 dark:hover:bg-blue-500 ${focusRing}`}><ChevronRight size={16} /></button>
@@ -521,7 +521,7 @@ export default function PersianCalendar() {
                                     {pickerOpen && pickerYear !== null && (
                                         <>
                                             <div className="fixed inset-0 z-20" onClick={() => setPickerOpen(false)} />
-                                            <motion.div
+                                            <m.div
                                                 initial={{ opacity: 0, y: -8, scale: 0.97 }}
                                                 animate={{ opacity: 1, y: 0, scale: 1 }}
                                                 transition={{ duration: 0.15 }}
@@ -534,14 +534,14 @@ export default function PersianCalendar() {
                                                 </div>
                                                 <div className="grid grid-cols-3 gap-1.5">
                                                     {JALALI_MONTHS.map((label, index) => {
-                                                        const m = index + 1;
-                                                        const active = pickerYear === currentJy && m === currentJm;
+                                                        const monthNum = index + 1;
+                                                        const active = pickerYear === currentJy && monthNum === currentJm;
                                                         return (
-                                                            <button key={label} type="button" onClick={() => { goToMonth(pickerYear, m); setPickerOpen(false); }} className={`rounded-xl px-2 py-2.5 text-[11px] font-bold transition ${active ? "bg-gradient-to-br from-blue-600 to-cyan-400 text-white shadow-md shadow-blue-500/30" : "bg-blue-500/[0.07] text-slate-600 hover:bg-blue-500/15 dark:text-slate-300"}`}>{label}</button>
+                                                            <button key={label} type="button" onClick={() => { goToMonth(pickerYear, monthNum); setPickerOpen(false); }} className={`rounded-xl px-2 py-2.5 text-[11px] font-bold transition ${active ? "bg-gradient-to-br from-blue-600 to-cyan-400 text-white shadow-md shadow-blue-500/30" : "bg-blue-500/[0.07] text-slate-600 hover:bg-blue-500/15 dark:text-slate-300"}`}>{label}</button>
                                                         );
                                                     })}
                                                 </div>
-                                            </motion.div>
+                                            </m.div>
                                         </>
                                     )}
                                 </div>
@@ -561,7 +561,7 @@ export default function PersianCalendar() {
                             </div>
                         </div>
 
-                        {/* Quick months */}
+                        
                         <div className="flex items-center gap-2 overflow-x-auto pb-1">
                             {quickMonths.map(({ jy, jm }) => {
                                 const selected = jy === currentJy && jm === currentJm;
@@ -575,7 +575,7 @@ export default function PersianCalendar() {
                             })}
                         </div>
 
-                        {/* Grid(s) */}
+                        
                         {loading ? (
                             <div className={`${glass} rounded-[1.75rem] p-4`}>
                                 <div className="grid grid-cols-7 gap-1.5">

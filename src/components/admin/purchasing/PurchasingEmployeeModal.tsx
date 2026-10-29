@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, m } from "framer-motion";
 import { AlertCircle, Check, Loader2, Search, UserPlus, X } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
-import { listAll } from "@/lib/api";
+import { fetchPage } from "@/lib/api";
+import { useInfiniteOptions, type InfiniteFetcher } from "@/hooks/useInfiniteOptions";
 import type { ApiPurchasingEmployee } from "@/types/purchasing";
 
 interface EmployeeItem {
@@ -31,37 +32,45 @@ const G = [
 ];
 
 export default function PurchasingEmployeeModal({ open, existingEmployees, onClose, onSaved }: Props) {
-    const [employees, setEmployees] = useState<EmployeeItem[]>([]);
-    const [search, setSearch] = useState("");
     const [selected, setSelected] = useState<number | null>(null);
-    const [fetching, setFetching] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
 
+    
+    
+    const employeeFetcher = useCallback<InfiniteFetcher<EmployeeItem>>(
+        (params, signal) => fetchPage<EmployeeItem>("/accounts/api/v1/employee/list/", params, signal),
+        [],
+    );
+
+    const {
+        items: employees,
+        search,
+        setSearch,
+        loading: fetching,
+        loadingMore,
+        hasMore,
+        error: loadError,
+        loadMore,
+    } = useInfiniteOptions<EmployeeItem>(employeeFetcher, { enabled: open, pageSize: 25 });
+
+    const listRef = useRef<HTMLDivElement>(null);
+    const onListScroll = useCallback(() => {
+        const el = listRef.current;
+        if (!el) return;
+        if (el.scrollHeight - el.scrollTop - el.clientHeight < 80) loadMore();
+    }, [loadMore]);
+
     useEffect(() => {
         if (!open) return;
-        let mounted = true;
-        setSearch("");
         setSelected(null);
         setError("");
-        setFetching(true);
-        listAll<EmployeeItem>("/accounts/api/v1/employee/list/")
-            .then((list) => {
-                if (!mounted) return;
-                const existing = new Set(existingEmployees.map((x) => x.employee));
-                setEmployees(list.filter((x) => !existing.has(x.id)));
-            })
-            .catch(() => mounted && setError("دریافت لیست کارکنان انجام نشد."))
-            .finally(() => mounted && setFetching(false));
-        return () => {
-            mounted = false;
-        };
-    }, [open, existingEmployees]);
+        setSearch("");
+    }, [open, setSearch]);
 
-    const visible = useMemo(() => {
-        const q = search.trim().toLowerCase();
-        return q ? employees.filter((e) => (e.full_name || "").toLowerCase().includes(q) || (e.username || "").toLowerCase().includes(q)) : employees;
-    }, [employees, search]);
+    
+    const existingSet = useMemo(() => new Set(existingEmployees.map((x) => x.employee)), [existingEmployees]);
+    const visible = useMemo(() => employees.filter((e) => !existingSet.has(e.id)), [employees, existingSet]);
 
     const close = () => !loading && onClose();
 
@@ -87,7 +96,7 @@ export default function PurchasingEmployeeModal({ open, existingEmployees, onClo
     return createPortal(
         <AnimatePresence>
             {open && (
-                <motion.div
+                <m.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
@@ -95,7 +104,7 @@ export default function PurchasingEmployeeModal({ open, existingEmployees, onClo
                     style={{ background: "rgba(0,0,0,0.45)", backdropFilter: "blur(3px)" }}
                     onMouseDown={close}
                 >
-                    <motion.div
+                    <m.div
                         initial={{ opacity: 0, y: 16, scale: 0.98 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: 16, scale: 0.98 }}
@@ -125,11 +134,13 @@ export default function PurchasingEmployeeModal({ open, existingEmployees, onClo
                                 <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="جستجوی نام یا نام کاربری..." className="w-full bg-transparent text-[12px] font-semibold text-gray-900 outline-none placeholder:text-gray-400 dark:text-white" />
                             </div>
 
-                            <div className="max-h-[280px] space-y-1.5 overflow-y-auto">
-                                {fetching ? (
+                            <div ref={listRef} onScroll={onListScroll} className="max-h-[280px] space-y-1.5 overflow-y-auto">
+                                {fetching && employees.length === 0 ? (
                                     <div className="flex justify-center py-8">
                                         <Loader2 size={18} className="animate-spin text-indigo-500" />
                                     </div>
+                                ) : loadError && employees.length === 0 ? (
+                                    <p className="py-8 text-center text-[11px] text-red-500">دریافت لیست کارکنان انجام نشد.</p>
                                 ) : visible.length === 0 ? (
                                     <p className="py-8 text-center text-[11px] text-gray-400">
                                         {employees.length === 0 ? "همه کارمندان قبلاً به تیم اضافه شده‌اند" : "کارمندی یافت نشد"}
@@ -139,7 +150,7 @@ export default function PurchasingEmployeeModal({ open, existingEmployees, onClo
                                         const active = selected === e.id;
                                         const name = e.full_name || e.username || `کارمند ${e.id}`;
                                         return (
-                                            <motion.button
+                                            <m.button
                                                 key={e.id}
                                                 type="button"
                                                 initial={{ opacity: 0, x: 6 }}
@@ -167,9 +178,20 @@ export default function PurchasingEmployeeModal({ open, existingEmployees, onClo
                                                         <Check size={11} className="text-white" strokeWidth={3} />
                                                     </span>
                                                 )}
-                                            </motion.button>
+                                            </m.button>
                                         );
                                     })
+                                )}
+
+                                {loadingMore && (
+                                    <div className="flex justify-center py-3">
+                                        <Loader2 size={14} className="animate-spin text-indigo-500" />
+                                    </div>
+                                )}
+                                {!loadingMore && hasMore && visible.length > 0 && (
+                                    <button type="button" onClick={loadMore} className="w-full py-2 text-center text-[11px] font-bold text-indigo-500">
+                                        نمایش بیشتر
+                                    </button>
                                 )}
                             </div>
 
@@ -182,13 +204,13 @@ export default function PurchasingEmployeeModal({ open, existingEmployees, onClo
                         </div>
 
                         <div className="flex shrink-0 px-8 pb-8 pt-5">
-                            <motion.button type="button" whileTap={{ scale: 0.97 }} onClick={submit} disabled={loading || fetching || !selected} className="flex h-11 w-full items-center justify-center gap-2 rounded-full bg-indigo-600 text-[13px] font-bold text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-40">
+                            <m.button type="button" whileTap={{ scale: 0.97 }} onClick={submit} disabled={loading || fetching || !selected} className="flex h-11 w-full items-center justify-center gap-2 rounded-full bg-indigo-600 text-[13px] font-bold text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-40">
                                 {loading ? <Loader2 size={15} className="animate-spin" /> : <UserPlus size={14} />}
                                 افزودن به تیم
-                            </motion.button>
+                            </m.button>
                         </div>
-                    </motion.div>
-                </motion.div>
+                    </m.div>
+                </m.div>
             )}
         </AnimatePresence>,
         document.body

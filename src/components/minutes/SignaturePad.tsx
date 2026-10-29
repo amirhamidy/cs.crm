@@ -8,7 +8,7 @@ const W = 700;
 const H = 240;
 
 interface SignaturePadProps {
-  /** مقدار PNG Data URL یا null (وقتی پاک شده) */
+  
   onChange: (dataUrl: string | null) => void;
   disabled?: boolean;
 }

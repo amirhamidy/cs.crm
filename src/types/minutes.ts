@@ -88,9 +88,9 @@ export interface PublicSigner {
   }>;
 }
 
-/** گزینه‌ی کاربر داخلی برای انتخاب به‌عنوان امضاکننده */
+
 export interface UserOption {
-  id: number; // شناسه‌ی User (همان مقداری که در فیلد signer.user ارسال می‌شود)
+  id: number; 
   username: string;
   label: string;
   phone: string | null;

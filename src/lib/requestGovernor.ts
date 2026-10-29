@@ -7,20 +7,17 @@ import axios, {
 
 declare module "axios" {
   interface AxiosRequestConfig {
-    /**
-     * "low" = کارهای پس‌زمینه (مثل sync نوتیفیکیشن). سقف هم‌زمانی جدا و کمتری دارند
-     * تا هیچ‌وقت درخواست‌های کاربر را پشت خودشان نگه ندارند. پیش‌فرض: عادی.
-     */
+    
     priority?: "low";
   }
 }
 
 export interface GovernorOptions {
-  /** حداکثر GET هم‌زمان در کل برنامه */
+  
   maxConcurrent?: number;
-  /** از آن سقف، حداکثر چند تا می‌تواند «پس‌زمینه» باشد (بقیه برای کاربر رزرو است) */
+  
   maxBackground?: number;
-  /** GETهای کاملاً یکسانِ هم‌زمان یک درخواست شبکه‌ای می‌شوند */
+  
   dedupeGet?: boolean;
 }
 
@@ -49,17 +46,10 @@ const stats: GovernorStats = {
   peakQueued: 0,
 };
 
-/** برای dev/عیب‌یابی: چند درخواست واقعاً به شبکه رفت و چند تا حذف (dedupe) شد. */
+
 export const getRequestStats = (): Readonly<GovernorStats> => ({ ...stats });
 
-/**
- * کنترل‌گر سراسری درخواست‌ها، به‌صورت adapter روی axios:
- *  - بعد از request interceptorها اجرا می‌شود (هدر Authorization سالم است)
- *    و قبل از response interceptorها (چرخهٔ ریفرش توکن/۴۰۱ بدون تغییر کار می‌کند).
- *  - فقط GET را صف و dedupe می‌کند؛ POST/PUT/DELETE/آپلود هیچ‌وقت منتظر نمی‌مانند.
- *  - درخواستی که signal دارد dedupe نمی‌شود (لغوِ یکی نباید دیگری را بکشد)،
- *    ولی هنگام انتظار در صف، با abort از صف بیرون می‌رود.
- */
+
 export function installRequestGovernor(
   instance: AxiosInstance,
   { maxConcurrent = 6, maxBackground = 2, dedupeGet = true }: GovernorOptions = {},
@@ -118,7 +108,7 @@ export function installRequestGovernor(
           "abort",
           () => {
             const index = queue.indexOf(job);
-            if (index === -1) return; // قبلاً شروع شده؛ خود adapter لغو را مدیریت می‌کند
+            if (index === -1) return; 
             queue.splice(index, 1);
             stats.canceledInQueue += 1;
             stats.queued = queue.length;
@@ -136,7 +126,7 @@ export function installRequestGovernor(
   const governed: AxiosAdapter = (config) => {
     const method = (config.method ?? "get").toLowerCase();
 
-    // فقط GET کنترل می‌شود؛ تغییر داده (POST/PUT/PATCH/DELETE) و آپلود هرگز صف نمی‌شود.
+    
     if (method !== "get") return base(config);
 
     const background = config.priority === "low";
@@ -154,7 +144,7 @@ export function installRequestGovernor(
 
     if (existing) {
       stats.deduped += 1;
-      // کپی سطحی: هر مصرف‌کننده response خودش را دارد (transformResponse روی شیء مشترک نمی‌نشیند)
+      
       return existing.then((response) => ({ ...response }));
     }
 

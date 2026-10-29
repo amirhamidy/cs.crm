@@ -1,7 +1,4 @@
-/**
- * Helpers for production log start/end times (HH:MM, 24h).
- * If end <= start the shift is treated as crossing midnight (+24h).
- */
+
 export function timeToMinutes(t: string): number | null {
   const m = /^(\d{1,2}):(\d{2})$/.exec(t.trim());
   if (!m) return null;
@@ -11,7 +8,7 @@ export function timeToMinutes(t: string): number | null {
   return h * 60 + min;
 }
 
-/** Returns worked hours (rounded to 2 decimals) or null if the times are invalid. */
+
 export function calcHoursWorked(start: string, end: string): number | null {
   const s = timeToMinutes(start);
   const e = timeToMinutes(end);
@@ -26,7 +23,7 @@ export function formatHoursWorked(start: string, end: string): string {
   return h === null ? "" : String(h);
 }
 
-/** Normalises API value ("08:30:00", "08:30:00.000Z", "08:30") to "HH:MM". */
+
 export function toHHMM(value: string | null | undefined): string {
   if (!value) return "";
   const m = /^(\d{1,2}):(\d{2})/.exec(value);

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, m } from "framer-motion";
 import { useTheme } from "next-themes";
 import {
     Boxes,
@@ -29,7 +29,7 @@ import {
     fetchWarehouseProductsPage,
 } from "@/lib/warehouseApi";
 
-/** تعداد محصول در هر صفحهٔ لیست کناری */
+
 const PRODUCT_LIST_PAGE_SIZE = 40;
 
 interface Product {
@@ -210,7 +210,7 @@ export default function WarehouseEmployeeStockLedger({
     const [txLoading, setTxLoading] = useState(false);
     const [txError, setTxError] = useState(false);
 
-    // لیست محصولات: صفحه‌بندی و جستجو سمت سرور
+    
     const list = usePaginatedList<Product>(
         async (params, signal) => {
             const res = await fetchWarehouseProductsPage(
@@ -235,7 +235,7 @@ export default function WarehouseEmployeeStockLedger({
         }
     );
 
-    // موجودیِ فقط محصولاتِ صفحهٔ جاری (نه کل موجودی انبار)
+    
     useEffect(() => {
         if (warehouseId == null) return;
 
@@ -265,7 +265,7 @@ export default function WarehouseEmployeeStockLedger({
         };
     }, [warehouseId, list.data]);
 
-    // اگر محصول انتخاب‌شده در صفحهٔ جاری نباشد، موجودی همان محصول را جدا بگیر
+    
     useEffect(() => {
         if (warehouseId == null || selectedProductId == null) return;
         if (stockByProduct.has(selectedProductId)) return;
@@ -284,7 +284,7 @@ export default function WarehouseEmployeeStockLedger({
                 });
             })
             .catch(() => {
-                /* ignore */
+                
             });
 
         return () => {
@@ -308,7 +308,7 @@ export default function WarehouseEmployeeStockLedger({
         setCurrentPage(1);
     }, [selectedProductId, kindFilter]);
 
-    // گردش کالای محصول انتخاب‌شده (همهٔ صفحات همان محصول؛ فیلتر ورودی/خروجی و صفحه‌بندی جدول روی همین مجموعه)
+    
     useEffect(() => {
         if (warehouseId == null || selectedProductId == null) {
             setTransactions([]);
@@ -476,7 +476,7 @@ export default function WarehouseEmployeeStockLedger({
                                 </div>
 
                                 {active && (
-                                    <motion.div
+                                    <m.div
                                         layoutId="activeIndicator"
                                         className="h-1.5 w-1.5 rounded-full bg-indigo-500"
                                     />
@@ -604,7 +604,7 @@ export default function WarehouseEmployeeStockLedger({
                                                         buildDescription(event);
 
                                                     return (
-                                                        <motion.tr
+                                                        <m.tr
                                                             key={event.id}
                                                             initial={{
                                                                 opacity: 0,
@@ -711,7 +711,7 @@ export default function WarehouseEmployeeStockLedger({
                                                                     )}
                                                                 </span>
                                                             </td>
-                                                        </motion.tr>
+                                                        </m.tr>
                                                     );
                                                 }
                                             )

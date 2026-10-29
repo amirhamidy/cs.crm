@@ -17,7 +17,7 @@ interface Props {
     onUpdated: (task: UserTask) => void;
     onTransferred?: (task: UserTask) => void;
     employeesMap: Record<number, string>;
-    staffId: number; // این خط اضافه شود
+    staffId: number; 
 }
 
 export default function TaskCardSwiper({
@@ -27,7 +27,7 @@ export default function TaskCardSwiper({
     onUpdated,
     onTransferred,
     employeesMap,
-    staffId, // این خط اضافه شود
+    staffId, 
 }: Props) {
     const [swiper, setSwiper] = useState<SwiperType | null>(null);
 
@@ -51,7 +51,7 @@ export default function TaskCardSwiper({
                             onUpdated={onUpdated}
                             onTransferred={onTransferred}
                             employeesMap={employeesMap}
-                            staffId={staffId} // این خط اضافه شود
+                            staffId={staffId} 
                         />
                     </SwiperSlide>
                 ))}

@@ -10,7 +10,7 @@ import {
     type InputHTMLAttributes,
 } from "react";
 import { createPortal } from "react-dom";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, m } from "framer-motion";
 import {
     ArrowDownCircle,
     ArrowUpCircle,
@@ -242,12 +242,12 @@ function NiceSelect({
                 </span>
 
                 {!disabled && (
-                    <motion.span
+                    <m.span
                         animate={{ rotate: open ? 180 : 0 }}
                         transition={{ duration: 0.2 }}
                     >
                         <ChevronDown size={14} className="shrink-0 text-gray-400" />
-                    </motion.span>
+                    </m.span>
                 )}
             </button>
 
@@ -255,7 +255,7 @@ function NiceSelect({
                 createPortal(
                     <AnimatePresence>
                         {open && !disabled && (
-                            <motion.div
+                            <m.div
                                 ref={panelRef}
                                 initial={{ opacity: 0, y: -6, scale: 0.97 }}
                                 animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -298,7 +298,7 @@ function NiceSelect({
                                         visible.map((o, i) => {
                                             const active = o.value === value;
                                             return (
-                                                <motion.button
+                                                <m.button
                                                     key={o.value}
                                                     type="button"
                                                     initial={{ opacity: 0, x: 6 }}
@@ -340,12 +340,12 @@ function NiceSelect({
                                                             <Check size={11} className="text-white" strokeWidth={3} />
                                                         </span>
                                                     )}
-                                                </motion.button>
+                                                </m.button>
                                             );
                                         })
                                     )}
                                 </div>
-                            </motion.div>
+                            </m.div>
                         )}
                     </AnimatePresence>,
                     document.body
@@ -481,7 +481,7 @@ export default function WarehouseEmployeeStockModal({
     return (
         <AnimatePresence>
             {isOpen && (
-                <motion.div
+                <m.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
@@ -492,7 +492,7 @@ export default function WarehouseEmployeeStockModal({
                         backdropFilter: "blur(3px)",
                     }}
                 >
-                    <motion.div
+                    <m.div
                         initial={{ opacity: 0, y: 16 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: 16 }}
@@ -553,7 +553,7 @@ export default function WarehouseEmployeeStockModal({
                                     }}
                                 >
                                     {mode === "in" && (
-                                        <motion.div
+                                        <m.div
                                             layoutId="employee-stock-mode"
                                             className="absolute inset-0 rounded-xl bg-white shadow-sm dark:bg-white/[0.08]"
                                         />
@@ -574,7 +574,7 @@ export default function WarehouseEmployeeStockModal({
                                     }}
                                 >
                                     {mode === "out" && (
-                                        <motion.div
+                                        <m.div
                                             layoutId="employee-stock-mode"
                                             className="absolute inset-0 rounded-xl bg-white shadow-sm dark:bg-white/[0.08]"
                                         />
@@ -677,7 +677,7 @@ export default function WarehouseEmployeeStockModal({
 
                             <AnimatePresence>
                                 {error && (
-                                    <motion.div
+                                    <m.div
                                         initial={{ opacity: 0, y: 6 }}
                                         animate={{ opacity: 1, y: 0 }}
                                         exit={{ opacity: 0, y: 4 }}
@@ -694,11 +694,11 @@ export default function WarehouseEmployeeStockModal({
                                         >
                                             <X size={13} />
                                         </button>
-                                    </motion.div>
+                                    </m.div>
                                 )}
                             </AnimatePresence>
 
-                            <motion.button
+                            <m.button
                                 type="submit"
                                 disabled={!canSubmit}
                                 whileTap={{ scale: 0.97 }}
@@ -714,7 +714,7 @@ export default function WarehouseEmployeeStockModal({
                                 ) : (
                                     "ثبت کاهش موجودی"
                                 )}
-                            </motion.button>
+                            </m.button>
 
                             {!noteValid && (
                                 <p className="text-center text-[10.5px] font-semibold text-gray-400">
@@ -722,8 +722,8 @@ export default function WarehouseEmployeeStockModal({
                                 </p>
                             )}
                         </form>
-                    </motion.div>
-                </motion.div>
+                    </m.div>
+                </m.div>
             )}
         </AnimatePresence>
     );

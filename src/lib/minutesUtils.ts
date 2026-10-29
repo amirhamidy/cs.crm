@@ -1,9 +1,9 @@
 import axios from "axios";
 import type { MeetingStatus } from "@/types/minutes";
 
-/* ------------------------------------------------------------------ */
-/* Status                                                              */
-/* ------------------------------------------------------------------ */
+
+
+
 
 export const STATUS_META: Record<MeetingStatus, { label: string; className: string; dot: string }> = {
   draft: {
@@ -36,9 +36,9 @@ export const STATUS_FILTERS: Array<{ value: MeetingStatus | ""; label: string }>
   { value: "canceled", label: STATUS_META.canceled.label },
 ];
 
-/* ------------------------------------------------------------------ */
-/* Dates                                                               */
-/* ------------------------------------------------------------------ */
+
+
+
 
 export function formatDateTime(iso?: string | null): string {
   if (!iso) return "—";
@@ -56,7 +56,7 @@ export function formatDate(iso?: string | null): string {
 
 const pad = (n: number) => String(n).padStart(2, "0");
 
-/** ISO → مقدار input از نوع datetime-local (به وقت محلی مرورگر) */
+
 export function toInputValue(iso?: string | null): string {
   if (!iso) return "";
   const d = new Date(iso);
@@ -64,14 +64,14 @@ export function toInputValue(iso?: string | null): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-/** مقدار datetime-local → ISO 8601 */
+
 export function fromInputValue(value: string): string {
   return new Date(value).toISOString();
 }
 
-/* ------------------------------------------------------------------ */
-/* Inputs                                                              */
-/* ------------------------------------------------------------------ */
+
+
+
 
 const FA = "۰۱۲۳۴۵۶۷۸۹";
 const AR = "٠١٢٣٤٥٦٧٨٩";
@@ -99,9 +99,9 @@ export function buildPublicSignLink(token: string): string {
   return `${window.location.origin}/minutes/sign/${token}`;
 }
 
-/* ------------------------------------------------------------------ */
-/* Errors                                                              */
-/* ------------------------------------------------------------------ */
+
+
+
 
 export interface ParsedError {
   status?: number;

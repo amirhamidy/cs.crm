@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, m } from "framer-motion";
 import { Loader2, ShieldCheck, X } from "lucide-react";
 import { apiErrorMessage, updateStockLimits } from "@/lib/warehouseApi";
 import type { ApiStockInfo } from "@/types/warehouse";
@@ -75,7 +75,7 @@ export default function StockLimitsModal({
     return (
         <AnimatePresence>
             {isOpen && stock && (
-                <motion.div
+                <m.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
@@ -83,7 +83,7 @@ export default function StockLimitsModal({
                     onClick={() => !loading && onClose()}
                     dir="rtl"
                 >
-                    <motion.form
+                    <m.form
                         initial={{ opacity: 0, scale: 0.95, y: 10 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.95, y: 10 }}
@@ -160,8 +160,8 @@ export default function StockLimitsModal({
                             {loading && <Loader2 size={15} className="animate-spin" />}
                             ذخیره تغییرات
                         </button>
-                    </motion.form>
-                </motion.div>
+                    </m.form>
+                </m.div>
             )}
         </AnimatePresence>
     );

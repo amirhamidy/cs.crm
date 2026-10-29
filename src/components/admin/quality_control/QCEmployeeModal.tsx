@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, m } from "framer-motion";
 import { AlertCircle, Check, Loader2, Search, UserPlus, X } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
 import { listAll } from "@/lib/api";
@@ -71,7 +71,7 @@ export default function QCEmployeeModal({ isOpen, existingEmployees, names, onCl
     return (
         <AnimatePresence>
             {isOpen && (
-                <motion.div
+                <m.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
@@ -79,7 +79,7 @@ export default function QCEmployeeModal({ isOpen, existingEmployees, names, onCl
                     style={{ background: "rgba(0,0,0,0.45)", backdropFilter: "blur(3px)" }}
                     onMouseDown={close}
                 >
-                    <motion.div
+                    <m.div
                         initial={{ opacity: 0, y: 16, scale: 0.98 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: 16, scale: 0.98 }}
@@ -126,7 +126,7 @@ export default function QCEmployeeModal({ isOpen, existingEmployees, names, onCl
                                         const active = selected === u.id;
                                         const name = names[u.username] || u.username;
                                         return (
-                                            <motion.button
+                                            <m.button
                                                 key={u.id}
                                                 type="button"
                                                 initial={{ opacity: 0, x: 6 }}
@@ -150,7 +150,7 @@ export default function QCEmployeeModal({ isOpen, existingEmployees, names, onCl
                                                         <Check size={11} className="text-white" strokeWidth={3} />
                                                     </span>
                                                 )}
-                                            </motion.button>
+                                            </m.button>
                                         );
                                     })
                                 )}
@@ -165,7 +165,7 @@ export default function QCEmployeeModal({ isOpen, existingEmployees, names, onCl
                         </div>
 
                         <div className="flex shrink-0 px-8 pb-8 pt-5">
-                            <motion.button
+                            <m.button
                                 type="button"
                                 whileTap={{ scale: 0.97 }}
                                 onClick={create}
@@ -174,10 +174,10 @@ export default function QCEmployeeModal({ isOpen, existingEmployees, names, onCl
                             >
                                 {loading ? <Loader2 size={15} className="animate-spin" /> : <UserPlus size={14} />}
                                 افزودن به تیم
-                            </motion.button>
+                            </m.button>
                         </div>
-                    </motion.div>
-                </motion.div>
+                    </m.div>
+                </m.div>
             )}
         </AnimatePresence>
     );

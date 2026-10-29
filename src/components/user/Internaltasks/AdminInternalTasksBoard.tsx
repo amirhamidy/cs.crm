@@ -4,17 +4,24 @@ import { JSX, memo, useEffect, useMemo, useState } from "react";
 import Pagination from "@/components/ui/Pagination";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import { internalTasksApi } from "@/lib/api";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, m } from "framer-motion";
 import { Ban, CalendarClock, CheckCircle2, ClipboardX, Clock3, Inbox, LayoutGrid, Loader, Loader2, MessageSquareText, Plus, RefreshCw, RotateCcw, Ticket, Trash2, Users, X } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useAuthStore } from "@/store/authStore";
 import { deleteInternalTask, fetchEmployeeList, reopenInternalTask, patchInternalTaskDeadline } from "./Api";
+import dynamic from "next/dynamic";
 import InternalTaskActionModal from "./InternalTaskActionModal";
 import type { EmployeeListItem, InternalTask, InternalTaskStatus, EmployeeRef } from "./types";
-import AdminInternalTaskChatModal from "./AdminInternalTaskChatModal";
 import CreateTicketModal from "./Createticketmodal";
+import LazyLoading from "@/components/ui/LazyLoading";
 import TimeRangeModal from "@/components/tasks/TimeRangeModal";
 import InternalTaskDeadlineModal from "./InternalTaskDeadlineModal";
+
+
+const AdminInternalTaskChatModal = dynamic(() => import("./AdminInternalTaskChatModal"), {
+    ssr: false,
+    loading: () => <LazyLoading />,
+});
 
 type AdminEmployee = EmployeeListItem & { id?: number; username?: string; full_name?: string };
 
@@ -209,10 +216,10 @@ const AdminInternalTaskCard = memo(function AdminInternalTaskCard({
     const creatorName = resolveCreatorName(String(task.created_by ?? ""), employees);
 
     return (
-        <motion.div layout initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: .95 }} transition={{ duration: .22, delay: index * .04 }} onHoverStart={() => setHovered(true)} onHoverEnd={() => setHovered(false)} onClick={() => onOpen(task)} className="group relative flex min-h-[220px] cursor-pointer flex-col gap-3 overflow-hidden rounded-[2rem] p-4" style={{ border: isDark ? "1px solid rgba(255,255,255,.06)" : "1px solid rgba(0,0,0,.06)", background: isDark ? "rgba(255,255,255,.02)" : "#fafafa", boxShadow: isDark ? "0 2px 24px rgba(0,0,0,.2)" : "0 2px 16px rgba(0,0,0,.04)", transition: "border-color .4s ease,box-shadow .4s ease" }}>
+        <m.div layout initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: .95 }} transition={{ duration: .22, delay: index * .04 }} onHoverStart={() => setHovered(true)} onHoverEnd={() => setHovered(false)} onClick={() => onOpen(task)} className="group relative flex min-h-[220px] cursor-pointer flex-col gap-3 overflow-hidden rounded-[2rem] p-4" style={{ border: isDark ? "1px solid rgba(255,255,255,.06)" : "1px solid rgba(0,0,0,.06)", background: isDark ? "rgba(255,255,255,.02)" : "#fafafa", boxShadow: isDark ? "0 2px 24px rgba(0,0,0,.2)" : "0 2px 16px rgba(0,0,0,.04)", transition: "border-color .4s ease,box-shadow .4s ease" }}>
             <svg className="pointer-events-none absolute inset-0 h-full w-full" style={{ borderRadius: "2rem" }}>
                 <defs><linearGradient id={`admin-border-${task.id}`} x1="100%" y1="100%" x2="0%" y2="0%"><stop offset="0%" stopColor="#6366f1" /><stop offset="100%" stopColor="#8b5cf6" /></linearGradient></defs>
-                <motion.rect x="1" y="1" width="calc(100% - 2px)" height="calc(100% - 2px)" rx="30" fill="none" stroke={`url(#admin-border-${task.id})`} strokeWidth="1.5" pathLength="1" initial={{ pathLength: 0, opacity: 0 }} animate={hovered ? { pathLength: 1, opacity: 1 } : { pathLength: 0, opacity: 0 }} transition={{ duration: .55, ease: "easeInOut" }} />
+                <m.rect x="1" y="1" width="calc(100% - 2px)" height="calc(100% - 2px)" rx="30" fill="none" stroke={`url(#admin-border-${task.id})`} strokeWidth="1.5" pathLength="1" initial={{ pathLength: 0, opacity: 0 }} animate={hovered ? { pathLength: 1, opacity: 1 } : { pathLength: 0, opacity: 0 }} transition={{ duration: .55, ease: "easeInOut" }} />
             </svg>
 
             <div className="relative z-10 flex items-start justify-between gap-3">
@@ -287,8 +294,8 @@ const AdminInternalTaskCard = memo(function AdminInternalTaskCard({
             {actionModal && canAct && hasResponse && <div onClick={event => event.stopPropagation()}><InternalTaskActionModal isOpen={true} action={actionModal} task={task} onClose={() => setActionModal(null)} onDone={handleActionDone} /></div>}
 
             <AnimatePresence>
-                {showConfirm && <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center px-4" style={{ background: "rgba(0,0,0,.45)", backdropFilter: "blur(3px)" }} onClick={event => { event.stopPropagation(); if (isDeleting) return; setShowConfirm(false); setDeleteError(null); }}>
-                    <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 16 }} transition={{ duration: .35, ease: "easeOut" }} onClick={event => event.stopPropagation()} dir="rtl" className="flex w-full max-w-md flex-col overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-sm dark:border-white/[0.06] dark:bg-[#0f172a]">
+                {showConfirm && <m.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center px-4" style={{ background: "rgba(0,0,0,.45)", backdropFilter: "blur(3px)" }} onClick={event => { event.stopPropagation(); if (isDeleting) return; setShowConfirm(false); setDeleteError(null); }}>
+                    <m.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 16 }} transition={{ duration: .35, ease: "easeOut" }} onClick={event => event.stopPropagation()} dir="rtl" className="flex w-full max-w-md flex-col overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-sm dark:border-white/[0.06] dark:bg-[#0f172a]">
                         <div className="flex shrink-0 items-center justify-between px-8 pb-6 pt-8">
                             <div className="flex items-center gap-2.5"><div className="flex h-8 w-8 items-center justify-center rounded-xl bg-red-50 dark:bg-red-500/10"><Trash2 size={15} className="text-red-500" /></div><div><h3 className="text-[14px] font-extrabold text-gray-900 dark:text-white">حذف تیکت</h3><p className="mt-0.5 text-[11px] text-gray-400">این عملیات قابل بازگشت نیست</p></div></div>
                             <button type="button" onClick={() => { if (isDeleting) return; setShowConfirm(false); setDeleteError(null); }} disabled={isDeleting} className="flex h-8 w-8 items-center justify-center rounded-xl bg-gray-100 text-gray-400 transition-colors hover:text-gray-600 disabled:opacity-40 dark:bg-white/[0.05] dark:hover:text-gray-300"><X size={15} /></button>
@@ -298,10 +305,10 @@ const AdminInternalTaskCard = memo(function AdminInternalTaskCard({
                             <button type="button" onClick={() => { if (isDeleting) return; setShowConfirm(false); setDeleteError(null); }} disabled={isDeleting} className="flex h-11 flex-1 items-center justify-center rounded-full bg-gray-100 text-[13px] font-bold text-gray-600 transition-colors hover:bg-gray-200 disabled:opacity-40 dark:bg-white/[0.05] dark:text-gray-300 dark:hover:bg-white/[0.08]">انصراف</button>
                             <button type="button" onClick={async () => { if (!onDelete) return; setDeleteError(null); try { await onDelete(task.id); setShowConfirm(false); } catch { setDeleteError("حذف تیکت با خطا مواجه شد."); } }} disabled={isDeleting} className="flex h-11 flex-1 items-center justify-center gap-2 rounded-full bg-red-600 text-[13px] font-bold text-white transition-colors hover:bg-red-500 disabled:opacity-40">{isDeleting ? <Loader size={14} className="animate-spin" /> : <><Trash2 size={13} strokeWidth={2.5} />حذف کن</>}</button>
                         </div>
-                    </motion.div>
-                </motion.div>}
+                    </m.div>
+                </m.div>}
             </AnimatePresence>
-        </motion.div>
+        </m.div>
     );
 }, (prev, next) => prev.task === next.task && prev.index === next.index && prev.employees === next.employees && prev.currentUsername === next.currentUsername && prev.isDeleting === next.isDeleting);
 

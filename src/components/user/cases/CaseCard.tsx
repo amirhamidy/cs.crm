@@ -2,7 +2,7 @@
 
 import { memo, useEffect, useState, useRef, useCallback, useMemo } from "react";
 import type { ReactNode, MouseEvent as ReactMouseEvent } from "react";
-import { motion, AnimatePresence, animate } from "framer-motion";
+import { m, AnimatePresence, animate } from "framer-motion";
 import { useTheme } from "next-themes";
 import {
     Trash2,
@@ -183,7 +183,7 @@ function SweepButton({
     }, [disabled, iconColor]);
 
     return (
-        <motion.button
+        <m.button
             type="button"
             initial={{ x: 0, y: 0, scale: 0, opacity: 0 }}
             animate={{ x: offset.x, y: offset.y, scale: 1, opacity: 1 }}
@@ -223,7 +223,7 @@ function SweepButton({
             >
                 {icon}
             </span>
-        </motion.button>
+        </m.button>
     );
 }
 
@@ -382,7 +382,7 @@ function CaseCard({
 
     return (
         <>
-            <motion.div
+            <m.div
                 ref={cardRef}
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -415,7 +415,7 @@ function CaseCard({
                             <stop offset="100%" stopColor="#8b5cf6" stopOpacity="0.5" />
                         </linearGradient>
                     </defs>
-                    <motion.rect
+                    <m.rect
                         x="1"
                         y="1"
                         width="calc(100% - 2px)"
@@ -523,7 +523,7 @@ function CaseCard({
                 <div className="hidden md:block">
                     <AnimatePresence>
                         {hovered && (
-                            <motion.div
+                            <m.div
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: 1 }}
                                 exit={{ opacity: 0 }}
@@ -554,7 +554,7 @@ function CaseCard({
                                         <AnimatePresence>
                                             {activeTooltip === act.key && (
                                                 <div className="pointer-events-none absolute right-full top-1/2 z-[60] mr-2.5 -translate-y-1/2">
-                                                    <motion.div
+                                                    <m.div
                                                         initial={{ opacity: 0, scale: 0.95, x: 4 }}
                                                         animate={{ opacity: 1, scale: 1, x: 0 }}
                                                         exit={{ opacity: 0, scale: 0.95, x: 4 }}
@@ -569,17 +569,17 @@ function CaseCard({
                                                         <span className="text-[11px] font-bold text-white">
                                                             {act.tooltip}
                                                         </span>
-                                                    </motion.div>
+                                                    </m.div>
                                                 </div>
                                             )}
                                         </AnimatePresence>
                                     </div>
                                 ))}
-                            </motion.div>
+                            </m.div>
                         )}
                     </AnimatePresence>
                 </div>
-            </motion.div>
+            </m.div>
 
             <AnimatePresence>
                 {showMobileSheet && (
@@ -587,7 +587,7 @@ function CaseCard({
                         className="fixed inset-0 z-50 flex items-end justify-center md:hidden"
                         dir="rtl"
                     >
-                        <motion.div
+                        <m.div
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
@@ -595,7 +595,7 @@ function CaseCard({
                             className="absolute inset-0 bg-black/60 backdrop-blur-sm"
                         />
 
-                        <motion.div
+                        <m.div
                             initial={{ y: "100%" }}
                             animate={{ y: 0 }}
                             exit={{ y: "100%" }}
@@ -673,7 +673,7 @@ function CaseCard({
                                     {canDelete ? "حذف پرونده" : "دارای وظیفه فعال"}
                                 </button>
                             </div>
-                        </motion.div>
+                        </m.div>
                     </div>
                 )}
             </AnimatePresence>
@@ -684,7 +684,7 @@ function CaseCard({
                         className="fixed inset-0 z-[60] flex items-center justify-center p-4"
                         dir="rtl"
                     >
-                        <motion.div
+                        <m.div
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
@@ -692,7 +692,7 @@ function CaseCard({
                             className="absolute inset-0 bg-black/60 backdrop-blur-sm"
                         />
 
-                        <motion.div
+                        <m.div
                             initial={{ opacity: 0, scale: 0.95, y: 12 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.95, y: 12 }}
@@ -761,7 +761,7 @@ function CaseCard({
                                     {isDeletingState ? "در حال حذف..." : "حذف پرونده"}
                                 </button>
                             </div>
-                        </motion.div>
+                        </m.div>
                     </div>
                 )}
             </AnimatePresence>

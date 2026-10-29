@@ -7,7 +7,7 @@ import {
 } from "react";
 import {
     AnimatePresence,
-    motion,
+    m,
 } from "framer-motion";
 import { useTheme } from "next-themes";
 import {
@@ -341,7 +341,7 @@ function EmployeeTooltip({
         : anchorRect.bottom + 8;
 
     return createPortal(
-        <motion.div
+        <m.div
             initial={{
                 opacity: 0,
                 y: shouldShowAbove
@@ -487,7 +487,7 @@ function EmployeeTooltip({
                         : "rgba(0,0,0,0.07)",
                 }}
             />
-        </motion.div>,
+        </m.div>,
         document.body,
     );
 }
@@ -578,7 +578,7 @@ function EmployeeRow({
 
     return (
         <>
-            <motion.div
+            <m.div
                 layout
                 initial={{
                     opacity: 0,
@@ -714,7 +714,7 @@ function EmployeeRow({
                         "-"
                     )}
                 </div>
-            </motion.div>
+            </m.div>
 
             <AnimatePresence>
                 {hovered &&
@@ -911,7 +911,7 @@ export default function BestEmployeesChart({
     }
 
     return (
-        <motion.div
+        <m.div
             initial={{
                 opacity: 0,
                 y: 6,
@@ -1013,6 +1013,6 @@ export default function BestEmployeesChart({
                     )}
                 </div>
             )}
-        </motion.div>
+        </m.div>
     );
 }

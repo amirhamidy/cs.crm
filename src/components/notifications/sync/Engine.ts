@@ -154,7 +154,7 @@ export function createSyncEngine({ userId, username }: EngineOptions) {
     }
   }
 
-  /** لیست کارمندها باید قبل از detect آماده باشد (برای پیدا کردن employeeId) */
+  
   async function ensureEmployees(signal: AbortSignal) {
     const needsFirstLoad = employeesTriedAt === 0;
 
@@ -405,7 +405,7 @@ export function createSyncEngine({ userId, username }: EngineOptions) {
 
       window.clearTimeout(pollTimer);
 
-      // اولین poll بعد از load کامل صفحه + تأخیر، تا با رندر اولیه (LCP/TBT) رقابت نکند.
+      
       const firstPoll = () => {
         if (stopped) return;
         pollTimer = window.setTimeout(

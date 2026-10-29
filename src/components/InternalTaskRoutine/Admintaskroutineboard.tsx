@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { AnimatePresence, m } from "framer-motion";
 import {
     AlertTriangle,
     Ban,
@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useAuthStore } from "@/store/authStore";
+import { useIsVisible, useVisibleInterval } from "@/hooks/useVisibility";
 import {
     deleteInternalTaskRoutine,
     fetchInternalTaskRoutines,
@@ -83,9 +84,12 @@ function getStatusBadge(status: InternalTask["status"] | undefined) {
 function RoutineCountdown({
     nextRunAt,
     onReady,
+    active = true,
 }: {
     nextRunAt?: string | null;
     onReady: () => void;
+    
+    active?: boolean;
 }) {
     const [remaining, setRemaining] = useState(() => {
         if (!nextRunAt) return 0;
@@ -96,30 +100,25 @@ function RoutineCountdown({
         );
     });
 
-    useEffect(() => {
+    const update = useCallback(() => {
         if (!nextRunAt) {
             setRemaining(0);
             onReady();
             return;
         }
 
-        const update = () => {
-            const target = new Date(nextRunAt).getTime();
-            const nextRemaining = Math.max(0, target - Date.now());
+        const target = new Date(nextRunAt).getTime();
+        const nextRemaining = Math.max(0, target - Date.now());
 
-            setRemaining(nextRemaining);
+        setRemaining(nextRemaining);
 
-            if (nextRemaining <= 0) {
-                onReady();
-            }
-        };
-
-        update();
-
-        const timer = window.setInterval(update, 1000);
-
-        return () => window.clearInterval(timer);
+        if (nextRemaining <= 0) {
+            onReady();
+        }
     }, [nextRunAt, onReady]);
+
+    
+    useVisibleInterval(update, 1000, Boolean(nextRunAt) && active);
 
     if (remaining <= 0) return null;
 
@@ -198,30 +197,23 @@ function RoutineCard({
     >(null);
     const [isReady, setIsReady] = useState(false);
 
-    useEffect(() => {
-        if (task?.status !== "waiting") {
-            setIsReady(true);
-            return;
-        }
-
-        if (!routine.next_run_at) {
-            setIsReady(true);
-            return;
-        }
-
-        const target = new Date(routine.next_run_at).getTime();
-        const check = () => setIsReady(target <= Date.now());
-
-        check();
-
-        const timer = window.setInterval(check, 1000);
-
-        return () => window.clearInterval(timer);
-    }, [task?.status, routine.next_run_at]);
-
     const statusBadge = getStatusBadge(task?.status);
 
     const isWaiting = task?.status === "waiting";
+
+    useEffect(() => {
+        if (!isWaiting || !routine.next_run_at) {
+            setIsReady(true);
+        }
+    }, [isWaiting, routine.next_run_at]);
+
+    
+    const checkReady = useCallback(() => {
+        if (!routine.next_run_at) return;
+        setIsReady(new Date(routine.next_run_at).getTime() <= Date.now());
+    }, [routine.next_run_at]);
+
+    useVisibleInterval(checkReady, 1000, isWaiting && !isReady);
     const isCompleted = task?.status === "completed";
     const isCancelled = task?.status === "cancelled";
 
@@ -234,7 +226,7 @@ function RoutineCard({
 
     return (
         <>
-            <motion.div
+            <m.div
                 layout
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -351,6 +343,7 @@ function RoutineCard({
                     >
                         <RoutineCountdown
                             nextRunAt={routine.next_run_at}
+                            active={isWaiting && !isReady}
                             onReady={() => setIsReady(true)}
                         />
                     </div>
@@ -396,7 +389,7 @@ function RoutineCard({
 
                 <AnimatePresence>
                     {showConfirm && (
-                        <motion.div
+                        <m.div
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
@@ -431,10 +424,10 @@ function RoutineCard({
                                     حذف شود
                                 </button>
                             </div>
-                        </motion.div>
+                        </m.div>
                     )}
                 </AnimatePresence>
-            </motion.div>
+            </m.div>
 
             {task && actionModal && canTakeAction && (
                 <InternalTaskActionModal
@@ -462,6 +455,7 @@ export default function AdminTaskRoutineBoard() {
     const [error, setError] = useState<string | null>(null);
     const [createOpen, setCreateOpen] = useState(false);
     const [deletingId, setDeletingId] = useState<number | null>(null);
+    const isVisible = useIsVisible();
 
     async function loadData(initial = false) {
         if (initial) setLoading(true);
@@ -502,19 +496,19 @@ export default function AdminTaskRoutineBoard() {
         void loadData(true);
     }, []);
 
-    useEffect(() => {
-        const interval = window.setInterval(() => {
-            void silentLoad();
-        }, 20000);
-
-        return () => window.clearInterval(interval);
-    }, []);
-
     const tasksById = useMemo(() => {
         const map = new Map<number, InternalTask>();
         tasks.forEach((task) => map.set(task.id, task));
         return map;
     }, [tasks]);
+
+    
+    const silentLoadRef = useCallback(() => {
+        void silentLoad();
+        
+    }, []);
+
+    useVisibleInterval(silentLoadRef, 20000, isVisible);
 
     const sortedRoutines = useMemo(() => {
         return [...routines].sort((a, b) => {

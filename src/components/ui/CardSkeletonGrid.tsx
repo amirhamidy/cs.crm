@@ -1,8 +1,6 @@
 "use client";
 
-/**
- * اسکلتون کارت‌ها هنگام تعویض صفحه (بدون framer-motion؛ فقط انیمیشن سبک CSS).
- */
+
 export default function CardSkeletonGrid({
     count = 6,
     className = "grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3",

@@ -1,4 +1,4 @@
-/** کلاس‌های مشترک برای هماهنگی با ظاهر بقیه‌ی پنل */
+
 export const CARD =
   "rounded-2xl border border-black/[0.06] bg-[#fafafa] dark:border-white/[0.06] dark:bg-white/[0.02]";
 

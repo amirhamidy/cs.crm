@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, m } from "framer-motion";
 import { AlertCircle, CheckCircle2, Loader2, Upload, X, XCircle } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
 import type { AxiosError } from "axios";
@@ -78,7 +78,7 @@ export default function QCActionModal({ isOpen, mode, item, reviewer, reviewerNa
     return (
         <AnimatePresence>
             {isOpen && (
-                <motion.div
+                <m.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
@@ -86,7 +86,7 @@ export default function QCActionModal({ isOpen, mode, item, reviewer, reviewerNa
                     style={{ background: "rgba(0,0,0,0.45)", backdropFilter: "blur(3px)" }}
                     onMouseDown={closeModal}
                 >
-                    <motion.div
+                    <m.div
                         initial={{ opacity: 0, y: 16, scale: 0.98 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: 16, scale: 0.98 }}
@@ -114,10 +114,10 @@ export default function QCActionModal({ isOpen, mode, item, reviewer, reviewerNa
                             <div className="flex flex-1 flex-col gap-4 overflow-y-auto px-8 pb-2">
                                 <AnimatePresence>
                                     {error && (
-                                        <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 4 }} className="flex items-start gap-2.5 rounded-2xl bg-red-50 px-3.5 py-3 dark:bg-red-500/10">
+                                        <m.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 4 }} className="flex items-start gap-2.5 rounded-2xl bg-red-50 px-3.5 py-3 dark:bg-red-500/10">
                                             <AlertCircle size={14} className="mt-0.5 shrink-0 text-red-500" />
                                             <p className="flex-1 text-[11.5px] font-semibold leading-5 text-red-500 dark:text-red-400">{error}</p>
-                                        </motion.div>
+                                        </m.div>
                                     )}
                                 </AnimatePresence>
 
@@ -160,7 +160,7 @@ export default function QCActionModal({ isOpen, mode, item, reviewer, reviewerNa
                                 <button type="button" onClick={closeModal} disabled={loading} className="h-11 flex-1 rounded-full bg-gray-100 text-[13px] font-bold text-gray-600 transition hover:bg-gray-200 disabled:opacity-40 dark:bg-white/[0.05] dark:text-gray-300 dark:hover:bg-white/[0.08]">
                                     انصراف
                                 </button>
-                                <motion.button
+                                <m.button
                                     type="submit"
                                     whileTap={{ scale: 0.97 }}
                                     disabled={loading || !reviewer}
@@ -168,11 +168,11 @@ export default function QCActionModal({ isOpen, mode, item, reviewer, reviewerNa
                                 >
                                     {loading ? <Loader2 size={15} className="animate-spin" /> : <Icon size={14} />}
                                     {isApprove ? "تایید نهایی" : "رد نهایی"}
-                                </motion.button>
+                                </m.button>
                             </div>
                         </form>
-                    </motion.div>
-                </motion.div>
+                    </m.div>
+                </m.div>
             )}
         </AnimatePresence>
     );

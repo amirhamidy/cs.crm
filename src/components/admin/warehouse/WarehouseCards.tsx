@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { motion } from "framer-motion";
+import { m } from "framer-motion";
 import {
     BellRing,
     Boxes,
@@ -230,7 +230,7 @@ export function StockCard({
     const gradientId = `stock-ring-${stock.id}`;
 
     return (
-        <motion.div
+        <m.div
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.96 }}
@@ -258,7 +258,7 @@ export function StockCard({
                     </linearGradient>
                 </defs>
 
-                <motion.rect
+                <m.rect
                     x="1"
                     y="1"
                     width="calc(100% - 2px)"
@@ -367,7 +367,7 @@ export function StockCard({
                             strokeWidth="8"
                         />
 
-                        <motion.circle
+                        <m.circle
                             cx="55"
                             cy="55"
                             r={radius}
@@ -480,7 +480,7 @@ export function StockCard({
                     مشاهده گردش کالا
                 </button>
             )}
-        </motion.div>
+        </m.div>
     );
 }
 
@@ -500,7 +500,7 @@ export function DeadlineCard({
         AVATAR_GRADIENTS[deadline.id % AVATAR_GRADIENTS.length];
 
     return (
-        <motion.div
+        <m.div
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.96 }}
@@ -528,7 +528,7 @@ export function DeadlineCard({
                     </linearGradient>
                 </defs>
 
-                <motion.rect
+                <m.rect
                     x="1"
                     y="1"
                     width="calc(100% - 2px)"
@@ -625,6 +625,6 @@ export function DeadlineCard({
                     </p>
                 </div>
             </div>
-        </motion.div>
+        </m.div>
     );
 }

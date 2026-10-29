@@ -17,7 +17,7 @@ import { BTN_GHOST, BTN_PRIMARY, CARD, INPUT, INPUT_ERROR, LABEL } from "./ui";
 import type { MeetingDetail, SignerInput } from "@/types/minutes";
 
 interface Props {
-  basePath: string; // "/admin/minutes" | "/user/minutes"
+  basePath: string; 
   mode: "create" | "edit";
 }
 
@@ -43,7 +43,7 @@ export default function MeetingFormPage({ basePath, mode }: Props) {
   const [formError, setFormError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  /* ---------- load (edit) ---------- */
+  
   useEffect(() => {
     if (mode !== "edit" || !meetingId) return;
     let alive = true;
@@ -71,7 +71,7 @@ export default function MeetingFormPage({ basePath, mode }: Props) {
   const takenUserIds = signers.map((s) => s.user).filter((id): id is number => id !== null);
   const nextOrder = signers.reduce((max, s) => Math.max(max, s.order), 0) + 1;
 
-  /* ---------- submit ---------- */
+  
   const validate = () => {
     const next: Record<string, string> = {};
     if (!title.trim()) next.title = "عنوان الزامی است.";
@@ -115,7 +115,7 @@ export default function MeetingFormPage({ basePath, mode }: Props) {
     }
   };
 
-  /* ---------- guards (edit) ---------- */
+  
   if (mode === "edit" && loadingMeeting) {
     return (
       <div className="flex items-center justify-center py-24">
@@ -232,7 +232,7 @@ export default function MeetingFormPage({ basePath, mode }: Props) {
           </div>
         </section>
 
-        {/* ---------- signers (only on create; edit → detail page) ---------- */}
+        
         {mode === "create" ? (
           <section className={`${CARD} flex flex-col gap-3 p-4 sm:p-5`}>
             <div className="flex items-center justify-between">

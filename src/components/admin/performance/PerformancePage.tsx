@@ -1,17 +1,27 @@
 "use client";
 
 import { useState } from "react";
+import dynamic from "next/dynamic";
 import { useTheme } from "next-themes";
-import { motion } from "framer-motion";
+import { m } from "framer-motion";
 import { Activity, ListTodo, TrendingUp, Ban } from "lucide-react";
 import { useAnalytics, type TimeRange } from "@/hooks/useAnalytics";
 import TimeRangeSelector from "./TimeRangeSelector";
 import BestEmployeesChart from "./BestEmployeesChart";
 import WeakestEmployeesChart from "./WeakestEmployeesChart";
-import TopBringersChart from "./TopBringersChart";
 import DepartmentChurn from "./DepartmentChurn";
-import TopStagesChart from "./TopStagesChart";
 import MyTaskDeadlines from "./MyTaskDeadlines";
+import LazyLoading from "@/components/ui/LazyLoading";
+
+
+const TopBringersChart = dynamic(() => import("./TopBringersChart"), {
+    ssr: false,
+    loading: () => <LazyLoading />,
+});
+const TopStagesChart = dynamic(() => import("./TopStagesChart"), {
+    ssr: false,
+    loading: () => <LazyLoading />,
+});
 
 export default function PerformancePage() {
     const { resolvedTheme } = useTheme();
@@ -124,7 +134,7 @@ export default function PerformancePage() {
             </div>
 
             {error && (
-                <motion.div
+                <m.div
                     initial={{ opacity: 0, y: -6 }}
                     animate={{ opacity: 1, y: 0 }}
                     className="rounded-2xl border px-4 py-3 text-[12px] font-semibold"
@@ -139,7 +149,7 @@ export default function PerformancePage() {
                     }}
                 >
                     {error}
-                </motion.div>
+                </m.div>
             )}
 
             <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">

@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { AnimatePresence, m } from "framer-motion";
 import {
     AlertTriangle,
     Ban,
@@ -20,6 +20,7 @@ import {
     Users,
 } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
+import { useIsVisible, useVisibleInterval } from "@/hooks/useVisibility";
 import {
     deleteInternalTaskRoutine,
     fetchEmployeeList,
@@ -156,9 +157,12 @@ function getStatusBadge(status: InternalTask["status"] | undefined) {
 function RoutineCountdown({
     nextRunAt,
     onReady,
+    active = true,
 }: {
     nextRunAt?: string | null;
     onReady: () => void;
+    
+    active?: boolean;
 }) {
     const [remaining, setRemaining] = useState(() => {
         if (!nextRunAt) return 0;
@@ -169,30 +173,25 @@ function RoutineCountdown({
         );
     });
 
-    useEffect(() => {
+    const update = useCallback(() => {
         if (!nextRunAt) {
             setRemaining(0);
             onReady();
             return;
         }
 
-        const update = () => {
-            const target = new Date(nextRunAt).getTime();
-            const nextRemaining = Math.max(0, target - Date.now());
+        const target = new Date(nextRunAt).getTime();
+        const nextRemaining = Math.max(0, target - Date.now());
 
-            setRemaining(nextRemaining);
+        setRemaining(nextRemaining);
 
-            if (nextRemaining <= 0) {
-                onReady();
-            }
-        };
-
-        update();
-
-        const timer = window.setInterval(update, 1000);
-
-        return () => window.clearInterval(timer);
+        if (nextRemaining <= 0) {
+            onReady();
+        }
     }, [nextRunAt, onReady]);
+
+    
+    useVisibleInterval(update, 1000, Boolean(nextRunAt) && active);
 
     if (remaining <= 0) return null;
 
@@ -270,35 +269,29 @@ function RoutineCard({
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [isReady, setIsReady] = useState(false);
 
+    const statusBadge = getStatusBadge(task?.status);
+
+    const isWaiting = task?.status === "waiting";
+
     useEffect(() => {
-        if (task?.status !== "waiting") {
+        if (!isWaiting || !routine.next_run_at) {
             setIsReady(true);
-            return;
         }
+    }, [isWaiting, routine.next_run_at]);
 
-        if (!routine.next_run_at) {
-            setIsReady(true);
-            return;
-        }
+    
+    const checkReady = useCallback(() => {
+        if (!routine.next_run_at) return;
+        setIsReady(new Date(routine.next_run_at).getTime() <= Date.now());
+    }, [routine.next_run_at]);
 
-        const target = new Date(routine.next_run_at).getTime();
-        const check = () => setIsReady(target <= Date.now());
-
-        check();
-
-        const timer = window.setInterval(check, 1000);
-
-        return () => window.clearInterval(timer);
-    }, [task?.status, routine.next_run_at]);
+    useVisibleInterval(checkReady, 1000, isWaiting && !isReady);
 
     const assignedEmployees = resolveAssignedTo(
         task?.assigned_to ?? [],
         employees,
     );
 
-    const statusBadge = getStatusBadge(task?.status);
-
-    const isWaiting = task?.status === "waiting";
     const isCompleted = task?.status === "completed";
     const isCancelled = task?.status === "cancelled";
 
@@ -310,7 +303,7 @@ function RoutineCard({
 
     return (
         <>
-            <motion.div
+            <m.div
                 layout
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -434,6 +427,7 @@ function RoutineCard({
                     <div className="border-t border-black/5 pt-3 dark:border-white/[0.05]">
                         <RoutineCountdown
                             nextRunAt={routine.next_run_at}
+                            active={isWaiting && !isReady}
                             onReady={() => setIsReady(true)}
                         />
                     </div>
@@ -472,7 +466,7 @@ function RoutineCard({
 
                 <AnimatePresence>
                     {showDeleteConfirm && (
-                        <motion.div
+                        <m.div
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
@@ -505,10 +499,10 @@ function RoutineCard({
                                     حذف شود
                                 </button>
                             </div>
-                        </motion.div>
+                        </m.div>
                     )}
                 </AnimatePresence>
-            </motion.div>
+            </m.div>
 
             {task && actionModal && canTakeAction && (
                 <InternalTaskActionModal
@@ -537,6 +531,7 @@ export default function EmployeeTaskRoutineBoard() {
     const [error, setError] = useState<string | null>(null);
     const [createOpen, setCreateOpen] = useState(false);
     const [deletingId, setDeletingId] = useState<number | null>(null);
+    const isVisible = useIsVisible();
 
     async function loadData(initial = false) {
         if (initial) setLoading(true);
@@ -617,14 +612,6 @@ export default function EmployeeTaskRoutineBoard() {
         void loadData(true);
     }, []);
 
-    useEffect(() => {
-        const interval = window.setInterval(() => {
-            void silentLoad();
-        }, 20000);
-
-        return () => window.clearInterval(interval);
-    }, []);
-
     const tasksById = useMemo(() => {
         const map = new Map<number, InternalTask>();
 
@@ -632,6 +619,14 @@ export default function EmployeeTaskRoutineBoard() {
 
         return map;
     }, [tasks]);
+
+    
+    const silentLoadRef = useCallback(() => {
+        void silentLoad();
+        
+    }, []);
+
+    useVisibleInterval(silentLoadRef, 20000, isVisible);
 
     const myTasks = useMemo(() => {
         if (!userId) return [];

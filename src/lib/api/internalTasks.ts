@@ -31,7 +31,7 @@ const TTL = 30_000;
 
 type AssigneeRef = number | string | { id: number | string };
 
-/** Light shape used by lookups (users page etc.). */
+
 export interface InternalTaskSummary {
   id: number;
   title?: string | null;
@@ -51,7 +51,7 @@ function buildForm(files: File[], note: string) {
   return fd;
 }
 
-// Mutations change what lists return, so every one clears the cache.
+
 async function mutate<T>(p: Promise<T>): Promise<T> {
   try {
     return await p;
@@ -76,15 +76,15 @@ const every = <T>(scope: string, url: string) =>
   dedupe(`${KEY}${scope}:every`, () => listAll<T>(url));
 
 export const internalTasksApi = {
-  // ---- tasks ----
+  
   list: (params: InternalTaskListParams = {}, signal?: AbortSignal) =>
     page<InternalTaskSummary>("list", BASE, params, signal),
 
-  /** Paginated, full task shape (for boards). */
+  
   page: (params: InternalTaskListParams = {}, signal?: AbortSignal) =>
     page<InternalTaskItem>("page", BASE, params, signal),
 
-  /** All tasks across every page (lookups, boards that group client-side). */
+  
   all: () =>
     cached(`${KEY}all`, () => listAll<InternalTaskSummary>(BASE), TTL),
 
@@ -128,7 +128,7 @@ export const internalTasksApi = {
   remove: (id: number) =>
     mutate(axiosInstance.delete<void>(`${BASE}${id}/delete/`)),
 
-  // ---- deadline / attachments ----
+  
   getDeadline: (id: number) =>
     axiosInstance.get<InternalTaskDeadline>(`${BASE}${id}/deadline/`),
 
@@ -151,13 +151,13 @@ export const internalTasksApi = {
   attachmentUrl: (taskId: number, attachmentId: number) =>
     `${BASE}${taskId}/attachments/${attachmentId}/`,
 
-  // ---- archive ----
+  
   archive: (params: SearchParams = {}, signal?: AbortSignal) =>
     page<InternalTaskArchiveItem>("archive", ARCHIVE, params, signal),
 
   archiveAll: () => every<InternalTaskArchiveItem>("archive", ARCHIVE),
 
-  // ---- routines ----
+  
   routines: (params: SearchParams = {}, signal?: AbortSignal) =>
     page<InternalTaskRoutineItem>("routines", ROUTINE, params, signal),
 
@@ -179,7 +179,7 @@ export const internalTasksApi = {
   removeRoutine: (id: number) =>
     mutate(axiosInstance.delete<void>(`${ROUTINE}${id}/delete/`)),
 
-  // ---- employees (internal picker) ----
+  
   employees: (params: SearchParams = {}, signal?: AbortSignal) =>
     page<InternalEmployeeItem>("employees", EMPLOYEES, params, signal),
 

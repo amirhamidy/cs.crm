@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, m } from "framer-motion";
 import { Check, Crown, Layers3, Loader2, Users, X } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
 import type { ApiPurchasingEmployee, ApiPurchasingStep } from "@/types/purchasing";
@@ -102,7 +102,7 @@ export default function StepFormModal({
     return createPortal(
         <AnimatePresence>
             {open && (
-                <motion.div
+                <m.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
@@ -110,7 +110,7 @@ export default function StepFormModal({
                     style={{ background: "rgba(0,0,0,0.45)", backdropFilter: "blur(3px)" }}
                     onClick={handleClose}
                 >
-                    <motion.div
+                    <m.div
                         initial={{ opacity: 0, y: 16 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: 16 }}
@@ -234,8 +234,8 @@ export default function StepFormModal({
                                 </button>
                             </div>
                         </div>
-                    </motion.div>
-                </motion.div>
+                    </m.div>
+                </m.div>
             )}
         </AnimatePresence>,
         document.body

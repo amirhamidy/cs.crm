@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, m } from "framer-motion";
 import {
     X,
     ChevronDown,
@@ -130,7 +130,7 @@ function NiceSelect({
 
             <AnimatePresence>
                 {isOpen && (
-                    <motion.div
+                    <m.div
                         initial={{ opacity: 0, y: -10, scale: 0.95 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: -10, scale: 0.95 }}
@@ -155,7 +155,7 @@ function NiceSelect({
                                 {option.value === value && <Check size={14} />}
                             </button>
                         ))}
-                    </motion.div>
+                    </m.div>
                 )}
             </AnimatePresence>
         </div>
@@ -255,7 +255,7 @@ export default function TimeRangeModal({
 
     return (
         <AnimatePresence>
-            <motion.div
+            <m.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
@@ -266,7 +266,7 @@ export default function TimeRangeModal({
                 }}
                 onClick={onClose}
             >
-                <motion.div
+                <m.div
                     initial={{ opacity: 0, y: 16 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: 16 }}
@@ -466,14 +466,14 @@ export default function TimeRangeModal({
 
                             <AnimatePresence>
                                 {error && (
-                                    <motion.div
+                                    <m.div
                                         initial={{ opacity: 0, y: 6 }}
                                         animate={{ opacity: 1, y: 0 }}
                                         exit={{ opacity: 0, y: 4 }}
                                         className="rounded-2xl bg-red-50 px-3.5 py-3 text-center text-[11.5px] font-semibold text-red-500 dark:bg-red-500/10 dark:text-red-400"
                                     >
                                         {error}
-                                    </motion.div>
+                                    </m.div>
                                 )}
                             </AnimatePresence>
                         </div>
@@ -488,7 +488,7 @@ export default function TimeRangeModal({
                             انصراف
                         </button>
 
-                        <motion.button
+                        <m.button
                             type="button"
                             whileTap={{ scale: 0.97 }}
                             onClick={handleSubmit}
@@ -503,10 +503,10 @@ export default function TimeRangeModal({
                                     تأیید
                                 </>
                             )}
-                        </motion.button>
+                        </m.button>
                     </div>
-                </motion.div>
-            </motion.div>
+                </m.div>
+            </m.div>
         </AnimatePresence>
     );
 }

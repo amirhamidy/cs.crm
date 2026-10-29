@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, m } from "framer-motion";
 import { Archive, ClipboardList, Plus, RefreshCw } from "lucide-react";
 import { useRouter } from "next/navigation";
 import axiosInstance from "@/lib/axiosInstance";
@@ -9,13 +9,26 @@ import { apiRoutes } from "@/lib/apiRoutes";
 import { metaApi, tasksApi } from "@/lib/api";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import Pagination from "@/components/ui/Pagination";
+import dynamic from "next/dynamic";
 import CardSkeletonGrid from "@/components/ui/CardSkeletonGrid";
+import LazyLoading from "@/components/ui/LazyLoading";
 import type { Task, TaskStatus } from "@/types/task";
 import type { Department } from "@/types/department";
 import TaskCard from "@/components/user/tasks/TaskCardx";
-import CreateTaskModal from "@/components/user/tasks/CreateTaskModal";
-import CreateNoCaseTaskModal from "@/components/tasks/CreateNoCaseTaskModal";
-import EditTaskModal from "@/components/user/tasks/EditTaskModal";
+
+
+const CreateTaskModal = dynamic(() => import("@/components/user/tasks/CreateTaskModal"), {
+    ssr: false,
+    loading: () => <LazyLoading />,
+});
+const CreateNoCaseTaskModal = dynamic(() => import("@/components/tasks/CreateNoCaseTaskModal"), {
+    ssr: false,
+    loading: () => <LazyLoading />,
+});
+const EditTaskModal = dynamic(() => import("@/components/user/tasks/EditTaskModal"), {
+    ssr: false,
+    loading: () => <LazyLoading />,
+});
 
 const ACTIVE_STATUS = "in_progress" as TaskStatus;
 
@@ -29,8 +42,8 @@ export default function UserTasksPage() {
     const [editingTask, setEditingTask] = useState<Task | null>(null);
     const [removed, setRemoved] = useState<Set<number>>(new Set());
 
-    // صفحه‌بندی و جستجو سمت سرور؛ فقط همین صفحه (حداکثر ۱۲ مورد) گرفته می‌شود.
-    // فیلتر «وظایف من» و جزئیات تک‌تک تسک‌ها دیگر سمت فرانت انجام نمی‌شود (بدون ریکوئست اضافه).
+    
+    
     const list = usePaginatedList<Task>(
         (params, signal) => tasksApi.page({ ...params, status: ACTIVE_STATUS } as never, signal),
         { pageSize: PAGE_SIZE, scrollTop: true }
@@ -43,7 +56,7 @@ export default function UserTasksPage() {
 
     const loading = list.loading;
 
-    // فقط دپارتمان‌ها (کش‌شده و سبک) برای مودال ویرایش؛ غیر مسدودکننده و یک‌بار
+    
     useEffect(() => {
         metaApi.departments().then(setDepartments).catch(() => setDepartments([]));
     }, []);
@@ -52,7 +65,7 @@ export default function UserTasksPage() {
         setRemoved(new Set());
         tasksApi.invalidate();
         list.refetch();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
+        
     }, [list.refetch]);
 
     const handleDelete = useCallback(async (taskId: number) => {

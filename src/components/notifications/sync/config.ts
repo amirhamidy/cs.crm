@@ -1,6 +1,8 @@
 export const SYNC_CONFIG = {
+  
   visibleMs: 20_000,
-  hiddenMs: 60_000,
+  
+  hiddenMs: 3 * 60_000,
   maxBackoffMs: 5 * 60_000,
   projectTasksMs: 60_000,
   namesTtlMs: 15 * 60_000,

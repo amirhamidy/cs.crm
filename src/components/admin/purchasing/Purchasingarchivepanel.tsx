@@ -12,7 +12,7 @@ import PurchasingTaskCard from "./PurchasingTaskCard";
 interface Props {
     steps: ApiPurchasingStep[];
     attachments: ApiTaskAttachment[];
-    /** با هر بار تازه‌سازی صفحهٔ اصلی عوض می‌شود تا بایگانی هم دوباره خوانده شود. */
+    
     refreshKey?: number;
 }
 
@@ -27,7 +27,7 @@ export default function PurchasingArchive({ steps, attachments, refreshKey = 0 }
     const [tab, setTab] = useState<PurchasingArchiveStatus>("completed");
 
     const fetcher = useCallback(
-        // «tab» فقط برای ریست صفحه در hook است و به سرور فرستاده نمی‌شود.
+        
         ({ tab: _tab, ...params }: { tab?: string; page?: number; page_size?: number; search?: string }, signal: AbortSignal) =>
             purchasingApi.archivePage(tab, params, signal),
         [tab],
@@ -38,19 +38,19 @@ export default function PurchasingArchive({ steps, attachments, refreshKey = 0 }
         filters: { tab },
     });
 
-    // با عوض شدن تب، فیلتر عوض می‌شود و صفحه به ۱ برمی‌گردد.
+    
     useEffect(() => {
         list.setFilters({ tab });
-        // eslint-disable-next-line react-hooks/exhaustive-deps
+        
     }, [tab]);
 
-    // تازه‌سازی همراه صفحهٔ اصلی (بعد از تغییر وضعیت تسک‌ها)
+    
     const lastRefresh = useRef(refreshKey);
     useEffect(() => {
-        if (lastRefresh.current === refreshKey) return; // اولین رندر: خود hook داده را می‌گیرد
+        if (lastRefresh.current === refreshKey) return; 
         lastRefresh.current = refreshKey;
         list.refetch();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
+        
     }, [refreshKey]);
 
     const byTask = useMemo(() => {

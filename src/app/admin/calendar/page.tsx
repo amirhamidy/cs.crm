@@ -1,7 +1,14 @@
 "use client";
 
 import { Suspense } from "react";
-import PersianCalendar from "../../../components/calendar/admin/PersianCalendar";
+import dynamic from "next/dynamic";
+import LazyLoading from "@/components/ui/LazyLoading";
+
+
+const PersianCalendar = dynamic(() => import("@/components/calendar/admin/PersianCalendar"), {
+  ssr: false,
+  loading: () => <LazyLoading />,
+});
 
 export default function CalendarPage() {
   return (

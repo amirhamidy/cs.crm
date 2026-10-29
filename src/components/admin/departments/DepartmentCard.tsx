@@ -1,6 +1,6 @@
 "use client";
 
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, m } from "framer-motion";
 import { Building2, Pencil, Trash2, UserRound } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Department } from "./types";
@@ -50,7 +50,7 @@ export default function DepartmentCard({
     const employees = department.employees || [];
 
     return (
-        <motion.div
+        <m.div
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.05 }}
@@ -131,7 +131,7 @@ export default function DepartmentCard({
 
                         <AnimatePresence>
                             {tooltipVisible && (
-                                <motion.div
+                                <m.div
                                     initial={{ opacity: 0, y: 4, scale: 0.95 }}
                                     animate={{ opacity: 1, y: 0, scale: 1 }}
                                     exit={{ opacity: 0, y: 4, scale: 0.95 }}
@@ -154,7 +154,7 @@ export default function DepartmentCard({
                                             برای حذف آن ابتدا وابستگی‌های این دپارتمان را حذف کنید
                                         </span>
                                     </div>
-                                </motion.div>
+                                </m.div>
                             )}
                         </AnimatePresence>
                     </div>
@@ -208,6 +208,6 @@ export default function DepartmentCard({
                     })}
                 </div>
             )}
-        </motion.div>
+        </m.div>
     );
 }

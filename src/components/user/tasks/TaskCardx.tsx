@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { useState } from "react";
+import { AnimatePresence, m } from "framer-motion";
+import { useVisibleInterval } from "@/hooks/useVisibility";
 import {
     Building2,
     CalendarClock,
@@ -220,7 +221,7 @@ export default function TaskCard({
     const accent =
         urgency && urgency !== "normal" ? URGENCY_ACCENT[urgency] : null;
 
-    // ددلاین دیگر موقع رندر کارت گرفته نمی‌شود؛ فقط با کلیک روی دکمه (مودال ددلاین) یا دکمهٔ تعیین بازه زمانی ریکوئست زده می‌شود.
+    
     const openTimeModal = () => {
         setTimeModalOpen(true);
         if (stepId && !stepDeadline) {
@@ -228,11 +229,12 @@ export default function TaskCard({
         }
     };
 
-    useEffect(() => {
-        if (!stepDeadline?.deadline || !isActiveTask) return;
-        const interval = setInterval(() => forceTick((t) => t + 1), 60000);
-        return () => clearInterval(interval);
-    }, [stepDeadline?.deadline, isActiveTask]);
+    
+    useVisibleInterval(
+        () => forceTick((t) => t + 1),
+        60000,
+        Boolean(stepDeadline?.deadline) && isActiveTask,
+    );
 
     async function handleDelete() {
         setDeleting(true);
@@ -280,7 +282,7 @@ export default function TaskCard({
 
     return (
         <>
-            <motion.div
+            <m.div
                 onHoverStart={() => setHovered(true)}
                 onHoverEnd={() => setHovered(false)}
                 className="relative flex flex-col gap-3 overflow-hidden rounded-2xl p-4"
@@ -309,7 +311,7 @@ export default function TaskCard({
                 }}
             >
                 {urgency === "overdue" && (
-                    <motion.div
+                    <m.div
                         className="pointer-events-none absolute inset-x-0 top-0 h-[2px]"
                         style={{
                             background: `linear-gradient(90deg, transparent, ${accent}, transparent)`,
@@ -335,7 +337,7 @@ export default function TaskCard({
                             <stop offset="100%" stopColor="#8b5cf6" />
                         </linearGradient>
                     </defs>
-                    <motion.rect
+                    <m.rect
                         x="1"
                         y="1"
                         width="calc(100% - 2px)"
@@ -376,7 +378,7 @@ export default function TaskCard({
                                     border: `1px solid color-mix(in srgb, ${accent} 30%, transparent)`,
                                 }}
                             >
-                                <motion.span
+                                <m.span
                                     className="h-1.5 w-1.5 rounded-full"
                                     style={{ background: accent }}
                                     animate={
@@ -554,11 +556,11 @@ export default function TaskCard({
                         </Chip>
                     ) : null}
                 </div>
-            </motion.div>
+            </m.div>
 
             <AnimatePresence>
                 {showConfirm && (
-                    <motion.div
+                    <m.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
@@ -566,7 +568,7 @@ export default function TaskCard({
                         style={{ background: "rgba(0,0,0,0.45)", backdropFilter: "blur(3px)" }}
                         onClick={handleCloseConfirm}
                     >
-                        <motion.div
+                        <m.div
                             initial={{ opacity: 0, y: 16 }}
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, y: 16 }}
@@ -604,7 +606,7 @@ export default function TaskCard({
 
                                 <AnimatePresence>
                                     {deleteError && (
-                                        <motion.div
+                                        <m.div
                                             initial={{ opacity: 0, y: 6 }}
                                             animate={{ opacity: 1, y: 0 }}
                                             exit={{ opacity: 0, y: 4 }}
@@ -614,7 +616,7 @@ export default function TaskCard({
                                             <p className="flex-1 text-[11.5px] font-semibold leading-5 text-red-500 dark:text-red-400">
                                                 {deleteError}
                                             </p>
-                                        </motion.div>
+                                        </m.div>
                                     )}
                                 </AnimatePresence>
                             </div>
@@ -644,8 +646,8 @@ export default function TaskCard({
                                     )}
                                 </button>
                             </div>
-                        </motion.div>
-                    </motion.div>
+                        </m.div>
+                    </m.div>
                 )}
             </AnimatePresence>
 

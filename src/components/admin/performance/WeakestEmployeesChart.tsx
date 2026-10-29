@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, m } from "framer-motion";
 import { useTheme } from "next-themes";
 import {
     AlertTriangle,
@@ -272,7 +272,7 @@ export default function WeakestEmployeesChart({
     }
 
     return (
-        <motion.div
+        <m.div
             initial={{
                 opacity: 0,
                 y: 6,
@@ -390,7 +390,7 @@ export default function WeakestEmployeesChart({
                                         : 0;
 
                                 return (
-                                    <motion.div
+                                    <m.div
                                         key={
                                             employee.key
                                         }
@@ -626,13 +626,13 @@ export default function WeakestEmployeesChart({
                                                 )}
                                             </span>
                                         </div>
-                                    </motion.div>
+                                    </m.div>
                                 );
                             },
                         )}
                     </AnimatePresence>
                 </div>
             )}
-        </motion.div>
+        </m.div>
     );
 }

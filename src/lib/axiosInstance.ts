@@ -118,7 +118,7 @@ axiosInstance.interceptors.response.use(
   },
 );
 
-// سقف هم‌زمانی GET، dedupe درخواست‌های یکسان و اولویت پس‌زمینه؛ POST/PUT/DELETE دست‌نخورده.
+
 installRequestGovernor(axiosInstance, { maxConcurrent: 6, maxBackground: 2 });
 
 export default axiosInstance;

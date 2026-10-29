@@ -1,6 +1,6 @@
 "use client";
 
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, m } from "framer-motion";
 import { Plus, Trash2, Users, X } from "lucide-react";
 import { useState } from "react";
 import { Department, Employee } from "./types";
@@ -114,7 +114,7 @@ export default function EmployeesPanel({
 
                                             <AnimatePresence>
                                                 {tooltipVisible === employee.id && hasTask && (
-                                                    <motion.div
+                                                    <m.div
                                                         initial={{
                                                             opacity: 0,
                                                             y: 4,
@@ -141,7 +141,7 @@ export default function EmployeesPanel({
                                                                 ابتدا وظایفش را حذف کنید
                                                             </p>
                                                         </div>
-                                                    </motion.div>
+                                                    </m.div>
                                                 )}
                                             </AnimatePresence>
                                         </div>

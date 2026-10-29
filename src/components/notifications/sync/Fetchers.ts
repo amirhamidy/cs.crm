@@ -1,8 +1,8 @@
 import { fetchAllPages, fetchPage } from "@/lib/api/_core";
 
-// لیست‌ها صفحه‌بندی شده‌اند؛ برای تشخیص تغییرات (نوتیفیکیشن) همهٔ صفحات لازم است
-// وگرنه تغییر در آیتم‌های بعد از صفحهٔ اول هیچ‌وقت دیده نمی‌شود.
-// TODO(backend-aggregate): تشخیص تغییر به snapshot کامل رکوردها نیاز دارد؛ با endpoint تغییرات (مثلاً ?updated_after=) می‌توان دریافت کامل را حذف کرد.
+
+
+
 async function getList(url: string, signal: AbortSignal): Promise<unknown[]> {
   return fetchAllPages<unknown>((p) =>
     fetchPage<unknown>(url, { ...p, page_size: 100 }, signal, "low"),

@@ -1,6 +1,6 @@
 "use client";
 
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, m } from "framer-motion";
 
 type TooltipRow = {
     dotStyle: "circle" | "square" | "dashed-circle";
@@ -120,7 +120,7 @@ export function AnimatedChartTooltip({
         <div className={`absolute top-14 z-10 min-w-[130px] ${position === "top-right" ? "right-2" : "left-2"}`}>
             <AnimatePresence mode="wait">
                 {visible && (
-                    <motion.div
+                    <m.div
                         key={animKey}
                         initial={{ opacity: 0, y: 4, filter: "blur(2px)", scale: 0.96 }}
                         animate={{ opacity: 1, y: 0, filter: "blur(0px)", scale: 1 }}
@@ -128,7 +128,7 @@ export function AnimatedChartTooltip({
                         transition={{ duration: 0.18 }}
                     >
                         <ChartTooltip {...tooltipProps} />
-                    </motion.div>
+                    </m.div>
                 )}
             </AnimatePresence>
         </div>

@@ -43,7 +43,7 @@ const STATUS_FILTERS = [
 
 const ARCHIVE_PAGE_SIZE = 12;
 
-/** اگر بک‌اند فیلتر department_id/status را اعمال نکند، خودکار به «حالت امن» می‌رود. */
+
 let archiveSafeMode = false;
 
 export default function ArchivedTasksBoard() {
@@ -51,7 +51,7 @@ export default function ArchivedTasksBoard() {
     const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
     const [departmentFilter, setDepartmentFilter] = useState<DepartmentFilter>("all");
 
-    // اگر کاربر فقط عضو یک دپارتمان است، همان به سرور فرستاده می‌شود
+    
     const effectiveDepartment =
         departmentFilter !== "all"
             ? departmentFilter
@@ -99,7 +99,7 @@ export default function ArchivedTasksBoard() {
         }
     );
 
-    // وقتی فیلتر دپارتمان/وضعیت عوض می‌شود، صفحه از ۱ شروع می‌شود (هوک انجام می‌دهد)
+    
     const applyStatus = (value: StatusFilter) => {
         setStatusFilter(value);
         list.setFilters({ status: value === "all" ? undefined : value });

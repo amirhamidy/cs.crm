@@ -15,18 +15,14 @@ import type {
 
 const BASE = "/minutes/api/v1";
 
-/**
- * کلاینت عمومی برای لینک امضای شخص بیرونی.
- * عمداً از axiosInstance اصلی استفاده نمی‌کنیم تا توکن/کوکی احراز هویت
- * و interceptorهای ریدایرکت به صفحه‌ی ورود روی این مسیرها اعمال نشوند.
- */
+
 const publicClient = axios.create({
   baseURL: axiosInstance.defaults.baseURL,
   headers: { "Content-Type": "application/json" },
 });
 
 export const minutesApi = {
-  /* ---------- Meetings ---------- */
+  
   async listMeetings(params: { status?: MeetingStatus | ""; search?: string } = {}) {
     const query: Record<string, string> = {};
     if (params.status) query.status = params.status;
@@ -63,7 +59,7 @@ export const minutesApi = {
     return res.data;
   },
 
-  /* ---------- Signers ---------- */
+  
   async mySignatures(pendingOnly = false) {
     return listAll<SignerItem>(`${BASE}/signer/my/`, pendingOnly ? { pending: 1 } : {});
   },
@@ -82,7 +78,7 @@ export const minutesApi = {
     await axiosInstance.delete(`${BASE}/signer/${id}/delete/`);
   },
 
-  /** توجه: id در اینجا شناسه‌ی Signer است، نه Meeting */
+  
   async signInternal(signerId: number, signatureImage: string) {
     const res = await axiosInstance.post<SignerItem>(`${BASE}/signer/${signerId}/sign/`, {
       signature_image: signatureImage,
@@ -90,7 +86,7 @@ export const minutesApi = {
     return res.data;
   },
 
-  /* ---------- Public (بدون احراز هویت) ---------- */
+  
   async getPublicSigner(token: string) {
     const res = await publicClient.get<PublicSigner>(`${BASE}/signer/public/${token}/`);
     return res.data;

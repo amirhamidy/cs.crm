@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, m } from "framer-motion";
 import { Check, FilePlus, FileText, Loader2, Upload, X } from "lucide-react";
 import { HumanResource, uploadDocumentFile } from "./humanResourceApi";
 import { extractError } from "./hrUtils";
@@ -13,11 +13,7 @@ interface Props {
     onSaved: () => void;
 }
 
-/**
- * مودال افزودن فایل به یک منبع انسانی.
- *   POST /document/api/v1/{document_id}/files/
- *   multipart/form-data  →  title (نام فایل) + file
- */
+
 export default function HumanResourceFileModal({ open, document, onClose, onSaved }: Props) {
     const [file, setFile] = useState<File | null>(null);
     const [fileTitle, setFileTitle] = useState("");
@@ -54,7 +50,7 @@ export default function HumanResourceFileModal({ open, document, onClose, onSave
 
     return (
         <AnimatePresence>
-            <motion.div
+            <m.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
@@ -62,7 +58,7 @@ export default function HumanResourceFileModal({ open, document, onClose, onSave
                 style={{ background: "rgba(0,0,0,0.45)", backdropFilter: "blur(3px)" }}
                 onMouseDown={() => !saving && onClose()}
             >
-                <motion.div
+                <m.div
                     initial={{ opacity: 0, y: 16, scale: 0.98 }}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: 16, scale: 0.98 }}
@@ -145,7 +141,7 @@ export default function HumanResourceFileModal({ open, document, onClose, onSave
                     )}
 
                     <div className="flex shrink-0 px-8 pb-8 pt-5">
-                        <motion.button
+                        <m.button
                             type="button"
                             whileTap={{ scale: 0.97 }}
                             onClick={save}
@@ -154,10 +150,10 @@ export default function HumanResourceFileModal({ open, document, onClose, onSave
                         >
                             {saving ? <Loader2 size={15} className="animate-spin" /> : <Check size={14} strokeWidth={3} />}
                             {saving ? "در حال آپلود..." : "افزودن فایل"}
-                        </motion.button>
+                        </m.button>
                     </div>
-                </motion.div>
-            </motion.div>
+                </m.div>
+            </m.div>
         </AnimatePresence>
     );
 }

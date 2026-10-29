@@ -10,7 +10,7 @@ import {
     type InputHTMLAttributes,
 } from "react";
 import { createPortal } from "react-dom";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, m } from "framer-motion";
 import { Check, ChevronDown, Loader, Pencil, Search, X } from "lucide-react";
 import type { AxiosError } from "axios";
 import axiosInstance from "@/lib/axiosInstance";
@@ -35,7 +35,7 @@ interface Props {
 
 type Option = { value: string; label: string; sub?: string };
 
-/* ------------------------------ helpers ------------------------------ */
+
 
 const GRADIENTS = [
     "from-blue-500 to-indigo-500",
@@ -62,7 +62,7 @@ function initialOf(text: string) {
     return clean ? clean.charAt(0) : "؟";
 }
 
-/** جدا کردن هر 3 رقم با کاما، حفظ نقطه اعشار */
+
 function formatNumber(raw: string): string {
     if (!raw) return "";
     let str = String(raw).replace(/,/g, "").trim();
@@ -78,20 +78,20 @@ function formatNumber(raw: string): string {
     return (neg ? "-" : "") + out;
 }
 
-/** تبدیل مقدار فرمت‌شده به عدد خام */
+
 function parseNumber(raw: string): number {
     if (!raw) return NaN;
     const cleaned = String(raw).replace(/,/g, "").trim();
     return cleaned === "" ? NaN : Number(cleaned);
 }
 
-/* ------------------------------ FloatingInput ------------------------------ */
+
 
 interface FloatingInputProps
     extends Omit<InputHTMLAttributes<HTMLInputElement>, "onChange"> {
     label: string;
     id: string;
-    /** فعال‌سازی فرمت عددی با کاما */
+    
     numeric?: boolean;
     onValueChange?: (value: string) => void;
 }
@@ -141,7 +141,7 @@ const FloatingInput = forwardRef<HTMLInputElement, FloatingInputProps>(
 );
 FloatingInput.displayName = "FloatingInput";
 
-/* ------------------------------ NiceSelect ------------------------------ */
+
 
 function NiceSelect({
     label,
@@ -256,12 +256,12 @@ function NiceSelect({
                 </span>
 
                 {!disabled && (
-                    <motion.span
+                    <m.span
                         animate={{ rotate: open ? 180 : 0 }}
                         transition={{ duration: 0.2 }}
                     >
                         <ChevronDown size={14} className="shrink-0 text-gray-400" />
-                    </motion.span>
+                    </m.span>
                 )}
             </button>
 
@@ -269,7 +269,7 @@ function NiceSelect({
                 createPortal(
                     <AnimatePresence>
                         {open && !disabled && (
-                            <motion.div
+                            <m.div
                                 ref={panelRef}
                                 initial={{ opacity: 0, y: -6, scale: 0.97 }}
                                 animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -321,7 +321,7 @@ function NiceSelect({
                                         visible.map((o, i) => {
                                             const active = o.value === value;
                                             return (
-                                                <motion.button
+                                                <m.button
                                                     key={o.value}
                                                     type="button"
                                                     initial={{ opacity: 0, x: 6 }}
@@ -369,12 +369,12 @@ function NiceSelect({
                                                             />
                                                         </span>
                                                     )}
-                                                </motion.button>
+                                                </m.button>
                                             );
                                         })
                                     )}
                                 </div>
-                            </motion.div>
+                            </m.div>
                         )}
                     </AnimatePresence>,
                     document.body
@@ -383,7 +383,7 @@ function NiceSelect({
     );
 }
 
-/* ------------------------------ helpers ------------------------------ */
+
 
 function getErrorMessage(error: unknown) {
     const data = (error as AxiosError<Record<string, unknown>>).response?.data;
@@ -408,7 +408,7 @@ function getErrorMessage(error: unknown) {
     return "خطا در ویرایش محصول";
 }
 
-/* ============================== component ============================== */
+
 
 export default function WarehouseEmployeeProductEditModal({
     isOpen,
@@ -530,7 +530,7 @@ export default function WarehouseEmployeeProductEditModal({
     return (
         <AnimatePresence>
             {isOpen && (
-                <motion.div
+                <m.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
@@ -541,7 +541,7 @@ export default function WarehouseEmployeeProductEditModal({
                     }}
                     onClick={handleClose}
                 >
-                    <motion.div
+                    <m.div
                         initial={{ opacity: 0, y: 16 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: 16 }}
@@ -646,7 +646,7 @@ export default function WarehouseEmployeeProductEditModal({
                                 </p>
                             )}
 
-                            <motion.button
+                            <m.button
                                 type="submit"
                                 disabled={loading}
                                 whileTap={{ scale: 0.97 }}
@@ -657,10 +657,10 @@ export default function WarehouseEmployeeProductEditModal({
                                 ) : (
                                     "ذخیره تغییرات"
                                 )}
-                            </motion.button>
+                            </m.button>
                         </form>
-                    </motion.div>
-                </motion.div>
+                    </m.div>
+                </m.div>
             )}
         </AnimatePresence>
     );

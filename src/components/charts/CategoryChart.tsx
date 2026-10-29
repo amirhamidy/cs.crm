@@ -1,6 +1,6 @@
 "use client";
 
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, m } from "framer-motion";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Cell, Pie, PieChart, ResponsiveContainer } from "recharts";
 
@@ -151,7 +151,7 @@ export default function CategoryChart({
               className="relative rounded-lg px-2.5 py-1 text-[11px] font-medium"
             >
               {activeRange === range.key && (
-                <motion.span
+                <m.span
                   layoutId="categoryChartRangeIndicator"
                   className="absolute inset-0 rounded-lg bg-white shadow-sm dark:bg-slate-800"
                   transition={{
@@ -179,7 +179,7 @@ export default function CategoryChart({
         <div className="absolute left-2 top-2 z-10 min-w-[140px]">
           <AnimatePresence mode="wait">
             {activeSlice && (
-              <motion.div
+              <m.div
                 key={`${activeRange}-${activeSlice.id}`}
                 initial={{
                   opacity: 0,
@@ -226,7 +226,7 @@ export default function CategoryChart({
                     {activeSlice.pct}%
                   </span>
                 </p>
-              </motion.div>
+              </m.div>
             )}
           </AnimatePresence>
         </div>
@@ -273,7 +273,7 @@ export default function CategoryChart({
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
           <AnimatePresence mode="wait">
             {activeSlice ? (
-              <motion.div
+              <m.div
                 key={activeSlice.id}
                 initial={{ opacity: 0, scale: 0.85 }}
                 animate={{ opacity: 1, scale: 1 }}
@@ -289,9 +289,9 @@ export default function CategoryChart({
                 >
                   {activeSlice.pct}%
                 </p>
-              </motion.div>
+              </m.div>
             ) : (
-              <motion.div
+              <m.div
                 key="total"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -306,7 +306,7 @@ export default function CategoryChart({
                 <p className="text-[16px] font-bold tabular-nums text-gray-700 dark:text-gray-200">
                   {totalFormatted}
                 </p>
-              </motion.div>
+              </m.div>
             )}
           </AnimatePresence>
         </div>

@@ -1,7 +1,4 @@
-/**
- * Compatibility shim. Real logic lives in `@/lib/api/internalTasks`.
- * List functions fetch ALL pages and return `{ data: T[] }`.
- */
+
 import type {
   EmployeeListItem,
   InternalTask,

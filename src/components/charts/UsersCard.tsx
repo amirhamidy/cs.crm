@@ -1,6 +1,6 @@
 "use client";
 
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, m } from "framer-motion";
 import { Crown, TrendingDown, TrendingUp } from "lucide-react";
 import { useState } from "react";
 
@@ -66,7 +66,7 @@ export default function TopUsersCard({
                 }`}
             >
               {range === r && (
-                <motion.span layoutId="activeTab" className="absolute inset-0 rounded-lg bg-white shadow-sm dark:bg-slate-800" />
+                <m.span layoutId="activeTab" className="absolute inset-0 rounded-lg bg-white shadow-sm dark:bg-slate-800" />
               )}
 
               <span className="relative z-10">{RANGE_LABELS[r]}</span>
@@ -81,7 +81,7 @@ export default function TopUsersCard({
             const rankMeta = index < 3 ? RANK_META[index] : null;
 
             return (
-              <motion.div
+              <m.div
                 key={user.id}
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -128,7 +128,7 @@ export default function TopUsersCard({
                     </div>
                   )}
                 </div>
-              </motion.div>
+              </m.div>
             );
           })}
         </AnimatePresence>

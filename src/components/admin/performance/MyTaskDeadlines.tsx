@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { motion } from "framer-motion";
+import { m } from "framer-motion";
 import { CalendarClock, Clock, Loader2, UserRound } from "lucide-react";
 import { useTheme } from "next-themes";
 import api from "@/lib/axiosInstance";
@@ -51,6 +51,8 @@ export default function MyTaskDeadlines() {
 
         async function load() {
             try {
+                
+                
                 const [source, employeeSource] = await Promise.all([
                     listAll<Task>("/tasks/api/v1/tasks/"),
                     listAll<Employee>("/accounts/api/v1/employee/list/"),
@@ -100,7 +102,7 @@ export default function MyTaskDeadlines() {
     }, []);
 
     return (
-        <motion.section
+        <m.section
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             className="rounded-[1.5rem] border p-4 sm:p-5"
@@ -142,7 +144,7 @@ export default function MyTaskDeadlines() {
             ) : (
                 <div className="grid gap-2.5">
                     {tasks.map((task, index) => (
-                        <motion.div
+                        <m.div
                             key={task.id}
                             initial={{ opacity: 0, y: 6 }}
                             animate={{ opacity: 1, y: 0 }}
@@ -191,10 +193,10 @@ export default function MyTaskDeadlines() {
                                     </div>
                                 </div>
                             </div>
-                        </motion.div>
+                        </m.div>
                     ))}
                 </div>
             )}
-        </motion.section>
+        </m.section>
     );
 }

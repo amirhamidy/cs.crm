@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, InputHTMLAttributes, forwardRef } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { m, AnimatePresence } from "framer-motion";
 import { X, Loader, User } from "lucide-react";
 import { accountsApi } from "@/lib/api";
 import type { ApiEmployee, ApiUser } from "@/types/users";
@@ -176,7 +176,7 @@ export default function EditUserModal({
     return (
         <AnimatePresence>
             {isOpen && (
-                <motion.div
+                <m.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
@@ -184,7 +184,7 @@ export default function EditUserModal({
                     style={{ background: "rgba(0,0,0,0.45)", backdropFilter: "blur(3px)" }}
                     onClick={onClose}
                 >
-                    <motion.div
+                    <m.div
                         initial={{ opacity: 0, y: 16 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: 16 }}
@@ -248,7 +248,7 @@ export default function EditUserModal({
                                 </p>
                             )}
 
-                            <motion.button
+                            <m.button
                                 type="submit"
                                 disabled={loading || fetchingUser}
                                 whileTap={{ scale: 0.97 }}
@@ -259,10 +259,10 @@ export default function EditUserModal({
                                 ) : (
                                     "ذخیره تغییرات"
                                 )}
-                            </motion.button>
+                            </m.button>
                         </form>
-                    </motion.div>
-                </motion.div>
+                    </m.div>
+                </m.div>
             )}
         </AnimatePresence>
     );

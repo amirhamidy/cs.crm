@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, m } from "framer-motion";
 import {
     X,
     History,
@@ -230,7 +230,7 @@ export default function TaskLogsModal({ isOpen, onClose, taskId, taskTitle }: Pr
     const { resolvedTheme } = useTheme();
     const isDark = resolvedTheme === "dark";
 
-    // صفحه‌بندی سمت سرور؛ تا وقتی مودال باز نشده درخواستی ارسال نمی‌شود.
+    
     const list = usePaginatedList<TaskLog>(
         (params, signal) => tasksApi.logsPage<TaskLog>(taskId, params, signal),
         { pageSize: LOGS_PAGE_SIZE, enabled: isOpen },
@@ -242,8 +242,8 @@ export default function TaskLogsModal({ isOpen, onClose, taskId, taskTitle }: Pr
     const fetchLogs = list.refetch;
     const setListPage = list.setPage;
 
-    // هر بار که مودال برای تسک دیگری باز شد از صفحهٔ اول شروع کن.
-    // (خود تغییر isOpen باعث واکشی مجدد در usePaginatedList می‌شود)
+    
+    
     useEffect(() => {
         if (!isOpen) return;
         setListPage(1);
@@ -257,7 +257,7 @@ export default function TaskLogsModal({ isOpen, onClose, taskId, taskTitle }: Pr
 
     return createPortal(
         <AnimatePresence>
-            <motion.div
+            <m.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
@@ -265,7 +265,7 @@ export default function TaskLogsModal({ isOpen, onClose, taskId, taskTitle }: Pr
                 style={{ background: "rgba(0,0,0,0.5)", backdropFilter: "blur(3px)" }}
                 onClick={onClose}
             >
-                <motion.div
+                <m.div
                     initial={{ scale: 0.94, y: 18 }}
                     animate={{ scale: 1, y: 0 }}
                     exit={{ scale: 0.94, y: 18 }}
@@ -361,8 +361,8 @@ export default function TaskLogsModal({ isOpen, onClose, taskId, taskTitle }: Pr
                             </div>
                         )}
                     </div>
-                </motion.div>
-            </motion.div>
+                </m.div>
+            </m.div>
         </AnimatePresence>,
         document.body
     );

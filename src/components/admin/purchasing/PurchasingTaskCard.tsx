@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { motion } from "framer-motion";
+import { m } from "framer-motion";
 import {
     ArrowLeftCircle,
     ArrowRightCircle,
@@ -146,7 +146,7 @@ export default function PurchasingTaskCard({
 
     return (
         <>
-            <motion.article
+            <m.article
                 layout
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -406,7 +406,7 @@ export default function PurchasingTaskCard({
                         )}
                     </div>
                 </div>
-            </motion.article>
+            </m.article>
 
             <TaskTransitionModal
                 isOpen={pendingAction !== null}

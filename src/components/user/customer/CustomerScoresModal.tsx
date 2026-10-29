@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, m } from "framer-motion";
 import {
     CalendarDays,
     Loader2,
@@ -140,7 +140,7 @@ export default function CustomerScoresModal({
     return (
         <AnimatePresence>
             {isOpen && (
-                <motion.div
+                <m.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
@@ -149,7 +149,7 @@ export default function CustomerScoresModal({
                         if (event.target === event.currentTarget) onClose();
                     }}
                 >
-                    <motion.div
+                    <m.div
                         initial={{ opacity: 0, y: 25, scale: 0.97 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: 25, scale: 0.97 }}
@@ -250,7 +250,7 @@ export default function CustomerScoresModal({
                             {!loading && !error && scores.length > 0 && (
                                 <div className="space-y-4">
                                     {scores.map((item) => (
-                                        <motion.div
+                                        <m.div
                                             key={item.id}
                                             initial={{ opacity: 0, y: 10 }}
                                             animate={{ opacity: 1, y: 0 }}
@@ -302,13 +302,13 @@ export default function CustomerScoresModal({
                                                     {item.reason}
                                                 </div>
                                             )}
-                                        </motion.div>
+                                        </m.div>
                                     ))}
                                 </div>
                             )}
                         </div>
-                    </motion.div>
-                </motion.div>
+                    </m.div>
+                </m.div>
             )}
         </AnimatePresence>
     );

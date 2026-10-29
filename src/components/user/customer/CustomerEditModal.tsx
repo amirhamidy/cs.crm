@@ -9,7 +9,7 @@ import {
     InputHTMLAttributes,
     TextareaHTMLAttributes,
 } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { m, AnimatePresence } from "framer-motion";
 import {
     X,
     Loader,
@@ -196,18 +196,18 @@ function NiceSelect({
                 >
                     {selected ? selected.label : placeholder}
                 </span>
-                <motion.span
+                <m.span
                     animate={{ rotate: open ? 180 : 0 }}
                     transition={{ duration: 0.2 }}
                     className="shrink-0 text-gray-400"
                 >
                     <ChevronDown size={15} />
-                </motion.span>
+                </m.span>
             </button>
 
             <AnimatePresence>
                 {open && (
-                    <motion.div
+                    <m.div
                         initial={{
                             opacity: 0,
                             scale: 0.95,
@@ -257,12 +257,12 @@ function NiceSelect({
                                                     {opt.label}
                                                 </span>
                                                 {value === opt.id && (
-                                                    <motion.span
+                                                    <m.span
                                                         layoutId="edit-check-icon"
                                                         className="text-white"
                                                     >
                                                         <Check size={14} />
-                                                    </motion.span>
+                                                    </m.span>
                                                 )}
                                             </div>
                                             {opt.sub && (
@@ -280,7 +280,7 @@ function NiceSelect({
                                 </div>
                             )}
                         </div>
-                    </motion.div>
+                    </m.div>
                 )}
             </AnimatePresence>
         </div>
@@ -378,18 +378,18 @@ function SourceSelect({
                 >
                     {selected ? selected.title : "انتخاب منبع آشنایی"}
                 </span>
-                <motion.span
+                <m.span
                     animate={{ rotate: open ? 180 : 0 }}
                     transition={{ duration: 0.2 }}
                     className="shrink-0 text-gray-400"
                 >
                     <ChevronDown size={15} />
-                </motion.span>
+                </m.span>
             </button>
 
             <AnimatePresence>
                 {open && (
-                    <motion.div
+                    <m.div
                         initial={{ opacity: 0, scale: 0.95, y: dropUp ? 8 : -8 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.95, y: dropUp ? 8 : -8 }}
@@ -506,7 +506,7 @@ function SourceSelect({
                                 </div>
                             )}
                         </div>
-                    </motion.div>
+                    </m.div>
                 )}
             </AnimatePresence>
         </div>
@@ -714,7 +714,7 @@ export default function CustomerEditModal({
     return (
         <AnimatePresence>
             {isOpen && (
-                <motion.div
+                <m.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
@@ -725,7 +725,7 @@ export default function CustomerEditModal({
                     }}
                     onClick={handleClose}
                 >
-                    <motion.div
+                    <m.div
                         initial={{ opacity: 0, y: 16 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: 16 }}
@@ -840,17 +840,17 @@ export default function CustomerEditModal({
                                     <div className="mt-2 min-h-[48px]">
                                         <AnimatePresence mode="wait">
                                             {error && (
-                                                <motion.div
+                                                <m.div
                                                     initial={{ opacity: 0, y: 6 }}
                                                     animate={{ opacity: 1, y: 0 }}
                                                     exit={{ opacity: 0, y: 4 }}
                                                     className="flex items-center justify-center py-3 rounded-2xl bg-red-50 dark:bg-red-500/10 text-red-500 dark:text-red-400 text-[12px] font-bold"
                                                 >
                                                     {error}
-                                                </motion.div>
+                                                </m.div>
                                             )}
                                             {success ? (
-                                                <motion.div
+                                                <m.div
                                                     key="success"
                                                     initial={{ opacity: 0, scale: 0.9 }}
                                                     animate={{ opacity: 1, scale: 1 }}
@@ -858,10 +858,10 @@ export default function CustomerEditModal({
                                                 >
                                                     <CheckCircle2 size={16} />
                                                     تغییرات ذخیره شد
-                                                </motion.div>
+                                                </m.div>
                                             ) : (
                                                 !error && (
-                                                    <motion.button
+                                                    <m.button
                                                         key="submit"
                                                         type="submit"
                                                         disabled={isSubmitting}
@@ -876,7 +876,7 @@ export default function CustomerEditModal({
                                                         ) : (
                                                             "ذخیره تغییرات"
                                                         )}
-                                                    </motion.button>
+                                                    </m.button>
                                                 )
                                             )}
                                         </AnimatePresence>
@@ -884,8 +884,8 @@ export default function CustomerEditModal({
                                 </form>
                             )}
                         </div>
-                    </motion.div>
-                </motion.div>
+                    </m.div>
+                </m.div>
             )}
         </AnimatePresence>
     );

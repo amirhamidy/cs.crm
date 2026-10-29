@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, m } from "framer-motion";
 import { CheckCircle2, ChevronDown, Clock3, FileText, UserRound, XCircle, type LucideIcon } from "lucide-react";
 import { toPersianDigits } from "@/lib/jalali";
 import type { ApiQualityControlEmployee, ApiQualityControlItem, QualityControlActionResponse } from "@/types/quality_control";
@@ -45,7 +45,7 @@ export default function QCItemCard({ item, index, reviewer, reviewerName, names,
 
     return (
         <>
-            <motion.article
+            <m.article
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 whileHover={{ y: -3 }}
@@ -95,29 +95,29 @@ export default function QCItemCard({ item, index, reviewer, reviewerName, names,
 
                     <AnimatePresence initial={false}>
                         {detailsOpen && (
-                            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                            <m.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
                                 <div className="mt-2 grid grid-cols-2 gap-2">
                                     <Tile label="شناسه بررسی">{toPersianDigits(item.id)}</Tile>
                                     <Tile label="ایجاد شده">{formatDate(item.created_at)}</Tile>
                                 </div>
-                            </motion.div>
+                            </m.div>
                         )}
                     </AnimatePresence>
 
                     {item.status === "pending" && (
                         <div className="mt-3 grid grid-cols-2 gap-2">
-                            <motion.button type="button" whileTap={{ scale: 0.98 }} onClick={() => setAction("approve")} className="flex h-9 items-center justify-center gap-1.5 rounded-full bg-emerald-600 text-[11.5px] font-extrabold text-white transition hover:bg-emerald-500">
+                            <m.button type="button" whileTap={{ scale: 0.98 }} onClick={() => setAction("approve")} className="flex h-9 items-center justify-center gap-1.5 rounded-full bg-emerald-600 text-[11.5px] font-extrabold text-white transition hover:bg-emerald-500">
                                 <CheckCircle2 size={13} />
                                 تایید کالا
-                            </motion.button>
-                            <motion.button type="button" whileTap={{ scale: 0.98 }} onClick={() => setAction("reject")} className="flex h-9 items-center justify-center gap-1.5 rounded-full bg-red-600 text-[11.5px] font-extrabold text-white transition hover:bg-red-500">
+                            </m.button>
+                            <m.button type="button" whileTap={{ scale: 0.98 }} onClick={() => setAction("reject")} className="flex h-9 items-center justify-center gap-1.5 rounded-full bg-red-600 text-[11.5px] font-extrabold text-white transition hover:bg-red-500">
                                 <XCircle size={13} />
                                 رد کالا
-                            </motion.button>
+                            </m.button>
                         </div>
                     )}
                 </div>
-            </motion.article>
+            </m.article>
 
             {action && <QCActionModal isOpen mode={action} item={item} reviewer={reviewer} reviewerName={reviewerName} onClose={() => setAction(null)} onCompleted={onUpdated} />}
         </>

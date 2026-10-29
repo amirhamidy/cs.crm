@@ -1,7 +1,7 @@
 "use client";
 
 import { Menu, User } from "lucide-react";
-import { motion } from "framer-motion";
+import { m } from "framer-motion";
 import { useSidebar } from "@/hooks/useSidebar";
 import { useCurrentEmployee } from "@/hooks/usecurrentemployee";
 import { ThemeToggle } from "../ThemeToggle";
@@ -17,7 +17,7 @@ export default function Topbar() {
     <header className="fixed top-0 right-0 left-0 z-50 h-16 border-b border-gray-200/60 bg-white/80 backdrop-blur-xl dark:border-white/10 dark:bg-slate-950/80">
       <div className="flex h-full items-center justify-between px-4 md:px-6">
         <div className="flex items-center gap-3">
-          <motion.button
+          <m.button
             onClick={toggle}
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
@@ -28,7 +28,7 @@ export default function Topbar() {
               className="h-5 w-5 text-gray-700 dark:text-gray-300"
               strokeWidth={1.5}
             />
-          </motion.button>
+          </m.button>
 
           <div className="hidden md:block">
             <h1 className="text-[14px] font-medium text-gray-900 dark:text-white">
@@ -37,7 +37,7 @@ export default function Topbar() {
           </div>
         </div>
 
-        {/* <GlobalSearch /> */}
+        
 
         <div className="flex items-center gap-2">
           <NotificationBell />
@@ -50,12 +50,12 @@ export default function Topbar() {
 
             <span className="hidden min-w-12 text-[13px] font-medium text-gray-900 md:block dark:text-white">
               {loading ? (
-                <motion.span
+                <m.span
                   animate={{ opacity: [0.35, 1, 0.35] }}
                   transition={{ duration: 1.2, repeat: Infinity }}
                 >
                   ...
-                </motion.span>
+                </m.span>
               ) : (
                 displayName
               )}

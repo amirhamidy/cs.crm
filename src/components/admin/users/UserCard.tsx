@@ -11,7 +11,7 @@ import {
 } from "react";
 import type { ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { motion, AnimatePresence } from "framer-motion";
+import { m, AnimatePresence } from "framer-motion";
 import {
     Phone,
     Trash2,
@@ -34,9 +34,9 @@ import type { ApiEmployee } from "@/types/users";
 import EditUserModal from "@/components/admin/users/EditUserModal";
 import AdjustScoreModal from "@/components/admin/users/AdjustScoreModal";
 
-/* -------------------------------------------------------------------------- */
-/*                                   Types                                    */
-/* -------------------------------------------------------------------------- */
+
+
+
 
 export interface UserInfo {
     id: number;
@@ -75,9 +75,9 @@ type DepartmentMembership = {
     is_manager?: boolean;
 };
 
-/* -------------------------------------------------------------------------- */
-/*                                  Constants                                 */
-/* -------------------------------------------------------------------------- */
+
+
+
 
 const EMPTY_TITLES: string[] = [];
 
@@ -106,9 +106,9 @@ const PANEL_BASE =
 const SOFT_BUTTON =
     "rounded-2xl bg-slate-900/5 py-2.5 text-[12.5px] font-bold text-slate-600 disabled:opacity-50 dark:bg-white/5 dark:text-slate-300";
 
-/* -------------------------------------------------------------------------- */
-/*                                  Helpers                                   */
-/* -------------------------------------------------------------------------- */
+
+
+
 
 let dateFormatter: Intl.DateTimeFormat | null = null;
 
@@ -154,7 +154,7 @@ function getErrorMessage(error: unknown, fallback: string) {
     return fallback;
 }
 
-/* ---- logged-in user id (بدون JSON.parse تکراری و بدون خطای hydration) ---- */
+
 
 let lastRawUser: string | null = null;
 let lastLoggedUserId: number | null = null;
@@ -185,7 +185,7 @@ function useLoggedUserId() {
     );
 }
 
-/* ---- یک بار mount می‌شود و بعد نگه داشته می‌شود ---- */
+
 
 function useMountedOnce(flag: boolean) {
     const ref = useRef(false);
@@ -193,7 +193,7 @@ function useMountedOnce(flag: boolean) {
     return ref.current;
 }
 
-/* ---- Escape + قفل اسکرول برای مودال‌ها ---- */
+
 
 function useModalBehavior(onClose: () => void, locked: boolean) {
     const onCloseRef = useRef(onClose);
@@ -220,9 +220,9 @@ function useModalBehavior(onClose: () => void, locked: boolean) {
     }, []);
 }
 
-/* -------------------------------------------------------------------------- */
-/*                              Small components                              */
-/* -------------------------------------------------------------------------- */
+
+
+
 
 const Avatar = memo(function Avatar({ name, id }: { name: string; id: number }) {
     const hue = (Math.abs(id) * 53) % 360;
@@ -334,9 +334,9 @@ function ActionButton({
     );
 }
 
-/* -------------------------------------------------------------------------- */
-/*                         Modal infrastructure (Portal)                      */
-/* -------------------------------------------------------------------------- */
+
+
+
 
 function Portal({ children }: { children: ReactNode }) {
     if (typeof document === "undefined") return null;
@@ -362,7 +362,7 @@ function ModalFrame({
 
     return (
         <Portal>
-            <motion.div
+            <m.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
@@ -378,14 +378,14 @@ function ModalFrame({
                     } ${className}`}
             >
                 {children}
-            </motion.div>
+            </m.div>
         </Portal>
     );
 }
 
-/* -------------------------------------------------------------------------- */
-/*                          Department manager modal                          */
-/* -------------------------------------------------------------------------- */
+
+
+
 
 function DepartmentManagerModal({
     employeeId,
@@ -474,7 +474,7 @@ function DepartmentManagerModal({
 
     return (
         <ModalFrame onClose={onClose} locked={busy} label="مدیر دپارتمان">
-            <motion.div
+            <m.div
                 initial={{ opacity: 0, scale: 0.96, y: 12 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.96, y: 12 }}
@@ -598,14 +598,14 @@ function DepartmentManagerModal({
                         بستن
                     </button>
                 </div>
-            </motion.div>
+            </m.div>
         </ModalFrame>
     );
 }
 
-/* -------------------------------------------------------------------------- */
-/*                            Confirm delete dialog                           */
-/* -------------------------------------------------------------------------- */
+
+
+
 
 function ConfirmDeleteDialog({
     name,
@@ -622,7 +622,7 @@ function ConfirmDeleteDialog({
 }) {
     return (
         <ModalFrame onClose={onCancel} locked={isDeleting} label="حذف کاربر">
-            <motion.div
+            <m.div
                 initial={{ opacity: 0, scale: 0.96, y: 12 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.96, y: 12 }}
@@ -675,14 +675,14 @@ function ConfirmDeleteDialog({
                         {isDeleting ? "در حال حذف..." : "حذف کن"}
                     </button>
                 </div>
-            </motion.div>
+            </m.div>
         </ModalFrame>
     );
 }
 
-/* -------------------------------------------------------------------------- */
-/*                                Mobile sheet                                */
-/* -------------------------------------------------------------------------- */
+
+
+
 
 function SheetButton({
     tone,
@@ -749,7 +749,7 @@ function MobileSheet({
             position="bottom"
             className="md:hidden"
         >
-            <motion.div
+            <m.div
                 initial={{ y: "100%" }}
                 animate={{ y: 0 }}
                 exit={{ y: "100%" }}
@@ -831,14 +831,14 @@ function MobileSheet({
                         )}
                     </div>
                 </div>
-            </motion.div>
+            </m.div>
         </ModalFrame>
     );
 }
 
-/* -------------------------------------------------------------------------- */
-/*                                  UserCard                                  */
-/* -------------------------------------------------------------------------- */
+
+
+
 
 function UserCard({
     employee,
@@ -1055,7 +1055,7 @@ function UserCard({
                 dir="rtl"
                 className="user-card group/card relative z-[1] flex flex-col gap-3 rounded-2xl border border-black/[0.06] bg-[#fafafa] p-4 transition-shadow duration-200 hover:z-50 hover:shadow-[0_0_0_1px_rgba(99,102,241,0.35),0_14px_40px_rgba(99,102,241,0.25)] focus-within:z-50 dark:border-white/[0.06] dark:bg-white/[0.02] dark:hover:shadow-[0_0_0_1px_rgba(129,140,248,0.45),0_14px_44px_rgba(99,102,241,0.35)]"
             >
-                {/* ---------- Desktop actions (pure CSS hover) ---------- */}
+                
                 <div
                     className={`peer pointer-events-none absolute top-1/2 z-40 hidden -translate-y-1/2 flex-col items-center gap-2.5 opacity-0 transition-opacity duration-150 group-focus-within/card:pointer-events-auto group-focus-within/card:opacity-100 group-hover/card:pointer-events-auto group-hover/card:opacity-100 md:flex ${isRight ? "-right-[59px] pl-6" : "-left-[59px] pr-6"
                         }`}
@@ -1093,7 +1093,7 @@ function UserCard({
                     ))}
                 </div>
 
-                {/* ---------- Active tasks tooltip (pure CSS) ---------- */}
+                
                 {hasActiveTasks && (
                     <div
                         className={`pointer-events-none absolute top-1/2 z-[70] hidden -translate-y-1/2 opacity-0 transition-opacity duration-150 group-hover/card:opacity-100 peer-hover:!opacity-0 md:block ${isRight ? "left-full ml-[70px]" : "right-full mr-[70px]"
@@ -1130,7 +1130,7 @@ function UserCard({
                     </div>
                 )}
 
-                {/* ---------- Top-left: mobile menu + score ---------- */}
+                
                 <div className="absolute left-3 top-3 z-10 flex items-center gap-2">
                     <button
                         type="button"
@@ -1155,7 +1155,7 @@ function UserCard({
                     )}
                 </div>
 
-                {/* ---------- Identity ---------- */}
+                
                 <div className="flex items-center gap-3 pt-1">
                     <Avatar name={employee.full_name || "؟"} id={employee.id} />
                     <div className="flex min-w-0 flex-col gap-0.5">
@@ -1168,7 +1168,7 @@ function UserCard({
                     </div>
                 </div>
 
-                {/* ---------- Details ---------- */}
+                
                 <div className="flex flex-col gap-2 border-t border-black/5 pt-2.5 dark:border-white/5">
                     {phoneNumber && (
                         <div className="flex items-center gap-2 text-[11.5px] text-gray-400 dark:text-gray-500">
@@ -1213,7 +1213,7 @@ function UserCard({
                 </div>
             </div>
 
-            {/* ---------- Mobile sheet ---------- */}
+            
             <AnimatePresence>
                 {showMobileSheet && (
                     <MobileSheet
@@ -1240,7 +1240,7 @@ function UserCard({
                 )}
             </AnimatePresence>
 
-            {/* ---------- Confirm delete ---------- */}
+            
             <AnimatePresence>
                 {showConfirm && (
                     <ConfirmDeleteDialog
@@ -1254,7 +1254,7 @@ function UserCard({
                 )}
             </AnimatePresence>
 
-            {/* ---------- Department manager ---------- */}
+            
             <AnimatePresence>
                 {showManager && (
                     <DepartmentManagerModal
@@ -1266,7 +1266,7 @@ function UserCard({
                 )}
             </AnimatePresence>
 
-            {/* ---------- Edit (فقط بعد از اولین باز شدن mount می‌شود) ---------- */}
+            
             {editMounted && (
                 <EditUserModal
                     isOpen={showEdit}
@@ -1279,7 +1279,7 @@ function UserCard({
                 />
             )}
 
-            {/* ---------- Adjust score ---------- */}
+            
             <AnimatePresence>
                 {showAdjust && (
                     <AdjustScoreModal

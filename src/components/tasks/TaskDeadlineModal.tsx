@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, m } from "framer-motion";
 import { AlertTriangle, CalendarClock, CalendarDays, Clock, Loader2, RefreshCw, X } from "lucide-react";
 import { useTheme } from "next-themes";
 import api from "@/lib/axiosInstance";
@@ -13,7 +13,7 @@ export interface StepDeadline {
     deadline: string | null;
 }
 
-/** درخواست ددلاین مرحلهٔ فعلی تسک: GET /tasks/api/v1/tasks/{id}/steps/{step}/deadline/ */
+
 export async function fetchStepDeadline(
     taskId: number,
     stepId: number,
@@ -67,7 +67,7 @@ interface TaskDeadlineModalProps {
     taskId: number;
     taskTitle?: string;
     stepId: number | null;
-    /** بعد از هر دریافت موفق، کارت والد می‌تواند وضعیت فوریت را به‌روز کند */
+    
     onLoaded?: (deadline: StepDeadline) => void;
 }
 
@@ -87,7 +87,7 @@ export default function TaskDeadlineModal({
     const [error, setError] = useState<string | null>(null);
     const [tick, setTick] = useState(0);
 
-    // هر بار که مودال باز می‌شود (یا «تلاش مجدد» زده می‌شود) ریکوئست زده می‌شود
+    
     useEffect(() => {
         if (!open) return;
 
@@ -118,7 +118,7 @@ export default function TaskDeadlineModal({
             });
 
         return () => controller.abort();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
+        
     }, [open, taskId, stepId, tick]);
 
     useEffect(() => {
@@ -150,7 +150,7 @@ export default function TaskDeadlineModal({
     return createPortal(
         <AnimatePresence>
             {open && (
-                <motion.div
+                <m.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
@@ -159,7 +159,7 @@ export default function TaskDeadlineModal({
                     style={{ background: isDark ? "rgba(0,0,0,0.62)" : "rgba(15,23,42,0.38)", backdropFilter: "blur(6px)" }}
                     onClick={onClose}
                 >
-                    <motion.div
+                    <m.div
                         initial={{ opacity: 0, y: 14, scale: 0.98 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: 14, scale: 0.98 }}
@@ -279,8 +279,8 @@ export default function TaskDeadlineModal({
                                 </>
                             )}
                         </div>
-                    </motion.div>
-                </motion.div>
+                    </m.div>
+                </m.div>
             )}
         </AnimatePresence>,
         document.body

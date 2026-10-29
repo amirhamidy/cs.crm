@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, m } from "framer-motion";
 import { Plus } from "lucide-react";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { FreeMode } from "swiper/modules";
@@ -162,7 +162,7 @@ export default function PurchasingStagesPanel({
                         <div className="mt-2">
                             <AnimatePresence mode="wait" initial={false}>
                                 {activeStep && (
-                                    <motion.div
+                                    <m.div
                                         key={activeStep.id}
                                         initial={{ opacity: 0, y: 5 }}
                                         animate={{ opacity: 1, y: 0 }}
@@ -183,7 +183,7 @@ export default function PurchasingStagesPanel({
                                             onDeleteStep={onDeleteStep}
                                             onUpdated={onUpdated}
                                         />
-                                    </motion.div>
+                                    </m.div>
                                 )}
                             </AnimatePresence>
                         </div>

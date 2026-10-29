@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { motion } from "framer-motion";
+import { m } from "framer-motion";
 import {
     Archive,
     Ban,
@@ -136,7 +136,7 @@ export default function ArchivedTaskCard({ task, onReopened }: Props) {
     const [selectedStep, setSelectedStep] = useState("");
     const [optionsLoading, setOptionsLoading] = useState(false);
 
-    // Only managers of THIS task's own department can reopen it
+    
     const isManagerOfTaskDepartment = useMemo(
         () =>
             departments.some(
@@ -149,7 +149,7 @@ export default function ArchivedTaskCard({ task, onReopened }: Props) {
 
     const canReopen = isManagerOfTaskDepartment;
 
-    // Employees belong to the task's department
+    
     const availableEmployees = useMemo(
         () =>
             departmentEmployees.filter(
@@ -158,7 +158,7 @@ export default function ArchivedTaskCard({ task, onReopened }: Props) {
         [departmentEmployees, task.department_id],
     );
 
-    // Steps belong to the task's department, sorted by order
+    
     const availableSteps = useMemo(
         () =>
             steps
@@ -196,7 +196,7 @@ export default function ArchivedTaskCard({ task, onReopened }: Props) {
                 const employeeData = employeeResponse as unknown as DepartmentEmployee[];
                 const stepData = stepResponse as unknown as DepartmentStep[];
 
-                // Only load employees from the task's own department
+                
                 setDepartmentEmployees(
                     employeeData.filter(
                         (item: DepartmentEmployee) =>
@@ -232,7 +232,7 @@ export default function ArchivedTaskCard({ task, onReopened }: Props) {
         }
 
         const employeeId = Number(selectedEmployee);
-        // step.id is exactly what the API expects for current_step
+        
         const step = availableSteps.find((s) => Number(s.id) === Number(selectedStep));
 
         if (
@@ -248,7 +248,7 @@ export default function ArchivedTaskCard({ task, onReopened }: Props) {
 
         try {
             await axiosInstance.post(`/tasks/api/v1/tasks/${task.task_id}/reopen/`, {
-                current_step: step.id,          // ← fix: id نه order
+                current_step: step.id,          
                 assigned_employee: [employeeId],
             });
 
@@ -263,7 +263,7 @@ export default function ArchivedTaskCard({ task, onReopened }: Props) {
 
     return (
         <>
-            <motion.article
+            <m.article
                 className="group relative overflow-hidden rounded-[1.8rem] border border-gray-100 bg-white p-4 shadow-[0_8px_28px_rgba(15,23,42,0.035)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_16px_36px_rgba(15,23,42,0.08)] dark:border-white/[0.07] dark:bg-[#111a2d] dark:shadow-none"
             >
                 <div className="absolute inset-y-0 right-0 w-1 bg-gradient-to-b from-slate-400 to-slate-400/20" />
@@ -380,7 +380,7 @@ export default function ArchivedTaskCard({ task, onReopened }: Props) {
                         </button>
                     )}
                 </div>
-            </motion.article>
+            </m.article>
 
             <AdminTaskNotesModal
                 isOpen={notesOpen}
@@ -395,7 +395,7 @@ export default function ArchivedTaskCard({ task, onReopened }: Props) {
                     dir="rtl"
                     onClick={() => !submitting && setConfirmOpen(false)}
                 >
-                    <motion.div
+                    <m.div
                         initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1 }}
                         onClick={(e) => e.stopPropagation()}
@@ -412,7 +412,7 @@ export default function ArchivedTaskCard({ task, onReopened }: Props) {
                             کارمند مسئول و مرحله شروع مجدد تسک را انتخاب کنید.
                         </p>
 
-                        {/* Department is fixed — show as read-only badge */}
+                        
                         <div className="mt-3 flex items-center gap-2 rounded-xl bg-gray-50 px-3 py-2.5 dark:bg-white/[0.035]">
                             <Building2 size={13} className="shrink-0 text-gray-400" />
                             <div>
@@ -518,7 +518,7 @@ export default function ArchivedTaskCard({ task, onReopened }: Props) {
                                 {submitting ? "در حال بازگردانی..." : "بازگرداندن"}
                             </button>
                         </div>
-                    </motion.div>
+                    </m.div>
                 </div>
             )}
         </>

@@ -9,7 +9,7 @@ import {
     InputHTMLAttributes,
     TextareaHTMLAttributes,
 } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { m, AnimatePresence } from "framer-motion";
 import {
     X,
     UserPlus,
@@ -241,18 +241,18 @@ function NiceSelect({
                 >
                     {selected ? selected.label : placeholder}
                 </span>
-                <motion.span
+                <m.span
                     animate={{ rotate: open ? 180 : 0 }}
                     transition={{ duration: 0.2 }}
                     className="shrink-0 text-gray-400"
                 >
                     <ChevronDown size={15} />
-                </motion.span>
+                </m.span>
             </button>
 
             <AnimatePresence>
                 {open && (
-                    <motion.div
+                    <m.div
                         initial={{ opacity: 0, scale: 0.95, y: dropUp ? 8 : -8 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.95, y: dropUp ? 8 : -8 }}
@@ -292,12 +292,12 @@ function NiceSelect({
                                                     {opt.label}
                                                 </span>
                                                 {value === opt.id && (
-                                                    <motion.span
+                                                    <m.span
                                                         layoutId="check-icon"
                                                         className="text-white"
                                                     >
                                                         <Check size={14} />
-                                                    </motion.span>
+                                                    </m.span>
                                                 )}
                                             </div>
                                             {opt.sub && (
@@ -315,7 +315,7 @@ function NiceSelect({
                                 </div>
                             )}
                         </div>
-                    </motion.div>
+                    </m.div>
                 )}
             </AnimatePresence>
         </div>
@@ -405,18 +405,18 @@ function SourceSelect({
                 >
                     {selected ? selected.title : "انتخاب منبع آشنایی"}
                 </span>
-                <motion.span
+                <m.span
                     animate={{ rotate: open ? 180 : 0 }}
                     transition={{ duration: 0.2 }}
                     className="shrink-0 text-gray-400"
                 >
                     <ChevronDown size={15} />
-                </motion.span>
+                </m.span>
             </button>
 
             <AnimatePresence>
                 {open && (
-                    <motion.div
+                    <m.div
                         initial={{ opacity: 0, scale: 0.95, y: dropUp ? 8 : -8 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.95, y: dropUp ? 8 : -8 }}
@@ -555,7 +555,7 @@ function SourceSelect({
                                 </div>
                             )}
                         </div>
-                    </motion.div>
+                    </m.div>
                 )}
             </AnimatePresence>
         </div>
@@ -566,7 +566,7 @@ interface AddCustomerModalProps {
     isOpen: boolean;
     onClose: () => void;
     onAdded: () => void;
-    /** در سمت کارمند اجازه می‌دهد شماره تکراری ثبت شود */
+    
     allowDuplicatePhone?: boolean;
 }
 
@@ -816,7 +816,7 @@ export default function AddCustomerModal({
     return (
         <AnimatePresence>
             {isOpen && (
-                <motion.div
+                <m.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
@@ -827,7 +827,7 @@ export default function AddCustomerModal({
                     }}
                     onClick={handleClose}
                 >
-                    <motion.div
+                    <m.div
                         initial={{ opacity: 0, y: 24, scale: 0.98 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: 24, scale: 0.98 }}
@@ -886,7 +886,7 @@ export default function AddCustomerModal({
                                     {!allowDuplicatePhone && (
                                         <AnimatePresence mode="wait">
                                             {phoneAvailability === "checking" && (
-                                                <motion.span
+                                                <m.span
                                                     key="checking"
                                                     initial={{ opacity: 0, y: -4 }}
                                                     animate={{ opacity: 1, y: 0 }}
@@ -898,10 +898,10 @@ export default function AddCustomerModal({
                                                         className="animate-spin"
                                                     />
                                                     در حال بررسی...
-                                                </motion.span>
+                                                </m.span>
                                             )}
                                             {phoneAvailability === "taken" && (
-                                                <motion.span
+                                                <m.span
                                                     key="taken"
                                                     initial={{ opacity: 0, y: -4 }}
                                                     animate={{ opacity: 1, y: 0 }}
@@ -910,10 +910,10 @@ export default function AddCustomerModal({
                                                 >
                                                     <AlertCircle size={11} />
                                                     این شماره قبلاً ثبت شده
-                                                </motion.span>
+                                                </m.span>
                                             )}
                                             {phoneAvailability === "available" && (
-                                                <motion.span
+                                                <m.span
                                                     key="available"
                                                     initial={{ opacity: 0, y: -4 }}
                                                     animate={{ opacity: 1, y: 0 }}
@@ -922,7 +922,7 @@ export default function AddCustomerModal({
                                                 >
                                                     <CheckCircle2 size={11} />
                                                     شماره در دسترس است
-                                                </motion.span>
+                                                </m.span>
                                             )}
                                         </AnimatePresence>
                                     )}
@@ -986,7 +986,7 @@ export default function AddCustomerModal({
                             <div className="mt-2 min-h-[48px]">
                                 <AnimatePresence mode="wait">
                                     {error && (
-                                        <motion.div
+                                        <m.div
                                             initial={{ opacity: 0, y: 6 }}
                                             animate={{ opacity: 1, y: 0 }}
                                             exit={{ opacity: 0, y: 4 }}
@@ -995,10 +995,10 @@ export default function AddCustomerModal({
                                             <span className="text-[12px] font-bold">
                                                 {error}
                                             </span>
-                                        </motion.div>
+                                        </m.div>
                                     )}
                                     {success ? (
-                                        <motion.div
+                                        <m.div
                                             key="success"
                                             initial={{ opacity: 0, scale: 0.9 }}
                                             animate={{ opacity: 1, scale: 1 }}
@@ -1006,10 +1006,10 @@ export default function AddCustomerModal({
                                         >
                                             <CheckCircle2 size={16} />
                                             مشتری با موفقیت ثبت شد
-                                        </motion.div>
+                                        </m.div>
                                     ) : (
                                         !error && (
-                                            <motion.button
+                                            <m.button
                                                 key="submit"
                                                 type="submit"
                                                 disabled={
@@ -1031,14 +1031,14 @@ export default function AddCustomerModal({
                                                 ) : (
                                                     "ثبت مشتری"
                                                 )}
-                                            </motion.button>
+                                            </m.button>
                                         )
                                     )}
                                 </AnimatePresence>
                             </div>
                         </form>
-                    </motion.div>
-                </motion.div>
+                    </m.div>
+                </m.div>
             )}
         </AnimatePresence>
     );

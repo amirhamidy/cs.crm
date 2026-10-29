@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { motion } from "framer-motion";
+import { m } from "framer-motion";
 import { useTheme } from "next-themes";
 import {
     ArrowDownLeft,
@@ -55,7 +55,7 @@ export default function WarehouseEmployeeTransactionCard({
             : isDark ? "rgba(244,63,94,0.14)" : "rgba(244,63,94,0.1)";
 
     return (
-        <motion.div
+        <m.div
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.96 }}
@@ -76,7 +76,7 @@ export default function WarehouseEmployeeTransactionCard({
                         <stop offset="100%" stopColor={isInitial ? "#475569" : isIn ? "#059669" : "#e11d48"} />
                     </linearGradient>
                 </defs>
-                <motion.rect
+                <m.rect
                     x="1"
                     y="1"
                     width="calc(100% - 2px)"
@@ -180,7 +180,7 @@ export default function WarehouseEmployeeTransactionCard({
                     </div>
                 )}
             </div>
-        </motion.div>
+        </m.div>
     );
 }
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { m, AnimatePresence } from "framer-motion";
 import { useTheme } from "next-themes";
 import {
     AlertCircle,
@@ -184,7 +184,7 @@ export default function WarehouseEmployeeOrderTaskCard({
 
     return (
         <>
-            <motion.article
+            <m.article
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.96 }}
@@ -215,7 +215,7 @@ export default function WarehouseEmployeeOrderTaskCard({
                             <stop offset="100%" stopColor={currentStatus.gradient[1]} />
                         </linearGradient>
                     </defs>
-                    <motion.rect
+                    <m.rect
                         x="1"
                         y="1"
                         width="calc(100% - 2px)"
@@ -292,7 +292,7 @@ export default function WarehouseEmployeeOrderTaskCard({
                                 </span>
                             </div>
                             <div className="h-1.5 overflow-hidden rounded-full bg-gray-200 dark:bg-white/10">
-                                <motion.div
+                                <m.div
                                     initial={{ width: 0 }}
                                     animate={{ width: `${progress}%` }}
                                     transition={{ duration: 0.6, delay: index * 0.04 }}
@@ -433,7 +433,7 @@ export default function WarehouseEmployeeOrderTaskCard({
 
                     <div className="flex items-center gap-1.5">
                         {canAddItems && (
-                            <motion.button
+                            <m.button
                                 type="button"
                                 whileTap={{ scale: 0.96 }}
                                 onClick={() => setAddItemsOpen(true)}
@@ -441,11 +441,11 @@ export default function WarehouseEmployeeOrderTaskCard({
                             >
                                 <PackagePlus size={11} />
                                 افزودن کالا
-                            </motion.button>
+                            </m.button>
                         )}
 
                         {(canComplete || canCancel) && (
-                            <motion.button
+                            <m.button
                                 type="button"
                                 whileTap={{ scale: 0.96 }}
                                 onClick={() => setModalOpen(true)}
@@ -457,11 +457,11 @@ export default function WarehouseEmployeeOrderTaskCard({
                             >
                                 <ArrowRight size={11} />
                                 تغییر وضعیت
-                            </motion.button>
+                            </m.button>
                         )}
                     </div>
                 </div>
-            </motion.article>
+            </m.article>
 
             <OrderTaskAttachmentsModal
                 isOpen={attachmentsOpen}

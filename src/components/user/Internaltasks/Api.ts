@@ -1,8 +1,4 @@
-/**
- * Compatibility shim. Real logic lives in `@/lib/api/internalTasks`.
- * List functions fetch ALL pages and return `{ data: T[] }` so existing
- * consumers keep working and no longer break on paginated responses.
- */
+
 import type {
   EmployeeListItem,
   InternalTask,

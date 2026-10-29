@@ -37,16 +37,16 @@ export const WAREHOUSE_ENDPOINTS = {
 export const WAREHOUSE_QUERY_KEY = "warehouse_id";
 
 export const PAGE_SIZE = 8;
-/** تعداد محصول در هر صفحه (ادمین و یوزر) */
+
 export const PRODUCTS_PAGE_SIZE = 15;
 
-/** سقف page_size در بک‌اند (بیشتر از این را بک‌اند خودش ۱۰۰ می‌کند). */
+
 export const MAX_PAGE_SIZE = 100;
 
-/** سقف ایمنی برای دریافت «همهٔ صفحات» (۲۰۰ × ۱۰۰ = ۲۰٬۰۰۰ ردیف). */
+
 const MAX_PAGES = 200;
 
-/** تعداد درخواست هم‌زمان هنگام دریافت صفحات باقی‌مانده. */
+
 const CONCURRENCY = 6;
 
 export interface PageResult<T> {
@@ -99,7 +99,7 @@ interface RawPage<T> {
   items: T[];
   count: number;
   hasNext: boolean;
-  /** پاسخ به شکل {count,next,previous,results} بود (نه آرایهٔ خام). */
+  
   paginated: boolean;
 }
 
@@ -141,7 +141,7 @@ async function getRaw<T>(
 const statusOf = (error: unknown): number | undefined =>
   (error as { response?: { status?: number } })?.response?.status;
 
-/** پردازش لیست با سقف هم‌زمانی (ترتیب خروجی همان ترتیب ورودی است). */
+
 async function mapLimit<I, O>(
   list: I[],
   limit: number,
@@ -163,12 +163,7 @@ async function mapLimit<I, O>(
   return out;
 }
 
-/**
- * یک صفحهٔ واقعی از سرور (صفحه‌بندی و جستجو سمت بک‌اند).
- * اگر endpoint آرایهٔ خام برگرداند (صفحه‌بندی نشده)، صفحه‌بندی محلی انجام می‌شود.
- * اگر صفحهٔ درخواستی از آخرین صفحه بیشتر باشد (۴۰۴ دی‌آر‌اف)، خالی + تعداد درست برمی‌گردد
- * تا UI بتواند به آخرین صفحه برگردد.
- */
+
 export async function fetchPage<T>(
   url: string,
   opts: {
@@ -218,7 +213,7 @@ function sliceLocal<T>(all: T[], page: number, pageSize: number): PageResult<T> 
   const totalPages = Math.max(1, Math.ceil(all.length / pageSize));
   const safePage = Math.max(1, page);
 
-  // صفحهٔ بیش از حد: خالی + تعداد درست، تا UI به آخرین صفحه هدایت شود
+  
   if (safePage > totalPages) {
     return { items: [], total: all.length, totalPages, page: safePage };
   }
@@ -231,10 +226,7 @@ function sliceLocal<T>(all: T[], page: number, pageSize: number): PageResult<T> 
   };
 }
 
-/**
- * همهٔ ردیف‌ها (همهٔ صفحات، ۱۰۰ تایی). صفحات باقی‌مانده با هم‌زمانی محدود گرفته می‌شود.
- * فقط برای لیست‌های «مرجع» و محاسبات تجمیعی استفاده شود؛ لیست‌های نمایشی باید fetchPage باشند.
- */
+
 export async function fetchAll<T>(
   url: string,
   params: Params = {},
@@ -262,7 +254,7 @@ export async function fetchAll<T>(
   return dedupeById([...first.items, ...rest.flatMap((r) => r.items)]);
 }
 
-/** فقط تعداد کل (بدون دریافت داده‌ها). */
+
 export async function fetchCount(
   url: string,
   params: Params = {},
@@ -272,11 +264,7 @@ export async function fetchCount(
   return raw.paginated ? raw.count : raw.items.length;
 }
 
-/**
- * جدیدترین n ردیف بدون خواندن کل لیست.
- * فرض: ترتیب پیش‌فرض بک‌اند یکنواخت است (صعودی یا نزولی بر اساس id/تاریخ)؛ بنابراین صفحهٔ اول،
- * آخر و یکی مانده به آخر ادغام و مرتب می‌شوند و جدیدترین‌ها در هر دو حالت در همین مجموعه‌اند.
- */
+
 export async function fetchNewest<T extends { id: number; created_at?: string | null }>(
   url: string,
   params: Params = {},
@@ -300,11 +288,11 @@ export async function fetchNewest<T extends { id: number; created_at?: string | 
   return sortNewestFirst(rows).slice(0, limit);
 }
 
-/* ------------------------------------------------------------------ */
-/*  لیست‌های انبار (فیلتر انبار کاملاً با بک‌اند است)                    */
-/* ------------------------------------------------------------------ */
 
-/** یک صفحه از لیست وابسته به انبار؛ `warehouse_id` به بک‌اند می‌رود. */
+
+
+
+
 export async function fetchWarehousePage<T>(
   url: string,
   warehouseId: number,
@@ -314,7 +302,7 @@ export async function fetchWarehousePage<T>(
     search?: string;
     params?: Params;
     signal?: AbortSignal;
-    /** فیلتر دسترسی کاربر (نه فیلتر انبار) */
+    
     clientFilter?: (row: T) => boolean;
   },
 ): Promise<PageResult<T>> {
@@ -330,6 +318,12 @@ export async function fetchWarehousePage<T>(
     });
   }
 
+  
+  
+  
+  
+  
+  
   const search = normalizeSearch(opts.search);
   const all = (
     await fetchAll<T>(url, { ...params, search: search || undefined }, opts.signal)
@@ -338,7 +332,7 @@ export async function fetchWarehousePage<T>(
   return sliceLocal(sortNewestFirst(all), Math.max(1, opts.page) || 1, pageSize);
 }
 
-/** همهٔ موجودی‌های یک انبار (لیست مرجع؛ درخواست‌های هم‌زمان یکی می‌شوند). */
+
 export function fetchWarehouseStocks(
   warehouseId: number,
   signal?: AbortSignal,
@@ -348,7 +342,7 @@ export function fetchWarehouseStocks(
   );
 }
 
-/** یک صفحه از محصولات انبار، با جستجو و فیلتر قفسه سمت سرور. */
+
 export function fetchWarehouseProductsPage(
   warehouseId: number,
   opts: {
@@ -372,10 +366,7 @@ export function fetchWarehouseProductsPage(
   });
 }
 
-/** موجودیِ چند محصول (صفحهٔ جاری) در یک انبار.
- * ابتدا با یک درخواست دسته‌ای `product__in` (سبک‌تر) و در صورت عدم پشتیبانی بک‌اند،
- * به‌صورت موازی محدود (mapLimit) هر محصول را جدا می‌خواند.
- */
+
 export async function fetchStocksForProducts(
   warehouseId: number,
   productIds: number[],
@@ -404,8 +395,8 @@ export async function fetchStocksForProducts(
       signal,
     });
 
-    // اگر بک‌اند فیلتر product__in را نادیده بگیرد، ردیف‌های نامرتبط برمی‌گردند؛
-    // در آن حالت فقط ردیف‌های موردنظر را نگه می‌داریم.
+    
+    
     for (const row of first.items) {
       const key = productKeyOf(row);
       if (key != null && wanted.has(key)) collected.set(key, row);
@@ -428,13 +419,13 @@ export async function fetchStocksForProducts(
       }
     }
   } catch {
-    // نادیده بگیر؛ سراغ مسیر جایگزین می‌رویم
+    
   }
 
   const missing = Array.from(wanted).filter((id) => !collected.has(id));
   if (!missing.length) return Array.from(collected.values());
 
-  // مسیر جایگزین: یک درخواست برای هر محصول باقی‌مانده (بدون فشار هم‌زمانی)
+  
   const rows = await mapLimit(missing, CONCURRENCY, (id) =>
     fetchPage<ApiStockInfo>(WAREHOUSE_ENDPOINTS.stock, {
       page: 1,
@@ -452,7 +443,7 @@ export async function fetchStocksForProducts(
   return Array.from(collected.values());
 }
 
-/** تعداد وظایف کنترل کیفیت در انتظار (pending) یک انبار. */
+
 export async function fetchPendingQualityCount(
   warehouseId: number,
   signal?: AbortSignal,
@@ -464,7 +455,7 @@ export async function fetchPendingQualityCount(
     quality_control__isnull: false,
   };
 
-  // تلاش اول: شمارش سمت سرور (سبک).
+  
   try {
     const probe = await fetchPage<ApiWarehouseTask>(WAREHOUSE_ENDPOINTS.tasks, {
       page: 1,
@@ -482,10 +473,10 @@ export async function fetchPendingQualityCount(
       }
     }
   } catch {
-    // نادیده بگیر؛ سراغ مسیر جایگزین می‌رویم
+    
   }
 
-  // مسیر جایگزین: خواندن وظایف pending و شمارش سمت کلاینت.
+  
   const all = await listAllByStatus<ApiWarehouseTask>(
     WAREHOUSE_ENDPOINTS.tasks,
     "pending",
@@ -497,7 +488,7 @@ export async function fetchPendingQualityCount(
   ).length;
 }
 
-/** تراکنش‌های یک محصول در یک انبار (برای گردش کالا). */
+
 export async function fetchProductTransactions(
   warehouseId: number,
   productId: number,

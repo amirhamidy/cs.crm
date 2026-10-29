@@ -1,6 +1,6 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { m } from "framer-motion";
 import {
   Package,
   ShoppingCart,
@@ -67,7 +67,7 @@ export default function StatsCard({
     gradientMap["from-blue-500 to-blue-600"];
 
   return (
-    <motion.div
+    <m.div
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{
@@ -136,6 +136,6 @@ export default function StatsCard({
           />
         </div>
       </div>
-    </motion.div>
+    </m.div>
   );
 }

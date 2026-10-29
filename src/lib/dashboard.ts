@@ -1,9 +1,9 @@
 import axiosInstance from "@/lib/axiosInstance";
 import { toPersianDigits } from "@/lib/jalali";
 
-/* ------------------------------------------------------------------ */
-/*  Dashboard API  (/dashboard/api/v1/...)                             */
-/* ------------------------------------------------------------------ */
+
+
+
 
 const BASE = "/dashboard/api/v1";
 const CACHE_TTL_MS = 30_000;
@@ -27,7 +27,7 @@ export class DashboardAuthError extends Error {
   }
 }
 
-/** کاربر به این بخش دسترسی ندارد (مثلاً کارمند برای endpoint مخصوص ادمین) */
+
 export class DashboardForbiddenError extends Error {
   constructor() {
     super("FORBIDDEN");
@@ -53,7 +53,7 @@ async function fetchJson<T>(
   }
 }
 
-/** کش کوتاه‌مدت برای جلوگیری از درخواست تکراری (مثلاً StrictMode) */
+
 const cache = new Map<string, { at: number; promise: Promise<unknown> }>();
 
 function cached<T>(key: string, loader: () => Promise<T>): Promise<T> {
@@ -73,7 +73,7 @@ function cached<T>(key: string, loader: () => Promise<T>): Promise<T> {
   return promise;
 }
 
-/** هر سه بازه را موازی می‌گیرد و در قالب {weekly, monthly, yearly} برمی‌گرداند */
+
 async function fetchAllPeriods<T>(
   loader: (period: Period) => Promise<T>,
 ): Promise<Record<Period, T>> {
@@ -82,9 +82,9 @@ async function fetchAllPeriods<T>(
   return { weekly, monthly, yearly };
 }
 
-/* ------------------------------------------------------------------ */
-/*  Raw API types                                                      */
-/* ------------------------------------------------------------------ */
+
+
+
 
 type ChangeDirection = "up" | "down" | "flat";
 
@@ -129,9 +129,9 @@ type ApiTopExperts = {
   items: Record<string, unknown>[];
 };
 
-/* ------------------------------------------------------------------ */
-/*  Summary cards                                                      */
-/* ------------------------------------------------------------------ */
+
+
+
 
 function signedChange(change?: ApiChange): number {
   if (!change) return 0;
@@ -167,9 +167,9 @@ export async function getSummary() {
   };
 }
 
-/* ------------------------------------------------------------------ */
-/*  Sales chart                                                        */
-/* ------------------------------------------------------------------ */
+
+
+
 
 function formatLabel(label: string | number) {
   const text = String(label);
@@ -190,9 +190,9 @@ export async function getSalesChartData() {
   });
 }
 
-/* ------------------------------------------------------------------ */
-/*  Cancelled tasks by department                                      */
-/* ------------------------------------------------------------------ */
+
+
+
 
 export async function getCancelledTasksByDepartment() {
   return fetchAllPeriods(async (period) => {
@@ -210,9 +210,9 @@ export async function getCancelledTasksByDepartment() {
   });
 }
 
-/* ------------------------------------------------------------------ */
-/*  Customer sources                                                   */
-/* ------------------------------------------------------------------ */
+
+
+
 
 const SOURCE_COLORS = [
   "#a78bfa",
@@ -247,9 +247,9 @@ export async function getCustomerSourcesData() {
   });
 }
 
-/* ------------------------------------------------------------------ */
-/*  Top experts                                                        */
-/* ------------------------------------------------------------------ */
+
+
+
 
 const TOP_EXPERTS_LIMIT = 5;
 
@@ -265,10 +265,7 @@ function pick<T>(source: Record<string, unknown>, keys: string[]): T | undefined
   return undefined;
 }
 
-/**
- * ساختار آیتم‌های top-experts در نمونه‌ی ارسال‌شده خالی بود،
- * بنابراین چند نام فیلد رایج پشتیبانی می‌شود.
- */
+
 function mapExpert(item: Record<string, unknown>, index: number) {
   const username =
     pick<string>(item, ["username", "user_name"]) ?? "";

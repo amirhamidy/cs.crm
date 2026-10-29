@@ -1,6 +1,6 @@
 "use client";
 
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, m } from "framer-motion";
 import {
     ChevronLeft,
     Loader,
@@ -132,7 +132,7 @@ export default function StageCard({
             typeof document !== "undefined"
             ? createPortal(
                 <AnimatePresence>
-                    <motion.div
+                    <m.div
                         initial={{
                             opacity: 0,
                             y: 5,
@@ -168,7 +168,7 @@ export default function StageCard({
                                 برای حذف، ابتدا وظایف این فرآیند را حذف کنید
                             </span>
                         </div>
-                    </motion.div>
+                    </m.div>
                 </AnimatePresence>,
                 document.body
             )
@@ -176,7 +176,7 @@ export default function StageCard({
 
     return (
         <>
-            <motion.div
+            <m.div
                 layout
                 initial={{
                     opacity: 0,
@@ -447,7 +447,7 @@ export default function StageCard({
                                 task,
                                 taskIndex
                             ) => (
-                                <motion.div
+                                <m.div
                                     key={task.id}
                                     initial={{
                                         opacity: 0,
@@ -471,12 +471,12 @@ export default function StageCard({
                                             stageColor
                                         }
                                     />
-                                </motion.div>
+                                </m.div>
                             )
                         )}
                     </div>
                 )}
-            </motion.div>
+            </m.div>
 
             {tooltip}
         </>

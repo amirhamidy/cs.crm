@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, forwardRef, InputHTMLAttributes, TextareaHTMLAttributes } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { m, AnimatePresence } from "framer-motion";
 import { X, FolderOpen, CheckCircle2, Loader, AlertCircle } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
 import type { CaseItem } from "@/types/case";
@@ -160,7 +160,7 @@ export default function EditCaseModal({
     return (
         <AnimatePresence>
             {isOpen && caseItem && (
-                <motion.div
+                <m.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
@@ -168,7 +168,7 @@ export default function EditCaseModal({
                     style={{ background: "rgba(0,0,0,0.45)", backdropFilter: "blur(3px)" }}
                     onClick={handleClose}
                 >
-                    <motion.div
+                    <m.div
                         initial={{ opacity: 0, y: 16 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: 16 }}
@@ -228,7 +228,7 @@ export default function EditCaseModal({
 
                             <AnimatePresence>
                                 {error && (
-                                    <motion.div
+                                    <m.div
                                         initial={{ opacity: 0, y: 6 }}
                                         animate={{ opacity: 1, y: 0 }}
                                         exit={{ opacity: 0, y: 4 }}
@@ -236,13 +236,13 @@ export default function EditCaseModal({
                                     >
                                         <AlertCircle size={14} className="shrink-0" />
                                         <span className="flex-1 font-medium">{error}</span>
-                                    </motion.div>
+                                    </m.div>
                                 )}
                             </AnimatePresence>
 
                             <AnimatePresence mode="wait">
                                 {success ? (
-                                    <motion.div
+                                    <m.div
                                         key="success"
                                         initial={{ opacity: 0, scale: 0.9 }}
                                         animate={{ opacity: 1, scale: 1 }}
@@ -251,9 +251,9 @@ export default function EditCaseModal({
                                     >
                                         <CheckCircle2 size={16} />
                                         تغییرات با موفقیت ذخیره شد
-                                    </motion.div>
+                                    </m.div>
                                 ) : (
-                                    <motion.button
+                                    <m.button
                                         key="submit"
                                         type="submit"
                                         disabled={!canSubmit}
@@ -265,12 +265,12 @@ export default function EditCaseModal({
                                         ) : (
                                             "ذخیره تغییرات"
                                         )}
-                                    </motion.button>
+                                    </m.button>
                                 )}
                             </AnimatePresence>
                         </form>
-                    </motion.div>
-                </motion.div>
+                    </m.div>
+                </m.div>
             )}
         </AnimatePresence>
     );

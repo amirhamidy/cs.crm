@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { createPortal } from "react-dom";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, m } from "framer-motion";
+import { useVisibleInterval } from "@/hooks/useVisibility";
 import {
     Building2,
     CalendarClock,
@@ -204,7 +205,7 @@ export default function TaskCard({
     const activeUrgency = isActiveUrgency(urgency) ? urgency : null;
     const accent = activeUrgency ? URGENCY_ACCENT[activeUrgency] : null;
 
-    // ددلاین دیگر موقع رندر کارت گرفته نمی‌شود؛ فقط با کلیک روی دکمه (مودال ددلاین) یا دکمهٔ تعیین بازه زمانی ریکوئست زده می‌شود.
+    
     const openTimeModal = () => {
         setTimeModalOpen(true);
         if (stepId && !stepDeadline) {
@@ -212,11 +213,12 @@ export default function TaskCard({
         }
     };
 
-    useEffect(() => {
-        if (!stepDeadline?.deadline || !isActiveTask) return;
-        const timer = setInterval(() => forceTick((v) => v + 1), 60000);
-        return () => clearInterval(timer);
-    }, [stepDeadline?.deadline, isActiveTask]);
+    
+    useVisibleInterval(
+        () => forceTick((v) => v + 1),
+        60000,
+        Boolean(stepDeadline?.deadline) && isActiveTask,
+    );
 
     async function handleDelete() {
         if (!onDelete) return;
@@ -264,7 +266,7 @@ export default function TaskCard({
 
     return (
         <>
-            <motion.div
+            <m.div
                 onHoverStart={() => setHovered(true)}
                 onHoverEnd={() => setHovered(false)}
                 className="relative flex min-h-[130px] flex-col gap-3 overflow-hidden rounded-2xl p-4"
@@ -278,7 +280,7 @@ export default function TaskCard({
                 }}
             >
                 {activeUrgency === "overdue" && (
-                    <motion.div
+                    <m.div
                         className="pointer-events-none absolute inset-x-0 top-0 h-[2px]"
                         style={{ background: `linear-gradient(90deg,transparent,${accent},transparent)` }}
                         animate={{ opacity: [0.4, 1, 0.4] }}
@@ -293,7 +295,7 @@ export default function TaskCard({
                             <stop offset="100%" stopColor="#8b5cf6" />
                         </linearGradient>
                     </defs>
-                    <motion.rect
+                    <m.rect
                         x="1" y="1"
                         width="calc(100% - 2px)"
                         height="calc(100% - 2px)"
@@ -374,12 +376,12 @@ export default function TaskCard({
                     {caseTitle && <Chip isDark={isDark}><FolderKanban size={11} />{caseTitle}</Chip>}
                     {task.files?.length ? <Chip isDark={isDark}><Paperclip size={11} />{task.files.length}</Chip> : null}
                 </div>
-            </motion.div>
+            </m.div>
 
             {!readOnly && typeof document !== "undefined" && createPortal(
                 <AnimatePresence>
                     {showConfirm && (
-                        <motion.div
+                        <m.div
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
@@ -387,7 +389,7 @@ export default function TaskCard({
                             style={{ backdropFilter: "blur(5px)", WebkitBackdropFilter: "blur(5px)" }}
                             onClick={closeConfirm}
                         >
-                            <motion.div
+                            <m.div
                                 initial={{ opacity: 0, scale: 0.96, y: 12 }}
                                 animate={{ opacity: 1, scale: 1, y: 0 }}
                                 exit={{ opacity: 0, scale: 0.96, y: 12 }}
@@ -432,8 +434,8 @@ export default function TaskCard({
                                         {deleting ? <Loader size={14} className="animate-spin" /> : <><Trash2 size={13} />حذف کن</>}
                                     </button>
                                 </div>
-                            </motion.div>
-                        </motion.div>
+                            </m.div>
+                        </m.div>
                     )}
                 </AnimatePresence>,
                 document.body

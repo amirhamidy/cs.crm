@@ -54,12 +54,7 @@ export const WAREHOUSE_TABS: WarehouseTab[] = [
   "task-archive",
 ];
 
-/**
- * هر تب فقط فیلدهای مربوط به خودش را پر می‌کند.
- * فیلدی که لیستِ «همان تب» است فقط همان صفحه را دارد (صفحه‌بندی سمت سرور)؛
- * بقیه‌ی فیلدها (در صورت نیاز تب) لیست‌های مرجع/تجمیعی هستند.
- * تب «گردش محصول» (ledger) داده‌اش را خودش می‌گیرد.
- */
+
 export interface TabData {
   products: ApiProduct[];
   stockInfos: ApiStockInfo[];
@@ -71,7 +66,7 @@ export interface TabData {
   staffList: ApiWarehouseStaff[];
   archived: ApiArchivedOrderTask[];
   taskArchive: ApiWarehouseTaskArchive[];
-  /** تعداد وظایف کنترل کیفیت در انتظار (تب وظایف) */
+  
   pendingQualityCount: number;
   total: number;
   totalPages: number;
@@ -99,7 +94,7 @@ interface LoadArgs {
   page: number;
   hasFullAccess: boolean;
   employeeId: number | string | null;
-  /** فقط برای تب محصولات: فیلتر قفسه (سمت سرور) */
+  
   shelfCode?: string;
 }
 
@@ -116,7 +111,7 @@ async function loadTab(args: LoadArgs): Promise<TabData> {
     data.totalPages = r.totalPages;
   };
 
-  /** کاربر معمولی فقط وظایف بدون مسئول یا وظایف خودش را می‌بیند. */
+  
   const taskFilter = hasFullAccess
     ? undefined
     : (task: ApiWarehouseTask) =>
@@ -124,7 +119,7 @@ async function loadTab(args: LoadArgs): Promise<TabData> {
         (employeeId != null && sameId(task.assigned_to, employeeId));
 
   if (tab === "products") {
-    // محصولات و دسته‌بندی‌ها مستقل‌اند؛ هم‌زمان خوانده می‌شوند تا تأخیر کم شود.
+    
     const [res, categories] = await Promise.all([
       fetchWarehouseProductsPage(warehouseId, {
         page,
@@ -159,7 +154,7 @@ async function loadTab(args: LoadArgs): Promise<TabData> {
   }
 
   if (tab === "tasks") {
-    // شمارش کنترل کیفیت فقط برای کاربران با دسترسی کامل لازم است (بج همین کاربران را دارد)
+    
     const [res, pending] = await Promise.all([
       fetchWarehousePage<ApiWarehouseTask>(EP.tasks, warehouseId, {
         page,
@@ -197,7 +192,7 @@ async function loadTab(args: LoadArgs): Promise<TabData> {
   }
 
   if (tab === "orders") {
-    // کارت‌ها نام کالا را از items خود سفارش می‌خوانند؛ لیست محصولات لازم نیست
+    
     const res = await fetchWarehousePage<ApiOrderTask>(EP.orderTasks, warehouseId, {
       page,
     });
@@ -207,7 +202,7 @@ async function loadTab(args: LoadArgs): Promise<TabData> {
   }
 
   if (tab === "deadlines") {
-    // صفحهٔ مهلت‌ها سمت سرور + سفارش‌های همان انبار برای عنوان کارت‌ها
+    
     const [orderTasks, res] = await Promise.all([
       fetchNewest<ApiOrderTask>(EP.orderTasks, wp, 100),
       fetchPage<ApiOrderTaskDeadline>(EP.deadlines, {
@@ -243,7 +238,7 @@ async function loadTab(args: LoadArgs): Promise<TabData> {
     return data;
   }
 
-  // ledger: کامپوننت گردش محصول خودش جستجو و صفحه‌بندی محصولات و تراکنش‌ها را سمت سرور انجام می‌دهد
+  
   return data;
 }
 

@@ -1,14 +1,7 @@
 import type { Paginated, SearchParams } from "@/types/pagination";
 import { dedupe, fetchPage, listAll } from "./_core";
 
-/**
- * لیست‌هایی که بر اساس «status» به چند بخش تقسیم می‌شوند (فعال / بایگانی، در انتظار / تایید‌شده، ...).
- *
- * حالت عادی: پارامتر `status` به بکاند فرستاده می‌شود و صفحه‌بندی کاملاً سمت سرور است.
- * اگر بکاند روی یک endpoint فیلتر `status` را پشتیبانی نکند (در پاسخ ردیفی با status دیگر
- * برمی‌گردد)، همان endpoint به‌صورت خودکار روی «حالت امن» می‌رود: همهٔ صفحات یک‌بار
- * خوانده می‌شود، سمت کلاینت فیلتر می‌شود و بعد صفحه‌بندی می‌شود. بدین‌ترتیب نتیجه در هر دو حالت درست است.
- */
+
 
 type Mode = "server" | "client";
 const modes = new Map<string, Mode>();
@@ -39,7 +32,7 @@ async function clientPage<T extends Row>(
   };
 }
 
-/** یک صفحه از لیست، فقط ردیف‌هایی که status آن‌ها برابر `status` است. */
+
 export async function fetchStatusPage<T extends Row>(
   url: string,
   status: string,
@@ -56,7 +49,7 @@ export async function fetchStatusPage<T extends Row>(
   return res;
 }
 
-/** فقط تعداد کل ردیف‌های یک status (بدون خواندن داده‌ها). */
+
 export async function fetchStatusCount(
   url: string,
   status: string,
@@ -66,7 +59,7 @@ export async function fetchStatusCount(
   return res.count;
 }
 
-/** همهٔ ردیف‌های یک status (برای بوردهایی که باید گروه‌بندی کنند، مثل مراحل خرید). */
+
 export async function listAllByStatus<T extends Row>(
   url: string,
   status: string,

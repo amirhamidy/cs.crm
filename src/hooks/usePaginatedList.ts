@@ -20,7 +20,7 @@ interface Options<F extends ListFilters> {
   delay?: number;
   enabled?: boolean;
   initialPage?: number;
-  /** با تغییر صفحه، صفحه از بالا نمایش داده شود (به‌جای ماندن کنار صفحه‌بندی) */
+  
   scrollTop?: boolean;
 }
 

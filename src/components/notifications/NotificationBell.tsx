@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, m } from "framer-motion";
 import {
     Bell,
     BellOff,
@@ -125,7 +125,7 @@ export function NotificationBell() {
 
     return (
         <div ref={rootRef} className="relative">
-            <motion.button
+            <m.button
                 type="button"
                 onClick={() => setOpen((v) => !v)}
                 whileHover={{ scale: 1.05 }}
@@ -143,7 +143,7 @@ export function NotificationBell() {
                 />
 
                 {unread > 0 && (
-                    <motion.span
+                    <m.span
                         key={unread}
                         initial={{ scale: 0.6 }}
                         animate={{ scale: 1 }}
@@ -151,13 +151,13 @@ export function NotificationBell() {
                         className="absolute -right-0.5 -top-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold leading-none text-white"
                     >
                         {unread > 99 ? "99+" : unread.toLocaleString("fa-IR")}
-                    </motion.span>
+                    </m.span>
                 )}
-            </motion.button>
+            </m.button>
 
             <AnimatePresence>
                 {open && (
-                    <motion.div
+                    <m.div
                         role="dialog"
                         aria-label="اعلان‌ها"
                         dir="rtl"
@@ -221,7 +221,7 @@ export function NotificationBell() {
                                 ))
                             )}
                         </div>
-                    </motion.div>
+                    </m.div>
                 )}
             </AnimatePresence>
         </div>

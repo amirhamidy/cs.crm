@@ -397,9 +397,7 @@ export const getTransactionQuantity = (transaction: ApiStockTransaction) => {
   return data.quantity ?? data.amount ?? data.qty ?? 0;
 };
 
-/* ============================================================
- *  Sales Invoices (Archived Order Tasks)
- * ============================================================ */
+
 
 export interface SalesInvoiceLine {
   id: number;
@@ -501,9 +499,7 @@ export const buildSalesInvoices = (
     );
 };
 
-/* ============================================================
- *  Customer lookup by product (for stock ledger)
- * ============================================================ */
+
 
 export interface ProductCustomerMatch {
   customerName: string;
@@ -514,10 +510,7 @@ export interface ProductCustomerMatch {
   productId: number;
 }
 
-/**
- * استخراج نقشه‌ای از product_id به لیست مشتریان (بر اساس آرشیو سفارش‌ها)
- * مرتب‌شده بر اساس تاریخ نزولی
- */
+
 export const buildCustomersByProduct = (
   items: ApiArchivedOrderTask[],
 ): Map<number, ProductCustomerMatch[]> => {
@@ -551,9 +544,7 @@ export const buildCustomersByProduct = (
   return map;
 };
 
-/**
- * پیدا کردن نزدیک‌ترین مشتری به یک تاریخ تراکنش برای یک محصول خاص
- */
+
 export const findCustomerForTransaction = (
   customersByProduct: Map<number, ProductCustomerMatch[]>,
   productId: number,

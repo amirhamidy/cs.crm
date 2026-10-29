@@ -10,10 +10,7 @@ import SignaturePad from "./SignaturePad";
 import { BTN_PRIMARY, CARD } from "./ui";
 import type { PublicSigner } from "@/types/minutes";
 
-/**
- * صفحه‌ی عمومی امضا برای شخص بیرونی. مسیر پیشنهادی: /minutes/sign/[token]
- * توکن را هرگز لاگ یا نمایش نمی‌دهیم.
- */
+
 export default function PublicSignPage() {
   const params = useParams<{ token: string }>();
   const token = params?.token;

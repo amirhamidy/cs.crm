@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { m, AnimatePresence } from "framer-motion";
 import { AlertCircle, Check, Loader2, Package, Upload, X } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
 import type { ApiOrderTask, ApiProduct } from "@/types/warehouse";
@@ -159,7 +159,7 @@ export default function WarehouseEmployeeOrderTaskStatusModal({
     return (
         <AnimatePresence>
             {open && (
-                <motion.div
+                <m.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
@@ -167,7 +167,7 @@ export default function WarehouseEmployeeOrderTaskStatusModal({
                     onClick={() => !submitting && onClose()}
                     dir="rtl"
                 >
-                    <motion.div
+                    <m.div
                         initial={{ opacity: 0, scale: 0.95, y: 10 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.95, y: 10 }}
@@ -311,7 +311,7 @@ export default function WarehouseEmployeeOrderTaskStatusModal({
                             >
                                 انصراف
                             </button>
-                            <motion.button
+                            <m.button
                                 type="button"
                                 whileTap={{ scale: 0.97 }}
                                 onClick={handleSubmit}
@@ -329,10 +329,10 @@ export default function WarehouseEmployeeOrderTaskStatusModal({
                                         {status === "completed" ? "تایید و ثبت خروج" : "ثبت لغو"}
                                     </>
                                 )}
-                            </motion.button>
+                            </m.button>
                         </div>
-                    </motion.div>
-                </motion.div>
+                    </m.div>
+                </m.div>
             )}
         </AnimatePresence>
     );

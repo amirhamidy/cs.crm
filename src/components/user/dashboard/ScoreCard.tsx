@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { motion } from "framer-motion";
+import { m } from "framer-motion";
 import { Award, Star, TrendingDown } from "lucide-react";
 import { useTheme } from "next-themes";
 import axiosInstance from "@/lib/axiosInstance";
@@ -216,7 +216,7 @@ export default function ScoreCard({ employeeName }: ScoreCardProps) {
         "";
 
     return (
-        <motion.div
+        <m.div
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.25 }}
@@ -259,7 +259,7 @@ export default function ScoreCard({ employeeName }: ScoreCardProps) {
 
             {employeeLoading || loading ? (
                 <div className="flex h-20 items-center justify-center">
-                    <motion.div
+                    <m.div
                         animate={{ rotate: 360 }}
                         transition={{
                             repeat: Infinity,
@@ -291,7 +291,7 @@ export default function ScoreCard({ employeeName }: ScoreCardProps) {
                     isDark={isDark}
                 />
             )}
-        </motion.div>
+        </m.div>
     );
 }
 
@@ -312,7 +312,7 @@ function ScoreBody({
     return (
         <div className="flex flex-col gap-4">
             <div className="flex items-end gap-3">
-                <motion.span
+                <m.span
                     initial={{
                         opacity: 0,
                         scale: 0.8,
@@ -331,7 +331,7 @@ function ScoreBody({
                     }}
                 >
                     {data.score}
-                </motion.span>
+                </m.span>
 
                 <div className="flex flex-col gap-1 pb-1">
                     <span
@@ -359,7 +359,7 @@ function ScoreBody({
                             : "rgba(0,0,0,0.06)",
                     }}
                 >
-                    <motion.div
+                    <m.div
                         initial={{ width: 0 }}
                         animate={{
                             width: `${pct}%`,
@@ -453,7 +453,7 @@ function ScoreHistory({
 
             {loading ? (
                 <div className="flex items-center justify-center py-2">
-                    <motion.div
+                    <m.div
                         animate={{ rotate: 360 }}
                         transition={{
                             repeat: Infinity,
@@ -498,7 +498,7 @@ function ScoreHistory({
                                 : "rgba(239,68,68,0.07)";
 
                         return (
-                        <motion.div
+                        <m.div
                             key={item.id}
                             initial={{
                                 opacity: 0,
@@ -546,7 +546,7 @@ function ScoreHistory({
                                     </span>
                                 )}
                             </div>
-                        </motion.div>
+                        </m.div>
                         );
                     })}
                 </div>

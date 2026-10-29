@@ -1,14 +1,14 @@
 "use client";
 
 import { useEffect, type ReactNode } from "react";
-import { motion } from "framer-motion";
+import { m } from "framer-motion";
 import { X } from "lucide-react";
 
 interface ModalProps {
   title: string;
   onClose: () => void;
   children: ReactNode;
-  /** هنگام ارسال درخواست، بستن مودال غیرفعال می‌شود */
+  
   busy?: boolean;
   maxWidthClass?: string;
 }
@@ -28,7 +28,7 @@ export default function Modal({ title, onClose, children, busy = false, maxWidth
   }, [busy, onClose]);
 
   return (
-    <motion.div
+    <m.div
       className="fixed inset-0 z-[100] flex items-end justify-center bg-black/50 p-0 backdrop-blur-sm sm:items-center sm:p-4"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
@@ -37,7 +37,7 @@ export default function Modal({ title, onClose, children, busy = false, maxWidth
         if (e.target === e.currentTarget && !busy) onClose();
       }}
     >
-      <motion.div
+      <m.div
         role="dialog"
         aria-modal="true"
         aria-label={title}
@@ -61,7 +61,7 @@ export default function Modal({ title, onClose, children, busy = false, maxWidth
           </button>
         </div>
         <div className="overflow-y-auto p-5">{children}</div>
-      </motion.div>
-    </motion.div>
+      </m.div>
+    </m.div>
   );
 }

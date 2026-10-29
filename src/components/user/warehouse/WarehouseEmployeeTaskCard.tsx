@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, m } from "framer-motion";
 import { useTheme } from "next-themes";
 import {
     AlertCircle,
@@ -290,7 +290,7 @@ export default function WarehouseEmployeeTaskCard({
 
     return (
         <>
-            <motion.article
+            <m.article
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.96 }}
@@ -322,7 +322,7 @@ export default function WarehouseEmployeeTaskCard({
                             <stop offset="100%" stopColor="#8b5cf6" />
                         </linearGradient>
                     </defs>
-                    <motion.rect
+                    <m.rect
                         x="1"
                         y="1"
                         width="calc(100% - 2px)"
@@ -479,7 +479,7 @@ export default function WarehouseEmployeeTaskCard({
                                 : "rgba(15,23,42,.06)",
                         }}
                     >
-                        <motion.div
+                        <m.div
                             initial={{ width: 0 }}
                             animate={{ width: `${progress}%` }}
                             transition={{ duration: 0.6, delay: index * 0.04 }}
@@ -537,7 +537,7 @@ export default function WarehouseEmployeeTaskCard({
                 <div className="relative z-[1] mt-3">
                     {isPending && (
                         <div className="grid grid-cols-2 gap-2">
-                            <motion.button
+                            <m.button
                                 type="button"
                                 whileTap={{ scale: 0.97 }}
                                 onClick={() => openAction("complete")}
@@ -551,9 +551,9 @@ export default function WarehouseEmployeeTaskCard({
                             >
                                 <PackageCheck size={14} />
                                 انجام می‌شود
-                            </motion.button>
+                            </m.button>
 
-                            <motion.button
+                            <m.button
                                 type="button"
                                 whileTap={{ scale: 0.97 }}
                                 onClick={() => openAction("cancel")}
@@ -570,12 +570,12 @@ export default function WarehouseEmployeeTaskCard({
                             >
                                 <XCircle size={14} />
                                 انجام نمی‌شود
-                            </motion.button>
+                            </m.button>
                         </div>
                     )}
 
                     {isCancelled && (
-                        <motion.button
+                        <m.button
                             type="button"
                             whileTap={{ scale: 0.97 }}
                             onClick={() => openAction("reopen")}
@@ -589,7 +589,7 @@ export default function WarehouseEmployeeTaskCard({
                         >
                             <RotateCcw size={14} />
                             بازگشایی وظیفه
-                        </motion.button>
+                        </m.button>
                     )}
 
                     {isCompleted && (
@@ -607,11 +607,11 @@ export default function WarehouseEmployeeTaskCard({
                         </div>
                     )}
                 </div>
-            </motion.article>
+            </m.article>
 
             <AnimatePresence>
                 {action && (
-                    <motion.div
+                    <m.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
@@ -632,7 +632,7 @@ export default function WarehouseEmployeeTaskCard({
                             );
 
                             return (
-                                <motion.div
+                                <m.div
                                     initial={{ opacity: 0, scale: 0.95, y: 18 }}
                                     animate={{ opacity: 1, scale: 1, y: 0 }}
                                     exit={{ opacity: 0, scale: 0.95, y: 18 }}
@@ -814,7 +814,7 @@ export default function WarehouseEmployeeTaskCard({
 
                                             <AnimatePresence>
                                                 {error && (
-                                                    <motion.div
+                                                    <m.div
                                                         initial={{ opacity: 0, y: 6 }}
                                                         animate={{ opacity: 1, y: 0 }}
                                                         exit={{ opacity: 0, y: 4 }}
@@ -831,7 +831,7 @@ export default function WarehouseEmployeeTaskCard({
                                                         >
                                                             <X size={13} />
                                                         </button>
-                                                    </motion.div>
+                                                    </m.div>
                                                 )}
                                             </AnimatePresence>
                                         </div>
@@ -847,7 +847,7 @@ export default function WarehouseEmployeeTaskCard({
                                             انصراف
                                         </button>
 
-                                        <motion.button
+                                        <m.button
                                             type="button"
                                             whileTap={{ scale: 0.97 }}
                                             onClick={submitAction}
@@ -872,12 +872,12 @@ export default function WarehouseEmployeeTaskCard({
                                                     {tone.submit}
                                                 </>
                                             )}
-                                        </motion.button>
+                                        </m.button>
                                     </div>
-                                </motion.div>
+                                </m.div>
                             );
                         })()}
-                    </motion.div>
+                    </m.div>
                 )}
             </AnimatePresence>
         </>

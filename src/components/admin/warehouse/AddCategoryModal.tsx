@@ -1,6 +1,6 @@
 "use client";
 import { FormEvent, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, m } from "framer-motion";
 import { Check, Loader, Package, X } from "lucide-react";
 import { useTheme } from "next-themes";
 import axiosInstance from "@/lib/axiosInstance";
@@ -54,7 +54,7 @@ export default function AddCategoryModal({
 
     return (
         <AnimatePresence>
-            <motion.div
+            <m.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
@@ -65,7 +65,7 @@ export default function AddCategoryModal({
                 }}
                 onClick={handleClose}
             >
-                <motion.div
+                <m.div
                     initial={{ opacity: 0, y: 16 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: 16 }}
@@ -117,7 +117,7 @@ export default function AddCategoryModal({
                             {error && <p className="mt-2 text-[11px] font-semibold text-red-500">{error}</p>}
                         </div>
 
-                        <motion.button
+                        <m.button
                             type="submit"
                             disabled={loading}
                             whileTap={{ scale: 0.97 }}
@@ -131,10 +131,10 @@ export default function AddCategoryModal({
                                     ثبت دسته‌بندی
                                 </>
                             )}
-                        </motion.button>
+                        </m.button>
                     </form>
-                </motion.div>
-            </motion.div>
+                </m.div>
+            </m.div>
         </AnimatePresence>
     );
 }

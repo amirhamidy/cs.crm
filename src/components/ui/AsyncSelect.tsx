@@ -1,7 +1,7 @@
 "use client";
 
 import { memo, useCallback, useEffect, useRef, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, m } from "framer-motion";
 import { Check, ChevronDown, Loader2, Search } from "lucide-react";
 import { useInfiniteOptions, type InfiniteFetcher } from "@/hooks/useInfiniteOptions";
 
@@ -25,20 +25,17 @@ interface AsyncSelectProps<T extends { id: number | string }> {
     emptyText: string;
     disabled?: boolean;
     value: number | null;
-    /** گزینهٔ انتخاب‌شده؛ برای نمایش برچسب حتی وقتی در صفحهٔ لود‌شدهٔ فعلی نیست */
+    
     selected?: AsyncOption | null;
     fetcher: InfiniteFetcher<T>;
     toOption: (item: T) => AsyncOption;
-    /** با تغییر این کلید (مثلاً مشتری انتخاب‌شده) لیست دوباره از صفحهٔ ۱ خوانده می‌شود */
+    
     depsKey?: string | number | null;
     pageSize?: number;
     onChange: (option: AsyncOption) => void;
 }
 
-/**
- * سلکت با جستجوی سمت سرور + لود صفحهٔ بعد هنگام رسیدن اسکرول به انتهای لیست.
- * تا وقتی دراپ‌دان باز نشده هیچ ریکوئستی زده نمی‌شود.
- */
+
 function AsyncSelectInner<T extends { id: number | string }>({
     label, placeholder, emptyText, disabled, value, selected, fetcher, toOption, depsKey, pageSize = 20, onChange,
 }: AsyncSelectProps<T>) {
@@ -94,14 +91,14 @@ function AsyncSelectInner<T extends { id: number | string }>({
                         {hasSelection ? selected!.label : placeholder}
                     </span>
                 </span>
-                <motion.span animate={{ rotate: open ? 180 : 0 }} transition={{ duration: 0.2 }}>
+                <m.span animate={{ rotate: open ? 180 : 0 }} transition={{ duration: 0.2 }}>
                     <ChevronDown size={14} className="shrink-0 text-gray-400" />
-                </motion.span>
+                </m.span>
             </button>
 
             <AnimatePresence>
                 {open && (
-                    <motion.div
+                    <m.div
                         initial={{ opacity: 0, y: -6, scale: 0.97 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: -4, scale: 0.97 }}
@@ -177,7 +174,7 @@ function AsyncSelectInner<T extends { id: number | string }>({
                                 </button>
                             )}
                         </div>
-                    </motion.div>
+                    </m.div>
                 )}
             </AnimatePresence>
         </div>

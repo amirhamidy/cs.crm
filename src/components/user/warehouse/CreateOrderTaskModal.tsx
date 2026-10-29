@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, m } from "framer-motion";
 import {
     Boxes,
     Calendar,
@@ -232,7 +232,7 @@ function SearchableCombobox<T>({
                 </span>
 
                 {!disabled && (
-                    <motion.span
+                    <m.span
                         animate={{ rotate: open ? 180 : 0 }}
                         transition={{ duration: 0.2 }}
                     >
@@ -240,13 +240,13 @@ function SearchableCombobox<T>({
                             size={14}
                             className="shrink-0 text-slate-400"
                         />
-                    </motion.span>
+                    </m.span>
                 )}
             </button>
 
             <AnimatePresence>
                 {open && !disabled && (
-                    <motion.div
+                    <m.div
                         initial={{ opacity: 0, y: -6, scale: 0.97 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: -4, scale: 0.97 }}
@@ -287,7 +287,7 @@ function SearchableCombobox<T>({
                                     const id = getId(item);
                                     const active = id === value;
                                     return (
-                                        <motion.button
+                                        <m.button
                                             key={id}
                                             type="button"
                                             initial={{ opacity: 0, x: 6 }}
@@ -334,12 +334,12 @@ function SearchableCombobox<T>({
                                                     />
                                                 </span>
                                             )}
-                                        </motion.button>
+                                        </m.button>
                                     );
                                 })
                             )}
                         </div>
-                    </motion.div>
+                    </m.div>
                 )}
             </AnimatePresence>
         </div>
@@ -433,14 +433,14 @@ export default function CreateOrderTaskModal({
 
     return (
         <AnimatePresence>
-            <motion.div
+            <m.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 px-3 py-4 backdrop-blur-md sm:px-4"
                 onClick={handleClose}
             >
-                <motion.div
+                <m.div
                     initial={{ opacity: 0, y: 18, scale: 0.98 }}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: 18, scale: 0.98 }}
@@ -480,7 +480,7 @@ export default function CreateOrderTaskModal({
                         <div className="flex flex-col gap-4">
                             <AnimatePresence>
                                 {(lookupsError || error) && (
-                                    <motion.div
+                                    <m.div
                                         initial={{ opacity: 0, y: 6 }}
                                         animate={{ opacity: 1, y: 0 }}
                                         exit={{ opacity: 0, y: 4 }}
@@ -500,7 +500,7 @@ export default function CreateOrderTaskModal({
                                         >
                                             <X size={13} />
                                         </button>
-                                    </motion.div>
+                                    </m.div>
                                 )}
                             </AnimatePresence>
 
@@ -635,7 +635,7 @@ export default function CreateOrderTaskModal({
                             </div>
 
                             {startedAt && deadline && (
-                                <motion.div
+                                <m.div
                                     initial={{ opacity: 0, y: 6 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     className="flex items-center justify-center gap-2 rounded-2xl border border-blue-100 bg-blue-50 py-2.5 text-[11.5px] font-bold text-blue-600 dark:border-blue-500/10 dark:bg-blue-500/10 dark:text-blue-400"
@@ -650,11 +650,11 @@ export default function CreateOrderTaskModal({
                                             deadline
                                         ).toLocaleDateString("fa-IR")}
                                     </span>
-                                </motion.div>
+                                </m.div>
                             )}
 
                             {file && (
-                                <motion.div
+                                <m.div
                                     initial={{ opacity: 0, x: 8 }}
                                     animate={{ opacity: 1, x: 0 }}
                                     className="flex items-center gap-2 rounded-2xl border border-slate-100 bg-slate-50 px-3.5 py-2.5 dark:border-white/[0.05] dark:bg-white/[0.03]"
@@ -675,13 +675,13 @@ export default function CreateOrderTaskModal({
                                     >
                                         <X size={12} />
                                     </button>
-                                </motion.div>
+                                </m.div>
                             )}
                         </div>
                     </div>
 
                     <div className="shrink-0 border-t border-slate-100 bg-white/95 px-6 pb-6 pt-4 backdrop-blur sm:px-7 dark:border-white/[0.06] dark:bg-[#10151d]/95">
-                        <motion.button
+                        <m.button
                             type="button"
                             whileTap={{ scale: 0.98 }}
                             onClick={handleSubmit}
@@ -696,9 +696,9 @@ export default function CreateOrderTaskModal({
                                     ثبت وظیفه
                                 </>
                             )}
-                        </motion.button>
+                        </m.button>
                     </div>
-                </motion.div>
+                </m.div>
 
                 <TimeRangeModal
                     open={timeModalOpen}
@@ -711,7 +711,7 @@ export default function CreateOrderTaskModal({
                         setTimeModalOpen(false);
                     }}
                 />
-            </motion.div>
+            </m.div>
         </AnimatePresence>
     );
 }

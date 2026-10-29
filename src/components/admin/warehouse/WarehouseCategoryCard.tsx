@@ -2,7 +2,7 @@
 
 import { ReactNode, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, m } from "framer-motion";
 import { AlertCircle, Hash, Loader2, Pencil, Tag, Trash2, X } from "lucide-react";
 import { useTheme } from "next-themes";
 import axiosInstance from "@/lib/axiosInstance";
@@ -36,7 +36,7 @@ function ModalShell({
     children: ReactNode;
 }) {
     return (
-        <motion.div
+        <m.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -47,7 +47,7 @@ function ModalShell({
             className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/50 px-4 backdrop-blur-sm"
             dir="rtl"
         >
-            <motion.div
+            <m.div
                 initial={{ opacity: 0, scale: 0.96, y: 16 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.96, y: 16 }}
@@ -55,8 +55,8 @@ function ModalShell({
                 className="w-full max-w-[380px] rounded-[2rem] border border-gray-100 bg-white p-5 shadow-[0_24px_64px_rgba(0,0,0,0.3)] dark:border-white/[0.07] dark:bg-[#0f172a]"
             >
                 {children}
-            </motion.div>
-        </motion.div>
+            </m.div>
+        </m.div>
     );
 }
 
@@ -197,7 +197,7 @@ export default function WarehouseCategoryCard({
 
     return (
         <>
-            <motion.div
+            <m.div
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.96 }}
@@ -229,7 +229,7 @@ export default function WarehouseCategoryCard({
                         </linearGradient>
                     </defs>
 
-                    <motion.rect
+                    <m.rect
                         x="1"
                         y="1"
                         width="calc(100% - 2px)"
@@ -305,7 +305,7 @@ export default function WarehouseCategoryCard({
                     </div>
 
                     <div className="flex items-center gap-1.5">
-                        <motion.button
+                        <m.button
                             type="button"
                             whileTap={{ scale: 0.92 }}
                             onClick={openEdit}
@@ -313,9 +313,9 @@ export default function WarehouseCategoryCard({
                             className="flex h-8 w-8 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-500 transition-colors hover:bg-indigo-500/20 dark:bg-indigo-500/15 dark:text-indigo-300"
                         >
                             <Pencil size={13} />
-                        </motion.button>
+                        </m.button>
 
-                        <motion.button
+                        <m.button
                             type="button"
                             whileTap={{ scale: 0.92 }}
                             onClick={openConfirm}
@@ -323,10 +323,10 @@ export default function WarehouseCategoryCard({
                             className="flex h-8 w-8 items-center justify-center rounded-xl bg-red-500/10 text-red-500 transition-colors hover:bg-red-500/20 dark:bg-red-500/15"
                         >
                             <Trash2 size={13} />
-                        </motion.button>
+                        </m.button>
                     </div>
                 </div>
-            </motion.div>
+            </m.div>
 
             {mounted &&
                 createPortal(
@@ -352,7 +352,7 @@ export default function WarehouseCategoryCard({
 
                                     <AnimatePresence>
                                         {deleteError && (
-                                            <motion.div
+                                            <m.div
                                                 initial={{ opacity: 0, y: 4 }}
                                                 animate={{ opacity: 1, y: 0 }}
                                                 exit={{ opacity: 0, y: 4 }}
@@ -365,7 +365,7 @@ export default function WarehouseCategoryCard({
                                                 <p className="text-[11.5px] font-semibold leading-5 text-red-500 dark:text-red-400">
                                                     {deleteError}
                                                 </p>
-                                            </motion.div>
+                                            </m.div>
                                         )}
                                     </AnimatePresence>
 
@@ -439,7 +439,7 @@ export default function WarehouseCategoryCard({
 
                                         <AnimatePresence>
                                             {error && (
-                                                <motion.p
+                                                <m.p
                                                     initial={{ opacity: 0, y: -4 }}
                                                     animate={{ opacity: 1, y: 0 }}
                                                     exit={{ opacity: 0, y: -4 }}
@@ -447,7 +447,7 @@ export default function WarehouseCategoryCard({
                                                 >
                                                     <AlertCircle size={11} />
                                                     {error}
-                                                </motion.p>
+                                                </m.p>
                                             )}
                                         </AnimatePresence>
                                     </div>

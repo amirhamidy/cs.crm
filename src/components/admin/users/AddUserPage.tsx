@@ -6,7 +6,7 @@ import {
     type InputHTMLAttributes,
     useState,
 } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, m } from "framer-motion";
 import {
     Check,
     ChevronLeft,
@@ -68,7 +68,7 @@ const INITIAL_STEP2: Step2Form = {
 
 function Notification({ message, type, onClose }: NotificationProps) {
     return (
-        <motion.div
+        <m.div
             initial={{ opacity: 0, scale: 0.9, y: -20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.9, y: -20 }}
@@ -93,7 +93,7 @@ function Notification({ message, type, onClose }: NotificationProps) {
             >
                 <X size={14} />
             </button>
-        </motion.div>
+        </m.div>
     );
 }
 
@@ -562,7 +562,7 @@ export default function AddUserModal({ onClose, onSuccess, onNotify }: Props) {
             </AnimatePresence>
 
             <AnimatePresence>
-                <motion.div
+                <m.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
@@ -573,7 +573,7 @@ export default function AddUserModal({ onClose, onSuccess, onNotify }: Props) {
                     }}
                     onClick={handleClose}
                 >
-                    <motion.div
+                    <m.div
                         initial={{ opacity: 0, y: 16 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: 16 }}
@@ -628,7 +628,7 @@ export default function AddUserModal({ onClose, onSuccess, onNotify }: Props) {
 
                         <AnimatePresence mode="wait">
                             {step === 1 ? (
-                                <motion.form
+                                <m.form
                                     key="step-1"
                                     initial={{ opacity: 0, x: 12 }}
                                     animate={{ opacity: 1, x: 0 }}
@@ -787,7 +787,7 @@ export default function AddUserModal({ onClose, onSuccess, onNotify }: Props) {
                                         </div>
                                     </div>
 
-                                    <motion.button
+                                    <m.button
                                         type="submit"
                                         disabled={loading}
                                         whileTap={{ scale: 0.97 }}
@@ -806,10 +806,10 @@ export default function AddUserModal({ onClose, onSuccess, onNotify }: Props) {
                                                 <ChevronLeft size={14} />
                                             </>
                                         )}
-                                    </motion.button>
-                                </motion.form>
+                                    </m.button>
+                                </m.form>
                             ) : (
-                                <motion.form
+                                <m.form
                                     key="step-2"
                                     initial={{ opacity: 0, x: 12 }}
                                     animate={{ opacity: 1, x: 0 }}
@@ -863,7 +863,7 @@ export default function AddUserModal({ onClose, onSuccess, onNotify }: Props) {
                                             برگشت
                                         </button>
 
-                                        <motion.button
+                                        <m.button
                                             type="submit"
                                             disabled={loading}
                                             whileTap={{ scale: 0.97 }}
@@ -877,13 +877,13 @@ export default function AddUserModal({ onClose, onSuccess, onNotify }: Props) {
                                                     ثبت کارمند
                                                 </>
                                             )}
-                                        </motion.button>
+                                        </m.button>
                                     </div>
-                                </motion.form>
+                                </m.form>
                             )}
                         </AnimatePresence>
-                    </motion.div>
-                </motion.div>
+                    </m.div>
+                </m.div>
             </AnimatePresence>
         </>
     );

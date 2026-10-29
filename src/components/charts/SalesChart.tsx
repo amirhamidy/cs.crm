@@ -1,6 +1,6 @@
 "use client";
 
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, m } from "framer-motion";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Area,
@@ -115,7 +115,7 @@ export default function SalesChart({ data: chartData }: { data: SalesChartData }
   );
 
   return (
-    <motion.div
+    <m.div
       initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{
@@ -144,7 +144,7 @@ export default function SalesChart({ data: chartData }: { data: SalesChartData }
               className="relative rounded-lg px-2.5 py-1 text-[11px] font-medium"
             >
               {activeRange === range.key && (
-                <motion.span
+                <m.span
                   layoutId="salesChartRangeIndicator"
                   className="absolute inset-0 rounded-lg bg-white shadow-sm dark:bg-slate-800"
                   transition={{
@@ -172,7 +172,7 @@ export default function SalesChart({ data: chartData }: { data: SalesChartData }
         <div className="absolute left-2 top-2 z-10 min-w-[150px]">
           <AnimatePresence mode="wait">
             {activePoint && (
-              <motion.div
+              <m.div
                 key={`${activeRange}-${activePoint.name}`}
                 initial={{
                   opacity: 0,
@@ -223,7 +223,7 @@ export default function SalesChart({ data: chartData }: { data: SalesChartData }
                   </p>
 
                 </div>
-              </motion.div>
+              </m.div>
             )}
           </AnimatePresence>
         </div>
@@ -330,6 +330,6 @@ export default function SalesChart({ data: chartData }: { data: SalesChartData }
           ))}
         </div>
       )}
-    </motion.div>
+    </m.div>
   );
 }

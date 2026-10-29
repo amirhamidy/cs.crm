@@ -66,7 +66,7 @@ const list = async (params: CustomerListParams = {}): Promise<Paginated<Customer
   return data;
 };
 
-/** صفحه‌بندی سمت سرور با پشتیبانی از AbortSignal (برای usePaginatedList) */
+
 const page = async (
   params: CustomerListParams = {},
   signal?: AbortSignal,

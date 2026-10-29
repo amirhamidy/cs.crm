@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, m } from "framer-motion";
 import {
     X,
     Loader2,
@@ -239,7 +239,7 @@ export default function TaskNotesModal({ isOpen, onClose, taskId, taskTitle }: P
 
     return createPortal(
         <AnimatePresence>
-            <motion.div
+            <m.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
@@ -250,7 +250,7 @@ export default function TaskNotesModal({ isOpen, onClose, taskId, taskTitle }: P
                 }}
                 onClick={onClose}
             >
-                <motion.div
+                <m.div
                     initial={{ scale: 0.94, y: 20 }}
                     animate={{ scale: 1, y: 0 }}
                     exit={{ scale: 0.94, y: 20 }}
@@ -459,8 +459,8 @@ export default function TaskNotesModal({ isOpen, onClose, taskId, taskTitle }: P
                             </div>
                         )}
                     </div>
-                </motion.div>
-            </motion.div>
+                </m.div>
+            </m.div>
         </AnimatePresence>,
         document.body
     );

@@ -1,11 +1,24 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import dynamic from "next/dynamic";
 import StatsCard from "@/components/charts/StatsCard";
-import SalesChart from "@/components/charts/SalesChart";
-import CategoryChart from "@/components/charts/CategoryChart";
-import VisitsChart from "@/components/charts/VisitsChart";
 import UsersCard from "@/components/charts/UsersCard";
+import LazyLoading from "@/components/ui/LazyLoading";
+
+
+const SalesChart = dynamic(() => import("@/components/charts/SalesChart"), {
+    ssr: false,
+    loading: () => <LazyLoading />,
+});
+const CategoryChart = dynamic(() => import("@/components/charts/CategoryChart"), {
+    ssr: false,
+    loading: () => <LazyLoading />,
+});
+const VisitsChart = dynamic(() => import("@/components/charts/VisitsChart"), {
+    ssr: false,
+    loading: () => <LazyLoading />,
+});
 import {
     DashboardForbiddenError,
     getCancelledTasksByDepartment,

@@ -1,12 +1,12 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, m } from "framer-motion";
 import { CalendarDays, Clock3, Loader2, Send, StickyNote, Tag, Trash2, UserRound, X } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
 import { useAuthStore } from "@/store/authStore";
 
-/* ───────────────────────── Types (unchanged) ───────────────────────── */
+
 
 export interface CalendarPerson {
     id: number;
@@ -51,7 +51,7 @@ interface Props {
     onDeleted: (id: number) => void;
 }
 
-/* ───────────────────────── Shared helpers (also used by PersianCalendar) ───────────────────────── */
+
 
 const pad = (v: number) => String(v).padStart(2, "0");
 const toDateKey = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
@@ -126,11 +126,11 @@ const EVENT_TYPE_LABEL: Record<string, string> = {
 };
 
 export interface TypeStyle {
-    bg: string;     // soft tinted surface
-    text: string;   // readable text color for that surface
-    dot: string;    // solid dot
-    bar: string;    // solid stripe
-    border: string; // subtle border
+    bg: string;     
+    text: string;   
+    dot: string;    
+    bar: string;    
+    border: string; 
 }
 
 const EVENT_TYPE_COLOR: Record<string, TypeStyle> = {
@@ -163,7 +163,7 @@ export const isEventOnDate = (event: CalendarEvent, dateISO: string) => {
 
 const initial = (name: string) => name.trim().charAt(0);
 
-/* ───────────────────────── Component ───────────────────────── */
+
 
 export default function CalendarNoteModal({ isOpen, onClose, selectedDate, notes, events, onCreated, onDeleted }: Props) {
     const { userId } = useAuthStore();
@@ -211,14 +211,14 @@ export default function CalendarNoteModal({ isOpen, onClose, selectedDate, notes
     return (
         <AnimatePresence>
             {isOpen && selectedDate && (
-                <motion.div
+                <m.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                     className="fixed inset-0 z-[120] flex items-stretch justify-start bg-slate-950/40 p-2 backdrop-blur-sm sm:p-4"
                     onClick={onClose}
                 >
-                    <motion.aside
+                    <m.aside
                         initial={{ opacity: 0, x: -48 }}
                         animate={{ opacity: 1, x: 0 }}
                         exit={{ opacity: 0, x: -48 }}
@@ -227,7 +227,7 @@ export default function CalendarNoteModal({ isOpen, onClose, selectedDate, notes
                         onClick={(e) => e.stopPropagation()}
                         className="relative flex h-full w-full max-w-[30rem] flex-col overflow-hidden rounded-[2rem] border border-white/60 bg-gradient-to-b from-sky-50/95 via-white/95 to-blue-50/95 shadow-[0_40px_100px_-30px_rgba(30,64,175,0.55)] backdrop-blur-2xl dark:border-white/[0.08] dark:from-[#0a1738]/95 dark:via-[#0b1633]/95 dark:to-[#08112b]/95"
                     >
-                        {/* Hero header */}
+                        
                         <div className="relative shrink-0 overflow-hidden bg-gradient-to-br from-blue-600 via-blue-500 to-cyan-400 px-6 pb-6 pt-5 text-white">
                             <div className="pointer-events-none absolute -left-10 -top-12 h-40 w-40 rounded-full bg-white/20 blur-2xl" />
                             <div className="pointer-events-none absolute -bottom-16 right-10 h-40 w-40 rounded-full bg-indigo-400/40 blur-3xl" />
@@ -252,7 +252,7 @@ export default function CalendarNoteModal({ isOpen, onClose, selectedDate, notes
                             </div>
                         </div>
 
-                        {/* Scrollable body */}
+                        
                         <div className="flex-1 space-y-6 overflow-y-auto px-5 py-5">
                             <section className="space-y-3">
                                 <h4 className="text-[12.5px] font-extrabold text-slate-700 dark:text-slate-200">برنامه این روز</h4>
@@ -263,7 +263,7 @@ export default function CalendarNoteModal({ isOpen, onClose, selectedDate, notes
                                     const assigned = event.people?.assigned_employee ?? [];
                                     const creator = event.people?.created_by;
                                     return (
-                                        <motion.div
+                                        <m.div
                                             key={`${event.type}-${event.id}`}
                                             layout
                                             initial={{ opacity: 0, y: 8 }}
@@ -305,7 +305,7 @@ export default function CalendarNoteModal({ isOpen, onClose, selectedDate, notes
                                                     )}
                                                 </div>
                                             )}
-                                        </motion.div>
+                                        </m.div>
                                     );
                                 })}
                             </section>
@@ -317,7 +317,7 @@ export default function CalendarNoteModal({ isOpen, onClose, selectedDate, notes
                                 ) : (
                                     <AnimatePresence>
                                         {dayNotes.map((note) => (
-                                            <motion.div
+                                            <m.div
                                                 key={note.id}
                                                 layout
                                                 initial={{ opacity: 0, y: 10 }}
@@ -335,14 +335,14 @@ export default function CalendarNoteModal({ isOpen, onClose, selectedDate, notes
                                                         {deletingId === note.id ? <Loader2 size={15} className="animate-spin text-rose-500" /> : <Trash2 size={15} className="text-rose-500" />}
                                                     </button>
                                                 </div>
-                                            </motion.div>
+                                            </m.div>
                                         ))}
                                     </AnimatePresence>
                                 )}
                             </section>
                         </div>
 
-                        {/* Composer pinned to the bottom */}
+                        
                         <div className="shrink-0 border-t border-blue-100/80 bg-white/70 p-4 backdrop-blur-xl dark:border-white/[0.06] dark:bg-white/[0.02]">
                             <div className="relative">
                                 <textarea
@@ -365,8 +365,8 @@ export default function CalendarNoteModal({ isOpen, onClose, selectedDate, notes
                                 </button>
                             </div>
                         </div>
-                    </motion.aside>
-                </motion.div>
+                    </m.aside>
+                </m.div>
             )}
         </AnimatePresence>
     );

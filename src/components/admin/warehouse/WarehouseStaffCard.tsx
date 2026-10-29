@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, m } from "framer-motion";
 import { Check, Loader2, Power, Trash2, Warehouse as WarehouseIcon, X } from "lucide-react";
 import { useTheme } from "next-themes";
 import axiosInstance from "@/lib/axiosInstance";
@@ -96,7 +96,7 @@ export default function WarehouseStaffCard({ staff, index, onDelete, onUpdated }
 
     return (
         <>
-            <motion.div
+            <m.div
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.96 }}
@@ -118,7 +118,7 @@ export default function WarehouseStaffCard({ staff, index, onDelete, onUpdated }
                             <stop offset="100%" stopColor="#8b5cf6" />
                         </linearGradient>
                     </defs>
-                    <motion.rect
+                    <m.rect
                         x="1"
                         y="1"
                         width="calc(100% - 2px)"
@@ -211,7 +211,7 @@ export default function WarehouseStaffCard({ staff, index, onDelete, onUpdated }
                         }}
                         title={isActive ? "اکانت فعال است" : "اکانت غیرفعال است"}
                     >
-                        <motion.span
+                        <m.span
                             animate={{ x: isActive ? 0 : 15 }}
                             transition={{ type: "spring", stiffness: 500, damping: 30 }}
                             className="absolute left-[2px] top-[2px] flex h-[23px] w-[23px] items-center justify-center rounded-full shadow-md"
@@ -221,7 +221,7 @@ export default function WarehouseStaffCard({ staff, index, onDelete, onUpdated }
                             }}
                         >
                             <AnimatePresence mode="wait" initial={false}>
-                                <motion.span
+                                <m.span
                                     key={isActive ? "check" : "power"}
                                     initial={{ opacity: 0, scale: 0.5 }}
                                     animate={{ opacity: 1, scale: 1 }}
@@ -229,16 +229,16 @@ export default function WarehouseStaffCard({ staff, index, onDelete, onUpdated }
                                     transition={{ duration: 0.15 }}
                                 >
                                     {isActive ? <Check size={12} strokeWidth={3.5} /> : <Power size={11} strokeWidth={2.5} />}
-                                </motion.span>
+                                </m.span>
                             </AnimatePresence>
-                        </motion.span>
+                        </m.span>
                     </button>
                 </div>
-            </motion.div>
+            </m.div>
 
             <AnimatePresence>
                 {showConfirm && (
-                    <motion.div
+                    <m.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
@@ -246,7 +246,7 @@ export default function WarehouseStaffCard({ staff, index, onDelete, onUpdated }
                         className="fixed inset-0 z-50 flex items-center justify-center px-4"
                         style={{ background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)" }}
                     >
-                        <motion.div
+                        <m.div
                             initial={{ opacity: 0, scale: 0.96, y: 16 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.96, y: 16 }}
@@ -313,8 +313,8 @@ export default function WarehouseStaffCard({ staff, index, onDelete, onUpdated }
                                     {deleting ? "" : "حذف کن"}
                                 </button>
                             </div>
-                        </motion.div>
-                    </motion.div>
+                        </m.div>
+                    </m.div>
                 )}
             </AnimatePresence>
         </>

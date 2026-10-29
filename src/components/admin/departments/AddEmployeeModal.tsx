@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, forwardRef, InputHTMLAttributes } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { m, AnimatePresence } from "framer-motion";
 import { X, User, CheckCircle2, Search, Loader } from "lucide-react";
 import type { Department, Employee } from "./types";
 
@@ -131,7 +131,7 @@ export default function AddEmployeeModal({
     return (
         <AnimatePresence>
             {open && (
-                <motion.div
+                <m.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
@@ -142,7 +142,7 @@ export default function AddEmployeeModal({
                     }}
                     onClick={handleClose}
                 >
-                    <motion.div
+                    <m.div
                         initial={{ opacity: 0, y: 16 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: 16 }}
@@ -151,7 +151,7 @@ export default function AddEmployeeModal({
                         onClick={(event) => event.stopPropagation()}
                         dir="rtl"
                     >
-                        {/* Header */}
+                        
                         <div className="flex items-center justify-between px-8 pb-6 pt-8">
                             <div className="flex items-center gap-2.5">
                                 <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-50 dark:bg-blue-500/10">
@@ -179,7 +179,7 @@ export default function AddEmployeeModal({
                             </button>
                         </div>
 
-                        {/* Body */}
+                        
                         <form
                             onSubmit={handleSubmit}
                             className="flex flex-col gap-4 px-8 pb-8"
@@ -271,7 +271,7 @@ export default function AddEmployeeModal({
 
                             <AnimatePresence mode="wait">
                                 {success ? (
-                                    <motion.div
+                                    <m.div
                                         key="success"
                                         initial={{ opacity: 0, scale: 0.9 }}
                                         animate={{ opacity: 1, scale: 1 }}
@@ -280,9 +280,9 @@ export default function AddEmployeeModal({
                                     >
                                         <CheckCircle2 size={16} />
                                         عضو با موفقیت اضافه شد
-                                    </motion.div>
+                                    </m.div>
                                 ) : (
-                                    <motion.button
+                                    <m.button
                                         key="submit"
                                         type="submit"
                                         disabled={!selectedId || submitting}
@@ -294,12 +294,12 @@ export default function AddEmployeeModal({
                                         ) : (
                                             "افزودن عضو"
                                         )}
-                                    </motion.button>
+                                    </m.button>
                                 )}
                             </AnimatePresence>
                         </form>
-                    </motion.div>
-                </motion.div>
+                    </m.div>
+                </m.div>
             )}
         </AnimatePresence>
     );

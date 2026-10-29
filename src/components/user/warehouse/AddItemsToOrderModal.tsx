@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, m } from "framer-motion";
 import {
   AlertTriangle,
   Check,
@@ -263,14 +263,14 @@ export default function AddItemsToOrderModal({
   return (
     <AnimatePresence>
       {isOpen && (
-        <motion.div
+        <m.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           onClick={handleClose}
           className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-3 backdrop-blur-sm sm:p-4"
         >
-          <motion.div
+          <m.div
             initial={{ opacity: 0, scale: 0.96, y: 12 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.96, y: 12 }}
@@ -551,7 +551,7 @@ export default function AddItemsToOrderModal({
                   >
                     بستن
                   </button>
-                  <motion.button
+                  <m.button
                     type="button"
                     whileTap={{ scale: 0.97 }}
                     onClick={handleSubmit}
@@ -564,12 +564,12 @@ export default function AddItemsToOrderModal({
                       <PackagePlus size={14} />
                     )}
                     افزودن به فاکتور
-                  </motion.button>
+                  </m.button>
                 </div>
               </div>
             </div>
-          </motion.div>
-        </motion.div>
+          </m.div>
+        </m.div>
       )}
     </AnimatePresence>
   );

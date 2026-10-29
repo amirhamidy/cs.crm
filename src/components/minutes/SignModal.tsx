@@ -9,7 +9,7 @@ import { BTN_GHOST, BTN_PRIMARY } from "./ui";
 
 interface SignModalProps {
   title?: string;
-  /** باید یک Promise برگرداند؛ در صورت خطا throw کند یا پیام خطا را برگرداند */
+  
   onSubmit: (signatureImage: string) => Promise<string | void>;
   onClose: () => void;
 }

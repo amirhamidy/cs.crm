@@ -1,13 +1,20 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { m, AnimatePresence } from "framer-motion";
 import { useTheme } from "next-themes";
 import { Users, Plus, Loader, RefreshCw, Filter, FileSpreadsheet } from "lucide-react";
+import dynamic from "next/dynamic";
 import CustomerCard from "./CustomerCard";
-import AddCustomerModal from "./AddCustomerModal";
 import ImportExcelModal from "./ImportExcelModal";
+import LazyLoading from "@/components/ui/LazyLoading";
 import Pagination from "@/components/ui/Pagination";
+
+
+const AddCustomerModal = dynamic(() => import("./AddCustomerModal"), {
+    ssr: false,
+    loading: () => <LazyLoading />,
+});
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import type { Customer, CustomerStatus } from "@/types/customer";
 import { cached, customersApi, casesApi, type CustomerCounts } from "@/lib/api";
@@ -38,7 +45,7 @@ export default function CustomersPage() {
     const [showAdd, setShowAdd] = useState(false);
     const [showImport, setShowImport] = useState(false);
 
-    // صفحه‌بندی و فیلتر وضعیت سمت سرور
+    
     const list = usePaginatedList<Customer, { status?: CustomerStatus }>(
         (params, signal) => customersApi.page(params, signal),
         { pageSize: PAGE_SIZE, filters: { status: STATUS_BY_FILTER.all } },
@@ -55,7 +62,7 @@ export default function CustomersPage() {
         try {
             setCounts(await customersApi.counts());
         } catch {
-            /* شمارنده‌ها اختیاری‌اند */
+            
         }
     }, []);
 
@@ -211,7 +218,7 @@ export default function CustomersPage() {
             ) : (
                 <AnimatePresence mode="wait">
                     {customers.length === 0 ? (
-                        <motion.div
+                        <m.div
                             key="empty"
                             initial={{ opacity: 0, y: 8 }}
                             animate={{ opacity: 1, y: 0 }}
@@ -226,9 +233,9 @@ export default function CustomersPage() {
                                         ? "مشتری بالقوه‌ای یافت نشد"
                                         : "مشتری فعالی یافت نشد"}
                             </p>
-                        </motion.div>
+                        </m.div>
                     ) : (
-                        <motion.div
+                        <m.div
                             layout
                             key={`grid-${filter}-${page}`}
                             className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4"
@@ -245,14 +252,14 @@ export default function CustomersPage() {
                                     />
                                 ))}
                             </AnimatePresence>
-                        </motion.div>
+                        </m.div>
                     )}
                 </AnimatePresence>
             )}
 
             {!loading && totalPages > 1 && <Pagination page={page} totalPages={totalPages} onChange={list.setPage} />}
 
-            <AddCustomerModal isOpen={showAdd} onClose={() => setShowAdd(false)} onAdded={handleAdded} />
+            {showAdd && <AddCustomerModal isOpen={showAdd} onClose={() => setShowAdd(false)} onAdded={handleAdded} />}
             <ImportExcelModal isOpen={showImport} onClose={() => setShowImport(false)} onSuccess={handleAdded} />
         </div>
     );

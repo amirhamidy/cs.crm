@@ -28,7 +28,7 @@ export default function Pagination({
     page: number;
     totalPages: number;
     onChange: (p: number) => void;
-    /** نسخهٔ کوچک برای ستون‌های باریک (فقط قبلی / شماره صفحه / بعدی) */
+    
     compact?: boolean;
 }) {
     if (compact) {

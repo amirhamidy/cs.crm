@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, m } from "framer-motion";
 import { Eye, EyeOff, Loader } from "lucide-react";
 import Image from "next/image";
 import { useLogin } from "@/hooks/useLogin";
@@ -72,7 +72,7 @@ export default function LoginClient() {
                 )}
             </AnimatePresence>
 
-            <motion.div
+            <m.div
                 initial={{ opacity: 0, y: 16 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.35, ease: "easeOut" }}
@@ -141,7 +141,7 @@ export default function LoginClient() {
                         </button>
                     </div>
 
-                    <motion.button
+                    <m.button
                         type="submit"
                         disabled={loading}
                         whileTap={
@@ -158,9 +158,9 @@ export default function LoginClient() {
                         ) : (
                             "ورود"
                         )}
-                    </motion.button>
+                    </m.button>
                 </form>
-            </motion.div>
+            </m.div>
         </div>
     );
 }

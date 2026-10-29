@@ -1,6 +1,6 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { m } from "framer-motion";
 import {
     Archive,
     Ban,
@@ -76,7 +76,7 @@ export default function InternalTaskArchiveCard({
     const archivedDate = formatJalali(task.archived_at);
 
     return (
-        <motion.div
+        <m.div
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.96 }}
@@ -111,7 +111,7 @@ export default function InternalTaskArchiveCard({
                     </linearGradient>
                 </defs>
 
-                <motion.rect
+                <m.rect
                     x="1"
                     y="1"
                     width="calc(100% - 2px)"
@@ -403,6 +403,6 @@ export default function InternalTaskArchiveCard({
                     {archivedDate}
                 </span>
             </div>
-        </motion.div>
+        </m.div>
     );
 }

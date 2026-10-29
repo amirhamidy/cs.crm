@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, m } from "framer-motion";
 import { AlertCircle, ArrowLeftCircle, ArrowRightCircle, Loader2, Upload, X } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
 import type { ApiPurchasingTask } from "@/types/purchasing";
@@ -91,7 +91,7 @@ export default function TaskTransitionModal({ isOpen, onClose, mode, task, onCom
     return createPortal(
         <AnimatePresence>
             {isOpen && (
-                <motion.div
+                <m.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
@@ -99,7 +99,7 @@ export default function TaskTransitionModal({ isOpen, onClose, mode, task, onCom
                     style={{ background: "rgba(0,0,0,0.45)", backdropFilter: "blur(3px)" }}
                     onMouseDown={close}
                 >
-                    <motion.div
+                    <m.div
                         initial={{ opacity: 0, y: 16, scale: 0.98 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: 16, scale: 0.98 }}
@@ -126,10 +126,10 @@ export default function TaskTransitionModal({ isOpen, onClose, mode, task, onCom
                         <div className="flex flex-1 flex-col gap-4 overflow-y-auto px-8 pb-2">
                             <AnimatePresence>
                                 {error && (
-                                    <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 4 }} className="flex items-start gap-2.5 rounded-2xl bg-red-50 px-3.5 py-3 dark:bg-red-500/10">
+                                    <m.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 4 }} className="flex items-start gap-2.5 rounded-2xl bg-red-50 px-3.5 py-3 dark:bg-red-500/10">
                                         <AlertCircle size={14} className="mt-0.5 shrink-0 text-red-500" />
                                         <p className="flex-1 text-[11.5px] font-semibold leading-5 text-red-500 dark:text-red-400">{error}</p>
-                                    </motion.div>
+                                    </m.div>
                                 )}
                             </AnimatePresence>
 
@@ -182,7 +182,7 @@ export default function TaskTransitionModal({ isOpen, onClose, mode, task, onCom
                             <button type="button" onClick={close} disabled={submitting} className="h-11 flex-1 rounded-full bg-gray-100 text-[13px] font-bold text-gray-600 transition hover:bg-gray-200 disabled:opacity-40 dark:bg-white/[0.05] dark:text-gray-300 dark:hover:bg-white/[0.08]">
                                 انصراف
                             </button>
-                            <motion.button
+                            <m.button
                                 type="button"
                                 whileTap={{ scale: 0.97 }}
                                 onClick={handleSubmit}
@@ -191,10 +191,10 @@ export default function TaskTransitionModal({ isOpen, onClose, mode, task, onCom
                             >
                                 {submitting ? <Loader2 size={15} className="animate-spin" /> : <Icon size={14} />}
                                 {isAdvance ? "انتقال" : "بازگشت"}
-                            </motion.button>
+                            </m.button>
                         </div>
-                    </motion.div>
-                </motion.div>
+                    </m.div>
+                </m.div>
             )}
         </AnimatePresence>,
         document.body

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, m } from "framer-motion";
 import { useTheme } from "next-themes";
 import {
     AlertCircle,
@@ -36,7 +36,7 @@ function SegmentTooltip({ stage, isDark }: { stage: StageStat; isDark: boolean }
     ];
 
     return (
-        <motion.div
+        <m.div
             initial={{ opacity: 0, y: 6, scale: 0.96 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 6, scale: 0.96 }}
@@ -75,7 +75,7 @@ function SegmentTooltip({ stage, isDark }: { stage: StageStat; isDark: boolean }
                     borderColor: isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.07)",
                 }}
             />
-        </motion.div>
+        </m.div>
     );
 }
 
@@ -105,7 +105,7 @@ function SegmentedBar({ stages, isDark }: { stages: StageStat[]; isDark: boolean
                             </p>
                         </div>
 
-                        <motion.div
+                        <m.div
                             whileHover={{ y: -3 }}
                             transition={{ duration: 0.15 }}
                             className="flex h-14 w-full cursor-pointer overflow-hidden rounded-xl"
@@ -129,7 +129,7 @@ function SegmentedBar({ stages, isDark }: { stages: StageStat[]; isDark: boolean
                                     />
                                 );
                             })}
-                        </motion.div>
+                        </m.div>
 
                         <AnimatePresence>
                             {hoverKey === stage.key && (
@@ -357,7 +357,7 @@ export default function DepartmentChurn({ departments, loading }: Props) {
     const showWorst = Boolean(dept.worst && dept.worst.key !== dept.best?.key);
 
     return (
-        <motion.div
+        <m.div
             initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, ease: [0.25, 0.46, 0.45, 0.94] }}
@@ -389,7 +389,7 @@ export default function DepartmentChurn({ departments, loading }: Props) {
                                 <HelpCircle size={13} />
                                 <AnimatePresence>
                                     {showInfo && (
-                                        <motion.div
+                                        <m.div
                                             initial={{ opacity: 0, y: 4 }}
                                             animate={{ opacity: 1, y: 0 }}
                                             exit={{ opacity: 0, y: 4 }}
@@ -399,7 +399,7 @@ export default function DepartmentChurn({ departments, loading }: Props) {
                                             <p className="text-[10.5px] leading-5 text-gray-500 dark:text-gray-400">
                                                 هر بخش از نوار یک مرحله از دپارتمان است. با هاور کردن روی هر مرحله جزئیات تعداد تسک‌های فروش‌رفته، تکمیل‌شده، در جریان و لغوشده نمایش داده می‌شود.
                                             </p>
-                                        </motion.div>
+                                        </m.div>
                                     )}
                                 </AnimatePresence>
                             </button>
@@ -454,7 +454,7 @@ export default function DepartmentChurn({ departments, loading }: Props) {
                                 </span>
 
                                 {active && (
-                                    <motion.span
+                                    <m.span
                                         layoutId="dept-tab-indicator"
                                         className="absolute -bottom-[1px] h-[2px] w-full rounded-full"
                                         style={{
@@ -479,7 +479,7 @@ export default function DepartmentChurn({ departments, loading }: Props) {
             </div>
 
             <AnimatePresence mode="wait">
-                <motion.div
+                <m.div
                     key={dept.key}
                     initial={{ opacity: 0, x: -8 }}
                     animate={{ opacity: 1, x: 0 }}
@@ -607,8 +607,8 @@ export default function DepartmentChurn({ departments, loading }: Props) {
                             )}
                         </div>
                     </div>
-                </motion.div>
+                </m.div>
             </AnimatePresence>
-        </motion.div>
+        </m.div>
     );
 }

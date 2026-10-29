@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, m } from "framer-motion";
 import {
     AlertCircle,
     Check,
@@ -266,7 +266,7 @@ function NiceSelect({
                     )}
                 </span>
 
-                <motion.span
+                <m.span
                     animate={{ rotate: open ? 180 : 0 }}
                     transition={{ duration: 0.2 }}
                 >
@@ -274,12 +274,12 @@ function NiceSelect({
                         size={14}
                         className="shrink-0 text-gray-400"
                     />
-                </motion.span>
+                </m.span>
             </button>
 
             <AnimatePresence>
                 {open && (
-                    <motion.div
+                    <m.div
                         initial={{
                             opacity: 0,
                             y: -6,
@@ -334,7 +334,7 @@ function NiceSelect({
                                         option.id === value;
 
                                     return (
-                                        <motion.button
+                                        <m.button
                                             key={option.id}
                                             type="button"
                                             initial={{
@@ -393,12 +393,12 @@ function NiceSelect({
                                                     />
                                                 </span>
                                             )}
-                                        </motion.button>
+                                        </m.button>
                                     );
                                 })
                             )}
                         </div>
-                    </motion.div>
+                    </m.div>
                 )}
             </AnimatePresence>
         </div>
@@ -446,7 +446,7 @@ export default function PurchasingCreateTaskModal({
 
         let cancelled = false;
 
-        // لیست‌ها صفحه‌بندی شده‌اند؛ برای انتخاب کالا/انبار همهٔ صفحات لازم است.
+        
         Promise.all([
             listAll<Product>("/warehouse/api/v1/products/"),
             listAll<{
@@ -581,7 +581,7 @@ export default function PurchasingCreateTaskModal({
     return createPortal(
         <AnimatePresence>
             {open && (
-                <motion.div
+                <m.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
@@ -592,7 +592,7 @@ export default function PurchasingCreateTaskModal({
                     }}
                     onMouseDown={handleClose}
                 >
-                    <motion.div
+                    <m.div
                         initial={{
                             opacity: 0,
                             y: 16,
@@ -649,7 +649,7 @@ export default function PurchasingCreateTaskModal({
                             <div className="flex flex-col gap-4">
                                 <AnimatePresence>
                                     {error && (
-                                        <motion.div
+                                        <m.div
                                             initial={{
                                                 opacity: 0,
                                                 y: 6,
@@ -682,7 +682,7 @@ export default function PurchasingCreateTaskModal({
                                             >
                                                 <X size={13} />
                                             </button>
-                                        </motion.div>
+                                        </m.div>
                                     )}
                                 </AnimatePresence>
 
@@ -765,7 +765,7 @@ export default function PurchasingCreateTaskModal({
 
                                         <AnimatePresence>
                                             {selectedProduct && (
-                                                <motion.div
+                                                <m.div
                                                     initial={{
                                                         opacity: 0,
                                                         height: 0,
@@ -793,7 +793,7 @@ export default function PurchasingCreateTaskModal({
                                                             </span>
                                                         </div>
                                                     </div>
-                                                </motion.div>
+                                                </m.div>
                                             )}
                                         </AnimatePresence>
 
@@ -826,7 +826,7 @@ export default function PurchasingCreateTaskModal({
 
                                         <AnimatePresence>
                                             {selectedStep && (
-                                                <motion.div
+                                                <m.div
                                                     initial={{
                                                         opacity: 0,
                                                         height: 0,
@@ -857,7 +857,7 @@ export default function PurchasingCreateTaskModal({
                                                             }
                                                         </p>
                                                     </div>
-                                                </motion.div>
+                                                </m.div>
                                             )}
                                         </AnimatePresence>
 
@@ -877,7 +877,7 @@ export default function PurchasingCreateTaskModal({
                         </div>
 
                         <div className="flex shrink-0 items-center gap-2 px-8 pb-8 pt-5">
-                            <motion.button
+                            <m.button
                                 type="button"
                                 whileTap={{ scale: 0.97 }}
                                 onClick={submit}
@@ -897,10 +897,10 @@ export default function PurchasingCreateTaskModal({
                                 )}
 
                                 ایجاد درخواست
-                            </motion.button>
+                            </m.button>
                         </div>
-                    </motion.div>
-                </motion.div>
+                    </m.div>
+                </m.div>
             )}
         </AnimatePresence>,
         document.body

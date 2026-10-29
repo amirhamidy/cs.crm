@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { motion } from "framer-motion";
+import { m } from "framer-motion";
 import { Loader2, Plus, Minus, SlidersHorizontal } from "lucide-react";
 import { useTheme } from "next-themes";
 import { scoreApi } from "@/lib/api";
@@ -102,7 +102,7 @@ export default function AdjustScoreModal({
     const fieldBorder = isDark ? "rgba(255,255,255,0.1)" : "rgba(15,23,42,0.1)";
 
     return (
-        <motion.div
+        <m.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -110,7 +110,7 @@ export default function AdjustScoreModal({
             className="fixed inset-0 z-[80] flex items-center justify-center p-4"
             style={{ background: "rgba(0,0,0,0.55)", backdropFilter: "blur(6px)" }}
         >
-            <motion.div
+            <m.div
                 initial={{ opacity: 0, scale: 0.95, y: 16 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 transition={{ duration: 0.18 }}
@@ -142,7 +142,7 @@ export default function AdjustScoreModal({
                     </div>
                 </div>
 
-                {/* انتخاب نوع عملیات */}
+                
                 <div
                     className="mb-3 grid grid-cols-2 gap-1.5 rounded-2xl p-1"
                     style={{ background: fieldBg }}
@@ -174,7 +174,7 @@ export default function AdjustScoreModal({
                     })}
                 </div>
 
-                {/* مقدار */}
+                
                 <label className="mb-1 block text-[11.5px] font-bold text-gray-600 dark:text-gray-400">
                     مقدار امتیاز
                 </label>
@@ -192,7 +192,7 @@ export default function AdjustScoreModal({
                     style={{ background: fieldBg, border: `1px solid ${fieldBorder}` }}
                 />
 
-                {/* دلیل */}
+                
                 <label className="mb-1 block text-[11.5px] font-bold text-gray-600 dark:text-gray-400">
                     دلیل
                 </label>
@@ -237,7 +237,7 @@ export default function AdjustScoreModal({
                         {loading ? "در حال ثبت..." : isAdd ? "افزایش امتیاز" : "کسر امتیاز"}
                     </button>
                 </div>
-            </motion.div>
-        </motion.div>
+            </m.div>
+        </m.div>
     );
 }

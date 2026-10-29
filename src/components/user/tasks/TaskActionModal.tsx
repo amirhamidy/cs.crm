@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, m } from "framer-motion";
 import { Check, FileText, Loader2, Paperclip, Star, User2, X } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
 
@@ -167,7 +167,7 @@ export default function TaskActionModal({
     return createPortal(
         <AnimatePresence>
             {isOpen && (
-                <motion.div
+                <m.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
@@ -177,7 +177,7 @@ export default function TaskActionModal({
                         if (e.target === e.currentTarget && !submitting) onClose();
                     }}
                 >
-                    <motion.div
+                    <m.div
                         initial={{ opacity: 0, y: 18, scale: .97 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: 12, scale: .98 }}
@@ -321,8 +321,8 @@ export default function TaskActionModal({
                                             : "ثبت و ادامه"}
                             </button>
                         </div>
-                    </motion.div>
-                </motion.div>
+                    </m.div>
+                </m.div>
             )}
         </AnimatePresence>,
         document.body

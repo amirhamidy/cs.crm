@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, m } from "framer-motion";
 import { Check, Loader, Send, UserRound, X } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useAuthStore } from "@/store/authStore";
@@ -156,7 +156,7 @@ export default function CreateTicketModal({
     return (
         <AnimatePresence>
             {isOpen && (
-                <motion.div
+                <m.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
@@ -164,7 +164,7 @@ export default function CreateTicketModal({
                     style={{ background: "rgba(0,0,0,0.5)", backdropFilter: "blur(3px)" }}
                     onClick={onClose}
                 >
-                    <motion.div
+                    <m.div
                         initial={{ scale: 0.94, y: 18 }}
                         animate={{ scale: 1, y: 0 }}
                         exit={{ scale: 0.94, y: 18 }}
@@ -319,8 +319,8 @@ export default function CreateTicketModal({
                                 </button>
                             </div>
                         </form>
-                    </motion.div>
-                </motion.div>
+                    </m.div>
+                </m.div>
             )}
         </AnimatePresence>
     );

@@ -124,7 +124,7 @@ export default function MeetingDetailPage({ basePath }: { basePath: string }) {
     }
   };
 
-  /* ---------- render guards ---------- */
+  
   if (loading) {
     return (
       <div className="flex items-center justify-center py-24">
@@ -193,7 +193,7 @@ export default function MeetingDetailPage({ basePath }: { basePath: string }) {
 
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-5 p-3 sm:p-4 md:p-6" dir="rtl">
-      {/* Header */}
+      
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div className="flex items-start gap-3">
           <Link
@@ -262,7 +262,7 @@ export default function MeetingDetailPage({ basePath }: { basePath: string }) {
         </p>
       )}
 
-      {/* Sign call-to-action */}
+      
       {mySigner && meeting.status === "pending" && (
         <div className="flex flex-col gap-3 rounded-2xl border border-indigo-500/30 bg-indigo-500/[0.06] p-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
@@ -277,7 +277,7 @@ export default function MeetingDetailPage({ basePath }: { basePath: string }) {
         </div>
       )}
 
-      {/* Body */}
+      
       <section className={`${CARD} p-4 sm:p-5`}>
         <h2 className="mb-3 text-[13px] font-extrabold text-gray-800 dark:text-gray-100">متن صورت‌جلسه</h2>
         {meeting.body?.trim() ? (
@@ -295,7 +295,7 @@ export default function MeetingDetailPage({ basePath }: { basePath: string }) {
         )}
       </section>
 
-      {/* Signers */}
+      
       <section className={`${CARD} p-4 sm:p-5`}>
         <div className="mb-3 flex items-center justify-between gap-3">
           <div>

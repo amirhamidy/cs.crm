@@ -1,9 +1,11 @@
 "use client";
-import { FormEvent, useEffect, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
+import { AnimatePresence, m } from "framer-motion";
 import { Check, CheckSquare, Loader, Square, UserPlus, Warehouse as WarehouseIcon, X } from "lucide-react";
 import { useTheme } from "next-themes";
 import axiosInstance from "@/lib/axiosInstance";
+import { fetchPage } from "@/lib/api";
+import { useInfiniteOptions, type InfiniteFetcher } from "@/hooks/useInfiniteOptions";
 import { WAREHOUSE_ENDPOINTS, fetchAll } from "@/lib/warehouseApi";
 
 interface Employee {
@@ -33,39 +35,62 @@ export default function AddWarehouseStaffModal({
     const { resolvedTheme } = useTheme();
     const isDark = resolvedTheme === "dark";
 
-    const [employees, setEmployees] = useState<Employee[]>([]);
     const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
 
     const [selectedEmployee, setSelectedEmployee] = useState<number | null>(null);
     const [selectedWarehouses, setSelectedWarehouses] = useState<number[]>([]);
 
-    const [fetching, setFetching] = useState(false);
+    const [fetchingWarehouses, setFetchingWarehouses] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
 
-    useEffect(() => {
-        if (isOpen) {
-            fetchInitialData();
-        }
-    }, [isOpen]);
+    const listRef = useRef<HTMLDivElement>(null);
 
-    const fetchInitialData = async () => {
-        setFetching(true);
-        try {
-            const [employeeList, warehouseList] = await Promise.all([
-                fetchAll<Employee>("/accounts/api/v1/employee/list/"),
-                fetchAll<Warehouse>(WAREHOUSE_ENDPOINTS.warehouses),
-            ]);
+    
+    const employeeFetcher = useCallback<InfiniteFetcher<Employee>>(
+        (params, signal) =>
+            fetchPage<Employee>("/accounts/api/v1/employee/list/", params, signal),
+        []
+    );
+    const {
+        items: employees,
+        loading: fetching,
+        loadingMore,
+        hasMore,
+        loadMore,
+    } = useInfiniteOptions<Employee>(employeeFetcher, {
+        enabled: isOpen,
+        pageSize: 25,
+    });
 
-            setEmployees(employeeList);
-            setWarehouses(warehouseList);
-        } catch {
-            setEmployees([]);
-            setWarehouses([]);
-        } finally {
-            setFetching(false);
+    const onListScroll = () => {
+        const element = listRef.current;
+        if (!element || !hasMore || loadingMore) return;
+        if (element.scrollTop + element.clientHeight >= element.scrollHeight - 80) {
+            loadMore();
         }
     };
+
+    useEffect(() => {
+        if (!isOpen) return;
+        let cancelled = false;
+        setFetchingWarehouses(true);
+        fetchAll<Warehouse>(WAREHOUSE_ENDPOINTS.warehouses)
+            .then((warehouseList) => {
+                if (!cancelled) setWarehouses(warehouseList);
+            })
+            .catch(() => {
+                if (!cancelled) setWarehouses([]);
+            })
+            .finally(() => {
+                if (!cancelled) setFetchingWarehouses(false);
+            });
+        return () => {
+            cancelled = true;
+        };
+    }, [isOpen]);
+
+    const initialLoading = fetchingWarehouses || (fetching && employees.length === 0);
 
     const toggleWarehouse = (id: number) => {
         setSelectedWarehouses((prev) =>
@@ -113,7 +138,7 @@ export default function AddWarehouseStaffModal({
 
     return (
         <AnimatePresence>
-            <motion.div
+            <m.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
@@ -124,7 +149,7 @@ export default function AddWarehouseStaffModal({
                 }}
                 onClick={handleClose}
             >
-                <motion.div
+                <m.div
                     initial={{ opacity: 0, y: 16 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: 16 }}
@@ -133,7 +158,7 @@ export default function AddWarehouseStaffModal({
                     onClick={(e) => e.stopPropagation()}
                     dir="rtl"
                 >
-                    {/* Header */}
+                    
                     <div className="flex items-center justify-between px-8 pb-5 pt-7">
                         <div className="flex items-center gap-2.5">
                             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50 dark:bg-blue-500/10">
@@ -159,20 +184,24 @@ export default function AddWarehouseStaffModal({
                     </div>
 
                     <form onSubmit={handleSubmit} className="flex flex-col gap-4 px-8 pb-8">
-                        {fetching ? (
+                        {initialLoading ? (
                             <div className="flex flex-col items-center justify-center py-10 text-gray-400">
                                 <Loader size={22} className="animate-spin mb-2 text-blue-500" />
                                 <span className="text-[12px]">در حال دریافت اطلاعات...</span>
                             </div>
                         ) : (
                             <>
-                                {/* بخش ۱: انتخاب کارمند (تک‌انتخابی) */}
+                                
                                 <div>
                                     <label className="mb-2 block text-[11.5px] font-bold text-gray-500 dark:text-gray-400">
                                         انتخاب کارمند <span className="text-red-500">*</span>
                                     </label>
-                                    <div className="max-h-[140px] overflow-y-auto space-y-1.5 pr-0.5 scrollbar-thin">
-                                        {employees.length === 0 ? (
+                                    <div ref={listRef} onScroll={onListScroll} className="max-h-[140px] overflow-y-auto space-y-1.5 pr-0.5 scrollbar-thin">
+                                        {fetching && employees.length === 0 ? (
+                                            <div className="flex justify-center py-2">
+                                                <Loader size={16} className="animate-spin text-blue-500" />
+                                            </div>
+                                        ) : employees.length === 0 ? (
                                             <p className="text-[11px] text-gray-400 py-2">کارمندی یافت نشد</p>
                                         ) : (
                                             employees.map((emp) => {
@@ -209,10 +238,20 @@ export default function AddWarehouseStaffModal({
                                                 );
                                             })
                                         )}
+                                        {loadingMore && (
+                                            <div className="flex justify-center py-2">
+                                                <Loader size={14} className="animate-spin text-blue-500" />
+                                            </div>
+                                        )}
+                                        {!loadingMore && hasMore && employees.length > 0 && (
+                                            <button type="button" onClick={loadMore} className="w-full py-1.5 text-center text-[10.5px] font-bold text-blue-500">
+                                                نمایش بیشتر
+                                            </button>
+                                        )}
                                     </div>
                                 </div>
 
-                                {/* بخش ۲: انتخاب انبارها (چندانتخابی) */}
+                                
                                 <div>
                                     <div className="flex items-center justify-between mb-2">
                                         <label className="block text-[11.5px] font-bold text-gray-500 dark:text-gray-400">
@@ -277,7 +316,7 @@ export default function AddWarehouseStaffModal({
 
                         {error && <p className="text-[11.5px] font-semibold text-red-500">{error}</p>}
 
-                        <motion.button
+                        <m.button
                             type="submit"
                             disabled={loading || fetching || !selectedEmployee || selectedWarehouses.length === 0}
                             whileTap={{ scale: 0.98 }}
@@ -291,10 +330,10 @@ export default function AddWarehouseStaffModal({
                                     ثبت انباردار
                                 </>
                             )}
-                        </motion.button>
+                        </m.button>
                     </form>
-                </motion.div>
-            </motion.div>
+                </m.div>
+            </m.div>
         </AnimatePresence>
     );
 }

@@ -11,7 +11,7 @@ import type { SignerInput, SignerItem } from "@/types/minutes";
 interface SignerModalProps {
   meetingId: number;
   existingSigners: SignerItem[];
-  /** اگر پاس داده شود، حالت ویرایش است */
+  
   editing?: SignerItem | null;
   onClose: () => void;
   onSaved: () => void;

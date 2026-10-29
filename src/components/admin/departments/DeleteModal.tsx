@@ -1,6 +1,6 @@
 "use client";
 
-import { motion, AnimatePresence } from "framer-motion";
+import { m, AnimatePresence } from "framer-motion";
 import { X, AlertTriangle, Loader, Trash2 } from "lucide-react";
 import { useTheme } from "next-themes";
 
@@ -20,7 +20,7 @@ export default function DeleteModal({ open, title, description, loading = false,
     return (
         <AnimatePresence>
             {open && (
-                <motion.div
+                <m.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
@@ -28,7 +28,7 @@ export default function DeleteModal({ open, title, description, loading = false,
                     style={{ background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)" }}
                     onClick={loading ? undefined : onCancel}
                 >
-                    <motion.div
+                    <m.div
                         initial={{ scale: 0.95, y: 16, opacity: 0 }}
                         animate={{ scale: 1, y: 0, opacity: 1 }}
                         exit={{ scale: 0.95, y: 16, opacity: 0 }}
@@ -98,8 +98,8 @@ export default function DeleteModal({ open, title, description, loading = false,
                                 </button>
                             </div>
                         </div>
-                    </motion.div>
-                </motion.div>
+                    </m.div>
+                </m.div>
             )}
         </AnimatePresence>
     );

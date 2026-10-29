@@ -12,9 +12,16 @@ import type { CaseItem } from "@/types/case";
 import type { Customer } from "@/types/customer";
 import CreateCaseModal from "@/components/user/cases/CreateCaseModal";
 import EditCaseModal from "@/components/user/cases/EditCaseModal";
+import dynamic from "next/dynamic";
 import CaseCard from "@/components/user/cases/CaseCard";
-import EditTaskModal from "@/components/tasks/EditTaskModal";
 import CaseTasksModal from "@/components/cases/CaseTasksModal";
+import LazyLoading from "@/components/ui/LazyLoading";
+
+
+const EditTaskModal = dynamic(() => import("@/components/tasks/EditTaskModal"), {
+    ssr: false,
+    loading: () => <LazyLoading />,
+});
 import Pagination from "@/components/ui/Pagination";
 import CardSkeletonGrid from "@/components/ui/CardSkeletonGrid";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
@@ -28,7 +35,7 @@ export default function UserCasesPage() {
     const [customers, setCustomers] = useState<Customer[]>([]);
     const [departments, setDepartments] = useState<Department[]>([]);
     const [employees, setEmployees] = useState<Employee[]>([]);
-    // وظایف فقط برای پرونده‌های همین صفحه (کلید = شناسهٔ پرونده)
+    
     const [tasksByCase, setTasksByCase] = useState<Map<string, TaskItem[]>>(new Map());
     const [isFetching, setIsFetching] = useState(false);
     const [caseModalOpen, setCaseModalOpen] = useState(false);
@@ -44,7 +51,7 @@ export default function UserCasesPage() {
 
     const requestId = useRef(0);
 
-    // صفحه‌بندی و جستجوی سمت سرور
+    
     const list = usePaginatedList<CaseItem>((params, signal) => casesApi.page(params, signal), {
         pageSize: PAGE_SIZE,
         scrollTop: true,
@@ -58,7 +65,7 @@ export default function UserCasesPage() {
     const refetchCases = list.refetch;
     const setListPage = list.setPage;
 
-    /** مشتری‌ها و وظایف پرونده‌های همین صفحه — بدون بلاک کردن نمایش کارت‌ها */
+    
     useEffect(() => {
         if (cases.length === 0) {
             setCustomers([]);

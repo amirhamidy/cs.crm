@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, forwardRef, InputHTMLAttributes } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { m, AnimatePresence } from "framer-motion";
 import { X, GitBranch, CheckCircle2, Loader } from "lucide-react";
 import { Department } from "./types";
 
@@ -68,8 +68,8 @@ export default function AddStageModal({ open, department, defaultOrder = 0, onCl
     return (
         <AnimatePresence>
             {open && (
-                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center px-4" style={{ background: "rgba(0,0,0,0.45)", backdropFilter: "blur(3px)" }} onClick={handleClose}>
-                    <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 16 }} transition={{ duration: 0.35, ease: "easeOut" }} className="bg-white dark:bg-[#0f172a] rounded-[2rem] shadow-sm border border-gray-100 dark:border-white/[0.06] w-full max-w-sm overflow-hidden" onClick={(e) => e.stopPropagation()} dir="rtl">
+                <m.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center px-4" style={{ background: "rgba(0,0,0,0.45)", backdropFilter: "blur(3px)" }} onClick={handleClose}>
+                    <m.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 16 }} transition={{ duration: 0.35, ease: "easeOut" }} className="bg-white dark:bg-[#0f172a] rounded-[2rem] shadow-sm border border-gray-100 dark:border-white/[0.06] w-full max-w-sm overflow-hidden" onClick={(e) => e.stopPropagation()} dir="rtl">
                         <div className="px-8 pt-8 pb-6 flex items-center justify-between">
                             <div className="flex items-center gap-2.5">
                                 <div className="w-8 h-8 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center"><GitBranch size={15} className="text-indigo-500" /></div>
@@ -86,19 +86,19 @@ export default function AddStageModal({ open, department, defaultOrder = 0, onCl
 
                             <AnimatePresence mode="wait">
                                 {success ? (
-                                    <motion.div key="success" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} className="flex items-center justify-center gap-2 py-3 rounded-2xl bg-green-50 dark:bg-green-500/10 text-green-600 dark:text-green-400 text-sm font-medium">
+                                    <m.div key="success" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} className="flex items-center justify-center gap-2 py-3 rounded-2xl bg-green-50 dark:bg-green-500/10 text-green-600 dark:text-green-400 text-sm font-medium">
                                         <CheckCircle2 size={16} />
                                         فرآیند با موفقیت اضافه شد
-                                    </motion.div>
+                                    </m.div>
                                 ) : (
-                                    <motion.button key="submit" type="submit" disabled={!name.trim() || loading} whileTap={{ scale: 0.97 }} className="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-bold rounded-full py-3 text-sm transition-colors flex items-center justify-center">
+                                    <m.button key="submit" type="submit" disabled={!name.trim() || loading} whileTap={{ scale: 0.97 }} className="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-bold rounded-full py-3 text-sm transition-colors flex items-center justify-center">
                                         {loading ? <Loader size={18} className="animate-spin" /> : "افزودن فرآیند"}
-                                    </motion.button>
+                                    </m.button>
                                 )}
                             </AnimatePresence>
                         </form>
-                    </motion.div>
-                </motion.div>
+                    </m.div>
+                </m.div>
             )}
         </AnimatePresence>
     );

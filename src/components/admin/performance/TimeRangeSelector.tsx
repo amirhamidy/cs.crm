@@ -1,7 +1,7 @@
 "use client";
 
 import { useTheme } from "next-themes";
-import { motion } from "framer-motion";
+import { m } from "framer-motion";
 import type { TimeRange } from "@/hooks/useAnalytics";
 
 const OPTIONS: { value: TimeRange; label: string }[] = [
@@ -40,7 +40,7 @@ export default function TimeRangeSelector({ value, onChange, loading = false }: 
                         style={{ color: active ? "#ffffff" : isDark ? "#94a3b8" : "#64748b" }}
                     >
                         {active && (
-                            <motion.span
+                            <m.span
                                 layoutId="range-pill"
                                 transition={{ duration: 0.25, ease: [0.25, 0.46, 0.45, 0.94] }}
                                 className="absolute inset-0 rounded-xl"

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, m } from "framer-motion";
 import {
     AlertTriangle,
     ArrowLeft,
@@ -34,10 +34,10 @@ interface Props {
     onClose: () => void;
     taskId: number;
     taskTitle: string;
-    /** دپارتمان فعلی تسک؛ از فهرست مقصدها حذف می‌شود */
+    
     currentDepartmentId?: number;
     currentDepartmentName?: string;
-    /** بعد از انتقال موفق صدا زده می‌شود */
+    
     onTransferred: (task: TransferTaskResponse) => void;
 }
 
@@ -97,7 +97,7 @@ export default function TaskTransferModal({
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState("");
 
-    /* ───────── ریست هنگام بسته شدن ───────── */
+    
     useEffect(() => {
         if (isOpen) return;
         setQuery("");
@@ -109,7 +109,7 @@ export default function TaskTransferModal({
         setError("");
     }, [isOpen]);
 
-    /* ───────── دریافت دپارتمان‌ها، مرحله‌ها و مدیرها ───────── */
+    
     useEffect(() => {
         if (!isOpen) return;
 
@@ -141,7 +141,7 @@ export default function TaskTransferModal({
         };
     }, [isOpen]);
 
-    /* ───────── گزینه‌های مقصد (به‌جز دپارتمان فعلی) ───────── */
+    
     const options = useMemo<DepartmentOption[]>(() => {
         return departments
             .filter((department) => Number(department.id) !== Number(currentDepartmentId))
@@ -176,7 +176,7 @@ export default function TaskTransferModal({
         [options, selectedId]
     );
 
-    // اگر دپارتمان انتخاب‌شده دیگر در فهرست نبود، انتخاب پاک شود
+    
     useEffect(() => {
         if (selectedId !== null && !options.some((o) => o.id === selectedId)) {
             setSelectedId(null);
@@ -242,7 +242,7 @@ export default function TaskTransferModal({
     return createPortal(
         <AnimatePresence>
             {isOpen && (
-                <motion.div
+                <m.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
@@ -252,14 +252,14 @@ export default function TaskTransferModal({
                         if (e.target === e.currentTarget) close();
                     }}
                 >
-                    <motion.div
+                    <m.div
                         initial={{ opacity: 0, y: 18, scale: 0.97 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: 12, scale: 0.98 }}
                         transition={{ duration: 0.2 }}
                         className="w-full max-w-lg overflow-hidden rounded-[1.7rem] border border-white/10 bg-white shadow-2xl dark:bg-[#101827]"
                     >
-                        {/* ───── سرتیتر ───── */}
+                        
                         <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4 dark:border-white/[.06]">
                             <div className="flex min-w-0 items-center gap-3">
                                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-indigo-500/10">
@@ -286,9 +286,9 @@ export default function TaskTransferModal({
                             </button>
                         </div>
 
-                        {/* ───── بدنه ───── */}
+                        
                         <div className="max-h-[72vh] overflow-y-auto px-5 py-5">
-                            {/* کارت اطلاعات تسک */}
+                            
                             <div className="mb-4 rounded-2xl bg-gray-50 px-3.5 py-3 dark:bg-white/[.035]">
                                 <p className="line-clamp-2 text-[12px] font-extrabold leading-snug text-gray-800 dark:text-white">
                                     {taskTitle}
@@ -313,7 +313,7 @@ export default function TaskTransferModal({
                             </div>
 
                             {confirming && selected ? (
-                                /* ═════════ مرحله‌ی تأیید ═════════ */
+                                
                                 <div className="flex flex-col gap-3">
                                     <div className="flex items-start gap-2.5 rounded-2xl border border-amber-500/20 bg-amber-500/[.07] p-3.5">
                                         <AlertTriangle
@@ -366,7 +366,7 @@ export default function TaskTransferModal({
                                     </div>
                                 </div>
                             ) : (
-                                /* ═════════ مرحله‌ی فرم ═════════ */
+                                
                                 <>
                                     <div className="mb-2 flex items-center justify-between">
                                         <div className="flex items-center gap-1.5 text-[11px] font-extrabold text-gray-600 dark:text-gray-300">
@@ -472,7 +472,7 @@ export default function TaskTransferModal({
                                         </div>
                                     )}
 
-                                    {/* پیش‌نمایش مقصد انتخاب‌شده */}
+                                    
                                     {selected && (
                                         <div className="mt-3 flex flex-col gap-1.5 rounded-2xl bg-indigo-500/[.045] px-3.5 py-3">
                                             <SummaryRow
@@ -501,7 +501,7 @@ export default function TaskTransferModal({
                                         </div>
                                     )}
 
-                                    {/* توضیح */}
+                                    
                                     <div className="mt-4">
                                         <div className="mb-2 flex items-center gap-1.5 text-[11px] font-extrabold text-gray-600 dark:text-gray-300">
                                             <FileText size={13} />
@@ -517,7 +517,7 @@ export default function TaskTransferModal({
                                         />
                                     </div>
 
-                                    {/* فایل‌ها */}
+                                    
                                     <label className="mt-3 flex cursor-pointer items-center justify-center gap-2 rounded-2xl border border-dashed border-gray-200 bg-gray-50 py-3 text-[10.5px] font-bold text-gray-500 dark:border-white/[.08] dark:bg-white/[.025] dark:text-gray-400">
                                         <Paperclip size={13} />
                                         {files.length
@@ -530,7 +530,7 @@ export default function TaskTransferModal({
                                             disabled={submitting}
                                             onChange={(e) => {
                                                 handleFiles(e.target.files);
-                                                // اجازه‌ی انتخاب دوباره‌ی همان فایل
+                                                
                                                 e.target.value = "";
                                             }}
                                         />
@@ -574,7 +574,7 @@ export default function TaskTransferModal({
                             )}
                         </div>
 
-                        {/* ───── دکمه‌ها ───── */}
+                        
                         <div className="flex gap-2 border-t border-gray-100 px-5 py-4 dark:border-white/[.06]">
                             {confirming ? (
                                 <>
@@ -624,8 +624,8 @@ export default function TaskTransferModal({
                                 </>
                             )}
                         </div>
-                    </motion.div>
-                </motion.div>
+                    </m.div>
+                </m.div>
             )}
         </AnimatePresence>,
         document.body

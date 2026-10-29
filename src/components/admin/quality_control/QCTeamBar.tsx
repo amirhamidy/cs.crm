@@ -1,6 +1,6 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { m } from "framer-motion";
 import { Plus, Trash2, Users } from "lucide-react";
 import { toPersianDigits } from "@/lib/jalali";
 import type { ApiQualityControlEmployee } from "@/types/quality_control";
@@ -34,7 +34,7 @@ export default function QCTeamBar({ employees, names, canManage, onAdd, onDelete
                 </div>
 
                 {canManage && (
-                    <motion.button
+                    <m.button
                         type="button"
                         whileTap={{ scale: 0.97 }}
                         onClick={onAdd}
@@ -42,7 +42,7 @@ export default function QCTeamBar({ employees, names, canManage, onAdd, onDelete
                     >
                         <Plus size={13} />
                         افزودن عضو
-                    </motion.button>
+                    </m.button>
                 )}
             </div>
 

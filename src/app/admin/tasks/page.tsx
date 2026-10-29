@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, m } from "framer-motion";
 import { Archive, Check, ClipboardList, Eye, Plus, RefreshCw } from "lucide-react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
@@ -13,11 +13,24 @@ import Pagination from "@/components/ui/Pagination";
 import CardSkeletonGrid from "@/components/ui/CardSkeletonGrid";
 import { Task, TaskStatus } from "@/types/task";
 import { Department } from "@/types/department";
+import dynamic from "next/dynamic";
 import SuspenseWrapper from "@/components/SuspenseWrapper";
 import TaskCard from "@/components/tasks/TaskCard";
-import CreateTaskModal from "@/components/tasks/CreateTaskModal";
-import CreateNoCaseTaskModal from "@/components/tasks/CreateNoCaseTaskModal";
-import EditTaskModal from "@/components/tasks/EditTaskModal";
+import LazyLoading from "@/components/ui/LazyLoading";
+
+
+const CreateTaskModal = dynamic(() => import("@/components/tasks/CreateTaskModal"), {
+    ssr: false,
+    loading: () => <LazyLoading />,
+});
+const CreateNoCaseTaskModal = dynamic(() => import("@/components/tasks/CreateNoCaseTaskModal"), {
+    ssr: false,
+    loading: () => <LazyLoading />,
+});
+const EditTaskModal = dynamic(() => import("@/components/tasks/EditTaskModal"), {
+    ssr: false,
+    loading: () => <LazyLoading />,
+});
 
 const ACTIVE_STATUS = "in_progress" as TaskStatus;
 
@@ -42,7 +55,7 @@ function AdminTasksPageContent() {
     const [highlightedTaskId, setHighlightedTaskId] = useState<number | null>(null);
     const [viewedTaskId, setViewedTaskId] = useState<number | null>(null);
 
-    // فقط لیست وظایفِ همین صفحه دوباره خوانده می‌شود؛ مشتری/کارمند/دپارتمان‌ها دیگر با هر رفرش گرفته نمی‌شوند.
+    
     const fetchAll = useCallback(() => {
         setRemoved(new Set());
         setPatched(new Map());
@@ -50,7 +63,7 @@ function AdminTasksPageContent() {
         list.refetch();
     }, [list.refetch]);
 
-    // دپارتمان‌ها (کش‌شده) فقط برای مودال ویرایش؛ یک‌بار و بدون مسدود کردن لیست
+    
     useEffect(() => {
         metaApi.departments().then(setDepartments).catch(() => setDepartments([]));
     }, []);
@@ -198,7 +211,7 @@ function AdminTasksPageContent() {
                             const isViewed = viewedTaskId === task.id;
 
                             return (
-                                <motion.div
+                                <m.div
                                     key={task.id}
                                     className="relative"
                                     animate={{ scale: isHighlighted ? [1, 1.012, 1] : 1 }}
@@ -206,12 +219,12 @@ function AdminTasksPageContent() {
                                 >
                                     {isHighlighted && (
                                         <>
-                                            <motion.div
+                                            <m.div
                                                 className="pointer-events-none absolute -inset-1 z-0 rounded-[26px] bg-red-500/20 blur-xl"
                                                 animate={{ opacity: [0.35, 0.7, 0.35], scale: [0.98, 1.03, 0.98] }}
                                                 transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
                                             />
-                                            <motion.div
+                                            <m.div
                                                 className="pointer-events-none absolute inset-0 z-10 rounded-[24px]"
                                                 animate={{
                                                     boxShadow: [
@@ -231,7 +244,7 @@ function AdminTasksPageContent() {
 
                                     <AnimatePresence>
                                         {isHighlighted && (
-                                            <motion.button
+                                            <m.button
                                                 type="button"
                                                 onClick={() => handleTaskViewed(task.id)}
                                                 className="absolute bottom-3 left-3 z-40 flex items-center gap-2 overflow-hidden rounded-xl px-3 py-2 text-[11px] font-extrabold text-white"
@@ -241,23 +254,23 @@ function AdminTasksPageContent() {
                                                 exit={{ opacity: 0, scale: 0.7, y: 8 }}
                                                 whileTap={{ scale: 0.94 }}
                                             >
-                                                <motion.span className="h-1.5 w-1.5 rounded-full bg-white" animate={{ opacity: [0.4, 1, 0.4], scale: [0.8, 1.2, 0.8] }} transition={{ duration: 0.8, repeat: Infinity }} />
+                                                <m.span className="h-1.5 w-1.5 rounded-full bg-white" animate={{ opacity: [0.4, 1, 0.4], scale: [0.8, 1.2, 0.8] }} transition={{ duration: 0.8, repeat: Infinity }} />
                                                 <Eye size={13} />
                                                 مشاهده شد
-                                            </motion.button>
+                                            </m.button>
                                         )}
                                     </AnimatePresence>
 
                                     <AnimatePresence>
                                         {isViewed && (
-                                            <motion.div className="pointer-events-none absolute inset-0 z-50 flex items-center justify-center" initial={{ opacity: 0, scale: 0.5 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.05 }} transition={{ duration: 0.35 }}>
-                                                <motion.div className="flex h-11 w-11 items-center justify-center rounded-full bg-emerald-500 text-white shadow-lg shadow-emerald-500/30" initial={{ scale: 0.7 }} animate={{ scale: 1 }} exit={{ scale: 0.05 }} transition={{ duration: 0.45, ease: "easeInOut" }}>
+                                            <m.div className="pointer-events-none absolute inset-0 z-50 flex items-center justify-center" initial={{ opacity: 0, scale: 0.5 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.05 }} transition={{ duration: 0.35 }}>
+                                                <m.div className="flex h-11 w-11 items-center justify-center rounded-full bg-emerald-500 text-white shadow-lg shadow-emerald-500/30" initial={{ scale: 0.7 }} animate={{ scale: 1 }} exit={{ scale: 0.05 }} transition={{ duration: 0.45, ease: "easeInOut" }}>
                                                     <Check size={21} strokeWidth={3} />
-                                                </motion.div>
-                                            </motion.div>
+                                                </m.div>
+                                            </m.div>
                                         )}
                                     </AnimatePresence>
-                                </motion.div>
+                                </m.div>
                             );
                         })}
                     </>

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, m } from "framer-motion";
 import { ClipboardList, Loader, Plus, RefreshCw } from "lucide-react";
 import { useTheme } from "next-themes";
 import { casesApi, customersApi, metaApi, tasksApi, fetchAllTasks, fetchTasksForCases, extractCaseId } from "@/lib/api";
@@ -12,9 +12,16 @@ import type { CaseItem } from "@/types/case";
 import type { Customer } from "@/types/customer";
 import CreateCaseModal from "@/components/user/cases/CreateCaseModal";
 import EditCaseModal from "@/components/user/cases/EditCaseModal";
+import dynamic from "next/dynamic";
 import CaseCard from "@/components/user/cases/CaseCard";
-import EditTaskModal from "@/components/tasks/EditTaskModal";
 import CaseTasksModal from "@/components/cases/CaseTasksModal";
+import LazyLoading from "@/components/ui/LazyLoading";
+
+
+const EditTaskModal = dynamic(() => import("@/components/tasks/EditTaskModal"), {
+    ssr: false,
+    loading: () => <LazyLoading />,
+});
 import Pagination from "@/components/ui/Pagination";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 
@@ -41,7 +48,7 @@ export default function UserCasesPage() {
     const [selectedCaseForTasks, setSelectedCaseForTasks] = useState<CaseItem | null>(null);
     const [tasksRefreshKey, setTasksRefreshKey] = useState(0);
 
-    // صفحه‌بندی و جستجوی سمت سرور
+    
     const list = usePaginatedList<CaseItem>((params, signal) => casesApi.page(params, signal), {
         pageSize: PAGE_SIZE,
         scrollTop: true,
@@ -57,7 +64,7 @@ export default function UserCasesPage() {
 
     const requestId = useRef(0);
 
-    // اطلاعات مشتریانِ پرونده‌های صفحهٔ جاری
+    
     useEffect(() => {
         if (cases.length === 0) {
             setCustomers([]);
@@ -82,11 +89,11 @@ export default function UserCasesPage() {
 
     const tasksRequestId = useRef(0);
 
-    /** TODO(backend-aggregate): شمارش وظایف هر پرونده در لیست پرونده‌ها. فعلاً فقط برای پرونده‌های صفحهٔ جاری. */
+    
     const fetchTasks = useCallback((fresh = false, items: CaseItem[] = casesRef.current) => {
         const id = ++tasksRequestId.current;
 
-        // تعداد کل وظایف (برای عنوان صفحه) با یک درخواست سبک؛ به‌جای دریافت همهٔ وظایف
+        
         tasksApi
             .page({ page: 1, page_size: 1 })
             .then((res) => {
@@ -100,7 +107,7 @@ export default function UserCasesPage() {
         }
         fetchTasksForCases(items.map((c) => c.id), { fresh })
             .then((grouped) => {
-                // پاسخ قدیمی (صفحهٔ قبلی) نادیده گرفته می‌شود؛ وظایف صفحه‌های قبل نگه داشته نمی‌شوند
+                
                 if (id !== tasksRequestId.current) return;
                 setTasks([...grouped.values()].flat());
             })
@@ -279,7 +286,7 @@ export default function UserCasesPage() {
             )}
 
             {!loading && cases.length > 0 && (
-                <motion.div
+                <m.div
                     layout
                     key={`grid-${page}`}
                     className={`grid grid-cols-1 gap-3 transition-opacity sm:grid-cols-2 xl:grid-cols-3 ${isFetching ? "opacity-60" : "opacity-100"
@@ -306,7 +313,7 @@ export default function UserCasesPage() {
                             );
                         })}
                     </AnimatePresence>
-                </motion.div>
+                </m.div>
             )}
 
             {!loading && totalPages > 1 && <Pagination page={page} totalPages={totalPages} onChange={setListPage} />}

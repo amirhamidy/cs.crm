@@ -15,23 +15,18 @@ export type InfiniteFetcher<T> = (
 ) => Promise<Paginated<T>>;
 
 interface Options {
-  /** فقط وقتی true است ریکوئست زده می‌شود (مثلاً وقتی دراپ‌دان باز است) */
+  
   enabled?: boolean;
   pageSize?: number;
-  /** تأخیر دیبانس جستجو */
+  
   delay?: number;
-  /** با تغییر این کلید (مثلاً شناسهٔ مشتری) لیست از صفحهٔ ۱ دوباره خوانده می‌شود */
+  
   depsKey?: string | number | null;
 }
 
 const normalize = (q: string) => q.trim().replace(/\s+/g, " ");
 
-/**
- * لیست صفحه‌بندی‌شده با جستجوی سمت سرور و «بارگذاری بیشتر» (اسکرول بی‌نهایت).
- * - هیچ‌وقت همهٔ صفحات را یکجا نمی‌گیرد؛ هر بار فقط یک صفحه.
- * - ریکوئست قبلی با AbortController لغو می‌شود.
- * - تا وقتی enabled نشده هیچ ریکوئستی نمی‌زند و نتیجه بعد از بسته شدن نگه داشته می‌شود.
- */
+
 export function useInfiniteOptions<T extends { id: number | string }>(
   fetcher: InfiniteFetcher<T>,
   { enabled = true, pageSize = 20, delay = 300, depsKey = null }: Options = {},
@@ -55,7 +50,7 @@ export function useInfiniteOptions<T extends { id: number | string }>(
 
   const key = useMemo(() => `${depsKey ?? ""}|${appliedSearch}`, [depsKey, appliedSearch]);
 
-  // دیبانس جستجو
+  
   useEffect(() => {
     const q = normalize(search);
     if (q === appliedSearch) return;
@@ -96,7 +91,7 @@ export function useInfiniteOptions<T extends { id: number | string }>(
         if (!append) {
           setItems([]);
           setHasMore(false);
-          loadedKeyRef.current = null; // اجازهٔ تلاش مجدد
+          loadedKeyRef.current = null; 
         }
         setError(true);
       } finally {
@@ -110,7 +105,7 @@ export function useInfiniteOptions<T extends { id: number | string }>(
     [pageSize, appliedSearch],
   );
 
-  // خواندن صفحهٔ ۱ — فقط وقتی فعال است و کلید (فیلتر/جستجو) عوض شده
+  
   useEffect(() => {
     if (!enabled) return;
     if (loadedKeyRef.current === key) return;

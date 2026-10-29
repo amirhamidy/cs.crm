@@ -4,7 +4,7 @@ import { useEffect } from "react";
 
 const counts = new Map<number, number>();
 
-/** آیا چت این تیکت همین الان جلوی چشم کاربر باز است؟ */
+
 export function isTicketActive(ticketId: number): boolean {
   if (
     typeof document !== "undefined" &&
@@ -15,12 +15,7 @@ export function isTicketActive(ticketId: number): boolean {
   return (counts.get(ticketId) ?? 0) > 0;
 }
 
-/**
- * اختیاری: داخل مودال چت تیکت صدا بزن تا برای پیام‌هایی که همان لحظه دارد
- * می‌خواندشان نوتیف نیاید.
- *
- *   useSuppressTicketAlerts(task.id, open);
- */
+
 export function useSuppressTicketAlerts(
   ticketId: number | null | undefined,
   active = true,

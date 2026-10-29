@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, m } from "framer-motion";
 import { AlertCircle, FileText, Plus, Search, Users, X } from "lucide-react";
 import HumanResourceCard from "./HumanResourceCard";
 import HumanResourceForm from "./HumanResourceForm";
@@ -30,8 +30,8 @@ export default function HumanResourcesPage({ canManage = false }: { canManage?: 
     const [stepsDocument, setStepsDocument] = useState<HumanResource | null>(null);
     const [fileDocument, setFileDocument] = useState<HumanResource | null>(null);
 
-    // فهرست منابع انسانی سمت سرور صفحه‌بندی می‌شود؛ در هر بار فقط یک صفحه
-    // (حداکثر ۱۲ مورد) از بک‌اند گرفته می‌شود و جستجو هم روی سرور انجام می‌شود.
+    
+    
     const list = usePaginatedList<HumanResource>(
         (params, signal) =>
             getDocumentsPage(
@@ -43,7 +43,7 @@ export default function HumanResourcesPage({ canManage = false }: { canManage?: 
 
     const { data, count, page, totalPages, search, setSearch, loading: listLoading, error, setPage, refetch } = list;
 
-    // دپارتمان‌ها و (در حالت غیرمدیر) دسترسی‌های دپارتمانی؛ یک‌بار و خارج از صفحه‌بندی.
+    
     useEffect(() => {
         let alive = true;
         (async () => {
@@ -77,8 +77,8 @@ export default function HumanResourcesPage({ canManage = false }: { canManage?: 
         [currentEmployeeId, departmentEmployees]
     );
 
-    // فیلتر دسترسی دپارتمانی سمت کلاینت روی همان صفحه‌ی جاری اعمال می‌شود
-    // (بک‌اند پارامتر فیلتر دپارتمان ندارد). جستجو سمت سرور انجام می‌شود.
+    
+    
     const visibleDocuments = useMemo(() => {
         if (canManage) return data;
         return data.filter((d) => {
@@ -95,7 +95,7 @@ export default function HumanResourcesPage({ canManage = false }: { canManage?: 
         refetch();
     }, [refetch]);
 
-    // بعد از ایجاد/ویرایش به صفحه‌ی اول برمی‌گردیم تا منبع تازه دیده شود.
+    
     const handleSaved = useCallback(() => {
         setPage(1);
         refetch();
@@ -117,7 +117,7 @@ export default function HumanResourcesPage({ canManage = false }: { canManage?: 
 
     return (
         <div className="space-y-4 p-3 sm:p-5" dir="rtl">
-            <motion.div
+            <m.div
                 initial={{ opacity: 0, y: -8 }}
                 animate={{ opacity: 1, y: 0 }}
                 className="rounded-[1.45rem] border border-gray-100 bg-white p-3 shadow-sm dark:border-white/[0.06] dark:bg-[#111827]"
@@ -155,7 +155,7 @@ export default function HumanResourcesPage({ canManage = false }: { canManage?: 
                         </div>
 
                         {canManage && (
-                            <motion.button
+                            <m.button
                                 type="button"
                                 whileTap={{ scale: 0.97 }}
                                 onClick={() => {
@@ -166,7 +166,7 @@ export default function HumanResourcesPage({ canManage = false }: { canManage?: 
                             >
                                 <Plus size={13} />
                                 ایجاد منبع
-                            </motion.button>
+                            </m.button>
                         )}
                     </div>
                 </div>
@@ -189,7 +189,7 @@ export default function HumanResourcesPage({ canManage = false }: { canManage?: 
                         <p className="mt-0.5 text-[13px] font-extrabold text-amber-600 dark:text-amber-400">{filesCount}</p>
                     </div>
                 </div>
-            </motion.div>
+            </m.div>
 
             {loading ? (
                 <CardSkeletonGrid count={PAGE_SIZE} className={GRID_CLASS} />
@@ -211,7 +211,7 @@ export default function HumanResourcesPage({ canManage = false }: { canManage?: 
                     </button>
                 </div>
             ) : visibleDocuments.length === 0 ? (
-                <motion.div
+                <m.div
                     initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
                     className="flex min-h-[230px] flex-col items-center justify-center rounded-[1.45rem] border border-dashed border-gray-200 bg-white text-center dark:border-white/[0.07] dark:bg-[#111827]"
@@ -227,12 +227,12 @@ export default function HumanResourcesPage({ canManage = false }: { canManage?: 
                                 ? "در صفحه‌ی جاری موردی برای دپارتمان‌های شما نیست؛ صفحه را تغییر دهید."
                                 : "هنوز منبع انسانی‌ای ثبت نشده است."}
                     </p>
-                </motion.div>
+                </m.div>
             ) : (
-                <motion.div layout className={GRID_CLASS}>
+                <m.div layout className={GRID_CLASS}>
                     <AnimatePresence mode="popLayout">
                         {visibleDocuments.map((d, i) => (
-                            <motion.div key={d.id} layout initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.035 }}>
+                            <m.div key={d.id} layout initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.035 }}>
                                 <HumanResourceCard
                                     document={d}
                                     departments={departments}
@@ -243,10 +243,10 @@ export default function HumanResourcesPage({ canManage = false }: { canManage?: 
                                     onAddFile={() => setFileDocument(d)}
                                     onChange={refresh}
                                 />
-                            </motion.div>
+                            </m.div>
                         ))}
                     </AnimatePresence>
-                </motion.div>
+                </m.div>
             )}
 
             {!error && totalPages > 1 && (

@@ -18,7 +18,7 @@ export interface QCCounts {
 export const qualityControlApi = {
   employees: () => listAll<ApiQualityControlEmployee>(EMPLOYEES),
 
-  /** هر بخش صفحه (در انتظار / تایید‌شده / ردشده) سمت سرور صفحه‌بندی و جستجو می‌شود. */
+  
   page: (
     status: QCListStatus,
     params: SearchParams = {},

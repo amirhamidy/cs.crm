@@ -10,10 +10,10 @@ interface SignerDraftFormProps {
   mode: "add" | "edit";
   users: UserOption[];
   usersLoading?: boolean;
-  /** شناسه‌ی کاربران داخلی که قبلاً در این جلسه هستند */
+  
   takenUserIds: number[];
   defaultOrder: number;
-  /** در حالت ویرایش: مقادیر فعلی (نوع داخلی/بیرونی قابل تغییر نیست) */
+  
   initial?: Partial<SignerInput> & { displayName?: string; isExternal?: boolean };
   submitLabel: string;
   submitting?: boolean;

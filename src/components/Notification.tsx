@@ -1,6 +1,6 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { m } from "framer-motion";
 
 interface NotificationProps {
     message: string;
@@ -10,7 +10,7 @@ interface NotificationProps {
 
 export function Notification({ message, type, onClose }: NotificationProps) {
     return (
-        <motion.div
+        <m.div
             initial={{ opacity: 0, scale: 0.9, y: -20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.9, y: -20 }}
@@ -30,6 +30,6 @@ export function Notification({ message, type, onClose }: NotificationProps) {
                     <path d="M1 1L13 13M13 1L1 13" />
                 </svg>
             </button>
-        </motion.div>
+        </m.div>
     );
 }

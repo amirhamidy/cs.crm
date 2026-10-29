@@ -39,13 +39,7 @@ export interface FetchAllTasksOptions {
   fresh?: boolean;
 }
 
-/**
- * پیام خطای قابل‌نمایش برای انتقال تسک.
- * ساختارهای ممکن (طبق مستندات):
- *  - 400 → { department: ["..."] }
- *  - 400 → ["..."]  (خطای منطقی سرویس)
- *  - 403/404 → { detail: "..." }
- */
+
 export function parseTransferError(error: unknown): string {
   const fallback = "انتقال تسک انجام نشد؛ لطفاً دوباره تلاش کنید";
   const err = error as {
@@ -73,7 +67,7 @@ export function parseTransferError(error: unknown): string {
   const fromBody = (() => {
     if (!data) return null;
     if (typeof data === "string") {
-      // پاسخ HTML (مثلاً خطای ۵۰۰ سرور) نباید به کاربر نشان داده شود
+      
       return data.trim().startsWith("<") ? null : first(data);
     }
     if (Array.isArray(data)) return first(data);
@@ -145,7 +139,7 @@ const listAll = (caseId?: string | number) =>
 
 const ARCHIVE_URL = "/tasks/api/v1/task_archive/";
 
-/** All pages of /tasks/api/v1/task_archive/ as a plain array (optionally server-side searched). */
+
 const archiveAll = <T = unknown>(search?: string) => {
   const q = search?.trim().replace(/\s+/g, " ") ?? "";
   return cached(
@@ -174,11 +168,11 @@ export const tasksApi = {
       return res.data;
     }),
 
-  /** همهٔ لاگ‌های یک تسک (همهٔ صفحات) — برای یادداشت‌ها و «آخرین لاگ». */
+  
   logs: async <T = unknown>(id: number | string) =>
     (await listAllPages<unknown>(`/tasks/api/v1/tasks/${id}/logs/`)) as unknown as T,
 
-  /** یک صفحه از لاگ‌ها با صفحه‌بندی و جستجوی سمت سرور. */
+  
   logsPage: <T = unknown>(
     id: number | string,
     params: PageParams & { search?: string } = {},
@@ -197,13 +191,7 @@ export const tasksApi = {
     invalidate(KEY);
   },
 
-  /**
-   * انتقال تسک به دپارتمان دیگر
-   * POST /tasks/api/v1/tasks/{id}/transfer/   (multipart/form-data)
-   *
-   * Content-Type عمداً دستی تنظیم نمی‌شود؛ axiosInstance برای FormData
-   * آن را حذف می‌کند تا مرورگر boundary را خودش بگذارد.
-   */
+  
   transfer: async (
     id: number | string,
     { department, note, files = [] }: TransferTaskPayload,
@@ -234,7 +222,7 @@ export function fetchAllTasks({ caseId, signal, fresh }: FetchAllTasksOptions = 
   return withSignal(listAll(id), signal);
 }
 
-/** null = هنوز بررسی نشده؛ true = بک‌اند فیلتر `case` را اعمال می‌کند. */
+
 let caseFilterWorks: boolean | null = null;
 
 async function probeCaseFilter(caseId: string, signal?: AbortSignal): Promise<boolean> {
@@ -251,10 +239,7 @@ async function probeCaseFilter(caseId: string, signal?: AbortSignal): Promise<bo
   return caseFilterWorks;
 }
 
-/**
- * وظایف فقط پرونده‌های داده‌شده (صفحهٔ جاری)، به‌جای دریافت همهٔ وظایف سیستم.
- * هر پرونده با فیلتر `case` و کش جدا خوانده می‌شود؛ درخواست‌ها موازی‌اند.
- */
+
 export async function fetchTasksForCases(
   caseIds: Array<string | number>,
   { signal, fresh }: { signal?: AbortSignal; fresh?: boolean } = {},
@@ -266,7 +251,7 @@ export async function fetchTasksForCases(
   const filterWorks = await probeCaseFilter(ids[0], signal);
 
   if (!filterWorks) {
-    // fallback: فیلتر نادیده گرفته می‌شود → یک دریافت کامل مشترک (کش‌شده) به‌جای یک دریافت کامل برای هر پرونده
+    
     const all = await fetchAllTasks({ signal, fresh });
     const grouped = new Map<string, TaskItem[]>(ids.map((id) => [id, []]));
     all.forEach((t) => {

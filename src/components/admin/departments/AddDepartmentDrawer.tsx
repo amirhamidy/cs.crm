@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, forwardRef, InputHTMLAttributes } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { m, AnimatePresence } from "framer-motion";
 import { X, Building2, CheckCircle2, Loader } from "lucide-react";
 
 interface Props {
@@ -93,7 +93,7 @@ const handleSubmit = async (e?: React.FormEvent) => {
 return (
     <AnimatePresence>
         {open && (
-            <motion.div
+            <m.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
@@ -104,7 +104,7 @@ return (
                 }}
                 onClick={handleClose}
             >
-                <motion.div
+                <m.div
                     initial={{ opacity: 0, y: 16 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: 16 }}
@@ -161,7 +161,7 @@ return (
 
                         <AnimatePresence mode="wait">
                             {success ? (
-                                <motion.div
+                                <m.div
                                     key="success"
                                     initial={{
                                         opacity: 0,
@@ -179,9 +179,9 @@ return (
                                 >
                                     <CheckCircle2 size={16} />
                                     دپارتمان با موفقیت ایجاد شد
-                                </motion.div>
+                                </m.div>
                             ) : (
-                                <motion.button
+                                <m.button
                                     key="submit"
                                     type="submit"
                                     disabled={!name.trim() || loading}
@@ -196,12 +196,12 @@ return (
                                     ) : (
                                         "ایجاد دپارتمان"
                                     )}
-                                </motion.button>
+                                </m.button>
                             )}
                         </AnimatePresence>
                     </form>
-                </motion.div>
-            </motion.div>
+                </m.div>
+            </m.div>
         )}
     </AnimatePresence>
 );

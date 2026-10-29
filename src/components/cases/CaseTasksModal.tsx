@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, m } from "framer-motion";
 import { useTheme } from "next-themes";
 import {
     CalendarDays,
@@ -22,12 +22,12 @@ interface CaseTasksModalProps {
     onClose: () => void;
     caseItem: CaseItem | null;
     employees?: any[];
-    /** با تغییر این عدد، مودال دوباره از API می‌خونه (مثلاً بعد از ویرایش وظیفه) */
+    
     refreshKey?: number;
     onEditTask: (task: TaskItem) => void;
     onDeleteTask: (taskId: number) => Promise<void>;
     deletingTaskId?: number | null;
-    /** بعد از هر بار دریافت از API، وظیفه‌های تازه‌ی این پرونده به والد داده می‌شه */
+    
     onTasksLoaded?: (caseId: string, tasks: TaskItem[]) => void;
 }
 
@@ -193,7 +193,7 @@ export default function CaseTasksModal({
     return (
         <AnimatePresence>
             {isOpen && caseItem && (
-                <motion.div
+                <m.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
@@ -204,7 +204,7 @@ export default function CaseTasksModal({
                     }}
                     onClick={onClose}
                 >
-                    <motion.div
+                    <m.div
                         initial={{ scale: 0.95, y: 16, opacity: 0 }}
                         animate={{ scale: 1, y: 0, opacity: 1 }}
                         exit={{ scale: 0.95, y: 16, opacity: 0 }}
@@ -218,7 +218,7 @@ export default function CaseTasksModal({
                         onClick={(e) => e.stopPropagation()}
                         dir="rtl"
                     >
-                        {/* Header */}
+                        
                         <div
                             className="flex items-center justify-between gap-3 border-b px-5 py-4"
                             style={{ borderColor: border }}
@@ -274,7 +274,7 @@ export default function CaseTasksModal({
                             </div>
                         </div>
 
-                        {/* Stats / filters */}
+                        
                         {!loading && !error && stats.total > 0 && (
                             <div
                                 className="flex flex-wrap items-center gap-2 border-b px-5 py-3"
@@ -336,7 +336,7 @@ export default function CaseTasksModal({
                             </div>
                         )}
 
-                        {/* Body */}
+                        
                         <div className="flex-1 overflow-y-auto px-5 py-4">
                             {loading && (
                                 <div className="flex flex-col items-center justify-center gap-3 py-14">
@@ -519,8 +519,8 @@ export default function CaseTasksModal({
                                 </div>
                             )}
                         </div>
-                    </motion.div>
-                </motion.div>
+                    </m.div>
+                </m.div>
             )}
         </AnimatePresence>
     );

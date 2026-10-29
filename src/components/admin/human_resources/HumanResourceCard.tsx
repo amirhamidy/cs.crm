@@ -1,7 +1,7 @@
 "use client";
 
 import { memo, useEffect, useMemo, useState } from "react";
-import { motion } from "framer-motion";
+import { m } from "framer-motion";
 import { ExternalLink, FilePlus, FileText, GitBranch, Loader2, Pencil, Trash2, Users, X } from "lucide-react";
 import {
     Department,
@@ -28,8 +28,8 @@ const iconBtn = "flex h-7 w-7 items-center justify-center rounded-lg text-gray-4
 function HumanResourceCard({ document, departments, canManage, onEdit, onDelete, onSteps, onAddFile, onChange }: Props) {
     const dep = departments.find((d) => d.name === document.title);
 
-    // اگر بک‌اند فایل‌ها را داخل خود سند نداده باشد، جداگانه از
-    // GET /document/api/v1/{id}/files/ گرفته می‌شود.
+    
+    
     const embedded = document.filesEmbedded !== false;
     const [fetched, setFetched] = useState<HumanResourceFile[] | null>(null);
     const [fetching, setFetching] = useState(false);
@@ -58,7 +58,7 @@ function HumanResourceCard({ document, departments, canManage, onEdit, onDelete,
         };
     }, [embedded, document]);
 
-    // فقط فایل‌های خودِ سند؛ فایل‌های مرحله‌ها داخل «مشاهده مراحل» نمایش داده می‌شوند.
+    
     const files = useMemo(
         () =>
             (embedded ? document.files : fetched ?? [])
@@ -80,7 +80,7 @@ function HumanResourceCard({ document, departments, canManage, onEdit, onDelete,
     };
 
     return (
-        <motion.div
+        <m.div
             layout
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
@@ -138,7 +138,7 @@ function HumanResourceCard({ document, departments, canManage, onEdit, onDelete,
                     ) : files.length > 0 ? (
                         <div className="space-y-1.5">
                             {files.map((f) => (
-                                <motion.div
+                                <m.div
                                     key={f.id}
                                     initial={{ opacity: 0, y: 4 }}
                                     animate={{ opacity: 1, y: 0 }}
@@ -175,7 +175,7 @@ function HumanResourceCard({ document, departments, canManage, onEdit, onDelete,
                                             <X size={11} />
                                         </button>
                                     )}
-                                </motion.div>
+                                </m.div>
                             ))}
                         </div>
                     ) : (
@@ -190,7 +190,7 @@ function HumanResourceCard({ document, departments, canManage, onEdit, onDelete,
                     {error && <p className="mt-1.5 text-[10.5px] font-semibold text-rose-500">{error}</p>}
                 </div>
 
-                <motion.button
+                <m.button
                     type="button"
                     whileTap={{ scale: 0.98 }}
                     onClick={onSteps}
@@ -198,9 +198,9 @@ function HumanResourceCard({ document, departments, canManage, onEdit, onDelete,
                 >
                     <GitBranch size={13} />
                     مشاهده مراحل
-                </motion.button>
+                </m.button>
             </div>
-        </motion.div>
+        </m.div>
     );
 }
 

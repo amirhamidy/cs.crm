@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useState, useCallback, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, m } from "framer-motion";
 import { Swiper, SwiperSlide } from "swiper/react";
 import "swiper/css";
 import { Building2, Users, ArrowRight, Loader, AlertCircle, ListChecks } from "lucide-react";
@@ -59,8 +59,7 @@ function DepartmentDetailPage() {
             if (departments.length === 0) await fetchAll();
             if (mounted) setPageLoading(false);
         };
-        init();
-        fetchTasks();
+        void Promise.all([init(), fetchTasks()]);
         return () => { mounted = false; };
     }, [fetchAll, fetchTasks, departments.length]);
 
@@ -173,15 +172,15 @@ function DepartmentDetailPage() {
                 )}
             </div>
 
-            <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.22 }} className="flex flex-col gap-3">
+            <m.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.22 }} className="flex flex-col gap-3">
                 <EmployeesPanel department={department} onAddEmployee={() => setAddEmployeeOpen(true)} onDeleteEmployee={(employee) => setDeleteTarget({ type: "employee", employee })} />
 
                 <div className="relative">
                     <AnimatePresence>
                         {stageRefreshing && (
-                            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 z-10 flex items-center justify-center rounded-[1.5rem] bg-white/70 backdrop-blur-sm dark:bg-black/50">
+                            <m.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 z-10 flex items-center justify-center rounded-[1.5rem] bg-white/70 backdrop-blur-sm dark:bg-black/50">
                                 <Loader size={19} className="animate-spin text-indigo-500" />
-                            </motion.div>
+                            </m.div>
                         )}
                     </AnimatePresence>
 
@@ -205,7 +204,7 @@ function DepartmentDetailPage() {
                         }
                     />
                 </div>
-            </motion.div>
+            </m.div>
         </div>
     );
 }

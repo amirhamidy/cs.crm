@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, m } from "framer-motion";
 import { useTheme } from "next-themes";
 import { Users } from "lucide-react";
 import { Cell, Pie, PieChart, ResponsiveContainer } from "recharts";
@@ -77,7 +77,7 @@ export default function TopBringersChart({ items, loading }: Props) {
     if (loading) return <TopBringersChartSkeleton />;
 
     return (
-        <motion.div
+        <m.div
             initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, ease: [0.25, 0.46, 0.45, 0.94] }}
@@ -107,7 +107,7 @@ export default function TopBringersChart({ items, loading }: Props) {
             <div className="absolute left-2 top-14 z-10 min-w-[160px]">
                 <AnimatePresence mode="wait">
                     {activeSlice && (
-                        <motion.div
+                        <m.div
                             key={activeSlice.index}
                             initial={{ opacity: 0, y: 4, scale: 0.96 }}
                             animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -123,7 +123,7 @@ export default function TopBringersChart({ items, loading }: Props) {
                             <p className="text-[11px] text-gray-500 dark:text-gray-400">
                                 بالفعل: <span className="font-bold tabular-nums" style={{ color: activeSlice.color }}>{activeSlice.actual.toLocaleString("fa-IR")}</span> از {activeSlice.count.toLocaleString("fa-IR")} ورودی
                             </p>
-                        </motion.div>
+                        </m.div>
                     )}
                 </AnimatePresence>
             </div>
@@ -175,6 +175,6 @@ export default function TopBringersChart({ items, loading }: Props) {
                     ))}
                 </div>
             )}
-        </motion.div>
+        </m.div>
     );
 }

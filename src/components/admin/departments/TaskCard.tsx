@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, m } from "framer-motion";
 import {
     AlarmClock,
     CalendarDays,
@@ -358,7 +358,7 @@ export default function TaskCard({
 
     return (
         <>
-            <motion.article
+            <m.article
                 layout
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -509,7 +509,7 @@ export default function TaskCard({
                         )}
                     </div>
                 </div>
-            </motion.article>
+            </m.article>
 
             {mounted &&
                 createPortal(
@@ -541,14 +541,14 @@ export default function TaskCard({
                 createPortal(
                     <AnimatePresence>
                         {confirmDelete && (
-                            <motion.div
+                            <m.div
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: 1 }}
                                 exit={{ opacity: 0 }}
                                 className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/50 px-4 backdrop-blur-sm"
                                 onClick={() => !deleteLoading && setConfirmDelete(false)}
                             >
-                                <motion.div
+                                <m.div
                                     initial={{ scale: 0.95, opacity: 0 }}
                                     animate={{ scale: 1, opacity: 1 }}
                                     exit={{ scale: 0.95, opacity: 0 }}
@@ -587,8 +587,8 @@ export default function TaskCard({
                                             حذف
                                         </button>
                                     </div>
-                                </motion.div>
-                            </motion.div>
+                                </m.div>
+                            </m.div>
                         )}
                     </AnimatePresence>,
                     document.body

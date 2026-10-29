@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, m } from "framer-motion";
 import {
     AlertCircle,
     ChevronDown,
@@ -46,7 +46,7 @@ export default function HumanResourceStepsModal({ open, document, canManage, onC
     const [editingInlineId, setEditingInlineId] = useState<number | null>(null);
     const [title, setTitle] = useState("");
 
-    // --- فایل‌های هر مرحله ---
+    
     const [filesByStep, setFilesByStep] = useState<Record<number, HumanResourceFile[]>>({});
     const [filesLoadingId, setFilesLoadingId] = useState<number | null>(null);
     const [expandedStepId, setExpandedStepId] = useState<number | null>(null);
@@ -133,7 +133,7 @@ export default function HumanResourceStepsModal({ open, document, canManage, onC
         await refresh();
     };
 
-    // --- فایل‌های مرحله ---
+    
 
     const toggleStep = async (stepId: number) => {
         if (expandedStepId === stepId) {
@@ -208,7 +208,7 @@ export default function HumanResourceStepsModal({ open, document, canManage, onC
 
     return (
         <AnimatePresence>
-            <motion.div
+            <m.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
@@ -217,7 +217,7 @@ export default function HumanResourceStepsModal({ open, document, canManage, onC
                 style={{ background: "rgba(0,0,0,0.45)", backdropFilter: "blur(3px)" }}
                 onMouseDown={onClose}
             >
-                <motion.div
+                <m.div
                     initial={{ opacity: 0, y: 18, scale: 0.98 }}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: 18, scale: 0.98 }}
@@ -407,7 +407,7 @@ export default function HumanResourceStepsModal({ open, document, canManage, onC
 
                                                         <AnimatePresence initial={false}>
                                                             {isOpen && (
-                                                                <motion.div
+                                                                <m.div
                                                                     initial={{ height: 0, opacity: 0 }}
                                                                     animate={{ height: "auto", opacity: 1 }}
                                                                     exit={{ height: 0, opacity: 0 }}
@@ -421,7 +421,7 @@ export default function HumanResourceStepsModal({ open, document, canManage, onC
                                                                             </div>
                                                                         ) : fileCount > 0 ? (
                                                                             stepFiles.map((f) => (
-                                                                                <motion.div
+                                                                                <m.div
                                                                                     key={f.id}
                                                                                     initial={{ opacity: 0, y: 4 }}
                                                                                     animate={{ opacity: 1, y: 0 }}
@@ -457,7 +457,7 @@ export default function HumanResourceStepsModal({ open, document, canManage, onC
                                                                                             <Trash2 size={11} />
                                                                                         </button>
                                                                                     )}
-                                                                                </motion.div>
+                                                                                </m.div>
                                                                             ))
                                                                         ) : (
                                                                             <div className="flex items-center gap-2 rounded-xl border border-dashed border-gray-200 px-2.5 py-2 dark:border-white/[0.07]">
@@ -470,7 +470,7 @@ export default function HumanResourceStepsModal({ open, document, canManage, onC
                                                                             </div>
                                                                         )}
                                                                     </div>
-                                                                </motion.div>
+                                                                </m.div>
                                                             )}
                                                         </AnimatePresence>
                                                     </div>
@@ -488,8 +488,8 @@ export default function HumanResourceStepsModal({ open, document, canManage, onC
                             </div>
                         </div>
                     </div>
-                </motion.div>
-            </motion.div>
+                </m.div>
+            </m.div>
         </AnimatePresence>
     );
 }

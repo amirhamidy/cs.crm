@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef, useCallback } from "react";
-import { motion, AnimatePresence, animate } from "framer-motion";
+import { m, AnimatePresence, animate } from "framer-motion";
 import { useTheme } from "next-themes";
 import {
     Phone,
@@ -16,12 +16,19 @@ import {
     MoreVertical,
     AlertCircle,
 } from "lucide-react";
+import dynamic from "next/dynamic";
 import type { Customer } from "@/types/customer";
 import { useEmployeeDirectory } from "@/hooks/useEmployeeDirectory";
 import CustomerDeleteModal from "./DeleteModal";
-import CustomerEditModal from "./CustomerEditModal";
 import CustomerScoresModal from "./CustomerScoresModal";
+import LazyLoading from "@/components/ui/LazyLoading";
 import axiosInstance from "@/lib/axiosInstance";
+
+
+const CustomerEditModal = dynamic(() => import("./CustomerEditModal"), {
+    ssr: false,
+    loading: () => <LazyLoading />,
+});
 
 interface ScoreItem {
     id: number;
@@ -225,20 +232,20 @@ function SweepButton({
 
     if (href) {
         return (
-            <motion.a
+            <m.a
                 {...commonProps}
                 href={disabled ? undefined : href}
                 aria-disabled={disabled}
             >
                 {content}
-            </motion.a>
+            </m.a>
         );
     }
 
     return (
-        <motion.button type="button" {...commonProps}>
+        <m.button type="button" {...commonProps}>
             {content}
-        </motion.button>
+        </m.button>
     );
 }
 
@@ -449,7 +456,7 @@ export default function CustomerCard({
 
     return (
         <>
-            <motion.div
+            <m.div
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95 }}
@@ -491,7 +498,7 @@ export default function CustomerCard({
                         </linearGradient>
                     </defs>
 
-                    <motion.rect
+                    <m.rect
                         x="1"
                         y="1"
                         width="calc(100% - 2px)"
@@ -614,7 +621,7 @@ export default function CustomerCard({
 
                 <AnimatePresence>
                     {showActions && (
-                        <motion.div
+                        <m.div
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
@@ -680,7 +687,7 @@ export default function CustomerCard({
                                             {action.key === "scores" && (
                                                 <AnimatePresence>
                                                     {showPreview && (
-                                                        <motion.div
+                                                        <m.div
                                                             initial={{ opacity: 0, scale: 0.95, y: 6 }}
                                                             animate={{ opacity: 1, scale: 1, y: 0 }}
                                                             exit={{ opacity: 0, scale: 0.95 }}
@@ -717,7 +724,7 @@ export default function CustomerCard({
                                                                     هنوز نظری ثبت نشده
                                                                 </span>
                                                             )}
-                                                        </motion.div>
+                                                        </m.div>
                                                     )}
                                                 </AnimatePresence>
                                             )}
@@ -725,7 +732,7 @@ export default function CustomerCard({
                                             {action.key === "delete" && (
                                                 <AnimatePresence>
                                                     {tooltipVisible && (
-                                                        <motion.div
+                                                        <m.div
                                                             initial={{
                                                                 opacity: 0,
                                                                 scale: 0.95,
@@ -765,7 +772,7 @@ export default function CustomerCard({
                                                                     را حذف کنید
                                                                 </span>
                                                             </div>
-                                                        </motion.div>
+                                                        </m.div>
                                                     )}
                                                 </AnimatePresence>
                                             )}
@@ -773,10 +780,10 @@ export default function CustomerCard({
                                     </div>
                                 ))}
                             </div>
-                        </motion.div>
+                        </m.div>
                     )}
                 </AnimatePresence>
-            </motion.div>
+            </m.div>
 
             <AnimatePresence>
                 {showMobileSheet && (
@@ -784,7 +791,7 @@ export default function CustomerCard({
                         className="fixed inset-0 z-50 flex items-end justify-center md:hidden"
                         dir="rtl"
                     >
-                        <motion.div
+                        <m.div
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
@@ -792,7 +799,7 @@ export default function CustomerCard({
                             className="absolute inset-0 bg-black/60 backdrop-blur-sm"
                         />
 
-                        <motion.div
+                        <m.div
                             initial={{ y: "100%" }}
                             animate={{ y: 0 }}
                             exit={{ y: "100%" }}
@@ -949,7 +956,7 @@ export default function CustomerCard({
                                     )}
                                 </div>
                             </div>
-                        </motion.div>
+                        </m.div>
                     </div>
                 )}
             </AnimatePresence>
@@ -962,12 +969,14 @@ export default function CustomerCard({
                 onClose={() => setShowConfirm(false)}
             />
 
-            <CustomerEditModal
-                customer={customer}
-                isOpen={showEdit}
-                onClose={() => setShowEdit(false)}
-                onEdited={onEdited}
-            />
+            {showEdit && (
+                <CustomerEditModal
+                    customer={customer}
+                    isOpen={showEdit}
+                    onClose={() => setShowEdit(false)}
+                    onEdited={onEdited}
+                />
+            )}
 
             <CustomerScoresModal
                 customerId={customer.id}

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, ChangeEvent, DragEvent } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { m, AnimatePresence } from "framer-motion";
 import {
     X,
     UploadCloud,
@@ -131,8 +131,8 @@ export default function ImportExcelModal({
     return (
         <AnimatePresence>
             <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-                {/* Backdrop */}
-                <motion.div
+                
+                <m.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
@@ -140,15 +140,15 @@ export default function ImportExcelModal({
                     className="fixed inset-0 bg-black/60 backdrop-blur-sm"
                 />
 
-                {/* Modal Card */}
-                <motion.div
+                
+                <m.div
                     initial={{ scale: 0.95, opacity: 0, y: 15 }}
                     animate={{ scale: 1, opacity: 1, y: 0 }}
                     exit={{ scale: 0.95, opacity: 0, y: 15 }}
                     dir="rtl"
                     className="relative z-10 w-full max-w-lg overflow-hidden rounded-2xl border border-gray-100 bg-white p-6 shadow-2xl dark:border-white/10 dark:bg-[#12141a]"
                 >
-                    {/* Header */}
+                    
                     <div className="flex items-center justify-between border-b border-gray-100 pb-4 dark:border-white/10">
                         <div className="flex items-center gap-2.5">
                             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-500">
@@ -172,7 +172,7 @@ export default function ImportExcelModal({
                         </button>
                     </div>
 
-                    {/* Body */}
+                    
                     <div className="mt-5 space-y-4">
                         {errorMessage && (
                             <div className="flex items-center gap-2 rounded-xl bg-red-500/10 p-3 text-[12px] font-medium text-red-500">
@@ -183,7 +183,7 @@ export default function ImportExcelModal({
 
                         {!result ? (
                             <>
-                                {/* Drag & Drop Area */}
+                                
                                 {!file ? (
                                     <div
                                         onDragOver={(e) => {
@@ -218,7 +218,7 @@ export default function ImportExcelModal({
                                         </div>
                                     </div>
                                 ) : (
-                                    /* File Preview */
+                                    
                                     <div className="flex items-center justify-between rounded-xl border border-gray-100 bg-gray-50/70 p-3.5 dark:border-white/5 dark:bg-white/[0.03]">
                                         <div className="flex items-center gap-3">
                                             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-500">
@@ -245,7 +245,7 @@ export default function ImportExcelModal({
                                 )}
                             </>
                         ) : (
-                            /* Success / Result View */
+                            
                             <div className="space-y-4">
                                 <div className="rounded-xl bg-emerald-500/10 p-3 text-center">
                                     <p className="text-[13px] font-bold text-emerald-600 dark:text-emerald-400">
@@ -288,7 +288,7 @@ export default function ImportExcelModal({
                         )}
                     </div>
 
-                    {/* Actions */}
+                    
                     <div className="mt-6 flex items-center justify-end gap-2">
                         <button
                             type="button"
@@ -319,7 +319,7 @@ export default function ImportExcelModal({
                             </button>
                         )}
                     </div>
-                </motion.div>
+                </m.div>
             </div>
         </AnimatePresence>
     );

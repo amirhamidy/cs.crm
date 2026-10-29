@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, m } from "framer-motion";
 import { Check, ChevronDown, FileText, Loader2, Search, X } from "lucide-react";
 import { Department, HumanResource, createDocument, updateDocument } from "./humanResourceApi";
 import { extractError, gradientOf, initialOf } from "./hrUtils";
@@ -92,14 +92,14 @@ function NiceSelect({ value, departments, onChange }: { value: string; departmen
                     </span>
                 </span>
 
-                <motion.span animate={{ rotate: open ? 180 : 0 }} transition={{ duration: 0.2 }}>
+                <m.span animate={{ rotate: open ? 180 : 0 }} transition={{ duration: 0.2 }}>
                     <ChevronDown size={14} className="text-gray-400" />
-                </motion.span>
+                </m.span>
             </button>
 
             <AnimatePresence>
                 {open && (
-                    <motion.div
+                    <m.div
                         initial={{ opacity: 0, y: -6, scale: 0.97 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: -4, scale: 0.97 }}
@@ -145,7 +145,7 @@ function NiceSelect({ value, departments, onChange }: { value: string; departmen
                                 visible.map((d, i) => {
                                     const active = String(d.id) === value;
                                     return (
-                                        <motion.button
+                                        <m.button
                                             key={d.id}
                                             type="button"
                                             initial={{ opacity: 0, x: 6 }}
@@ -164,12 +164,12 @@ function NiceSelect({ value, departments, onChange }: { value: string; departmen
                                                 <span className="mt-0.5 block text-[10px] text-gray-400">دسترسی اختصاصی</span>
                                             </span>
                                             {active && <Tick />}
-                                        </motion.button>
+                                        </m.button>
                                     );
                                 })
                             )}
                         </div>
-                    </motion.div>
+                    </m.div>
                 )}
             </AnimatePresence>
         </div>
@@ -182,7 +182,7 @@ export default function HumanResourceForm({ open, document, departments, onClose
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    // فقط با باز شدن فرم یا عوض شدن سند، فرم ریست می‌شود.
+    
     useEffect(() => {
         if (!open) return;
         setTitle(document?.title ?? "");
@@ -201,8 +201,8 @@ export default function HumanResourceForm({ open, document, departments, onClose
         setTitle(departments.find((d) => String(d.id) === value)?.name ?? "");
     };
 
-    // فقط اسم منبع ثبت می‌شود  →  POST /document/api/v1/  { title }
-    // فایل بعداً از روی کارت و با مودال جدا اضافه می‌شود.
+    
+    
     const save = async () => {
         const t = title.trim();
         if (!t || saving) return;
@@ -230,7 +230,7 @@ export default function HumanResourceForm({ open, document, departments, onClose
 
     return (
         <AnimatePresence>
-            <motion.div
+            <m.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
@@ -238,7 +238,7 @@ export default function HumanResourceForm({ open, document, departments, onClose
                 style={{ background: "rgba(0,0,0,0.45)", backdropFilter: "blur(3px)" }}
                 onMouseDown={onClose}
             >
-                <motion.div
+                <m.div
                     initial={{ opacity: 0, y: 16, scale: 0.98 }}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: 16, scale: 0.98 }}
@@ -298,7 +298,7 @@ export default function HumanResourceForm({ open, document, departments, onClose
                     )}
 
                     <div className="flex shrink-0 px-8 pb-8 pt-5">
-                        <motion.button
+                        <m.button
                             type="button"
                             whileTap={{ scale: 0.97 }}
                             onClick={save}
@@ -307,10 +307,10 @@ export default function HumanResourceForm({ open, document, departments, onClose
                         >
                             {saving ? <Loader2 size={15} className="animate-spin" /> : <Check size={14} strokeWidth={3} />}
                             {document ? "ذخیره تغییرات" : "ایجاد منبع انسانی"}
-                        </motion.button>
+                        </m.button>
                     </div>
-                </motion.div>
-            </motion.div>
+                </m.div>
+            </m.div>
         </AnimatePresence>
     );
 }

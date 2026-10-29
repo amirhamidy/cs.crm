@@ -1,6 +1,6 @@
 "use client";
 
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, m } from "framer-motion";
 import { useTheme } from "next-themes";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
@@ -485,7 +485,7 @@ export default function TopStagesChart({
   }
 
   return (
-    <motion.div
+    <m.div
       initial={{
         opacity: 0,
         y: 6,
@@ -541,7 +541,7 @@ export default function TopStagesChart({
               >
                 {activeRange ===
                   range.key && (
-                    <motion.span
+                    <m.span
                       layoutId="topStagesRangeIndicator"
                       className="absolute inset-0 rounded-lg bg-white shadow-sm dark:bg-slate-800"
                       transition={{
@@ -579,7 +579,7 @@ export default function TopStagesChart({
               >
                 {activeTab ===
                   t.key && (
-                    <motion.span
+                    <m.span
                       layoutId="topStagesTabIndicator"
                       className="absolute inset-0 rounded-lg"
                       style={{
@@ -615,7 +615,7 @@ export default function TopStagesChart({
       <div className="absolute left-2 top-24 z-10 min-w-[150px]">
         <AnimatePresence mode="wait">
           {activeBar && (
-            <motion.div
+            <m.div
               key={`${activeRange}-${activeTab}-${activeBar.stage}`}
               initial={{
                 opacity: 0,
@@ -683,7 +683,7 @@ export default function TopStagesChart({
                   }
                 </span>
               </p>
-            </motion.div>
+            </m.div>
           )}
         </AnimatePresence>
       </div>
@@ -767,6 +767,6 @@ export default function TopStagesChart({
           </ResponsiveContainer>
         )}
       </div>
-    </motion.div>
+    </m.div>
   );
 }

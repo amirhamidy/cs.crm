@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import {
     AnimatePresence,
-    motion,
+    m,
     useReducedMotion,
 } from "framer-motion";
 import { useRouter } from "next/navigation";
@@ -103,7 +103,7 @@ function ToastItem({
     );
 
     return (
-        <motion.div
+        <m.div
             layout
             initial={
                 reduceMotion
@@ -170,7 +170,7 @@ function ToastItem({
             >
                 <X size={14} />
             </button>
-        </motion.div>
+        </m.div>
     );
 }
 

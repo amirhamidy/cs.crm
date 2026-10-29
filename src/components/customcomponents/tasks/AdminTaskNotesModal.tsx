@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, m } from "framer-motion";
 import {
     X,
     Loader2,
@@ -279,7 +279,7 @@ export default function AdminTaskNotesModal({
     return createPortal(
         <AnimatePresence mode="wait">
             {isOpen && (
-                <motion.div
+                <m.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
@@ -291,7 +291,7 @@ export default function AdminTaskNotesModal({
                     onClick={onClose}
                     dir="rtl"
                 >
-                    <motion.div
+                    <m.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
@@ -304,7 +304,7 @@ export default function AdminTaskNotesModal({
                         }}
                     />
 
-                    <motion.div
+                    <m.div
                         initial={{ opacity: 0, scale: 0.96, y: 18 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.96, y: 18 }}
@@ -629,8 +629,8 @@ export default function AdminTaskNotesModal({
                                 </div>
                             )}
                         </div>
-                    </motion.div>
-                </motion.div>
+                    </m.div>
+                </m.div>
             )}
         </AnimatePresence>,
         document.body

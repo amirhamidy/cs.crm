@@ -17,7 +17,7 @@ export default function MinutesListPage({ basePath }: { basePath: string }) {
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
 
-  // debounce جست‌وجو
+  
   useEffect(() => {
     const t = setTimeout(() => setSearch(searchInput), 400);
     return () => clearTimeout(t);
@@ -44,7 +44,7 @@ export default function MinutesListPage({ basePath }: { basePath: string }) {
 
   return (
     <div className="flex flex-col gap-5 p-3 sm:p-4 md:p-6" dir="rtl">
-      {/* Header */}
+      
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-start gap-3">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-indigo-500/10">
@@ -71,7 +71,7 @@ export default function MinutesListPage({ basePath }: { basePath: string }) {
         </div>
       </div>
 
-      {/* Filters */}
+      
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div className="relative w-full lg:max-w-sm">
           <Search size={14} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -103,7 +103,7 @@ export default function MinutesListPage({ basePath }: { basePath: string }) {
         </div>
       </div>
 
-      {/* States */}
+      
       {loading && (
         <div className="flex flex-col items-center justify-center gap-3 py-16">
           <Loader2 size={24} className="animate-spin text-indigo-500" />

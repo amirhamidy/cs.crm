@@ -16,6 +16,10 @@ const nextConfig: NextConfig = {
       "@dnd-kit/utilities",
     ],
   },
+  
+  compiler: {
+    removeConsole: { exclude: ["error", "warn"] },
+  },
   webpack: (config, { isServer }) => {
     if (!isServer) {
       config.resolve.fallback = {

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, m } from "framer-motion";
 import { AlertTriangle, CalendarClock, CalendarDays, Clock, Loader2, RefreshCw, X } from "lucide-react";
 import { useTheme } from "next-themes";
 import api from "@/lib/axiosInstance";
@@ -13,8 +13,7 @@ export interface InternalDeadline {
     deadline: string | null;
 }
 
-/** درخواست ددلاین تسک اینترنال: GET /tasks/api/v1/internal_task/{id}/deadline/
- *  اگر سرور ۴۰۴ بدهد یعنی تسک ددلاین ندارد و `null` برگردانده می‌شود. */
+
 export async function fetchInternalDeadline(
     taskId: number,
     signal?: AbortSignal
@@ -72,7 +71,7 @@ interface InternalTaskDeadlineModalProps {
     onClose: () => void;
     taskId: number;
     taskTitle?: string;
-    /** بعد از هر دریافت موفق، کارت والد می‌تواند وضعیت فوریت را به‌روز کند */
+    
     onLoaded?: (deadline: InternalDeadline) => void;
 }
 
@@ -91,7 +90,7 @@ export default function InternalTaskDeadlineModal({
     const [error, setError] = useState<string | null>(null);
     const [tick, setTick] = useState(0);
 
-    // هر بار که مودال باز می‌شود (یا «تلاش مجدد» زده می‌شود) ریکوئست زده می‌شود
+    
     useEffect(() => {
         if (!open) return;
 
@@ -102,7 +101,7 @@ export default function InternalTaskDeadlineModal({
         fetchInternalDeadline(taskId, controller.signal)
             .then((res) => {
                 if (controller.signal.aborted) return;
-                setData(res); // null یعنی ۴۰۴ => ددلاین ندارد
+                setData(res); 
                 if (res) onLoaded?.(res);
             })
             .catch((err) => {
@@ -115,7 +114,7 @@ export default function InternalTaskDeadlineModal({
             });
 
         return () => controller.abort();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
+        
     }, [open, taskId, tick]);
 
     useEffect(() => {
@@ -147,7 +146,7 @@ export default function InternalTaskDeadlineModal({
     return createPortal(
         <AnimatePresence>
             {open && (
-                <motion.div
+                <m.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
@@ -156,7 +155,7 @@ export default function InternalTaskDeadlineModal({
                     style={{ background: isDark ? "rgba(0,0,0,0.62)" : "rgba(15,23,42,0.38)", backdropFilter: "blur(6px)" }}
                     onClick={onClose}
                 >
-                    <motion.div
+                    <m.div
                         initial={{ opacity: 0, y: 14, scale: 0.98 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: 14, scale: 0.98 }}
@@ -272,8 +271,8 @@ export default function InternalTaskDeadlineModal({
                                 </>
                             )}
                         </div>
-                    </motion.div>
-                </motion.div>
+                    </m.div>
+                </m.div>
             )}
         </AnimatePresence>,
         document.body
