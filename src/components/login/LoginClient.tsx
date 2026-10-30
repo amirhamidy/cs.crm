@@ -137,7 +137,7 @@ export default function LoginClient({ initialMode = "staff" }: LoginClientProps)
                         <button
                             type="button"
                             onClick={() => setShowPassword((prev) => !prev)}
-                            className="absolute left-3 top-1/2 flex size-8 -trangray-y-1/2 items-center justify-center rounded-xl text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700"
+                            className="absolute inset-y-0 left-3 my-auto flex size-8 items-center justify-center rounded-xl text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700"
                             aria-label={showPassword ? "مخفی کردن رمز عبور" : "نمایش رمز عبور"}
                         >
                             {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}

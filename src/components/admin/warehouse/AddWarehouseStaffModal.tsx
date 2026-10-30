@@ -1,7 +1,7 @@
 "use client";
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, m } from "framer-motion";
-import { Check, CheckSquare, Loader, Square, UserPlus, Warehouse as WarehouseIcon, X } from "lucide-react";
+import { Check, CheckSquare, Loader, Square, UserPlus, X } from "lucide-react";
 import { useTheme } from "next-themes";
 import axiosInstance from "@/lib/axiosInstance";
 import { fetchPage } from "@/lib/api";
@@ -154,7 +154,7 @@ export default function AddWarehouseStaffModal({
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: 16 }}
                     transition={{ duration: 0.35, ease: "easeOut" }}
-                    className="w-full max-w-md overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-xl dark:border-white/[0.06] dark:bg-[#0f172a]"
+                    className="w-full max-w-md overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-xl dark:border-white/[0.06] dark:bg-[#111827]"
                     onClick={(e) => e.stopPropagation()}
                     dir="rtl"
                 >
@@ -228,8 +228,8 @@ export default function AddWarehouseStaffModal({
                                                                     ? "#a5b4fc"
                                                                     : "#6366f1"
                                                                 : isDark
-                                                                    ? "#94a3b8"
-                                                                    : "#475569",
+                                                                    ? "#9ca3af"
+                                                                    : "#4b5563",
                                                         }}
                                                     >
                                                         <span className="font-semibold">{emp.full_name}</span>
@@ -292,8 +292,8 @@ export default function AddWarehouseStaffModal({
                                                                     ? "#93c5fd"
                                                                     : "#2563eb"
                                                                 : isDark
-                                                                    ? "#94a3b8"
-                                                                    : "#475569",
+                                                                    ? "#9ca3af"
+                                                                    : "#4b5563",
                                                         }}
                                                     >
                                                         <div className="flex items-center gap-2">

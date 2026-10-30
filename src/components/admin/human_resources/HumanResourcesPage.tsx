@@ -7,10 +7,7 @@ import HumanResourceCard from "./HumanResourceCard";
 import HumanResourceForm from "./HumanResourceForm";
 import HumanResourceStepsModal from "./HumanResourceStepsModal";
 import HumanResourceFileModal from "./Humanresourcefilemodal";
-import {
-    Department, DepartmentEmployee, HumanResource,
-    getDepartmentEmployees, getDepartments, getDocumentsPage, getEmployees, getMe, deleteDocument,
-} from "./humanResourceApi";
+import { Department, DepartmentEmployee, HumanResource, getDepartmentEmployees, getDepartments, getDocumentsPage, getEmployees, getMe, deleteDocument } from "./humanResourceApi";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import Pagination from "@/components/ui/Pagination";
 import CardSkeletonGrid from "@/components/ui/CardSkeletonGrid";

@@ -2,24 +2,10 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { m, AnimatePresence } from "framer-motion";
-import {
-    Check,
-    ChevronDown,
-    ChevronLeft,
-    ClipboardList,
-    Loader,
-    Search,
-    X,
-    Upload,
-    Paperclip,
-    AlertCircle,
-    UserPlus,
-    FolderOpen,
-    Users,
-} from "lucide-react";
+import { Check, ChevronDown, ChevronLeft, ClipboardList, Loader, Search, X, Upload, Paperclip, AlertCircle, UserPlus, FolderOpen, Users } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
 import { apiRoutes } from "@/lib/apiRoutes";
-import type { CaseItem, Employee } from "@/types/case";
+import type { CaseItem } from "@/types/case";
 import type { Customer } from "@/types/customer";
 import type { Department } from "@/types/department";
 import type { TaskItem } from "@/types/task";
@@ -290,7 +276,7 @@ function NiceSelect({
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: -4, scale: 0.97 }}
                         transition={{ type: "spring", damping: 24, stiffness: 340 }}
-                        className="absolute z-50 mt-2 w-full origin-top overflow-hidden rounded-[1.5rem] border border-gray-100 bg-white shadow-xl shadow-black/5 dark:border-white/[0.08] dark:bg-[#0f172a] dark:shadow-black/40"
+                        className="absolute z-50 mt-2 w-full origin-top overflow-hidden rounded-[1.5rem] border border-gray-100 bg-white shadow-xl shadow-black/5 dark:border-white/[0.08] dark:bg-[#111827] dark:shadow-black/40"
                     >
                         {options.length > 5 && (
                             <div className="border-b border-gray-100 px-3 py-2.5 dark:border-white/[0.06]">
@@ -437,12 +423,6 @@ export default function EditTaskModal({
         const employeeIds = parseRawEmployeeIds(task.assigned_employee);
         initialEmployeeIds.current = employeeIds;
         setSelectedEmployees(employeeIds);
-        console.log(
-            "[EditTaskModal] task.assigned_employee raw:",
-            task.assigned_employee,
-            "| parsed employeeIds:",
-            employeeIds
-        );
 
         const taskFiles = task.files || [];
         if (Array.isArray(taskFiles)) {
@@ -470,29 +450,13 @@ export default function EditTaskModal({
             .get("/department/api/v1/department_employee/list/")
             .then((res) => {
                 const list = getListData<DepartmentEmployee>(res.data);
-                console.log(
-                    "[EditTaskModal] dept employee list loaded, count:",
-                    list.length
-                );
 
                 const pending = initialEmployeeIds.current;
-                console.log(
-                    "[EditTaskModal] checking pending selectedEmployees:",
-                    pending
-                );
 
                 const listEmployeeIds = list.map((e) => e.employee);
-                console.log(
-                    "[EditTaskModal] employee ids in dept list:",
-                    listEmployeeIds
-                );
 
                 const missingIds = pending.filter(
                     (id) => !list.some((e) => e.employee === id)
-                );
-                console.log(
-                    "[EditTaskModal] missingIds (not in dept list):",
-                    missingIds
                 );
 
                 setAllDeptEmployees(list);
@@ -512,9 +476,6 @@ export default function EditTaskModal({
                                 const name = extractEmployeeName(
                                     r.value.data,
                                     missingIds[idx]
-                                );
-                                console.log(
-                                    `[EditTaskModal] resolved missing employee id=${missingIds[idx]} name="${name}"`
                                 );
                                 next[missingIds[idx]] = name;
                             } else {
@@ -576,14 +537,6 @@ export default function EditTaskModal({
             }
         }
 
-        console.log(
-            "[EditTaskModal] filteredEmpOptions count:",
-            merged.length,
-            "| selectedEmployees:",
-            selectedEmployees,
-            "| ids in options:",
-            merged.map((o) => o.id)
-        );
 
         return merged;
     }, [
@@ -717,7 +670,7 @@ export default function EditTaskModal({
                     transition={{ duration: 0.35, ease: "easeOut" }}
                     onClick={(e) => e.stopPropagation()}
                     dir="rtl"
-                    className="flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-sm dark:border-white/[0.06] dark:bg-[#0f172a]"
+                    className="flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-sm dark:border-white/[0.06] dark:bg-[#111827]"
                 >
                     <div className="flex shrink-0 items-center justify-between px-8 pb-6 pt-8">
                         <div className="flex items-center gap-3">

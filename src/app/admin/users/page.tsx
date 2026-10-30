@@ -5,13 +5,7 @@ import { AnimatePresence } from "framer-motion";
 import { Loader2, RefreshCw, Search, UserPlus, Users } from "lucide-react";
 import { useTheme } from "next-themes";
 
-import {
-    accountsApi,
-    departmentsApi,
-    internalTasksApi,
-    scoreApi,
-    tasksApi,
-} from "@/lib/api";
+import { accountsApi, departmentsApi, internalTasksApi, scoreApi, tasksApi } from "@/lib/api";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import Pagination from "@/components/ui/Pagination";
 import UserCard from "@/components/admin/users/UserCard";
@@ -286,7 +280,7 @@ export default function UsersPage() {
                             className="h-10 w-40 rounded-2xl border-0 pl-3 pr-9 text-[12.5px] outline-none sm:w-52"
                             style={{
                                 background: isDark ? "rgba(255,255,255,0.05)" : "rgba(15,23,42,0.05)",
-                                color: isDark ? "#e2e8f0" : "#0f172a",
+                                color: isDark ? "#e5e7eb" : "#111827",
                             }}
                         />
                     </div>
@@ -297,7 +291,7 @@ export default function UsersPage() {
                         className="flex h-10 w-10 items-center justify-center rounded-2xl transition-colors disabled:opacity-50"
                         style={{
                             background: isDark ? "rgba(255,255,255,0.05)" : "rgba(15,23,42,0.05)",
-                            color: isDark ? "#cbd5e1" : "#475569",
+                            color: isDark ? "#d1d5db" : "#4b5563",
                         }}
                         title="بارگذاری مجدد"
                     >

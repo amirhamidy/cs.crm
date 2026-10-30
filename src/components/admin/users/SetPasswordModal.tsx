@@ -59,7 +59,7 @@ export default function SetPasswordModal({ userId, userName, onClose }: Props) {
                 if (e.target === e.currentTarget && !busy) onClose();
             }}
         >
-            <div className="w-full max-w-lg rounded-[2.5rem] bg-white p-8 shadow-2xl dark:bg-[#0f172a]">
+            <div className="w-full max-w-lg rounded-[2.5rem] bg-white p-8 shadow-2xl dark:bg-[#111827]">
                 <div className="mb-6 flex items-center justify-between">
                     <h2 className="text-[15px] font-extrabold text-gray-900 dark:text-white">
                         تغییر رمز {userName}
@@ -92,7 +92,7 @@ export default function SetPasswordModal({ userId, userName, onClose }: Props) {
                         type="button"
                         onClick={() => setVisible((v) => !v)}
                         aria-label={visible ? "پنهان کردن رمز" : "نمایش رمز"}
-                        className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                        className="absolute inset-y-0 left-4 my-auto flex h-8 w-8 items-center justify-center text-gray-400 hover:text-gray-600"
                     >
                         {visible ? <EyeOff size={18} /> : <Eye size={18} />}
                     </button>

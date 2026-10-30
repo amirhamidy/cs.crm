@@ -1,13 +1,7 @@
 "use client";
 
 import { m } from "framer-motion";
-import {
-  Package,
-  ShoppingCart,
-  TrendingDown,
-  TrendingUp,
-  Users,
-} from "lucide-react";
+import { Package, ShoppingCart, TrendingDown, TrendingUp, Users } from "lucide-react";
 
 type StatsIcon = "users" | "shoppingCart" | "package";
 

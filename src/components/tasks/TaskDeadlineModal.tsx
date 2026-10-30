@@ -144,7 +144,7 @@ export default function TaskDeadlineModal({
 
     if (typeof document === "undefined") return null;
 
-    const muted = isDark ? "#94a3b8" : "#64748b";
+    const muted = isDark ? "#9ca3af" : "#6b7280";
     const border = isDark ? "rgba(255,255,255,0.06)" : "rgba(15,23,42,0.06)";
 
     return createPortal(
@@ -183,8 +183,8 @@ export default function TaskDeadlineModal({
                                     <CalendarClock size={18} />
                                 </div>
                                 <div className="min-w-0">
-                                    <h3 className="text-[14.5px] font-extrabold text-slate-900 dark:text-white">زمان‌بندی وظیفه</h3>
-                                    {taskTitle && <p className="mt-0.5 truncate text-[11px] text-slate-400">{taskTitle}</p>}
+                                    <h3 className="text-[14.5px] font-extrabold text-gray-900 dark:text-white">زمان‌بندی وظیفه</h3>
+                                    {taskTitle && <p className="mt-0.5 truncate text-[11px] text-gray-400">{taskTitle}</p>}
                                 </div>
                             </div>
 
@@ -240,7 +240,7 @@ export default function TaskDeadlineModal({
                                                 <CalendarDays size={14} />
                                                 شروع
                                             </span>
-                                            <span className="text-[12px] font-extrabold text-slate-800 dark:text-slate-100">
+                                            <span className="text-[12px] font-extrabold text-gray-800 dark:text-gray-100">
                                                 {started.date} · {started.time}
                                             </span>
                                         </div>
@@ -258,7 +258,7 @@ export default function TaskDeadlineModal({
                                                 <Clock size={14} />
                                                 مهلت (ددلاین)
                                             </span>
-                                            <span className="text-[12px] font-extrabold text-slate-800 dark:text-slate-100">
+                                            <span className="text-[12px] font-extrabold text-gray-800 dark:text-gray-100">
                                                 {deadline.date} · {deadline.time}
                                             </span>
                                         </div>

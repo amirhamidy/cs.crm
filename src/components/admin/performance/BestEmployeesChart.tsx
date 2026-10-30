@@ -1,26 +1,12 @@
 "use client";
 
-import {
-    useEffect,
-    useMemo,
-    useState,
-} from "react";
-import {
-    AnimatePresence,
-    m,
-} from "framer-motion";
+import { useEffect, useMemo, useState } from "react";
+import { AnimatePresence, m } from "framer-motion";
 import { useTheme } from "next-themes";
-import {
-    Award,
-    Crown,
-    Loader2,
-    Star,
-} from "lucide-react";
+import { Award, Crown, Loader2, Star } from "lucide-react";
 import { createPortal } from "react-dom";
 import axiosInstance from "@/lib/axiosInstance";
-import type {
-    EmployeeOverallStat,
-} from "@/hooks/useAnalytics";
+import type { EmployeeOverallStat } from "@/hooks/useAnalytics";
 
 interface Props {
     items: EmployeeOverallStat[];
@@ -73,7 +59,7 @@ const RANK_STYLES = [
             "0 4px 14px rgba(245,158,11,0.35)",
     },
     {
-        bg: "linear-gradient(135deg, #cbd5e1, #94a3b8)",
+        bg: "linear-gradient(135deg, #d1d5db, #9ca3af)",
         color: "#ffffff",
         shadow:
             "0 4px 14px rgba(148,163,184,0.3)",
@@ -93,7 +79,7 @@ function getTier(
         return {
             min: 0,
             label: "نامشخص",
-            color: "#94a3b8",
+            color: "#9ca3af",
             bg: "rgba(148,163,184,0.12)",
         };
     }
@@ -373,7 +359,7 @@ function EmployeeTooltip({
                         ? "translateY(-100%)"
                         : undefined,
                 background: isDark
-                    ? "#0f172a"
+                    ? "#111827"
                     : "#ffffff",
                 borderColor: isDark
                     ? "rgba(255,255,255,0.08)"
@@ -480,7 +466,7 @@ function EmployeeTooltip({
                         ? "100%"
                         : "-4px",
                     background: isDark
-                        ? "#0f172a"
+                        ? "#111827"
                         : "#ffffff",
                     borderColor: isDark
                         ? "rgba(255,255,255,0.08)"
@@ -648,8 +634,8 @@ function EmployeeRow({
                                         : "rgba(0,0,0,0.045)",
                                 color:
                                     isDark
-                                        ? "#94a3b8"
-                                        : "#64748b",
+                                        ? "#9ca3af"
+                                        : "#6b7280",
                             }
                     }
                 >
@@ -738,14 +724,14 @@ function EmployeeRow({
 
 function BestEmployeesChartSkeleton() {
     return (
-        <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-white/8 dark:bg-slate-950">
+        <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-white/8 dark:bg-gray-950">
             <div
                 className="mb-3 flex items-start justify-between gap-3"
                 dir="rtl"
             >
                 <div className="space-y-2">
-                    <div className="h-4 w-40 animate-pulse rounded-full bg-gray-100 dark:bg-slate-900" />
-                    <div className="h-3 w-28 animate-pulse rounded-full bg-gray-100/80 dark:bg-slate-900/60" />
+                    <div className="h-4 w-40 animate-pulse rounded-full bg-gray-100 dark:bg-gray-900" />
+                    <div className="h-3 w-28 animate-pulse rounded-full bg-gray-100/80 dark:bg-gray-900/60" />
                 </div>
             </div>
 
@@ -754,7 +740,7 @@ function BestEmployeesChartSkeleton() {
                     (i) => (
                         <div
                             key={i}
-                            className="h-12 animate-pulse rounded-2xl bg-gray-100 dark:bg-slate-900"
+                            className="h-12 animate-pulse rounded-2xl bg-gray-100 dark:bg-gray-900"
                         />
                     ),
                 )}
@@ -929,7 +915,7 @@ export default function BestEmployeesChart({
                     0.94,
                 ],
             }}
-            className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-white/8 dark:bg-slate-950"
+            className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-white/8 dark:bg-gray-950"
         >
             <div
                 className="mb-3 flex items-start justify-between gap-3"

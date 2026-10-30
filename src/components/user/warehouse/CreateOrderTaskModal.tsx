@@ -2,24 +2,10 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, m } from "framer-motion";
-import {
-    Boxes,
-    Calendar,
-    Check,
-    ChevronDown,
-    Loader,
-    Paperclip,
-    Search,
-    X,
-    AlertCircle,
-    Upload,
-} from "lucide-react";
+import { Boxes, Calendar, Check, ChevronDown, Loader, Paperclip, Search, X, AlertCircle, Upload } from "lucide-react";
 import type { AxiosError } from "axios";
 import axiosInstance from "@/lib/axiosInstance";
-import {
-    ApiOrderTaskStockProduct,
-    useOrderTaskLookups,
-} from "@/hooks/useOrderTaskLookups";
+import { ApiOrderTaskStockProduct, useOrderTaskLookups } from "@/hooks/useOrderTaskLookups";
 import { ApiOrderTask, ApiTask } from "@/types/warehouse";
 import TimeRangeModal from "@/components/tasks/TimeRangeModal";
 
@@ -121,11 +107,11 @@ function FloatingInput({
                 placeholder=" "
                 value={value}
                 onChange={handleChange}
-                className="peer h-[56px] w-full rounded-2xl border border-slate-200 bg-slate-50/80 px-4 pt-4 text-[12.5px] font-bold text-slate-900 outline-none transition-all duration-200 focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10 dark:border-white/[0.07] dark:bg-white/[0.035] dark:text-white dark:focus:border-blue-500/50 dark:focus:bg-white/[0.05] dark:focus:ring-blue-500/10"
+                className="peer h-[56px] w-full rounded-2xl border border-gray-200 bg-gray-50/80 px-4 pt-4 text-[12.5px] font-bold text-gray-900 outline-none transition-all duration-200 focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10 dark:border-white/[0.07] dark:bg-white/[0.035] dark:text-white dark:focus:border-blue-500/50 dark:focus:bg-white/[0.05] dark:focus:ring-blue-500/10"
             />
             <label
                 htmlFor={id}
-                className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[12px] font-semibold text-slate-400 transition-all duration-200 peer-focus:top-[15px] peer-focus:text-[10px] peer-focus:text-blue-500 peer-[:not(:placeholder-shown)]:top-[15px] peer-[:not(:placeholder-shown)]:text-[10px] peer-[:not(:placeholder-shown)]:text-slate-500 dark:peer-[:not(:placeholder-shown)]:text-slate-400"
+                className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[12px] font-semibold text-gray-400 transition-all duration-200 peer-focus:top-[15px] peer-focus:text-[10px] peer-focus:text-blue-500 peer-[:not(:placeholder-shown)]:top-[15px] peer-[:not(:placeholder-shown)]:text-[10px] peer-[:not(:placeholder-shown)]:text-gray-500 dark:peer-[:not(:placeholder-shown)]:text-gray-400"
             >
                 {label}
             </label>
@@ -188,7 +174,7 @@ function SearchableCombobox<T>({
 
     return (
         <div ref={ref} className="relative">
-            <label className="mb-2 block px-1 text-[11px] font-bold text-slate-400">
+            <label className="mb-2 block px-1 text-[11px] font-bold text-gray-400">
                 {label}
             </label>
 
@@ -198,7 +184,7 @@ function SearchableCombobox<T>({
                 onClick={() => setOpen((v) => !v)}
                 className={`flex h-[56px] w-full items-center gap-3 rounded-2xl border px-3.5 text-right transition-all duration-200 ${open
                     ? "border-blue-500 bg-blue-50/60 shadow-sm shadow-blue-500/5 dark:border-blue-500/50 dark:bg-blue-500/[0.07]"
-                    : "border-slate-200 bg-slate-50/80 hover:border-slate-300 hover:bg-white dark:border-white/[0.07] dark:bg-white/[0.035] dark:hover:border-white/[0.13] dark:hover:bg-white/[0.05]"
+                    : "border-gray-200 bg-gray-50/80 hover:border-gray-300 hover:bg-white dark:border-white/[0.07] dark:bg-white/[0.035] dark:hover:border-white/[0.13] dark:hover:bg-white/[0.05]"
                     } ${disabled ? "cursor-not-allowed opacity-40" : "cursor-pointer"}`}
             >
                 {selected ? (
@@ -211,21 +197,21 @@ function SearchableCombobox<T>({
                     </span>
                 ) : (
                     <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white shadow-sm dark:bg-white/[0.07]">
-                        <ChevronDown size={13} className="text-slate-400" />
+                        <ChevronDown size={13} className="text-gray-400" />
                     </span>
                 )}
 
                 <span className="min-w-0 flex-1">
                     <span
                         className={`block truncate text-[12.5px] font-bold ${selected
-                            ? "text-slate-900 dark:text-white"
-                            : "text-slate-400"
+                            ? "text-gray-900 dark:text-white"
+                            : "text-gray-400"
                             }`}
                     >
                         {selected ? getLabel(selected) : placeholder}
                     </span>
                     {selected && getSubLabel && (
-                        <span className="mt-0.5 block truncate text-[10.5px] text-slate-400">
+                        <span className="mt-0.5 block truncate text-[10.5px] text-gray-400">
                             {getSubLabel(selected)}
                         </span>
                     )}
@@ -238,7 +224,7 @@ function SearchableCombobox<T>({
                     >
                         <ChevronDown
                             size={14}
-                            className="shrink-0 text-slate-400"
+                            className="shrink-0 text-gray-400"
                         />
                     </m.span>
                 )}
@@ -255,14 +241,14 @@ function SearchableCombobox<T>({
                             damping: 24,
                             stiffness: 340,
                         }}
-                        className="absolute z-[60] mt-2 w-full origin-top overflow-hidden rounded-[1.4rem] border border-slate-200 bg-white shadow-2xl shadow-slate-900/10 dark:border-white/[0.08] dark:bg-[#151a23] dark:shadow-black/40"
+                        className="absolute z-[60] mt-2 w-full origin-top overflow-hidden rounded-[1.4rem] border border-gray-200 bg-white shadow-2xl shadow-gray-900/10 dark:border-white/[0.08] dark:bg-[#151a23] dark:shadow-black/40"
                     >
                         {items.length > 5 && (
-                            <div className="border-b border-slate-100 px-3 py-2.5 dark:border-white/[0.06]">
-                                <div className="flex items-center gap-2 rounded-xl bg-slate-50 px-3 py-2.5 dark:bg-white/[0.04]">
+                            <div className="border-b border-gray-100 px-3 py-2.5 dark:border-white/[0.06]">
+                                <div className="flex items-center gap-2 rounded-xl bg-gray-50 px-3 py-2.5 dark:bg-white/[0.04]">
                                     <Search
                                         size={13}
-                                        className="shrink-0 text-slate-400"
+                                        className="shrink-0 text-gray-400"
                                     />
                                     <input
                                         autoFocus
@@ -271,7 +257,7 @@ function SearchableCombobox<T>({
                                             setQuery(e.target.value)
                                         }
                                         placeholder="جستجو..."
-                                        className="w-full bg-transparent text-[12px] font-semibold text-slate-900 outline-none placeholder:text-slate-400 dark:text-white"
+                                        className="w-full bg-transparent text-[12px] font-semibold text-gray-900 outline-none placeholder:text-gray-400 dark:text-white"
                                     />
                                 </div>
                             </div>
@@ -279,7 +265,7 @@ function SearchableCombobox<T>({
 
                         <div className="max-h-56 overflow-y-auto p-1.5">
                             {visible.length === 0 ? (
-                                <p className="py-7 text-center text-[12px] text-slate-400">
+                                <p className="py-7 text-center text-[12px] text-gray-400">
                                     {emptyText}
                                 </p>
                             ) : (
@@ -300,7 +286,7 @@ function SearchableCombobox<T>({
                                             }}
                                             className={`flex w-full items-center gap-3 rounded-xl px-2.5 py-2.5 text-right transition-colors ${active
                                                 ? "bg-blue-50 dark:bg-blue-500/10"
-                                                : "hover:bg-slate-50 dark:hover:bg-white/[0.04]"
+                                                : "hover:bg-gray-50 dark:hover:bg-white/[0.04]"
                                                 }`}
                                         >
                                             <span
@@ -314,13 +300,13 @@ function SearchableCombobox<T>({
                                                 <span
                                                     className={`block truncate text-[12.5px] font-bold ${active
                                                         ? "text-blue-600 dark:text-blue-400"
-                                                        : "text-slate-900 dark:text-white"
+                                                        : "text-gray-900 dark:text-white"
                                                         }`}
                                                 >
                                                     {getLabel(item)}
                                                 </span>
                                                 {getSubLabel && (
-                                                    <span className="mt-0.5 block truncate text-[10.5px] text-slate-400">
+                                                    <span className="mt-0.5 block truncate text-[10.5px] text-gray-400">
                                                         {getSubLabel(item)}
                                                     </span>
                                                 )}
@@ -437,7 +423,7 @@ export default function CreateOrderTaskModal({
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 px-3 py-4 backdrop-blur-md sm:px-4"
+                className="fixed inset-0 z-50 flex items-center justify-center bg-gray-950/55 px-3 py-4 backdrop-blur-md sm:px-4"
                 onClick={handleClose}
             >
                 <m.div
@@ -451,16 +437,16 @@ export default function CreateOrderTaskModal({
                 >
                     <div className="h-1 w-full shrink-0 bg-gradient-to-l from-blue-600 via-cyan-500 to-violet-500" />
 
-                    <div className="flex shrink-0 items-center justify-between border-b border-slate-100 px-6 pb-5 pt-6 dark:border-white/[0.06] sm:px-7">
+                    <div className="flex shrink-0 items-center justify-between border-b border-gray-100 px-6 pb-5 pt-6 dark:border-white/[0.06] sm:px-7">
                         <div className="flex items-center gap-3">
                             <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-lg shadow-blue-500/20">
                                 <Boxes size={19} />
                             </div>
                             <div>
-                                <h3 className="text-[14px] font-extrabold text-slate-900 dark:text-white">
+                                <h3 className="text-[14px] font-extrabold text-gray-900 dark:text-white">
                                     ثبت وظیفه برای انبار
                                 </h3>
-                                <p className="mt-1 text-[10.5px] font-medium text-slate-400">
+                                <p className="mt-1 text-[10.5px] font-medium text-gray-400">
                                     درخواست سفارش کالا از انبار
                                 </p>
                             </div>
@@ -470,7 +456,7 @@ export default function CreateOrderTaskModal({
                             type="button"
                             onClick={handleClose}
                             disabled={loading}
-                            className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 text-slate-400 transition-all hover:bg-slate-200 hover:text-slate-700 disabled:opacity-40 dark:bg-white/[0.05] dark:hover:bg-white/[0.09] dark:hover:text-white"
+                            className="flex h-9 w-9 items-center justify-center rounded-xl bg-gray-100 text-gray-400 transition-all hover:bg-gray-200 hover:text-gray-700 disabled:opacity-40 dark:bg-white/[0.05] dark:hover:bg-white/[0.09] dark:hover:text-white"
                         >
                             <X size={15} />
                         </button>
@@ -504,10 +490,10 @@ export default function CreateOrderTaskModal({
                                 )}
                             </AnimatePresence>
 
-                            <div className="rounded-[1.35rem] border border-slate-100 bg-slate-50/50 p-3.5 dark:border-white/[0.05] dark:bg-white/[0.018]">
+                            <div className="rounded-[1.35rem] border border-gray-100 bg-gray-50/50 p-3.5 dark:border-white/[0.05] dark:bg-white/[0.018]">
                                 <div className="mb-3 flex items-center gap-2 px-1">
                                     <span className="h-4 w-1 rounded-full bg-blue-500" />
-                                    <span className="text-[10.5px] font-extrabold text-slate-500 dark:text-slate-300">
+                                    <span className="text-[10.5px] font-extrabold text-gray-500 dark:text-gray-300">
                                         اطلاعات درخواست
                                     </span>
                                 </div>
@@ -578,7 +564,7 @@ export default function CreateOrderTaskModal({
                                                 setNote(e.target.value)
                                             }
                                             rows={3}
-                                            className="peer w-full resize-none rounded-2xl border border-slate-200 bg-white px-4 pb-3 pt-6 text-[12.5px] font-bold text-slate-900 outline-none transition-all duration-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 dark:border-white/[0.07] dark:bg-white/[0.035] dark:text-white dark:focus:border-blue-500/50 dark:focus:bg-white/[0.05]"
+                                            className="peer w-full resize-none rounded-2xl border border-gray-200 bg-white px-4 pb-3 pt-6 text-[12.5px] font-bold text-gray-900 outline-none transition-all duration-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 dark:border-white/[0.07] dark:bg-white/[0.035] dark:text-white dark:focus:border-blue-500/50 dark:focus:bg-white/[0.05]"
                                         />
                                     </div>
                                 </div>
@@ -591,13 +577,13 @@ export default function CreateOrderTaskModal({
                                     onClick={() => setTimeModalOpen(true)}
                                     className={`group flex h-[58px] items-center gap-2.5 rounded-2xl border px-3 transition-all duration-200 disabled:opacity-40 ${startedAt && deadline
                                         ? "border-blue-500/30 bg-blue-50/60 dark:border-blue-500/30 dark:bg-blue-500/[0.07]"
-                                        : "border-slate-200 bg-slate-50/80 hover:border-slate-300 hover:bg-white dark:border-white/[0.07] dark:bg-white/[0.035] dark:hover:border-white/[0.13]"
+                                        : "border-gray-200 bg-gray-50/80 hover:border-gray-300 hover:bg-white dark:border-white/[0.07] dark:bg-white/[0.035] dark:hover:border-white/[0.13]"
                                         }`}
                                 >
                                     <span
                                         className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl shadow-sm ${startedAt && deadline
                                             ? "bg-blue-100 text-blue-600 dark:bg-blue-500/15 dark:text-blue-400"
-                                            : "bg-white text-slate-400 dark:bg-white/[0.06]"
+                                            : "bg-white text-gray-400 dark:bg-white/[0.06]"
                                             }`}
                                     >
                                         <Calendar size={14} />
@@ -605,7 +591,7 @@ export default function CreateOrderTaskModal({
                                     <span
                                         className={`truncate text-[11.5px] font-bold ${startedAt && deadline
                                             ? "text-blue-600 dark:text-blue-400"
-                                            : "text-slate-500 dark:text-slate-400"
+                                            : "text-gray-500 dark:text-gray-400"
                                             }`}
                                     >
                                         {startedAt && deadline
@@ -614,11 +600,11 @@ export default function CreateOrderTaskModal({
                                     </span>
                                 </button>
 
-                                <label className="group flex h-[58px] cursor-pointer items-center gap-2.5 rounded-2xl border border-dashed border-slate-300 bg-slate-50/70 px-3 transition-all hover:border-blue-400 hover:bg-blue-50/40 dark:border-white/[0.1] dark:bg-white/[0.025] dark:hover:border-blue-500/40 dark:hover:bg-blue-500/[0.05]">
-                                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white text-slate-400 shadow-sm transition-colors group-hover:text-blue-500 dark:bg-white/[0.06]">
+                                <label className="group flex h-[58px] cursor-pointer items-center gap-2.5 rounded-2xl border border-dashed border-gray-300 bg-gray-50/70 px-3 transition-all hover:border-blue-400 hover:bg-blue-50/40 dark:border-white/[0.1] dark:bg-white/[0.025] dark:hover:border-blue-500/40 dark:hover:bg-blue-500/[0.05]">
+                                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white text-gray-400 shadow-sm transition-colors group-hover:text-blue-500 dark:bg-white/[0.06]">
                                         <Upload size={14} />
                                     </span>
-                                    <span className="truncate text-[11.5px] font-bold text-slate-500 dark:text-slate-400">
+                                    <span className="truncate text-[11.5px] font-bold text-gray-500 dark:text-gray-400">
                                         {file ? file.name : "ضمیمه فایل"}
                                     </span>
                                     <input
@@ -657,21 +643,21 @@ export default function CreateOrderTaskModal({
                                 <m.div
                                     initial={{ opacity: 0, x: 8 }}
                                     animate={{ opacity: 1, x: 0 }}
-                                    className="flex items-center gap-2 rounded-2xl border border-slate-100 bg-slate-50 px-3.5 py-2.5 dark:border-white/[0.05] dark:bg-white/[0.03]"
+                                    className="flex items-center gap-2 rounded-2xl border border-gray-100 bg-gray-50 px-3.5 py-2.5 dark:border-white/[0.05] dark:bg-white/[0.03]"
                                 >
                                     <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-white dark:bg-white/[0.06]">
                                         <Paperclip
                                             size={12}
-                                            className="text-slate-400"
+                                            className="text-gray-400"
                                         />
                                     </span>
-                                    <span className="min-w-0 flex-1 truncate text-[11.5px] font-semibold text-slate-600 dark:text-slate-300">
+                                    <span className="min-w-0 flex-1 truncate text-[11.5px] font-semibold text-gray-600 dark:text-gray-300">
                                         {file.name}
                                     </span>
                                     <button
                                         type="button"
                                         onClick={() => setFile(null)}
-                                        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-slate-400 transition-all hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-500/10"
+                                        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-gray-400 transition-all hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-500/10"
                                     >
                                         <X size={12} />
                                     </button>
@@ -680,7 +666,7 @@ export default function CreateOrderTaskModal({
                         </div>
                     </div>
 
-                    <div className="shrink-0 border-t border-slate-100 bg-white/95 px-6 pb-6 pt-4 backdrop-blur sm:px-7 dark:border-white/[0.06] dark:bg-[#10151d]/95">
+                    <div className="shrink-0 border-t border-gray-100 bg-white/95 px-6 pb-6 pt-4 backdrop-blur sm:px-7 dark:border-white/[0.06] dark:bg-[#10151d]/95">
                         <m.button
                             type="button"
                             whileTap={{ scale: 0.98 }}

@@ -2,24 +2,10 @@
 
 import { useState } from "react";
 import { m } from "framer-motion";
-import {
-    ArrowLeftCircle,
-    ArrowRightCircle,
-    CheckCircle2,
-    FileText,
-    ListOrdered,
-    MessageSquareText,
-    Package,
-    UserCheck,
-    UserRound,
-} from "lucide-react";
+import { ArrowLeftCircle, ArrowRightCircle, CheckCircle2, FileText, ListOrdered, MessageSquareText, Package, UserCheck, UserRound } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
 import { toPersianDigits } from "@/lib/jalali";
-import type {
-    ApiPurchasingStep,
-    ApiPurchasingTask,
-    ApiTaskAttachment,
-} from "@/types/purchasing";
+import type { ApiPurchasingStep, ApiPurchasingTask, ApiTaskAttachment } from "@/types/purchasing";
 import { PURCHASING_TASK_STATUS_META } from "@/types/purchasing";
 import { usePurchasingAccess } from "@/hooks/usePurchasingAccess";
 import TaskTransitionModal from "./TaskTransitionModal";

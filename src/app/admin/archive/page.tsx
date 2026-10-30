@@ -54,7 +54,7 @@ export default function AdminArchivedTasksPage() {
                         type="button"
                         onClick={() => router.push("/admin/tasks")}
                         className="flex h-10 items-center gap-2 rounded-2xl px-3.5 text-[12px] font-bold transition-colors"
-                        style={{ background: isDark ? "rgba(255,255,255,0.05)" : "rgba(15,23,42,0.05)", color: isDark ? "#cbd5e1" : "#475569" }}
+                        style={{ background: isDark ? "rgba(255,255,255,0.05)" : "rgba(15,23,42,0.05)", color: isDark ? "#d1d5db" : "#4b5563" }}
                     >
                         <ArrowRight size={15} />
                         بازگشت به وظایف
@@ -65,7 +65,7 @@ export default function AdminArchivedTasksPage() {
                         onClick={fetchAll}
                         disabled={loading}
                         className="flex h-10 w-10 items-center justify-center rounded-2xl transition-colors disabled:opacity-50"
-                        style={{ background: isDark ? "rgba(255,255,255,0.05)" : "rgba(15,23,42,0.05)", color: isDark ? "#cbd5e1" : "#475569" }}
+                        style={{ background: isDark ? "rgba(255,255,255,0.05)" : "rgba(15,23,42,0.05)", color: isDark ? "#d1d5db" : "#4b5563" }}
                         title="بارگذاری مجدد"
                     >
                         <RefreshCw size={15} className={loading ? "animate-spin" : ""} />

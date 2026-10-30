@@ -130,7 +130,7 @@ export default function CategoryChart({
   );
 
   return (
-    <div className="relative rounded-2xl border border-gray-100 bg-white p-4 shadow-sm dark:border-white/5 dark:bg-slate-950">
+    <div className="relative rounded-2xl border border-gray-100 bg-white p-4 shadow-sm dark:border-white/5 dark:bg-gray-950">
       <div className="mb-3 flex items-start justify-between gap-3" dir="rtl">
         <div>
           <h3 className="text-[14px] font-semibold text-gray-900 dark:text-white">
@@ -142,7 +142,7 @@ export default function CategoryChart({
           </p>
         </div>
 
-        <div className="flex items-center gap-1 rounded-xl border border-gray-100 bg-gray-50/80 p-1 dark:border-white/5 dark:bg-slate-900/50">
+        <div className="flex items-center gap-1 rounded-xl border border-gray-100 bg-gray-50/80 p-1 dark:border-white/5 dark:bg-gray-900/50">
           {ranges.map((range) => (
             <button
               key={range.key}
@@ -153,7 +153,7 @@ export default function CategoryChart({
               {activeRange === range.key && (
                 <m.span
                   layoutId="categoryChartRangeIndicator"
-                  className="absolute inset-0 rounded-lg bg-white shadow-sm dark:bg-slate-800"
+                  className="absolute inset-0 rounded-lg bg-white shadow-sm dark:bg-gray-800"
                   transition={{
                     type: "spring",
                     stiffness: 400,
@@ -197,7 +197,7 @@ export default function CategoryChart({
                   scale: 0.96,
                 }}
                 transition={{ duration: 0.15 }}
-                className="pointer-events-none rounded-xl border border-gray-200/60 bg-white/95 px-3 py-2 shadow-lg backdrop-blur-sm dark:border-white/10 dark:bg-slate-900/95"
+                className="pointer-events-none rounded-xl border border-gray-200/60 bg-white/95 px-3 py-2 shadow-lg backdrop-blur-sm dark:border-white/10 dark:bg-gray-900/95"
                 style={{
                   boxShadow: `0 4px 20px ${activeSlice.glow}`,
                 }}

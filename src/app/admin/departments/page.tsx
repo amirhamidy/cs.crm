@@ -1,26 +1,9 @@
 "use client";
 
-import {
-    useEffect,
-    useRef,
-    useState,
-    forwardRef,
-    InputHTMLAttributes,
-    useMemo,
-} from "react";
+import { useEffect, useRef, useState, forwardRef, InputHTMLAttributes, useMemo } from "react";
 import { m, AnimatePresence } from "framer-motion";
 import { useTheme } from "next-themes";
-import {
-    Plus,
-    Building2,
-    Loader,
-    AlertCircle,
-    Check,
-    X,
-    Pencil,
-    CheckCircle2,
-    RefreshCw,
-} from "lucide-react";
+import { Plus, Building2, Loader, AlertCircle, Check, X, Pencil, CheckCircle2, RefreshCw } from "lucide-react";
 import { useDepartmentStore } from "@/components/admin/departments/departmentStore";
 import { Department } from "@/components/admin/departments/types";
 import DepartmentCard from "@/components/admin/departments/DepartmentCard";
@@ -53,7 +36,7 @@ const FloatingInput = forwardRef<HTMLInputElement, FloatingInputProps>(
 
             <label
                 htmlFor={id}
-                className="absolute right-5 top-1/2 -translate-y-1/2 text-sm text-gray-400 pointer-events-none transition-all duration-200 bg-white dark:bg-[#0f172a] px-1.5 rounded peer-focus:top-0 peer-focus:text-xs peer-focus:text-gray-500 peer-[:not(:placeholder-shown)]:top-0 peer-[:not(:placeholder-shown)]:text-xs peer-[:not(:placeholder-shown)]:text-gray-500"
+                className="absolute right-5 top-1/2 -translate-y-1/2 text-sm text-gray-400 pointer-events-none transition-all duration-200 bg-white dark:bg-[#111827] px-1.5 rounded peer-focus:top-0 peer-focus:text-xs peer-focus:text-gray-500 peer-[:not(:placeholder-shown)]:top-0 peer-[:not(:placeholder-shown)]:text-xs peer-[:not(:placeholder-shown)]:text-gray-500"
             >
                 {label}
             </label>
@@ -344,7 +327,7 @@ export default function DepartmentsPage() {
                                 onClick={(e) =>
                                     e.stopPropagation()
                                 }
-                                className="w-full max-w-[92vw] sm:max-w-sm overflow-hidden rounded-[1.75rem] sm:rounded-[2rem] border border-gray-100 bg-white shadow-sm dark:border-white/[0.06] dark:bg-[#0f172a]"
+                                className="w-full max-w-[92vw] sm:max-w-sm overflow-hidden rounded-[1.75rem] sm:rounded-[2rem] border border-gray-100 bg-white shadow-sm dark:border-white/[0.06] dark:bg-[#111827]"
                             >
                                 <div className="flex items-center justify-between gap-3 px-5 sm:px-8 pb-5 sm:pb-6 pt-6 sm:pt-8">
                                     <div className="flex min-w-0 items-center gap-2.5 sm:gap-3">
@@ -549,8 +532,8 @@ export default function DepartmentsPage() {
                                             ? "rgba(255,255,255,0.05)"
                                             : "rgba(15,23,42,0.05)",
                                         color: isDark
-                                            ? "#cbd5e1"
-                                            : "#475569",
+                                            ? "#d1d5db"
+                                            : "#4b5563",
                                     }
                                     : undefined
                             }

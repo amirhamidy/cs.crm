@@ -104,7 +104,7 @@ function NiceSelect({ value, departments, onChange }: { value: string; departmen
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: -4, scale: 0.97 }}
                         transition={{ type: "spring", damping: 24, stiffness: 340 }}
-                        className="absolute z-50 mt-2 w-full origin-top overflow-hidden rounded-[1.5rem] border border-gray-100 bg-white shadow-xl shadow-black/5 dark:border-white/[0.08] dark:bg-[#0f172a] dark:shadow-black/40"
+                        className="absolute z-50 mt-2 w-full origin-top overflow-hidden rounded-[1.5rem] border border-gray-100 bg-white shadow-xl shadow-black/5 dark:border-white/[0.08] dark:bg-[#111827] dark:shadow-black/40"
                     >
                         <div className="border-b border-gray-100 p-2.5 dark:border-white/[0.06]">
                             <button
@@ -244,7 +244,7 @@ export default function HumanResourceForm({ open, document, departments, onClose
                     exit={{ opacity: 0, y: 16, scale: 0.98 }}
                     transition={{ duration: 0.28, ease: "easeOut" }}
                     onMouseDown={(e) => e.stopPropagation()}
-                    className="flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-2xl shadow-black/10 dark:border-white/[0.06] dark:bg-[#0f172a]"
+                    className="flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-2xl shadow-black/10 dark:border-white/[0.06] dark:bg-[#111827]"
                     dir="rtl"
                 >
                     <div className="flex shrink-0 items-center justify-between px-8 pb-6 pt-8">

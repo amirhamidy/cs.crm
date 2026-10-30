@@ -19,14 +19,7 @@ const VisitsChart = dynamic(() => import("@/components/charts/VisitsChart"), {
     ssr: false,
     loading: () => <LazyLoading />,
 });
-import {
-    DashboardForbiddenError,
-    getCancelledTasksByDepartment,
-    getCustomerSourcesData,
-    getSalesChartData,
-    getSummary,
-    getTopUsers,
-} from "@/lib/dashboard";
+import { DashboardForbiddenError, getCancelledTasksByDepartment, getCustomerSourcesData, getSalesChartData, getSummary, getTopUsers } from "@/lib/dashboard";
 
 export function StatsSkeleton() {
     return (
@@ -52,7 +45,7 @@ export function StatsSkeleton() {
 
 export function ChartSkeleton() {
     return (
-        <div className="h-[300px] animate-pulse rounded-2xl border border-gray-100 bg-gray-50 dark:border-white/5 dark:bg-slate-900/40" />
+        <div className="h-[300px] animate-pulse rounded-2xl border border-gray-100 bg-gray-50 dark:border-white/5 dark:bg-gray-900/40" />
     );
 }
 

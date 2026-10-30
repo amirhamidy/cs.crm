@@ -4,10 +4,7 @@ import { NiceSelect } from "@/components/ui/NiceSelect";
 import TimePicker from "@/components/TimePicker";
 import { useCallback, useRef, useState } from "react";
 import { m, AnimatePresence } from "framer-motion";
-import { 
-  ClipboardList, Plus, Trash2, X, AlertCircle, 
-  Loader2, CheckCircle2, TrendingUp, Filter 
-} from "lucide-react";
+import { ClipboardList, Plus, Trash2, X, AlertCircle, Loader2, Filter } from "lucide-react";
 import { useTheme } from "next-themes";
 import axiosInstance from "@/lib/axiosInstance";
 import { fetchPage, listAll } from "@/lib/api";
@@ -179,7 +176,7 @@ export default function UserProductionLogsPage() {
       {loading ? (
         <div className="flex justify-center py-20 text-gray-400 text-xs">در حال بارگذاری سوابق تولید...</div>
       ) : (
-        <div className="bg-white dark:bg-[#0f172a] rounded-3xl border border-gray-100 dark:border-white/[0.07] overflow-hidden shadow-sm">
+        <div className="bg-white dark:bg-[#111827] rounded-3xl border border-gray-100 dark:border-white/[0.07] overflow-hidden shadow-sm">
           <div className="flex items-center gap-2 border-b border-gray-100 dark:border-white/[0.06] px-4 py-3.5">
             <div className="flex items-center gap-2 rounded-2xl border border-gray-100 bg-gray-50 px-3.5 py-2.5 transition-colors focus-within:border-indigo-500 dark:border-white/[0.06] dark:bg-white/[0.03]">
               <Filter size={13} className="shrink-0 text-gray-400" />
@@ -271,7 +268,7 @@ export default function UserProductionLogsPage() {
               initial={{ opacity: 0, scale: 0.95, y: 16 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 16 }}
-              className="w-full max-w-lg rounded-[2rem] bg-white p-6 shadow-2xl dark:bg-[#0f172a] border border-gray-100 dark:border-white/[0.07]"
+              className="w-full max-w-lg rounded-[2rem] bg-white p-6 shadow-2xl dark:bg-[#111827] border border-gray-100 dark:border-white/[0.07]"
             >
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-sm font-extrabold text-gray-900 dark:text-white">ثبت رکورد جدید تولید</h3>

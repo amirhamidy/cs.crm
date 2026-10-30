@@ -1,12 +1,4 @@
-import {
-  ApiArchivedOrderTask,
-  ApiOrderTask,
-  ApiOrderTaskDeadline,
-  ApiStockInfo,
-  ApiStockTransaction,
-  ApiWarehouseStaff,
-  ApiWarehouseTask,
-} from "@/types/warehouse";
+import { ApiArchivedOrderTask, ApiOrderTask, ApiOrderTaskDeadline, ApiStockInfo, ApiStockTransaction, ApiWarehouseStaff, ApiWarehouseTask } from "@/types/warehouse";
 
 export type WarehouseTab =
   | "tasks"

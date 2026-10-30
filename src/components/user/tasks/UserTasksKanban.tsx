@@ -322,7 +322,7 @@ export default function UserTasksKanban() {
                                 const active = stage.id === mobileStage?.id;
                                 const color = accentForId(stage.id);
                                 return (
-                                    <button key={stage.id} type="button" onClick={() => setActiveMobileStageId(stage.id)} className="flex shrink-0 items-center gap-2 rounded-2xl border px-3 py-2 text-[11px] font-bold" style={{ color: active ? color : "#94a3b8", background: active ? `${color}14` : undefined, borderColor: active ? `${color}45` : "rgba(148,163,184,.25)" }}>
+                                    <button key={stage.id} type="button" onClick={() => setActiveMobileStageId(stage.id)} className="flex shrink-0 items-center gap-2 rounded-2xl border px-3 py-2 text-[11px] font-bold" style={{ color: active ? color : "#9ca3af", background: active ? `${color}14` : undefined, borderColor: active ? `${color}45` : "rgba(148,163,184,.25)" }}>
                                         <span className="flex h-5 w-5 items-center justify-center rounded-lg text-[9px] text-white" style={{ background: color }}>{index + 1}</span>
                                         {stage.name}<span>{grouped[stage.id]?.length ?? 0}</span>
                                     </button>
@@ -354,7 +354,7 @@ export default function UserTasksKanban() {
 function StageColumn({ stage, tasks, accent, index, isLast, onUpdated, onTransferred, employeesMap, staffId }: { stage: KanbanStage; tasks: UserTask[]; accent: string; index: number; isLast: boolean; onUpdated: (task: UserTask) => void; onTransferred: (task: UserTask) => void; employeesMap: Record<number, string>; staffId: number }) {
     return (
         <m.div layout initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="relative flex min-w-0 flex-col rounded-[1.45rem] border bg-white shadow-[0_5px_20px_rgba(15,23,42,.03)] dark:bg-white/[.025]" style={{ borderColor: `${accent}28` }}>
-            {!isLast && <div className="pointer-events-none absolute top-7 z-20 flex h-5 w-5 items-center justify-center rounded-full border bg-white shadow-sm dark:bg-[#0f172a]" style={{ insetInlineEnd: -10, borderColor: `${accent}35`, color: accent }}><ChevronLeft size={10} /></div>}
+            {!isLast && <div className="pointer-events-none absolute top-7 z-20 flex h-5 w-5 items-center justify-center rounded-full border bg-white shadow-sm dark:bg-[#111827]" style={{ insetInlineEnd: -10, borderColor: `${accent}35`, color: accent }}><ChevronLeft size={10} /></div>}
             <div className="px-3 py-2.5">
                 <div className="flex items-center justify-between gap-2.5">
                     <div className="flex items-center gap-2">

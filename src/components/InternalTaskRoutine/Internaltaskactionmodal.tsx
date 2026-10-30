@@ -107,7 +107,7 @@ export default function InternalTaskActionModal({
                     transition={{ duration: 0.22, ease: "easeOut" }}
                     className="w-full max-w-[420px] overflow-hidden rounded-3xl border"
                     style={{
-                        background: isDark ? "#0f172a" : "#ffffff",
+                        background: isDark ? "#111827" : "#ffffff",
                         borderColor: isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.06)",
                         boxShadow: "0 24px 64px rgba(0,0,0,0.28)",
                     }}
@@ -206,7 +206,7 @@ export default function InternalTaskActionModal({
                                 className="flex-1 rounded-xl py-2.5 text-[12.5px] font-bold transition-colors disabled:opacity-40"
                                 style={{
                                     background: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.04)",
-                                    color: isDark ? "#94a3b8" : "#64748b",
+                                    color: isDark ? "#9ca3af" : "#6b7280",
                                 }}
                             >
                                 انصراف

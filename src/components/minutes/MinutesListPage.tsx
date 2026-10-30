@@ -59,7 +59,7 @@ export default function MinutesListPage({ basePath }: { basePath: string }) {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <button type="button" onClick={load} disabled={loading} title="بارگذاری مجدد" aria-label="بارگذاری مجدد" className="flex h-10 w-10 items-center justify-center rounded-2xl bg-black/5 text-slate-600 transition-colors hover:bg-black/10 disabled:opacity-50 dark:bg-white/5 dark:text-slate-300">
+          <button type="button" onClick={load} disabled={loading} title="بارگذاری مجدد" aria-label="بارگذاری مجدد" className="flex h-10 w-10 items-center justify-center rounded-2xl bg-black/5 text-gray-600 transition-colors hover:bg-black/10 disabled:opacity-50 dark:bg-white/5 dark:text-gray-300">
             <RefreshCw size={15} className={loading ? "animate-spin" : ""} />
           </button>
           <Link href={`${basePath}/my-signatures`} className={BTN_GHOST}>
@@ -94,7 +94,7 @@ export default function MinutesListPage({ basePath }: { basePath: string }) {
               className={`h-8 rounded-xl px-3 text-[11.5px] font-bold transition-colors ${
                 status === f.value
                   ? "bg-indigo-600 text-white"
-                  : "bg-black/5 text-slate-600 hover:bg-black/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10"
+                  : "bg-black/5 text-gray-600 hover:bg-black/10 dark:bg-white/5 dark:text-gray-300 dark:hover:bg-white/10"
               }`}
             >
               {f.label}

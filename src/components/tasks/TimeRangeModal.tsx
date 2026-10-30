@@ -3,27 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, m } from "framer-motion";
-import {
-    X,
-    ChevronDown,
-    ChevronLeft,
-    ChevronRight,
-    Clock,
-    Check,
-    Loader,
-    CalendarDays,
-} from "lucide-react";
-import {
-    toJalali,
-    toGregorian,
-    jalaliMonthLength,
-    jalaliWeekday,
-    JALALI_MONTHS,
-    JALALI_WEEKDAYS,
-    toPersianDigits,
-    pad2,
-    todayJalali,
-} from "@/lib/jalali";
+import { X, ChevronDown, ChevronLeft, ChevronRight, Clock, Check, Loader, CalendarDays } from "lucide-react";
+import { toJalali, toGregorian, jalaliMonthLength, jalaliWeekday, JALALI_MONTHS, JALALI_WEEKDAYS, toPersianDigits, pad2, todayJalali } from "@/lib/jalali";
 
 interface FieldState {
     jy: number;
@@ -130,7 +111,7 @@ function NiceSelect({
                 />
             </button>
             <label
-                className={`pointer-events-none absolute right-5 rounded bg-white px-1.5 text-sm text-gray-400 transition-all duration-200 dark:bg-[#0f172a] ${isOpen || selectedOption
+                className={`pointer-events-none absolute right-5 rounded bg-white px-1.5 text-sm text-gray-400 transition-all duration-200 dark:bg-[#111827] ${isOpen || selectedOption
                     ? "top-0 text-xs text-gray-500 dark:text-gray-400"
                     : "top-1/2 -translate-y-1/2"
                     }`}
@@ -144,7 +125,7 @@ function NiceSelect({
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: -10, scale: 0.95 }}
                         transition={{ duration: 0.15 }}
-                        className="absolute z-50 mt-2 max-h-60 w-full overflow-y-auto rounded-2xl border border-gray-100 bg-white p-1.5 shadow-[0_8px_30px_rgb(0,0,0,0.12)] dark:border-white/[0.06] dark:bg-[#0f172a]"
+                        className="absolute z-50 mt-2 max-h-60 w-full overflow-y-auto rounded-2xl border border-gray-100 bg-white p-1.5 shadow-[0_8px_30px_rgb(0,0,0,0.12)] dark:border-white/[0.06] dark:bg-[#111827]"
                         style={{ scrollbarWidth: "thin" }}
                     >
                         {options.map((option) => (
@@ -313,7 +294,7 @@ export default function TimeRangeModal({
                         }}
                         onClick={(e) => e.stopPropagation()}
                         dir="rtl"
-                        className="relative flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-[0_24px_70px_rgba(0,0,0,0.22)] dark:border-white/[0.06] dark:bg-[#0f172a]"
+                        className="relative flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-[0_24px_70px_rgba(0,0,0,0.22)] dark:border-white/[0.06] dark:bg-[#111827]"
                     >
                         <div className="flex shrink-0 items-center justify-between px-8 pb-6 pt-8">
                             <div className="flex items-center gap-2.5">

@@ -3,30 +3,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, m } from "framer-motion";
-import {
-    AlertTriangle,
-    ArrowLeft,
-    ArrowLeftRight,
-    Building2,
-    Check,
-    FileText,
-    Layers3,
-    Loader2,
-    Paperclip,
-    Search,
-    Trash2,
-    UserRound,
-    X,
-    type LucideIcon,
-} from "lucide-react";
+import { AlertTriangle, ArrowLeft, ArrowLeftRight, Building2, Check, FileText, Layers3, Loader2, Paperclip, Search, Trash2, UserRound, X, type LucideIcon } from "lucide-react";
 import { departmentsApi, tasksApi, parseTransferError } from "@/lib/api";
 import { toast } from "@/components/notifications/toast";
 import { toPersianDigits } from "@/lib/jalali";
-import type {
-    Department,
-    DepartmentEmployee,
-    DepartmentStep,
-} from "@/types/department";
+import type { Department, DepartmentEmployee, DepartmentStep } from "@/types/department";
 import type { TransferTaskResponse } from "@/types/task";
 
 interface Props {
@@ -246,7 +227,7 @@ export default function TaskTransferModal({
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className="fixed inset-0 z-[99999] flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-md"
+                    className="fixed inset-0 z-[99999] flex items-center justify-center bg-gray-950/60 p-4 backdrop-blur-md"
                     dir="rtl"
                     onMouseDown={(e) => {
                         if (e.target === e.currentTarget) close();
@@ -303,7 +284,7 @@ export default function TaskTransferModal({
                                         className="flex items-center gap-1 rounded-full px-2 py-1"
                                         style={{
                                             background: selected ? `${selected.accent}18` : undefined,
-                                            color: selected ? selected.accent : "#94a3b8",
+                                            color: selected ? selected.accent : "#9ca3af",
                                         }}
                                     >
                                         <Building2 size={10} />

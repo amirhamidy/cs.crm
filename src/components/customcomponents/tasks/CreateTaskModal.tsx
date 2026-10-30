@@ -2,18 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { m, AnimatePresence } from "framer-motion";
-import {
-    X,
-    ChevronDown,
-    Upload,
-    Check,
-    Loader,
-    ClipboardList,
-    Search,
-    Paperclip,
-    AlertCircle,
-    UserPlus,
-} from "lucide-react";
+import { X, ChevronDown, Upload, Check, Loader, ClipboardList, Search, Paperclip, AlertCircle, UserPlus } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
 import { listAll, fetchPage } from "@/lib/api";
 import AsyncSelect, { type AsyncOption } from "@/components/customcomponents/shared/AsyncSelect";
@@ -171,7 +160,7 @@ function NiceSelect({ label, options, value, onChange, placeholder, disabled, em
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: -4, scale: 0.97 }}
                         transition={{ type: "spring", damping: 24, stiffness: 340 }}
-                        className="absolute z-50 mt-2 w-full origin-top overflow-hidden rounded-[1.5rem] border border-gray-100 bg-white shadow-xl shadow-black/5 dark:border-white/[0.08] dark:bg-[#0f172a] dark:shadow-black/40"
+                        className="absolute z-50 mt-2 w-full origin-top overflow-hidden rounded-[1.5rem] border border-gray-100 bg-white shadow-xl shadow-black/5 dark:border-white/[0.08] dark:bg-[#111827] dark:shadow-black/40"
                     >
                         {options.length > 5 && (
                             <div className="border-b border-gray-100 px-3 py-2.5 dark:border-white/[0.06]">
@@ -329,7 +318,7 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess }: Props) {
                     initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 16 }}
                     transition={{ duration: 0.35, ease: "easeOut" }}
                     onClick={(e) => e.stopPropagation()} dir="rtl"
-                    className="flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-sm dark:border-white/[0.06] dark:bg-[#0f172a]"
+                    className="flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-sm dark:border-white/[0.06] dark:bg-[#111827]"
                 >
                     <div className="flex shrink-0 items-center justify-between px-8 pb-6 pt-8">
                         <div className="flex items-center gap-2.5">

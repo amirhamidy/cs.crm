@@ -1,17 +1,7 @@
 import axios from "axios";
 import axiosInstance from "@/lib/axiosInstance";
 import { listAll } from "@/lib/api";
-import type {
-  MeetingCreatePayload,
-  MeetingDetail,
-  MeetingListItem,
-  MeetingStatus,
-  MeetingUpdatePayload,
-  PublicSigner,
-  SignerCreatePayload,
-  SignerItem,
-  SignerUpdatePayload,
-} from "@/types/minutes";
+import type { MeetingCreatePayload, MeetingDetail, MeetingListItem, MeetingStatus, MeetingUpdatePayload, PublicSigner, SignerCreatePayload, SignerItem, SignerUpdatePayload } from "@/types/minutes";
 
 const BASE = "/minutes/api/v1";
 

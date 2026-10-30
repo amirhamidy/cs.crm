@@ -241,7 +241,7 @@ export default function UserCasesPage() {
                         className="flex h-10 w-10 items-center justify-center rounded-2xl transition-colors disabled:opacity-50"
                         style={{
                             background: isDark ? "rgba(255,255,255,0.05)" : "rgba(15,23,42,0.05)",
-                            color: isDark ? "#cbd5e1" : "#475569",
+                            color: isDark ? "#d1d5db" : "#4b5563",
                         }}
                     >
                         <RefreshCw size={15} className={loading || isFetching ? "animate-spin" : ""} />

@@ -2,39 +2,13 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence, m } from "framer-motion";
-import {
-    AlertTriangle,
-    Ban,
-    CalendarClock,
-    CheckCircle2,
-    History,
-    Inbox,
-    Loader,
-    Loader2,
-    Plus,
-    RefreshCw,
-    Repeat,
-    RotateCcw,
-    Timer,
-    Trash2,
-    Users,
-} from "lucide-react";
+import { AlertTriangle, Ban, CalendarClock, CheckCircle2, History, Inbox, Loader, Loader2, Plus, RefreshCw, Repeat, RotateCcw, Timer, Trash2, Users } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
 import { useIsVisible, useVisibleInterval } from "@/hooks/useVisibility";
-import {
-    deleteInternalTaskRoutine,
-    fetchEmployeeList,
-    fetchInternalTaskRoutines,
-    fetchInternalTasks,
-} from "./Api";
+import { deleteInternalTaskRoutine, fetchEmployeeList, fetchInternalTaskRoutines, fetchInternalTasks } from "./Api";
 import InternalTaskActionModal from "@/components/user/Internaltasks/InternalTaskActionModal";
 import EmployeeCreateTaskRoutineModal from "./EmployeeCreateTaskRoutineModal";
-import type {
-    EmployeeListItem,
-    EmployeeRef,
-    InternalTask,
-    InternalTaskRoutine,
-} from "./Types";
+import type { EmployeeListItem, EmployeeRef, InternalTask, InternalTaskRoutine } from "./Types";
 
 const NEVER_REPEAT_VALUE = 2147483647;
 
@@ -477,7 +451,7 @@ function RoutineCard({
                             }}
                         >
                             <AlertTriangle size={22} className="text-red-500" />
-                            <p className="text-[12px] font-bold text-slate-200">
+                            <p className="text-[12px] font-bold text-gray-200">
                                 این تسک روتین حذف شود؟
                             </p>
                             <div className="flex w-full items-center gap-2">

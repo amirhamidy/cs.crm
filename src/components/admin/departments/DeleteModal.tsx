@@ -1,7 +1,7 @@
 "use client";
 
 import { m, AnimatePresence } from "framer-motion";
-import { X, AlertTriangle, Loader, Trash2 } from "lucide-react";
+import { X, Loader, Trash2 } from "lucide-react";
 import { useTheme } from "next-themes";
 
 interface Props {
@@ -35,7 +35,7 @@ export default function DeleteModal({ open, title, description, loading = false,
                         transition={{ duration: 0.2, ease: "easeOut" }}
                         className="w-full max-w-[360px] rounded-[2rem] overflow-hidden border p-5"
                         style={{
-                            background: isDark ? "#0f172a" : "#ffffff",
+                            background: isDark ? "#111827" : "#ffffff",
                             borderColor: isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.07)",
                             boxShadow: "0 24px 64px rgba(0,0,0,0.35)",
                         }}
@@ -78,7 +78,7 @@ export default function DeleteModal({ open, title, description, loading = false,
                                     className="flex-1 py-2.5 rounded-2xl text-[12.5px] font-bold transition-colors disabled:opacity-40"
                                     style={{
                                         background: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.04)",
-                                        color: isDark ? "#94a3b8" : "#64748b",
+                                        color: isDark ? "#9ca3af" : "#6b7280",
                                     }}
                                     type="button"
                                 >

@@ -9,12 +9,7 @@ import { useTheme } from "next-themes";
 import useWarehouses from "@/hooks/useWarehouses";
 import useWarehouseAccess from "@/hooks/useWarehouseAccess";
 import { useCurrentEmployee } from "@/hooks/usecurrentemployee";
-import {
-    WAREHOUSE_ENDPOINTS,
-    apiErrorMessage,
-    createWarehouse,
-    fetchAll,
-} from "@/lib/warehouseApi";
+import { WAREHOUSE_ENDPOINTS, apiErrorMessage, createWarehouse, fetchAll } from "@/lib/warehouseApi";
 import { cardBg, cardBorder, cardShadow, muted } from "@/components/admin/warehouse/WarehouseCards";
 import { EditWarehouseModal, WarehouseStatusModal } from "@/components/admin/warehouse/WarehouseFormModals";
 import type { ApiWarehouse } from "@/types/warehouse";
@@ -90,7 +85,7 @@ function CreateWarehouseModal({
                         exit={{ opacity: 0, scale: 0.95, y: 10 }}
                         onClick={(e) => e.stopPropagation()}
                         onSubmit={handleSubmit}
-                        className="w-full max-w-sm rounded-3xl bg-white p-5 shadow-2xl dark:bg-slate-900"
+                        className="w-full max-w-sm rounded-3xl bg-white p-5 shadow-2xl dark:bg-gray-900"
                     >
                         <div className="flex items-center justify-between">
                             <h3 className="text-[14px] font-extrabold text-gray-900 dark:text-white">

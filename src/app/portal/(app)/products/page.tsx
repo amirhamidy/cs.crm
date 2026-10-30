@@ -6,6 +6,7 @@ import { portalApi } from "@/lib/portal/portalApi";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import Pagination from "@/components/ui/Pagination";
 import CardSkeletonGrid from "@/components/ui/CardSkeletonGrid";
+import QuantityModal from "@/components/portal/QuantityModal";
 import { FloatingInput } from "@/components/ui/FloatingField";
 import { toast } from "@/components/notifications/toast";
 import { usePortalCartStore } from "@/store/portalCartStore";
@@ -62,8 +63,7 @@ export default function PortalProductsPage() {
 
     const [categories, setCategories] = useState<CategoryOption[]>([]);
     const [category, setCategory] = useState("");
-    const [quantities, setQuantities] = useState<Record<number, string>>({});
-    const [errors, setErrors] = useState<Record<number, string>>({});
+    const [selected, setSelected] = useState<PortalProduct | null>(null);
 
     // Build the category chips from the first products page.
     useEffect(() => {
@@ -96,25 +96,15 @@ export default function PortalProductsPage() {
         [cart],
     );
 
-    const setQuantity = (id: number, value: string) => {
-        setQuantities((s) => ({ ...s, [id]: value }));
-        setErrors((s) => {
-            if (!s[id]) return s;
-            const next = { ...s };
-            delete next[id];
-            return next;
-        });
-    };
-
-    const handleAdd = (p: PortalProduct) => {
-        const result = parseQuantity(quantities[p.id] ?? "1", p.available_quantity);
-        if (result.error !== null) {
-            setErrors((s) => ({ ...s, [p.id]: result.error }));
-            toast.error(result.error);
-            return;
-        }
-        add(p, result.value);
+    // Validates the quantity; returns an error message or null on success
+    const confirmAdd = (raw: string): string | null => {
+        if (!selected) return null;
+        const result = parseQuantity(raw, selected.available_quantity);
+        if (result.error !== null) return result.error;
+        add(selected, result.value);
         toast.success("به سبد خرید اضافه شد");
+        setSelected(null);
+        return null;
     };
 
     return (
@@ -209,41 +199,15 @@ export default function PortalProductsPage() {
                                     <span className="text-[11px] font-bold">تومان</span>
                                 </p>
 
-                                <div className="mt-4 flex gap-2">
-                                    <input
-                                        dir="ltr"
-                                        inputMode="decimal"
-                                        aria-label="تعداد"
-                                        aria-invalid={!!errors[p.id]}
-                                        disabled={inCart}
-                                        value={quantities[p.id] ?? "1"}
-                                        onChange={(e) => setQuantity(p.id, e.target.value)}
-                                        onKeyDown={(e) => {
-                                            if (e.key === "Enter") handleAdd(p);
-                                        }}
-                                        autoComplete="off"
-                                        name={`radco-qty-${p.id}`}
-                                        className={`min-w-0 flex-1 rounded-4xl border bg-white px-5 py-2.5 text-sm text-black outline-none transition-colors disabled:opacity-50 dark:bg-white/[0.04] dark:text-white ${
-                                            errors[p.id]
-                                                ? "border-red-400"
-                                                : "border-gray-200 focus:border-gray-400 dark:border-white/[0.08] dark:focus:border-blue-500"
-                                        }`}
-                                    />
-                                    <button
-                                        type="button"
-                                        disabled={inCart}
-                                        onClick={() => handleAdd(p)}
-                                        className="flex h-10 items-center gap-2 rounded-2xl bg-indigo-600 px-4 text-[12.5px] font-bold text-white transition-colors hover:bg-indigo-500 disabled:opacity-50"
-                                    >
-                                        {inCart ? <Check size={15} /> : <ShoppingCart size={15} />}
-                                        {inCart ? "در سبد" : "افزودن"}
-                                    </button>
-                                </div>
-                                {errors[p.id] && (
-                                    <p role="alert" className="mt-2 text-[11px] text-red-500">
-                                        {errors[p.id]}
-                                    </p>
-                                )}
+                                <button
+                                    type="button"
+                                    disabled={inCart}
+                                    onClick={() => setSelected(p)}
+                                    className="mt-4 flex h-10 w-full items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-4 text-[12.5px] font-bold text-white transition-colors hover:bg-indigo-500 disabled:opacity-50"
+                                >
+                                    {inCart ? <Check size={15} /> : <ShoppingCart size={15} />}
+                                    {inCart ? "در سبد" : "خرید"}
+                                </button>
                             </article>
                         );
                     })}
@@ -261,6 +225,15 @@ export default function PortalProductsPage() {
             <p className="text-[11px] text-gray-400">
                 موجودی هنگام ثبت سفارش بررسی می‌شود و تا زمان تأیید کارمند رزرو نخواهد شد.
             </p>
+
+            <QuantityModal
+                open={selected !== null}
+                title={selected?.name ?? ""}
+                unitLabel={selected ? UNIT_TYPE_LABELS[selected.unit_type] : ""}
+                available={selected?.available_quantity ?? 0}
+                onConfirm={confirmAdd}
+                onClose={() => setSelected(null)}
+            />
         </section>
     );
 }

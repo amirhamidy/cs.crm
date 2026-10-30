@@ -1,16 +1,7 @@
 import axiosInstance from "@/lib/axiosInstance";
 import type { ApiEmployee, ApiUser } from "@/types/users";
 import type { Paginated, SearchParams } from "@/types/pagination";
-import {
-  cached,
-  createSearch,
-  dedupe,
-  fetchPage,
-  getOne,
-  invalidate,
-  listAll,
-  uniqueIds,
-} from "./_core";
+import { cached, createSearch, dedupe, fetchPage, getOne, invalidate, listAll, uniqueIds } from "./_core";
 
 const KEY = "accounts:";
 const BASE = "/accounts/api/v1";

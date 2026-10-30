@@ -10,27 +10,8 @@ import { Check, ClipboardList, Eye, Factory, Loader2, Trash2, X } from "lucide-r
 import axiosInstance from "@/lib/axiosInstance";
 import { calcHoursWorked } from "@/lib/productionTime";
 import { toPersianDigits } from "@/lib/jalali";
-import {
-  ErrorBanner,
-  FloatingInput,
-  InfoBanner,
-  JalaliDatePicker,
-  NiceSelect,
-  NumberField,
-  SOFT_BUTTON,
-  StatusSwitch,
-  TimeField,
-  fetchAllEmployeesCached,
-  isoToJalaliString,
-  parseBackendError,
-  todayGregorian,
-} from "./_shared";
-import type {
-  EmployeeItem,
-  Machine,
-  Option,
-  ProductionLog,
-} from "./_shared";
+import { ErrorBanner, FloatingInput, InfoBanner, JalaliDatePicker, NiceSelect, NumberField, SOFT_BUTTON, StatusSwitch, TimeField, fetchAllEmployeesCached, isoToJalaliString, parseBackendError, todayGregorian } from "./_shared";
+import type { EmployeeItem, Machine, Option, ProductionLog } from "./_shared";
 
 export function ModalShell({
     icon,
@@ -107,7 +88,7 @@ export function ModalShell({
                 role="dialog"
                 aria-modal="true"
                 aria-label={title}
-                className={`relative flex max-h-[90vh] w-full ${maxWidth} flex-col overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-[0_24px_70px_rgba(0,0,0,0.22)] dark:border-white/[0.06] dark:bg-[#0f172a]`}
+                className={`relative flex max-h-[90vh] w-full ${maxWidth} flex-col overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-[0_24px_70px_rgba(0,0,0,0.22)] dark:border-white/[0.06] dark:bg-[#111827]`}
             >
                 <div className="flex shrink-0 items-center justify-between px-8 pb-6 pt-8">
                     <div className="flex items-center gap-2.5">

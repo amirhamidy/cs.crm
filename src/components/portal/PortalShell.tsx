@@ -25,7 +25,7 @@ export default function PortalShell({ children }: { children: React.ReactNode })
             dir="rtl"
             className="min-h-screen bg-gray-50 text-gray-800 dark:bg-[#090d18] dark:text-gray-100"
         >
-            <header className="sticky top-0 z-40 border-b border-gray-100 bg-white/85 backdrop-blur-xl dark:border-white/[0.08] dark:bg-[#0f172a]/85">
+            <header className="sticky top-0 z-40 border-b border-gray-100 bg-white/85 backdrop-blur-xl dark:border-white/[0.08] dark:bg-[#111827]/85">
                 <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3">
                     <div className="flex items-center gap-3">
                         {/* eslint-disable-next-line @next/next/no-img-element */}

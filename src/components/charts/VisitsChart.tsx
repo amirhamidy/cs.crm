@@ -2,22 +2,8 @@
 
 import { AnimatePresence, m } from "framer-motion";
 import { useTheme } from "next-themes";
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  Cell,
-  ResponsiveContainer,
-  XAxis,
-  YAxis,
-} from "recharts";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, XAxis, YAxis } from "recharts";
 
 type TimeRange = "weekly" | "monthly" | "yearly";
 
@@ -195,7 +181,7 @@ function CustomXAxisTick({
       textAnchor="middle"
       fontSize={11}
       fontWeight={500}
-      fill="#64748b"
+      fill="#6b7280"
     >
       {payload.value}
     </text>
@@ -646,7 +632,7 @@ export default function SalesIssuesChart({
 
   const gridColor = isDark
     ? "rgba(255,255,255,0.04)"
-    : "#e2e8f0";
+    : "#e5e7eb";
 
   const chartDefs = isDark
     ? STATIC_DEFS_DARK
@@ -679,7 +665,7 @@ export default function SalesIssuesChart({
           0.94,
         ],
       }}
-      className="relative rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-white/8 dark:bg-slate-950"
+      className="relative rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-white/8 dark:bg-gray-950"
     >
       <div
         className="mb-3 flex items-start justify-between gap-3"
@@ -695,7 +681,7 @@ export default function SalesIssuesChart({
           </p>
         </div>
 
-        <div className="flex items-center gap-1 rounded-xl border border-gray-200 bg-gray-50 p-1 dark:border-white/5 dark:bg-slate-900/50">
+        <div className="flex items-center gap-1 rounded-xl border border-gray-200 bg-gray-50 p-1 dark:border-white/5 dark:bg-gray-900/50">
           {ranges.map((range) => (
             <button
               key={range.key}
@@ -711,7 +697,7 @@ export default function SalesIssuesChart({
                 range.key && (
                   <m.span
                     layoutId="salesIssuesRangeIndicator"
-                    className="absolute inset-0 rounded-lg bg-white shadow-sm dark:bg-slate-800"
+                    className="absolute inset-0 rounded-lg bg-white shadow-sm dark:bg-gray-800"
                     transition={{
                       type: "spring",
                       stiffness: 400,
@@ -763,7 +749,7 @@ export default function SalesIssuesChart({
                   0.94,
                 ],
               }}
-              className="pointer-events-none rounded-xl border border-gray-200/60 bg-white/95 px-3 py-2 shadow-lg backdrop-blur-sm dark:border-white/10 dark:bg-slate-900/95"
+              className="pointer-events-none rounded-xl border border-gray-200/60 bg-white/95 px-3 py-2 shadow-lg backdrop-blur-sm dark:border-white/10 dark:bg-gray-900/95"
               style={{
                 boxShadow:
                   activeBar.isEmpty
@@ -777,7 +763,7 @@ export default function SalesIssuesChart({
                   style={{
                     backgroundColor:
                       activeBar.isEmpty
-                        ? "#cbd5e1"
+                        ? "#d1d5db"
                         : activeBar.color,
                     boxShadow:
                       activeBar.isEmpty
@@ -810,7 +796,7 @@ export default function SalesIssuesChart({
                     </span>
                   </p>
 
-                  <div className="mt-1.5 h-1 w-full overflow-hidden rounded-full bg-gray-100 dark:bg-slate-800">
+                  <div className="mt-1.5 h-1 w-full overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800">
                     <div
                       className="h-full rounded-full"
                       style={{

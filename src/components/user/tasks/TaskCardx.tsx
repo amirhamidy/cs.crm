@@ -3,21 +3,7 @@
 import { useState } from "react";
 import { AnimatePresence, m } from "framer-motion";
 import { useVisibleInterval } from "@/hooks/useVisibility";
-import {
-    Building2,
-    CalendarClock,
-    ClipboardX,
-    Clock,
-    FolderKanban,
-    Loader,
-    Loader2,
-    MessageSquareText,
-    Paperclip,
-    Pencil,
-    Trash2,
-    UserRound,
-    X,
-} from "lucide-react";
+import { Building2, CalendarClock, ClipboardX, Clock, FolderKanban, Loader, Loader2, MessageSquareText, Paperclip, Pencil, Trash2, UserRound, X } from "lucide-react";
 import { useTheme } from "next-themes";
 import type { Task, TaskStatus, TaskEmployeeRef } from "@/types/task";
 import type { Employee } from "@/types/employee";
@@ -130,7 +116,7 @@ function Chip({ isDark, children }: { isDark: boolean; children: React.ReactNode
             style={{
                 border: isDark ? "1px solid rgba(255,255,255,0.06)" : "1px solid rgba(0,0,0,0.06)",
                 background: isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)",
-                color: isDark ? "#94a3b8" : "#64748b",
+                color: isDark ? "#9ca3af" : "#6b7280",
             }}
         >
             {children}
@@ -159,7 +145,7 @@ function EmployeeChip({ id, isDark }: { id: number; isDark: boolean }) {
             </span>
             <span
                 className="text-[10.5px] font-bold"
-                style={{ color: isDark ? "#cbd5e1" : "#475569" }}
+                style={{ color: isDark ? "#d1d5db" : "#4b5563" }}
             >
                 {name}
             </span>
@@ -212,7 +198,7 @@ export default function TaskCard({
     const status = (task.status ?? "cancelled") as TaskStatus;
     const statusConfig = STATUS_CONFIG[status] ?? {
         label: "نامشخص",
-        className: "border-slate-500/20 bg-slate-500/10 text-slate-400",
+        className: "border-gray-500/20 bg-gray-500/10 text-gray-400",
     };
 
     const isActiveTask =
@@ -294,7 +280,7 @@ export default function TaskCard({
                             : "1px solid rgba(0,0,0,0.06)",
                     background: accent
                         ? `color-mix(in srgb, ${accent} ${urgency === "overdue" ? 7 : urgency === "critical" ? 5 : 4
-                        }%, ${isDark ? "#0f172a" : "#fafafa"})`
+                        }%, ${isDark ? "#111827" : "#fafafa"})`
                         : isDark
                             ? "rgba(255,255,255,0.02)"
                             : "#fafafa",
@@ -480,14 +466,14 @@ export default function TaskCard({
                 <div className="flex flex-col gap-1">
                     <h3
                         className="text-[13.5px] font-extrabold leading-tight"
-                        style={{ color: isDark ? "#f1f5f9" : "#1e293b" }}
+                        style={{ color: isDark ? "#f3f4f6" : "#1f2937" }}
                     >
                         {task.title}
                     </h3>
                     {task.description ? (
                         <p
                             className="line-clamp-2 text-[12px] leading-6"
-                            style={{ color: isDark ? "#94a3b8" : "#64748b" }}
+                            style={{ color: isDark ? "#9ca3af" : "#6b7280" }}
                         >
                             {task.description}
                         </p>
@@ -528,7 +514,7 @@ export default function TaskCard({
                             </span>
                             <span
                                 className="text-[10.5px] font-bold"
-                                style={{ color: isDark ? "#cbd5e1" : "#475569" }}
+                                style={{ color: isDark ? "#d1d5db" : "#4b5563" }}
                             >
                                 بدون مسئول
                             </span>
@@ -575,7 +561,7 @@ export default function TaskCard({
                             transition={{ duration: 0.35, ease: "easeOut" }}
                             onClick={(e) => e.stopPropagation()}
                             dir="rtl"
-                            className="flex w-full max-w-md flex-col overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-sm dark:border-white/[0.06] dark:bg-[#0f172a]"
+                            className="flex w-full max-w-md flex-col overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-sm dark:border-white/[0.06] dark:bg-[#111827]"
                         >
                             <div className="flex shrink-0 items-center justify-between px-8 pb-6 pt-8">
                                 <div className="flex items-center gap-2.5">

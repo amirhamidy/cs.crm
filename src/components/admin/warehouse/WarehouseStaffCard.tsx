@@ -216,7 +216,7 @@ export default function WarehouseStaffCard({ staff, index, onDelete, onUpdated }
                             transition={{ type: "spring", stiffness: 500, damping: 30 }}
                             className="absolute left-[2px] top-[2px] flex h-[23px] w-[23px] items-center justify-center rounded-full shadow-md"
                             style={{
-                                background: isActive ? "#10b981" : isDark ? "#475569" : "#94a3b8",
+                                background: isActive ? "#10b981" : isDark ? "#4b5563" : "#9ca3af",
                                 color: "#ffffff",
                             }}
                         >
@@ -254,7 +254,7 @@ export default function WarehouseStaffCard({ staff, index, onDelete, onUpdated }
                             onClick={(e) => e.stopPropagation()}
                             className="w-full max-w-[360px] rounded-[2rem] p-5"
                             style={{
-                                background: isDark ? "#0f172a" : "#ffffff",
+                                background: isDark ? "#111827" : "#ffffff",
                                 border: isDark ? "1px solid rgba(255,255,255,0.07)" : "1px solid rgba(15,23,42,0.07)",
                                 boxShadow: "0 24px 64px rgba(0,0,0,0.35)",
                             }}
@@ -295,7 +295,7 @@ export default function WarehouseStaffCard({ staff, index, onDelete, onUpdated }
                                     onClick={handleCloseConfirm}
                                     disabled={deleting}
                                     className="flex-1 rounded-2xl py-2.5 text-[12.5px] font-bold disabled:opacity-50"
-                                    style={{ background: softBg, color: isDark ? "#cbd5e1" : "#475569" }}
+                                    style={{ background: softBg, color: isDark ? "#d1d5db" : "#4b5563" }}
                                 >
                                     انصراف
                                 </button>

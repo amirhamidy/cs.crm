@@ -1,17 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, m } from "framer-motion";
-import {
-    AlertCircle,
-    Check,
-    ChevronDown,
-    Loader,
-    PackagePlus,
-    Search,
-    X,
-} from "lucide-react";
+import { AlertCircle, Check, ChevronDown, Loader, PackagePlus, Search, X } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
 import { listAll } from "@/lib/api";
 import type { ApiPurchasingStep, ApiPurchasingTask } from "@/types/purchasing";
@@ -300,7 +292,7 @@ function NiceSelect({
                             damping: 24,
                             stiffness: 340,
                         }}
-                        className="absolute z-50 mt-2 w-full origin-top overflow-hidden rounded-[1.5rem] border border-gray-100 bg-white shadow-xl shadow-black/5 dark:border-white/[0.08] dark:bg-[#0f172a] dark:shadow-black/40"
+                        className="absolute z-50 mt-2 w-full origin-top overflow-hidden rounded-[1.5rem] border border-gray-100 bg-white shadow-xl shadow-black/5 dark:border-white/[0.08] dark:bg-[#111827] dark:shadow-black/40"
                     >
                         {options.length > 5 && (
                             <div className="border-b border-gray-100 px-3 py-2.5 dark:border-white/[0.06]">
@@ -613,7 +605,7 @@ export default function PurchasingCreateTaskModal({
                             event.stopPropagation()
                         }
                         dir="rtl"
-                        className="flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-sm dark:border-white/[0.06] dark:bg-[#0f172a]"
+                        className="flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-sm dark:border-white/[0.06] dark:bg-[#111827]"
                     >
                         <div className="flex shrink-0 items-center justify-between px-8 pb-6 pt-8">
                             <div className="flex items-center gap-2.5">

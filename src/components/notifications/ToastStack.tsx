@@ -1,18 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import {
-    AnimatePresence,
-    m,
-    useReducedMotion,
-} from "framer-motion";
+import { AnimatePresence, m, useReducedMotion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { X } from "lucide-react";
 import { useNotificationStore } from "@/store/notificationStore";
-import type {
-    Toast,
-    ToastType,
-} from "./types";
+import type { Toast, ToastType } from "./types";
 
 const TONES: Record<
     ToastType,
@@ -144,7 +137,7 @@ function ToastItem({
                     ? "alert"
                     : "status"
             }
-            className={`pointer-events-auto flex w-fit max-w-[min(92vw,26rem)] items-center gap-3 rounded-2xl border bg-white/90 px-4 py-3 shadow-[0_8px_30px_rgb(0,0,0,0.12)] backdrop-blur-xl dark:bg-slate-900/90 dark:shadow-[0_8px_30px_rgb(0,0,0,0.45)] ${tone.box}`}
+            className={`pointer-events-auto flex w-fit max-w-[min(92vw,26rem)] items-center gap-3 rounded-2xl border bg-white/90 px-4 py-3 shadow-[0_8px_30px_rgb(0,0,0,0.12)] backdrop-blur-xl dark:bg-gray-900/90 dark:shadow-[0_8px_30px_rgb(0,0,0,0.45)] ${tone.box}`}
         >
             {toast.href ? (
                 <button

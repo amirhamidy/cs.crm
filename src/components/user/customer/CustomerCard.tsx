@@ -3,20 +3,7 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { m, AnimatePresence, animate } from "framer-motion";
 import { useTheme } from "next-themes";
-import {
-    Phone,
-    Building2,
-    Trash2,
-    SquarePen,
-    User,
-    CalendarDays,
-    Star,
-    MessageCircle,
-    Loader2,
-    MoreVertical,
-    AlertCircle,
-    KeyRound,
-} from "lucide-react";
+import { Phone, Building2, Trash2, SquarePen, User, CalendarDays, Star, MessageCircle, Loader2, MoreVertical, AlertCircle, KeyRound } from "lucide-react";
 import dynamic from "next/dynamic";
 import type { Customer } from "@/types/customer";
 import { useEmployeeDirectory } from "@/hooks/useEmployeeDirectory";
@@ -169,7 +156,7 @@ function SweepButton({
                 {
                     color: disabled
                         ? isDark
-                            ? "#64748b"
+                            ? "#6b7280"
                             : "#9ca3af"
                         : iconColor,
                 },
@@ -204,7 +191,7 @@ function SweepButton({
                 style={{
                     color: disabled
                         ? isDark
-                            ? "#64748b"
+                            ? "#6b7280"
                             : "#9ca3af"
                         : iconColor,
                 }}
@@ -625,8 +612,8 @@ export default function CustomerCard({
                                             background:
                                                 "linear-gradient(135deg, rgba(148,163,184,0.18), rgba(100,116,139,0.18))",
                                             color: isDark
-                                                ? "#cbd5e1"
-                                                : "#475569",
+                                                ? "#d1d5db"
+                                                : "#4b5563",
                                             border: "1px solid rgba(148,163,184,0.25)",
                                         }
                                         : {
@@ -721,12 +708,12 @@ export default function CustomerCard({
                                                             className="pointer-events-none absolute left-1/2 top-0 z-50 flex w-44 -translate-x-1/2 flex-col gap-1.5 rounded-2xl px-3 py-2 shadow-xl"
                                                             style={{
                                                                 marginTop: "-64px",
-                                                                background: isDark ? "#0f172a" : "#1e293b",
+                                                                background: isDark ? "#111827" : "#1f2937",
                                                                 border: "1px solid rgba(255,255,255,0.08)",
                                                             }}
                                                         >
                                                             {previewLoading ? (
-                                                                <span className="flex items-center gap-1.5 text-[11px] text-slate-300">
+                                                                <span className="flex items-center gap-1.5 text-[11px] text-gray-300">
                                                                     <Loader2 size={11} className="animate-spin" />
                                                                     در حال دریافت...
                                                                 </span>
@@ -735,18 +722,18 @@ export default function CustomerCard({
                                                                     <span className="flex items-center gap-1 text-[12px] font-black text-amber-400">
                                                                         <Star size={12} fill="currentColor" />
                                                                         {scoresPreview.average.toFixed(1)}
-                                                                        <span className="text-[10px] font-medium text-slate-400">
+                                                                        <span className="text-[10px] font-medium text-gray-400">
                                                                             از ۵ • {scoresPreview.count} نظر
                                                                         </span>
                                                                     </span>
                                                                     {scoresPreview.reason && (
-                                                                        <span className="line-clamp-2 text-[10.5px] leading-relaxed text-slate-400">
+                                                                        <span className="line-clamp-2 text-[10.5px] leading-relaxed text-gray-400">
                                                                             {scoresPreview.reason}
                                                                         </span>
                                                                     )}
                                                                 </>
                                                             ) : (
-                                                                <span className="text-[11px] text-slate-400">
+                                                                <span className="text-[11px] text-gray-400">
                                                                     هنوز نظری ثبت نشده
                                                                 </span>
                                                             )}
@@ -781,8 +768,8 @@ export default function CustomerCard({
                                                                 className="flex flex-col items-center gap-1 rounded-2xl px-3 py-2 text-center shadow-xl"
                                                                 style={{
                                                                     background: isDark
-                                                                        ? "#0f172a"
-                                                                        : "#1e293b",
+                                                                        ? "#111827"
+                                                                        : "#1f2937",
                                                                     border: "1px solid rgba(255,255,255,0.08)",
                                                                 }}
                                                             >
@@ -791,7 +778,7 @@ export default function CustomerCard({
                                                                     پرونده دارد
                                                                 </span>
 
-                                                                <span className="text-[10px] text-slate-400">
+                                                                <span className="text-[10px] text-gray-400">
                                                                     برای حذف آن
                                                                     باید ابتدا
                                                                     پرونده‌هایش

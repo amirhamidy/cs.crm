@@ -3,27 +3,7 @@
 import { ComponentType, useCallback, useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { AnimatePresence, m } from "framer-motion";
-import {
-    BellRing,
-    Boxes,
-    ClipboardList,
-    Archive,
-    FileText,
-    Loader2,
-    Package,
-    PackagePlus,
-    PackageSearch,
-    Plus,
-    ReceiptText,
-    ShieldCheck,
-    Power,
-    PowerOff,
-    ShieldAlert,
-    ShoppingBag,
-    UploadCloud,
-    UsersRound,
-    UserPlus,
-} from "lucide-react";
+import { BellRing, Boxes, ClipboardList, Archive, FileText, Loader2, Package, PackagePlus, PackageSearch, Plus, ReceiptText, ShieldCheck, Power, PowerOff, ShieldAlert, ShoppingBag, UploadCloud, UsersRound, UserPlus } from "lucide-react";
 import { useTheme } from "next-themes";
 
 import AddCategoryModal from "@/components/admin/warehouse/AddCategoryModal";
@@ -33,14 +13,7 @@ import AddWarehouseStaffModal from "@/components/admin/warehouse/AddWarehouseSta
 import StockLimitsModal from "@/components/admin/warehouse/StockLimitsModal";
 import { WarehouseStatusModal } from "@/components/admin/warehouse/WarehouseFormModals";
 import WarehouseTaskArchiveCard from "@/components/admin/warehouse/WarehouseTaskArchiveCard";
-import {
-    DeadlineCard,
-    Pagination,
-    StockCard,
-    muted,
-    cardBg,
-    cardShadow,
-} from "@/components/admin/warehouse/WarehouseCards";
+import { DeadlineCard, Pagination, StockCard, muted, cardBg, cardShadow } from "@/components/admin/warehouse/WarehouseCards";
 import CreateOrderTaskModal from "@/components/user/warehouse/CreateOrderTaskModal";
 import WarehouseEmployeeTransactionCard from "@/components/user/warehouse/WarehouseEmployeeTransactionCard";
 import dynamic from "next/dynamic";
@@ -338,7 +311,7 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
         [isDark],
     );
 
-    const pageBg = isDark ? "#0f172a" : "#f8fafc";
+    const pageBg = isDark ? "#111827" : "#f9fafb";
     const cardBorder = isDark ? "rgba(255,255,255,0.06)" : "rgba(15,23,42,0.06)";
     const iconBg = isDark ? "rgba(99,102,241,0.14)" : "rgba(99,102,241,0.08)";
 
@@ -509,7 +482,7 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
                             className="relative flex items-center gap-1.5 rounded-xl px-4 py-2 text-[12px] font-extrabold"
                             style={{
                                 background: active ? "linear-gradient(135deg,#6366f1,#8b5cf6)" : "transparent",
-                                color: active ? "#fff" : isDark ? "#94a3b8" : "#475569",
+                                color: active ? "#fff" : isDark ? "#9ca3af" : "#4b5563",
                                 boxShadow: active ? "0 4px 12px rgba(99,102,241,.25)" : "none",
                             }}
                         >

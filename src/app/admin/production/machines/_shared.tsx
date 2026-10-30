@@ -435,7 +435,7 @@ export function JalaliDatePicker({
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: -4, scale: 0.97 }}
                         transition={{ type: "spring", damping: 24, stiffness: 340 }}
-                        className="absolute right-0 top-[calc(100%+8px)] z-[99999] w-[320px] origin-top overflow-hidden rounded-[1.5rem] border border-gray-100 bg-white shadow-[0_20px_60px_rgba(0,0,0,0.18)] dark:border-white/[0.08] dark:bg-[#0f172a]"
+                        className="absolute right-0 top-[calc(100%+8px)] z-[99999] w-[320px] origin-top overflow-hidden rounded-[1.5rem] border border-gray-100 bg-white shadow-[0_20px_60px_rgba(0,0,0,0.18)] dark:border-white/[0.08] dark:bg-[#111827]"
                     >
                         <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3 dark:border-white/[0.06]">
                             <button
@@ -735,7 +735,7 @@ export function NiceSelect({
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: -4, scale: 0.97 }}
                         transition={{ type: "spring", damping: 24, stiffness: 340 }}
-                        className="absolute z-50 mt-2 w-full origin-top overflow-hidden rounded-[1.5rem] border border-gray-100 bg-white shadow-xl shadow-black/5 dark:border-white/[0.08] dark:bg-[#0f172a] dark:shadow-black/40"
+                        className="absolute z-50 mt-2 w-full origin-top overflow-hidden rounded-[1.5rem] border border-gray-100 bg-white shadow-xl shadow-black/5 dark:border-white/[0.08] dark:bg-[#111827] dark:shadow-black/40"
                     >
                         {options.length > 5 && (
                             <div className="border-b border-gray-100 px-3 py-2.5 dark:border-white/[0.06]">
@@ -830,11 +830,11 @@ export function StatusSwitch({
 }) {
     const trackClass = isActive
         ? "border-emerald-500/30 bg-emerald-500/[0.14] dark:border-emerald-500/40 dark:bg-emerald-500/20"
-        : "border-slate-400/35 bg-[#e9ecf1] dark:border-slate-400/30 dark:bg-slate-400/[0.16]";
+        : "border-gray-400/35 bg-[#e9ecf1] dark:border-gray-400/30 dark:bg-gray-400/[0.16]";
 
     const knobClass = isActive
         ? "translate-x-0 bg-emerald-500"
-        : "translate-x-6 bg-slate-400 dark:bg-slate-500";
+        : "translate-x-6 bg-gray-400 dark:bg-gray-500";
 
     return (
         <button

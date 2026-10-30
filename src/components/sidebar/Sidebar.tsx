@@ -5,10 +5,7 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { LogOut, X } from "lucide-react";
 import { cn, normalizePath } from "@/lib/utils";
-import {
-  useSidebarIsOpen,
-  useSidebarActions,
-} from "@/store/mobileSidebarStore";
+import { useSidebarIsOpen, useSidebarActions } from "@/store/mobileSidebarStore";
 import { useMenuItems } from "@/hooks/useMenuItems";
 import { useLogout } from "@/hooks/useLogout";
 
@@ -39,7 +36,7 @@ export default function Sidebar() {
       <aside
         inert={!isOpen}
         className={cn(
-          "fixed right-0 z-50 flex w-[280px] flex-col border-l border-gray-200/60 bg-white dark:border-white/10 dark:bg-slate-950",
+          "fixed right-0 z-50 flex w-[280px] flex-col border-l border-gray-200/60 bg-white dark:border-white/10 dark:bg-gray-950",
           "top-0 h-dvh md:top-16 md:z-40 md:h-[calc(100dvh-4rem)] md:w-64",
           "transition-transform duration-300 ease-out will-change-transform",
           isOpen ? "translate-x-0" : "translate-x-full",

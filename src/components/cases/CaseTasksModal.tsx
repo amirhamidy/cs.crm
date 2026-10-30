@@ -3,16 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, m } from "framer-motion";
 import { useTheme } from "next-themes";
-import {
-    CalendarDays,
-    Layers,
-    Loader2,
-    Pencil,
-    RefreshCw,
-    Trash2,
-    User,
-    X,
-} from "lucide-react";
+import { CalendarDays, Layers, Loader2, Pencil, RefreshCw, Trash2, User, X } from "lucide-react";
 import type { CaseItem } from "@/types/case";
 import type { TaskItem } from "@/types/task";
 import { fetchAllTasks } from "@/lib/fetchAllTasks";
@@ -42,7 +33,7 @@ const STATUS_META: Record<string, { label: string; color: string }> = {
 const getStatusMeta = (status?: string | null) =>
     STATUS_META[status ?? ""] ?? {
         label: status || "نامشخص",
-        color: "#64748b",
+        color: "#6b7280",
     };
 
 const formatNumber = (n: number) => n.toLocaleString("fa-IR");
@@ -187,8 +178,8 @@ export default function CaseTasksModal({
 
     const border = isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.07)";
     const softBg = isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)";
-    const textMain = isDark ? "#f1f5f9" : "#1e293b";
-    const textMuted = isDark ? "#94a3b8" : "#64748b";
+    const textMain = isDark ? "#f3f4f6" : "#1f2937";
+    const textMuted = isDark ? "#9ca3af" : "#6b7280";
 
     return (
         <AnimatePresence>
@@ -211,7 +202,7 @@ export default function CaseTasksModal({
                         transition={{ duration: 0.2, ease: "easeOut" }}
                         className="flex max-h-[85vh] w-full max-w-[560px] flex-col overflow-hidden rounded-[2rem] border"
                         style={{
-                            background: isDark ? "#0f172a" : "#ffffff",
+                            background: isDark ? "#111827" : "#ffffff",
                             borderColor: border,
                             boxShadow: "0 24px 64px rgba(0,0,0,0.35)",
                         }}

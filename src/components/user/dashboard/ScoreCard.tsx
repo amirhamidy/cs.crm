@@ -120,11 +120,6 @@ export default function ScoreCard({ employeeName }: ScoreCardProps) {
         const scorePath = `/score/api/v1/employees/${employeeId}/`;
         const historyPath = `/score/api/v1/employees/${employeeId}/history/`;
 
-        console.log("SCORE REQUEST:", {
-            employeeId,
-            scorePath,
-            historyPath,
-        });
 
         setLoading(true);
         setHistoryLoading(true);
@@ -135,7 +130,6 @@ export default function ScoreCard({ employeeName }: ScoreCardProps) {
             .then((response) => {
                 if (!alive) return;
 
-                console.log("SCORE SUCCESS:", response.data);
 
                 setData(response.data);
                 setError(false);
@@ -167,7 +161,6 @@ export default function ScoreCard({ employeeName }: ScoreCardProps) {
             .then((response) => {
                 if (!alive) return;
 
-                console.log("SCORE HISTORY SUCCESS:", response.data);
 
                 setHistory(
                     Array.isArray(response.data)

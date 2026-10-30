@@ -1,9 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import {
-  getDepartmentSteps,
-  getDepartments,
-  getTasks,
-} from "@/lib/api/analyticsData";
+import { getDepartmentSteps, getDepartments, getTasks } from "@/lib/api/analyticsData";
 
 export type TimeRange = "weekly" | "monthly" | "yearly";
 

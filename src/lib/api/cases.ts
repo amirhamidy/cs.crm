@@ -1,16 +1,8 @@
 import axiosInstance from "@/lib/axiosInstance";
 import type { CaseItem } from "@/types/case";
+import type { CaseReport } from "@/types/caseReport";
 import type { PageParams } from "@/types/pagination";
-import {
-  dedupe,
-  fetchAllPages,
-  fetchPage,
-  getOne,
-  invalidate,
-  toPaginated,
-  type Paginated,
-  type RawList,
-} from "./_core";
+import { dedupe, fetchAllPages, fetchPage, getOne, invalidate, toPaginated, type Paginated, type RawList } from "./_core";
 
 const KEY = "cases:";
 const BASE = "/tasks/api/v1/cases/";
@@ -44,6 +36,11 @@ export const casesApi = {
   listAll: () => fetchAllPages<CaseItem>((p) => list({ ...p, page_size: 100 })),
 
   get: (id: number) => dedupe(`${KEY}get:${id}`, () => getOne<CaseItem>(`${BASE}${id}/`)),
+
+  report: async (id: number, signal?: AbortSignal) => {
+    const { data } = await axiosInstance.get<CaseReport>(`${BASE}${id}/report/`, { signal });
+    return data;
+  },
 
   create: async (payload: CreateCasePayload) => {
     const { data } = await axiosInstance.post<CaseItem>(`${BASE}create/`, payload);

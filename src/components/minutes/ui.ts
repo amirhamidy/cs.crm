@@ -13,10 +13,10 @@ export const BTN_PRIMARY =
   "inline-flex h-10 items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-4 text-[12.5px] font-bold text-white transition-colors hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50";
 
 export const BTN_GHOST =
-  "inline-flex h-10 items-center justify-center gap-2 rounded-2xl bg-black/5 px-4 text-[12.5px] font-bold text-slate-600 transition-colors hover:bg-black/10 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10";
+  "inline-flex h-10 items-center justify-center gap-2 rounded-2xl bg-black/5 px-4 text-[12.5px] font-bold text-gray-600 transition-colors hover:bg-black/10 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white/5 dark:text-gray-300 dark:hover:bg-white/10";
 
 export const BTN_DANGER =
   "inline-flex h-10 items-center justify-center gap-2 rounded-2xl bg-rose-600 px-4 text-[12.5px] font-bold text-white transition-colors hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-50";
 
 export const ICON_BTN =
-  "flex h-8 w-8 items-center justify-center rounded-xl bg-black/5 text-slate-500 transition-colors hover:bg-black/10 disabled:cursor-not-allowed disabled:opacity-40 dark:bg-white/5 dark:text-slate-400 dark:hover:bg-white/10";
+  "flex h-8 w-8 items-center justify-center rounded-xl bg-black/5 text-gray-500 transition-colors hover:bg-black/10 disabled:cursor-not-allowed disabled:opacity-40 dark:bg-white/5 dark:text-gray-400 dark:hover:bg-white/10";

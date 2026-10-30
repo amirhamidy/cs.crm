@@ -142,7 +142,7 @@ export default function DepartmentCard({
                                     <div
                                         className="flex flex-col items-center gap-1 rounded-2xl px-3 py-2 text-center shadow-xl"
                                         style={{
-                                            background: "#1e293b",
+                                            background: "#1f2937",
                                             border: "1px solid rgba(0,0,0,0.12)",
                                         }}
                                     >
@@ -150,7 +150,7 @@ export default function DepartmentCard({
                                             {dependencyMessage}
                                         </span>
 
-                                        <span className="text-[10px] text-slate-400">
+                                        <span className="text-[10px] text-gray-400">
                                             برای حذف آن ابتدا وابستگی‌های این دپارتمان را حذف کنید
                                         </span>
                                     </div>
@@ -168,7 +168,7 @@ export default function DepartmentCard({
                             key={stage.id}
                             className="flex items-center gap-2.5 rounded-xl border border-gray-100 bg-gray-50/60 px-3 py-2.5 dark:border-white/[0.06] dark:bg-white/[0.02]"
                         >
-                            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-gray-300 bg-white text-[10px] font-extrabold text-gray-500 dark:border-white/15 dark:bg-[#0f172a] dark:text-gray-400">
+                            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-gray-300 bg-white text-[10px] font-extrabold text-gray-500 dark:border-white/15 dark:bg-[#111827] dark:text-gray-400">
                                 {i + 1}
                             </span>
 

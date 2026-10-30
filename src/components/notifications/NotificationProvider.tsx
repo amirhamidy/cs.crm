@@ -3,10 +3,7 @@
 import { useEffect, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import { useAuthStore } from "@/store/authStore";
-import {
-    notificationsStorageKey,
-    useNotificationStore,
-} from "@/store/notificationStore";
+import { notificationsStorageKey, useNotificationStore } from "@/store/notificationStore";
 import { ToastStack } from "./ToastStack";
 import axiosInstance from "@/lib/axiosInstance";
 import { installSelfChangeTracker } from "./sync/selfchanges";

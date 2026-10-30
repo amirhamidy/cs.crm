@@ -1,25 +1,8 @@
 "use client";
 
-import {
-    useState,
-    useEffect,
-    useRef,
-    useCallback,
-    forwardRef,
-    InputHTMLAttributes,
-    TextareaHTMLAttributes,
-} from "react";
+import { useState, useEffect, useRef, useCallback, forwardRef, InputHTMLAttributes, TextareaHTMLAttributes } from "react";
 import { m, AnimatePresence } from "framer-motion";
-import {
-    X,
-    UserPlus,
-    CheckCircle2,
-    Loader,
-    ChevronDown,
-    Check,
-    Plus,
-    AlertCircle,
-} from "lucide-react";
+import { X, UserPlus, CheckCircle2, Loader, ChevronDown, Check, Plus, AlertCircle } from "lucide-react";
 import { Customer, CustomerFormData } from "@/types/customer";
 import axiosInstance from "@/lib/axiosInstance";
 
@@ -114,7 +97,7 @@ const FloatingInput = forwardRef<HTMLInputElement, FloatingInputProps>(
                 />
                 <label
                     htmlFor={id}
-                    className={`absolute right-5 pointer-events-none transition-all duration-200 bg-white dark:bg-[#0f172a] px-1.5 rounded text-sm text-gray-400 peer-focus:-top-2.5 peer-focus:translate-y-0 peer-focus:text-xs peer-focus:text-gray-500 ${hasValue
+                    className={`absolute right-5 pointer-events-none transition-all duration-200 bg-white dark:bg-[#111827] px-1.5 rounded text-sm text-gray-400 peer-focus:-top-2.5 peer-focus:translate-y-0 peer-focus:text-xs peer-focus:text-gray-500 ${hasValue
                             ? "-top-2.5 translate-y-0 text-xs text-gray-500"
                             : "top-1/2 -translate-y-1/2"
                         }`}
@@ -146,7 +129,7 @@ const FloatingTextarea = forwardRef<HTMLTextAreaElement, FloatingTextareaProps>(
             />
             <label
                 htmlFor={id}
-                className="absolute right-5 top-4 text-sm text-gray-400 pointer-events-none transition-all duration-200 bg-white dark:bg-[#0f172a] px-1.5 rounded peer-focus:top-0 peer-focus:text-xs peer-focus:text-gray-500 peer-[:not(:placeholder-shown)]:top-0 peer-[:not(:placeholder-shown)]:text-xs peer-[:not(:placeholder-shown)]:text-gray-500"
+                className="absolute right-5 top-4 text-sm text-gray-400 pointer-events-none transition-all duration-200 bg-white dark:bg-[#111827] px-1.5 rounded peer-focus:top-0 peer-focus:text-xs peer-focus:text-gray-500 peer-[:not(:placeholder-shown)]:top-0 peer-[:not(:placeholder-shown)]:text-xs peer-[:not(:placeholder-shown)]:text-gray-500"
             >
                 {label}
             </label>
@@ -832,7 +815,7 @@ export default function AddCustomerModal({
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: 24, scale: 0.98 }}
                         transition={{ duration: 0.3, ease: "easeOut" }}
-                        className="my-8 w-full max-w-lg overflow-visible rounded-[2.5rem] border border-gray-100 bg-white shadow-2xl dark:border-white/[0.08] dark:bg-[#0f172a]"
+                        className="my-8 w-full max-w-lg overflow-visible rounded-[2.5rem] border border-gray-100 bg-white shadow-2xl dark:border-white/[0.08] dark:bg-[#111827]"
                         onClick={(e) => e.stopPropagation()}
                         dir="rtl"
                     >

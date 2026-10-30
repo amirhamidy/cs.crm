@@ -64,7 +64,7 @@ export default function HumanResourceFileModal({ open, document, onClose, onSave
                     exit={{ opacity: 0, y: 16, scale: 0.98 }}
                     transition={{ duration: 0.28, ease: "easeOut" }}
                     onMouseDown={(e) => e.stopPropagation()}
-                    className="flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-2xl shadow-black/10 dark:border-white/[0.06] dark:bg-[#0f172a]"
+                    className="flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-2xl shadow-black/10 dark:border-white/[0.06] dark:bg-[#111827]"
                     dir="rtl"
                 >
                     <div className="flex shrink-0 items-center justify-between px-8 pb-6 pt-8">

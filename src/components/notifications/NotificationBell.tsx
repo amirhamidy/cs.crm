@@ -2,19 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, m } from "framer-motion";
-import {
-    Bell,
-    BellOff,
-    CheckCheck,
-    ClipboardList,
-    Clock,
-    Inbox,
-    Info,
-    MessageSquare,
-    Repeat,
-    Trash2,
-    type LucideIcon,
-} from "lucide-react";
+import { Bell, BellOff, CheckCheck, ClipboardList, Clock, Inbox, Info, MessageSquare, Repeat, Trash2, type LucideIcon } from "lucide-react";
 import { useNotificationStore } from "@/store/notificationStore";
 import type { AppNotification, NotificationKind } from "./types";
 
@@ -165,7 +153,7 @@ export function NotificationBell() {
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: -6, scale: 0.98 }}
                         transition={{ duration: 0.15 }}
-                        className="fixed inset-x-3 top-[72px] z-50 overflow-hidden rounded-2xl border border-gray-200/60 bg-white shadow-[0_12px_40px_rgb(0,0,0,0.14)] sm:absolute sm:inset-x-auto sm:left-[100%] sm:top-full sm:mt-2 sm:w-[360px] dark:border-white/10 dark:bg-slate-900 dark:shadow-[0_12px_40px_rgb(0,0,0,0.5)]"
+                        className="fixed inset-x-3 top-[72px] z-50 overflow-hidden rounded-2xl border border-gray-200/60 bg-white shadow-[0_12px_40px_rgb(0,0,0,0.14)] sm:absolute sm:inset-x-auto sm:left-[100%] sm:top-full sm:mt-2 sm:w-[360px] dark:border-white/10 dark:bg-gray-900 dark:shadow-[0_12px_40px_rgb(0,0,0,0.5)]"
                     >
                         <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3 dark:border-white/5">
                             <div>

@@ -23,7 +23,7 @@ type UsersRangeData = Record<TimeRange, User[]>;
 
 const RANK_META = [
   { bg: "rgba(250,204,21,0.15)", border: "rgba(250,204,21,0.4)", text: "#facc15", glow: "rgba(250,204,21,0.55)" },
-  { bg: "rgba(148,163,184,0.12)", border: "rgba(148,163,184,0.35)", text: "#94a3b8", glow: "rgba(148,163,184,0.45)" },
+  { bg: "rgba(148,163,184,0.12)", border: "rgba(148,163,184,0.35)", text: "#9ca3af", glow: "rgba(148,163,184,0.45)" },
   { bg: "rgba(251,146,60,0.12)", border: "rgba(251,146,60,0.35)", text: "#fb923c", glow: "rgba(251,146,60,0.45)" },
 ];
 
@@ -50,14 +50,14 @@ export default function TopUsersCard({
   const users = rangeData[range] ?? [];
 
   return (
-    <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm dark:border-white/5 dark:bg-slate-950">
+    <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm dark:border-white/5 dark:bg-gray-950">
       <div className="mb-4 flex items-start justify-between gap-3" dir="rtl">
         <div>
           <h3 className="text-[14px] font-semibold text-gray-900 dark:text-white">برترین کارشناسان</h3>
           <p className="mt-0.5 text-[12px] text-gray-500 dark:text-gray-400">بر اساس جذب مشتری بالفعل</p>
         </div>
 
-        <div className="flex items-center gap-1 rounded-xl border border-gray-100 bg-gray-50/80 p-1 dark:border-white/5 dark:bg-slate-900/50">
+        <div className="flex items-center gap-1 rounded-xl border border-gray-100 bg-gray-50/80 p-1 dark:border-white/5 dark:bg-gray-900/50">
           {(["weekly", "monthly", "yearly"] as TimeRange[]).map((r) => (
             <button
               key={r}
@@ -66,7 +66,7 @@ export default function TopUsersCard({
                 }`}
             >
               {range === r && (
-                <m.span layoutId="activeTab" className="absolute inset-0 rounded-lg bg-white shadow-sm dark:bg-slate-800" />
+                <m.span layoutId="activeTab" className="absolute inset-0 rounded-lg bg-white shadow-sm dark:bg-gray-800" />
               )}
 
               <span className="relative z-10">{RANGE_LABELS[r]}</span>

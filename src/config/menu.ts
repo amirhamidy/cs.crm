@@ -1,25 +1,5 @@
-import {
-  Home,
-  Users,
-  ClipboardList,
-  Building2,
-  FolderKanban,
-  CalendarCheck2,
-  Ticket,
-  Archive,
-  MessageSquareText,
-  UserRound,
-  ListTodo,
-  BarChart3,
-  Boxes,
-  ShoppingCart,
-  ShieldCheck,
-  CreativeCommonsIcon,
-  Factory,
-  ClipboardCheck,
-  KeyRound,
-} from "lucide-react";
-import { FileSignature } from "lucide-react";
+import { Home, Users, ClipboardList, Building2, FolderKanban, CalendarCheck2, Ticket, Archive, MessageSquareText, UserRound, ListTodo, BarChart3, Boxes, ShoppingCart, ShieldCheck, Factory, ClipboardCheck, KeyRound } from "lucide-react";
+
 import { LucideIcon } from "lucide-react";
 
 export interface MenuItem {

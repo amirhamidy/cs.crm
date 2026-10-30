@@ -42,7 +42,7 @@ export default function ProfileMenu({ name }: { name: string }) {
       <UserAvatar key={version} src={myAvatar} name={name} id={userId || 1} size="h-8 w-8" rounded="rounded-full" />
       <span className="hidden text-[11.5px] font-bold md:block">{name}</span><ChevronDown size={14}/>
     </button>
-    {open && <><button aria-label="بستن منو" className="fixed inset-0 z-40 cursor-default" onClick={() => setOpen(false)} /><div className="absolute left-0 top-full z-50 mt-2 w-72 rounded-[1.5rem] border border-gray-100 bg-white p-4 shadow-2xl dark:border-white/[0.08] dark:bg-[#0f172a]">
+    {open && <><button aria-label="بستن منو" className="fixed inset-0 z-40 cursor-default" onClick={() => setOpen(false)} /><div className="absolute left-0 top-full z-50 mt-2 w-72 rounded-[1.5rem] border border-gray-100 bg-white p-4 shadow-2xl dark:border-white/[0.08] dark:bg-[#111827]">
       <div className="mb-4 flex items-center gap-2 text-[11.5px] text-gray-500"><UserRound size={15}/>{username}</div>
       {userId > 0 && <AvatarUploader key={version} current={myAvatar} name={name} id={userId} onUpload={upload} onRemove={remove}/>}
     </div></>}

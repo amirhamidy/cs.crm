@@ -15,7 +15,7 @@ export default function Topbar() {
   const displayName = employee?.full_name || "ادمین";
 
   return (
-    <header className="fixed top-0 right-0 left-0 z-50 h-16 border-b border-gray-200/60 bg-white/80 backdrop-blur-xl dark:border-white/10 dark:bg-slate-950/80">
+    <header className="fixed top-0 right-0 left-0 z-50 h-16 border-b border-gray-200/60 bg-white/80 backdrop-blur-xl dark:border-white/10 dark:bg-gray-950/80">
       <div className="flex h-full items-center justify-between px-4 md:px-6">
         <div className="flex items-center gap-3">
           <m.button

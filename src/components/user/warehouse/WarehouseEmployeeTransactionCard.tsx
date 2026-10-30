@@ -3,14 +3,7 @@
 import { useState } from "react";
 import { m } from "framer-motion";
 import { useTheme } from "next-themes";
-import {
-    ArrowDownLeft,
-    ArrowLeft,
-    ArrowUpRight,
-    CalendarDays,
-    FileText,
-    User,
-} from "lucide-react";
+import { ArrowDownLeft, ArrowLeft, ArrowUpRight, CalendarDays, FileText, User } from "lucide-react";
 import type { ApiStockTransaction } from "@/types/warehouse";
 
 interface Props {
@@ -47,7 +40,7 @@ export default function WarehouseEmployeeTransactionCard({
     const quantityBefore = Number(transaction.quantity_before ?? 0);
     const quantityAfter = Number(transaction.quantity_after ?? 0);
 
-    const accentColor = isInitial ? "#64748b" : isIn ? "#10b981" : "#f43f5e";
+    const accentColor = isInitial ? "#6b7280" : isIn ? "#10b981" : "#f43f5e";
     const accentBg = isInitial
         ? isDark ? "rgba(100,116,139,0.14)" : "rgba(100,116,139,0.1)"
         : isIn
@@ -73,7 +66,7 @@ export default function WarehouseEmployeeTransactionCard({
                 <defs>
                     <linearGradient id={`tx-border-${transaction.id}`} x1="100%" y1="100%" x2="0%" y2="0%">
                         <stop offset="0%" stopColor={accentColor} />
-                        <stop offset="100%" stopColor={isInitial ? "#475569" : isIn ? "#059669" : "#e11d48"} />
+                        <stop offset="100%" stopColor={isInitial ? "#4b5563" : isIn ? "#059669" : "#e11d48"} />
                     </linearGradient>
                 </defs>
                 <m.rect
@@ -144,7 +137,7 @@ export default function WarehouseEmployeeTransactionCard({
                     <span className="text-[9px] font-bold text-gray-400 dark:text-white/40">موجودی قبل</span>
                     <span className="mt-0.5 text-[13px] font-black text-gray-700 dark:text-gray-200">{formatNumber(quantityBefore)}</span>
                 </div>
-                <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white shadow-sm dark:bg-[#0f172a]">
+                <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white shadow-sm dark:bg-[#111827]">
                     <ArrowLeft size={11} className="text-gray-400" />
                 </div>
                 <div className="flex flex-col items-center">
@@ -185,5 +178,5 @@ export default function WarehouseEmployeeTransactionCard({
 }
 
 function ReceiptIcon() {
-    return <span className="text-[17px] font-black text-slate-500">#</span>;
+    return <span className="text-[17px] font-black text-gray-500">#</span>;
 }

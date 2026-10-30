@@ -1,63 +1,19 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, } from "react";
-import type {
-    ReactNode,
-} from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import type { ReactNode } from "react";
 import dynamic from "next/dynamic";
 
 import LazyLoading from "@/components/ui/LazyLoading";
-import { m, AnimatePresence, } from "framer-motion";
-import {
-    Factory,
-    Plus,
-    SquarePen,
-    X,
-    Loader2,
-    TrendingUp,
-    BarChart3,
-    AlertTriangle,
-    ClipboardList,
-    Trash2,
-    CalendarDays,
-    Gauge,
-    Filter,
-    LineChart,
-    Users,
-    Eye,
-    CalendarCogIcon,
-} from "lucide-react";
+import { m, AnimatePresence } from "framer-motion";
+import { Factory, Plus, SquarePen, X, Loader2, TrendingUp, BarChart3, AlertTriangle, ClipboardList, Trash2, CalendarDays, Gauge, Filter, LineChart, Users, Eye, CalendarCogIcon } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
 
-import { listAll, } from "@/lib/api";
+import { listAll } from "@/lib/api";
 import Pagination from "@/components/ui/Pagination";
-import { toHHMM, } from "@/lib/productionTime";
-import { toPersianDigits, JALALI_MONTHS, pad2, } from "@/lib/jalali";
-import {
-    EfficiencyBadge,
-    EmployeeItem,
-    ErrorBanner,
-    Field,
-    GroupBy,
-    INPUT_CLS,
-    JalaliDatePicker,
-    Machine,
-    MachineMonthlyReport,
-    MachineSummaryReport,
-    MonthlyReport,
-    NiceSelect,
-    Option,
-    ProductionLog,
-    StatCard,
-    StatusSwitch,
-    currentJalaliYearMonth,
-    fetchAllEmployeesCached,
-    gradientOf,
-    initialOf,
-    isoToJalaliString,
-    parseBackendError,
-    todayGregorian,
-} from "./_shared";
+import { toHHMM } from "@/lib/productionTime";
+import { toPersianDigits, JALALI_MONTHS, pad2 } from "@/lib/jalali";
+import { EfficiencyBadge, EmployeeItem, ErrorBanner, Field, GroupBy, INPUT_CLS, JalaliDatePicker, Machine, MachineMonthlyReport, MachineSummaryReport, MonthlyReport, NiceSelect, Option, ProductionLog, StatCard, StatusSwitch, currentJalaliYearMonth, fetchAllEmployeesCached, gradientOf, initialOf, isoToJalaliString, parseBackendError, todayGregorian } from "./_shared";
 
 
 const ProductionBarChart = dynamic(() => import("@/components/charts/ProductionBarChart"), {
@@ -520,7 +476,7 @@ export default function AdminProductionManagementPage() {
                                             <span
                                                 className={`rounded-lg border px-2 py-0.5 text-[10.5px] font-bold ${machine.is_active
                                                     ? "border-emerald-500/25 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
-                                                    : "border-slate-400/30 bg-slate-400/10 text-slate-500 dark:text-slate-400"
+                                                    : "border-gray-400/30 bg-gray-400/10 text-gray-500 dark:text-gray-400"
                                                     }`}
                                             >
                                                 {machine.is_active ? "فعال" : "غیرفعال"}
@@ -578,7 +534,7 @@ export default function AdminProductionManagementPage() {
                                     transition={{ delay: Math.min(index, 8) * 0.03 }}
                                     className={`flex flex-col gap-3 rounded-2xl border p-4 transition-shadow duration-200 ${machine.is_active
                                         ? "border-black/[0.06] bg-[#fafafa] hover:shadow-[0_0_0_1px_rgba(99,102,241,0.35),0_14px_40px_rgba(99,102,241,0.25)] dark:border-white/[0.06] dark:bg-white/[0.02] dark:hover:shadow-[0_0_0_1px_rgba(129,140,248,0.45),0_14px_44px_rgba(99,102,241,0.35)]"
-                                        : "border-slate-300/40 bg-slate-50 opacity-75 dark:border-white/[0.08] dark:bg-white/[0.015]"
+                                        : "border-gray-300/40 bg-gray-50 opacity-75 dark:border-white/[0.08] dark:bg-white/[0.015]"
                                         }`}
                                 >
                                     <div className="flex items-center justify-between gap-3">
@@ -655,7 +611,7 @@ export default function AdminProductionManagementPage() {
                                         <span
                                             className={`rounded-lg border px-2 py-0.5 text-[10.5px] font-bold ${machine.is_active
                                                 ? "border-emerald-500/25 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
-                                                : "border-slate-400/30 bg-slate-400/10 text-slate-500 dark:text-slate-400"
+                                                : "border-gray-400/30 bg-gray-400/10 text-gray-500 dark:text-gray-400"
                                                 }`}
                                         >
                                             {machine.is_active ? "فعال" : "غیرفعال"}
@@ -1433,7 +1389,7 @@ export default function AdminProductionManagementPage() {
                                         key={mch.machine_id}
                                         className={`overflow-hidden rounded-2xl border bg-white dark:bg-white/[0.02] ${mch.is_active
                                             ? "border-black/[0.06] dark:border-white/[0.06]"
-                                            : "border-slate-300/40 opacity-75 dark:border-white/[0.08]"
+                                            : "border-gray-300/40 opacity-75 dark:border-white/[0.08]"
                                             }`}
                                     >
                                         <div className="flex flex-col gap-2 border-b border-black/5 bg-gray-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between dark:border-white/5 dark:bg-white/[0.03]">
@@ -1453,7 +1409,7 @@ export default function AdminProductionManagementPage() {
                                                         <span
                                                             className={`rounded-md border px-1.5 py-0.5 text-[9.5px] font-bold ${mch.is_active
                                                                 ? "border-emerald-500/25 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
-                                                                : "border-slate-400/30 bg-slate-400/10 text-slate-500 dark:text-slate-400"
+                                                                : "border-gray-400/30 bg-gray-400/10 text-gray-500 dark:text-gray-400"
                                                                 }`}
                                                         >
                                                             {mch.is_active ? "فعال" : "غیرفعال"}

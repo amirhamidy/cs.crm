@@ -3,11 +3,7 @@
 import { useRef, useState } from "react";
 import { AnimatePresence, m } from "framer-motion";
 import { ExternalLink, Loader2, Paperclip, Trash2, Upload, X } from "lucide-react";
-import {
-    apiErrorMessage,
-    createOrderTaskAttachment,
-    deleteOrderTaskAttachment,
-} from "@/lib/warehouseApi";
+import { apiErrorMessage, createOrderTaskAttachment, deleteOrderTaskAttachment } from "@/lib/warehouseApi";
 import { resolveMediaUrl } from "@/lib/media";
 import { formatDate } from "@/utils/warehouseEmployee";
 import type { ApiOrderTask } from "@/types/warehouse";
@@ -93,7 +89,7 @@ export default function OrderTaskAttachmentsModal({
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.95, y: 10 }}
                         onClick={(e) => e.stopPropagation()}
-                        className="flex max-h-[85vh] w-full max-w-md flex-col rounded-3xl bg-white p-5 shadow-2xl dark:bg-slate-900"
+                        className="flex max-h-[85vh] w-full max-w-md flex-col rounded-3xl bg-white p-5 shadow-2xl dark:bg-gray-900"
                     >
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">

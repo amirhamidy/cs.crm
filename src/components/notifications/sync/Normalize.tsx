@@ -1,10 +1,4 @@
-import type {
-    Names,
-    ProjectTask,
-    Routine,
-    Ticket,
-    TicketAttachment,
-} from "./types";
+import type { Names, ProjectTask, Routine, Ticket, TicketAttachment } from "./types";
 
 type Rec = Record<string, unknown>;
 

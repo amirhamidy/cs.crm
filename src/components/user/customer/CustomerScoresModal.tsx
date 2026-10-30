@@ -2,15 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, m } from "framer-motion";
-import {
-    CalendarDays,
-    Loader2,
-    MessageCircle,
-    Sparkles,
-    Star,
-    UserRound,
-    X,
-} from "lucide-react";
+import { CalendarDays, Loader2, MessageCircle, Sparkles, Star, UserRound, X } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
 
 interface ScoreItem {
@@ -49,7 +41,7 @@ const Stars = ({ score }: { score: number }) => (
                 className={
                     star <= score
                         ? "fill-amber-400 text-amber-400"
-                        : "text-slate-300 dark:text-slate-600"
+                        : "text-gray-300 dark:text-gray-600"
                 }
             />
         ))}
@@ -154,21 +146,21 @@ export default function CustomerScoresModal({
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: 25, scale: 0.97 }}
                         transition={{ duration: 0.2 }}
-                        className="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-[30px] border border-slate-200 bg-white shadow-2xl dark:border-white/10 dark:bg-[#17191f]"
+                        className="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-[30px] border border-gray-200 bg-white shadow-2xl dark:border-white/10 dark:bg-[#17191f]"
                         dir="rtl"
                     >
-                        <div className="flex items-center justify-between border-b border-slate-200 px-5 py-5 dark:border-white/10">
+                        <div className="flex items-center justify-between border-b border-gray-200 px-5 py-5 dark:border-white/10">
                             <div className="flex items-center gap-3">
                                 <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 text-white shadow-lg shadow-indigo-500/20">
                                     <MessageCircle size={23} />
                                 </div>
 
                                 <div>
-                                    <h2 className="text-lg font-black text-slate-900 dark:text-white">
+                                    <h2 className="text-lg font-black text-gray-900 dark:text-white">
                                         نظرات و امتیازها
                                     </h2>
 
-                                    <p className="mt-1 max-w-[230px] truncate text-xs text-slate-500 dark:text-slate-400">
+                                    <p className="mt-1 max-w-[230px] truncate text-xs text-gray-500 dark:text-gray-400">
                                         {customerName || "مشتری"}
                                     </p>
                                 </div>
@@ -177,7 +169,7 @@ export default function CustomerScoresModal({
                             <button
                                 type="button"
                                 onClick={onClose}
-                                className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-500 transition hover:bg-rose-100 hover:text-rose-500 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-rose-500/15"
+                                className="flex h-10 w-10 items-center justify-center rounded-xl bg-gray-100 text-gray-500 transition hover:bg-rose-100 hover:text-rose-500 dark:bg-white/5 dark:text-gray-300 dark:hover:bg-rose-500/15"
                             >
                                 <X size={20} />
                             </button>
@@ -216,7 +208,7 @@ export default function CustomerScoresModal({
                             </div>
 
                             {loading && (
-                                <div className="flex min-h-52 flex-col items-center justify-center gap-3 text-slate-500 dark:text-slate-400">
+                                <div className="flex min-h-52 flex-col items-center justify-center gap-3 text-gray-500 dark:text-gray-400">
                                     <Loader2
                                         size={30}
                                         className="animate-spin text-indigo-500"
@@ -235,13 +227,13 @@ export default function CustomerScoresModal({
                             )}
 
                             {!loading && !error && !scores.length && (
-                                <div className="flex min-h-52 flex-col items-center justify-center rounded-3xl border border-dashed border-slate-300 text-center dark:border-white/10">
+                                <div className="flex min-h-52 flex-col items-center justify-center rounded-3xl border border-dashed border-gray-300 text-center dark:border-white/10">
                                     <MessageCircle
                                         size={35}
-                                        className="mb-3 text-slate-300 dark:text-slate-600"
+                                        className="mb-3 text-gray-300 dark:text-gray-600"
                                     />
 
-                                    <p className="text-sm font-bold text-slate-500 dark:text-slate-400">
+                                    <p className="text-sm font-bold text-gray-500 dark:text-gray-400">
                                         هنوز امتیازی برای این مشتری ثبت نشده است.
                                     </p>
                                 </div>
@@ -254,7 +246,7 @@ export default function CustomerScoresModal({
                                             key={item.id}
                                             initial={{ opacity: 0, y: 10 }}
                                             animate={{ opacity: 1, y: 0 }}
-                                            className="rounded-3xl border border-slate-200 bg-slate-50 p-4 dark:border-white/10 dark:bg-white/[0.035]"
+                                            className="rounded-3xl border border-gray-200 bg-gray-50 p-4 dark:border-white/10 dark:bg-white/[0.035]"
                                         >
                                             <div className="flex items-start justify-between gap-3">
                                                 <div className="flex min-w-0 items-center gap-3">
@@ -265,7 +257,7 @@ export default function CustomerScoresModal({
                                                     </div>
 
                                                     <div className="min-w-0">
-                                                        <p className="truncate text-sm font-black text-slate-900 dark:text-white">
+                                                        <p className="truncate text-sm font-black text-gray-900 dark:text-white">
                                                             {employeeMap.get(
                                                                 Number(
                                                                     item.created_by
@@ -274,7 +266,7 @@ export default function CustomerScoresModal({
                                                                 "کارمند ناشناس"}
                                                         </p>
 
-                                                        <div className="mt-1 flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400">
+                                                        <div className="mt-1 flex items-center gap-1.5 text-[11px] text-gray-500 dark:text-gray-400">
                                                             <CalendarDays
                                                                 size={13}
                                                             />
@@ -298,7 +290,7 @@ export default function CustomerScoresModal({
                                             </div>
 
                                             {item.reason && (
-                                                <div className="mt-4 rounded-2xl bg-white px-4 py-3 text-sm leading-7 text-slate-600 dark:bg-white/[0.04] dark:text-slate-300">
+                                                <div className="mt-4 rounded-2xl bg-white px-4 py-3 text-sm leading-7 text-gray-600 dark:bg-white/[0.04] dark:text-gray-300">
                                                     {item.reason}
                                                 </div>
                                             )}

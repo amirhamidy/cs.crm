@@ -2,25 +2,7 @@
 
 import { useEffect } from "react";
 import { AnimatePresence, m } from "framer-motion";
-import {
-    X,
-    History,
-    Loader2,
-    AlertCircle,
-    ClipboardList,
-    ArrowLeftCircle,
-    ArrowRightCircle,
-    ArrowLeftRight,
-    ShoppingBag,
-    XCircle,
-    Ban,
-    RotateCcw,
-    CheckCircle2,
-    Paperclip,
-    UserRound,
-    MessageSquareText,
-    RefreshCw,
-} from "lucide-react";
+import { X, History, Loader2, AlertCircle, ClipboardList, ArrowLeftCircle, ArrowRightCircle, ArrowLeftRight, ShoppingBag, XCircle, Ban, RotateCcw, CheckCircle2, Paperclip, UserRound, MessageSquareText, RefreshCw } from "lucide-react";
 import { useTheme } from "next-themes";
 import { createPortal } from "react-dom";
 import { tasksApi } from "@/lib/api";
@@ -77,7 +59,7 @@ const ACTION_META: Record<string, { label: string; color: string; bg: string; ic
     reverted: { label: "بازگشت به مرحله قبل", color: "#ec4899", bg: "rgba(236,72,153,0.12)", icon: ArrowRightCircle },
     transferred: { label: "انتقال به دپارتمان دیگر", color: "#0ea5e9", bg: "rgba(14,165,233,0.12)", icon: ArrowLeftRight },
     sold: { label: "فروش ثبت شد", color: "#f59e0b", bg: "rgba(245,158,11,0.12)", icon: ShoppingBag },
-    unsold: { label: "فروش لغو شد", color: "#64748b", bg: "rgba(100,116,139,0.12)", icon: XCircle },
+    unsold: { label: "فروش لغو شد", color: "#6b7280", bg: "rgba(100,116,139,0.12)", icon: XCircle },
     cancelled: { label: "تسک لغو شد", color: "#ef4444", bg: "rgba(239,68,68,0.12)", icon: Ban },
     uncancelled: { label: "بازگشت از لغو", color: "#f87171", bg: "rgba(248,113,113,0.12)", icon: RotateCcw },
     completed: { label: "تسک تکمیل شد", color: "#10b981", bg: "rgba(16,185,129,0.12)", icon: CheckCircle2 },
@@ -89,7 +71,7 @@ function metaOf(action: string) {
     return (
         ACTION_META[action] ?? {
             label: action,
-            color: "#94a3b8",
+            color: "#9ca3af",
             bg: "rgba(148,163,184,0.12)",
             icon: History,
         }
@@ -113,7 +95,7 @@ function EmployeeTag({ id, isDark }: { id: number; isDark: boolean }) {
             >
                 <UserRound size={9} />
             </span>
-            <span className="text-[10.5px] font-bold" style={{ color: isDark ? "#cbd5e1" : "#475569" }}>
+            <span className="text-[10.5px] font-bold" style={{ color: isDark ? "#d1d5db" : "#4b5563" }}>
                 {name}
             </span>
         </span>
@@ -153,20 +135,20 @@ function LogItem({ log, isLast, isDark }: { log: TaskLog; isLast: boolean; isDar
                     >
                         {meta.label}
                     </span>
-                    <span className="text-[10.5px] font-semibold" style={{ color: isDark ? "#64748b" : "#94a3b8" }}>
+                    <span className="text-[10.5px] font-semibold" style={{ color: isDark ? "#6b7280" : "#9ca3af" }}>
                         {formatJalaliDate(log.created_at)}
                     </span>
                 </div>
 
                 <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
-                    <span className="text-[10.5px] font-bold" style={{ color: isDark ? "#64748b" : "#94a3b8" }}>
+                    <span className="text-[10.5px] font-bold" style={{ color: isDark ? "#6b7280" : "#9ca3af" }}>
                         {log.action === "transferred" ? "مرحله‌ی دپارتمان قبلی:" : "مرحله:"}
                     </span>
                     <span
                         className="rounded-lg px-2 py-0.5 text-[10.5px] font-bold"
                         style={{
                             background: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.04)",
-                            color: isDark ? "#cbd5e1" : "#475569",
+                            color: isDark ? "#d1d5db" : "#4b5563",
                         }}
                     >
                         {log.step_name}
@@ -175,7 +157,7 @@ function LogItem({ log, isLast, isDark }: { log: TaskLog; isLast: boolean; isDar
 
                 {log.employee?.length > 0 && (
                     <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
-                        <span className="text-[10.5px] font-bold" style={{ color: isDark ? "#64748b" : "#94a3b8" }}>
+                        <span className="text-[10.5px] font-bold" style={{ color: isDark ? "#6b7280" : "#9ca3af" }}>
                             توسط:
                         </span>
                         {log.employee.map((id) => (
@@ -192,7 +174,7 @@ function LogItem({ log, isLast, isDark }: { log: TaskLog; isLast: boolean; isDar
                         <MessageSquareText size={13} className="mt-0.5 shrink-0" style={{ color: meta.color }} />
                         <p
                             className="text-[11.5px] font-semibold leading-6"
-                            style={{ color: isDark ? "#e2e8f0" : "#334155" }}
+                            style={{ color: isDark ? "#e5e7eb" : "#374151" }}
                         >
                             {log.note}
                         </p>
@@ -272,7 +254,7 @@ export default function TaskLogsModal({ isOpen, onClose, taskId, taskTitle }: Pr
                     transition={{ duration: 0.22, ease: "easeOut" }}
                     className="flex max-h-[85vh] w-full max-w-[460px] flex-col overflow-hidden rounded-3xl border"
                     style={{
-                        background: isDark ? "#0f172a" : "#ffffff",
+                        background: isDark ? "#111827" : "#ffffff",
                         borderColor: isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.06)",
                         boxShadow: "0 24px 64px rgba(0,0,0,0.28)",
                     }}

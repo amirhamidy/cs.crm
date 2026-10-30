@@ -2,22 +2,9 @@
 
 import { useState } from "react";
 import { m } from "framer-motion";
-import {
-    BellRing,
-    Boxes,
-    ChevronLeft,
-    ChevronRight,
-    Package,
-    ShieldCheck,
-} from "lucide-react";
+import { BellRing, Boxes, ChevronLeft, ChevronRight, Package, ShieldCheck } from "lucide-react";
 
-import {
-    formatDate,
-    formatNumber,
-    getDeadlineDate,
-    getQuantityFromStock,
-    getStockProductName,
-} from "@/utils/warehouseEmployee";
+import { formatDate, formatNumber, getDeadlineDate, getQuantityFromStock, getStockProductName } from "@/utils/warehouseEmployee";
 import type { ApiOrderTaskDeadline, ApiStockInfo } from "@/types/warehouse";
 
 export const AVATAR_GRADIENTS = [
@@ -42,7 +29,7 @@ export const cardShadow = (dark: boolean) =>
         : "0 8px 24px rgba(15,23,42,0.05)";
 
 export const muted = (dark: boolean) =>
-    dark ? "#94a3b8" : "#64748b";
+    dark ? "#9ca3af" : "#6b7280";
 
 type StockLevel = "critical" | "low" | "medium" | "good";
 
@@ -129,7 +116,7 @@ export function Pagination({
         background: isDark
             ? "rgba(255,255,255,.04)"
             : "rgba(15,23,42,.04)",
-        color: isDark ? "#94a3b8" : "#475569",
+        color: isDark ? "#9ca3af" : "#4b5563",
     };
 
     return (

@@ -8,11 +8,7 @@ import { FreeMode } from "swiper/modules";
 import "swiper/css";
 import "swiper/css/free-mode";
 import { toPersianDigits } from "@/lib/jalali";
-import type {
-    ApiPurchasingStep,
-    ApiPurchasingTask,
-    ApiTaskAttachment,
-} from "@/types/purchasing";
+import type { ApiPurchasingStep, ApiPurchasingTask, ApiTaskAttachment } from "@/types/purchasing";
 import PurchasingStageCard from "./PurchasingStageCard";
 
 const STAGE_COLORS = [

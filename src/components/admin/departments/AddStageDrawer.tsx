@@ -24,7 +24,7 @@ interface FloatingInputProps extends InputHTMLAttributes<HTMLInputElement> { lab
 const FloatingInput = forwardRef<HTMLInputElement, FloatingInputProps>(({ label, id, className = "", ...props }, ref) => (
     <div className="relative">
         <input ref={ref} id={id} placeholder=" " className={`peer w-full border border-gray-200 rounded-4xl px-5 py-3 text-sm text-black outline-none transition-all duration-200 focus:border-gray-400 dark:bg-white/[0.04] dark:border-white/[0.08] dark:text-white dark:focus:border-blue-500 ${className}`} {...props} />
-        <label htmlFor={id} className="absolute right-5 top-1/2 -translate-y-1/2 text-sm text-gray-400 pointer-events-none transition-all duration-200 bg-white dark:bg-[#0f172a] px-1.5 rounded peer-focus:top-0 peer-focus:text-xs peer-focus:text-gray-500 peer-[:not(:placeholder-shown)]:top-0 peer-[:not(:placeholder-shown)]:text-xs peer-[:not(:placeholder-shown)]:text-gray-500">{label}</label>
+        <label htmlFor={id} className="absolute right-5 top-1/2 -translate-y-1/2 text-sm text-gray-400 pointer-events-none transition-all duration-200 bg-white dark:bg-[#111827] px-1.5 rounded peer-focus:top-0 peer-focus:text-xs peer-focus:text-gray-500 peer-[:not(:placeholder-shown)]:top-0 peer-[:not(:placeholder-shown)]:text-xs peer-[:not(:placeholder-shown)]:text-gray-500">{label}</label>
     </div>
 ));
 FloatingInput.displayName = "FloatingInput";
@@ -69,7 +69,7 @@ export default function AddStageModal({ open, department, defaultOrder = 0, onCl
         <AnimatePresence>
             {open && (
                 <m.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center px-4" style={{ background: "rgba(0,0,0,0.45)", backdropFilter: "blur(3px)" }} onClick={handleClose}>
-                    <m.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 16 }} transition={{ duration: 0.35, ease: "easeOut" }} className="bg-white dark:bg-[#0f172a] rounded-[2rem] shadow-sm border border-gray-100 dark:border-white/[0.06] w-full max-w-sm overflow-hidden" onClick={(e) => e.stopPropagation()} dir="rtl">
+                    <m.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 16 }} transition={{ duration: 0.35, ease: "easeOut" }} className="bg-white dark:bg-[#111827] rounded-[2rem] shadow-sm border border-gray-100 dark:border-white/[0.06] w-full max-w-sm overflow-hidden" onClick={(e) => e.stopPropagation()} dir="rtl">
                         <div className="px-8 pt-8 pb-6 flex items-center justify-between">
                             <div className="flex items-center gap-2.5">
                                 <div className="w-8 h-8 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center"><GitBranch size={15} className="text-indigo-500" /></div>

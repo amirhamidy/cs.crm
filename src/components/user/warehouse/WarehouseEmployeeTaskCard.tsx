@@ -3,23 +3,7 @@
 import { useState } from "react";
 import { AnimatePresence, m } from "framer-motion";
 import { useTheme } from "next-themes";
-import {
-    AlertCircle,
-    Check,
-    CheckCircle2,
-    Clock3,
-    FileText,
-    Loader2,
-    Package,
-    PackageCheck,
-    Paperclip,
-    RotateCcw,
-    ShieldCheck,
-    Upload,
-    User,
-    X,
-    XCircle,
-} from "lucide-react";
+import { AlertCircle, Check, CheckCircle2, Clock3, FileText, Loader2, Package, PackageCheck, Paperclip, RotateCcw, ShieldCheck, Upload, User, X, XCircle } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
 import type { ApiWarehouseTask } from "@/types/warehouse";
 
@@ -270,15 +254,12 @@ export default function WarehouseEmployeeTaskCard({
                     ? `/warehouse/api/v1/task/${task.id}/complete/`
                     : `/warehouse/api/v1/task/${task.id}/cancel/`;
 
-            console.log("submitting to:", endpoint, "employeeId:", employeeId, "task:", task);
-            console.log("formData entries:", Array.from(formData.entries()));
 
             const response = await axiosInstance.post(endpoint, formData);
             const updatedTask = response.data?.warehouse_task ?? response.data;
             if (updatedTask) onUpdated?.(updatedTask);
             setAction(null);
         } catch (err) {
-            console.log("submitAction error:", err);
             setError(getErrorMessage(err));
         } finally {
             setSubmitting(false);
@@ -464,8 +445,8 @@ export default function WarehouseEmployeeTaskCard({
                                     progress >= 100
                                         ? "#10b981"
                                         : isDark
-                                            ? "#e2e8f0"
-                                            : "#334155",
+                                            ? "#e5e7eb"
+                                            : "#374151",
                             }}
                         >
                             {formatNumber(Math.round(progress))}٪
@@ -639,7 +620,7 @@ export default function WarehouseEmployeeTaskCard({
                                     transition={{ duration: 0.22, ease: "easeOut" }}
                                     onClick={(e) => e.stopPropagation()}
                                     dir="rtl"
-                                    className="flex max-h-[92vh] w-full max-w-md flex-col overflow-hidden rounded-[2rem] border border-white/80 bg-white shadow-2xl shadow-black/20 dark:border-white/[0.07] dark:bg-[#0f172a]"
+                                    className="flex max-h-[92vh] w-full max-w-md flex-col overflow-hidden rounded-[2rem] border border-white/80 bg-white shadow-2xl shadow-black/20 dark:border-white/[0.07] dark:bg-[#111827]"
                                 >
                                     <div className="h-1.5 w-full shrink-0" style={{ background: tone.bar }} />
 
@@ -751,7 +732,7 @@ export default function WarehouseEmployeeTaskCard({
                                                                 style={
                                                                     isCancel
                                                                         ? { background: tone.soft, color: tone.accent }
-                                                                        : { background: "rgba(148,163,184,0.15)", color: "#94a3b8" }
+                                                                        : { background: "rgba(148,163,184,0.15)", color: "#9ca3af" }
                                                                 }
                                                             >
                                                                 {isCancel ? "الزامی" : "اختیاری"}

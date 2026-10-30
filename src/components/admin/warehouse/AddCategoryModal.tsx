@@ -70,7 +70,7 @@ export default function AddCategoryModal({
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: 16 }}
                     transition={{ duration: 0.35, ease: "easeOut" }}
-                    className="w-full max-w-sm overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-sm dark:border-white/[0.06] dark:bg-[#0f172a]"
+                    className="w-full max-w-sm overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-sm dark:border-white/[0.06] dark:bg-[#111827]"
                     onClick={(e) => e.stopPropagation()}
                     dir="rtl"
                 >

@@ -1,23 +1,8 @@
 "use client";
 
-import {
-    forwardRef,
-    type FormEvent,
-    type InputHTMLAttributes,
-    useState,
-} from "react";
+import { forwardRef, type FormEvent, type InputHTMLAttributes, useState } from "react";
 import { AnimatePresence, m } from "framer-motion";
-import {
-    Check,
-    ChevronLeft,
-    ChevronRight,
-    Eye,
-    EyeOff,
-    Loader,
-    Shield,
-    UserPlus,
-    X,
-} from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, Eye, EyeOff, Loader, Shield, UserPlus, X } from "lucide-react";
 import { accountsApi } from "@/lib/api";
 import { parseApiErrors, type FieldErrors } from "@/lib/parseApiErrors";
 
@@ -111,7 +96,7 @@ const FloatingInput = forwardRef<HTMLInputElement, FloatingInputProps>(
                 />
                 <label
                     htmlFor={id}
-                    className="pointer-events-none absolute right-5 top-1/2 -translate-y-1/2 rounded bg-white px-1.5 text-sm text-gray-400 transition-all duration-200 peer-focus:top-0 peer-focus:text-xs peer-[:not(:placeholder-shown)]:top-0 peer-[:not(:placeholder-shown)]:text-xs peer-[:not(:placeholder-shown)]:text-gray-500 dark:bg-[#0f172a]"
+                    className="pointer-events-none absolute right-5 top-1/2 -translate-y-1/2 rounded bg-white px-1.5 text-sm text-gray-400 transition-all duration-200 peer-focus:top-0 peer-focus:text-xs peer-[:not(:placeholder-shown)]:top-0 peer-[:not(:placeholder-shown)]:text-xs peer-[:not(:placeholder-shown)]:text-gray-500 dark:bg-[#111827]"
                 >
                     {label}
                 </label>
@@ -578,7 +563,7 @@ export default function AddUserModal({ onClose, onSuccess, onNotify }: Props) {
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: 16 }}
                         transition={{ duration: 0.35, ease: "easeOut" }}
-                        className="w-full max-w-sm overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-sm dark:border-white/[0.06] dark:bg-[#0f172a]"
+                        className="w-full max-w-sm overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-sm dark:border-white/[0.06] dark:bg-[#111827]"
                         onClick={(event) => event.stopPropagation()}
                         dir="rtl"
                     >
@@ -727,7 +712,7 @@ export default function AddUserModal({ onClose, onSuccess, onNotify }: Props) {
                                                 onClick={() =>
                                                     setShowPassword((prev) => !prev)
                                                 }
-                                                className="absolute left-4 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center text-gray-400 transition-colors hover:text-gray-600 dark:hover:text-gray-200"
+                                                className="absolute inset-y-0 left-4 my-auto flex h-8 w-8 items-center justify-center text-gray-400 transition-colors hover:text-gray-600 dark:hover:text-gray-200"
                                             >
                                                 {showPassword ? (
                                                     <EyeOff size={16} />
@@ -777,7 +762,7 @@ export default function AddUserModal({ onClose, onSuccess, onNotify }: Props) {
                                                         color:
                                                             step1.type === value
                                                                 ? "#3b82f6"
-                                                                : "#94a3b8",
+                                                                : "#9ca3af",
                                                     }}
                                                 >
                                                     <Shield size={12} />

@@ -1,34 +1,11 @@
 "use client";
-import {
-    ChangeEvent,
-    KeyboardEvent,
-    useEffect,
-    useMemo,
-    useRef,
-    useState,
-} from "react";
+import { ChangeEvent, KeyboardEvent, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, m } from "framer-motion";
-import {
-    Check,
-    Download,
-    File,
-    Loader2,
-    MessageSquareText,
-    Paperclip,
-    Send,
-    X,
-} from "lucide-react";
+import { Check, Download, File, Loader2, MessageSquareText, Paperclip, Send, X } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
 import api from "@/lib/axiosInstance";
-import type {
-    EmployeeListItem,
-    InternalTask,
-    InternalTaskAttachment,
-} from "./types";
-import {
-    fetchInternalTasks,
-    uploadInternalTaskAttachments,
-} from "./Api";
+import type { EmployeeListItem, InternalTask, InternalTaskAttachment } from "./types";
+import { fetchInternalTasks, uploadInternalTaskAttachments } from "./Api";
 
 interface UserListItem {
     id: number;

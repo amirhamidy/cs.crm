@@ -42,7 +42,7 @@ export default function Modal({ title, onClose, children, busy = false, maxWidth
         aria-modal="true"
         aria-label={title}
         dir="rtl"
-        className={`flex max-h-[92vh] w-full flex-col overflow-hidden rounded-t-3xl border border-black/[0.06] bg-white shadow-2xl dark:border-white/[0.08] dark:bg-slate-900 sm:rounded-3xl ${maxWidthClass}`}
+        className={`flex max-h-[92vh] w-full flex-col overflow-hidden rounded-t-3xl border border-black/[0.06] bg-white shadow-2xl dark:border-white/[0.08] dark:bg-gray-900 sm:rounded-3xl ${maxWidthClass}`}
         initial={{ opacity: 0, y: 24, scale: 0.98 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, y: 24, scale: 0.98 }}
@@ -55,7 +55,7 @@ export default function Modal({ title, onClose, children, busy = false, maxWidth
             onClick={onClose}
             disabled={busy}
             aria-label="بستن"
-            className="flex h-8 w-8 items-center justify-center rounded-xl bg-black/5 text-slate-500 transition-colors hover:bg-black/10 disabled:opacity-40 dark:bg-white/5 dark:text-slate-400"
+            className="flex h-8 w-8 items-center justify-center rounded-xl bg-black/5 text-gray-500 transition-colors hover:bg-black/10 disabled:opacity-40 dark:bg-white/5 dark:text-gray-400"
           >
             <X size={15} />
           </button>

@@ -2,29 +2,11 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence, m } from "framer-motion";
-import {
-    AlertTriangle,
-    Ban,
-    CalendarClock,
-    CheckCircle2,
-    History,
-    Loader,
-    Loader2,
-    Plus,
-    RefreshCw,
-    Repeat,
-    RotateCcw,
-    Timer,
-    Trash2,
-} from "lucide-react";
+import { AlertTriangle, Ban, CalendarClock, CheckCircle2, History, Loader, Loader2, Plus, RefreshCw, Repeat, RotateCcw, Timer, Trash2 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useAuthStore } from "@/store/authStore";
 import { useIsVisible, useVisibleInterval } from "@/hooks/useVisibility";
-import {
-    deleteInternalTaskRoutine,
-    fetchInternalTaskRoutines,
-    fetchInternalTasks,
-} from "./Api";
+import { deleteInternalTaskRoutine, fetchInternalTaskRoutines, fetchInternalTasks } from "./Api";
 import CreateTaskRoutineModal from "./Createtaskroutinemodal";
 import InternalTaskActionModal from "@/components/user/Internaltasks/InternalTaskActionModal";
 import type { InternalTask, InternalTaskRoutine } from "./Types";
@@ -290,13 +272,13 @@ function RoutineCard({
                 <div className="flex flex-col gap-1">
                     <h3
                         className="line-clamp-1 text-[13.5px] font-extrabold"
-                        style={{ color: isDark ? "#f1f5f9" : "#1e293b" }}
+                        style={{ color: isDark ? "#f3f4f6" : "#1f2937" }}
                     >
                         {task?.title || `تسک #${routine.task}`}
                     </h3>
                     <p
                         className="line-clamp-2 text-[11.5px] leading-6"
-                        style={{ color: isDark ? "#94a3b8" : "#64748b" }}
+                        style={{ color: isDark ? "#9ca3af" : "#6b7280" }}
                     >
                         {task?.description || "بدون توضیحات"}
                     </p>
@@ -402,7 +384,7 @@ function RoutineCard({
                             }}
                         >
                             <AlertTriangle size={22} className="text-red-500" />
-                            <p className="text-[12px] font-bold text-slate-700 dark:text-slate-200">
+                            <p className="text-[12px] font-bold text-gray-700 dark:text-gray-200">
                                 این تسک روتین حذف شود؟
                             </p>
                             <div className="flex w-full items-center gap-2">

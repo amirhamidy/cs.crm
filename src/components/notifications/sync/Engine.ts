@@ -4,30 +4,11 @@ import type { NotificationInput } from "@/components/notifications/types";
 import { isTicketActive } from "./activeTickets";
 import { SYNC_CONFIG as CFG } from "./config";
 import { detectRoutines, detectTasks, detectTickets } from "./detectors";
-import {
-  fetchEmployees,
-  fetchUsers,
-  fetchInternalTasks,
-  fetchProjectTasks,
-  fetchRoutines,
-} from "./Fetchers";
-import {
-  buildNames,
-  normalizeProjectTasks,
-  normalizeRoutines,
-  normalizeTickets,
-  resolveEmployeeId,
-} from "./Normalize";
+import { fetchEmployees, fetchUsers, fetchInternalTasks, fetchProjectTasks, fetchRoutines } from "./Fetchers";
+import { buildNames, normalizeProjectTasks, normalizeRoutines, normalizeTickets, resolveEmployeeId } from "./Normalize";
 import { consumeTouched, readTouched } from "./selfchanges";
 import { loadSnapshot, saveSnapshot } from "./snapshot";
-import type {
-  DetectContext,
-  Names,
-  ProjectTask,
-  Routine,
-  Snapshot,
-  Ticket,
-} from "./types";
+import type { DetectContext, Names, ProjectTask, Routine, Snapshot, Ticket } from "./types";
 
 interface EngineOptions {
   userId: number;

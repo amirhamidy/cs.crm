@@ -1,37 +1,12 @@
 "use client";
 
-import {
-    useEffect,
-    useMemo,
-    useRef,
-    useState,
-    forwardRef,
-    useLayoutEffect,
-    type InputHTMLAttributes,
-} from "react";
+import { useEffect, useMemo, useRef, useState, forwardRef, useLayoutEffect, type InputHTMLAttributes } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, m } from "framer-motion";
-import {
-    ArrowDownCircle,
-    ArrowUpCircle,
-    Boxes,
-    Check,
-    ChevronDown,
-    Loader,
-    Paperclip,
-    Search,
-    Upload,
-    X,
-} from "lucide-react";
+import { ArrowDownCircle, ArrowUpCircle, Boxes, Check, ChevronDown, Loader, Paperclip, Search, Upload, X } from "lucide-react";
 import type { AxiosError } from "axios";
 import axiosInstance from "@/lib/axiosInstance";
-import {
-    ApiProduct,
-    ApiStockTransaction,
-    ApiWarehouseStaff,
-    STOCK_OUT_REASON_OPTIONS,
-    StockOutReason,
-} from "@/types/warehouse";
+import { ApiProduct, ApiStockTransaction, ApiWarehouseStaff, STOCK_OUT_REASON_OPTIONS, StockOutReason } from "@/types/warehouse";
 
 interface Props {
     isOpen: boolean;
@@ -130,7 +105,7 @@ const FloatingInput = forwardRef<HTMLInputElement, FloatingInputProps>(
                 />
                 <label
                     htmlFor={id}
-                    className="absolute right-5 top-1/2 -translate-y-1/2 text-sm text-gray-400 pointer-events-none transition-all duration-200 bg-white px-1.5 rounded peer-focus:top-0 peer-focus:text-xs peer-focus:text-gray-500 peer-[:not(:placeholder-shown)]:top-0 peer-[:not(:placeholder-shown)]:text-xs peer-[:not(:placeholder-shown)]:text-gray-500 dark:bg-[#0f172a]"
+                    className="absolute right-5 top-1/2 -translate-y-1/2 text-sm text-gray-400 pointer-events-none transition-all duration-200 bg-white px-1.5 rounded peer-focus:top-0 peer-focus:text-xs peer-focus:text-gray-500 peer-[:not(:placeholder-shown)]:top-0 peer-[:not(:placeholder-shown)]:text-xs peer-[:not(:placeholder-shown)]:text-gray-500 dark:bg-[#111827]"
                 >
                     {label}
                 </label>
@@ -269,7 +244,7 @@ function NiceSelect({
                                     zIndex: 100,
                                     transformOrigin: "top center",
                                 }}
-                                className="overflow-hidden rounded-[1.5rem] border border-gray-100 bg-white shadow-xl shadow-black/5 dark:border-white/[0.08] dark:bg-[#0f172a] dark:shadow-black/40"
+                                className="overflow-hidden rounded-[1.5rem] border border-gray-100 bg-white shadow-xl shadow-black/5 dark:border-white/[0.08] dark:bg-[#111827] dark:shadow-black/40"
                             >
                                 {options.length > 5 && (
                                     <div className="border-b border-gray-100 px-3 py-2.5 dark:border-white/[0.06]">
@@ -498,7 +473,7 @@ export default function WarehouseEmployeeStockModal({
                         exit={{ opacity: 0, y: 16 }}
                         transition={{ duration: 0.35, ease: "easeOut" }}
                         onClick={(e) => e.stopPropagation()}
-                        className="w-full max-w-md rounded-[2rem] border border-gray-100 bg-white shadow-sm dark:border-white/[0.06] dark:bg-[#0f172a]"
+                        className="w-full max-w-md rounded-[2rem] border border-gray-100 bg-white shadow-sm dark:border-white/[0.06] dark:bg-[#111827]"
                         dir="rtl"
                     >
                         <div className="flex items-center justify-between px-8 pb-5 pt-7">
@@ -631,7 +606,7 @@ export default function WarehouseEmployeeStockModal({
                                 />
                                 <label
                                     htmlFor="stock-note"
-                                    className="pointer-events-none absolute right-5 top-4 text-sm text-gray-400 transition-all duration-200 bg-white px-1.5 rounded peer-focus:top-0 peer-focus:-translate-y-1/2 peer-focus:text-xs peer-focus:text-gray-500 peer-[:not(:placeholder-shown)]:top-0 peer-[:not(:placeholder-shown)]:-translate-y-1/2 peer-[:not(:placeholder-shown)]:text-xs peer-[:not(:placeholder-shown)]:text-gray-500 dark:bg-[#0f172a]"
+                                    className="pointer-events-none absolute right-5 top-4 text-sm text-gray-400 transition-all duration-200 bg-white px-1.5 rounded peer-focus:top-0 peer-focus:-translate-y-1/2 peer-focus:text-xs peer-focus:text-gray-500 peer-[:not(:placeholder-shown)]:top-0 peer-[:not(:placeholder-shown)]:-translate-y-1/2 peer-[:not(:placeholder-shown)]:text-xs peer-[:not(:placeholder-shown)]:text-gray-500 dark:bg-[#111827]"
                                 >
                                     توضیحات <span className="text-red-500">*</span>
                                 </label>

@@ -23,11 +23,11 @@
 @variant dark (&:where(.dark, .dark *));
 
 body {
-  @apply bg-slate-50 text-slate-900 transition-colors duration-200;
+  @apply bg-gray-50 text-gray-900 transition-colors duration-200;
 }
 
 .dark body {
-  @apply bg-slate-950 text-slate-50;
+  @apply bg-gray-950 text-gray-50;
 }
 
 body {
@@ -68,10 +68,10 @@ body {
   }
 
   .dark {
-    --bg-elevated: #0f172a;
+    --bg-elevated: #111827;
     --border-subtle: rgba(51, 65, 85, 0.5);
-    --text-primary: #f8fafc;
-    --text-secondary: #94a3b8;
+    --text-primary: #f9fafb;
+    --text-secondary: #9ca3af;
     --bg-hover: rgba(255, 255, 255, 0.05);
     --purple-primary: #60a5fa;
   }

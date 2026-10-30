@@ -32,7 +32,7 @@ export default function PurchasingDeleteModal({ open, title, description, loadin
                         animate={{ scale: 1, y: 0, opacity: 1 }}
                         exit={{ scale: 0.95, y: 16, opacity: 0 }}
                         transition={{ duration: 0.2, ease: "easeOut" }}
-                        className="w-full max-w-[360px] overflow-hidden rounded-[2rem] border border-black/[0.07] bg-white p-5 dark:border-white/[0.07] dark:bg-[#0f172a]"
+                        className="w-full max-w-[360px] overflow-hidden rounded-[2rem] border border-black/[0.07] bg-white p-5 dark:border-white/[0.07] dark:bg-[#111827]"
                         style={{ boxShadow: "0 24px 64px rgba(0,0,0,0.35)" }}
                         onClick={(e) => e.stopPropagation()}
                         dir="rtl"
@@ -52,7 +52,7 @@ export default function PurchasingDeleteModal({ open, title, description, loadin
                         <div className="flex flex-col gap-4 px-2 py-4">
                             <p className="text-[12.5px] leading-relaxed text-gray-500 dark:text-gray-400">{description}</p>
                             <div className="flex gap-2">
-                                <button type="button" onClick={onCancel} disabled={loading} className="flex-1 rounded-2xl bg-black/[0.04] py-2.5 text-[12.5px] font-bold text-slate-500 transition-colors disabled:opacity-40 dark:bg-white/[0.05] dark:text-slate-400">
+                                <button type="button" onClick={onCancel} disabled={loading} className="flex-1 rounded-2xl bg-black/[0.04] py-2.5 text-[12.5px] font-bold text-gray-500 transition-colors disabled:opacity-40 dark:bg-white/[0.05] dark:text-gray-400">
                                     انصراف
                                 </button>
                                 <button

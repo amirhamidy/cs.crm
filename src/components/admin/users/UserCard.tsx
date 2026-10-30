@@ -1,36 +1,10 @@
 "use client";
 
-import {
-    memo,
-    useCallback,
-    useEffect,
-    useMemo,
-    useRef,
-    useState,
-    useSyncExternalStore,
-} from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import type { ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { m, AnimatePresence } from "framer-motion";
-import {
-    Phone,
-    Trash2,
-    SquarePen,
-    CalendarDays,
-    Star,
-    Loader2,
-    MoreVertical,
-    AlertCircle,
-    ShieldCheck,
-    Check,
-    Power,
-    SlidersHorizontal,
-    Crown,
-    Building2,
-    X,
-    KeyRound,
-    Camera,
-} from "lucide-react";
+import { Phone, Trash2, SquarePen, CalendarDays, Star, Loader2, MoreVertical, AlertCircle, ShieldCheck, Check, Power, SlidersHorizontal, Crown, Building2, X, KeyRound, Camera } from "lucide-react";
 import { accountsApi, departmentsApi } from "@/lib/api";
 import type { ApiEmployee } from "@/types/users";
 import EditUserModal from "@/components/admin/users/EditUserModal";
@@ -111,10 +85,10 @@ const SHEET_DISABLED =
     "cursor-not-allowed border-black/[0.06] bg-black/[0.03] text-gray-400 opacity-50 dark:border-white/[0.06] dark:bg-white/[0.03]";
 
 const PANEL_BASE =
-    "w-full rounded-[2rem] border border-slate-900/[0.08] bg-white p-5 shadow-2xl dark:border-white/[0.08] dark:bg-slate-900";
+    "w-full rounded-[2rem] border border-gray-900/[0.08] bg-white p-5 shadow-2xl dark:border-white/[0.08] dark:bg-gray-900";
 
 const SOFT_BUTTON =
-    "rounded-2xl bg-slate-900/5 py-2.5 text-[12.5px] font-bold text-slate-600 disabled:opacity-50 dark:bg-white/5 dark:text-slate-300";
+    "rounded-2xl bg-gray-900/5 py-2.5 text-[12.5px] font-bold text-gray-600 disabled:opacity-50 dark:bg-white/5 dark:text-gray-300";
 
 
 
@@ -249,11 +223,11 @@ function StatusSwitch({
 }) {
     const trackClass = isActive
         ? "border-emerald-500/30 bg-emerald-500/[0.14] dark:border-emerald-500/40 dark:bg-emerald-500/20"
-        : "border-slate-400/35 bg-[#e9ecf1] dark:border-slate-400/30 dark:bg-slate-400/[0.16]";
+        : "border-gray-400/35 bg-[#e9ecf1] dark:border-gray-400/30 dark:bg-gray-400/[0.16]";
 
     const knobClass = isActive
         ? "translate-x-0 bg-emerald-500"
-        : "translate-x-6 bg-slate-400 dark:bg-slate-500";
+        : "translate-x-6 bg-gray-400 dark:bg-gray-500";
 
     return (
         <button
@@ -312,7 +286,7 @@ function ActionButton({
                 if (!disabled) onClick();
             }}
             className={`relative flex h-11 w-11 items-center justify-center overflow-hidden rounded-full border-[1.5px] border-black/[0.14] bg-[#e2e2e2] transition-[color,transform] duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/60 dark:border-white/[0.13] dark:bg-[#1e1e1e] ${disabled
-                ? "cursor-not-allowed text-gray-400 opacity-45 dark:text-slate-500"
+                ? "cursor-not-allowed text-gray-400 opacity-45 dark:text-gray-500"
                 : "cursor-pointer text-gray-700 active:scale-95 group-hover/btn:text-white dark:text-gray-200"
                 }`}
         >
@@ -1116,7 +1090,7 @@ function UserCard({
                             <span
                                 role="tooltip"
                                 dir="rtl"
-                                className={`pointer-events-none absolute z-[60] whitespace-nowrap rounded-2xl border border-white/[0.08] bg-slate-800 px-3 py-2 text-center text-[11px] font-bold text-white opacity-0 shadow-xl transition-opacity duration-150 group-hover/btn:opacity-100 dark:bg-slate-900 ${tooltipPositionClass}`}
+                                className={`pointer-events-none absolute z-[60] whitespace-nowrap rounded-2xl border border-white/[0.08] bg-gray-800 px-3 py-2 text-center text-[11px] font-bold text-white opacity-0 shadow-xl transition-opacity duration-150 group-hover/btn:opacity-100 dark:bg-gray-900 ${tooltipPositionClass}`}
                             >
                                 {act.tooltip}
                             </span>
@@ -1132,7 +1106,7 @@ function UserCard({
                     >
                         <div
                             dir="rtl"
-                            className="w-56 rounded-2xl border border-white/[0.08] bg-slate-800 p-3 shadow-2xl dark:bg-slate-900"
+                            className="w-56 rounded-2xl border border-white/[0.08] bg-gray-800 p-3 shadow-2xl dark:bg-gray-900"
                         >
                             <div className="flex items-center gap-1.5 border-b border-white/10 pb-1.5 text-[11px] font-extrabold text-rose-400">
                                 <AlertCircle size={13} />
@@ -1143,7 +1117,7 @@ function UserCard({
                                     {activeTaskTitles.map((title, idx) => (
                                         <li
                                             key={`${title}-${idx}`}
-                                            className="flex items-start gap-1.5 text-[10.5px] leading-4 text-slate-300"
+                                            className="flex items-start gap-1.5 text-[10.5px] leading-4 text-gray-300"
                                         >
                                             <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-rose-400" />
                                             <span className="line-clamp-2 min-w-0 break-words">
@@ -1153,7 +1127,7 @@ function UserCard({
                                     ))}
                                 </ul>
                             ) : (
-                                <p className="mt-1.5 text-[10px] text-slate-400">
+                                <p className="mt-1.5 text-[10px] text-gray-400">
                                     این کاربر تسک دارد ولی هیچ‌کدام در حال انجام نیست
                                 </p>
                             )}
@@ -1320,7 +1294,7 @@ function UserCard({
             )}
             {showAvatarModal && userId != null && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4" dir="rtl">
-                    <div className="w-full max-w-sm rounded-[2rem] bg-white p-6 shadow-2xl dark:bg-slate-900">
+                    <div className="w-full max-w-sm rounded-[2rem] bg-white p-6 shadow-2xl dark:bg-gray-900">
                         <div className="mb-5 flex items-center justify-between"><h3 className="font-black">عکس پروفایل {employee.full_name}</h3><button onClick={() => setShowAvatarModal(false)}>✕</button></div>
                         <AvatarUploader
                             current={employee.avatar}

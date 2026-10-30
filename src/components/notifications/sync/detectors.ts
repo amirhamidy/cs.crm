@@ -1,14 +1,5 @@
 import type { NotificationInput } from "@/components/notifications/types";
-import type {
-  DetectContext,
-  DetectResult,
-  ProjectTask,
-  Routine,
-  TaskMark,
-  Ticket,
-  TicketAttachment,
-  TicketMark,
-} from "./types";
+import type { DetectContext, DetectResult, ProjectTask, Routine, TaskMark, Ticket, TicketAttachment, TicketMark } from "./types";
 
 const RETAIN_MS = 30 * 24 * 60 * 60 * 1000;
 const CLOSED = new Set(["completed", "cancelled"]);

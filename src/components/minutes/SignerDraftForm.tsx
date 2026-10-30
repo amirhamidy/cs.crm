@@ -104,8 +104,8 @@ export default function SignerDraftForm({
               onClick={() => setKind(value)}
               className={`h-9 rounded-xl text-[12px] font-bold transition-colors ${
                 kind === value
-                  ? "bg-white text-indigo-600 shadow-sm dark:bg-slate-800 dark:text-indigo-300"
-                  : "text-slate-500 dark:text-slate-400"
+                  ? "bg-white text-indigo-600 shadow-sm dark:bg-gray-800 dark:text-indigo-300"
+                  : "text-gray-500 dark:text-gray-400"
               }`}
             >
               {label}

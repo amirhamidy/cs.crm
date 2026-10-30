@@ -117,7 +117,7 @@ export default function AdjustScoreModal({
                 onClick={(e) => e.stopPropagation()}
                 className="w-full max-w-[400px] rounded-[2rem] p-5 shadow-2xl"
                 style={{
-                    background: isDark ? "#0f172a" : "#ffffff",
+                    background: isDark ? "#111827" : "#ffffff",
                     border: isDark
                         ? "1px solid rgba(255,255,255,0.08)"
                         : "1px solid rgba(15,23,42,0.08)",
@@ -163,7 +163,7 @@ export default function AdjustScoreModal({
                                 className="flex items-center justify-center gap-1.5 rounded-xl py-2 text-[12px] font-bold transition-all"
                                 style={{
                                     background: selected ? opt.color : "transparent",
-                                    color: selected ? "#fff" : isDark ? "#94a3b8" : "#64748b",
+                                    color: selected ? "#fff" : isDark ? "#9ca3af" : "#6b7280",
                                     boxShadow: selected ? `0 6px 16px ${opt.color}40` : "none",
                                 }}
                             >
@@ -218,7 +218,7 @@ export default function AdjustScoreModal({
                         className="flex-1 rounded-2xl py-2.5 text-[12.5px] font-bold disabled:opacity-50"
                         style={{
                             background: isDark ? "rgba(255,255,255,0.05)" : "rgba(15,23,42,0.05)",
-                            color: isDark ? "#cbd5e1" : "#475569",
+                            color: isDark ? "#d1d5db" : "#4b5563",
                         }}
                     >
                         انصراف

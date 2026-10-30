@@ -1,13 +1,7 @@
 "use client";
 
 import { AnimatePresence, m } from "framer-motion";
-import {
-    ChevronLeft,
-    Loader,
-    Pencil,
-    Plus,
-    Trash2,
-} from "lucide-react";
+import { ChevronLeft, Loader, Pencil, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { createPortal } from "react-dom";
 import type { TaskStatus } from "@/types/task";
@@ -159,12 +153,12 @@ export default function StageCard({
                         }}
                         dir="rtl"
                     >
-                        <div className="flex flex-col items-center gap-0.5 rounded-xl border border-white/[0.08] bg-slate-800 px-3 py-2 text-center shadow-2xl">
+                        <div className="flex flex-col items-center gap-0.5 rounded-xl border border-white/[0.08] bg-gray-800 px-3 py-2 text-center shadow-2xl">
                             <span className="text-[11px] font-extrabold text-white">
                                 {dependencyMessage}
                             </span>
 
-                            <span className="text-[10px] text-slate-400">
+                            <span className="text-[10px] text-gray-400">
                                 برای حذف، ابتدا وظایف این فرآیند را حذف کنید
                             </span>
                         </div>
@@ -207,7 +201,7 @@ export default function StageCard({
             >
                 {showConnector && !isLast && (
                     <div
-                        className="pointer-events-none absolute top-[28px] z-20 flex h-5 w-5 items-center justify-center rounded-full border bg-white shadow-sm dark:bg-[#0f172a]"
+                        className="pointer-events-none absolute top-[28px] z-20 flex h-5 w-5 items-center justify-center rounded-full border bg-white shadow-sm dark:bg-[#111827]"
                         style={{
                             insetInlineEnd: "-10px",
                             borderColor: `${stageColor}35`,
@@ -387,7 +381,7 @@ export default function StageCard({
                                             color:
                                                 hasDependencies
                                                     ? "#9ca3af"
-                                                    : "#94a3b8",
+                                                    : "#9ca3af",
                                             cursor:
                                                 hasDependencies
                                                     ? "not-allowed"

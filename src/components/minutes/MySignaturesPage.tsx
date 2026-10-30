@@ -45,7 +45,7 @@ export default function MySignaturesPage({ basePath }: { basePath: string }) {
           <Link
             href={basePath}
             aria-label="بازگشت"
-            className="flex h-10 w-10 items-center justify-center rounded-2xl bg-black/5 text-slate-600 transition-colors hover:bg-black/10 dark:bg-white/5 dark:text-slate-300"
+            className="flex h-10 w-10 items-center justify-center rounded-2xl bg-black/5 text-gray-600 transition-colors hover:bg-black/10 dark:bg-white/5 dark:text-gray-300"
           >
             <ArrowRight size={16} />
           </Link>
@@ -62,7 +62,7 @@ export default function MySignaturesPage({ basePath }: { basePath: string }) {
           disabled={loading}
           title="بارگذاری مجدد"
           aria-label="بارگذاری مجدد"
-          className="flex h-10 w-10 items-center justify-center rounded-2xl bg-black/5 text-slate-600 transition-colors hover:bg-black/10 disabled:opacity-50 dark:bg-white/5 dark:text-slate-300"
+          className="flex h-10 w-10 items-center justify-center rounded-2xl bg-black/5 text-gray-600 transition-colors hover:bg-black/10 disabled:opacity-50 dark:bg-white/5 dark:text-gray-300"
         >
           <RefreshCw size={15} className={loading ? "animate-spin" : ""} />
         </button>
@@ -83,8 +83,8 @@ export default function MySignaturesPage({ basePath }: { basePath: string }) {
             onClick={() => setPendingOnly(value)}
             className={`h-9 rounded-xl text-[12px] font-bold transition-colors ${
               pendingOnly === value
-                ? "bg-white text-indigo-600 shadow-sm dark:bg-slate-800 dark:text-indigo-300"
-                : "text-slate-500 dark:text-slate-400"
+                ? "bg-white text-indigo-600 shadow-sm dark:bg-gray-800 dark:text-indigo-300"
+                : "text-gray-500 dark:text-gray-400"
             }`}
           >
             {label}

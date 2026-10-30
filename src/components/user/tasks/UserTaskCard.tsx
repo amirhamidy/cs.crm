@@ -4,27 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { m } from "framer-motion";
 
-import {
-    AlarmClock,
-    ArrowLeftCircle,
-    ArrowLeftRight,
-    ArrowRightCircle,
-    Ban,
-    Building2,
-    CalendarDays,
-    CheckCircle2,
-    Clock3,
-    History,
-    Layers3,
-    Loader2,
-    MessageSquareText,
-    RotateCcw,
-    ShoppingBag,
-    XCircle,
-    ClipboardList,
-    FileText,
-    Users,
-} from "lucide-react";
+import { AlarmClock, ArrowLeftCircle, ArrowLeftRight, ArrowRightCircle, Building2, CalendarDays, CheckCircle2, Clock3, History, Layers3, MessageSquareText, RotateCcw, ShoppingBag, XCircle, FileText, Users } from "lucide-react";
 
 import axiosInstance from "@/lib/axiosInstance";
 import { tasksApi, casesApi, customersApi } from "@/lib/api";
@@ -37,12 +17,7 @@ import TaskLogsModal from "./TaskLogsModal";
 import TaskTransferModal from "./TaskTransferModal";
 import ActionBtn from "./ActionBtn";
 
-import {
-    toJalali,
-    toPersianDigits,
-    JALALI_MONTHS,
-    pad2,
-} from "@/lib/jalali";
+import { toJalali, toPersianDigits, JALALI_MONTHS, pad2 } from "@/lib/jalali";
 
 import type { UserTask } from "./types";
 import type { TransferTaskResponse } from "@/types/task";

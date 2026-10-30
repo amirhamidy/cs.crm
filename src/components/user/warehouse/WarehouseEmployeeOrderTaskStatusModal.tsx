@@ -172,7 +172,7 @@ export default function WarehouseEmployeeOrderTaskStatusModal({
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.95, y: 10 }}
                         onClick={(e) => e.stopPropagation()}
-                        className="flex max-h-[90vh] w-full max-w-lg flex-col rounded-3xl bg-white shadow-2xl dark:bg-slate-900"
+                        className="flex max-h-[90vh] w-full max-w-lg flex-col rounded-3xl bg-white shadow-2xl dark:bg-gray-900"
                     >
                         <div className="flex items-center justify-between border-b border-gray-100 p-5 dark:border-white/10">
                             <div className="flex items-center gap-2">

@@ -37,7 +37,7 @@ export default function TimeRangeSelector({ value, onChange, loading = false }: 
                         onClick={() => onChange(opt.value)}
                         disabled={loading}
                         className="relative rounded-xl px-3.5 py-1.5 text-[12px] font-bold transition-colors disabled:opacity-40"
-                        style={{ color: active ? "#ffffff" : isDark ? "#94a3b8" : "#64748b" }}
+                        style={{ color: active ? "#ffffff" : isDark ? "#9ca3af" : "#6b7280" }}
                     >
                         {active && (
                             <m.span

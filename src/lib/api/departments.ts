@@ -1,20 +1,7 @@
 import axiosInstance from "@/lib/axiosInstance";
-import type {
-  Department,
-  DepartmentEmployee,
-  DepartmentStep,
-} from "@/types/department";
+import type { Department, DepartmentEmployee, DepartmentStep } from "@/types/department";
 import type { Paginated, SearchParams } from "@/types/pagination";
-import {
-  byOrder,
-  cached,
-  createSearch,
-  dedupe,
-  fetchPage,
-  getOne,
-  invalidate,
-  listAll,
-} from "./_core";
+import { byOrder, cached, createSearch, dedupe, fetchPage, getOne, invalidate, listAll } from "./_core";
 
 const KEY = "departments:";
 const TTL = 5 * 60_000;

@@ -30,7 +30,7 @@ export function ChartTooltip({ title, rows, footer, dark, colorKey, glowColor }:
             className={`
                 pointer-events-none rounded-xl backdrop-blur-sm
                 border min-w-[132px] px-3 py-2
-                ${dark ? "bg-slate-900/95 border-white/10" : "bg-white/95 border-gray-200/60"}
+                ${dark ? "bg-gray-900/95 border-white/10" : "bg-white/95 border-gray-200/60"}
             `}
             style={{
                 boxShadow: glowColor

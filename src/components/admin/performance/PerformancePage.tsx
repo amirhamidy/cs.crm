@@ -46,7 +46,7 @@ export default function PerformancePage() {
             label: "تسک",
             value: departments.reduce((sum, d) => sum + d.total, 0),
             icon: ListTodo,
-            gradient: ["#94a3b8", "#64748b"],
+            gradient: ["#9ca3af", "#6b7280"],
         },
         {
             label: "فروش",

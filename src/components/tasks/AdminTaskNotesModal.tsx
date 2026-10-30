@@ -3,37 +3,10 @@
 import { useCallback, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, m } from "framer-motion";
-import {
-    X,
-    Loader2,
-    AlertCircle,
-    ClipboardList,
-    Paperclip,
-    MessageSquareText,
-    RefreshCw,
-    FileText,
-    ArrowLeftCircle,
-    ArrowRightCircle,
-    ArrowLeftRight,
-    User,
-    Calendar,
-    Clock3,
-    History,
-    CheckCircle2,
-    ShoppingBag,
-    Ban,
-    RotateCcw,
-    Layers3,
-    Hash,
-} from "lucide-react";
+import { X, Loader2, AlertCircle, ClipboardList, Paperclip, MessageSquareText, RefreshCw, FileText, ArrowLeftCircle, ArrowRightCircle, ArrowLeftRight, User, Calendar, Clock3, History, CheckCircle2, ShoppingBag, Ban, RotateCcw, Layers3, Hash } from "lucide-react";
 import { useTheme } from "next-themes";
 import { tasksApi } from "@/lib/api/index";
-import {
-    toJalali,
-    toPersianDigits,
-    JALALI_MONTHS,
-    pad2,
-} from "@/lib/jalali";
+import { toJalali, toPersianDigits, JALALI_MONTHS, pad2 } from "@/lib/jalali";
 import { useEmployeeInfo } from "@/hooks/useEmployeeInfo";
 import { resolveMediaUrl } from "@/lib/media";
 
@@ -101,7 +74,7 @@ const ACTION_META: Record<
     },
     unsold: {
         label: "فروش لغو شد",
-        color: "#64748b",
+        color: "#6b7280",
         bg: "rgba(100,116,139,0.14)",
         icon: RotateCcw,
     },
@@ -161,7 +134,7 @@ function getActionMeta(action?: string) {
     return (
         ACTION_META[action ?? ""] ?? {
             label: action || "ثبت رویداد",
-            color: "#94a3b8",
+            color: "#9ca3af",
             bg: "rgba(148,163,184,0.14)",
             icon: History,
         }
@@ -274,7 +247,7 @@ export default function AdminTaskNotesModal({
     const buttonBg = isDark
         ? "rgba(255,255,255,0.05)"
         : "rgba(0,0,0,0.04)";
-    const bodyText = isDark ? "#e2e8f0" : "#334155";
+    const bodyText = isDark ? "#e5e7eb" : "#374151";
 
     return createPortal(
         <AnimatePresence mode="wait">

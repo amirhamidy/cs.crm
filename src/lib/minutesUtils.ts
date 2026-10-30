@@ -8,8 +8,8 @@ import type { MeetingStatus } from "@/types/minutes";
 export const STATUS_META: Record<MeetingStatus, { label: string; className: string; dot: string }> = {
   draft: {
     label: "پیش‌نویس",
-    className: "border-slate-500/25 bg-slate-500/10 text-slate-600 dark:text-slate-300",
-    dot: "bg-slate-400",
+    className: "border-gray-500/25 bg-gray-500/10 text-gray-600 dark:text-gray-300",
+    dot: "bg-gray-400",
   },
   pending: {
     label: "در انتظار امضا",

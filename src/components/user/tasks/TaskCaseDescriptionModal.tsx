@@ -82,7 +82,7 @@ export default function TaskCaseDescriptionModal({
                     transition={{ duration: 0.22, ease: "easeOut" }}
                     className="w-full max-w-[430px] overflow-hidden rounded-3xl border"
                     style={{
-                        background: isDark ? "#0f172a" : "#ffffff",
+                        background: isDark ? "#111827" : "#ffffff",
                         borderColor: isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.06)",
                         boxShadow: "0 24px 64px rgba(0,0,0,0.28)",
                     }}

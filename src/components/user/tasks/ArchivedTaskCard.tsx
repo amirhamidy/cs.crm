@@ -2,20 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { m } from "framer-motion";
-import {
-    Archive,
-    Ban,
-    Building2,
-    CalendarDays,
-    CheckCircle2,
-    Clock3,
-    FileText,
-    Loader2,
-    MessageSquareText,
-    RotateCcw,
-    ShoppingBag,
-    User,
-} from "lucide-react";
+import { Archive, Ban, Building2, CalendarDays, CheckCircle2, Clock3, FileText, Loader2, MessageSquareText, RotateCcw, ShoppingBag, User } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
 import { departmentsApi } from "@/lib/api";
 import { useCurrentEmployee } from "@/hooks/usecurrentemployee";
@@ -267,7 +254,7 @@ export default function ArchivedTaskCard({ task, onReopened }: Props) {
             <m.article
                 className="group relative overflow-hidden rounded-[1.8rem] border border-gray-100 bg-white p-4 shadow-[0_8px_28px_rgba(15,23,42,0.035)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_16px_36px_rgba(15,23,42,0.08)] dark:border-white/[0.07] dark:bg-[#111a2d] dark:shadow-none"
             >
-                <div className="absolute inset-y-0 right-0 w-1 bg-gradient-to-b from-slate-400 to-slate-400/20" />
+                <div className="absolute inset-y-0 right-0 w-1 bg-gradient-to-b from-gray-400 to-gray-400/20" />
 
                 <div className="mb-3 flex items-start justify-between gap-3 pl-1">
                     <span
@@ -392,7 +379,7 @@ export default function ArchivedTaskCard({ task, onReopened }: Props) {
 
             {confirmOpen && (
                 <div
-                    className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/50 px-4 backdrop-blur-sm"
+                    className="fixed inset-0 z-[9999] flex items-center justify-center bg-gray-950/50 px-4 backdrop-blur-sm"
                     dir="rtl"
                     onClick={() => !submitting && setConfirmOpen(false)}
                 >

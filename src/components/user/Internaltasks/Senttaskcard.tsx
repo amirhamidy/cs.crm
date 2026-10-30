@@ -3,10 +3,7 @@
 import { memo, useEffect, useState } from "react";
 import { AnimatePresence, m } from "framer-motion";
 import { useVisibleInterval } from "@/hooks/useVisibility";
-import {
-    Ban, CalendarClock, CheckCircle2, ClipboardX, Clock, Loader, Loader2,
-    MessageSquareText, RotateCcw, Trash2, UserRound, X,
-} from "lucide-react";
+import { Ban, CalendarClock, CheckCircle2, ClipboardX, Clock, Loader, Loader2, MessageSquareText, RotateCcw, Trash2, UserRound, X } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useAuthStore } from "@/store/authStore";
 import type { InternalTask, InternalTaskStatus, EmployeeRef } from "./types";
@@ -74,7 +71,7 @@ function EmployeeChip({ employee, isDark }: { employee: EmployeeRef; isDark: boo
                 style={{ background: `linear-gradient(135deg, ${gradient[0]}, ${gradient[1]})` }}>
                 <UserRound size={11} />
             </span>
-            <span className="text-[10.5px] font-bold" style={{ color: isDark ? "#cbd5e1" : "#475569" }}>{name}</span>
+            <span className="text-[10.5px] font-bold" style={{ color: isDark ? "#d1d5db" : "#4b5563" }}>{name}</span>
         </div>
     );
 }
@@ -200,7 +197,7 @@ function SentTaskCard({ task, index = 0, onDelete, onUpdated, isDeleting = false
                 className="relative flex min-h-[130px] flex-col gap-3 overflow-hidden rounded-[2rem] p-4"
                 style={{
                     border: accent ? `1px solid color-mix(in srgb, ${accent} 40%, transparent)` : isDark ? "1px solid rgba(255,255,255,0.06)" : "1px solid rgba(0,0,0,0.06)",
-                    background: accent ? `color-mix(in srgb, ${accent} ${urgency === "overdue" ? 7 : urgency === "critical" ? 5 : 4}%, ${isDark ? "#0f172a" : "#fafafa"})` : isDark ? "rgba(255,255,255,0.02)" : "#fafafa",
+                    background: accent ? `color-mix(in srgb, ${accent} ${urgency === "overdue" ? 7 : urgency === "critical" ? 5 : 4}%, ${isDark ? "#111827" : "#fafafa"})` : isDark ? "rgba(255,255,255,0.02)" : "#fafafa",
                     opacity: effectiveDeleting ? 0.45 : 1, pointerEvents: effectiveDeleting ? "none" : undefined,
                     boxShadow: accent ? `0 0 0 1px color-mix(in srgb, ${accent} 15%, transparent), 0 4px 24px color-mix(in srgb, ${accent} 12%, transparent)` : isDark ? "0 2px 24px rgba(0,0,0,0.2)" : "0 2px 16px rgba(0,0,0,0.04)",
                     transition: "border-color .4s ease,background .4s ease,box-shadow .4s ease",
@@ -263,15 +260,15 @@ function SentTaskCard({ task, index = 0, onDelete, onUpdated, isDeleting = false
                 </div>
 
                 <div className="flex flex-col gap-1">
-                    <h3 className="text-[13.5px] font-extrabold leading-tight" style={{ color: isDark ? "#f1f5f9" : "#1e293b" }}>{task.title}</h3>
-                    {task.description && <p className="line-clamp-2 text-[12px] leading-6" style={{ color: isDark ? "#94a3b8" : "#64748b" }}>{task.description}</p>}
+                    <h3 className="text-[13.5px] font-extrabold leading-tight" style={{ color: isDark ? "#f3f4f6" : "#1f2937" }}>{task.title}</h3>
+                    {task.description && <p className="line-clamp-2 text-[12px] leading-6" style={{ color: isDark ? "#9ca3af" : "#6b7280" }}>{task.description}</p>}
                 </div>
 
                 <div className="mt-auto flex flex-wrap items-center gap-2 border-t pt-2.5" style={{ borderColor: isDark ? "rgba(255,255,255,.05)" : "rgba(0,0,0,.05)" }}>
                     {assignedEmployees.length ? assignedEmployees.map(emp => <EmployeeChip key={`${emp.id}-${(emp as any).username ?? ""}`} employee={emp} isDark={isDark} />) : (
                         <div className="flex items-center gap-1.5 rounded-full py-0.5 pl-2 pr-0.5" style={{ border: isDark ? "1px solid rgba(255,255,255,.06)" : "1px solid rgba(0,0,0,.06)", background: isDark ? "rgba(255,255,255,.04)" : "rgba(0,0,0,.03)" }}>
                             <span className="flex h-5 w-5 items-center justify-center rounded-full text-white" style={{ background: "linear-gradient(135deg,#6366f1,#8b5cf6)" }}><UserRound size={11} /></span>
-                            <span className="text-[10.5px] font-bold" style={{ color: isDark ? "#cbd5e1" : "#475569" }}>بدون مسئول</span>
+                            <span className="text-[10.5px] font-bold" style={{ color: isDark ? "#d1d5db" : "#4b5563" }}>بدون مسئول</span>
                         </div>
                     )}
                 </div>
@@ -298,7 +295,7 @@ function SentTaskCard({ task, index = 0, onDelete, onUpdated, isDeleting = false
                         style={{ background: "rgba(0,0,0,.45)", backdropFilter: "blur(3px)" }} onClick={closeConfirm}>
                         <m.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 16 }}
                             onClick={e => e.stopPropagation()} dir="rtl"
-                            className="flex w-full max-w-md flex-col overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-sm dark:border-white/[.06] dark:bg-[#0f172a]">
+                            className="flex w-full max-w-md flex-col overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-sm dark:border-white/[.06] dark:bg-[#111827]">
                             <div className="flex items-center justify-between px-8 pb-6 pt-8">
                                 <div className="flex items-center gap-2.5">
                                     <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-red-50 dark:bg-red-500/10"><Trash2 size={15} className="text-red-500" /></div>

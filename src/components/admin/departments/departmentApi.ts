@@ -1,10 +1,5 @@
 import { accountsApi, departmentsApi } from "@/lib/api";
-import {
-  DepartmentAPIItem,
-  EmployeeAPIItem,
-  DepartmentEmployeeAPIItem,
-  StageAPIItem,
-} from "./types";
+import { DepartmentAPIItem, EmployeeAPIItem, DepartmentEmployeeAPIItem, StageAPIItem } from "./types";
 
 export const departmentApi = {
   getDepartments: async (): Promise<DepartmentAPIItem[]> =>

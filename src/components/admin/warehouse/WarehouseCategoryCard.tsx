@@ -44,7 +44,7 @@ function ModalShell({
             onMouseDown={(e) => {
                 if (e.target === e.currentTarget) onClose();
             }}
-            className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/50 px-4 backdrop-blur-sm"
+            className="fixed inset-0 z-[9999] flex items-center justify-center bg-gray-950/50 px-4 backdrop-blur-sm"
             dir="rtl"
         >
             <m.div
@@ -52,7 +52,7 @@ function ModalShell({
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.96, y: 16 }}
                 transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
-                className="w-full max-w-[380px] rounded-[2rem] border border-gray-100 bg-white p-5 shadow-[0_24px_64px_rgba(0,0,0,0.3)] dark:border-white/[0.07] dark:bg-[#0f172a]"
+                className="w-full max-w-[380px] rounded-[2rem] border border-gray-100 bg-white p-5 shadow-[0_24px_64px_rgba(0,0,0,0.3)] dark:border-white/[0.07] dark:bg-[#111827]"
             >
                 {children}
             </m.div>
@@ -374,7 +374,7 @@ export default function WarehouseCategoryCard({
                                             type="button"
                                             onClick={handleCloseConfirm}
                                             disabled={deleting}
-                                            className="flex h-11 flex-1 items-center justify-center rounded-2xl bg-gray-100 text-[12.5px] font-bold text-gray-600 transition-colors hover:text-gray-800 disabled:opacity-50 dark:bg-white/[0.05] dark:text-slate-300 dark:hover:text-white"
+                                            className="flex h-11 flex-1 items-center justify-center rounded-2xl bg-gray-100 text-[12.5px] font-bold text-gray-600 transition-colors hover:text-gray-800 disabled:opacity-50 dark:bg-white/[0.05] dark:text-gray-300 dark:hover:text-white"
                                         >
                                             انصراف
                                         </button>
@@ -457,7 +457,7 @@ export default function WarehouseCategoryCard({
                                             type="button"
                                             onClick={handleCloseEdit}
                                             disabled={editing}
-                                            className="flex h-11 flex-1 items-center justify-center rounded-2xl bg-gray-100 text-[12.5px] font-bold text-gray-600 transition-colors hover:text-gray-800 disabled:opacity-50 dark:bg-white/[0.05] dark:text-slate-300 dark:hover:text-white"
+                                            className="flex h-11 flex-1 items-center justify-center rounded-2xl bg-gray-100 text-[12.5px] font-bold text-gray-600 transition-colors hover:text-gray-800 disabled:opacity-50 dark:bg-white/[0.05] dark:text-gray-300 dark:hover:text-white"
                                         >
                                             انصراف
                                         </button>

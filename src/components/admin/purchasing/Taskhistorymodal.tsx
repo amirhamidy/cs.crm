@@ -2,17 +2,7 @@
 
 import { createPortal } from "react-dom";
 import { AnimatePresence, m } from "framer-motion";
-import {
-    ArrowLeftCircle,
-    ArrowRightCircle,
-    FileText,
-    History,
-    Loader2,
-    RefreshCw,
-    StickyNote,
-    UserRound,
-    X,
-} from "lucide-react";
+import { ArrowLeftCircle, ArrowRightCircle, FileText, History, Loader2, RefreshCw, StickyNote, UserRound, X } from "lucide-react";
 import { JALALI_MONTHS, pad2, toJalali, toPersianDigits } from "@/lib/jalali";
 
 export interface PurchasingTaskHistoryEntry {
@@ -97,7 +87,7 @@ export default function TaskHistoryModal({
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className="fixed inset-0 z-[999] flex items-center justify-center bg-slate-950/50 px-4 backdrop-blur-sm"
+                    className="fixed inset-0 z-[999] flex items-center justify-center bg-gray-950/50 px-4 backdrop-blur-sm"
                     onClick={onClose}
                     dir="rtl"
                 >

@@ -54,7 +54,7 @@ export function ConfirmModal({
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: 24, scale: 0.98 }}
                         transition={{ duration: 0.3, ease: "easeOut" }}
-                        className="my-8 w-full max-w-sm overflow-visible rounded-[2.5rem] border border-gray-100 bg-white shadow-2xl dark:border-white/[0.08] dark:bg-[#0f172a]"
+                        className="my-8 w-full max-w-sm overflow-visible rounded-[2.5rem] border border-gray-100 bg-white shadow-2xl dark:border-white/[0.08] dark:bg-[#111827]"
                         onClick={(e) => e.stopPropagation()}
                         dir="rtl"
                     >

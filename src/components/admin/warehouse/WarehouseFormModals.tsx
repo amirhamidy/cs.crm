@@ -36,7 +36,7 @@ function Shell({
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.95, y: 10 }}
                         onClick={(e) => e.stopPropagation()}
-                        className="w-full max-w-sm rounded-3xl bg-white p-5 shadow-2xl dark:bg-slate-900"
+                        className="w-full max-w-sm rounded-3xl bg-white p-5 shadow-2xl dark:bg-gray-900"
                     >
                         {children}
                     </m.div>

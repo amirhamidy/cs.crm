@@ -3,13 +3,7 @@
 import { memo, useEffect, useMemo, useState } from "react";
 import { m } from "framer-motion";
 import { ExternalLink, FilePlus, FileText, GitBranch, Loader2, Pencil, Trash2, Users, X } from "lucide-react";
-import {
-    Department,
-    HumanResource,
-    HumanResourceFile,
-    deleteDocumentFile,
-    getDocumentFiles,
-} from "./humanResourceApi";
+import { Department, HumanResource, HumanResourceFile, deleteDocumentFile, getDocumentFiles } from "./humanResourceApi";
 import { extractError, gradientOf, initialOf } from "./hrUtils";
 
 interface Props {

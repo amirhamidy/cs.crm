@@ -2,30 +2,11 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, m } from "framer-motion";
-import {
-    Ban,
-    Calendar,
-    Check,
-    ChevronDown,
-    ChevronLeft,
-    ChevronRight,
-    Clock,
-    ListTodo,
-    Loader2,
-    Repeat,
-    Search,
-    X,
-} from "lucide-react";
+import { Ban, Calendar, Check, ChevronDown, ChevronLeft, ChevronRight, Clock, ListTodo, Loader2, Repeat, Search, X } from "lucide-react";
 import { useTheme } from "next-themes";
 import type { InternalTask, InternalTaskRoutine } from "./Types";
 import { createInternalTaskRoutine } from "./Api";
-import {
-    JALALI_MONTHS,
-    pad2,
-    toGregorian,
-    toJalali,
-    toPersianDigits,
-} from "@/lib/jalali";
+import { JALALI_MONTHS, pad2, toGregorian, toJalali, toPersianDigits } from "@/lib/jalali";
 
 const NEVER_REPEAT_VALUE = 2147483647;
 const INTERVAL_PRESETS = [1, 3, 7, 14, 30];
@@ -155,7 +136,7 @@ function NiceSelect({
                 />
             </button>
             <label
-                className={`pointer-events-none absolute right-5 rounded bg-white px-1.5 text-sm text-gray-400 transition-all duration-200 dark:bg-[#0f172a] ${isOpen || selectedOption
+                className={`pointer-events-none absolute right-5 rounded bg-white px-1.5 text-sm text-gray-400 transition-all duration-200 dark:bg-[#111827] ${isOpen || selectedOption
                     ? "top-0 text-xs text-gray-500 dark:text-gray-400"
                     : "top-1/2 -translate-y-1/2"
                     }`}
@@ -169,7 +150,7 @@ function NiceSelect({
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: -10, scale: 0.95 }}
                         transition={{ duration: 0.15 }}
-                        className="absolute z-50 mt-2 max-h-60 w-full overflow-y-auto rounded-2xl border border-gray-100 bg-white p-1.5 shadow-[0_8px_30px_rgb(0,0,0,0.12)] dark:border-white/[0.06] dark:bg-[#0f172a]"
+                        className="absolute z-50 mt-2 max-h-60 w-full overflow-y-auto rounded-2xl border border-gray-100 bg-white p-1.5 shadow-[0_8px_30px_rgb(0,0,0,0.12)] dark:border-white/[0.06] dark:bg-[#111827]"
                         style={{ scrollbarWidth: "thin" }}
                     >
                         {options.map((option) => (
@@ -262,7 +243,7 @@ function TaskPicker({
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: -10, scale: 0.97 }}
                         transition={{ duration: 0.15 }}
-                        className="absolute z-50 mt-2 w-full overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-[0_8px_30px_rgb(0,0,0,0.12)] dark:border-white/[0.06] dark:bg-[#0f172a]"
+                        className="absolute z-50 mt-2 w-full overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-[0_8px_30px_rgb(0,0,0,0.12)] dark:border-white/[0.06] dark:bg-[#111827]"
                     >
                         <div className="flex items-center gap-2 border-b border-gray-100 px-3.5 py-2.5 dark:border-white/[0.06]">
                             <Search size={14} className="shrink-0 text-gray-400" />
@@ -483,7 +464,7 @@ export default function CreateTaskRoutineModal({
                         exit={{ opacity: 0, y: 20, scale: 0.97 }}
                         transition={{ duration: 0.24, ease: "easeOut" }}
                         onClick={(event) => event.stopPropagation()}
-                        className="max-h-[88vh] w-full max-w-md overflow-y-auto rounded-[2rem] border border-gray-100 bg-white shadow-2xl dark:border-white/[0.07] dark:bg-[#0f172a]"
+                        className="max-h-[88vh] w-full max-w-md overflow-y-auto rounded-[2rem] border border-gray-100 bg-white shadow-2xl dark:border-white/[0.07] dark:bg-[#111827]"
                         style={{ scrollbarWidth: "thin" }}
                     >
                         <div className="flex items-center justify-between px-6 pb-4 pt-6">
@@ -492,10 +473,10 @@ export default function CreateTaskRoutineModal({
                                     <Repeat size={18} />
                                 </div>
                                 <div>
-                                    <h2 className="text-[15px] font-extrabold text-slate-900 dark:text-white">
+                                    <h2 className="text-[15px] font-extrabold text-gray-900 dark:text-white">
                                         تسک روتین جدید
                                     </h2>
-                                    <p className="mt-1 text-[11px] font-medium text-slate-400">
+                                    <p className="mt-1 text-[11px] font-medium text-gray-400">
                                         یک تسک درون‌سازمانی را تکرارشونده کن
                                     </p>
                                 </div>
@@ -504,7 +485,7 @@ export default function CreateTaskRoutineModal({
                                 type="button"
                                 onClick={onClose}
                                 disabled={isSubmitting}
-                                className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 text-slate-400 transition-colors hover:text-slate-700 disabled:opacity-40 dark:bg-white/[0.06] dark:hover:text-white"
+                                className="flex h-9 w-9 items-center justify-center rounded-xl bg-gray-100 text-gray-400 transition-colors hover:text-gray-700 disabled:opacity-40 dark:bg-white/[0.06] dark:hover:text-white"
                             >
                                 <X size={17} />
                             </button>
@@ -522,8 +503,8 @@ export default function CreateTaskRoutineModal({
                                 />
                             </div>
 
-                            <div className="rounded-2xl border border-slate-100 p-3 dark:border-white/[0.06]">
-                                <div className="mb-3 flex items-center gap-2 px-1 text-[12px] font-bold text-slate-500 dark:text-slate-400">
+                            <div className="rounded-2xl border border-gray-100 p-3 dark:border-white/[0.06]">
+                                <div className="mb-3 flex items-center gap-2 px-1 text-[12px] font-bold text-gray-500 dark:text-gray-400">
                                     <Calendar size={14} className="text-indigo-500" />
                                     زمان شروع
                                 </div>
@@ -531,18 +512,18 @@ export default function CreateTaskRoutineModal({
                                     <button
                                         type="button"
                                         onClick={goToNextMonth}
-                                        className="flex h-8 w-8 items-center justify-center rounded-xl text-slate-400 transition-colors hover:bg-indigo-50 hover:text-indigo-500 dark:hover:bg-indigo-500/10"
+                                        className="flex h-8 w-8 items-center justify-center rounded-xl text-gray-400 transition-colors hover:bg-indigo-50 hover:text-indigo-500 dark:hover:bg-indigo-500/10"
                                     >
                                         <ChevronRight size={16} />
                                     </button>
-                                    <span className="text-[13px] font-extrabold text-slate-800 dark:text-slate-100">
+                                    <span className="text-[13px] font-extrabold text-gray-800 dark:text-gray-100">
                                         {JALALI_MONTHS[calendarMonth - 1]}{" "}
                                         {toPersianDigits(calendarYear)}
                                     </span>
                                     <button
                                         type="button"
                                         onClick={goToPreviousMonth}
-                                        className="flex h-8 w-8 items-center justify-center rounded-xl text-slate-400 transition-colors hover:bg-indigo-50 hover:text-indigo-500 dark:hover:bg-indigo-500/10"
+                                        className="flex h-8 w-8 items-center justify-center rounded-xl text-gray-400 transition-colors hover:bg-indigo-50 hover:text-indigo-500 dark:hover:bg-indigo-500/10"
                                     >
                                         <ChevronLeft size={16} />
                                     </button>
@@ -552,7 +533,7 @@ export default function CreateTaskRoutineModal({
                                         (day, index) => (
                                             <span
                                                 key={`weekday-${index}`}
-                                                className="flex h-8 items-center justify-center text-[10px] font-bold text-slate-400"
+                                                className="flex h-8 items-center justify-center text-[10px] font-bold text-gray-400"
                                             >
                                                 {day}
                                             </span>
@@ -576,7 +557,7 @@ export default function CreateTaskRoutineModal({
                                                         onClick={() => selectDay(day)}
                                                         className={`flex h-8 w-8 items-center justify-center rounded-xl text-[11px] font-bold transition-all ${isSelected
                                                             ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/25"
-                                                            : "text-slate-600 hover:bg-indigo-50 hover:text-indigo-600 dark:text-slate-300 dark:hover:bg-indigo-500/10 dark:hover:text-indigo-300"
+                                                            : "text-gray-600 hover:bg-indigo-50 hover:text-indigo-600 dark:text-gray-300 dark:hover:bg-indigo-500/10 dark:hover:text-indigo-300"
                                                             }`}
                                                     >
                                                         {toPersianDigits(day)}
@@ -685,7 +666,7 @@ export default function CreateTaskRoutineModal({
                                 type="button"
                                 onClick={onClose}
                                 disabled={isSubmitting}
-                                className="flex h-11 flex-1 items-center justify-center rounded-full bg-slate-100 text-[12px] font-bold text-slate-600 transition-colors hover:bg-slate-200 disabled:opacity-40 dark:bg-white/[0.06] dark:text-slate-300"
+                                className="flex h-11 flex-1 items-center justify-center rounded-full bg-gray-100 text-[12px] font-bold text-gray-600 transition-colors hover:bg-gray-200 disabled:opacity-40 dark:bg-white/[0.06] dark:text-gray-300"
                             >
                                 انصراف
                             </button>

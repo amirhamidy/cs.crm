@@ -1,11 +1,7 @@
 "use client";
 
 import { create } from "zustand";
-import {
-  clearSession,
-  getStoredUser,
-  saveSession,
-} from "@/lib/clientAuth";
+import { clearSession, getStoredUser, saveSession } from "@/lib/clientAuth";
 
 export interface AuthState {
   username: string | null;

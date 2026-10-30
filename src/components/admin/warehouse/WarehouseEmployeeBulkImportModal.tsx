@@ -3,13 +3,7 @@
 import { useRef, useState } from "react";
 import { AnimatePresence, m } from "framer-motion";
 import { useTheme } from "next-themes";
-import {
-    CheckCircle2,
-    FileSpreadsheet,
-    Loader2,
-    UploadCloud,
-    X,
-} from "lucide-react";
+import { CheckCircle2, FileSpreadsheet, Loader2, UploadCloud, X } from "lucide-react";
 import type { AxiosError } from "axios";
 import axiosInstance from "@/lib/axiosInstance";
 
@@ -140,7 +134,7 @@ export default function WarehouseEmployeeBulkImportModal({
                         dir="rtl"
                         className="w-full max-w-[400px] rounded-[2rem] p-5"
                         style={{
-                            background: isDark ? "#0f172a" : "#ffffff",
+                            background: isDark ? "#111827" : "#ffffff",
                             border: `1px solid ${border}`,
                             boxShadow: isDark
                                 ? "0 20px 60px rgba(0,0,0,.45)"

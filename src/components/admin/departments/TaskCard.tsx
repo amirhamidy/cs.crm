@@ -3,20 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, m } from "framer-motion";
-import {
-    AlarmClock,
-    CalendarDays,
-    CheckCircle2,
-    Clock3,
-    FileText,
-    FolderKanban,
-    Loader2,
-    MessageSquareText,
-    Pencil,
-    Trash2,
-    User,
-    UsersRound,
-} from "lucide-react";
+import { AlarmClock, CalendarDays, CheckCircle2, Clock3, FileText, Loader2, MessageSquareText, Pencil, Trash2, User, UsersRound } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
 import { JALALI_MONTHS, pad2, toJalali, toPersianDigits } from "@/lib/jalali";
 import type { Task, TaskRelationId } from "./types";
@@ -545,7 +532,7 @@ export default function TaskCard({
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: 1 }}
                                 exit={{ opacity: 0 }}
-                                className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/50 px-4 backdrop-blur-sm"
+                                className="fixed inset-0 z-[70] flex items-center justify-center bg-gray-950/50 px-4 backdrop-blur-sm"
                                 onClick={() => !deleteLoading && setConfirmDelete(false)}
                             >
                                 <m.div

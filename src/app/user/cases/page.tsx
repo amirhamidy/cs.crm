@@ -4,7 +4,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { AnimatePresence } from "framer-motion";
 import { ClipboardList, Plus, RefreshCw } from "lucide-react";
 import { useTheme } from "next-themes";
-import { casesApi, customersApi, extractCaseId, metaApi, tasksApi, fetchAllTasks, fetchTasksForCases } from "@/lib/api";
+import { casesApi, customersApi, metaApi, tasksApi, fetchAllTasks, fetchTasksForCases } from "@/lib/api";
 import type { Department } from "@/types/department";
 import type { Employee } from "@/types/employee";
 import type { TaskItem } from "@/types/task";
@@ -217,7 +217,7 @@ export default function UserCasesPage() {
                         className="flex h-10 w-10 items-center justify-center rounded-2xl transition-colors disabled:opacity-50"
                         style={{
                             background: isDark ? "rgba(255,255,255,0.05)" : "rgba(15,23,42,0.05)",
-                            color: isDark ? "#cbd5e1" : "#475569",
+                            color: isDark ? "#d1d5db" : "#4b5563",
                         }}
                     >
                         <RefreshCw size={15} className={loading || isFetching ? "animate-spin" : ""} />

@@ -140,7 +140,7 @@ const EVENT_TYPE_COLOR: Record<string, TypeStyle> = {
     reminder: { bg: "bg-cyan-500/10", text: "text-cyan-700 dark:text-cyan-200", dot: "bg-cyan-500", bar: "bg-cyan-500", border: "border-cyan-500/20" },
     deadline: { bg: "bg-rose-500/10", text: "text-rose-700 dark:text-rose-200", dot: "bg-rose-500", bar: "bg-rose-500", border: "border-rose-500/20" },
     note: { bg: "bg-emerald-500/10", text: "text-emerald-700 dark:text-emerald-200", dot: "bg-emerald-500", bar: "bg-emerald-500", border: "border-emerald-500/20" },
-    default: { bg: "bg-slate-500/10", text: "text-slate-600 dark:text-slate-300", dot: "bg-slate-400", bar: "bg-slate-400", border: "border-slate-500/20" },
+    default: { bg: "bg-gray-500/10", text: "text-gray-600 dark:text-gray-300", dot: "bg-gray-400", bar: "bg-gray-400", border: "border-gray-500/20" },
 };
 
 export const getEventType = (type: string) => {
@@ -215,7 +215,7 @@ export default function CalendarNoteModal({ isOpen, onClose, selectedDate, notes
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className="fixed inset-0 z-[120] flex items-stretch justify-start bg-slate-950/40 p-2 backdrop-blur-sm sm:p-4"
+                    className="fixed inset-0 z-[120] flex items-stretch justify-start bg-gray-950/40 p-2 backdrop-blur-sm sm:p-4"
                     onClick={onClose}
                 >
                     <m.aside
@@ -255,9 +255,9 @@ export default function CalendarNoteModal({ isOpen, onClose, selectedDate, notes
                         
                         <div className="flex-1 space-y-6 overflow-y-auto px-5 py-5">
                             <section className="space-y-3">
-                                <h4 className="text-[12.5px] font-extrabold text-slate-700 dark:text-slate-200">برنامه این روز</h4>
+                                <h4 className="text-[12.5px] font-extrabold text-gray-700 dark:text-gray-200">برنامه این روز</h4>
                                 {dayEvents.length === 0 ? (
-                                    <div className="rounded-2xl border border-dashed border-blue-200/80 bg-white/50 px-5 py-7 text-center text-[11px] font-semibold text-slate-400 dark:border-white/[0.08] dark:bg-white/[0.02]">برای این روز رویدادی ثبت نشده</div>
+                                    <div className="rounded-2xl border border-dashed border-blue-200/80 bg-white/50 px-5 py-7 text-center text-[11px] font-semibold text-gray-400 dark:border-white/[0.08] dark:bg-white/[0.02]">برای این روز رویدادی ثبت نشده</div>
                                 ) : dayEvents.map((event) => {
                                     const style = getTypeStyle(event.type);
                                     const assigned = event.people?.assigned_employee ?? [];
@@ -271,18 +271,18 @@ export default function CalendarNoteModal({ isOpen, onClose, selectedDate, notes
                                             className="relative overflow-hidden rounded-2xl border border-white/70 bg-white/70 p-4 pr-5 shadow-[0_6px_24px_-14px_rgba(37,99,235,0.35)] backdrop-blur-md dark:border-white/[0.07] dark:bg-white/[0.04] dark:shadow-none"
                                         >
                                             <span className={`absolute inset-y-3 right-0 w-1 rounded-full ${style.bar}`} />
-                                            <p className="break-words text-[13px] font-extrabold text-slate-800 dark:text-white">{event.title}</p>
+                                            <p className="break-words text-[13px] font-extrabold text-gray-800 dark:text-white">{event.title}</p>
                                             <div className="mt-2 flex flex-wrap items-center gap-1.5">
                                                 <span className={`flex items-center gap-1 rounded-lg border px-2 py-1 text-[9.5px] font-bold ${style.bg} ${style.text} ${style.border}`}><Tag size={10} />{getTypeLabel(event.type)}</span>
-                                                <span className="rounded-lg bg-slate-500/10 px-2 py-1 text-[9px] font-bold text-slate-400">#{event.id}</span>
+                                                <span className="rounded-lg bg-gray-500/10 px-2 py-1 text-[9px] font-bold text-gray-400">#{event.id}</span>
                                             </div>
                                             <div className="mt-3 grid grid-cols-2 gap-2">
                                                 {[["شروع", event.start], ["پایان", event.end]].map(([label, value]) => (
                                                     <div key={label} className="flex items-center gap-2 rounded-xl bg-blue-500/[0.06] px-2.5 py-2 dark:bg-white/[0.04]">
                                                         <Clock3 size={12} className="shrink-0 text-blue-500" />
                                                         <div className="min-w-0">
-                                                            <p className="text-[8.5px] font-bold text-slate-400">{label}</p>
-                                                            <p className="truncate text-[10px] font-bold text-slate-600 dark:text-slate-300">{formatEventDate(value)}</p>
+                                                            <p className="text-[8.5px] font-bold text-gray-400">{label}</p>
+                                                            <p className="truncate text-[10px] font-bold text-gray-600 dark:text-gray-300">{formatEventDate(value)}</p>
                                                         </div>
                                                     </div>
                                                 ))}
@@ -295,13 +295,13 @@ export default function CalendarNoteModal({ isOpen, onClose, selectedDate, notes
                                                                 {assigned.slice(0, 5).map((p) => (
                                                                     <span key={p.id} title={p.full_name} className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-white bg-gradient-to-br from-blue-500 to-cyan-400 text-[10px] font-extrabold text-white dark:border-[#0b1633]">{initial(p.full_name)}</span>
                                                                 ))}
-                                                                {assigned.length > 5 && <span className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-white bg-slate-200 text-[9px] font-bold text-slate-600 dark:border-[#0b1633] dark:bg-slate-700 dark:text-slate-200">+{(assigned.length - 5).toLocaleString("fa-IR")}</span>}
+                                                                {assigned.length > 5 && <span className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-white bg-gray-200 text-[9px] font-bold text-gray-600 dark:border-[#0b1633] dark:bg-gray-700 dark:text-gray-200">+{(assigned.length - 5).toLocaleString("fa-IR")}</span>}
                                                             </div>
-                                                            <span className="max-w-[10rem] truncate text-[10px] font-bold text-slate-500 dark:text-slate-400">{assigned.map((p) => p.full_name).join("، ")}</span>
+                                                            <span className="max-w-[10rem] truncate text-[10px] font-bold text-gray-500 dark:text-gray-400">{assigned.map((p) => p.full_name).join("، ")}</span>
                                                         </div>
                                                     )}
                                                     {creator && (
-                                                        <span className="flex items-center gap-1.5 text-[9.5px] font-bold text-slate-400"><UserRound size={11} />ایجاد: <span className="text-slate-600 dark:text-slate-300">{creator.full_name}</span></span>
+                                                        <span className="flex items-center gap-1.5 text-[9.5px] font-bold text-gray-400"><UserRound size={11} />ایجاد: <span className="text-gray-600 dark:text-gray-300">{creator.full_name}</span></span>
                                                     )}
                                                 </div>
                                             )}
@@ -311,9 +311,9 @@ export default function CalendarNoteModal({ isOpen, onClose, selectedDate, notes
                             </section>
 
                             <section className="space-y-3">
-                                <h4 className="flex items-center gap-1.5 text-[12.5px] font-extrabold text-slate-700 dark:text-slate-200"><StickyNote size={13} className="text-emerald-500" />یادداشت‌ها</h4>
+                                <h4 className="flex items-center gap-1.5 text-[12.5px] font-extrabold text-gray-700 dark:text-gray-200"><StickyNote size={13} className="text-emerald-500" />یادداشت‌ها</h4>
                                 {dayNotes.length === 0 ? (
-                                    <div className="rounded-2xl border border-dashed border-blue-200/80 bg-white/50 px-5 py-7 text-center text-[11px] font-semibold text-slate-400 dark:border-white/[0.08] dark:bg-white/[0.02]">هنوز یادداشتی برای این روز نوشته نشده</div>
+                                    <div className="rounded-2xl border border-dashed border-blue-200/80 bg-white/50 px-5 py-7 text-center text-[11px] font-semibold text-gray-400 dark:border-white/[0.08] dark:bg-white/[0.02]">هنوز یادداشتی برای این روز نوشته نشده</div>
                                 ) : (
                                     <AnimatePresence>
                                         {dayNotes.map((note) => (
@@ -328,8 +328,8 @@ export default function CalendarNoteModal({ isOpen, onClose, selectedDate, notes
                                             >
                                                 <div className="flex items-start justify-between gap-3">
                                                     <div className="min-w-0 flex-1">
-                                                        <p className="whitespace-pre-wrap break-words text-[11.5px] font-semibold leading-7 text-slate-700 dark:text-slate-200">{note.description}</p>
-                                                        {note.created_at && <p className="mt-2 text-[9px] font-medium text-slate-400">{formatEventDate(note.created_at)}</p>}
+                                                        <p className="whitespace-pre-wrap break-words text-[11.5px] font-semibold leading-7 text-gray-700 dark:text-gray-200">{note.description}</p>
+                                                        {note.created_at && <p className="mt-2 text-[9px] font-medium text-gray-400">{formatEventDate(note.created_at)}</p>}
                                                     </div>
                                                     <button type="button" aria-label="حذف یادداشت" onClick={() => handleDelete(note.id)} disabled={deletingId === note.id} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition hover:bg-rose-500/10 disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-rose-400">
                                                         {deletingId === note.id ? <Loader2 size={15} className="animate-spin text-rose-500" /> : <Trash2 size={15} className="text-rose-500" />}
@@ -352,7 +352,7 @@ export default function CalendarNoteModal({ isOpen, onClose, selectedDate, notes
                                     placeholder={disabled ? "برای روزهای گذشته امکان ثبت یادداشت وجود ندارد" : "یادداشت این روز را بنویسید..."}
                                     rows={3}
                                     disabled={disabled}
-                                    className="w-full resize-none rounded-2xl border border-blue-200/70 bg-white/80 py-3 pl-16 pr-4 text-[12.5px] leading-7 text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-blue-500/60 focus:ring-4 focus:ring-blue-500/15 disabled:cursor-not-allowed disabled:opacity-60 dark:border-white/[0.08] dark:bg-white/[0.04] dark:text-slate-100"
+                                    className="w-full resize-none rounded-2xl border border-blue-200/70 bg-white/80 py-3 pl-16 pr-4 text-[12.5px] leading-7 text-gray-800 outline-none transition placeholder:text-gray-400 focus:border-blue-500/60 focus:ring-4 focus:ring-blue-500/15 disabled:cursor-not-allowed disabled:opacity-60 dark:border-white/[0.08] dark:bg-white/[0.04] dark:text-gray-100"
                                 />
                                 <button
                                     type="button"

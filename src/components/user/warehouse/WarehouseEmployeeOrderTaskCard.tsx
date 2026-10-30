@@ -3,36 +3,13 @@
 import { useMemo, useState } from "react";
 import { m, AnimatePresence } from "framer-motion";
 import { useTheme } from "next-themes";
-import {
-    AlertCircle,
-    ArrowRight,
-    Building2,
-    CheckCircle2,
-    ClipboardList,
-    Clock3,
-    FileText,
-    MapPin,
-    Package,
-    PackagePlus,
-    Paperclip,
-    User,
-    XCircle,
-} from "lucide-react";
+import { AlertCircle, ArrowRight, Building2, CheckCircle2, ClipboardList, Clock3, FileText, MapPin, Package, PackagePlus, Paperclip, User, XCircle } from "lucide-react";
 import { ApiOrderTask, ApiProduct } from "@/types/warehouse";
 import WarehouseEmployeeOrderTaskStatusModal from "./WarehouseEmployeeOrderTaskStatusModal";
 import OrderTaskAttachmentsModal from "./OrderTaskAttachmentsModal";
 import AddItemsToOrderModal from "./AddItemsToOrderModal";
-import {
-    formatQuantity,
-    getOrderItems,
-    resolveOrderWarehouseId,
-} from "@/utils/warehouseShelf";
-import {
-    formatDate,
-    formatNumber,
-    getStatusLabel,
-    getStatusTone,
-} from "@/utils/warehouseEmployee";
+import { formatQuantity, getOrderItems, resolveOrderWarehouseId } from "@/utils/warehouseShelf";
+import { formatDate, formatNumber, getStatusLabel, getStatusTone } from "@/utils/warehouseEmployee";
 
 interface Props {
     orderTask: ApiOrderTask;

@@ -1,24 +1,10 @@
 "use client";
 
 import { m } from "framer-motion";
-import {
-    Archive,
-    Ban,
-    CheckCircle2,
-    Clock3,
-    History,
-    Ticket,
-    TimerReset,
-    UserRound,
-} from "lucide-react";
+import { Archive, Ban, CheckCircle2, Clock3, History, Ticket, TimerReset, UserRound } from "lucide-react";
 import { useTheme } from "next-themes";
 
-import {
-    JALALI_MONTHS,
-    pad2,
-    toJalali,
-    toPersianDigits,
-} from "@/lib/jalali";
+import { JALALI_MONTHS, pad2, toJalali, toPersianDigits } from "@/lib/jalali";
 import type { InternalTaskArchive as InternalTaskArchiveType } from "./types";
 
 type InternalTaskArchiveCardProps = {
@@ -174,7 +160,7 @@ export default function InternalTaskArchiveCard({
                             background: isDark
                                 ? "rgba(255,255,255,0.05)"
                                 : "rgba(15,23,42,0.04)",
-                            color: isDark ? "#94a3b8" : "#64748b",
+                            color: isDark ? "#9ca3af" : "#6b7280",
                         }}
                     >
                         <Archive size={10} />

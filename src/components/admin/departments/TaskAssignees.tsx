@@ -2,7 +2,7 @@
 
 import { UserRound, Loader } from "lucide-react";
 import { useEmployeeInfo } from "@/hooks/useEmployeeInfo";
-import type { TaskAssignee, TaskRelation, TaskRelationObject } from "./types";
+import type { TaskAssignee, TaskRelationObject } from "./types";
 
 interface TaskAssigneesProps {
     ids: TaskAssignee | null | undefined;

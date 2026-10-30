@@ -111,7 +111,7 @@ function NiceSelect({ label, options, value, onChange, placeholder, disabled, em
             </button>
             <AnimatePresence>
                 {open && (
-                    <m.div initial={{ opacity: 0, y: -6, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -4, scale: 0.97 }} transition={{ type: "spring", damping: 24, stiffness: 340 }} className="absolute z-50 mt-2 w-full origin-top overflow-hidden rounded-[1.5rem] border border-gray-100 bg-white shadow-xl shadow-black/5 dark:border-white/[0.08] dark:bg-[#0f172a] dark:shadow-black/40">
+                    <m.div initial={{ opacity: 0, y: -6, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -4, scale: 0.97 }} transition={{ type: "spring", damping: 24, stiffness: 340 }} className="absolute z-50 mt-2 w-full origin-top overflow-hidden rounded-[1.5rem] border border-gray-100 bg-white shadow-xl shadow-black/5 dark:border-white/[0.08] dark:bg-[#111827] dark:shadow-black/40">
                         {options.length > 5 && (
                             <div className="border-b border-gray-100 px-3 py-2.5 dark:border-white/[0.06]">
                                 <div className="flex items-center gap-2 rounded-xl bg-gray-50 px-3 py-2 dark:bg-white/[0.04]">
@@ -231,6 +231,8 @@ export default function SoldOrderTaskModal({ isOpen, onClose, taskId, staffId, o
         if (value > selectedProduct.current_quantity) setQuantity(String(selectedProduct.current_quantity));
     }, [selectedProduct]);
 
+    const productOptions: Option[] = useMemo(() => products.map((item) => ({ id: item.product, label: item.product_name, sub: `موجودی: ${formatNumber(item.current_quantity)} ${item.unit_label}` })), [products]);
+    const warehouseOptions: Option[] = useMemo(() => warehouses.map((item) => ({ id: item.id, label: item.name, sub: `کد انبار: ${item.code}` })), [warehouses]);
     if (typeof document === "undefined") return null;
 
     const qty = numberValue(quantity);
@@ -284,8 +286,6 @@ export default function SoldOrderTaskModal({ isOpen, onClose, taskId, staffId, o
         } catch (e) { setError(parseError(e)); }
     }
 
-    const productOptions: Option[] = useMemo(() => products.map((item) => ({ id: item.product, label: item.product_name, sub: `موجودی: ${formatNumber(item.current_quantity)} ${item.unit_label}` })), [products]);
-    const warehouseOptions: Option[] = useMemo(() => warehouses.map((item) => ({ id: item.id, label: item.name, sub: `کد انبار: ${item.code}` })), [warehouses]);
     const hasTime = !!startedAt || !!deadline;
 
     return createPortal(
@@ -293,7 +293,7 @@ export default function SoldOrderTaskModal({ isOpen, onClose, taskId, staffId, o
             <AnimatePresence>
                 {isOpen && (
                     <m.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.18 }} className="fixed inset-0 z-[9999] flex items-center justify-center px-4" style={{ background: "rgba(0,0,0,0.45)", backdropFilter: "blur(3px)" }} onClick={onClose}>
-                        <m.div initial={{ opacity: 0, y: 16, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 16, scale: 0.97 }} transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }} onClick={(e) => e.stopPropagation()} dir="rtl" className="flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-[0_24px_70px_rgba(0,0,0,0.22)] dark:border-white/[0.06] dark:bg-[#0f172a]">
+                        <m.div initial={{ opacity: 0, y: 16, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 16, scale: 0.97 }} transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }} onClick={(e) => e.stopPropagation()} dir="rtl" className="flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-[0_24px_70px_rgba(0,0,0,0.22)] dark:border-white/[0.06] dark:bg-[#111827]">
                             <div className="flex shrink-0 items-center justify-between px-8 pb-6 pt-8">
                                 <div className="flex items-center gap-2.5">
                                     <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-50 dark:bg-blue-500/10"><ShoppingBag size={15} className="text-blue-500" /></div>

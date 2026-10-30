@@ -4,20 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { AnimatePresence } from "framer-motion";
-import {
-  ArrowRight,
-  CalendarDays,
-  Hash,
-  Loader2,
-  MapPin,
-  Pencil,
-  PenLine,
-  Plus,
-  Send,
-  Trash2,
-  UserRound,
-  XCircle,
-} from "lucide-react";
+import { ArrowRight, CalendarDays, Hash, Loader2, MapPin, Pencil, PenLine, Plus, Send, Trash2, UserRound, XCircle } from "lucide-react";
 import { minutesApi } from "@/lib/minutesApi";
 import { formatDateTime, parseApiError } from "@/lib/minutesUtils";
 import MeetingStatusBadge from "./MeetingStatusBadge";
@@ -199,7 +186,7 @@ export default function MeetingDetailPage({ basePath }: { basePath: string }) {
           <Link
             href={basePath}
             aria-label="بازگشت به فهرست"
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-black/5 text-slate-600 transition-colors hover:bg-black/10 dark:bg-white/5 dark:text-slate-300"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-black/5 text-gray-600 transition-colors hover:bg-black/10 dark:bg-white/5 dark:text-gray-300"
           >
             <ArrowRight size={16} />
           </Link>

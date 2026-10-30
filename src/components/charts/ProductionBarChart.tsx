@@ -3,16 +3,7 @@
 import { m } from "framer-motion";
 import { useTheme } from "next-themes";
 import { useMemo } from "react";
-import {
-  Area,
-  AreaChart,
-  CartesianGrid,
-  ReferenceLine,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
+import { Area, AreaChart, CartesianGrid, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { ChartTooltip } from "@/components/charts/ChartTooltip";
 import { toPersianDigits } from "@/lib/jalali";
 
@@ -61,7 +52,7 @@ export default function ProductionBarChart({
       initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
-      className="relative overflow-hidden rounded-2xl border border-gray-100 bg-white p-4 shadow-sm dark:border-white/5 dark:bg-slate-950"
+      className="relative overflow-hidden rounded-2xl border border-gray-100 bg-white p-4 shadow-sm dark:border-white/5 dark:bg-gray-950"
     >
       <div className="mb-3 flex items-start justify-between gap-3" dir="rtl">
         <div>
@@ -80,7 +71,7 @@ export default function ProductionBarChart({
                 onClick={() => onTab?.(t.id)}
                 className={`rounded-full px-3 py-1 text-[11px] font-semibold transition ${
                   activeTab === t.id
-                    ? "bg-white text-gray-900 shadow-sm dark:bg-slate-800 dark:text-white"
+                    ? "bg-white text-gray-900 shadow-sm dark:bg-gray-800 dark:text-white"
                     : "text-gray-500 dark:text-gray-400"
                 }`}
               >
@@ -120,9 +111,9 @@ export default function ProductionBarChart({
               width={44}
               tickFormatter={(v: number) => toPersianDigits(String(v))}
             />
-            {signed && <ReferenceLine y={0} stroke={dark ? "#475569" : "#cbd5e1"} />}
+            {signed && <ReferenceLine y={0} stroke={dark ? "#4b5563" : "#d1d5db"} />}
             <Tooltip
-              cursor={{ stroke: dark ? "#475569" : "#cbd5e1", strokeDasharray: "4 4" }}
+              cursor={{ stroke: dark ? "#4b5563" : "#d1d5db", strokeDasharray: "4 4" }}
               content={({ active, payload, label }) => {
                 if (!active || !payload?.length) return null;
                 return (

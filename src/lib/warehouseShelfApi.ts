@@ -1,12 +1,6 @@
 import axiosInstance from "@/lib/axiosInstance";
 import type { ApiOrderTask } from "@/types/warehouse";
-import type {
-  AddItemInput,
-  PicklistPage,
-  PicklistParams,
-  PicklistProduct,
-  ShelfSummary,
-} from "@/types/warehouseShelf";
+import type { AddItemInput, PicklistPage, PicklistParams, PicklistProduct, ShelfSummary } from "@/types/warehouseShelf";
 
 const BASE = "/warehouse/api/v1";
 

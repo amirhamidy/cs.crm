@@ -2,15 +2,7 @@ import axiosInstance from "@/lib/axiosInstance";
 import { dedupe } from "@/lib/api/_core";
 import { listAllByStatus } from "@/lib/api";
 import { extractList } from "@/utils/warehouseEmployee";
-import type {
-  ApiProduct,
-  ApiStockInfo,
-  ApiStockTransaction,
-  ApiWarehouse,
-  ApiWarehouseTask,
-  CreateWarehousePayload,
-  UpdateStockLimitsPayload,
-} from "@/types/warehouse";
+import type { ApiProduct, ApiStockInfo, ApiStockTransaction, ApiWarehouse, ApiWarehouseTask, CreateWarehousePayload, UpdateStockLimitsPayload } from "@/types/warehouse";
 
 const BASE = "/warehouse/api/v1";
 

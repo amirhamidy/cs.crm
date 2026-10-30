@@ -238,8 +238,8 @@ const AdminInternalTaskCard = memo(function AdminInternalTaskCard({
             </div>
 
             <div className="relative z-10 flex flex-col gap-1">
-                <h3 className="line-clamp-1 text-[13.5px] font-extrabold" style={{ color: isDark ? "#f1f5f9" : "#1e293b" }}>{task.title || "بدون عنوان"}</h3>
-                {task.description ? <p className="line-clamp-2 text-[11.5px] leading-6" style={{ color: isDark ? "#94a3b8" : "#64748b" }}>{task.description}</p> : null}
+                <h3 className="line-clamp-1 text-[13.5px] font-extrabold" style={{ color: isDark ? "#f3f4f6" : "#1f2937" }}>{task.title || "بدون عنوان"}</h3>
+                {task.description ? <p className="line-clamp-2 text-[11.5px] leading-6" style={{ color: isDark ? "#9ca3af" : "#6b7280" }}>{task.description}</p> : null}
             </div>
 
             <div className="relative z-10 flex flex-col gap-2 border-t pt-3" style={{ borderColor: isDark ? "rgba(255,255,255,.05)" : "rgba(0,0,0,.05)" }}>
@@ -250,7 +250,7 @@ const AdminInternalTaskCard = memo(function AdminInternalTaskCard({
                             const gradient = getGradient(Number(employee.id));
                             return <span key={`${employee.id}-${employee.full_name}`} className="flex items-center gap-1.5 rounded-full border py-0.5 pl-2 pr-0.5" style={{ borderColor: isDark ? "rgba(255,255,255,.06)" : "rgba(0,0,0,.06)", background: isDark ? "rgba(255,255,255,.035)" : "rgba(0,0,0,.025)" }}>
                                 <span className="flex h-5 w-5 items-center justify-center rounded-full text-[8px] font-extrabold text-white" style={{ background: `linear-gradient(135deg,${gradient[0]},${gradient[1]})` }}>{employee.full_name?.slice(0, 1) || "ک"}</span>
-                                <span className="max-w-[120px] truncate text-[9.5px] font-bold" style={{ color: isDark ? "#cbd5e1" : "#475569" }}>{employee.full_name || `کارمند ${employee.id}`}</span>
+                                <span className="max-w-[120px] truncate text-[9.5px] font-bold" style={{ color: isDark ? "#d1d5db" : "#4b5563" }}>{employee.full_name || `کارمند ${employee.id}`}</span>
                             </span>;
                         }) : <span className="text-[10px] text-gray-400">بدون مسئول</span>}
                     </div>
@@ -295,7 +295,7 @@ const AdminInternalTaskCard = memo(function AdminInternalTaskCard({
 
             <AnimatePresence>
                 {showConfirm && <m.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center px-4" style={{ background: "rgba(0,0,0,.45)", backdropFilter: "blur(3px)" }} onClick={event => { event.stopPropagation(); if (isDeleting) return; setShowConfirm(false); setDeleteError(null); }}>
-                    <m.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 16 }} transition={{ duration: .35, ease: "easeOut" }} onClick={event => event.stopPropagation()} dir="rtl" className="flex w-full max-w-md flex-col overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-sm dark:border-white/[0.06] dark:bg-[#0f172a]">
+                    <m.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 16 }} transition={{ duration: .35, ease: "easeOut" }} onClick={event => event.stopPropagation()} dir="rtl" className="flex w-full max-w-md flex-col overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-sm dark:border-white/[0.06] dark:bg-[#111827]">
                         <div className="flex shrink-0 items-center justify-between px-8 pb-6 pt-8">
                             <div className="flex items-center gap-2.5"><div className="flex h-8 w-8 items-center justify-center rounded-xl bg-red-50 dark:bg-red-500/10"><Trash2 size={15} className="text-red-500" /></div><div><h3 className="text-[14px] font-extrabold text-gray-900 dark:text-white">حذف تیکت</h3><p className="mt-0.5 text-[11px] text-gray-400">این عملیات قابل بازگشت نیست</p></div></div>
                             <button type="button" onClick={() => { if (isDeleting) return; setShowConfirm(false); setDeleteError(null); }} disabled={isDeleting} className="flex h-8 w-8 items-center justify-center rounded-xl bg-gray-100 text-gray-400 transition-colors hover:text-gray-600 disabled:opacity-40 dark:bg-white/[0.05] dark:hover:text-gray-300"><X size={15} /></button>

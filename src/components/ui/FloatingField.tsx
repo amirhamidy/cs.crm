@@ -1,10 +1,6 @@
 "use client";
 
-import {
-    forwardRef,
-    InputHTMLAttributes,
-    TextareaHTMLAttributes,
-} from "react";
+import { forwardRef, InputHTMLAttributes, TextareaHTMLAttributes } from "react";
 
 // Copied from AddCustomerModal to keep the same visual language.
 
@@ -28,7 +24,7 @@ export const FloatingInput = forwardRef<HTMLInputElement, FloatingInputProps>(
                 />
                 <label
                     htmlFor={id}
-                    className={`pointer-events-none absolute right-5 rounded bg-white px-1.5 text-sm text-gray-400 transition-all duration-200 peer-focus:-top-2.5 peer-focus:translate-y-0 peer-focus:text-xs peer-focus:text-gray-500 dark:bg-[#0f172a] ${
+                    className={`pointer-events-none absolute right-5 rounded bg-white px-1.5 text-sm text-gray-400 transition-all duration-200 peer-focus:-top-2.5 peer-focus:translate-y-0 peer-focus:text-xs peer-focus:text-gray-500 dark:bg-[#111827] ${
                         hasValue
                             ? "-top-2.5 translate-y-0 text-xs text-gray-500"
                             : "top-1/2 -translate-y-1/2"
@@ -63,7 +59,7 @@ export const FloatingTextarea = forwardRef<
         />
         <label
             htmlFor={id}
-            className="pointer-events-none absolute right-5 top-4 rounded bg-white px-1.5 text-sm text-gray-400 transition-all duration-200 peer-focus:top-0 peer-focus:text-xs peer-focus:text-gray-500 peer-[:not(:placeholder-shown)]:top-0 peer-[:not(:placeholder-shown)]:text-xs peer-[:not(:placeholder-shown)]:text-gray-500 dark:bg-[#0f172a]"
+            className="pointer-events-none absolute right-5 top-4 rounded bg-white px-1.5 text-sm text-gray-400 transition-all duration-200 peer-focus:top-0 peer-focus:text-xs peer-focus:text-gray-500 peer-[:not(:placeholder-shown)]:top-0 peer-[:not(:placeholder-shown)]:text-xs peer-[:not(:placeholder-shown)]:text-gray-500 dark:bg-[#111827]"
         >
             {label}
         </label>

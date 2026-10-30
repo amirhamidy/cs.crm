@@ -1,26 +1,8 @@
 import { isAxiosError } from "axios";
 import axiosInstance from "@/lib/axiosInstance";
-import type {
-  Customer,
-  CustomerDetail,
-  CustomerPayload,
-  CustomerStatus,
-} from "@/types/customer";
+import type { Customer, CustomerDetail, CustomerPayload, CustomerStatus } from "@/types/customer";
 import type { PageParams } from "@/types/pagination";
-import {
-  cached,
-  createSearch,
-  dedupe,
-  fetchPage,
-  getOne,
-  invalidate,
-  listAll as listAllPages,
-  normalizeQuery,
-  toPaginated,
-  uniqueIds,
-  type Paginated,
-  type RawList,
-} from "./_core";
+import { cached, createSearch, dedupe, fetchPage, getOne, invalidate, listAll as listAllPages, normalizeQuery, toPaginated, uniqueIds, type Paginated, type RawList } from "./_core";
 
 const KEY = "customers:";
 const BASE = "/customers/api/v1/customers/";

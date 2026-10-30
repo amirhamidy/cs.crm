@@ -2,14 +2,7 @@
 
 import { AnimatePresence, m } from "framer-motion";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import {
-  Area,
-  AreaChart,
-  CartesianGrid,
-  ResponsiveContainer,
-  XAxis,
-  YAxis,
-} from "recharts";
+import { Area, AreaChart, CartesianGrid, ResponsiveContainer, XAxis, YAxis } from "recharts";
 import { ChartContainer, type ChartConfig } from "@/components/ui/chart";
 
 type TimeRange = "weekly" | "monthly" | "yearly";
@@ -122,7 +115,7 @@ export default function SalesChart({ data: chartData }: { data: SalesChartData }
         duration: 0.3,
         ease: [0.25, 0.46, 0.45, 0.94],
       }}
-      className="relative overflow-hidden rounded-2xl border border-gray-100 bg-white p-4 shadow-sm dark:border-white/5 dark:bg-slate-950"
+      className="relative overflow-hidden rounded-2xl border border-gray-100 bg-white p-4 shadow-sm dark:border-white/5 dark:bg-gray-950"
     >
       <div className="mb-3 flex items-center justify-between" dir="rtl">
         <div>
@@ -135,7 +128,7 @@ export default function SalesChart({ data: chartData }: { data: SalesChartData }
           </p>
         </div>
 
-        <div className="flex items-center gap-1 rounded-xl border border-gray-100 bg-gray-50/80 p-1 dark:border-white/5 dark:bg-slate-900/50">
+        <div className="flex items-center gap-1 rounded-xl border border-gray-100 bg-gray-50/80 p-1 dark:border-white/5 dark:bg-gray-900/50">
           {ranges.map((range) => (
             <button
               key={range.key}
@@ -146,7 +139,7 @@ export default function SalesChart({ data: chartData }: { data: SalesChartData }
               {activeRange === range.key && (
                 <m.span
                   layoutId="salesChartRangeIndicator"
-                  className="absolute inset-0 rounded-lg bg-white shadow-sm dark:bg-slate-800"
+                  className="absolute inset-0 rounded-lg bg-white shadow-sm dark:bg-gray-800"
                   transition={{
                     type: "spring",
                     stiffness: 400,
@@ -190,7 +183,7 @@ export default function SalesChart({ data: chartData }: { data: SalesChartData }
                   scale: 0.96,
                 }}
                 transition={{ duration: 0.15 }}
-                className="pointer-events-none rounded-xl border border-gray-200/60 bg-white/95 px-3 py-2 shadow-lg backdrop-blur-sm dark:border-white/10 dark:bg-slate-900/95"
+                className="pointer-events-none rounded-xl border border-gray-200/60 bg-white/95 px-3 py-2 shadow-lg backdrop-blur-sm dark:border-white/10 dark:bg-gray-900/95"
                 style={{
                   boxShadow:
                     "0 4px 20px rgba(56,189,248,0.35)",

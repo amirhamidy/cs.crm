@@ -3,31 +3,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, m } from "framer-motion";
 import { useTheme } from "next-themes";
-import {
-    Boxes,
-    CalendarDays,
-    Check,
-    ChevronLeft,
-    ChevronRight,
-    FileText,
-    History,
-    Search,
-    User,
-} from "lucide-react";
+import { Boxes, CalendarDays, Check, ChevronLeft, ChevronRight, FileText, History, Search, User } from "lucide-react";
 
-import {
-    formatDate,
-    formatNumber,
-    paginate,
-    PAGE_SIZE,
-} from "@/utils/warehouseEmployee";
+import { formatDate, formatNumber, paginate, PAGE_SIZE } from "@/utils/warehouseEmployee";
 import Pagination from "@/components/ui/Pagination";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
-import {
-    fetchProductTransactions,
-    fetchStocksForProducts,
-    fetchWarehouseProductsPage,
-} from "@/lib/warehouseApi";
+import { fetchProductTransactions, fetchStocksForProducts, fetchWarehouseProductsPage } from "@/lib/warehouseApi";
 
 
 const PRODUCT_LIST_PAGE_SIZE = 40;
@@ -404,23 +385,23 @@ export default function WarehouseEmployeeStockLedger({
             dir="rtl"
             className="grid grid-cols-1 gap-6 lg:grid-cols-[300px_1fr]"
         >
-            <div className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-slate-950">
+            <div className="flex flex-col gap-4 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-gray-950">
                 <div className="relative">
                     <Search
                         size={16}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
                     />
                     <input
                         value={list.search}
                         onChange={(e) => list.setSearch(e.target.value)}
                         placeholder="جستجوی محصول..."
-                        className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pr-9 pl-3 text-sm font-medium text-slate-900 outline-none transition-all placeholder:text-slate-400 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 dark:border-white/10 dark:bg-white/5 dark:text-slate-100 dark:focus:border-indigo-500"
+                        className="w-full rounded-xl border border-gray-200 bg-gray-50 py-2.5 pr-9 pl-3 text-sm font-medium text-gray-900 outline-none transition-all placeholder:text-gray-400 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 dark:border-white/10 dark:bg-white/5 dark:text-gray-100 dark:focus:border-indigo-500"
                     />
                 </div>
 
-                <div className="flex max-h-[600px] flex-col gap-1.5 overflow-y-auto pr-1 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-slate-200 dark:scrollbar-thumb-white/10">
+                <div className="flex max-h-[600px] flex-col gap-1.5 overflow-y-auto pr-1 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-gray-200 dark:scrollbar-thumb-white/10">
                     {list.data.length === 0 && (
-                        <div className="flex flex-col items-center justify-center py-10 text-slate-400">
+                        <div className="flex flex-col items-center justify-center py-10 text-gray-400">
                             <Boxes size={24} className="mb-2 opacity-50" />
                             <span className="text-xs font-medium">
                                 {list.loading
@@ -445,7 +426,7 @@ export default function WarehouseEmployeeStockLedger({
                                 onClick={() => setSelectedProductId(product.id)}
                                 className={`group flex items-center gap-3 rounded-xl p-3 text-right transition-all duration-200 ${active
                                         ? "bg-indigo-50 shadow-sm dark:bg-indigo-500/10"
-                                        : "hover:bg-slate-50 dark:hover:bg-white/5"
+                                        : "hover:bg-gray-50 dark:hover:bg-white/5"
                                     }`}
                             >
                                 <div
@@ -461,13 +442,13 @@ export default function WarehouseEmployeeStockLedger({
                                     <p
                                         className={`truncate text-sm font-bold ${active
                                                 ? "text-indigo-600 dark:text-indigo-400"
-                                                : "text-slate-900 dark:text-slate-100"
+                                                : "text-gray-900 dark:text-gray-100"
                                             }`}
                                     >
                                         {product.name}
                                     </p>
 
-                                    <p className="mt-0.5 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                                    <p className="mt-0.5 text-[11px] font-semibold text-gray-500 dark:text-gray-400">
                                         موجودی:{" "}
                                         {formatNumber(
                                             Number(stock?.current_quantity ?? 0)
@@ -498,18 +479,18 @@ export default function WarehouseEmployeeStockLedger({
 
             <div className="flex flex-col gap-5">
                 {!selectedProduct ? (
-                    <div className="flex min-h-[400px] flex-col items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-slate-50 dark:border-white/10 dark:bg-white/[0.02]">
+                    <div className="flex min-h-[400px] flex-col items-center justify-center rounded-2xl border border-dashed border-gray-300 bg-gray-50 dark:border-white/10 dark:bg-white/[0.02]">
                         <History
                             size={32}
-                            className="mb-3 text-slate-300 dark:text-slate-600"
+                            className="mb-3 text-gray-300 dark:text-gray-600"
                         />
-                        <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
+                        <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
                             یک محصول را برای مشاهده گردش کالا انتخاب کنید
                         </p>
                     </div>
                 ) : (
-                    <div className="rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-white/10 dark:bg-slate-950">
-                        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 p-4 dark:border-white/10">
+                    <div className="rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-white/10 dark:bg-gray-950">
+                        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-gray-200 p-4 dark:border-white/10">
                             <div className="flex items-center gap-3">
                                 <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-indigo-50 dark:bg-indigo-500/10">
                                     <History
@@ -519,17 +500,17 @@ export default function WarehouseEmployeeStockLedger({
                                 </div>
 
                                 <div>
-                                    <h3 className="text-sm font-black text-slate-900 dark:text-white">
+                                    <h3 className="text-sm font-black text-gray-900 dark:text-white">
                                         گردش کالا · {selectedProduct.name}
                                     </h3>
 
-                                    <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
+                                    <p className="text-[11px] font-medium text-gray-500 dark:text-gray-400">
                                         {allEvents.length} رویداد ثبت شده
                                     </p>
                                 </div>
                             </div>
 
-                            <div className="flex items-center gap-1.5 rounded-lg bg-slate-100 p-1 dark:bg-white/5">
+                            <div className="flex items-center gap-1.5 rounded-lg bg-gray-100 p-1 dark:bg-white/5">
                                 {(
                                     [
                                         ["all", "همه"],
@@ -545,8 +526,8 @@ export default function WarehouseEmployeeStockLedger({
                                             type="button"
                                             onClick={() => setKindFilter(key)}
                                             className={`rounded-md px-3 py-1.5 text-xs font-bold transition-all duration-200 ${active
-                                                    ? "bg-white text-indigo-600 shadow-sm dark:bg-slate-800 dark:text-indigo-400"
-                                                    : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+                                                    ? "bg-white text-indigo-600 shadow-sm dark:bg-gray-800 dark:text-indigo-400"
+                                                    : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
                                                 }`}
                                         >
                                             {label}
@@ -559,7 +540,7 @@ export default function WarehouseEmployeeStockLedger({
                         <div className="overflow-x-auto">
                             <table className="w-full text-right">
                                 <thead>
-                                    <tr className="border-b border-slate-200 bg-slate-50/50 text-xs font-bold text-slate-500 dark:border-white/10 dark:bg-white/[0.02] dark:text-slate-400">
+                                    <tr className="border-b border-gray-200 bg-gray-50/50 text-xs font-bold text-gray-500 dark:border-white/10 dark:bg-white/[0.02] dark:text-gray-400">
                                         <th className="px-5 py-3.5">تاریخ</th>
                                         <th className="px-5 py-3.5">شرح</th>
                                         <th className="px-5 py-3.5 text-center">
@@ -574,13 +555,13 @@ export default function WarehouseEmployeeStockLedger({
                                     </tr>
                                 </thead>
 
-                                <tbody className="divide-y divide-slate-200 dark:divide-white/10">
+                                <tbody className="divide-y divide-gray-200 dark:divide-white/10">
                                     <AnimatePresence mode="popLayout">
                                         {paginatedEvents.items.length === 0 ? (
                                             <tr>
                                                 <td
                                                     colSpan={5}
-                                                    className="py-12 text-center text-sm text-slate-400"
+                                                    className="py-12 text-center text-sm text-gray-400"
                                                 >
                                                     {txLoading
                                                         ? "در حال دریافت گردش کالا..."
@@ -622,13 +603,13 @@ export default function WarehouseEmployeeStockLedger({
                                                                 duration: 0.2,
                                                                 delay: index * 0.03,
                                                             }}
-                                                            className="group transition-colors hover:bg-slate-50 dark:hover:bg-white/[0.03]"
+                                                            className="group transition-colors hover:bg-gray-50 dark:hover:bg-white/[0.03]"
                                                         >
                                                             <td className="px-5 py-4">
-                                                                <div className="flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-slate-300">
+                                                                <div className="flex items-center gap-2 text-xs font-semibold text-gray-700 dark:text-gray-300">
                                                                     <CalendarDays
                                                                         size={13}
-                                                                        className="text-slate-400"
+                                                                        className="text-gray-400"
                                                                     />
                                                                     {formatDate(
                                                                         event.date
@@ -637,10 +618,10 @@ export default function WarehouseEmployeeStockLedger({
                                                             </td>
 
                                                             <td className="px-5 py-4">
-                                                                <div className="flex items-start gap-1.5 text-xs font-medium text-slate-700 dark:text-slate-300">
+                                                                <div className="flex items-start gap-1.5 text-xs font-medium text-gray-700 dark:text-gray-300">
                                                                     <FileText
                                                                         size={13}
-                                                                        className="mt-0.5 shrink-0 text-slate-400"
+                                                                        className="mt-0.5 shrink-0 text-gray-400"
                                                                     />
 
                                                                     <div className="min-w-0">
@@ -649,7 +630,7 @@ export default function WarehouseEmployeeStockLedger({
                                                                         </span>
 
                                                                         {event.performedByName && (
-                                                                            <div className="mt-1 flex items-center gap-1 text-[10px] text-slate-400 dark:text-slate-500">
+                                                                            <div className="mt-1 flex items-center gap-1 text-[10px] text-gray-400 dark:text-gray-500">
                                                                                 <User
                                                                                     size={
                                                                                         10
@@ -678,7 +659,7 @@ export default function WarehouseEmployeeStockLedger({
                                                                         )}
                                                                     </span>
                                                                 ) : (
-                                                                    <span className="text-xs text-slate-300 dark:text-slate-600">
+                                                                    <span className="text-xs text-gray-300 dark:text-gray-600">
                                                                         -
                                                                     </span>
                                                                 )}
@@ -698,14 +679,14 @@ export default function WarehouseEmployeeStockLedger({
                                                                         )}
                                                                     </span>
                                                                 ) : (
-                                                                    <span className="text-xs text-slate-300 dark:text-slate-600">
+                                                                    <span className="text-xs text-gray-300 dark:text-gray-600">
                                                                         -
                                                                     </span>
                                                                 )}
                                                             </td>
 
                                                             <td className="px-5 py-4 text-center">
-                                                                <span className="text-sm font-black text-slate-900 dark:text-white">
+                                                                <span className="text-sm font-black text-gray-900 dark:text-white">
                                                                     {formatNumber(
                                                                         event.quantityAfter
                                                                     )}
@@ -722,8 +703,8 @@ export default function WarehouseEmployeeStockLedger({
                         </div>
 
                         {paginatedEvents.totalPages > 1 && (
-                            <div className="flex items-center justify-between border-t border-slate-200 px-5 py-4 dark:border-white/10">
-                                <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                            <div className="flex items-center justify-between border-t border-gray-200 px-5 py-4 dark:border-white/10">
+                                <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
                                     صفحه {formatNumber(currentPage)} از{" "}
                                     {formatNumber(paginatedEvents.totalPages)}
                                 </span>
@@ -735,7 +716,7 @@ export default function WarehouseEmployeeStockLedger({
                                         onClick={() =>
                                             setCurrentPage((p) => p - 1)
                                         }
-                                        className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 transition-all hover:bg-slate-50 disabled:opacity-40 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10"
+                                        className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-600 transition-all hover:bg-gray-50 disabled:opacity-40 dark:border-white/10 dark:bg-white/5 dark:text-gray-300 dark:hover:bg-white/10"
                                     >
                                         <ChevronRight size={14} />
                                     </button>
@@ -749,7 +730,7 @@ export default function WarehouseEmployeeStockLedger({
                                         onClick={() =>
                                             setCurrentPage((p) => p + 1)
                                         }
-                                        className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 transition-all hover:bg-slate-50 disabled:opacity-40 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10"
+                                        className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-600 transition-all hover:bg-gray-50 disabled:opacity-40 dark:border-white/10 dark:bg-white/5 dark:text-gray-300 dark:hover:bg-white/10"
                                     >
                                         <ChevronLeft size={14} />
                                     </button>

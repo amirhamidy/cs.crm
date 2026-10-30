@@ -84,7 +84,7 @@ export default function SignerList({
                 className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${
                   signer.is_signed
                     ? "bg-emerald-500/10 text-emerald-500"
-                    : "bg-black/5 text-slate-400 dark:bg-white/5"
+                    : "bg-black/5 text-gray-400 dark:bg-white/5"
                 }`}
               >
                 {signer.is_signed ? <Check size={16} /> : <UserRound size={16} />}

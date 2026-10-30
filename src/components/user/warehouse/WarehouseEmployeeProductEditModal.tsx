@@ -1,28 +1,13 @@
 "use client";
 
-import {
-    useEffect,
-    useState,
-    useRef,
-    useMemo,
-    useLayoutEffect,
-    forwardRef,
-    type InputHTMLAttributes,
-} from "react";
+import { useEffect, useState, useRef, useMemo, useLayoutEffect, forwardRef, type InputHTMLAttributes } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, m } from "framer-motion";
 import { Check, ChevronDown, Loader, Pencil, Search, X } from "lucide-react";
 import type { AxiosError } from "axios";
 import axiosInstance from "@/lib/axiosInstance";
-import {
-    ApiCategory,
-    ApiProduct,
-    unitDetailKey,
-} from "@/types/warehouse";
-import {
-    SHELF_CODE_MAX_LENGTH,
-    normalizeShelfCode,
-} from "@/utils/warehouseShelf";
+import { ApiCategory, ApiProduct, unitDetailKey } from "@/types/warehouse";
+import { SHELF_CODE_MAX_LENGTH, normalizeShelfCode } from "@/utils/warehouseShelf";
 import type { WithShelf } from "@/types/warehouseShelf";
 
 interface Props {
@@ -131,7 +116,7 @@ const FloatingInput = forwardRef<HTMLInputElement, FloatingInputProps>(
                 />
                 <label
                     htmlFor={id}
-                    className="absolute right-5 top-1/2 -translate-y-1/2 text-sm text-gray-400 pointer-events-none transition-all duration-200 bg-white px-1.5 rounded peer-focus:top-0 peer-focus:text-xs peer-focus:text-gray-500 peer-[:not(:placeholder-shown)]:top-0 peer-[:not(:placeholder-shown)]:text-xs peer-[:not(:placeholder-shown)]:text-gray-500 dark:bg-[#0f172a]"
+                    className="absolute right-5 top-1/2 -translate-y-1/2 text-sm text-gray-400 pointer-events-none transition-all duration-200 bg-white px-1.5 rounded peer-focus:top-0 peer-focus:text-xs peer-focus:text-gray-500 peer-[:not(:placeholder-shown)]:top-0 peer-[:not(:placeholder-shown)]:text-xs peer-[:not(:placeholder-shown)]:text-gray-500 dark:bg-[#111827]"
                 >
                     {label}
                 </label>
@@ -287,7 +272,7 @@ function NiceSelect({
                                     zIndex: 100,
                                     transformOrigin: "top center",
                                 }}
-                                className="overflow-hidden rounded-[1.5rem] border border-gray-100 bg-white shadow-xl shadow-black/5 dark:border-white/[0.08] dark:bg-[#0f172a] dark:shadow-black/40"
+                                className="overflow-hidden rounded-[1.5rem] border border-gray-100 bg-white shadow-xl shadow-black/5 dark:border-white/[0.08] dark:bg-[#111827] dark:shadow-black/40"
                             >
                                 {options.length > 5 && (
                                     <div className="border-b border-gray-100 px-3 py-2.5 dark:border-white/[0.06]">
@@ -548,7 +533,7 @@ export default function WarehouseEmployeeProductEditModal({
                         transition={{ duration: 0.35, ease: "easeOut" }}
                         onClick={(e) => e.stopPropagation()}
                         dir="rtl"
-                        className="w-full max-w-sm overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-sm dark:border-white/[0.06] dark:bg-[#0f172a]"
+                        className="w-full max-w-sm overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-sm dark:border-white/[0.06] dark:bg-[#111827]"
                     >
                         <div className="flex items-center justify-between px-8 pb-6 pt-8">
                             <div className="flex items-center gap-2.5">

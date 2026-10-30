@@ -2,27 +2,12 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, m } from "framer-motion";
-import {
-  AlertTriangle,
-  Check,
-  CheckCircle2,
-  Loader2,
-  MapPin,
-  PackagePlus,
-  Search,
-  X,
-} from "lucide-react";
+import { AlertTriangle, Check, CheckCircle2, Loader2, MapPin, PackagePlus, Search, X } from "lucide-react";
 import type { ApiOrderTask } from "@/types/warehouse";
 import type { PicklistProduct } from "@/types/warehouseShelf";
 import { addItemsToOrder, fetchPicklist } from "@/lib/warehouseShelfApi";
 import { useWarehouseShelves } from "@/hooks/useWarehouseShelves";
-import {
-  extractApiError,
-  formatQuantity,
-  formatToman,
-  parseQuantity,
-  sanitizeQuantityInput,
-} from "@/utils/warehouseShelf";
+import { extractApiError, formatQuantity, formatToman, parseQuantity, sanitizeQuantityInput } from "@/utils/warehouseShelf";
 import ShelfFilterBar from "./ShelfFilterBar";
 
 interface Props {
@@ -277,7 +262,7 @@ export default function AddItemsToOrderModal({
             transition={{ duration: 0.2 }}
             onClick={(e) => e.stopPropagation()}
             dir="rtl"
-            className="relative flex max-h-[94vh] w-full max-w-3xl flex-col overflow-hidden rounded-3xl border border-gray-100 bg-white shadow-2xl dark:border-white/[0.06] dark:bg-[#0f172a]"
+            className="relative flex max-h-[94vh] w-full max-w-3xl flex-col overflow-hidden rounded-3xl border border-gray-100 bg-white shadow-2xl dark:border-white/[0.06] dark:bg-[#111827]"
           >
             <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4 dark:border-white/[0.06]">
               <div className="flex min-w-0 items-center gap-3">

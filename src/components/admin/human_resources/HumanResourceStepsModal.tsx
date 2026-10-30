@@ -2,32 +2,9 @@
 
 import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import { AnimatePresence, m } from "framer-motion";
-import {
-    AlertCircle,
-    ChevronDown,
-    Download,
-    FileText,
-    GitBranch,
-    Loader2,
-    Paperclip,
-    Plus,
-    Trash2,
-    Upload,
-    X,
-} from "lucide-react";
+import { AlertCircle, ChevronDown, Download, FileText, GitBranch, Loader2, Paperclip, Plus, Trash2, Upload, X } from "lucide-react";
 import HumanResourceStepRoadmap from "./HumanResourceStepRoadmap";
-import {
-    HumanResource,
-    HumanResourceFile,
-    HumanResourceStep,
-    createStep,
-    deleteStep,
-    deleteStepFile,
-    getDocumentSteps,
-    getStepFiles,
-    updateStep,
-    uploadStepFile,
-} from "./humanResourceApi";
+import { HumanResource, HumanResourceFile, HumanResourceStep, createStep, deleteStep, deleteStepFile, getDocumentSteps, getStepFiles, updateStep, uploadStepFile } from "./humanResourceApi";
 
 interface Props {
     open: boolean;
@@ -223,7 +200,7 @@ export default function HumanResourceStepsModal({ open, document, canManage, onC
                     exit={{ opacity: 0, y: 18, scale: 0.98 }}
                     transition={{ duration: 0.25, ease: "easeOut" }}
                     onMouseDown={(e) => e.stopPropagation()}
-                    className="flex max-h-[90vh] w-full max-w-5xl flex-col overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-2xl shadow-black/10 dark:border-white/[0.06] dark:bg-[#0f172a]"
+                    className="flex max-h-[90vh] w-full max-w-5xl flex-col overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-2xl shadow-black/10 dark:border-white/[0.06] dark:bg-[#111827]"
                     dir="rtl"
                 >
                     <div className="flex shrink-0 items-center justify-between px-7 pb-5 pt-7 sm:px-8">

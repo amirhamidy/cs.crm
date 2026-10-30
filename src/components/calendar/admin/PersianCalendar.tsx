@@ -2,30 +2,10 @@
 import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { AnimatePresence, MotionConfig, m } from "framer-motion";
-import {
-    CalendarCheck,
-    CalendarClock,
-    CalendarDays,
-    CalendarRange,
-    Check,
-    ChevronDown,
-    ChevronLeft,
-    ChevronRight,
-    ListFilter,
-    Plus,
-    StickyNote,
-} from "lucide-react";
+import { CalendarCheck, CalendarClock, CalendarDays, CalendarRange, Check, ChevronDown, ChevronLeft, ChevronRight, ListFilter, Plus, StickyNote } from "lucide-react";
 import api from "@/lib/axiosInstance";
 import { listAll } from "@/lib/api/index";
-import {
-    toJalali,
-    toGregorian,
-    jalaliMonthLength,
-    jalaliWeekday,
-    toPersianDigits,
-    JALALI_MONTHS,
-    pad2,
-} from "@/lib/jalali";
+import { toJalali, toGregorian, jalaliMonthLength, jalaliWeekday, toPersianDigits, JALALI_MONTHS, pad2 } from "@/lib/jalali";
 import CalendarNoteModal, {
     CalendarNote,
     CalendarEvent,
@@ -68,7 +48,7 @@ const UPCOMING_DAYS = 60;
 const UPCOMING_LIMIT = 6;
 const weekDays = ["شنبه", "یکشنبه", "دوشنبه", "سه‌شنبه", "چهارشنبه", "پنجشنبه", "جمعه"];
 const PANEL =
-    "rounded-2xl border border-slate-300/55 bg-white/70 backdrop-blur-md dark:border-white/[0.08] dark:bg-slate-900/55";
+    "rounded-2xl border border-gray-300/55 bg-white/70 backdrop-blur-md dark:border-white/[0.08] dark:bg-gray-900/55";
 const CELL_GLOW =
     "hover:z-10 hover:-translate-y-0.5 hover:border-indigo-400/50 hover:bg-indigo-500/[0.06] dark:hover:bg-indigo-400/[0.08]";
 const FOCUS = "focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/60";
@@ -154,7 +134,7 @@ const DayCell = memo(function DayCell({
         ? "border-indigo-500/45 bg-indigo-500/[0.08] dark:bg-indigo-400/[0.12]"
         : day.holiday
             ? "border-rose-500/20 bg-rose-500/[0.06] dark:border-rose-300/15 dark:bg-rose-400/[0.07]"
-            : "border-slate-300/55 bg-white/65 dark:border-white/[0.08] dark:bg-slate-900/45";
+            : "border-gray-300/55 bg-white/65 dark:border-white/[0.08] dark:bg-gray-900/45";
     const numberTone = isToday
         ? `${GRADIENT} text-white ring-2 ring-indigo-300/35`
         : day.holiday
@@ -205,7 +185,7 @@ const DayCell = memo(function DayCell({
                 )}
             </div>
             {events.length > 0 && (
-                <span className="mt-auto self-start px-1 text-[10px] font-medium tabular-nums text-slate-500 dark:text-slate-400">
+                <span className="mt-auto self-start px-1 text-[10px] font-medium tabular-nums text-gray-500 dark:text-gray-400">
                     {toPersianDigits(events.length)}
                 </span>
             )}
@@ -588,7 +568,7 @@ export default function PersianCalendar() {
     return (
         <MotionConfig reducedMotion="user">
             <style>{CSS}</style>
-            <div dir="rtl" className="mx-auto w-full max-w-[1400px] rounded-[2rem] border border-slate-300/50 bg-[#e8eff6] p-3 text-slate-800 sm:p-5 dark:border-slate-700/70 dark:bg-[#111c2b] dark:text-slate-100">
+            <div dir="rtl" className="mx-auto w-full max-w-[1400px] rounded-[2rem] border border-gray-300/50 bg-[#e8eff6] p-3 text-gray-800 sm:p-5 dark:border-gray-700/70 dark:bg-[#111c2b] dark:text-gray-100">
                 <div className="grid gap-4 lg:grid-cols-[300px_minmax(0,1fr)]">
                     { }
                     <aside className="flex flex-col gap-4">
@@ -822,7 +802,7 @@ export default function PersianCalendar() {
                                                     exit={{ opacity: 0, y: -6, scale: 0.97 }}
                                                     transition={{ duration: 0.16, ease: "easeOut" }}
                                                     style={{ transformOrigin: "top right" }}
-                                                    className="absolute right-0 top-[calc(100%+10px)] z-30 w-[min(19rem,calc(100vw-3rem))] rounded-2xl border border-slate-900/[0.08] bg-white p-4 shadow-2xl dark:border-white/[0.08] dark:bg-slate-900"
+                                                    className="absolute right-0 top-[calc(100%+10px)] z-30 w-[min(19rem,calc(100vw-3rem))] rounded-2xl border border-gray-900/[0.08] bg-white p-4 shadow-2xl dark:border-white/[0.08] dark:bg-gray-900"
                                                 >
                                                     <div className="mb-3 flex items-center justify-between">
                                                         <button
@@ -931,7 +911,7 @@ export default function PersianCalendar() {
                                         onClick={() => goToMonth(jy, jm)}
                                         className={`relative flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-3.5 py-1.5 text-[11px] font-bold transition-colors ${FOCUS} ${selected
                                             ? "border-transparent text-white"
-                                            : "border-slate-300/60 bg-white/65 text-gray-600 hover:text-indigo-600 dark:border-white/[0.08] dark:bg-slate-900/45 dark:text-gray-300"
+                                            : "border-gray-300/60 bg-white/65 text-gray-600 hover:text-indigo-600 dark:border-white/[0.08] dark:bg-gray-900/45 dark:text-gray-300"
                                             }`}
                                     >
                                         {selected && (

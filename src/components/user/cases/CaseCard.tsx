@@ -1,21 +1,11 @@
 "use client";
 
+import CaseReportModal from "./CaseReportModal";
 import { memo, useEffect, useState, useRef, useCallback, useMemo } from "react";
 import type { ReactNode, MouseEvent as ReactMouseEvent } from "react";
 import { m, AnimatePresence, animate } from "framer-motion";
 import { useTheme } from "next-themes";
-import {
-    Trash2,
-    SquarePen,
-    CalendarDays,
-    Loader2,
-    MoreVertical,
-    AlertCircle,
-    User,
-    Briefcase,
-    Building2,
-    ListTodo,
-} from "lucide-react";
+import { Trash2, SquarePen, CalendarDays, Loader2, MoreVertical, AlertCircle, User, Building2, ListTodo, FileText } from "lucide-react";
 import type { CaseItem } from "@/types/case";
 import type { Customer } from "@/types/customer";
 import type { Department } from "@/types/department";
@@ -110,6 +100,7 @@ const SWEEP_COLORS: Record<string, string> = {
     delete: "#ef4444",
     edit: "linear-gradient(90deg, #3b82f6, #8b5cf6)",
     tasks: "linear-gradient(90deg, #6366f1, #8b5cf6)",
+    report: "linear-gradient(90deg, #10b981, #06b6d4)",
 };
 
 function SweepButton({
@@ -218,7 +209,7 @@ function SweepButton({
                 ref={iconWrapRef}
                 className="relative z-10 flex items-center justify-center"
                 style={{
-                    color: disabled ? (isDark ? "#64748b" : "#9ca3af") : iconColor,
+                    color: disabled ? (isDark ? "#6b7280" : "#9ca3af") : iconColor,
                 }}
             >
                 {icon}
@@ -254,6 +245,7 @@ function CaseCard({
     const [isDeletingState, setIsDeletingState] = useState(false);
     const [deleteError, setDeleteError] = useState("");
     const [showEdit, setShowEdit] = useState(false);
+    const [showReport, setShowReport] = useState(false);
     const [showMobileSheet, setShowMobileSheet] = useState(false);
 
     const customerName = useMemo(
@@ -336,13 +328,25 @@ function CaseCard({
 
     const actions = [
         {
+            key: "report",
+            tooltip: "گزارش مسیر پرونده",
+            disabled: false,
+            delay: 0,
+            color: isDark ? "#6ee7b7" : "#059669",
+            onClick: (e: ReactMouseEvent) => {
+                e.stopPropagation();
+                setShowReport(true);
+            },
+            icon: <FileText size={16} />,
+        },
+        {
             key: "tasks",
             tooltip:
                 caseTasks.length > 0
                     ? `${caseTasks.length} وظیفه`
                     : "وظایف پرونده",
             disabled: false,
-            delay: 0,
+            delay: 0.07,
             color: tasksColor,
             onClick: (e: ReactMouseEvent) => {
                 e.stopPropagation();
@@ -354,7 +358,7 @@ function CaseCard({
             key: "edit",
             tooltip: "ویرایش اطلاعات",
             disabled: false,
-            delay: 0.07,
+            delay: 0.14,
             color: iconColor,
             onClick: (e: ReactMouseEvent) => {
                 e.stopPropagation();
@@ -370,7 +374,7 @@ function CaseCard({
             key: "delete",
             tooltip: deleteTooltipText,
             disabled: !canDelete,
-            delay: 0.14,
+            delay: 0.21,
             color: iconColor,
             onClick: (e: ReactMouseEvent) => {
                 e.stopPropagation();
@@ -382,6 +386,13 @@ function CaseCard({
 
     return (
         <>
+            {showReport && (
+                <CaseReportModal
+                    caseId={item.id}
+                    caseTitle={item.title}
+                    onClose={() => setShowReport(false)}
+                />
+            )}
             <m.div
                 ref={cardRef}
                 initial={{ opacity: 0, y: 12 }}
@@ -561,7 +572,7 @@ function CaseCard({
                                                         transition={{ duration: 0.15 }}
                                                         className="whitespace-nowrap rounded-2xl px-3 py-2 text-center shadow-xl"
                                                         style={{
-                                                            background: isDark ? "#0f172a" : "#1e293b",
+                                                            background: isDark ? "#111827" : "#1f2937",
                                                             border: "1px solid rgba(255,255,255,0.08)",
                                                         }}
                                                         dir="rtl"
@@ -634,7 +645,7 @@ function CaseCard({
                                     }}
                                     className="flex w-full items-center gap-3 rounded-2xl p-3 text-sm font-bold text-gray-700 dark:text-gray-200"
                                     style={{
-                                        background: isDark ? "rgba(255,255,255,0.05)" : "#f8fafc",
+                                        background: isDark ? "rgba(255,255,255,0.05)" : "#f9fafb",
                                     }}
                                 >
                                     <ListTodo size={17} />
@@ -645,11 +656,26 @@ function CaseCard({
                                     type="button"
                                     onClick={() => {
                                         setShowMobileSheet(false);
+                                        setShowReport(true);
+                                    }}
+                                    className="flex w-full items-center gap-3 rounded-2xl p-3 text-sm font-bold text-gray-700 dark:text-gray-200"
+                                    style={{
+                                        background: isDark ? "rgba(255,255,255,0.05)" : "#f9fafb",
+                                    }}
+                                >
+                                    <FileText size={17} />
+                                    گزارش مسیر پرونده
+                                </button>
+
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setShowMobileSheet(false);
                                         onEdit ? onEdit(item) : setShowEdit(true);
                                     }}
                                     className="flex w-full items-center gap-3 rounded-2xl p-3 text-sm font-bold text-gray-700 dark:text-gray-200"
                                     style={{
-                                        background: isDark ? "rgba(255,255,255,0.05)" : "#f8fafc",
+                                        background: isDark ? "rgba(255,255,255,0.05)" : "#f9fafb",
                                     }}
                                 >
                                     <SquarePen size={17} />

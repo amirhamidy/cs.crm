@@ -3,13 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, m } from "framer-motion";
 import { useTheme } from "next-themes";
-import {
-    AlertTriangle,
-    Ban,
-    CheckCircle2,
-    Loader2,
-    TrendingDown,
-} from "lucide-react";
+import { AlertTriangle, Ban, CheckCircle2, Loader2, TrendingDown } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
 
 export interface WeakestEmployeeItem {
@@ -72,17 +66,17 @@ const MAUVE_SCALE = [
 
 function WeakestEmployeesChartSkeleton() {
     return (
-        <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-white/8 dark:bg-slate-950">
+        <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-white/8 dark:bg-gray-950">
             <div className="mb-3 space-y-2" dir="rtl">
-                <div className="h-4 w-40 animate-pulse rounded-full bg-gray-100 dark:bg-slate-900" />
-                <div className="h-3 w-24 animate-pulse rounded-full bg-gray-100/80 dark:bg-slate-900/60" />
+                <div className="h-4 w-40 animate-pulse rounded-full bg-gray-100 dark:bg-gray-900" />
+                <div className="h-3 w-24 animate-pulse rounded-full bg-gray-100/80 dark:bg-gray-900/60" />
             </div>
 
             <div className="grid grid-cols-2 gap-2">
                 {[1, 2, 3, 4, 5, 6].map((i) => (
                     <div
                         key={i}
-                        className="h-[118px] animate-pulse rounded-2xl bg-gray-100 dark:bg-slate-900"
+                        className="h-[118px] animate-pulse rounded-2xl bg-gray-100 dark:bg-gray-900"
                     />
                 ))}
             </div>
@@ -91,7 +85,7 @@ function WeakestEmployeesChartSkeleton() {
 }
 
 function getScoreColor(score: number | null) {
-    if (score === null) return "#94a3b8";
+    if (score === null) return "#9ca3af";
     if (score >= 90) return "#16a34a";
     if (score >= 70) return "#2563eb";
     if (score >= 50) return "#d97706";

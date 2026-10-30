@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, m } from "framer-motion";
-import { Plus, Trash2, Users, X } from "lucide-react";
+import { Plus, Users, X } from "lucide-react";
 import { useState } from "react";
 import { Department, Employee } from "./types";
 
@@ -133,11 +133,11 @@ export default function EmployeesPanel({
                                                         transition={{ duration: 0.15 }}
                                                         className="pointer-events-none absolute bottom-full left-1/2 z-50 mb-2 -translate-x-1/2 whitespace-nowrap"
                                                     >
-                                                        <div className="rounded-xl border border-white/[0.08] bg-slate-800 px-2.5 py-1.5 text-center shadow-xl">
+                                                        <div className="rounded-xl border border-white/[0.08] bg-gray-800 px-2.5 py-1.5 text-center shadow-xl">
                                                             <p className="text-[11.5px] font-bold text-white">
                                                                 این عضو وظیفه دارد
                                                             </p>
-                                                            <p className="mt-0.5 text-[8.5px] text-slate-400">
+                                                            <p className="mt-0.5 text-[8.5px] text-gray-400">
                                                                 ابتدا وظایفش را حذف کنید
                                                             </p>
                                                         </div>

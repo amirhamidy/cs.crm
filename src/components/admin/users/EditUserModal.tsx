@@ -43,7 +43,7 @@ const FloatingInput = forwardRef<HTMLInputElement, FloatingInputProps>(
                     absolute right-5 top-1/2 -translate-y-1/2
                     text-sm text-gray-400 pointer-events-none
                     transition-all duration-200
-                    bg-white dark:bg-[#0f172a] px-1.5 rounded
+                    bg-white dark:bg-[#111827] px-1.5 rounded
                     peer-focus:top-0 peer-focus:text-xs peer-focus:text-gray-500
                     peer-[:not(:placeholder-shown)]:top-0
                     peer-[:not(:placeholder-shown)]:text-xs
@@ -189,7 +189,7 @@ export default function EditUserModal({
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: 16 }}
                         transition={{ duration: 0.35, ease: "easeOut" }}
-                        className="w-full max-w-sm rounded-[2rem] border border-gray-100 bg-white p-8 shadow-sm dark:border-white/[0.06] dark:bg-[#0f172a]"
+                        className="w-full max-w-sm rounded-[2rem] border border-gray-100 bg-white p-8 shadow-sm dark:border-white/[0.06] dark:bg-[#111827]"
                         onClick={(e) => e.stopPropagation()}
                         dir="rtl"
                     >

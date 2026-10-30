@@ -3,30 +3,10 @@
 import { useState } from "react";
 import { AnimatePresence, m } from "framer-motion";
 import { useTheme } from "next-themes";
-import {
-    AlertTriangle,
-    ArrowDownUp,
-    Boxes,
-    CalendarDays,
-    Loader2,
-    MapPin,
-    Package,
-    Pencil,
-    Scale,
-    Tag,
-    Trash2,
-    Wallet,
-    X,
-} from "lucide-react";
+import { AlertTriangle, ArrowDownUp, Boxes, CalendarDays, Loader2, MapPin, Package, Pencil, Scale, Tag, Trash2, Wallet, X } from "lucide-react";
 import type { AxiosError } from "axios";
 import axiosInstance from "@/lib/axiosInstance";
-import {
-    ApiCategory,
-    ApiProduct,
-    ApiStockInfo,
-    ApiWarehouseStaff,
-    UNIT_TYPE_LABELS,
-} from "@/types/warehouse";
+import { ApiCategory, ApiProduct, ApiStockInfo, ApiWarehouseStaff, UNIT_TYPE_LABELS } from "@/types/warehouse";
 import type { WithShelf } from "@/types/warehouseShelf";
 import WarehouseEmployeeProductEditModal from "./WarehouseEmployeeProductEditModal";
 import WarehouseEmployeeStockModal from "./WarehouseEmployeeStockModal";
@@ -555,7 +535,7 @@ export default function WarehouseEmployeeProductCard({
                                                 ? "#ef4444"
                                                 : isDark
                                                     ? "#fff"
-                                                    : "#0f172a",
+                                                    : "#111827",
                                         }}
                                     >
                                         {formatStockValue(
@@ -664,7 +644,7 @@ export default function WarehouseEmployeeProductCard({
                                 background: isDark
                                     ? "rgba(255,255,255,.04)"
                                     : "rgba(15,23,42,.04)",
-                                color: isDark ? "#94a3b8" : "#64748b",
+                                color: isDark ? "#9ca3af" : "#6b7280",
                             }}
                         >
                             <CalendarDays size={9} />
@@ -733,7 +713,7 @@ export default function WarehouseEmployeeProductCard({
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.96, y: 16 }}
                             onClick={(e) => e.stopPropagation()}
-                            className="w-full max-w-[360px] rounded-[2rem] bg-white p-5 dark:bg-[#0f172a]"
+                            className="w-full max-w-[360px] rounded-[2rem] bg-white p-5 dark:bg-[#111827]"
                             dir="rtl"
                         >
                             <div className="mb-4 flex items-center justify-between">
