@@ -86,7 +86,7 @@ const EVENT_TYPE_COLOR: Record<string, TypeStyle> = {
     reminder: { bg: "bg-cyan-500/10", text: "text-cyan-700 dark:text-cyan-200", dot: "bg-cyan-500", bar: "bg-cyan-500", border: "border-cyan-500/20" },
     deadline: { bg: "bg-rose-500/10", text: "text-rose-700 dark:text-rose-200", dot: "bg-rose-500", bar: "bg-rose-500", border: "border-rose-500/20" },
     note: { bg: "bg-emerald-500/10", text: "text-emerald-700 dark:text-emerald-200", dot: "bg-emerald-500", bar: "bg-emerald-500", border: "border-emerald-500/20" },
-    default: { bg: "bg-slate-500/10", text: "text-slate-600 dark:text-slate-300", dot: "bg-slate-400", bar: "bg-slate-400", border: "border-slate-500/20" },
+    default: { bg: "bg-gray-500/10", text: "text-gray-600 dark:text-gray-300", dot: "bg-gray-400", bar: "bg-gray-400", border: "border-gray-500/20" },
 };
 export const getEventType = (type: string) => {
     const value = String(type || "").toLowerCase();
@@ -105,9 +105,9 @@ export const isEventOnDate = (event: CalendarEvent, dateISO: string) => {
 };
 function PersonAvatar({ name, id }: { name: string; id: number }) {
     const hue = (Math.abs(id) * 53) % 360;
-    return <span title={name} className="flex h-7 w-7 select-none items-center justify-center rounded-full border-2 border-white text-[10px] font-extrabold text-white dark:border-slate-900" style={{ background: `linear-gradient(135deg, oklch(55% 0.18 ${hue}), oklch(45% 0.22 ${(hue + 30) % 360}))` }}>{name.trim().charAt(0) || "؟"}</span>;
+    return <span title={name} className="flex h-7 w-7 select-none items-center justify-center rounded-full border-2 border-white text-[10px] font-extrabold text-white dark:border-gray-900" style={{ background: `linear-gradient(135deg, oklch(55% 0.18 ${hue}), oklch(45% 0.22 ${(hue + 30) % 360}))` }}>{name.trim().charAt(0) || "؟"}</span>;
 }
-const EMPTY_BOX = "rounded-2xl border border-dashed border-slate-300/70 bg-white/45 px-5 py-7 text-center text-[11px] font-semibold text-gray-500 dark:border-white/10 dark:bg-white/[0.03] dark:text-gray-400";
+const EMPTY_BOX = "rounded-2xl border border-dashed border-gray-300/70 bg-white/45 px-5 py-7 text-center text-[11px] font-semibold text-gray-500 dark:border-white/10 dark:bg-white/[0.03] dark:text-gray-400";
 function DayPanel({ onClose, selectedDate, notes, events, onCreated, onDeleted }: Omit<Props, "isOpen" | "selectedDate"> & { selectedDate: Date }) {
     const userId = useAuthStore((state) => state.userId);
     const [description, setDescription] = useState("");
@@ -161,8 +161,8 @@ function DayPanel({ onClose, selectedDate, notes, events, onCreated, onDeleted }
     };
     return (
         <MotionConfig reducedMotion="user">
-            <m.div role="dialog" aria-modal="true" aria-label="جزئیات روز" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.18 }} onClick={onClose} className="fixed inset-0 z-[120] flex items-stretch justify-start bg-slate-950/45 p-2 sm:p-4">
-                <m.aside dir="rtl" initial={{ x: -56, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -56, opacity: 0 }} transition={{ type: "spring", damping: 30, stiffness: 340 }} onClick={(e) => e.stopPropagation()} className="flex h-full w-full max-w-[30rem] flex-col overflow-hidden rounded-[2rem] border border-slate-300/60 bg-[#f7faff]/95 shadow-xl backdrop-blur-xl dark:border-white/[0.08] dark:bg-slate-900/95">
+            <m.div role="dialog" aria-modal="true" aria-label="جزئیات روز" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.18 }} onClick={onClose} className="fixed inset-0 z-[120] flex items-stretch justify-start bg-black/50 p-2 sm:p-4">
+                <m.aside dir="rtl" initial={{ x: -56, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -56, opacity: 0 }} transition={{ type: "spring", damping: 30, stiffness: 340 }} onClick={(e) => e.stopPropagation()} className="flex h-full w-full max-w-[30rem] flex-col overflow-hidden rounded-[2.5rem] border border-gray-300/60 bg-[#f7faff]/95 shadow-xl backdrop-blur-xl dark:border-white/[0.08] dark:bg-gray-900/95">
                     <div className="relative shrink-0 overflow-hidden bg-gradient-to-br from-indigo-500 to-violet-600 px-6 pb-6 pt-5 text-white">
                         <span aria-hidden className="pointer-events-none absolute -left-4 top-6 select-none text-[150px] font-black leading-none text-white/10">{dayFmt.format(selectedDate)}</span>
                         <div className="relative flex items-start justify-between">
@@ -189,7 +189,7 @@ function DayPanel({ onClose, selectedDate, notes, events, onCreated, onDeleted }
                                 const startMs = new Date(event.start).getTime();
                                 const endMs = new Date(event.end || event.start).getTime();
                                 const ongoing = !Number.isNaN(startMs) && !Number.isNaN(endMs) && startMs <= nowMs && nowMs <= endMs;
-                                return <m.div key={`${event.type}-${event.id}`} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 + Math.min(i, 8) * 0.05, duration: 0.25, ease: "easeOut" }} className="relative overflow-hidden rounded-2xl border border-slate-300/45 bg-white/60 p-4 pr-5 dark:border-white/[0.06] dark:bg-white/[0.04]">
+                                return <m.div key={`${event.type}-${event.id}`} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 + Math.min(i, 8) * 0.05, duration: 0.25, ease: "easeOut" }} className="relative overflow-hidden rounded-2xl border border-gray-300/45 bg-white/60 p-4 pr-5 dark:border-white/[0.06] dark:bg-white/[0.04]">
                                     <span className={`absolute inset-y-3 right-0 w-1 rounded-full ${style.bar}`} />
                                     <p className="break-words text-[13px] font-extrabold text-gray-800 dark:text-gray-100">{event.title}</p>
                                     <div className="mt-2 flex flex-wrap items-center gap-1.5">
@@ -201,7 +201,7 @@ function DayPanel({ onClose, selectedDate, notes, events, onCreated, onDeleted }
                                         {[["شروع", event.start], ["پایان", event.end]].map(([label, value]) => <div key={label} className="flex items-center gap-2 rounded-xl bg-black/[0.04] px-2.5 py-2 dark:bg-white/[0.04]"><Clock3 size={12} className="shrink-0 text-indigo-500" /><div className="min-w-0"><p className="text-[9px] font-bold text-gray-500 dark:text-gray-400">{label}</p><p className="truncate text-[10.5px] font-bold text-gray-700 dark:text-gray-300">{formatEventDate(value)}</p></div></div>)}
                                     </div>
                                     {(assigned.length > 0 || creator) && <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-                                        {assigned.length > 0 && <div className="flex items-center gap-2"><div className="flex -space-x-2 space-x-reverse">{assigned.slice(0, 5).map((person) => <PersonAvatar key={person.id} name={person.full_name} id={person.id} />)}{assigned.length > 5 && <span className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-white bg-gray-200 text-[9px] font-bold text-gray-600 dark:border-slate-900 dark:bg-slate-700 dark:text-gray-200">+{(assigned.length - 5).toLocaleString("fa-IR")}</span>}</div><span className="max-w-[10rem] truncate text-[10.5px] font-bold text-gray-600 dark:text-gray-400">{assigned.map((person) => person.full_name).join("، ")}</span></div>}
+                                        {assigned.length > 0 && <div className="flex items-center gap-2"><div className="flex -space-x-2 space-x-reverse">{assigned.slice(0, 5).map((person) => <PersonAvatar key={person.id} name={person.full_name} id={person.id} />)}{assigned.length > 5 && <span className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-white bg-gray-200 text-[9px] font-bold text-gray-600 dark:border-gray-900 dark:bg-gray-700 dark:text-gray-200">+{(assigned.length - 5).toLocaleString("fa-IR")}</span>}</div><span className="max-w-[10rem] truncate text-[10.5px] font-bold text-gray-600 dark:text-gray-400">{assigned.map((person) => person.full_name).join("، ")}</span></div>}
                                         {creator && <span className="flex items-center gap-1.5 text-[10px] font-bold text-gray-500 dark:text-gray-400"><UserRound size={11} />ایجاد: <span className="text-gray-700 dark:text-gray-300">{creator.full_name}</span></span>}
                                     </div>}
                                 </m.div>;
@@ -216,10 +216,10 @@ function DayPanel({ onClose, selectedDate, notes, events, onCreated, onDeleted }
                             </m.div>)}</AnimatePresence>}
                         </section>
                     </div>
-                    <div className="shrink-0 border-t border-slate-300/50 bg-white/65 p-4 dark:border-white/5 dark:bg-white/[0.03]">
+                    <div className="shrink-0 border-t border-gray-300/50 bg-white/65 p-4 dark:border-white/5 dark:bg-white/[0.03]">
                         {error && <p className="mb-2 text-[11.5px] font-semibold text-red-500">{error}</p>}
                         <div className="relative">
-                            <textarea value={description} onChange={(e) => setDescription(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) handleSubmit(); }} placeholder={placeholder} rows={3} disabled={!canWrite} className="w-full resize-none rounded-2xl border border-slate-300/70 bg-white/80 py-3 pl-16 pr-4 text-[12.5px] leading-7 text-gray-800 outline-none transition placeholder:text-gray-500 focus:border-indigo-500/60 focus:ring-4 focus:ring-indigo-500/15 disabled:cursor-not-allowed disabled:opacity-60 dark:border-white/[0.08] dark:bg-white/[0.04] dark:text-gray-100 dark:placeholder:text-gray-500" />
+                            <textarea value={description} onChange={(e) => setDescription(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) handleSubmit(); }} placeholder={placeholder} rows={3} disabled={!canWrite} className="w-full resize-none rounded-2xl border border-gray-300/70 bg-white/80 py-3 pl-16 pr-4 text-[12.5px] leading-7 text-gray-800 outline-none transition placeholder:text-gray-500 focus:border-indigo-500/60 focus:ring-4 focus:ring-indigo-500/15 disabled:cursor-not-allowed disabled:opacity-60 dark:border-white/[0.08] dark:bg-white/[0.04] dark:text-gray-100 dark:placeholder:text-gray-500" />
                             <button type="button" aria-label="ثبت یادداشت" onClick={handleSubmit} disabled={submitting || !description.trim() || !canWrite} className="absolute bottom-3 left-3 flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 text-white transition-transform hover:scale-105 active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/60 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:scale-100">{submitting ? <Loader2 size={18} className="animate-spin" /> : <Send size={17} className="-scale-x-100" />}</button>
                         </div>
                     </div>

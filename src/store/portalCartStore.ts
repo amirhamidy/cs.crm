@@ -10,6 +10,7 @@ interface PortalCartState {
   setQuantity: (productId: number, quantity: number) => void;
   remove: (productId: number) => void; clear: () => void;
   total: () => number;
+  syncProducts: (fresh: PortalProduct[]) => void;
 }
 const key = (id: number) => `portal-cart:${id}`;
 const round = (n: number) => Math.round(n * 1000) / 1000;
@@ -40,5 +41,17 @@ export const usePortalCartStore = create<PortalCartState>((set, get) => ({
   },
   remove: (productId) => { const { accountId, items } = get(); const next = items.filter((i) => i.product.id !== productId); persist(accountId, next); set({ items: next }); },
   clear: () => { const { accountId } = get(); persist(accountId, []); set({ items: [] }); },
+  syncProducts: (fresh) => {
+    const { accountId, items } = get();
+    const byId = new Map(fresh.map((p) => [p.id, p]));
+    // Update price/stock; drop items no longer available; clamp quantity
+    const next = items.flatMap((item) => {
+      const product = byId.get(item.product.id);
+      if (!product) return [item];
+      if (product.available_quantity <= 0) return [];
+      return [{ product, quantity: Math.min(item.quantity, product.available_quantity) }];
+    });
+    persist(accountId, next); set({ items: next });
+  },
   total: () => get().items.reduce((sum, item) => sum + Number(item.product.sale_price) * item.quantity, 0),
 }));

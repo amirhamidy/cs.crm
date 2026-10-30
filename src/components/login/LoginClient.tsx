@@ -85,21 +85,21 @@ export default function LoginClient({ initialMode = "staff" }: LoginClientProps)
             >
                 <div className="mb-8 flex items-center justify-between gap-3 p-2">
                     <div>
-                        <p className="text-sm font-bold text-slate-800">{typedSlogan}</p>
-                        <span className="mt-1 block h-4 text-[11px] text-slate-400">
+                        <p className="text-sm font-bold text-gray-800">{typedSlogan}</p>
+                        <span className="mt-1 block h-4 text-[11px] text-gray-400">
                             {mode === "customer" ? "سامانه ثبت و پیگیری سفارش مشتریان" : "ورود به سامانه مدیریت رادکو"}
                         </span>
                     </div>
                     <Image src="/radco.png" alt="رادکو" width={100} height={100} priority className="rounded-xl object-cover" />
                 </div>
 
-                <div role="tablist" aria-label="نوع ورود" className="mb-6 grid grid-cols-2 rounded-2xl bg-slate-100 p-1">
+                <div role="tablist" aria-label="نوع ورود" className="mb-6 grid grid-cols-2 rounded-2xl bg-gray-100 p-1">
                     <button
                         type="button"
                         role="tab"
                         aria-selected={mode === "staff"}
                         onClick={() => changeMode("staff")}
-                        className={`min-h-10 rounded-xl px-3 text-xs font-bold transition-all ${mode === "staff" ? "bg-white text-slate-900 shadow-sm ring-1 ring-slate-200" : "text-slate-500 hover:text-slate-800"}`}
+                        className={`min-h-10 rounded-xl px-3 text-xs font-bold transition-all ${mode === "staff" ? "bg-white text-gray-900 shadow-sm ring-1 ring-gray-200" : "text-gray-500 hover:text-gray-800"}`}
                     >
                         کارکنان و ادمین
                     </button>
@@ -108,7 +108,7 @@ export default function LoginClient({ initialMode = "staff" }: LoginClientProps)
                         role="tab"
                         aria-selected={mode === "customer"}
                         onClick={() => changeMode("customer")}
-                        className={`min-h-10 rounded-xl px-3 text-xs font-bold transition-all ${mode === "customer" ? "bg-white text-indigo-700 shadow-sm ring-1 ring-slate-200" : "text-slate-500 hover:text-slate-800"}`}
+                        className={`min-h-10 rounded-xl px-3 text-xs font-bold transition-all ${mode === "customer" ? "bg-white text-indigo-700 shadow-sm ring-1 ring-gray-200" : "text-gray-500 hover:text-gray-800"}`}
                     >
                         مشتریان
                     </button>
@@ -137,7 +137,7 @@ export default function LoginClient({ initialMode = "staff" }: LoginClientProps)
                         <button
                             type="button"
                             onClick={() => setShowPassword((prev) => !prev)}
-                            className="absolute left-3 top-1/2 flex size-8 -translate-y-1/2 items-center justify-center rounded-xl text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
+                            className="absolute left-3 top-1/2 flex size-8 -trangray-y-1/2 items-center justify-center rounded-xl text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700"
                             aria-label={showPassword ? "مخفی کردن رمز عبور" : "نمایش رمز عبور"}
                         >
                             {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
@@ -161,7 +161,7 @@ export default function LoginClient({ initialMode = "staff" }: LoginClientProps)
                     </m.button>
                 </form>
 
-                <p className="mt-6 text-center text-[11px] leading-5 text-slate-400">
+                <p className="mt-6 text-center text-[11px] leading-5 text-gray-400">
                     {mode === "customer"
                         ? "اطلاعات ورود پرتال را از واحد فروش یا مدیر حساب خود دریافت کنید."
                         : "ورود ویژه کاربران و مدیران سامانه رادکو"}

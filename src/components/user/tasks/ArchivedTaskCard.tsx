@@ -19,6 +19,7 @@ import {
 import axiosInstance from "@/lib/axiosInstance";
 import { departmentsApi } from "@/lib/api";
 import { useCurrentEmployee } from "@/hooks/usecurrentemployee";
+import { NiceSelect } from "@/components/ui/NiceSelect";
 import AdminTaskNotesModal from "@/components/tasks/AdminTaskNotesModal";
 
 interface ArchiveTask {
@@ -441,44 +442,25 @@ export default function ArchivedTaskCard({ task, onReopened }: Props) {
                         ) : (
                             <div className="mt-4 space-y-3">
                                 <div>
-                                    <label className="mb-1.5 block text-[10.5px] font-bold text-gray-500 dark:text-gray-400">
-                                        کارمند مسئول
-                                    </label>
-                                    <select
-                                        value={selectedEmployee}
-                                        onChange={(e) => setSelectedEmployee(e.target.value)}
+                                    <NiceSelect
+                                        label="کارمند مسئول"
+                                        placeholder="انتخاب کارمند"
                                         disabled={submitting}
-                                        className="h-10 w-full rounded-xl border border-gray-200 bg-white px-3 text-[11px] font-bold text-gray-700 outline-none focus:border-indigo-400 disabled:opacity-50 dark:border-white/[0.08] dark:bg-[#111a2d] dark:text-white"
-                                    >
-                                        <option value="">انتخاب کارمند</option>
-                                        {availableEmployees.map((emp) => (
-                                            <option
-                                                key={`${emp.department}-${emp.employee}`}
-                                                value={emp.employee}
-                                            >
-                                                {emp.employee_name}
-                                            </option>
-                                        ))}
-                                    </select>
+                                        options={availableEmployees.map((emp) => ({ id: Number(emp.employee), label: emp.employee_name }))}
+                                        value={selectedEmployee === "" ? null : Number(selectedEmployee)}
+                                        onChange={(id) => setSelectedEmployee(String(id))}
+                                    />
                                 </div>
 
                                 <div>
-                                    <label className="mb-1.5 block text-[10.5px] font-bold text-gray-500 dark:text-gray-400">
-                                        مرحله شروع
-                                    </label>
-                                    <select
-                                        value={selectedStep}
-                                        onChange={(e) => setSelectedStep(e.target.value)}
+                                    <NiceSelect
+                                        label="مرحله شروع"
+                                        placeholder="انتخاب مرحله"
                                         disabled={submitting}
-                                        className="h-10 w-full rounded-xl border border-gray-200 bg-white px-3 text-[11px] font-bold text-gray-700 outline-none focus:border-indigo-400 disabled:opacity-50 dark:border-white/[0.08] dark:bg-[#111a2d] dark:text-white"
-                                    >
-                                        <option value="">انتخاب مرحله</option>
-                                        {availableSteps.map((step) => (
-                                            <option key={step.id} value={step.id}>
-                                                {step.name}
-                                            </option>
-                                        ))}
-                                    </select>
+                                        options={availableSteps.map((step) => ({ id: Number(step.id), label: step.name }))}
+                                        value={selectedStep === "" ? null : Number(selectedStep)}
+                                        onChange={(id) => setSelectedStep(String(id))}
+                                    />
                                 </div>
                             </div>
                         )}

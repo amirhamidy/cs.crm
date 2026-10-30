@@ -1,5 +1,6 @@
 "use client";
 
+import { NiceSelect } from "@/components/ui/NiceSelect";
 import TimePicker from "@/components/TimePicker";
 import { useCallback, useRef, useState } from "react";
 import { m, AnimatePresence } from "framer-motion";
@@ -294,19 +295,13 @@ export default function UserProductionLogsPage() {
                 </div>
 
                 <div>
-                  <label className="block text-[11.5px] font-bold text-gray-400 mb-1">انتخاب ماشین</label>
-                  <select
-                    value={formMachine}
-                    onChange={(e) => setFormMachine(Number(e.target.value))}
-                    className="h-11 w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 text-xs font-bold text-gray-900 outline-none focus:border-indigo-500 dark:border-white/[0.08] dark:bg-white/[0.03] dark:text-white"
-                  >
-                    <option value="">انتخاب دستگاه...</option>
-                    {machines.map((m) => (
-                      <option key={m.id} value={m.id}>
-                        {m.name} ({m.code})
-                      </option>
-                    ))}
-                  </select>
+                  <NiceSelect
+                    label="انتخاب ماشین"
+                    placeholder="انتخاب دستگاه..."
+                    options={machines.map((mc) => ({ id: mc.id, label: mc.name, sub: mc.code }))}
+                    value={formMachine === "" ? null : formMachine}
+                    onChange={(id) => setFormMachine(id)}
+                  />
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
