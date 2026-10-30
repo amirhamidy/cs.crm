@@ -28,11 +28,19 @@ import {
     Crown,
     Building2,
     X,
+    KeyRound,
+    Camera,
 } from "lucide-react";
 import { accountsApi, departmentsApi } from "@/lib/api";
 import type { ApiEmployee } from "@/types/users";
 import EditUserModal from "@/components/admin/users/EditUserModal";
 import AdjustScoreModal from "@/components/admin/users/AdjustScoreModal";
+import UserAvatar from "@/components/ui/UserAvatar";
+import AvatarUploader from "@/components/ui/AvatarUploader";
+import SetPasswordModal from "@/components/admin/users/SetPasswordModal";
+import { useAuthStore } from "@/store/authStore";
+import { useAvatarStore } from "@/store/avatarStore";
+import { apiMessage } from "@/lib/apiMessage";
 
 
 
@@ -62,7 +70,7 @@ interface UserCardProps {
 }
 
 type Placement = "left" | "right";
-type ActionKey = "toggleActive" | "edit" | "adjustScore" | "manager" | "delete";
+type ActionKey = "toggleActive" | "edit" | "adjustScore" | "manager" | "delete" | "password" | "avatar";
 
 type DepartmentMembership = {
     id: number;
@@ -86,6 +94,8 @@ const SWEEP_GRADIENTS: Record<string, string> = {
     adjustScore: "linear-gradient(90deg, #f59e0b, #10b981)",
     manager: "linear-gradient(90deg, #f59e0b, #f97316)",
     delete: "#ef4444",
+    password: "linear-gradient(90deg, #6366f1, #8b5cf6)",
+    avatar: "linear-gradient(90deg, #10b981, #06b6d4)",
 };
 
 const SHEET_TONES = {
@@ -223,20 +233,6 @@ function useModalBehavior(onClose: () => void, locked: boolean) {
 
 
 
-
-const Avatar = memo(function Avatar({ name, id }: { name: string; id: number }) {
-    const hue = (Math.abs(id) * 53) % 360;
-    return (
-        <div
-            className="flex h-11 w-11 shrink-0 select-none items-center justify-center rounded-2xl text-[15px] font-extrabold text-white"
-            style={{
-                background: `linear-gradient(135deg, oklch(55% 0.18 ${hue}), oklch(45% 0.22 ${(hue + 30) % 360}))`,
-            }}
-        >
-            {name?.charAt(0) ?? "؟"}
-        </div>
-    );
-});
 
 function StatusSwitch({
     isActive,
@@ -726,6 +722,10 @@ function MobileSheet({
     onAdjust,
     onManager,
     onRequestDelete,
+    canManageProfile,
+    userId,
+    onPassword,
+    onAvatar,
 }: {
     employee: ApiEmployee;
     departmentName: string | null;
@@ -741,6 +741,10 @@ function MobileSheet({
     onAdjust: () => void;
     onManager: () => void;
     onRequestDelete: () => void;
+    canManageProfile: boolean;
+    userId: number | null;
+    onPassword: () => void;
+    onAvatar: () => void;
 }) {
     return (
         <ModalFrame
@@ -761,7 +765,7 @@ function MobileSheet({
 
                 <div className="mb-4 flex items-center justify-between border-b border-black/5 pb-3 dark:border-white/5">
                     <div className="flex min-w-0 items-center gap-2.5">
-                        <Avatar name={employee.full_name || "؟"} id={employee.id} />
+                        <UserAvatar src={employee.avatar} name={employee.full_name || "؟"} id={employee.id} />
                         <div className="min-w-0">
                             <p className="truncate text-sm font-extrabold text-gray-800 dark:text-gray-100">
                                 {employee.full_name || "بدون نام"}
@@ -813,6 +817,12 @@ function MobileSheet({
                         label="تعیین مدیر دپارتمان"
                         onClick={onManager}
                     />
+                    {canManageProfile && (
+                        <>
+                            <SheetButton tone="blue" icon={<KeyRound size={18} />} label="تغییر رمز عبور" disabled={!userId} onClick={onPassword} />
+                            <SheetButton tone="emerald" icon={<Camera size={18} />} label="عکس پروفایل" disabled={!userId} onClick={onAvatar} />
+                        </>
+                    )}
 
                     <div className="flex flex-col gap-1.5 pt-1">
                         <SheetButton
@@ -870,6 +880,11 @@ function UserCard({
     const [showAdjust, setShowAdjust] = useState(false);
     const [showManager, setShowManager] = useState(false);
     const [showMobileSheet, setShowMobileSheet] = useState(false);
+    const [showPasswordModal, setShowPasswordModal] = useState(false);
+    const [showAvatarModal, setShowAvatarModal] = useState(false);
+    const loggedUserType = useAuthStore((state) => state.userType);
+    const setMyAvatar = useAvatarStore((state) => state.setMyAvatar);
+    const canManageProfile = loggedUserType === 1;
 
     const editMounted = useMountedOnce(showEdit);
 
@@ -1034,6 +1049,22 @@ function UserCard({
                 icon: <Crown size={16} />,
                 onClick: () => setShowManager(true),
             },
+            ...(canManageProfile ? [
+                {
+                    key: "password" as const,
+                    tooltip: userId == null ? "شناسه کاربر در دسترس نیست" : "تغییر رمز عبور",
+                    disabled: userId == null,
+                    icon: <KeyRound size={16} />,
+                    onClick: () => setShowPasswordModal(true),
+                },
+                {
+                    key: "avatar" as const,
+                    tooltip: userId == null ? "شناسه کاربر در دسترس نیست" : "تغییر عکس پروفایل",
+                    disabled: userId == null,
+                    icon: <Camera size={16} />,
+                    onClick: () => setShowAvatarModal(true),
+                },
+            ] : []),
             {
                 key: "delete",
                 tooltip: deleteTooltipText,
@@ -1157,7 +1188,7 @@ function UserCard({
 
                 
                 <div className="flex items-center gap-3 pt-1">
-                    <Avatar name={employee.full_name || "؟"} id={employee.id} />
+                    <UserAvatar src={employee.avatar} name={employee.full_name || "؟"} id={employee.id} />
                     <div className="flex min-w-0 flex-col gap-0.5">
                         <p className="truncate text-[13.5px] font-extrabold leading-tight text-gray-800 dark:text-gray-100">
                             {employee.full_name || "بدون نام"}
@@ -1236,6 +1267,10 @@ function UserCard({
                         onRequestDelete={() => {
                             if (canDelete) closeSheetThen(() => setShowConfirm(true));
                         }}
+                        canManageProfile={canManageProfile}
+                        userId={userId}
+                        onPassword={() => closeSheetThen(() => setShowPasswordModal(true))}
+                        onAvatar={() => closeSheetThen(() => setShowAvatarModal(true))}
                     />
                 )}
             </AnimatePresence>
@@ -1280,6 +1315,37 @@ function UserCard({
             )}
 
             
+            {showPasswordModal && userId != null && (
+                <SetPasswordModal userId={userId} userName={employee.full_name || employee.username} onClose={() => setShowPasswordModal(false)} />
+            )}
+            {showAvatarModal && userId != null && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4" dir="rtl">
+                    <div className="w-full max-w-sm rounded-3xl bg-white p-6 shadow-2xl dark:bg-slate-900">
+                        <div className="mb-5 flex items-center justify-between"><h3 className="font-black">عکس پروفایل {employee.full_name}</h3><button onClick={() => setShowAvatarModal(false)}>✕</button></div>
+                        <AvatarUploader
+                            current={employee.avatar}
+                            name={employee.full_name || employee.username}
+                            id={userId}
+                            onUpload={async (file) => {
+                                try {
+                                    const avatar = await accountsApi.users.uploadAvatar(userId, file);
+                                    onUpdated({ ...employee, avatar });
+                                    if (isSelf) setMyAvatar(avatar);
+                                    else setMyAvatar(useAvatarStore.getState().myAvatar);
+                                } catch (error) { throw new Error(apiMessage(error, "آپلود عکس انجام نشد")); }
+                            }}
+                            onRemove={async () => {
+                                try {
+                                    await accountsApi.users.removeAvatar(userId);
+                                    onUpdated({ ...employee, avatar: null });
+                                    if (isSelf) setMyAvatar(null);
+                                    else setMyAvatar(useAvatarStore.getState().myAvatar);
+                                } catch (error) { throw new Error(apiMessage(error, "حذف عکس انجام نشد")); }
+                            }}
+                        />
+                    </div>
+                </div>
+            )}
             <AnimatePresence>
                 {showAdjust && (
                     <AdjustScoreModal

@@ -11,6 +11,7 @@ export interface ApiEmployee {
   updated_at: string;
   department?: number;
   role?: string;
+  avatar?: string | null;
 }
 
 
@@ -22,6 +23,7 @@ export interface ApiUser {
   is_active: boolean;
   created_at: string;
   updated_at: string;
+  avatar?: string | null;
 }
 
 interface UserCardProps {

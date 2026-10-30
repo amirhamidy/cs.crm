@@ -1,0 +1,6 @@
+"use client";
+import { Copy, X } from "lucide-react";
+import { toast } from "@/components/notifications/toast";
+export default function OneTimePasswordModal({password,onClose}:{password:string;onClose:()=>void}) {
+ return <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/60 p-4" dir="rtl"><div className="w-full max-w-sm rounded-3xl bg-white p-6 dark:bg-slate-900"><div className="mb-4 flex justify-between"><h2 className="font-black">رمز عبور جدید</h2><button onClick={onClose}><X size={18}/></button></div><p className="mb-3 text-xs leading-6 text-amber-600">این رمز دیگر نمایش داده نمی‌شود. آن را همین حالا ذخیره و به مشتری تحویل دهید.</p><div dir="ltr" className="rounded-xl bg-slate-100 p-4 text-center font-mono text-lg font-black tracking-wider dark:bg-white/10">{password}</div><button onClick={()=>{void navigator.clipboard.writeText(password);toast.success("رمز کپی شد");}} className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 py-3 text-sm font-bold text-white"><Copy size={16}/> کپی رمز</button><button onClick={onClose} className="mt-2 w-full rounded-xl bg-slate-100 py-3 text-sm font-bold dark:bg-white/10">بستن</button></div></div>;
+}

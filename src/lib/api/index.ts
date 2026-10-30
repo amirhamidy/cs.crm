@@ -35,3 +35,6 @@ export type { PurchasingArchiveStatus, PurchasingCounts } from "./purchasing";
 export { qualityControlApi } from "./qualityControl";
 export type { QCListStatus, QCReviewedStatus, QCCounts } from "./qualityControl";
 export { fetchStatusPage, fetchStatusCount, listAllByStatus, isStatusFilterServerSide } from "./statusPage";
+
+export { customerPortalApi } from "./customerPortal";
+export type { PortalAccountParams, CustomerOrderParams } from "./customerPortal";

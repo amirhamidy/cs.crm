@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { AnimatePresence, m } from "framer-motion";
 import { Eye, EyeOff, Loader } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
 import { useLogin } from "@/hooks/useLogin";
 import { useLogout } from "@/hooks/useLogout";
 import { Notification } from "@/components/Notification";
@@ -107,6 +108,7 @@ export default function LoginClient() {
                         label="نام کاربری"
                         id="username"
                         type="text"
+                        autoComplete="username"
                         value={username}
                         onChange={(e) => setUsername(e.target.value)}
                     />
@@ -116,6 +118,7 @@ export default function LoginClient() {
                             label="رمز عبور"
                             id="password"
                             type={showPassword ? "text" : "password"}
+                            autoComplete="current-password"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                             className="pl-12"
@@ -159,6 +162,9 @@ export default function LoginClient() {
                             "ورود"
                         )}
                     </m.button>
+                    <Link href="/portal/login/" className="text-center text-xs font-semibold text-indigo-500 hover:text-indigo-600">
+                        ورود مشتریان
+                    </Link>
                 </form>
             </m.div>
         </div>

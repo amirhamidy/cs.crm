@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, type ReactNode } from "react";
+import { usePathname } from "next/navigation";
 import { useAuthStore } from "@/store/authStore";
 import {
     notificationsStorageKey,
@@ -16,6 +17,8 @@ export function NotificationProvider({
 }: {
     children: ReactNode;
 }) {
+    const pathname = usePathname();
+    const isPortalPath = pathname.startsWith("/portal");
     const userId = useAuthStore((state) => state.userId);
     const username = useAuthStore((state) => state.username);
     const isAuthenticated = useAuthStore(
@@ -34,9 +37,7 @@ export function NotificationProvider({
     );
 
     const activeUserId =
-        hasHydrated &&
-            isAuthenticated &&
-            userId != null
+        !isPortalPath && hasHydrated && isAuthenticated && userId != null
             ? userId
             : null;
 

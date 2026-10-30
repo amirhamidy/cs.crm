@@ -1,11 +1,12 @@
 "use client";
 
-import { Menu, User } from "lucide-react";
+import { Menu } from "lucide-react";
 import { m } from "framer-motion";
 import { useSidebar } from "@/hooks/useSidebar";
 import { useCurrentEmployee } from "@/hooks/usecurrentemployee";
 import { ThemeToggle } from "../ThemeToggle";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
+import ProfileMenu from "./ProfileMenu";
 
 export default function Topbar() {
   const { toggle } = useSidebar();
@@ -43,24 +44,7 @@ export default function Topbar() {
           <NotificationBell />
           <ThemeToggle />
 
-          <div className="flex items-center gap-2 rounded-lg px-2.5 py-1.5">
-            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-blue-600 shadow-sm shadow-blue-500/30">
-              <User className="h-4 w-4 text-white" strokeWidth={1.5} />
-            </div>
-
-            <span className="hidden min-w-12 text-[13px] font-medium text-gray-900 md:block dark:text-white">
-              {loading ? (
-                <m.span
-                  animate={{ opacity: [0.35, 1, 0.35] }}
-                  transition={{ duration: 1.2, repeat: Infinity }}
-                >
-                  ...
-                </m.span>
-              ) : (
-                displayName
-              )}
-            </span>
-          </div>
+          <ProfileMenu name={displayName} />
         </div>
       </div>
     </header>

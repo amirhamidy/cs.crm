@@ -222,6 +222,13 @@ export default function UsersPage() {
     }, []);
 
     const handleNoop = useCallback(() => undefined, []);
+    const handleAdminUpdated = useCallback((updatedEmployee: ApiEmployee) => {
+        const targetId = Number(updatedEmployee.user_id ?? updatedEmployee.user);
+        if (!targetId) return;
+        setAdminUsers((previous) => previous.map((user) =>
+            user.id === targetId ? { ...user, avatar: updatedEmployee.avatar } : user
+        ));
+    }, []);
 
     const searchTerm = list.search.trim().toLowerCase();
 
@@ -241,6 +248,7 @@ export default function UsersPage() {
                 user_id: user.id,
                 created_at: user.created_at,
                 updated_at: user.updated_at,
+                avatar: user.avatar,
             })) as ApiEmployee[],
         [visibleAdmins]
     );
@@ -363,7 +371,7 @@ export default function UsersPage() {
                                 userInfo={userInfoMap.get(adminEmployee.username.trim().toLowerCase()) ?? null}
                                 score={null}
                                 onDelete={handleNoop}
-                                onUpdated={handleNoop}
+                                onUpdated={handleAdminUpdated}
                             />
                         ))}
                     </AnimatePresence>

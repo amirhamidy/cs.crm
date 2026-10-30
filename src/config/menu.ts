@@ -16,6 +16,8 @@ import {
   ShieldCheck,
   CreativeCommonsIcon,
   Factory,
+  ClipboardCheck,
+  KeyRound,
 } from "lucide-react";
 import { FileSignature } from "lucide-react";
 import { LucideIcon } from "lucide-react";
@@ -113,6 +115,16 @@ export const adminMenuItems: MenuItem[] = [
     href: "/admin/production/machines",
   },
   {
+    icon: ClipboardCheck,
+    label: "سفارش‌های مشتریان",
+    href: "/admin/customer-orders/",
+  },
+  {
+    icon: KeyRound,
+    label: "حساب‌های پرتال مشتریان",
+    href: "/admin/customer-portal/",
+  },
+  {
     icon: CalendarCheck2,
     label: "تقویم",
     href: "/admin/calendar",
@@ -184,6 +196,11 @@ export const userMenuItems: MenuItem[] = [
     icon: ShieldCheck,
     label: "کنترل کیفی",
     href: "/user/qualityControl",
+  },
+  {
+    icon: ClipboardCheck,
+    label: "سفارش‌های مشتریان",
+    href: "/user/customer-orders/",
   },
   {
     icon: CalendarCheck2,
