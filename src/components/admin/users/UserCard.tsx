@@ -1320,7 +1320,7 @@ function UserCard({
             )}
             {showAvatarModal && userId != null && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4" dir="rtl">
-                    <div className="w-full max-w-sm rounded-3xl bg-white p-6 shadow-2xl dark:bg-slate-900">
+                    <div className="w-full max-w-sm rounded-[2rem] bg-white p-6 shadow-2xl dark:bg-slate-900">
                         <div className="mb-5 flex items-center justify-between"><h3 className="font-black">عکس پروفایل {employee.full_name}</h3><button onClick={() => setShowAvatarModal(false)}>✕</button></div>
                         <AvatarUploader
                             current={employee.avatar}

@@ -1,6 +1,6 @@
 "use client";
 
-import { InputHTMLAttributes, forwardRef } from "react";
+import { InputHTMLAttributes, forwardRef, useState } from "react";
 
 interface FloatingInputProps extends InputHTMLAttributes<HTMLInputElement> {
     label: string;
@@ -8,14 +8,15 @@ interface FloatingInputProps extends InputHTMLAttributes<HTMLInputElement> {
 }
 
 export const FloatingInput = forwardRef<HTMLInputElement, FloatingInputProps>(
-    ({ label, id, className = "", ...props }, ref) => {
+    ({ label, id, className = "", onFocus, ...props }, ref) => {
+        const [isEditable, setIsEditable] = useState(false);
+
         return (
             <div className="relative mx-0">
                 <input
                     ref={ref}
                     id={id}
                     placeholder=" "
-                    autoComplete="new-password"
                     className={`
             peer w-full  border border-gray-200 rounded-4xl
             px-5 py-3 text-sm text-black outline-none
@@ -24,6 +25,12 @@ export const FloatingInput = forwardRef<HTMLInputElement, FloatingInputProps>(
             ${className}
           `}
                     {...props}
+                    autoComplete="new-password"
+                    readOnly={!isEditable}
+                    onFocus={(event) => {
+                        setIsEditable(true);
+                        onFocus?.(event);
+                    }}
                 />
                 <label
                     htmlFor={id}

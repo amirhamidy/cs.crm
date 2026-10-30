@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import { ImagePlus, Trash2, Loader2 } from "lucide-react";
 import UserAvatar from "@/components/ui/UserAvatar";
 import { validateAvatarFile } from "@/lib/avatar";
@@ -41,8 +42,7 @@ export default function AvatarUploader({ current, name, id, onUpload, onRemove }
   return (
     <div className="flex flex-col items-center gap-3">
       {preview ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={preview} alt={name} className="h-24 w-24 rounded-3xl object-cover" />
+        <Image src={preview} alt={name} width={96} height={96} unoptimized className="h-24 w-24 rounded-3xl object-cover" />
       ) : <UserAvatar src={current} name={name} id={id} size="h-24 w-24" />}
       <div className="flex flex-wrap justify-center gap-2">
         <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl bg-indigo-600 px-3 py-2 text-xs font-bold text-white">

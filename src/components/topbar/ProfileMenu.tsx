@@ -31,8 +31,8 @@ export default function ProfileMenu({ name }: { name: string }) {
   };
 
   return <div className="relative">
-    <button type="button" onClick={() => setOpen(!open)} className="flex items-center gap-2 rounded-xl px-2 py-1.5 hover:bg-gray-100 dark:hover:bg-white/10">
-      <UserAvatar key={version} src={myAvatar} name={name} id={userId || 1} size="h-8 w-8" rounded="rounded-xl" />
+    <button type="button" onClick={() => setOpen(!open)} className="flex items-center gap-2 rounded-lg px-2.5 py-1.5 hover:bg-gray-100 dark:hover:bg-white/10">
+      <UserAvatar key={version} src={myAvatar} name={name} id={userId || 1} size="h-8 w-8" rounded="rounded-full" />
       <span className="hidden text-xs font-semibold md:block">{name}</span><ChevronDown size={14}/>
     </button>
     {open && <><button aria-label="بستن منو" className="fixed inset-0 z-40 cursor-default" onClick={() => setOpen(false)} /><div className="absolute left-0 top-full z-50 mt-2 w-72 rounded-2xl border border-gray-200 bg-white p-4 shadow-2xl dark:border-white/10 dark:bg-slate-900">

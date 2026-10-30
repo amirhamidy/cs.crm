@@ -28,7 +28,6 @@ export const usePortalAuthStore = create<PortalAuthState>((set) => ({
       savePortalSession(access, fresh, seconds);
       set({ account: fresh, isAuthenticated: true, hasHydrated: true });
     } catch {
-      // Keep the locally valid session on transient network failures.
       set({ account, isAuthenticated: true, hasHydrated: true });
     }
   },

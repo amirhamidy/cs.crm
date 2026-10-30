@@ -114,7 +114,7 @@ function AsyncSelectInner<T extends { id: number | string }>({
                                     onChange={(e) => setSearch(e.target.value)}
                                     placeholder="جستجو..."
                                     className="w-full bg-transparent text-[12px] font-semibold text-gray-900 outline-none placeholder:text-gray-400 dark:text-white"
-                                />
+                                 autoComplete="off" readOnly onFocus={(event) => { event.currentTarget.readOnly = false; }}/>
                                 {loading && <Loader2 size={13} className="shrink-0 animate-spin text-gray-400" />}
                             </div>
                         </div>
