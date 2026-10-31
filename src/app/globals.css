@@ -30,13 +30,9 @@ body {
   @apply bg-gray-950 text-gray-50;
 }
 
-body {
-  font-family: "Vazir";
-}
-
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+/* NOTE: single source of truth for the body font is the `@layer base` rule below.
+   Tailwind v4 is loaded via `@import "tailwindcss"`, so the legacy
+   `@tailwind base/components/utilities` directives were removed. */
 
 @layer base {
   :root {
@@ -60,11 +56,6 @@ body {
 
     --border-subtle: #2a2545;
     --border-default: #3d3660;
-
-    --accent: #a78bfa;
-    --accent-hover: #c4b5fd;
-    --accent-bg: rgba(167, 139, 250, 0.12);
-    --accent-bg-hover: rgba(167, 139, 250, 0.2);
   }
 
   .dark {
@@ -84,9 +75,8 @@ body {
   }
 
   body {
-    background-color: white !important;
     font-family:
-      "Vazirmatn",
+      "Vazir",
       -apple-system,
       BlinkMacSystemFont,
       "Segoe UI",
@@ -98,23 +88,9 @@ body {
     @apply bg-background text-foreground;
   }
 
-  ::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
-  }
-
-  ::-webkit-scrollbar-track {
-    background: var(--bg-base);
-  }
-
-  ::-webkit-scrollbar-thumb {
-    background: var(--border-muted);
-    border-radius: 4px;
-  }
-
-  ::-webkit-scrollbar-thumb:hover {
-    background: var(--purple-primary);
-  }
+  /* Scrollbar styling lives in a single block below (the previous 8px block was
+     fully overridden by it, including the only usage of the undefined
+     `--border-muted` variable). */
 
   @layer utilities {
     .text-balance {
@@ -122,7 +98,6 @@ body {
     }
   }
 
-  
   ::-webkit-scrollbar {
     width: 4px;
     height: 4px;
@@ -279,4 +254,38 @@ body {
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.556 0 0);
+}
+
+/* ───────── Phase 2 / A: shared UI tokens ───────── */
+:root {
+  --brand: #6366f1;
+  --brand-hover: #4f46e5;
+  --brand-soft: rgb(99 102 241 / 0.1);
+  --surface-dark: #111827;
+}
+
+.dark {
+  --brand: #818cf8;
+  --brand-hover: #6366f1;
+  --brand-soft: rgb(129 140 248 / 0.15);
+}
+
+@theme inline {
+  --color-brand: var(--brand);
+  --color-brand-hover: var(--brand-hover);
+  --color-brand-soft: var(--brand-soft);
+  --color-surface-dark: var(--surface-dark);
+}
+
+@utility custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(148 163 184 / 0.4) transparent;
+  &::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: rgb(148 163 184 / 0.4);
+    border-radius: 9999px;
+  }
 }
