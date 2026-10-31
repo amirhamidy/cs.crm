@@ -10,7 +10,7 @@ import { usePaginatedList } from "@/hooks/usePaginatedList";
 import Pagination from "@/components/ui/Pagination";
 import UserCard from "@/components/admin/users/UserCard";
 import type { UserInfo } from "@/components/admin/users/UserCard";
-import AddUserModal from "@/components/admin/users/AddUserPage";
+import AddUserModal from "@/components/admin/users/AddUserModal";
 import type { ApiEmployee, ApiUser } from "@/types/users";
 
 const PAGE_SIZE = 20;
@@ -376,20 +376,19 @@ export default function UsersPage() {
                 <Pagination page={list.page} totalPages={list.totalPages} onChange={setPage} />
             )}
 
-            <AnimatePresence>
-                {showAddModal && (
-                    <AddUserModal
-                        onClose={() => setShowAddModal(false)}
-                        onSuccess={() => {
-                            setShowAddModal(false);
-                            accountsApi.invalidate();
-                            setPage(1);
-                            refetch();
-                            loadMeta();
-                        }}
-                    />
-                )}
-            </AnimatePresence>
+            {showAddModal && (
+                <AddUserModal
+                    open={showAddModal}
+                    onClose={() => setShowAddModal(false)}
+                    onSuccess={() => {
+                        setShowAddModal(false);
+                        accountsApi.invalidate();
+                        setPage(1);
+                        refetch();
+                        loadMeta();
+                    }}
+                />
+            )}
         </div>
     );
 }

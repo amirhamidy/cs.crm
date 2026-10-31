@@ -69,7 +69,7 @@ export function ConfirmModal({
                                 >
                                     <AlertTriangle size={18} />
                                 </div>
-                                <h3 className="text-[15px] font-extrabold text-gray-900 dark:text-white">
+                                <h3 className="text-[15px] font-bold text-gray-900 dark:text-white">
                                     {title}
                                 </h3>
                             </div>

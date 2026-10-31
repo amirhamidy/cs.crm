@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -22,6 +23,7 @@ const LABELS: Record<OrderStatus, string> = {
   rejected: "رد شد",
   cancelled: "لغو توسط مشتری",
 };
+
 const TONES: Record<OrderStatus, string> = {
   pending: "bg-amber-100 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300",
   confirmed: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300",
@@ -29,7 +31,6 @@ const TONES: Record<OrderStatus, string> = {
   cancelled: "bg-gray-100 text-gray-600 dark:bg-white/10 dark:text-gray-300",
 };
 
-// NiceSelect works with numeric ids, so map them to statuses
 const STATUS_OPTIONS: (SelectOption & { value: OrderStatus | "all" })[] = [
   { id: 1, value: "pending", label: "در انتظار بررسی" },
   { id: 2, value: "confirmed", label: "تأیید شده" },
@@ -40,8 +41,16 @@ const STATUS_OPTIONS: (SelectOption & { value: OrderStatus | "all" })[] = [
 
 const money = (n: number) => `${n.toLocaleString("fa-IR")} تومان`;
 
-function StatusPill({ order, size = "sm" }: { order: PortalOrder; size?: "sm" | "md" }) {
-  const pad = size === "md" ? "px-3 py-1 text-xs" : "px-2.5 py-1 text-[10px]";
+function StatusPill({
+  order,
+  size = "sm",
+}: {
+  order: PortalOrder;
+  size?: "sm" | "md";
+}) {
+  const pad =
+    size === "md" ? "px-3 py-1 text-xs" : "px-2.5 py-1 text-[10px]";
+
   return (
     <span className={`rounded-full font-bold ${pad} ${TONES[order.status]}`}>
       {order.status_display || LABELS[order.status]}
@@ -64,29 +73,72 @@ function OrderDetailModal({
         <div className="mb-4 flex justify-between">
           <div>
             <h2 className="font-black">سفارش #{order.id}</h2>
-            <p className="mt-1 text-xs text-gray-500">{order.customer_name} · {order.company_name}</p>
+            <p className="mt-1 text-xs text-gray-500">
+              {order.customer_name} · {order.company_name}
+            </p>
           </div>
-          <button onClick={onClose} aria-label="بستن"><X size={18} /></button>
+
+          <button onClick={onClose} aria-label="بستن">
+            <X size={18} />
+          </button>
         </div>
+
         <StatusPill order={order} size="md" />
+
         <div className="my-4 space-y-2">
-          {order.items.map((i) => (
-            <div key={i.id} className="flex justify-between border-b border-gray-100 py-2 text-sm dark:border-white/10">
-              <span>{i.product_name} × {i.quantity}</span>
-              <b>{money(i.line_total)}</b>
+          {order.items.map((item) => (
+            <div
+              key={item.id}
+              className="flex justify-between border-b border-gray-100 py-2 text-sm dark:border-white/10"
+            >
+              <span>
+                {item.product_name} × {item.quantity}
+              </span>
+              <b>{money(item.line_total)}</b>
             </div>
           ))}
         </div>
-        {order.note && <p className="mb-3 rounded-xl bg-gray-50 p-3 text-xs dark:bg-white/5">یادداشت مشتری: {order.note}</p>}
-        {order.staff_note && <p className="mb-3 rounded-xl bg-indigo-50 p-3 text-xs dark:bg-indigo-500/10">یادداشت کارشناس: {order.staff_note}</p>}
-        <p className="mb-4 text-left font-black">{money(order.total_price)}</p>
+
+        {order.note && (
+          <p className="mb-3 rounded-xl bg-gray-50 p-3 text-xs dark:bg-white/5">
+            یادداشت مشتری: {order.note}
+          </p>
+        )}
+
+        {order.staff_note && (
+          <p className="mb-3 rounded-xl bg-indigo-50 p-3 text-xs dark:bg-indigo-500/10">
+            یادداشت کارشناس: {order.staff_note}
+          </p>
+        )}
+
+        <p className="mb-4 text-left font-black">
+          {money(order.total_price)}
+        </p>
+
         {order.status === "pending" && (
           <div className="flex gap-2">
-            <button onClick={() => onDecide("confirmed")} className="flex-1 rounded-xl bg-emerald-600 py-3 text-xs font-bold text-white">تأیید سفارش</button>
-            <button onClick={() => onDecide("rejected")} className="flex-1 rounded-xl bg-rose-600 py-3 text-xs font-bold text-white">رد سفارش</button>
+            <button
+              onClick={() => onDecide("confirmed")}
+              className="flex-1 rounded-xl bg-emerald-600 py-3 text-xs font-bold text-white"
+            >
+              تأیید سفارش
+            </button>
+
+            <button
+              onClick={() => onDecide("rejected")}
+              className="flex-1 rounded-xl bg-rose-600 py-3 text-xs font-bold text-white"
+            >
+              رد سفارش
+            </button>
           </div>
         )}
-        <button onClick={onClose} className="mt-2 w-full rounded-xl bg-gray-100 py-3 text-xs font-bold dark:bg-white/10">بستن</button>
+
+        <button
+          onClick={onClose}
+          className="mt-2 w-full rounded-xl bg-gray-100 py-3 text-xs font-bold dark:bg-white/10"
+        >
+          بستن
+        </button>
       </div>
     </div>
   );
@@ -109,20 +161,56 @@ function DecisionModal({
   onSubmit: () => void;
   onClose: () => void;
 }) {
+  const isReject = decision === "rejected";
+
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/65 p-4">
       <div className="w-full max-w-md rounded-3xl bg-white p-6 dark:bg-gray-900">
-        <h3 className="font-black">{decision === "confirmed" ? "تأیید سفارش" : "رد سفارش"}</h3>
+        <h3 className="font-black">
+          {isReject ? "رد درخواست مشتری" : "تأیید درخواست مشتری"}
+        </h3>
+
         <p className="mb-4 mt-2 text-xs text-gray-500">
-          {decision === "rejected" ? "پیشنهاد می‌شود دلیل رد سفارش را برای مشتری بنویسید." : "پیام اختیاری برای مشتری"}
+          {isReject
+            ? "در صورت امکان دلیل رد درخواست را برای مشتری بنویسید."
+            : "در صورت نیاز یادداشتی برای مشتری ثبت کنید."}
         </p>
-        <FloatingTextarea id="decision-note" label="پیام به مشتری" value={note} onChange={(e) => onNote(e.target.value)} rows={4} />
-        {error && <p className="mt-3 rounded-xl bg-rose-50 p-3 text-xs text-rose-700 dark:bg-rose-500/10 dark:text-rose-300">{error}</p>}
+
+        <FloatingTextarea
+          id="decision-note"
+          label="یادداشت کارشناس"
+          value={note}
+          onChange={(e) => onNote(e.target.value)}
+          rows={4}
+        />
+
+        {error && (
+          <p className="mt-3 rounded-xl bg-rose-50 p-3 text-xs text-rose-700 dark:bg-rose-500/10 dark:text-rose-300">
+            {error}
+          </p>
+        )}
+
         <div className="mt-4 flex gap-2">
-          <button disabled={busy} onClick={onSubmit} className="flex-1 rounded-xl bg-indigo-600 py-3 text-xs font-bold text-white disabled:opacity-50">
-            {busy ? "در حال ثبت..." : "ثبت وضعیت"}
+          <button
+            disabled={busy}
+            onClick={onSubmit}
+            className={`flex-1 rounded-xl py-3 text-xs font-bold text-white disabled:opacity-50 ${isReject ? "bg-rose-600" : "bg-emerald-600"
+              }`}
+          >
+            {busy
+              ? "در حال ثبت..."
+              : isReject
+                ? "ثبت رد درخواست"
+                : "ثبت تأیید درخواست"}
           </button>
-          <button disabled={busy} onClick={onClose} className="rounded-xl bg-gray-100 px-4 py-3 text-xs font-bold dark:bg-white/10">انصراف</button>
+
+          <button
+            disabled={busy}
+            onClick={onClose}
+            className="rounded-xl bg-gray-100 px-4 py-3 text-xs font-bold dark:bg-white/10"
+          >
+            انصراف
+          </button>
         </div>
       </div>
     </div>
@@ -140,7 +228,7 @@ export default function CustomerOrdersPage() {
 
   const list = usePaginatedList<PortalOrder, Filters>(
     (params, signal) => customerPortalApi.orders.page(params, signal),
-    { pageSize: 15, filters: { status: "pending" } },
+    { pageSize: 15, filters: { status: "pending" } }
   );
 
   const openDecision = (order: PortalOrder, value: Decision) => {
@@ -151,21 +239,39 @@ export default function CustomerOrdersPage() {
   };
 
   const closeDecision = () => {
-    if (!busy) setDecision(null);
+    if (!busy) {
+      setDecision(null);
+      setDecisionError(null);
+    }
   };
 
   const submitDecision = async () => {
-    if (!selected || !decision) return;
+    if (!selected || !decision || busy) return;
+
     setBusy(true);
     setDecisionError(null);
+
     try {
-      const updated = await customerPortalApi.orders.setStatus(selected.id, decision, note);
+      const updated =
+        decision === "confirmed"
+          ? await customerPortalApi.orders.approve(selected.id, note)
+          : await customerPortalApi.orders.reject(selected.id, note);
+
       setSelected(updated);
       setDecision(null);
+      setNote("");
+
       list.refetch();
-      toast.success(decision === "confirmed" ? "سفارش تأیید شد" : "سفارش رد شد");
-    } catch (e) {
-      setDecisionError(apiMessage(e, "تغییر وضعیت سفارش انجام نشد"));
+
+      toast.success(
+        decision === "confirmed"
+          ? "درخواست مشتری با موفقیت تأیید شد"
+          : "درخواست مشتری با موفقیت رد شد"
+      );
+    } catch (error) {
+      setDecisionError(
+        apiMessage(error, "تغییر وضعیت درخواست مشتری انجام نشد")
+      );
     } finally {
       setBusy(false);
     }
@@ -173,20 +279,32 @@ export default function CustomerOrdersPage() {
 
   const changeStatus = (id: number) => {
     setStatusId(id);
-    const value = STATUS_OPTIONS.find((o) => o.id === id)?.value ?? "all";
-    list.setFilters({ ...list.filters, status: value === "all" ? undefined : value });
+
+    const value =
+      STATUS_OPTIONS.find((option) => option.id === id)?.value ?? "all";
+
+    list.setFilters({
+      ...list.filters,
+      status: value === "all" ? undefined : value,
+    });
   };
 
   const changeCustomer = (option: AsyncOption | null) => {
     setCustomer(option);
-    list.setFilters({ ...list.filters, customer: option?.id });
+
+    list.setFilters({
+      ...list.filters,
+      customer: option?.id,
+    });
   };
 
   return (
     <section dir="rtl">
       <div className="mb-6">
         <h1 className="text-[15px] font-black">سفارش‌های مشتریان</h1>
-        <p className="mt-1 text-xs text-gray-500">بررسی و تعیین وضعیت سفارش‌های ثبت‌شده</p>
+        <p className="mt-1 text-xs text-gray-500">
+          بررسی و تعیین وضعیت سفارش‌های ثبت‌شده
+        </p>
       </div>
 
       <div className="mb-4 grid gap-2 md:grid-cols-[1fr_220px_220px]">
@@ -197,27 +315,49 @@ export default function CustomerOrdersPage() {
           onChange={(e) => list.setSearch(e.target.value)}
           autoComplete="off"
         />
-        <NiceSelect label="وضعیت" options={STATUS_OPTIONS} value={statusId} onChange={changeStatus} />
+
+        <NiceSelect
+          label="وضعیت"
+          options={STATUS_OPTIONS}
+          value={statusId}
+          onChange={changeStatus}
+        />
+
         <AsyncSelect<Customer>
           label="فیلتر مشتری"
           placeholder="انتخاب مشتری..."
           emptyText="مشتری پیدا نشد"
           value={customer?.id ?? null}
           selected={customer}
-          fetcher={(p, s) => customersApi.page(p, s)}
-          toOption={(c) => ({ id: c.id, label: c.full_name, sub: c.company_name })}
+          fetcher={(params, signal) => customersApi.page(params, signal)}
+          toOption={(item) => ({
+            id: item.id,
+            label: item.full_name,
+            sub: item.company_name,
+          })}
           onChange={changeCustomer}
         />
       </div>
+
       {customer && (
-        <button onClick={() => changeCustomer(null)} className="mb-3 text-xs text-indigo-600">حذف فیلتر مشتری ×</button>
+        <button
+          onClick={() => changeCustomer(null)}
+          className="mb-3 text-xs text-indigo-600"
+        >
+          حذف فیلتر مشتری ×
+        </button>
       )}
 
       {list.loading ? (
-        <div className="py-16 text-center text-sm text-gray-500">در حال دریافت سفارش‌ها...</div>
+        <div className="py-16 text-center text-sm text-gray-500">
+          در حال دریافت سفارش‌ها...
+        </div>
       ) : list.error ? (
         <div className="py-12 text-center text-sm text-rose-500">
-          دریافت سفارش‌ها انجام نشد <button onClick={list.refetch} className="underline">تلاش مجدد</button>
+          دریافت سفارش‌ها انجام نشد{" "}
+          <button onClick={list.refetch} className="underline">
+            تلاش مجدد
+          </button>
         </div>
       ) : !list.data.length ? (
         <div className="rounded-2xl border border-dashed border-gray-300 p-12 text-center text-sm text-gray-500 dark:border-white/10">
@@ -225,24 +365,55 @@ export default function CustomerOrdersPage() {
         </div>
       ) : (
         <div className="space-y-3">
-          {list.data.map((o) => (
-            <article key={o.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-gray-200 bg-white p-4 dark:border-white/10 dark:bg-white/[0.04]">
-              <button onClick={() => setSelected(o)} className="min-w-0 flex-1 text-right">
+          {list.data.map((order) => (
+            <article
+              key={order.id}
+              className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-gray-200 bg-white p-4 dark:border-white/10 dark:bg-white/[0.04]"
+            >
+              <button
+                onClick={() => setSelected(order)}
+                className="min-w-0 flex-1 text-right"
+              >
                 <div className="flex flex-wrap items-center gap-2">
-                  <h2 className="font-extrabold">#{o.id} · {o.customer_name}</h2>
-                  <StatusPill order={o} />
+                  <h2 className="font-extrabold">
+                    #{order.id} · {order.customer_name}
+                  </h2>
+
+                  <StatusPill order={order} />
                 </div>
-                <p className="mt-1 text-xs text-gray-500">{o.company_name} · {o.customer_phone}</p>
+
+                <p className="mt-1 text-xs text-gray-500">
+                  {order.company_name} · {order.customer_phone}
+                </p>
+
                 <p className="mt-2 text-[11px] text-gray-400">
-                  {new Date(o.created_at).toLocaleString("fa-IR")} · {o.items.length} قلم
+                  {new Date(order.created_at).toLocaleString("fa-IR")} ·{" "}
+                  {order.items.length} قلم
                 </p>
               </button>
+
               <div className="text-left">
-                <p className="font-black">{money(o.total_price)}</p>
-                {o.status === "pending" && (
+                <p className="font-black">
+                  {money(order.total_price)}
+                </p>
+
+                {order.status === "pending" && (
                   <div className="mt-2 flex gap-2">
-                    <button onClick={() => openDecision(o, "confirmed")} aria-label="تأیید" className="rounded-lg bg-emerald-600 px-3 py-2 text-white"><CheckCircle2 size={14} /></button>
-                    <button onClick={() => openDecision(o, "rejected")} aria-label="رد" className="rounded-lg bg-rose-600 px-3 py-2 text-white"><XCircle size={14} /></button>
+                    <button
+                      onClick={() => openDecision(order, "confirmed")}
+                      aria-label="تأیید"
+                      className="rounded-lg bg-emerald-600 px-3 py-2 text-white"
+                    >
+                      <CheckCircle2 size={14} />
+                    </button>
+
+                    <button
+                      onClick={() => openDecision(order, "rejected")}
+                      aria-label="رد"
+                      className="rounded-lg bg-rose-600 px-3 py-2 text-white"
+                    >
+                      <XCircle size={14} />
+                    </button>
                   </div>
                 )}
               </div>
@@ -252,12 +423,23 @@ export default function CustomerOrdersPage() {
       )}
 
       {list.totalPages > 1 && (
-        <div className="mt-6"><Pagination page={list.page} totalPages={list.totalPages} onChange={list.setPage} /></div>
+        <div className="mt-6">
+          <Pagination
+            page={list.page}
+            totalPages={list.totalPages}
+            onChange={list.setPage}
+          />
+        </div>
       )}
 
       {selected && (
-        <OrderDetailModal order={selected} onDecide={(d) => openDecision(selected, d)} onClose={() => setSelected(null)} />
+        <OrderDetailModal
+          order={selected}
+          onDecide={(value) => openDecision(selected, value)}
+          onClose={() => setSelected(null)}
+        />
       )}
+
       {decision && selected && (
         <DecisionModal
           decision={decision}

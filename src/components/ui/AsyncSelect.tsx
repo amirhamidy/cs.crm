@@ -78,7 +78,7 @@ function AsyncSelectInner<T extends { id: number | string }>({
                     } ${disabled ? "cursor-not-allowed opacity-40" : "cursor-pointer"}`}
             >
                 {hasSelection ? (
-                    <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br text-[12px] font-extrabold text-white ${gradientOf(selected!.id)}`}>
+                    <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br text-[12px] font-bold text-white ${gradientOf(selected!.id)}`}>
                         {initialOf(selected!.label)}
                     </span>
                 ) : (
@@ -113,7 +113,7 @@ function AsyncSelectInner<T extends { id: number | string }>({
                                     value={search}
                                     onChange={(e) => setSearch(e.target.value)}
                                     placeholder="جستجو..."
-                                    className="w-full bg-transparent text-[12px] font-semibold text-gray-900 outline-none placeholder:text-gray-400 dark:text-white"
+                                    className="w-full bg-transparent text-[12px] font-bold text-gray-900 outline-none placeholder:text-gray-400 dark:text-white"
                                  autoComplete="off"/>
                                 {loading && <Loader2 size={13} className="shrink-0 animate-spin text-gray-400" />}
                             </div>
@@ -144,7 +144,7 @@ function AsyncSelectInner<T extends { id: number | string }>({
                                             onClick={() => { onChange(o); setOpen(false); }}
                                             className={`flex w-full items-center gap-2.5 rounded-2xl px-2.5 py-2 text-right transition-colors ${active ? "bg-blue-50 dark:bg-blue-500/10" : "hover:bg-gray-50 dark:hover:bg-white/[0.04]"}`}
                                         >
-                                            <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br text-[12px] font-extrabold text-white ${gradientOf(o.id)}`}>
+                                            <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br text-[12px] font-bold text-white ${gradientOf(o.id)}`}>
                                                 {initialOf(o.label)}
                                             </span>
                                             <span className="min-w-0 flex-1">
