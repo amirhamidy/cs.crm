@@ -31,7 +31,7 @@ export function usePaginatedList<T, F extends ListFilters = ListFilters>(
   opts: Options<F> = {},
 ) {
   const {
-    pageSize = 20,
+    pageSize: initialPageSize = 20,
     filters: initialFilters,
     search: initialSearch = "",
     delay = 300,
@@ -40,6 +40,7 @@ export function usePaginatedList<T, F extends ListFilters = ListFilters>(
     scrollTop = false,
   } = opts;
 
+  const [pageSize, setPageSizeState] = useState(initialPageSize);
   const [page, setPageState] = useState(initialPage);
   const [search, setSearchState] = useState(initialSearch);
   const [appliedSearch, setAppliedSearch] = useState(normalize(initialSearch));
@@ -141,6 +142,11 @@ export function usePaginatedList<T, F extends ListFilters = ListFilters>(
     setPageState(Math.max(1, p));
   }, []);
 
+  const setPageSize = useCallback((n: number) => {
+    setPageSizeState(Math.max(1, n));
+    setPageState(1);
+  }, []);
+
   const setSearch = useCallback((q: string) => {
     setSearchState(q);
   }, []);
@@ -173,6 +179,7 @@ export function usePaginatedList<T, F extends ListFilters = ListFilters>(
     loading,
     error,
     setPage,
+    setPageSize,
     setSearch,
     setFilters,
     refetch,

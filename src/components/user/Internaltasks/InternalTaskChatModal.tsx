@@ -2,7 +2,7 @@
 
 import { ChangeEvent, KeyboardEvent, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, m } from "framer-motion";
-import { Check, Download, File, Loader2, MessageSquareText, Paperclip, Send, UserRound, X } from "lucide-react";
+import { Check, Download, File, MessageSquareText, Paperclip, Send, UserRound, X } from "lucide-react";
 import api from "@/lib/axiosInstance";
 import { useAuthStore } from "@/store/authStore";
 import type { EmployeeListItem, InternalTask, InternalTaskAttachment } from "./types";
@@ -845,13 +845,10 @@ export default function InternalTaskChatModal({ open, task, onClose, onUpdated }
                                         sending ||
                                         (!message.trim() && !selectedFiles.length)
                                     }
-                                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[18px] bg-blue-500 text-white shadow-[0_8px_20px_rgba(59,130,246,0.2)] transition-all hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-35"
+                                    aria-busy={sending}
+                                    className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-[18px] bg-blue-500 text-white shadow-[0_8px_20px_rgba(59,130,246,0.2)] transition-all hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-35 ${sending ? "is-busy" : ""}`}
                                 >
-                                    {sending ? (
-                                        <Loader2 size={17} className="animate-spin" />
-                                    ) : (
-                                        <Send size={17} className="translate-x-[-1px]" />
-                                    )}
+                                    <Send size={17} className="translate-x-[-1px]" />
                                 </button>
                             </div>
 

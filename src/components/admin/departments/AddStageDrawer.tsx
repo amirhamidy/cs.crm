@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useState, forwardRef, InputHTMLAttributes } from "react";
-import { m, AnimatePresence } from "framer-motion";
+import { m, AnimatePresence, useReducedMotion } from "framer-motion";
+import { Backdrop } from "@/components/ui/Backdrop";
+import { panelMotion } from "@/lib/motion";
 import { X, GitBranch, CheckCircle2, Loader } from "lucide-react";
 import { Department } from "./types";
 
@@ -30,6 +32,7 @@ const FloatingInput = forwardRef<HTMLInputElement, FloatingInputProps>(({ label,
 FloatingInput.displayName = "FloatingInput";
 
 export default function AddStageModal({ open, department, defaultOrder = 0, onClose, onSubmit }: Props) {
+    const reduced = useReducedMotion() ?? false;
     const [name, setName] = useState("");
     const [order, setOrder] = useState(defaultOrder);
     const [loading, setLoading] = useState(false);
@@ -68,8 +71,9 @@ export default function AddStageModal({ open, department, defaultOrder = 0, onCl
     return (
         <AnimatePresence>
             {open && (
-                <m.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center px-4" style={{ background: "rgba(0,0,0,0.45)", backdropFilter: "blur(3px)" }} onClick={handleClose}>
-                    <m.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 16 }} transition={{ duration: 0.35, ease: "easeOut" }} className="bg-white dark:bg-[#111827] rounded-[2rem] shadow-sm border border-gray-100 dark:border-white/[0.06] w-full max-w-sm overflow-hidden" onClick={(e) => e.stopPropagation()} dir="rtl">
+                <div className="fixed inset-0 z-[100] flex items-center justify-center px-4">
+<Backdrop onClick={handleClose} />
+                    <m.div {...panelMotion(false, reduced)} className="relative bg-white dark:bg-[#111827] rounded-[2rem] shadow-sm border border-gray-100 dark:border-white/[0.06] w-full max-w-sm overflow-hidden" dir="rtl">
                         <div className="px-8 pt-8 pb-6 flex items-center justify-between">
                             <div className="flex items-center gap-2.5">
                                 <div className="w-8 h-8 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center"><GitBranch size={15} className="text-indigo-500" /></div>
@@ -98,7 +102,7 @@ export default function AddStageModal({ open, department, defaultOrder = 0, onCl
                             </AnimatePresence>
                         </form>
                     </m.div>
-                </m.div>
+                </div>
             )}
         </AnimatePresence>
     );

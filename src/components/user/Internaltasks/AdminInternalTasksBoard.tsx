@@ -13,14 +13,13 @@ import dynamic from "next/dynamic";
 import InternalTaskActionModal from "./InternalTaskActionModal";
 import type { EmployeeListItem, InternalTask, InternalTaskStatus, EmployeeRef } from "./types";
 import CreateTicketModal from "./Createticketmodal";
-import LazyLoading from "@/components/ui/LazyLoading";
 import TimeRangeModal from "@/components/tasks/TimeRangeModal";
 import InternalTaskDeadlineModal from "./InternalTaskDeadlineModal";
 
 
 const AdminInternalTaskChatModal = dynamic(() => import("./AdminInternalTaskChatModal"), {
     ssr: false,
-    loading: () => <LazyLoading />,
+    loading: () => null,
 });
 
 type AdminEmployee = EmployeeListItem & { id?: number; username?: string; full_name?: string };
@@ -381,7 +380,7 @@ export default function AdminInternalTasksBoard(): JSX.Element {
                 <div className="flex items-center gap-2.5"><div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-indigo-500/10"><Ticket size={17} className="text-indigo-500" /></div><div><h3 className="text-[14px] font-extrabold text-gray-900 dark:text-white">گفتگوهای کارکنان</h3><p className="text-[11px] text-gray-400 dark:text-gray-600">مشاهده گفتگوهای داخلی و فایل‌های رد و بدل شده</p></div></div>
                 <div className="flex shrink-0 items-center gap-2">
                     <button type="button" onClick={() => setCreateOpen(true)} className="flex items-center gap-1.5 rounded-2xl bg-indigo-600 px-3.5 py-2 text-[11.5px] font-bold text-white transition-colors hover:bg-indigo-500"><Plus size={13} />تیکت جدید</button>
-                    <button type="button" onClick={() => loadData()} disabled={refreshing} className="flex h-9 w-9 items-center justify-center rounded-2xl bg-gray-100 text-gray-500 transition-colors hover:bg-gray-200 disabled:opacity-40 dark:bg-white/[0.05] dark:text-gray-400 dark:hover:bg-white/[0.08]" title="به‌روزرسانی"><RefreshCw size={14} className={refreshing ? "animate-spin" : ""} /></button>
+                    <button type="button" onClick={() => loadData()} disabled={refreshing} className={`flex h-9 w-9 items-center justify-center rounded-2xl bg-gray-100 text-gray-500 transition-colors hover:bg-gray-200 disabled:opacity-40 dark:bg-white/[0.05] dark:text-gray-400 dark:hover:bg-white/[0.08] ${refreshing ? "is-busy" : ""}`} title="به‌روزرسانی"><RefreshCw size={14} /></button>
                 </div>
             </div>
 

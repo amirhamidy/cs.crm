@@ -4,7 +4,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import dynamic from "next/dynamic";
 
-import LazyLoading from "@/components/ui/LazyLoading";
 import { m, AnimatePresence } from "framer-motion";
 import { Factory, Plus, SquarePen, X, Loader2, TrendingUp, BarChart3, AlertTriangle, ClipboardList, Trash2, CalendarDays, Gauge, Filter, LineChart, Users, Eye, CalendarCogIcon } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
@@ -18,24 +17,24 @@ import { EfficiencyBadge, EmployeeItem, ErrorBanner, Field, GroupBy, INPUT_CLS, 
 
 const ProductionBarChart = dynamic(() => import("@/components/charts/ProductionBarChart"), {
     ssr: false,
-    loading: () => <LazyLoading />,
+    loading: () => null,
 });
 
 const ConfirmDeleteLog = dynamic(() => import("./_modals").then((mod) => mod.ConfirmDeleteLog), {
     ssr: false,
-    loading: () => <LazyLoading />,
+    loading: () => null,
 });
 const LogModal = dynamic(() => import("./_modals").then((mod) => mod.LogModal), {
     ssr: false,
-    loading: () => <LazyLoading />,
+    loading: () => null,
 });
 const MachineModal = dynamic(() => import("./_modals").then((mod) => mod.MachineModal), {
     ssr: false,
-    loading: () => <LazyLoading />,
+    loading: () => null,
 });
 const ViewNoteModal = dynamic(() => import("./_modals").then((mod) => mod.ViewNoteModal), {
     ssr: false,
-    loading: () => <LazyLoading />,
+    loading: () => null,
 });
 
 type TabKey = "dashboard" | "machines" | "logs" | "monthly" | "machineSummary" | "machineMonthly";

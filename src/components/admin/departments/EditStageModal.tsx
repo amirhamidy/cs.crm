@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useState, forwardRef, InputHTMLAttributes } from "react";
-import { m, AnimatePresence } from "framer-motion";
+import { m, AnimatePresence, useReducedMotion } from "framer-motion";
+import { Backdrop } from "@/components/ui/Backdrop";
+import { panelMotion } from "@/lib/motion";
 import { X, GitBranch, Loader, CheckCircle2 } from "lucide-react";
 import { Stage } from "./types";
 
@@ -24,6 +26,7 @@ const FloatingInput = forwardRef<HTMLInputElement, FloatingInputProps>(({ label,
 FloatingInput.displayName = "FloatingInput";
 
 export default function EditStageModal({ open, stage, onClose, onSubmit }: Props) {
+    const reduced = useReducedMotion() ?? false;
     const [name, setName] = useState("");
     const [order, setOrder] = useState("1");
     const [loading, setLoading] = useState(false);
@@ -73,13 +76,14 @@ export default function EditStageModal({ open, stage, onClose, onSubmit }: Props
     return (
         <AnimatePresence>
             {open && (
-                <m.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center px-4" style={{ background: "rgba(0,0,0,0.45)", backdropFilter: "blur(3px)" }} onClick={handleClose}>
-                    <m.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 16 }} transition={{ duration: 0.35, ease: "easeOut" }} className="bg-white dark:bg-[#111827] rounded-[2rem] shadow-sm border border-gray-100 dark:border-white/[0.06] w-full max-w-sm overflow-hidden" onClick={(e) => e.stopPropagation()} dir="rtl">
+                <div className="fixed inset-0 z-[100] flex items-center justify-center px-4">
+                    <Backdrop onClick={handleClose} />
+                    <m.div {...panelMotion(false, reduced)} className="relative bg-white dark:bg-[#111827] rounded-[2rem] shadow-sm border border-gray-100 dark:border-white/[0.06] w-full max-w-sm overflow-hidden" dir="rtl">
                         <div className="px-8 pt-8 pb-6 flex items-center justify-between">
                             <div className="flex items-center gap-2.5">
                                 <div className="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center"><GitBranch size={15} className="text-blue-500" /></div>
                                 <div>
-                                    <h3 className="text-[14px] font-extrabold text-gray-900 dark:text-white">ویرایش فرآیند</h3>
+                                    <h3 className="text-[14px] font-bold text-gray-900 dark:text-white">ویرایش فرآیند</h3>
                                     <p className="text-[11px] text-gray-400 mt-0.5">مشخصات فرآیند را ویرایش کنید</p>
                                 </div>
                             </div>
@@ -104,7 +108,7 @@ export default function EditStageModal({ open, stage, onClose, onSubmit }: Props
                             </AnimatePresence>
                         </form>
                     </m.div>
-                </m.div>
+                </div>
             )}
         </AnimatePresence>
     );

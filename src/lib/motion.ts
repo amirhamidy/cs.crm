@@ -35,3 +35,21 @@ export function panelMotion(mobile: boolean, reduced: boolean) {
         transition: { duration: DURATION.base, ease: EASE_OUT },
     };
 }
+
+/** Popover (dropdown) panel: small fade + slide from the trigger. */
+export function popoverMotion(reduced: boolean) {
+    if (reduced) {
+        return {
+            initial: { opacity: 0 },
+            animate: { opacity: 1 },
+            exit: { opacity: 0 },
+            transition: { duration: DURATION.fast },
+        };
+    }
+    return {
+        initial: { opacity: 0, y: -6, scale: 0.98 },
+        animate: { opacity: 1, y: 0, scale: 1 },
+        exit: { opacity: 0, y: -6, scale: 0.98 },
+        transition: { duration: DURATION.fast, ease: EASE_OUT },
+    };
+}

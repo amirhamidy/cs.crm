@@ -2,7 +2,9 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { AnimatePresence, m } from "framer-motion";
+import { AnimatePresence, m, useReducedMotion } from "framer-motion";
+import { Backdrop } from "@/components/ui/Backdrop";
+import { panelMotion } from "@/lib/motion";
 import { AlertCircle, Check, ChevronDown, Loader, PackagePlus, Search, X } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
 import { listAll } from "@/lib/api";
@@ -138,7 +140,7 @@ function FloatingInput({
 
             <label
                 htmlFor={id}
-                className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[12px] font-semibold text-gray-400 transition-all duration-200 peer-focus:top-[15px] peer-focus:text-[10px] peer-focus:text-blue-500 peer-[:not(:placeholder-shown)]:top-[15px] peer-[:not(:placeholder-shown)]:text-[10px]"
+                className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[12px] font-medium text-gray-400 transition-all duration-200 peer-focus:top-[15px] peer-focus:text-[10px] peer-focus:text-blue-500 peer-[:not(:placeholder-shown)]:top-[15px] peer-[:not(:placeholder-shown)]:text-[10px]"
             >
                 {label}
             </label>
@@ -226,7 +228,7 @@ function NiceSelect({
             >
                 {selected ? (
                     <span
-                        className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br text-[12px] font-extrabold text-white ${gradientOf(
+                        className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br text-[12px] font-bold text-white ${gradientOf(
                             selected.id
                         )}`}
                     >
@@ -309,7 +311,7 @@ function NiceSelect({
                                             setQuery(event.target.value)
                                         }
                                         placeholder="جستجو..."
-                                        className="w-full bg-transparent text-[12px] font-semibold text-gray-900 outline-none placeholder:text-gray-400 dark:text-white"
+                                        className="w-full bg-transparent text-[12px] font-medium text-gray-900 outline-none placeholder:text-gray-400 dark:text-white"
                                     />
                                 </div>
                             </div>
@@ -350,7 +352,7 @@ function NiceSelect({
                                                 }`}
                                         >
                                             <span
-                                                className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br text-[12px] font-extrabold text-white ${gradientOf(
+                                                className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br text-[12px] font-bold text-white ${gradientOf(
                                                     option.id
                                                 )}`}
                                             >
@@ -404,6 +406,7 @@ export default function PurchasingCreateTaskModal({
     onClose,
     onSaved,
 }: Props) {
+    const reduced = useReducedMotion() ?? false;
     const [products, setProducts] = useState<Product[]>([]);
     const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
 
@@ -573,40 +576,9 @@ export default function PurchasingCreateTaskModal({
     return createPortal(
         <AnimatePresence>
             {open && (
-                <m.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    className="fixed inset-0 z-[9999] flex items-center justify-center px-4"
-                    style={{
-                        background: "rgba(0,0,0,0.45)",
-                        backdropFilter: "blur(3px)",
-                    }}
-                    onMouseDown={handleClose}
-                >
-                    <m.div
-                        initial={{
-                            opacity: 0,
-                            y: 16,
-                        }}
-                        animate={{
-                            opacity: 1,
-                            y: 0,
-                        }}
-                        exit={{
-                            opacity: 0,
-                            y: 16,
-                        }}
-                        transition={{
-                            duration: 0.35,
-                            ease: "easeOut",
-                        }}
-                        onMouseDown={(event) =>
-                            event.stopPropagation()
-                        }
-                        dir="rtl"
-                        className="flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-sm dark:border-white/[0.06] dark:bg-[#111827]"
-                    >
+                <div className="fixed inset-0 z-[9999] flex items-center justify-center px-4">
+                    <Backdrop onClick={handleClose} />
+                    <m.div {...panelMotion(false, reduced)} dir="rtl" className="relative flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-sm dark:border-white/[0.06] dark:bg-[#111827]">
                         <div className="flex shrink-0 items-center justify-between px-8 pb-6 pt-8">
                             <div className="flex items-center gap-2.5">
                                 <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-50 dark:bg-blue-500/10">
@@ -617,7 +589,7 @@ export default function PurchasingCreateTaskModal({
                                 </div>
 
                                 <div>
-                                    <h3 className="text-[14px] font-extrabold text-gray-900 dark:text-white">
+                                    <h3 className="text-[14px] font-bold text-gray-900 dark:text-white">
                                         ایجاد درخواست خرید
                                     </h3>
 
@@ -661,7 +633,7 @@ export default function PurchasingCreateTaskModal({
                                                 className="mt-0.5 shrink-0 text-red-500"
                                             />
 
-                                            <p className="flex-1 text-[11.5px] font-semibold leading-5 text-red-500 dark:text-red-400">
+                                            <p className="flex-1 text-[11.5px] font-medium leading-5 text-red-500 dark:text-red-400">
                                                 {error}
                                             </p>
 
@@ -778,7 +750,7 @@ export default function PurchasingCreateTaskModal({
                                                                 محصول انتخاب‌شده
                                                             </span>
 
-                                                            <span className="truncate text-[11px] font-extrabold text-blue-500">
+                                                            <span className="truncate text-[11px] font-bold text-blue-500">
                                                                 {
                                                                     selectedProduct.name
                                                                 }
@@ -838,7 +810,7 @@ export default function PurchasingCreateTaskModal({
                                                             فرآیند از این مرحله شروع می‌شود
                                                         </p>
 
-                                                        <p className="mt-1 text-[11px] font-extrabold text-gray-700 dark:text-gray-200">
+                                                        <p className="mt-1 text-[11px] font-bold text-gray-700 dark:text-gray-200">
                                                             مرحله{" "}
                                                             {
                                                                 selectedStep.order
@@ -892,7 +864,7 @@ export default function PurchasingCreateTaskModal({
                             </m.button>
                         </div>
                     </m.div>
-                </m.div>
+                </div>
             )}
         </AnimatePresence>,
         document.body

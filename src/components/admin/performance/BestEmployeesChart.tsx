@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, m } from "framer-motion";
 import { useTheme } from "next-themes";
-import { Award, Crown, Loader2, Star } from "lucide-react";
+import { Award, Crown, Star } from "lucide-react";
 import { createPortal } from "react-dom";
 import axiosInstance from "@/lib/axiosInstance";
 import type { EmployeeOverallStat } from "@/hooks/useAnalytics";
@@ -687,10 +687,7 @@ function EmployeeRow({
                     }}
                 >
                     {scoresLoading ? (
-                        <Loader2
-                            size={12}
-                            className="animate-spin"
-                        />
+                        <span className="inline-block h-2.5 w-4 animate-pulse rounded bg-current opacity-30" />
                     ) : employee.score !==
                         null ? (
                         employee.score.toLocaleString(

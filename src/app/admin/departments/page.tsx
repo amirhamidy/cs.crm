@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState, forwardRef, InputHTMLAttributes, useMemo } from "react";
-import { m, AnimatePresence } from "framer-motion";
+import { m, AnimatePresence, useReducedMotion } from "framer-motion";
+import { Backdrop } from "@/components/ui/Backdrop";
+import { panelMotion } from "@/lib/motion";
 import { useTheme } from "next-themes";
 import { Plus, Building2, Loader, AlertCircle, Check, X, Pencil, CheckCircle2, RefreshCw } from "lucide-react";
 import { useDepartmentStore } from "@/components/admin/departments/departmentStore";
@@ -102,6 +104,7 @@ function extractTasks(data: unknown): TaskDependency[] {
 }
 
 export default function DepartmentsPage() {
+    const reduced = useReducedMotion() ?? false;
     const { resolvedTheme } = useTheme();
     const [mounted, setMounted] = useState(false);
     const isDark = mounted && resolvedTheme === "dark";
@@ -292,42 +295,13 @@ export default function DepartmentsPage() {
 
                 <AnimatePresence>
                     {editDept && (
-                        <m.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            className="fixed inset-0 z-50 flex items-center justify-center px-3 sm:px-4"
-                            style={{
-                                background: "rgba(0,0,0,0.45)",
-                                backdropFilter: "blur(3px)",
-                            }}
-                            onClick={() =>
+                        <div className="fixed inset-0 z-[100] flex items-center justify-center px-3 sm:px-4">
+<Backdrop onClick={() =>
                                 !editLoading &&
                                 !editSuccess &&
                                 setEditDept(null)
-                            }
-                        >
-                            <m.div
-                                initial={{
-                                    opacity: 0,
-                                    y: 16,
-                                }}
-                                animate={{
-                                    opacity: 1,
-                                    y: 0,
-                                }}
-                                exit={{
-                                    opacity: 0,
-                                    y: 16,
-                                }}
-                                transition={{
-                                    duration: 0.35,
-                                    ease: "easeOut",
-                                }}
-                                onClick={(e) =>
-                                    e.stopPropagation()
-                                }
-                                className="w-full max-w-[92vw] sm:max-w-sm overflow-hidden rounded-[1.75rem] sm:rounded-[2rem] border border-gray-100 bg-white shadow-sm dark:border-white/[0.06] dark:bg-[#111827]"
+                            } />
+                            <m.div {...panelMotion(false, reduced)} className="relative w-full max-w-[92vw] sm:max-w-sm overflow-hidden rounded-[1.75rem] sm:rounded-[2rem] border border-gray-100 bg-white shadow-sm dark:border-white/[0.06] dark:bg-[#111827]"
                             >
                                 <div className="flex items-center justify-between gap-3 px-5 sm:px-8 pb-5 sm:pb-6 pt-6 sm:pt-8">
                                     <div className="flex min-w-0 items-center gap-2.5 sm:gap-3">
@@ -481,7 +455,7 @@ export default function DepartmentsPage() {
                                     </AnimatePresence>
                                 </div>
                             </m.div>
-                        </m.div>
+                        </div>
                     )}
                 </AnimatePresence>
 

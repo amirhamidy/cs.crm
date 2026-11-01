@@ -1,9 +1,12 @@
 "use client";
 
 import { NiceSelect } from "@/components/ui/NiceSelect";
+import { ListSkeleton } from "@/components/ui/skeletons";
 import TimePicker from "@/components/TimePicker";
 import { useCallback, useRef, useState } from "react";
-import { m, AnimatePresence } from "framer-motion";
+import { m, AnimatePresence, useReducedMotion } from "framer-motion";
+import { Backdrop } from "@/components/ui/Backdrop";
+import { panelMotion } from "@/lib/motion";
 import { ClipboardList, Plus, Trash2, X, AlertCircle, Loader2, Filter } from "lucide-react";
 import { useTheme } from "next-themes";
 import axiosInstance from "@/lib/axiosInstance";
@@ -44,6 +47,7 @@ interface MachineOption {
 const PAGE_SIZE = 20;
 
 export default function UserProductionLogsPage() {
+    const reduced = useReducedMotion() ?? false;
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === "dark";
   const { employeeId } = useCurrentEmployee();
@@ -174,7 +178,7 @@ export default function UserProductionLogsPage() {
 
       
       {loading ? (
-        <div className="flex justify-center py-20 text-gray-400 text-xs">در حال بارگذاری سوابق تولید...</div>
+        <ListSkeleton />
       ) : (
         <div className="bg-white dark:bg-[#111827] rounded-3xl border border-gray-100 dark:border-white/[0.07] overflow-hidden shadow-sm">
           <div className="flex items-center gap-2 border-b border-gray-100 dark:border-white/[0.06] px-4 py-3.5">
@@ -263,12 +267,11 @@ export default function UserProductionLogsPage() {
       
       <AnimatePresence>
         {showModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-4">
+          <div className="fixed inset-0 z-[100] flex items-center justify-center px-4">
+            <Backdrop onClick={() => setShowModal(false)} />
             <m.div
-              initial={{ opacity: 0, scale: 0.95, y: 16 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 16 }}
-              className="w-full max-w-lg rounded-[2rem] bg-white p-6 shadow-2xl dark:bg-[#111827] border border-gray-100 dark:border-white/[0.07]"
+              {...panelMotion(false, reduced)}
+              className="relative w-full max-w-lg rounded-[2rem] bg-white p-6 shadow-2xl dark:bg-[#111827] border border-gray-100 dark:border-white/[0.07]"
             >
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-sm font-extrabold text-gray-900 dark:text-white">ثبت رکورد جدید تولید</h3>

@@ -321,3 +321,22 @@ body {
         backdrop-filter: none;
     }
 }
+
+/* Busy state for buttons: opacity-only pulse, no icon. */
+@keyframes busy-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
+}
+
+.is-busy {
+  animation: busy-pulse 1.1s ease-in-out infinite;
+  pointer-events: none;
+  cursor: progress;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .is-busy {
+    animation: none;
+    opacity: 0.6;
+  }
+}

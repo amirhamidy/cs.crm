@@ -771,13 +771,11 @@ export default function EmployeeTaskRoutineBoard() {
                         type="button"
                         onClick={() => void loadData()}
                         disabled={refreshing}
-                        className="flex h-9 w-9 items-center justify-center rounded-2xl bg-gray-100 text-gray-500 transition-colors hover:bg-gray-200 disabled:opacity-40 dark:bg-white/[0.05] dark:text-gray-400 dark:hover:bg-white/[0.08]"
+                        className={`flex h-9 w-9 items-center justify-center rounded-2xl bg-gray-100 text-gray-500 transition-colors hover:bg-gray-200 disabled:opacity-40 dark:bg-white/[0.05] dark:text-gray-400 dark:hover:bg-white/[0.08] ${refreshing ? "is-busy" : ""}`}
                         title="به‌روزرسانی"
                     >
                         <RefreshCw
-                            size={14}
-                            className={refreshing ? "animate-spin" : ""}
-                        />
+                            size={14} />
                     </button>
                 </div>
             </div>

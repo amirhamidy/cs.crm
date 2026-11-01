@@ -1,6 +1,8 @@
 "use client";
 
-import { AnimatePresence, m } from "framer-motion";
+import { AnimatePresence, m, useReducedMotion } from "framer-motion";
+import { Backdrop } from "@/components/ui/Backdrop";
+import { panelMotion } from "@/lib/motion";
 import { Loader, Trash2, X } from "lucide-react";
 import { createPortal } from "react-dom";
 
@@ -14,35 +16,21 @@ interface Props {
 }
 
 export default function PurchasingDeleteModal({ open, title, description, loading = false, onConfirm, onCancel }: Props) {
+    const reduced = useReducedMotion() ?? false;
     if (typeof document === "undefined") return null;
 
     return createPortal(
         <AnimatePresence>
             {open && (
-                <m.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    className="fixed inset-0 z-[999] flex items-center justify-center px-4"
-                    style={{ background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)" }}
-                    onClick={loading ? undefined : onCancel}
-                >
-                    <m.div
-                        initial={{ scale: 0.95, y: 16, opacity: 0 }}
-                        animate={{ scale: 1, y: 0, opacity: 1 }}
-                        exit={{ scale: 0.95, y: 16, opacity: 0 }}
-                        transition={{ duration: 0.2, ease: "easeOut" }}
-                        className="w-full max-w-[360px] overflow-hidden rounded-[2rem] border border-black/[0.07] bg-white p-5 dark:border-white/[0.07] dark:bg-[#111827]"
-                        style={{ boxShadow: "0 24px 64px rgba(0,0,0,0.35)" }}
-                        onClick={(e) => e.stopPropagation()}
-                        dir="rtl"
-                    >
+                <div className="fixed inset-0 z-[999] flex items-center justify-center px-4">
+                <Backdrop onClick={loading ? undefined : onCancel} />
+                <m.div {...panelMotion(false, reduced)} className="relative w-full max-w-[360px] overflow-hidden rounded-[2rem] border border-black/[0.07] bg-white p-5 dark:border-white/[0.07] dark:bg-[#111827]" style={{ boxShadow: "0 24px 64px rgba(0,0,0,0.35)" }} dir="rtl">
                         <div className="flex items-center justify-between border-b border-black/[0.06] px-2 py-2 dark:border-white/[0.06]">
                             <div className="flex min-w-0 items-center gap-2.5">
                                 <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-red-500/[0.08] dark:bg-red-500/[0.12]">
                                     <Trash2 size={14} className="text-red-500" />
                                 </div>
-                                <h3 className="truncate text-[13.5px] font-extrabold text-gray-900 dark:text-white">{title}</h3>
+                                <h3 className="truncate text-[13.5px] font-bold text-gray-900 dark:text-white">{title}</h3>
                             </div>
                             <button type="button" onClick={onCancel} disabled={loading} className="flex h-7 w-7 shrink-0 items-center justify-center rounded-xl bg-black/[0.04] text-gray-400 transition-colors hover:text-gray-600 disabled:opacity-40 dark:bg-white/[0.05] dark:hover:text-gray-300">
                                 <X size={13} />
@@ -67,7 +55,7 @@ export default function PurchasingDeleteModal({ open, title, description, loadin
                             </div>
                         </div>
                     </m.div>
-                </m.div>
+                </div>
             )}
         </AnimatePresence>,
         document.body

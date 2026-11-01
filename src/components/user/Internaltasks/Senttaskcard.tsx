@@ -11,12 +11,11 @@ import api from "@/lib/axiosInstance";
 import TimeRangeModal from "@/components/tasks/TimeRangeModal";
 import InternalTaskDeadlineModal from "./InternalTaskDeadlineModal";
 import dynamic from "next/dynamic";
-import LazyLoading from "@/components/ui/LazyLoading";
 
 
 const InternalTaskChatModal = dynamic(() => import("./InternalTaskChatModal"), {
     ssr: false,
-    loading: () => <LazyLoading />,
+    loading: () => null,
 });
 import InternalTaskActionModal from "./InternalTaskActionModal";
 import { reopenInternalTask } from "./Api";

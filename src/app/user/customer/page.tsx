@@ -1,19 +1,19 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { ListSkeleton } from "@/components/ui/skeletons";
 import { m, AnimatePresence } from "framer-motion";
-import { Users, Plus, Loader, RefreshCw, Filter, FileSpreadsheet, Search, X } from "lucide-react";
+import { Users, Plus, RefreshCw, Filter, FileSpreadsheet, Search, X } from "lucide-react";
 import { useTheme } from "next-themes";
 import dynamic from "next/dynamic";
 import CustomerCard from "@/components/user/customer/CustomerCard";
 import ImportExcelModal from "@/components/user/customer/ImportExcelModal";
-import LazyLoading from "@/components/ui/LazyLoading";
 import Pagination from "@/components/ui/Pagination";
 
 
 const AddCustomerModal = dynamic(() => import("@/components/user/customer/AddCustomerModal"), {
     ssr: false,
-    loading: () => <LazyLoading />,
+    loading: () => null,
 });
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import { Customer, CustomerStatus } from "@/types/customer";
@@ -393,7 +393,7 @@ export default function CustomersPage() {
                     <button
                         onClick={refresh}
                         disabled={loading}
-                        className="flex h-9 w-9 items-center justify-center rounded-xl text-gray-400 transition-colors hover:text-gray-600 disabled:opacity-40 dark:hover:text-gray-300"
+                        className={`flex h-9 w-9 items-center justify-center rounded-xl text-gray-400 transition-colors hover:text-gray-600 disabled:opacity-40 dark:hover:text-gray-300 ${loading ? "is-busy" : ""}`}
                         style={{
                             background: isDark
                                 ? "rgba(255,255,255,0.05)"
@@ -402,10 +402,7 @@ export default function CustomersPage() {
                         title="بارگذاری مجدد"
                         type="button"
                     >
-                        <RefreshCw
-                            size={13}
-                            className={loading ? "animate-spin" : ""}
-                        />
+                        <RefreshCw size={13} />
                     </button>
 
                     <button
@@ -525,16 +522,7 @@ export default function CustomersPage() {
             </div>
 
             {loading ? (
-                <div className="flex flex-col items-center justify-center gap-3 py-16">
-                    <Loader
-                        size={22}
-                        className="animate-spin text-indigo-500"
-                    />
-
-                    <p className="text-[12.5px] text-gray-400 dark:text-gray-500">
-                        در حال دریافت لیست مشتریان...
-                    </p>
-                </div>
+                <ListSkeleton />
             ) : (
                 <AnimatePresence mode="wait">
                     {customers.length === 0 ? (

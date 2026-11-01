@@ -177,12 +177,10 @@ export default function PurchasingPage() {
                             type="button"
                             onClick={() => loadAll(true)}
                             disabled={loading || refreshing}
-                            className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 text-gray-400 transition-colors hover:text-gray-600 disabled:opacity-40 dark:bg-white/[0.05] dark:hover:text-gray-300"
+                            className={`flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 text-gray-400 transition-colors hover:text-gray-600 disabled:opacity-40 dark:bg-white/[0.05] dark:hover:text-gray-300 ${refreshing ? "is-busy" : ""}`}
                         >
                             <RefreshCw
-                                size={13}
-                                className={refreshing ? "animate-spin" : ""}
-                            />
+                                size={13} />
                         </button>
                     </div>
                 </div>

@@ -6,12 +6,11 @@ import { CalendarClock, History, MessageSquareText, UserRound } from "lucide-rea
 import { JALALI_MONTHS, pad2, toJalali, toPersianDigits } from "@/lib/jalali";
 import type { EmployeeListItem, InternalTask } from "./types";
 import dynamic from "next/dynamic";
-import LazyLoading from "@/components/ui/LazyLoading";
 
 
 const InternalTaskChatModal = dynamic(() => import("./InternalTaskChatModal"), {
     ssr: false,
-    loading: () => <LazyLoading />,
+    loading: () => null,
 });
 import InternalTaskDeadlineModal from "./InternalTaskDeadlineModal";
 

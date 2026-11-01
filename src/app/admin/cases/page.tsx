@@ -1,8 +1,9 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ListSkeleton } from "@/components/ui/skeletons";
 import { AnimatePresence, m } from "framer-motion";
-import { ClipboardList, Loader, Plus, RefreshCw } from "lucide-react";
+import { ClipboardList, Plus, RefreshCw } from "lucide-react";
 import { useTheme } from "next-themes";
 import { casesApi, customersApi, metaApi, tasksApi, fetchAllTasks, fetchTasksForCases, extractCaseId } from "@/lib/api";
 import type { Department } from "@/types/department";
@@ -15,12 +16,11 @@ import EditCaseModal from "@/components/user/cases/EditCaseModal";
 import dynamic from "next/dynamic";
 import CaseCard from "@/components/user/cases/CaseCard";
 import CaseTasksModal from "@/components/cases/CaseTasksModal";
-import LazyLoading from "@/components/ui/LazyLoading";
 
 
 const EditTaskModal = dynamic(() => import("@/components/tasks/EditTaskModal"), {
     ssr: false,
-    loading: () => <LazyLoading />,
+    loading: () => null,
 });
 import Pagination from "@/components/ui/Pagination";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
@@ -238,13 +238,13 @@ export default function UserCasesPage() {
                         disabled={loading}
                         type="button"
                         title="بارگذاری مجدد"
-                        className="flex h-10 w-10 items-center justify-center rounded-2xl transition-colors disabled:opacity-50"
+                        className={`flex h-10 w-10 items-center justify-center rounded-2xl transition-colors disabled:opacity-50 ${loading || isFetching ? "is-busy" : ""}`}
                         style={{
                             background: isDark ? "rgba(255,255,255,0.05)" : "rgba(15,23,42,0.05)",
                             color: isDark ? "#d1d5db" : "#4b5563",
                         }}
                     >
-                        <RefreshCw size={15} className={loading || isFetching ? "animate-spin" : ""} />
+                        <RefreshCw size={15} />
                     </button>
 
                     <button
@@ -271,12 +271,7 @@ export default function UserCasesPage() {
                 </div>
             )}
 
-            {loading && (
-                <div className="flex flex-col items-center justify-center gap-3 py-16">
-                    <Loader size={24} className="animate-spin text-indigo-500" />
-                    <p className="text-[12.5px] text-gray-500 dark:text-gray-400">در حال دریافت لیست پرونده‌ها...</p>
-                </div>
-            )}
+            {loading && <ListSkeleton />}
 
             {!loading && !error && cases.length === 0 && (
                 <div className="flex flex-col items-center justify-center gap-2 py-16">

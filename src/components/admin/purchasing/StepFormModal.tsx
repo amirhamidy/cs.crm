@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { AnimatePresence, m } from "framer-motion";
+import { AnimatePresence, m, useReducedMotion } from "framer-motion";
+import { Backdrop } from "@/components/ui/Backdrop";
+import { panelMotion } from "@/lib/motion";
 import { Check, Crown, Layers3, Loader2, Users, X } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
 import type { ApiPurchasingEmployee, ApiPurchasingStep } from "@/types/purchasing";
@@ -26,6 +28,7 @@ export default function StepFormModal({
     onClose,
     onSaved,
 }: Props) {
+    const reduced = useReducedMotion() ?? false;
     const { currentEmployeeId, isAdmin } = usePurchasingAccess();
 
     const [title, setTitle] = useState("");
@@ -102,30 +105,16 @@ export default function StepFormModal({
     return createPortal(
         <AnimatePresence>
             {open && (
-                <m.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    className="fixed inset-0 z-[999] flex items-center justify-center px-4"
-                    style={{ background: "rgba(0,0,0,0.45)", backdropFilter: "blur(3px)" }}
-                    onClick={handleClose}
-                >
-                    <m.div
-                        initial={{ opacity: 0, y: 16 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: 16 }}
-                        transition={{ duration: 0.3, ease: "easeOut" }}
-                        className="w-full max-w-sm overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-sm dark:border-white/[0.06] dark:bg-[#111827]"
-                        onClick={(e) => e.stopPropagation()}
-                        dir="rtl"
-                    >
+                <div className="fixed inset-0 z-[999] flex items-center justify-center px-4">
+                    <Backdrop onClick={handleClose} />
+                    <m.div {...panelMotion(false, reduced)} className="relative w-full max-w-sm overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-sm dark:border-white/[0.06] dark:bg-[#111827]" dir="rtl">
                         <div className="flex items-center justify-between px-8 pb-6 pt-8">
                             <div className="flex items-center gap-2.5">
                                 <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-indigo-500/10">
                                     <Layers3 size={15} className="text-indigo-500" />
                                 </div>
                                 <div>
-                                    <h3 className="text-[14px] font-extrabold text-gray-900 dark:text-white">
+                                    <h3 className="text-[14px] font-bold text-gray-900 dark:text-white">
                                         {isEditing ? "ویرایش مرحله" : "افزودن مرحله"}
                                     </h3>
                                     <p className="mt-0.5 text-[11px] text-gray-400">
@@ -163,10 +152,10 @@ export default function StepFormModal({
                                 <div>
                                     <div className="mb-2.5 flex items-center gap-2">
                                         <Users size={14} className="text-gray-400" />
-                                        <span className="text-[10.5px] font-extrabold text-gray-900 dark:text-white">
+                                        <span className="text-[10.5px] font-bold text-gray-900 dark:text-white">
                                             مسئولان مرحله
                                         </span>
-                                        <span className="rounded-lg bg-indigo-500/10 px-2 py-0.5 text-[9px] font-extrabold text-indigo-600 dark:text-indigo-300">
+                                        <span className="rounded-lg bg-indigo-500/10 px-2 py-0.5 text-[9px] font-bold text-indigo-600 dark:text-indigo-300">
                                             {selectedIds.length}
                                         </span>
                                     </div>
@@ -213,7 +202,7 @@ export default function StepFormModal({
                                 </div>
 
                                 {errorMessage && (
-                                    <div className="rounded-2xl bg-red-50 px-3 py-2.5 text-[10px] font-semibold text-red-500 dark:bg-red-500/10">
+                                    <div className="rounded-2xl bg-red-50 px-3 py-2.5 text-[10px] font-medium text-red-500 dark:bg-red-500/10">
                                         {errorMessage}
                                     </div>
                                 )}
@@ -235,7 +224,7 @@ export default function StepFormModal({
                             </div>
                         </div>
                     </m.div>
-                </m.div>
+                </div>
             )}
         </AnimatePresence>,
         document.body

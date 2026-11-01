@@ -2,7 +2,6 @@
 
 import { forwardRef, type ButtonHTMLAttributes, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
-import { Spinner } from "./Spinner";
 
 export type ButtonVariant = "primary" | "secondary" | "soft" | "danger" | "ghost";
 export type ButtonSize = "sm" | "md" | "lg";
@@ -28,6 +27,7 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
     variant?: ButtonVariant;
     size?: ButtonSize;
     loading?: boolean;
+    loadingLabel?: string;
     icon?: ReactNode;
     fullWidth?: boolean;
 }
@@ -37,6 +37,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
         variant = "primary",
         size = "md",
         loading = false,
+        loadingLabel,
         icon,
         fullWidth,
         className,
@@ -60,12 +61,13 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
                 VARIANTS[variant],
                 SIZES[size],
                 fullWidth && "w-full",
+                loading && "is-busy",
                 className,
             )}
             {...rest}
         >
-            {loading ? <Spinner size="sm" /> : icon}
-            {children}
+            {!loading && icon}
+            {loading && loadingLabel ? loadingLabel : children}
         </button>
     );
 });
@@ -88,16 +90,18 @@ export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(
                 ref={ref}
                 type={type}
                 disabled={disabled || loading}
+                aria-busy={loading || undefined}
                 className={cn(
                     "inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl transition-colors md:h-9 md:w-9",
                     "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand",
                     "disabled:cursor-not-allowed disabled:opacity-50",
+                    loading && "is-busy",
                     VARIANTS[variant],
                     className,
                 )}
                 {...rest}
             >
-                {loading ? <Spinner size="sm" /> : children}
+                {children}
             </button>
         );
     },

@@ -130,9 +130,11 @@ export default function PortalOrdersPage() {
                 </AnimatePresence>
             )}
 
-            {!list.loading && list.totalPages > 1 && (
+            {!list.loading && list.count > 0 && (
                 <div className="mt-5">
-                    <Pagination page={list.page} totalPages={list.totalPages} onChange={list.setPage} />
+                    <Pagination
+                        summary={`نمایش ${((list.page - 1) * list.pageSize + 1).toLocaleString("fa-IR")} تا ${Math.min(list.page * list.pageSize, list.count).toLocaleString("fa-IR")} از ${list.count.toLocaleString("fa-IR")} سفارش`}
+                        page={list.page} totalPages={list.totalPages} onChange={list.setPage} />
                 </div>
             )}
 

@@ -280,10 +280,10 @@ export default function TaskNotesModal({ isOpen, onClose, taskId, taskTitle }: P
                                 type="button"
                                 onClick={fetchLogs}
                                 disabled={loading}
-                                className="flex h-8 w-8 items-center justify-center rounded-xl text-gray-400 hover:text-gray-300 disabled:opacity-40 transition-colors"
+                                className={`flex h-8 w-8 items-center justify-center rounded-xl text-gray-400 hover:text-gray-300 disabled:opacity-40 transition-colors ${loading ? "is-busy" : ""}`}
                                 style={{ background: buttonBg }}
                             >
-                                <RefreshCw size={13} className={loading ? "animate-spin" : ""} />
+                                <RefreshCw size={13} />
                             </button>
 
                             <button

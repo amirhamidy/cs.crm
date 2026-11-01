@@ -16,20 +16,19 @@ import { Department } from "@/types/department";
 import dynamic from "next/dynamic";
 import SuspenseWrapper from "@/components/SuspenseWrapper";
 import TaskCard from "@/components/tasks/TaskCard";
-import LazyLoading from "@/components/ui/LazyLoading";
 
 
 const CreateTaskModal = dynamic(() => import("@/components/tasks/CreateTaskModal"), {
     ssr: false,
-    loading: () => <LazyLoading />,
+    loading: () => null,
 });
 const CreateNoCaseTaskModal = dynamic(() => import("@/components/tasks/CreateNoCaseTaskModal"), {
     ssr: false,
-    loading: () => <LazyLoading />,
+    loading: () => null,
 });
 const EditTaskModal = dynamic(() => import("@/components/tasks/EditTaskModal"), {
     ssr: false,
-    loading: () => <LazyLoading />,
+    loading: () => null,
 });
 
 const ACTIVE_STATUS = "in_progress" as TaskStatus;
@@ -160,11 +159,11 @@ function AdminTasksPageContent() {
                         type="button"
                         onClick={fetchAll}
                         disabled={loading}
-                        className="flex h-10 w-10 items-center justify-center rounded-2xl transition-colors disabled:opacity-50"
+                        className={`flex h-10 w-10 items-center justify-center rounded-2xl transition-colors disabled:opacity-50 ${loading ? "is-busy" : ""}`}
                         style={{ background: isDark ? "rgba(255,255,255,0.05)" : "rgba(15,23,42,0.05)", color: isDark ? "#d1d5db" : "#4b5563" }}
                         title="بارگذاری مجدد"
                     >
-                        <RefreshCw size={15} className={loading ? "animate-spin" : ""} />
+                        <RefreshCw size={15} />
                     </button>
 
                     <button

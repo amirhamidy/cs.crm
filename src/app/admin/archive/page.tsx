@@ -1,8 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { ListSkeleton } from "@/components/ui/skeletons";
 import { AnimatePresence, m } from "framer-motion";
-import { Archive, ArrowRight, Ban, CheckCircle2, ClipboardList, Layers3, Loader, RefreshCw, ShoppingBag } from "lucide-react";
+import { Archive, ArrowRight, Ban, CheckCircle2, ClipboardList, Layers3, RefreshCw, ShoppingBag } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import { tasksApi } from "@/lib/api";
@@ -64,11 +65,11 @@ export default function AdminArchivedTasksPage() {
                         type="button"
                         onClick={fetchAll}
                         disabled={loading}
-                        className="flex h-10 w-10 items-center justify-center rounded-2xl transition-colors disabled:opacity-50"
+                        className={`flex h-10 w-10 items-center justify-center rounded-2xl transition-colors disabled:opacity-50 ${loading ? "is-busy" : ""}`}
                         style={{ background: isDark ? "rgba(255,255,255,0.05)" : "rgba(15,23,42,0.05)", color: isDark ? "#d1d5db" : "#4b5563" }}
                         title="بارگذاری مجدد"
                     >
-                        <RefreshCw size={15} className={loading ? "animate-spin" : ""} />
+                        <RefreshCw size={15} />
                     </button>
                 </div>
             </div>
@@ -100,12 +101,7 @@ export default function AdminArchivedTasksPage() {
                 })}
             </div>
 
-            {loading && (
-                <div className="flex flex-col items-center justify-center gap-3 py-16">
-                    <Loader size={24} className="animate-spin text-indigo-500" />
-                    <p className="text-[12.5px] text-gray-500 dark:text-gray-400">در حال دریافت بایگانی...</p>
-                </div>
-            )}
+            {loading && <ListSkeleton />}
 
             {!loading && !list.error && filteredTasks.length === 0 && (
                 <div className="flex flex-col items-center justify-center gap-2 py-16">

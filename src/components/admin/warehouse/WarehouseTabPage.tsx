@@ -18,12 +18,11 @@ import CreateOrderTaskModal from "@/components/user/warehouse/CreateOrderTaskMod
 import WarehouseEmployeeTransactionCard from "@/components/user/warehouse/WarehouseEmployeeTransactionCard";
 import dynamic from "next/dynamic";
 import WarehouseEmployeeProductCard from "@/components/user/warehouse/WarehouseEmployeeProductCard";
-import LazyLoading from "@/components/ui/LazyLoading";
 
 
 const WarehouseEmployeeProductWizardModal = dynamic(() => import("@/components/user/warehouse/WarehouseEmployeeProductWizardModal"), {
     ssr: false,
-    loading: () => <LazyLoading />,
+    loading: () => null,
 });
 import WarehouseEmployeeBulkImportModal from "@/components/admin/warehouse/WarehouseEmployeeBulkImportModal";
 import WarehouseEmployeeTaskCard from "@/components/user/warehouse/WarehouseEmployeeTaskCard";
@@ -475,11 +474,11 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
                     const active = tab === id;
                     const count = counts[id] ?? 0;
                     return (
-                        <button
+                        <button disabled={archiveLoading}
                             key={id}
                             type="button"
                             onClick={() => goToTab(id)}
-                            className="relative flex items-center gap-1.5 rounded-xl px-4 py-2 text-[12px] font-extrabold"
+                            className={`relative flex items-center gap-1.5 rounded-xl px-4 py-2 text-[12px] font-extrabold ${archiveLoading ? "is-busy" : ""}`}
                             style={{
                                 background: active ? "linear-gradient(135deg,#6366f1,#8b5cf6)" : "transparent",
                                 color: active ? "#fff" : isDark ? "#9ca3af" : "#4b5563",
@@ -902,7 +901,7 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
                                         disabled={archiveLoading}
                                         className="flex h-10 items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-4 text-[12.5px] font-bold text-white transition-colors hover:bg-indigo-700 disabled:opacity-50"
                                     >
-                                        <Loader2 size={14} className={archiveLoading ? "animate-spin" : ""} />
+                                        <Loader2 size={14} />
                                         بروزرسانی
                                     </m.button>
                                 </div>

@@ -114,9 +114,9 @@ export default function TaskHistoryModal({
                                         type="button"
                                         onClick={onRefresh}
                                         disabled={loading}
-                                        className="flex h-9 w-9 items-center justify-center rounded-xl bg-gray-100 text-gray-400 transition hover:text-gray-600 disabled:opacity-40 dark:bg-white/[0.05] dark:hover:text-gray-300"
+                                        className={`flex h-9 w-9 items-center justify-center rounded-xl bg-gray-100 text-gray-400 transition hover:text-gray-600 disabled:opacity-40 dark:bg-white/[0.05] dark:hover:text-gray-300 ${loading ? "is-busy" : ""}`}
                                     >
-                                        <RefreshCw size={13} className={loading ? "animate-spin" : ""} />
+                                        <RefreshCw size={13} />
                                     </button>
                                 )}
                             </div>

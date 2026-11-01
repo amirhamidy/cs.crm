@@ -246,13 +246,11 @@ export default function CaseTasksModal({
                                     title="بارگذاری مجدد"
                                     onClick={() => setReloadTick((n) => n + 1)}
                                     disabled={loading}
-                                    className="flex h-8 w-8 items-center justify-center rounded-xl transition-colors disabled:opacity-40"
+                                    className={`flex h-8 w-8 items-center justify-center rounded-xl transition-colors disabled:opacity-40 ${loading ? "is-busy" : ""}`}
                                     style={{ background: softBg, color: textMuted }}
                                 >
                                     <RefreshCw
-                                        size={13}
-                                        className={loading ? "animate-spin" : ""}
-                                    />
+                                        size={13} />
                                 </button>
                                 <button
                                     type="button"

@@ -14,7 +14,8 @@ import { toEnglishDigits } from "@/lib/digits";
 import { UNIT_TYPE_LABELS } from "@/types/warehouse";
 import type { PortalProduct } from "@/types/portal";
 
-const PAGE_SIZE = 12;
+const PAGE_SIZES = [12, 24, 48] as const;
+const PAGE_SIZE = PAGE_SIZES[0];
 
 interface CategoryOption {
     id: number;
@@ -45,6 +46,9 @@ function parseQuantity(
     }
     return { value, error: null };
 }
+
+const summary = (page: number, size: number, total: number) =>
+    `نمایش ${fmt((page - 1) * size + 1)} تا ${fmt(Math.min(page * size, total))} از ${fmt(total)} کالا`;
 
 const chipClass = (active: boolean) =>
     `h-9 rounded-xl px-3.5 text-[11.5px] font-bold transition-colors ${
@@ -150,6 +154,20 @@ export default function PortalProductsPage() {
                 ))}
             </div>
 
+            <div className="flex flex-wrap items-center gap-2">
+                <span className="text-[11.5px] font-medium text-gray-500">تعداد در صفحه:</span>
+                {PAGE_SIZES.map((n) => (
+                    <button
+                        key={n}
+                        type="button"
+                        onClick={() => list.setPageSize(n)}
+                        className={chipClass(list.pageSize === n)}
+                    >
+                        {fmt(n)}
+                    </button>
+                ))}
+            </div>
+
             {list.loading ? (
                 <CardSkeletonGrid />
             ) : list.error ? (
@@ -172,7 +190,7 @@ export default function PortalProductsPage() {
                     کالایی با این مشخصات پیدا نشد
                 </div>
             ) : (
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
                     {list.data.map((p) => {
                         const inCart = cartIds.has(p.id);
                         return (
@@ -214,8 +232,9 @@ export default function PortalProductsPage() {
                 </div>
             )}
 
-            {!list.loading && !list.error && list.totalPages > 1 && (
+            {!list.loading && !list.error && list.count > 0 && (
                 <Pagination
+                    summary={summary(list.page, list.pageSize, list.count)}
                     page={list.page}
                     totalPages={list.totalPages}
                     onChange={list.setPage}

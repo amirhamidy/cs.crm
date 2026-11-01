@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence } from "framer-motion";
-import { Award, Loader2, Plus, Minus, RefreshCw, Users } from "lucide-react";
+import { ListSkeleton } from "@/components/ui/skeletons";
+import { Award, Plus, Minus, RefreshCw, Users } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
 import { listAll } from "@/lib/api";
 import { useAuthStore } from "@/store/authStore";
@@ -110,7 +111,7 @@ export default function DepartmentScoreManager() {
   }, [load, selected]);
 
   if (!hasHydrated || loading) {
-    return <div className="flex min-h-28 items-center justify-center rounded-3xl border border-gray-200/70 bg-white p-6 dark:border-white/10 dark:bg-gray-900"><Loader2 className="animate-spin text-indigo-500" size={20} /></div>;
+    return <ListSkeleton rows={2} />;
   }
   if (!managedAssignments.length) return null;
 
@@ -124,8 +125,8 @@ export default function DepartmentScoreManager() {
             <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">امتیاز اعضای دپارتمان‌های تحت مدیریت شما</p>
           </div>
         </div>
-        <button onClick={() => void load(true)} disabled={refreshing} className="flex items-center gap-2 rounded-xl border border-gray-200 px-3 py-2 text-xs font-bold text-gray-600 disabled:opacity-50 dark:border-white/10 dark:text-gray-300">
-          <RefreshCw size={14} className={refreshing ? "animate-spin" : ""} /> بروزرسانی
+        <button onClick={() => void load(true)} disabled={refreshing} className={`flex items-center gap-2 rounded-xl border border-gray-200 px-3 py-2 text-xs font-bold text-gray-600 disabled:opacity-50 ${refreshing ? "is-busy" : ""} dark:border-white/10 dark:text-gray-300`}>
+          <RefreshCw size={14} /> بروزرسانی
         </button>
       </div>
       {error && <p className="rounded-xl bg-red-500/10 px-3 py-2 text-xs text-red-500">{error}</p>}

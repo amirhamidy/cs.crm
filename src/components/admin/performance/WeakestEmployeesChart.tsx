@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, m } from "framer-motion";
 import { useTheme } from "next-themes";
-import { AlertTriangle, Ban, CheckCircle2, Loader2, TrendingDown } from "lucide-react";
+import { AlertTriangle, Ban, CheckCircle2, TrendingDown } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
 
 export interface WeakestEmployeeItem {
@@ -484,12 +484,7 @@ export default function WeakestEmployeesChart({
                                                 }}
                                             >
                                                 {scoresLoading ? (
-                                                    <Loader2
-                                                        size={
-                                                            12
-                                                        }
-                                                        className="animate-spin"
-                                                    />
+                                                    <span className="inline-block h-2.5 w-4 animate-pulse rounded bg-current opacity-30" />
                                                 ) : employee.score !==
                                                     null ? (
                                                     employee.score.toLocaleString(

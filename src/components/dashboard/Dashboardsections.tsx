@@ -4,20 +4,19 @@ import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import StatsCard from "@/components/charts/StatsCard";
 import UsersCard from "@/components/charts/UsersCard";
-import LazyLoading from "@/components/ui/LazyLoading";
 
 
 const SalesChart = dynamic(() => import("@/components/charts/SalesChart"), {
     ssr: false,
-    loading: () => <LazyLoading />,
+    loading: () => null,
 });
 const CategoryChart = dynamic(() => import("@/components/charts/CategoryChart"), {
     ssr: false,
-    loading: () => <LazyLoading />,
+    loading: () => null,
 });
 const VisitsChart = dynamic(() => import("@/components/charts/VisitsChart"), {
     ssr: false,
-    loading: () => <LazyLoading />,
+    loading: () => null,
 });
 import { DashboardForbiddenError, getCancelledTasksByDepartment, getCustomerSourcesData, getSalesChartData, getSummary, getTopUsers } from "@/lib/dashboard";
 

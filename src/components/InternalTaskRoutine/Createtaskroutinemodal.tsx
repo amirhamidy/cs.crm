@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { AnimatePresence, m } from "framer-motion";
+import { AnimatePresence, m, useReducedMotion } from "framer-motion";
+import { Backdrop } from "@/components/ui/Backdrop";
+import { panelMotion } from "@/lib/motion";
 import { Ban, Calendar, Check, ChevronDown, ChevronLeft, ChevronRight, Clock, ListTodo, Loader2, Repeat, Search, X } from "lucide-react";
 import { useTheme } from "next-themes";
 import type { InternalTask, InternalTaskRoutine } from "./Types";
@@ -297,6 +299,7 @@ export default function CreateTaskRoutineModal({
     tasks,
     onCreated,
 }: CreateTaskRoutineModalProps) {
+    const reduced = useReducedMotion() ?? false;
     const { resolvedTheme } = useTheme();
     const isDark = resolvedTheme === "dark";
     const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
@@ -444,27 +447,11 @@ export default function CreateTaskRoutineModal({
     return (
         <AnimatePresence>
             {isOpen && (
-                <m.div
-                    dir="rtl"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    className="fixed inset-0 z-[100] flex items-center justify-center p-4"
-                    style={{
-                        background: "rgba(2, 6, 23, 0.58)",
-                        backdropFilter: "blur(6px)",
-                    }}
-                    onClick={() => {
+                <div dir="rtl" className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+<Backdrop onClick={() => {
                         if (!isSubmitting) onClose();
-                    }}
-                >
-                    <m.div
-                        initial={{ opacity: 0, y: 20, scale: 0.97 }}
-                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                        exit={{ opacity: 0, y: 20, scale: 0.97 }}
-                        transition={{ duration: 0.24, ease: "easeOut" }}
-                        onClick={(event) => event.stopPropagation()}
-                        className="max-h-[88vh] w-full max-w-md overflow-y-auto rounded-[2rem] border border-gray-100 bg-white shadow-2xl dark:border-white/[0.07] dark:bg-[#111827]"
+                    }} />
+                    <m.div {...panelMotion(false, reduced)} className="relative max-h-[88vh] w-full max-w-md overflow-y-auto rounded-[2rem] border border-gray-100 bg-white shadow-2xl dark:border-white/[0.07] dark:bg-[#111827]"
                         style={{ scrollbarWidth: "thin" }}
                     >
                         <div className="flex items-center justify-between px-6 pb-4 pt-6">
@@ -687,7 +674,7 @@ export default function CreateTaskRoutineModal({
                             </button>
                         </div>
                     </m.div>
-                </m.div>
+                </div>
             )}
         </AnimatePresence>
     );

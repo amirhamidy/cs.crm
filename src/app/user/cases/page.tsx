@@ -15,12 +15,11 @@ import EditCaseModal from "@/components/user/cases/EditCaseModal";
 import dynamic from "next/dynamic";
 import CaseCard from "@/components/user/cases/CaseCard";
 import CaseTasksModal from "@/components/cases/CaseTasksModal";
-import LazyLoading from "@/components/ui/LazyLoading";
 
 
 const EditTaskModal = dynamic(() => import("@/components/tasks/EditTaskModal"), {
     ssr: false,
-    loading: () => <LazyLoading />,
+    loading: () => null,
 });
 import Pagination from "@/components/ui/Pagination";
 import CardSkeletonGrid from "@/components/ui/CardSkeletonGrid";
@@ -214,13 +213,13 @@ export default function UserCasesPage() {
                         disabled={loading}
                         type="button"
                         title="بارگذاری مجدد"
-                        className="flex h-10 w-10 items-center justify-center rounded-2xl transition-colors disabled:opacity-50"
+                        className={`flex h-10 w-10 items-center justify-center rounded-2xl transition-colors disabled:opacity-50 ${loading || isFetching ? "is-busy" : ""}`}
                         style={{
                             background: isDark ? "rgba(255,255,255,0.05)" : "rgba(15,23,42,0.05)",
                             color: isDark ? "#d1d5db" : "#4b5563",
                         }}
                     >
-                        <RefreshCw size={15} className={loading || isFetching ? "animate-spin" : ""} />
+                        <RefreshCw size={15} />
                     </button>
 
                     <button

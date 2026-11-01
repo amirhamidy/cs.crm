@@ -2,7 +2,9 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { AnimatePresence, m } from "framer-motion";
+import { AnimatePresence, m, useReducedMotion } from "framer-motion";
+import { Backdrop } from "@/components/ui/Backdrop";
+import { panelMotion } from "@/lib/motion";
 import { AlertCircle, Check, Loader2, Search, UserPlus, X } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
 import { fetchPage } from "@/lib/api";
@@ -32,6 +34,7 @@ const G = [
 ];
 
 export default function PurchasingEmployeeModal({ open, existingEmployees, onClose, onSaved }: Props) {
+    const reduced = useReducedMotion() ?? false;
     const [selected, setSelected] = useState<number | null>(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
@@ -96,30 +99,16 @@ export default function PurchasingEmployeeModal({ open, existingEmployees, onClo
     return createPortal(
         <AnimatePresence>
             {open && (
-                <m.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    className="fixed inset-0 z-[999] flex items-center justify-center px-4"
-                    style={{ background: "rgba(0,0,0,0.45)", backdropFilter: "blur(3px)" }}
-                    onMouseDown={close}
-                >
-                    <m.div
-                        initial={{ opacity: 0, y: 16, scale: 0.98 }}
-                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                        exit={{ opacity: 0, y: 16, scale: 0.98 }}
-                        transition={{ duration: 0.28, ease: "easeOut" }}
-                        onMouseDown={(e) => e.stopPropagation()}
-                        className="flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-2xl shadow-black/10 dark:border-white/[0.06] dark:bg-[#111827]"
-                        dir="rtl"
-                    >
+                <div className="fixed inset-0 z-[999] flex items-center justify-center px-4">
+                    <Backdrop onClick={close} />
+                    <m.div {...panelMotion(false, reduced)} className="relative flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-xl shadow-black/10 dark:border-white/[0.06] dark:bg-[#111827]" dir="rtl">
                         <div className="flex shrink-0 items-center justify-between px-8 pb-6 pt-8">
                             <div className="flex items-center gap-2.5">
                                 <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-indigo-50 dark:bg-indigo-500/10">
                                     <UserPlus size={15} className="text-indigo-500" />
                                 </div>
                                 <div>
-                                    <h3 className="text-[14px] font-extrabold text-gray-900 dark:text-white">افزودن عضو خرید</h3>
+                                    <h3 className="text-[14px] font-bold text-gray-900 dark:text-white">افزودن عضو خرید</h3>
                                     <p className="mt-0.5 text-[11px] text-gray-400">کارمند موردنظر را به تیم اضافه کنید</p>
                                 </div>
                             </div>
@@ -131,7 +120,7 @@ export default function PurchasingEmployeeModal({ open, existingEmployees, onClo
                         <div className="flex min-h-0 flex-1 flex-col gap-3 px-8 pb-2">
                             <div className="flex items-center gap-2 rounded-2xl border border-gray-100 bg-gray-50 px-3.5 py-3 transition-colors focus-within:border-indigo-500 dark:border-white/[0.06] dark:bg-white/[0.03]">
                                 <Search size={13} className="shrink-0 text-gray-400" />
-                                <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="جستجوی نام یا نام کاربری..." className="w-full bg-transparent text-[12px] font-semibold text-gray-900 outline-none placeholder:text-gray-400 dark:text-white" />
+                                <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="جستجوی نام یا نام کاربری..." className="w-full bg-transparent text-[12px] font-medium text-gray-900 outline-none placeholder:text-gray-400 dark:text-white" />
                             </div>
 
                             <div ref={listRef} onScroll={onListScroll} className="max-h-[280px] space-y-1.5 overflow-y-auto">
@@ -162,7 +151,7 @@ export default function PurchasingEmployeeModal({ open, existingEmployees, onClo
                                                 }}
                                                 className={`flex w-full items-center gap-2.5 rounded-2xl px-2.5 py-2 text-right transition-colors ${active ? "bg-indigo-50 dark:bg-indigo-500/10" : "hover:bg-gray-50 dark:hover:bg-white/[0.04]"}`}
                                             >
-                                                <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${G[e.id % G.length]} text-[12px] font-extrabold text-white`}>
+                                                <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${G[e.id % G.length]} text-[12px] font-bold text-white`}>
                                                     {name.trim().charAt(0)}
                                                 </span>
                                                 <span className="min-w-0 flex-1">
@@ -198,7 +187,7 @@ export default function PurchasingEmployeeModal({ open, existingEmployees, onClo
                             {error && (
                                 <div className="flex items-start gap-2.5 rounded-2xl bg-red-50 px-3.5 py-3 dark:bg-red-500/10">
                                     <AlertCircle size={14} className="mt-0.5 shrink-0 text-red-500" />
-                                    <p className="text-[11.5px] font-semibold leading-5 text-red-500 dark:text-red-400">{error}</p>
+                                    <p className="text-[11.5px] font-medium leading-5 text-red-500 dark:text-red-400">{error}</p>
                                 </div>
                             )}
                         </div>
@@ -210,7 +199,7 @@ export default function PurchasingEmployeeModal({ open, existingEmployees, onClo
                             </m.button>
                         </div>
                     </m.div>
-                </m.div>
+                </div>
             )}
         </AnimatePresence>,
         document.body

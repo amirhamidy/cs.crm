@@ -286,11 +286,11 @@ export default function TaskLogsModal({ isOpen, onClose, taskId, taskTitle }: Pr
                                 type="button"
                                 onClick={fetchLogs}
                                 disabled={loading}
-                                className="flex h-8 w-8 items-center justify-center rounded-xl text-gray-400 transition-colors hover:text-gray-600 disabled:opacity-40 dark:hover:text-gray-300"
+                                className={`flex h-8 w-8 items-center justify-center rounded-xl text-gray-400 transition-colors hover:text-gray-600 disabled:opacity-40 dark:hover:text-gray-300 ${loading ? "is-busy" : ""}`}
                                 style={{ background: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.04)" }}
                                 title="بروزرسانی"
                             >
-                                <RefreshCw size={13} className={loading ? "animate-spin" : ""} />
+                                <RefreshCw size={13} />
                             </button>
                             <button
                                 type="button"

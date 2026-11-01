@@ -11,16 +11,15 @@ import BestEmployeesChart from "./BestEmployeesChart";
 import WeakestEmployeesChart from "./WeakestEmployeesChart";
 import DepartmentChurn from "./DepartmentChurn";
 import MyTaskDeadlines from "./MyTaskDeadlines";
-import LazyLoading from "@/components/ui/LazyLoading";
 
 
 const TopBringersChart = dynamic(() => import("./TopBringersChart"), {
     ssr: false,
-    loading: () => <LazyLoading />,
+    loading: () => null,
 });
 const TopStagesChart = dynamic(() => import("./TopStagesChart"), {
     ssr: false,
-    loading: () => <LazyLoading />,
+    loading: () => null,
 });
 
 export default function PerformancePage() {

@@ -9,7 +9,6 @@ import type { Customer } from "@/types/customer";
 import { useEmployeeDirectory } from "@/hooks/useEmployeeDirectory";
 import CustomerDeleteModal from "./DeleteModal";
 import CustomerScoresModal from "./CustomerScoresModal";
-import LazyLoading from "@/components/ui/LazyLoading";
 import axiosInstance from "@/lib/axiosInstance";
 import { useAuthStore } from "@/store/authStore";
 import CreatePortalAccountModal from "@/components/admin/customer-portal/CreatePortalAccountModal";
@@ -21,7 +20,7 @@ import { apiMessage } from "@/lib/apiMessage";
 
 const CustomerEditModal = dynamic(() => import("./CustomerEditModal"), {
     ssr: false,
-    loading: () => <LazyLoading />,
+    loading: () => null,
 });
 
 interface ScoreItem {
