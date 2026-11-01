@@ -2,16 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import { AnimatePresence, m } from "framer-motion";
-import {
-    Check,
-    ChevronLeft,
-    ChevronRight,
-    Eye,
-    EyeOff,
-    Loader,
-    Shield,
-    UserPlus,
-} from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, Eye, EyeOff, Shield, UserPlus } from "lucide-react";
 import { accountsApi } from "@/lib/api";
 import { parseApiErrors, type FieldErrors } from "@/lib/parseApiErrors";
 import { toast } from "@/components/notifications/toast";
@@ -29,6 +20,7 @@ import {
     type Step2Form,
 } from "./addUserUtils";
 
+import { BusyContent } from "@/components/ui/Button";
 interface Props {
     open: boolean;
     onClose: () => void;
@@ -612,21 +604,21 @@ export default function AddUserModal({ open, onClose, onSuccess, onNotify }: Pro
                             type="submit"
                             disabled={loading}
                             whileTap={{ scale: 0.97 }}
-                            className="flex items-center justify-center gap-2 rounded-full bg-blue-600 py-3 text-sm font-bold text-white transition-colors hover:bg-blue-500 disabled:opacity-50"
+                            className="relative flex items-center justify-center gap-2 rounded-full bg-blue-600 py-3 text-sm font-bold text-white transition-colors hover:bg-blue-500 disabled:opacity-50"
                         >
-                            {loading ? (
-                                <Loader size={15} className="animate-spin" />
-                            ) : step1.type === 1 ? (
-                                <>
-                                    <Check size={14} />
-                                    ثبت ادمین
-                                </>
-                            ) : (
-                                <>
-                                    ادامه
-                                    <ChevronLeft size={14} />
-                                </>
-                            )}
+                            <BusyContent busy={loading}>
+                                {step1.type === 1 ? (
+                                    <>
+                                        <Check size={14} />
+                                        ثبت ادمین
+                                    </>
+                                ) : (
+                                    <>
+                                        ادامه
+                                        <ChevronLeft size={14} />
+                                    </>
+                                )}
+                            </BusyContent>
                         </m.button>
                     </m.form>
                 ) : (
@@ -689,16 +681,14 @@ export default function AddUserModal({ open, onClose, onSuccess, onNotify }: Pro
                                 type="submit"
                                 disabled={loading}
                                 whileTap={{ scale: 0.97 }}
-                                className="flex flex-1 items-center justify-center gap-2 rounded-full bg-blue-600 py-3 text-sm font-bold text-white transition-colors hover:bg-blue-500 disabled:opacity-50"
+                                className="relative flex flex-1 items-center justify-center gap-2 rounded-full bg-blue-600 py-3 text-sm font-bold text-white transition-colors hover:bg-blue-500 disabled:opacity-50"
                             >
-                                {loading ? (
-                                    <Loader size={18} className="animate-spin" />
-                                ) : (
+                                <BusyContent busy={loading}>
                                     <>
-                                        <Check size={14} />
-                                        ثبت کارمند
-                                    </>
-                                )}
+                                            <Check size={14} />
+                                            ثبت کارمند
+                                        </>
+                                </BusyContent>
                             </m.button>
                         </div>
                     </m.form>

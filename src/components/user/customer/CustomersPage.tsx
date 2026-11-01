@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { ListSkeleton } from "@/components/ui/skeletons";
 import { m, AnimatePresence } from "framer-motion";
 import { useTheme } from "next-themes";
-import { Users, Plus, RefreshCw, Filter, FileSpreadsheet } from "lucide-react";
+import { Users, Plus, RefreshCw, Filter, FileSpreadsheet, Loader2 } from "lucide-react";
 import dynamic from "next/dynamic";
 import CustomerCard from "./CustomerCard";
 import ImportExcelModal from "./ImportExcelModal";
@@ -137,7 +137,7 @@ export default function CustomersPage() {
                     <button
                         onClick={refreshAll}
                         disabled={loading}
-                        className={`flex h-10 w-10 items-center justify-center rounded-2xl transition-colors disabled:opacity-50 ${loading ? "is-busy" : ""}`}
+                        className={`flex h-10 w-10 items-center justify-center rounded-2xl transition-colors disabled:opacity-50 `}
                         style={{
                             background: isDark ? "rgba(255,255,255,0.05)" : "rgba(15,23,42,0.05)",
                             color: isDark ? "#d1d5db" : "#4b5563",
@@ -145,7 +145,7 @@ export default function CustomersPage() {
                         title="بارگذاری مجدد"
                         type="button"
                     >
-                        <RefreshCw size={15} />
+                        {loading ? <Loader2 size={15} className="animate-spin" /> : <RefreshCw size={15} />}
                     </button>
 
                     <button

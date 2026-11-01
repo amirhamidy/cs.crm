@@ -1,10 +1,11 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, m } from "framer-motion";
-import { Check, Loader2, Power, Trash2, Warehouse as WarehouseIcon, X } from "lucide-react";
+import { Check, Power, Trash2, Warehouse as WarehouseIcon, X } from "lucide-react";
 import { useTheme } from "next-themes";
 import axiosInstance from "@/lib/axiosInstance";
 
+import { BusyContent } from "@/components/ui/Button";
 export interface WarehouseStaff {
     id: number;
     employee: number;
@@ -303,14 +304,16 @@ export default function WarehouseStaffCard({ staff, index, onDelete, onUpdated }
                                     type="button"
                                     onClick={handleDelete}
                                     disabled={deleting}
-                                    className="flex flex-1 items-center justify-center gap-1.5 rounded-2xl py-2.5 text-[12.5px] font-bold text-white disabled:opacity-60"
+                                    className="relative flex flex-1 items-center justify-center gap-1.5 rounded-2xl py-2.5 text-[12.5px] font-bold text-white disabled:opacity-60"
                                     style={{
                                         background: "linear-gradient(135deg, #ef4444, #dc2626)",
                                         boxShadow: "0 10px 24px rgba(239,68,68,0.22)",
                                     }}
                                 >
-                                    {deleting ? <Loader2 size={15} className="animate-spin" /> : <Trash2 size={13} />}
-                                    {deleting ? "" : "حذف کن"}
+                                    <BusyContent busy={deleting}>
+                                        <Trash2 size={13} />
+                                        حذف کن
+                                    </BusyContent>
                                 </button>
                             </div>
                         </m.div>

@@ -4,13 +4,14 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, m, useReducedMotion } from "framer-motion";
 import { Backdrop } from "@/components/ui/Backdrop";
 import { panelMotion } from "@/lib/motion";
-import { Ban, Calendar, Check, ChevronDown, ChevronLeft, ChevronRight, Clock, ListTodo, Loader2, Repeat, Search, X } from "lucide-react";
+import { Ban, Calendar, Check, ChevronDown, ChevronLeft, ChevronRight, Clock, ListTodo, Repeat, Search, X } from "lucide-react";
 import { useTheme } from "next-themes";
 import type { InternalTask, InternalTaskRoutine } from "./Types";
 import { createInternalTaskRoutine } from "./Api";
 import { useAuthStore } from "@/store/authStore";
 import { JALALI_MONTHS, pad2, toGregorian, toJalali, toPersianDigits } from "@/lib/jalali";
 
+import { BusyContent } from "@/components/ui/Button";
 const NEVER_REPEAT_VALUE = 2147483647;
 const INTERVAL_PRESETS = [1, 3, 7, 14, 30];
 
@@ -683,16 +684,14 @@ export default function EmployeeCreateTaskRoutineModal({
                                 type="button"
                                 onClick={handleSubmit}
                                 disabled={isSubmitting || myTasks.length === 0}
-                                className="flex h-11 flex-1 items-center justify-center gap-2 rounded-full bg-indigo-600 text-[12px] font-bold text-white transition-colors hover:bg-indigo-500 disabled:opacity-50"
+                                className="relative flex h-11 flex-1 items-center justify-center gap-2 rounded-full bg-indigo-600 text-[12px] font-bold text-white transition-colors hover:bg-indigo-500 disabled:opacity-50"
                             >
-                                {isSubmitting ? (
-                                    <Loader2 size={15} className="animate-spin" />
-                                ) : (
+                                <BusyContent busy={isSubmitting}>
                                     <>
-                                        <Check size={15} strokeWidth={2.7} />
-                                        ثبت تسک روتین
-                                    </>
-                                )}
+                                            <Check size={15} strokeWidth={2.7} />
+                                            ثبت تسک روتین
+                                        </>
+                                </BusyContent>
                             </button>
                         </div>
                     </m.div>

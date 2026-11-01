@@ -3,9 +3,10 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, m } from "framer-motion";
-import { X, ChevronDown, ChevronLeft, ChevronRight, Clock, Check, Loader, CalendarDays } from "lucide-react";
+import { X, ChevronDown, ChevronLeft, ChevronRight, Clock, Check, CalendarDays } from "lucide-react";
 import { toJalali, toGregorian, jalaliMonthLength, jalaliWeekday, JALALI_MONTHS, JALALI_WEEKDAYS, toPersianDigits, pad2, todayJalali } from "@/lib/jalali";
 
+import { BusyContent } from "@/components/ui/Button";
 interface FieldState {
     jy: number;
     jm: number;
@@ -534,19 +535,14 @@ export default function TimeRangeModal({
                                 whileTap={{ scale: 0.97 }}
                                 onClick={handleSubmit}
                                 disabled={loading}
-                                className="flex h-11 flex-1 items-center justify-center gap-2 rounded-full bg-blue-600 text-[13px] font-bold text-white transition-colors hover:bg-blue-500 disabled:opacity-40"
+                                className="relative flex h-11 flex-1 items-center justify-center gap-2 rounded-full bg-blue-600 text-[13px] font-bold text-white transition-colors hover:bg-blue-500 disabled:opacity-40"
                             >
-                                {loading ? (
-                                    <Loader
-                                        size={15}
-                                        className="animate-spin"
-                                    />
-                                ) : (
+                                <BusyContent busy={loading}>
                                     <>
-                                        <Check size={14} strokeWidth={3} />
-                                        تأیید
-                                    </>
-                                )}
+                                            <Check size={14} strokeWidth={3} />
+                                            تأیید
+                                        </>
+                                </BusyContent>
                             </m.button>
                         </div>
                     </m.div>

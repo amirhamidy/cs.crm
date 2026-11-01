@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Loader, ShoppingCart } from "lucide-react";
+import { ShoppingCart } from "lucide-react";
 import { m } from "framer-motion";
 import { FloatingInput } from "@/components/ui/FloatingField";
 import { ModalShell } from "@/components/ui/ModalShell";

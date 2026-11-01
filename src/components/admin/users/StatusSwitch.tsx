@@ -1,7 +1,8 @@
 "use client";
 
-import { Check, Loader2, Power } from "lucide-react";
+import { Check, Power } from "lucide-react";
 
+import { BusyContent } from "@/components/ui/Button";
 export function StatusSwitch({
     isActive,
     loading,
@@ -42,17 +43,17 @@ export function StatusSwitch({
                     : "cursor-pointer"
                 }`}
         >
-            <span
-                className={`absolute left-[1.5px] top-[1.5px] flex h-6 w-6 items-center justify-center rounded-full text-white shadow-[0_2px_6px_rgba(15,23,42,0.22)] transition-[transform,background-color] duration-200 ${knobClass}`}
-            >
-                {loading ? (
-                    <Loader2 size={12} className="animate-spin" />
-                ) : isActive ? (
-                    <Check size={13} strokeWidth={3.2} />
-                ) : (
-                    <Power size={12} strokeWidth={2.6} />
-                )}
-            </span>
+            <BusyContent busy={loading}>
+                <span
+                    className={`absolute left-[1.5px] top-[1.5px] flex h-6 w-6 items-center justify-center rounded-full text-white shadow-[0_2px_6px_rgba(15,23,42,0.22)] transition-[transform,background-color] duration-200 ${knobClass}`}
+                >
+                    {isActive ? (
+                        <Check size={13} strokeWidth={3.2} />
+                    ) : (
+                        <Power size={12} strokeWidth={2.6} />
+                    )}
+                </span>
+            </BusyContent>
         </button>
     );
 }

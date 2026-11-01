@@ -1,7 +1,10 @@
 "use client";
 
 import { useState, useRef, ChangeEvent, DragEvent } from "react";
-import { m, AnimatePresence } from "framer-motion";
+import { BusyContent } from "@/components/ui/Button";
+import { m, AnimatePresence, useReducedMotion } from "framer-motion";
+import { Backdrop } from "@/components/ui/Backdrop";
+import { panelMotion } from "@/lib/motion";
 import {
     X,
     UploadCloud,
@@ -9,7 +12,6 @@ import {
     CheckCircle2,
     AlertTriangle,
     XCircle,
-    Loader2,
     Trash2
 } from "lucide-react";
 import { useTheme } from "next-themes";
@@ -36,6 +38,7 @@ export default function ImportExcelModal({
     onClose,
     onSuccess,
 }: ImportExcelModalProps) {
+    const reduced = useReducedMotion() ?? false;
     const { resolvedTheme } = useTheme();
     const isDark = resolvedTheme === "dark";
 
@@ -131,11 +134,9 @@ export default function ImportExcelModal({
     return (
         <AnimatePresence>
             <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-                
+                <Backdrop />
                 <m.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
+                    {...panelMotion(false, reduced)}
                     onClick={handleClose}
                     className="modal-backdrop fixed inset-0"
                 />
@@ -303,19 +304,12 @@ export default function ImportExcelModal({
                                 type="button"
                                 onClick={handleUpload}
                                 disabled={!file || loading}
-                                className="flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2 text-[12px] font-bold text-white transition-all hover:bg-emerald-700 disabled:opacity-40"
+                                className="relative flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2 text-[12px] font-bold text-white transition-all hover:bg-emerald-700 disabled:opacity-40"
                             >
-                                {loading ? (
-                                    <>
-                                        <Loader2 size={14} className="animate-spin" />
-                                        <span>در حال پردازش...</span>
-                                    </>
-                                ) : (
-                                    <>
+                                <BusyContent busy={loading}>
                                         <UploadCloud size={14} />
                                         <span>آپلود و ثبت</span>
-                                    </>
-                                )}
+                                    </BusyContent>
                             </button>
                         )}
                     </div>

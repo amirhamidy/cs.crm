@@ -3,15 +3,18 @@
 import CaseReportModal from "./CaseReportModal";
 import { memo, useEffect, useState, useRef, useCallback, useMemo } from "react";
 import type { ReactNode, MouseEvent as ReactMouseEvent } from "react";
-import { m, AnimatePresence, animate } from "framer-motion";
+import { m, AnimatePresence, animate, useReducedMotion } from "framer-motion";
+import { Backdrop } from "@/components/ui/Backdrop";
+import { panelMotion } from "@/lib/motion";
 import { useTheme } from "next-themes";
-import { Trash2, SquarePen, CalendarDays, Loader2, MoreVertical, AlertCircle, User, Building2, ListTodo, FileText } from "lucide-react";
+import { Trash2, SquarePen, CalendarDays, MoreVertical, AlertCircle, User, Building2, ListTodo, FileText } from "lucide-react";
 import type { CaseItem } from "@/types/case";
 import type { Customer } from "@/types/customer";
 import type { Department } from "@/types/department";
 import type { Employee } from "@/types/employee";
 import type { TaskItem } from "@/types/task";
 
+import { BusyContent } from "@/components/ui/Button";
 export interface CaseInfo {
     id: number;
     title: string;
@@ -231,6 +234,7 @@ function CaseCard({
     onDelete,
     onClick,
 }: CaseCardProps) {
+    const reduced = useReducedMotion() ?? false;
     const { resolvedTheme } = useTheme();
 
     const [mounted, setMounted] = useState(false);
@@ -710,10 +714,9 @@ function CaseCard({
                         className="fixed inset-0 z-[60] flex items-center justify-center p-4"
                         dir="rtl"
                     >
+                        <Backdrop />
                         <m.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
+                            {...panelMotion(false, reduced)}
                             onClick={() => !isDeletingState && setShowConfirm(false)}
                             className="modal-backdrop absolute inset-0"
                         />
@@ -773,18 +776,16 @@ function CaseCard({
                                     type="button"
                                     onClick={handleDelete}
                                     disabled={isDeletingState || !canDelete}
-                                    className="flex flex-1 items-center justify-center gap-2 rounded-[1.25rem] py-2.5 text-[12.5px] font-bold text-white transition-all active:scale-[0.98] disabled:opacity-60"
+                                    className="relative flex flex-1 items-center justify-center gap-2 rounded-[1.25rem] py-2.5 text-[12.5px] font-bold text-white transition-all active:scale-[0.98] disabled:opacity-60"
                                     style={{
                                         background: "linear-gradient(135deg, #ef4444, #dc2626)",
                                         border: "1px solid rgba(239,68,68,0.3)",
                                     }}
                                 >
-                                    {isDeletingState ? (
-                                        <Loader2 size={14} className="animate-spin" />
-                                    ) : (
+                                    <BusyContent busy={isDeletingState}>
                                         <Trash2 size={14} />
-                                    )}
-                                    {isDeletingState ? "در حال حذف..." : "حذف پرونده"}
+                                        حذف پرونده
+                                    </BusyContent>
                                 </button>
                             </div>
                         </m.div>

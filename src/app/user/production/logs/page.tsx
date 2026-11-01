@@ -7,7 +7,7 @@ import { useCallback, useRef, useState } from "react";
 import { m, AnimatePresence, useReducedMotion } from "framer-motion";
 import { Backdrop } from "@/components/ui/Backdrop";
 import { panelMotion } from "@/lib/motion";
-import { ClipboardList, Plus, Trash2, X, AlertCircle, Loader2, Filter } from "lucide-react";
+import { ClipboardList, Plus, Trash2, X, AlertCircle, Filter } from "lucide-react";
 import { useTheme } from "next-themes";
 import axiosInstance from "@/lib/axiosInstance";
 import { fetchPage, listAll } from "@/lib/api";
@@ -17,6 +17,7 @@ import { useCurrentEmployee } from "@/hooks/usecurrentemployee";
 import { toPersianDigits } from "@/lib/jalali";
 import { calcHoursWorked, formatHoursWorked, toHHMM } from "@/lib/productionTime";
 
+import { BusyContent } from "@/components/ui/Button";
 interface ProductionLog {
   id: number;
   date: string;
@@ -373,10 +374,11 @@ export default function UserProductionLogsPage() {
                     type="button"
                     onClick={handleCreate}
                     disabled={saving}
-                    className="flex-1 h-11 rounded-2xl bg-indigo-600 text-xs font-bold text-white shadow-lg shadow-indigo-600/20 flex items-center justify-center gap-1.5 disabled:opacity-50"
+                    className="relative flex-1 h-11 rounded-2xl bg-indigo-600 text-xs font-bold text-white shadow-lg shadow-indigo-600/20 flex items-center justify-center gap-1.5 disabled:opacity-50"
                   >
-                    {saving && <Loader2 size={15} className="animate-spin" />}
-                    <span>{saving ? "در حال ثبت..." : "ثبت نهایی"}</span>
+                      <BusyContent busy={saving}>
+                        <span>ثبت نهایی</span>
+                      </BusyContent>
                   </button>
                 </div>
               </div>

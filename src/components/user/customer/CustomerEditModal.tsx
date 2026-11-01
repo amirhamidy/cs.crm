@@ -1,12 +1,15 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef, forwardRef, InputHTMLAttributes, TextareaHTMLAttributes } from "react";
-import { m, AnimatePresence } from "framer-motion";
+import { m, AnimatePresence, useReducedMotion } from "framer-motion";
+import { Backdrop } from "@/components/ui/Backdrop";
+import { panelMotion } from "@/lib/motion";
 import { X, Loader, SquarePen, CheckCircle2, ChevronDown, Check, Plus } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
 import { listAll } from "@/lib/api";
 import type { Customer, CustomerFormData } from "@/types/customer";
 
+import { BusyContent } from "@/components/ui/Button";
 interface CaseResource {
     id: number;
     title: string;
@@ -417,9 +420,11 @@ function SourceSelect({
                                     type="button"
                                     onClick={onConfirmAdd}
                                     disabled={creating || !newTitle.trim()}
-                                    className="flex h-7 items-center justify-center rounded-xl bg-blue-600 px-3 text-[11px] font-bold text-white transition-opacity disabled:opacity-50 dark:bg-blue-500"
+                                    className="relative flex h-7 items-center justify-center rounded-xl bg-blue-600 px-3 text-[11px] font-bold text-white transition-opacity disabled:opacity-50 dark:bg-blue-500"
                                 >
-                                    {creating ? <Loader size={12} className="animate-spin" /> : "ثبت"}
+                                    <BusyContent busy={creating}>
+                                        ثبت
+                                    </BusyContent>
                                 </button>
                                 <button
                                     type="button"
@@ -460,30 +465,28 @@ function SourceSelect({
                                                         : "hover:bg-gray-100 dark:hover:bg-white/[0.05]"
                                                     }`}
                                             >
-                                                <span
-                                                    className={`truncate text-sm font-bold ${active ? "text-white" : "text-gray-900 dark:text-white"
-                                                        }`}
-                                                >
-                                                    {opt.title}
-                                                </span>
-                                                <span className="flex shrink-0 items-center gap-1.5">
-                                                    {active && <Check size={14} className="text-white" />}
+                                                <BusyContent busy={isDeleting}>
                                                     <span
-                                                        role="button"
-                                                        tabIndex={0}
-                                                        onClick={(e) => onDelete(e, opt.id)}
-                                                        className={`flex h-5 w-5 items-center justify-center rounded-full transition-all ${active
-                                                                ? "text-blue-100 hover:bg-white/20 hover:text-white"
-                                                                : "text-gray-400 hover:bg-gray-100 hover:text-red-500 dark:text-gray-500 dark:hover:bg-white/10 dark:hover:text-red-400"
+                                                        className={`truncate text-sm font-bold ${active ? "text-white" : "text-gray-900 dark:text-white"
                                                             }`}
                                                     >
-                                                        {isDeleting ? (
-                                                            <Loader size={10} className="animate-spin" />
-                                                        ) : (
-                                                            <X size={11} strokeWidth={2.5} />
-                                                        )}
+                                                        {opt.title}
                                                     </span>
-                                                </span>
+                                                    <span className="flex shrink-0 items-center gap-1.5">
+                                                        {active && <Check size={14} className="text-white" />}
+                                                        <span
+                                                            role="button"
+                                                            tabIndex={0}
+                                                            onClick={(e) => onDelete(e, opt.id)}
+                                                            className={`flex h-5 w-5 items-center justify-center rounded-full transition-all ${active
+                                                                    ? "text-blue-100 hover:bg-white/20 hover:text-white"
+                                                                    : "text-gray-400 hover:bg-gray-100 hover:text-red-500 dark:text-gray-500 dark:hover:bg-white/10 dark:hover:text-red-400"
+                                                                }`}
+                                                        >
+                                                            <X size={11} strokeWidth={2.5} />
+                                                        </span>
+                                                    </span>
+                                                </BusyContent>
                                             </button>
                                         );
                                     })}
@@ -521,6 +524,7 @@ export default function CustomerEditModal({
     onClose,
     onEdited,
 }: Props) {
+    const reduced = useReducedMotion() ?? false;
     const [form, setForm] = useState<CustomerFormData>(EMPTY_FORM);
     const [isLoadingDetails, setIsLoadingDetails] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -698,24 +702,13 @@ export default function CustomerEditModal({
     return (
         <AnimatePresence>
             {isOpen && (
-                <m.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
+                <div
                     className="fixed inset-0 z-50 flex items-center justify-center px-4 overflow-y-auto"
-                    style={{
-                        background: "rgba(0,0,0,0.45)",
-                        backdropFilter: "blur(3px)",
-                    }}
-                    onClick={handleClose}
                 >
+                    <Backdrop onClick={handleClose} />
                     <m.div
-                        initial={{ opacity: 0, y: 16 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: 16 }}
-                        transition={{ duration: 0.35, ease: "easeOut" }}
-                        className="bg-white dark:bg-[#111827] rounded-[2rem] shadow-sm border border-gray-100 dark:border-white/[0.06] w-full max-w-lg overflow-visible my-8"
-                        onClick={(e) => e.stopPropagation()}
+                        {...panelMotion(false, reduced)}
+                        className="relative bg-white dark:bg-[#111827] rounded-[2rem] shadow-sm border border-gray-100 dark:border-white/[0.06] w-full max-w-lg overflow-visible my-8"
                         dir="rtl"
                     >
                         <div className="px-8 pt-8 pb-6 flex items-center justify-between">
@@ -850,16 +843,11 @@ export default function CustomerEditModal({
                                                         type="submit"
                                                         disabled={isSubmitting}
                                                         whileTap={{ scale: 0.97 }}
-                                                        className="w-full bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-bold rounded-full py-3 text-sm transition-colors flex items-center justify-center gap-2"
+                                                        className="relative w-full bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-bold rounded-full py-3 text-sm transition-colors flex items-center justify-center gap-2"
                                                     >
-                                                        {isSubmitting ? (
-                                                            <Loader
-                                                                size={18}
-                                                                className="animate-spin"
-                                                            />
-                                                        ) : (
-                                                            "ذخیره تغییرات"
-                                                        )}
+                                                        <BusyContent busy={isSubmitting}>
+                                                            ذخیره تغییرات
+                                                        </BusyContent>
                                                     </m.button>
                                                 )
                                             )}
@@ -869,7 +857,7 @@ export default function CustomerEditModal({
                             )}
                         </div>
                     </m.div>
-                </m.div>
+                </div>
             )}
         </AnimatePresence>
     );

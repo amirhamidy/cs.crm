@@ -295,7 +295,7 @@ export default function UsersPage() {
                         }}
                         title="بارگذاری مجدد"
                     >
-                        <RefreshCw size={15} className={loading || list.loading ? "animate-spin" : ""} />
+                        {loading || list.loading ? <Loader2 size={15} className="animate-spin" /> : <RefreshCw size={15} />}
                     </button>
                     <button
                         type="button"

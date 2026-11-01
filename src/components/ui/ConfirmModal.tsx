@@ -3,8 +3,9 @@
 import { useEffect } from "react";
 import { m, AnimatePresence } from "framer-motion";
 import { Backdrop } from "./Backdrop";
-import { AlertTriangle, Loader, X } from "lucide-react";
+import { AlertTriangle, X } from "lucide-react";
 
+import { BusyContent } from "@/components/ui/Button";
 interface ConfirmModalProps {
     open: boolean;
     title: string;
@@ -96,19 +97,15 @@ export function ConfirmModal({
                                     type="button"
                                     onClick={onConfirm}
                                     disabled={loading}
-                                    className={`flex flex-1 items-center justify-center gap-2 rounded-4xl px-5 py-3 text-sm font-bold text-white transition-colors disabled:opacity-60 ${
+                                    className={`relative flex flex-1 items-center justify-center gap-2 rounded-4xl px-5 py-3 text-sm font-bold text-white transition-colors disabled:opacity-60 ${
                                         danger
                                             ? "bg-red-600 hover:bg-red-700"
                                             : "bg-blue-600 hover:bg-blue-700"
                                     }`}
                                 >
-                                    {loading && (
-                                        <Loader
-                                            size={14}
-                                            className="animate-spin"
-                                        />
-                                    )}
-                                    {confirmLabel}
+                                    <BusyContent busy={loading}>
+                                        {confirmLabel}
+                                    </BusyContent>
                                 </button>
                                 <button
                                     type="button"

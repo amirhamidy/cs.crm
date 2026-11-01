@@ -3,10 +3,11 @@
 import { useRef, useState } from "react";
 import { AnimatePresence, m } from "framer-motion";
 import { useTheme } from "next-themes";
-import { CheckCircle2, FileSpreadsheet, Loader2, UploadCloud, X } from "lucide-react";
+import { CheckCircle2, FileSpreadsheet, UploadCloud, X } from "lucide-react";
 import type { AxiosError } from "axios";
 import axiosInstance from "@/lib/axiosInstance";
 
+import { BusyContent } from "@/components/ui/Button";
 interface Props {
     isOpen: boolean;
     onClose: () => void;
@@ -293,13 +294,11 @@ export default function WarehouseEmployeeBulkImportModal({
                                 type="button"
                                 onClick={handleSubmit}
                                 disabled={loading || !file || success}
-                                className="flex flex-1 items-center justify-center gap-1.5 rounded-2xl bg-indigo-600 py-2.5 text-[12.5px] font-bold text-white transition-opacity hover:bg-indigo-500 disabled:opacity-55"
+                                className="relative flex flex-1 items-center justify-center gap-1.5 rounded-2xl bg-indigo-600 py-2.5 text-[12.5px] font-bold text-white transition-opacity hover:bg-indigo-500 disabled:opacity-55"
                             >
-                                {loading ? (
-                                    <Loader2 size={14} className="animate-spin" />
-                                ) : (
-                                    "آپلود و ثبت"
-                                )}
+                                <BusyContent busy={loading}>
+                                    آپلود و ثبت
+                                </BusyContent>
                             </button>
                         </div>
                     </m.div>

@@ -2,12 +2,15 @@
 
 import { useEffect, useMemo, useRef, useState, forwardRef, useLayoutEffect, type InputHTMLAttributes } from "react";
 import { createPortal } from "react-dom";
-import { AnimatePresence, m } from "framer-motion";
-import { ArrowLeft, ArrowRight, Check, ChevronDown, Loader, PackagePlus, Search, X } from "lucide-react";
+import { AnimatePresence, m, useReducedMotion } from "framer-motion";
+import { Backdrop } from "@/components/ui/Backdrop";
+import { panelMotion } from "@/lib/motion";
+import { ArrowLeft, ArrowRight, Check, ChevronDown, PackagePlus, Search, X } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
 import type { ApiCategory, ApiProduct, ApiProductInitDraft, ApiStockInfo, ApiWarehouseStaff } from "@/types/warehouse";
 import { SHELF_CODE_MAX_LENGTH, normalizeShelfCode } from "@/utils/warehouseShelf";
 
+import { BusyContent } from "@/components/ui/Button";
 interface WarehouseEmployeeProductWizardModalProps {
     isOpen: boolean;
     onClose: () => void;
@@ -471,6 +474,7 @@ export default function WarehouseEmployeeProductWizardModal({
     warehouseId,
     onCreated,
 }: WarehouseEmployeeProductWizardModalProps) {
+    const reduced = useReducedMotion() ?? false;
     const [step, setStep] = useState<Step>(1);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
@@ -764,25 +768,14 @@ export default function WarehouseEmployeeProductWizardModal({
     return (
         <AnimatePresence>
             {isOpen && (
-                <m.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    onClick={closeModal}
+                <div
                     className="fixed inset-0 z-[80] flex items-center justify-center px-4"
-                    style={{
-                        background: "rgba(0,0,0,0.45)",
-                        backdropFilter: "blur(3px)",
-                    }}
                 >
+                    <Backdrop onClick={closeModal} />
                     <m.div
-                        initial={{ opacity: 0, y: 16 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: 16 }}
-                        transition={{ duration: 0.35, ease: "easeOut" }}
-                        onClick={(e) => e.stopPropagation()}
+                        {...panelMotion(false, reduced)}
                         dir="rtl"
-                        className="flex max-h-[90vh] w-full max-w-md flex-col rounded-[2rem] border border-gray-100 bg-white shadow-sm dark:border-white/[0.06] dark:bg-[#111827]"
+                        className="relative flex max-h-[90vh] w-full max-w-md flex-col rounded-[2rem] border border-gray-100 bg-white shadow-sm dark:border-white/[0.06] dark:bg-[#111827]"
                     >
                         <div className="flex shrink-0 items-center justify-between px-8 pb-5 pt-7">
                             <div className="flex items-center gap-3">
@@ -1163,23 +1156,18 @@ export default function WarehouseEmployeeProductWizardModal({
                                     onClick={handleNext}
                                     disabled={loading}
                                     whileTap={{ scale: 0.97 }}
-                                    className="flex h-11 flex-1 items-center justify-center gap-2 rounded-full bg-blue-600 text-[12.5px] font-bold text-white transition-colors hover:bg-blue-500 disabled:opacity-40"
+                                    className="relative flex h-11 flex-1 items-center justify-center gap-2 rounded-full bg-blue-600 text-[12.5px] font-bold text-white transition-colors hover:bg-blue-500 disabled:opacity-40"
                                 >
-                                    {loading ? (
-                                        <Loader
-                                            size={15}
-                                            className="animate-spin"
-                                        />
-                                    ) : (
+                                    <BusyContent busy={loading}>
                                         <>
-                                            {step === 2
-                                                ? "ایجاد محصول"
-                                                : step === 3
-                                                    ? "ثبت موجودی"
-                                                    : "ادامه"}
-                                            <ArrowLeft size={14} />
-                                        </>
-                                    )}
+                                                {step === 2
+                                                    ? "ایجاد محصول"
+                                                    : step === 3
+                                                        ? "ثبت موجودی"
+                                                        : "ادامه"}
+                                                <ArrowLeft size={14} />
+                                            </>
+                                    </BusyContent>
                                 </m.button>
                             )}
 
@@ -1195,7 +1183,7 @@ export default function WarehouseEmployeeProductWizardModal({
                             )}
                         </div>
                     </m.div>
-                </m.div>
+                </div>
             )}
         </AnimatePresence>
     );

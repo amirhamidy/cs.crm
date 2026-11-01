@@ -2,13 +2,14 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { m, AnimatePresence } from "framer-motion";
-import { X, ChevronDown, Upload, Check, Loader, ClipboardList, Search, Paperclip, AlertCircle, UserPlus } from "lucide-react";
+import { X, ChevronDown, Upload, Check, ClipboardList, Search, Paperclip, AlertCircle, UserPlus } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
 import { listAll, fetchPage } from "@/lib/api/index";
 import AsyncSelect, { type AsyncOption } from "@/components/ui/AsyncSelect";
 import { apiRoutes } from "@/lib/apiRoutes";
 import type { Customer } from "@/types/customer";
 
+import { BusyContent } from "@/components/ui/Button";
 interface Case { id: number; title: string; customer: number }
 interface Department { id: number; name: string }
 interface DepartmentStep { id: number; department: number; name: string; order: number }
@@ -454,9 +455,11 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess }: Props) {
 
                     <div className="flex shrink-0 items-center gap-2 px-8 pb-8 pt-5">
                         <m.button type="button" whileTap={{ scale: 0.97 }} onClick={handleSubmit} disabled={!canSubmit}
-                            className="flex h-11 flex-1 items-center justify-center gap-2 rounded-full bg-blue-600 text-[13px] font-bold text-white transition-colors hover:bg-blue-500 disabled:opacity-40"
+                            className="relative flex h-11 flex-1 items-center justify-center gap-2 rounded-full bg-blue-600 text-[13px] font-bold text-white transition-colors hover:bg-blue-500 disabled:opacity-40"
                         >
-                            {submitting ? <Loader size={15} className="animate-spin" /> : <><Check size={14} strokeWidth={3} />ثبت وظیفه</>}
+                            <BusyContent busy={submitting}>
+                                <><Check size={14} strokeWidth={3} />ثبت وظیفه</>
+                            </BusyContent>
                         </m.button>
                     </div>
                 </m.div>

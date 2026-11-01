@@ -5,12 +5,13 @@ import { createPortal } from "react-dom";
 import { AnimatePresence, m, useReducedMotion } from "framer-motion";
 import { Backdrop } from "@/components/ui/Backdrop";
 import { panelMotion } from "@/lib/motion";
-import { Check, Crown, Layers3, Loader2, Users, X } from "lucide-react";
+import { Check, Crown, Layers3, Users, X } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
 import type { ApiPurchasingEmployee, ApiPurchasingStep } from "@/types/purchasing";
 import { usePurchasingAccess } from "@/hooks/usePurchasingAccess";
 import { FloatingInput, FloatingTextarea } from "./FormControls";
 
+import { BusyContent } from "@/components/ui/Button";
 interface Props {
     open: boolean;
     step?: ApiPurchasingStep | null;
@@ -211,15 +212,15 @@ export default function StepFormModal({
                                     type="button"
                                     onClick={handleSubmit}
                                     disabled={!title.trim() || saving}
-                                    className="flex items-center justify-center gap-2 rounded-full bg-blue-600 py-3 text-sm font-bold text-white transition-colors hover:bg-blue-500 disabled:opacity-50"
+                                    className="relative flex items-center justify-center gap-2 rounded-full bg-blue-600 py-3 text-sm font-bold text-white transition-colors hover:bg-blue-500 disabled:opacity-50"
                                 >
-                                    {saving ? (
-                                        <Loader2 size={18} className="animate-spin" />
-                                    ) : isEditing ? (
-                                        "ذخیره تغییرات"
-                                    ) : (
-                                        "ایجاد مرحله"
-                                    )}
+                                    <BusyContent busy={saving}>
+                                        {isEditing ? (
+                                            "ذخیره تغییرات"
+                                        ) : (
+                                            "ایجاد مرحله"
+                                        )}
+                                    </BusyContent>
                                 </button>
                             </div>
                         </div>

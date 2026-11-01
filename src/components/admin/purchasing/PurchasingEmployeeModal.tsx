@@ -11,6 +11,7 @@ import { fetchPage } from "@/lib/api";
 import { useInfiniteOptions, type InfiniteFetcher } from "@/hooks/useInfiniteOptions";
 import type { ApiPurchasingEmployee } from "@/types/purchasing";
 
+import { BusyContent } from "@/components/ui/Button";
 interface EmployeeItem {
     id: number;
     full_name?: string;
@@ -193,9 +194,11 @@ export default function PurchasingEmployeeModal({ open, existingEmployees, onClo
                         </div>
 
                         <div className="flex shrink-0 px-8 pb-8 pt-5">
-                            <m.button type="button" whileTap={{ scale: 0.97 }} onClick={submit} disabled={loading || fetching || !selected} className="flex h-11 w-full items-center justify-center gap-2 rounded-full bg-indigo-600 text-[13px] font-bold text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-40">
-                                {loading ? <Loader2 size={15} className="animate-spin" /> : <UserPlus size={14} />}
-                                افزودن به تیم
+                            <m.button type="button" whileTap={{ scale: 0.97 }} onClick={submit} disabled={loading || fetching || !selected} className="relative flex h-11 w-full items-center justify-center gap-2 rounded-full bg-indigo-600 text-[13px] font-bold text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-40">
+                                <BusyContent busy={loading}>
+                                    <UserPlus size={14} />
+                                    افزودن به تیم
+                                </BusyContent>
                             </m.button>
                         </div>
                     </m.div>

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence } from "framer-motion";
-import { Archive, ClipboardList, Plus, RefreshCw } from "lucide-react";
+import { Archive, ClipboardList, Plus, RefreshCw, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import axiosInstance from "@/lib/axiosInstance";
 import { apiRoutes } from "@/lib/apiRoutes";
@@ -111,8 +111,8 @@ export default function UserTasksPage() {
                     <button type="button" onClick={() => router.push("/user/Ticketarchive")} className="flex h-9 items-center gap-1.5 rounded-xl bg-gray-100 px-3 text-[11.5px] font-bold text-gray-500 transition-colors hover:bg-gray-200 dark:bg-white/5 dark:text-gray-400 dark:hover:bg-white/10">
                         <Archive size={13} /> بایگانی
                     </button>
-                    <button type="button" onClick={() => void fetchAll()} disabled={list.loading} className={`flex h-9 w-9 items-center justify-center rounded-xl text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 disabled:opacity-40 dark:text-gray-500 dark:hover:bg-white/5 dark:hover:text-gray-300 ${list.loading ? "is-busy" : ""}`} title="بارگذاری مجدد">
-                        <RefreshCw size={13} />
+                    <button type="button" onClick={() => void fetchAll()} disabled={list.loading} className={`flex h-9 w-9 items-center justify-center rounded-xl text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 disabled:opacity-40 dark:text-gray-500 dark:hover:bg-white/5 dark:hover:text-gray-300 `} title="بارگذاری مجدد">
+                        {list.loading ? <Loader2 size={13} className="animate-spin" /> : <RefreshCw size={13} />}
                     </button>
                     <button type="button" onClick={() => setShowCreate(true)} className="flex h-9 flex-1 items-center justify-center gap-2 rounded-xl bg-blue-600 px-3.5 py-2 text-[12.5px] font-bold text-white transition-all duration-200 hover:bg-blue-100 hover:text-blue-600 dark:bg-blue-500 dark:hover:bg-blue-500/15 dark:hover:text-blue-300 sm:flex-none">
                         <Plus size={13} strokeWidth={2.5} /><span className="whitespace-nowrap">افزودن وظیفه</span>

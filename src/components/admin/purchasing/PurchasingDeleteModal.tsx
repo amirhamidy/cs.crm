@@ -3,9 +3,10 @@
 import { AnimatePresence, m, useReducedMotion } from "framer-motion";
 import { Backdrop } from "@/components/ui/Backdrop";
 import { panelMotion } from "@/lib/motion";
-import { Loader, Trash2, X } from "lucide-react";
+import { Trash2, X } from "lucide-react";
 import { createPortal } from "react-dom";
 
+import { BusyContent } from "@/components/ui/Button";
 interface Props {
     open: boolean;
     title: string;
@@ -47,10 +48,12 @@ export default function PurchasingDeleteModal({ open, title, description, loadin
                                     type="button"
                                     onClick={onConfirm}
                                     disabled={loading}
-                                    className="flex flex-1 items-center justify-center rounded-2xl py-2.5 text-[12.5px] font-bold text-white transition-opacity disabled:cursor-not-allowed disabled:opacity-60"
+                                    className="relative flex flex-1 items-center justify-center rounded-2xl py-2.5 text-[12.5px] font-bold text-white transition-opacity disabled:cursor-not-allowed disabled:opacity-60"
                                     style={{ background: "linear-gradient(135deg, #ef4444, #dc2626)", boxShadow: "0 4px 14px rgba(239,68,68,0.3)" }}
                                 >
-                                    {loading ? <Loader size={15} className="animate-spin" /> : "حذف"}
+                                    <BusyContent busy={loading}>
+                                        حذف
+                                    </BusyContent>
                                 </button>
                             </div>
                         </div>

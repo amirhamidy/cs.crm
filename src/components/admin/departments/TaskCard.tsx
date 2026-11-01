@@ -2,8 +2,9 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
+import { BusyContent } from "@/components/ui/Button";
 import { AnimatePresence, m } from "framer-motion";
-import { AlarmClock, CalendarDays, CheckCircle2, Clock3, FileText, Loader2, MessageSquareText, Pencil, Trash2, User, UsersRound } from "lucide-react";
+import { AlarmClock, CalendarDays, CheckCircle2, Clock3, FileText, MessageSquareText, Pencil, Trash2, User, UsersRound } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
 import { JALALI_MONTHS, pad2, toJalali, toPersianDigits } from "@/lib/jalali";
 import type { Task, TaskRelationId } from "./types";
@@ -564,14 +565,12 @@ export default function TaskCard({
                                             type="button"
                                             disabled={deleteLoading || deleting}
                                             onClick={handleDelete}
-                                            className="flex h-10 flex-1 items-center justify-center gap-2 rounded-full bg-red-500 text-[11.5px] font-extrabold text-white transition-colors hover:bg-red-600 disabled:opacity-50"
+                                            className="relative flex h-10 flex-1 items-center justify-center gap-2 rounded-full bg-red-500 text-[11.5px] font-extrabold text-white transition-colors hover:bg-red-600 disabled:opacity-50"
                                         >
-                                            {deleteLoading || deleting ? (
-                                                <Loader2 size={14} className="animate-spin" />
-                                            ) : (
-                                                <Trash2 size={14} />
-                                            )}
-                                            حذف
+                                            <BusyContent busy={deleteLoading || deleting}>
+<Trash2 size={14} />
+حذف
+</BusyContent>
                                         </button>
                                     </div>
                                 </m.div>

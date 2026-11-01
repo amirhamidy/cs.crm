@@ -2,12 +2,13 @@
 
 import { useMemo, useState } from "react";
 import { AnimatePresence, m } from "framer-motion";
-import { CalendarDays, Clock3, Loader2, Send, StickyNote, Tag, Trash2, UserRound, X } from "lucide-react";
+import { CalendarDays, Clock3, Send, StickyNote, Tag, Trash2, UserRound, X } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
 import { useAuthStore } from "@/store/authStore";
 
 
 
+import { BusyContent } from "@/components/ui/Button";
 export interface CalendarPerson {
     id: number;
     full_name: string;
@@ -331,8 +332,10 @@ export default function CalendarNoteModal({ isOpen, onClose, selectedDate, notes
                                                         <p className="whitespace-pre-wrap break-words text-[11.5px] font-semibold leading-7 text-gray-700 dark:text-gray-200">{note.description}</p>
                                                         {note.created_at && <p className="mt-2 text-[9px] font-medium text-gray-400">{formatEventDate(note.created_at)}</p>}
                                                     </div>
-                                                    <button type="button" aria-label="حذف یادداشت" onClick={() => handleDelete(note.id)} disabled={deletingId === note.id} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition hover:bg-rose-500/10 disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-rose-400">
-                                                        {deletingId === note.id ? <Loader2 size={15} className="animate-spin text-rose-500" /> : <Trash2 size={15} className="text-rose-500" />}
+                                                    <button type="button" aria-label="حذف یادداشت" onClick={() => handleDelete(note.id)} disabled={deletingId === note.id} className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition hover:bg-rose-500/10 disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-rose-400">
+                                                        <BusyContent busy={deletingId === note.id}>
+                                                            <Trash2 size={15} className="text-rose-500" />
+                                                        </BusyContent>
                                                     </button>
                                                 </div>
                                             </m.div>
@@ -361,7 +364,9 @@ export default function CalendarNoteModal({ isOpen, onClose, selectedDate, notes
                                     disabled={submitting || !description.trim() || disabled}
                                     className="absolute bottom-3 left-3 flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-br from-blue-600 to-cyan-400 text-white shadow-[0_8px_20px_-8px_rgba(37,99,235,0.9)] transition hover:scale-105 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:scale-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500"
                                 >
-                                    {submitting ? <Loader2 size={18} className="animate-spin" /> : <Send size={17} className="-scale-x-100" />}
+                                    <BusyContent busy={submitting}>
+                                        <Send size={17} className="-scale-x-100" />
+                                    </BusyContent>
                                 </button>
                             </div>
                         </div>

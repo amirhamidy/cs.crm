@@ -1,13 +1,16 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { AnimatePresence, m } from "framer-motion";
+import { AnimatePresence, m, useReducedMotion } from "framer-motion";
+import { Backdrop } from "@/components/ui/Backdrop";
+import { panelMotion } from "@/lib/motion";
 import { AlertCircle, CalendarDays, Check, ChevronDown, ClipboardList, Loader2, Package, Paperclip, Pencil, Plus, Search, ShoppingBag, Star, Trash2, Upload, X } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
 import type { ApiStockInfo, ApiWarehouse } from "@/types/warehouse";
 import { fetchWarehouseStocks, fetchWarehouses } from "@/lib/warehouseApi";
 import TimeRangeModal from "@/components/tasks/TimeRangeModal";
 
+import { BusyContent } from "@/components/ui/Button";
 interface OrderItem {
     id: string;
     product_id: number;
@@ -173,6 +176,7 @@ function formatJalaliDateTime(iso: string) {
 }
 
 export default function SoldOrderTaskModal({ isOpen, onClose, taskId, staffId, onSubmit, submitting = false }: Props) {
+    const reduced = useReducedMotion() ?? false;
     const [products, setProducts] = useState<ApiStockInfo[]>([]);
     const [warehouses, setWarehouses] = useState<ApiWarehouse[]>([]);
     const [warehouseId, setWarehouseId] = useState<number | null>(null);
@@ -292,8 +296,11 @@ export default function SoldOrderTaskModal({ isOpen, onClose, taskId, staffId, o
         <>
             <AnimatePresence>
                 {isOpen && (
-                    <m.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.18 }} className="fixed inset-0 z-[9999] flex items-center justify-center px-4" style={{ background: "rgba(0,0,0,0.45)", backdropFilter: "blur(3px)" }} onClick={onClose}>
-                        <m.div initial={{ opacity: 0, y: 16, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 16, scale: 0.97 }} transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }} onClick={(e) => e.stopPropagation()} dir="rtl" className="flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-[0_24px_70px_rgba(0,0,0,0.22)] dark:border-white/[0.06] dark:bg-[#111827]">
+                    <div className="fixed inset-0 z-[9999] flex items-center justify-center px-4" >
+                        <Backdrop onClick={onClose} />
+                        <m.div
+                            {...panelMotion(false, reduced)}
+      dir="rtl" className="relative flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-[0_24px_70px_rgba(0,0,0,0.22)] dark:border-white/[0.06] dark:bg-[#111827]">
                             <div className="flex shrink-0 items-center justify-between px-8 pb-6 pt-8">
                                 <div className="flex items-center gap-2.5">
                                     <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-50 dark:bg-blue-500/10"><ShoppingBag size={15} className="text-blue-500" /></div>
@@ -439,14 +446,16 @@ export default function SoldOrderTaskModal({ isOpen, onClose, taskId, staffId, o
                             <div className="flex shrink-0 flex-col gap-2 px-8 pb-8 pt-5">
                                 <div className="flex items-center gap-2">
                                     <button type="button" onClick={onClose} disabled={submitting} className="flex h-11 flex-1 items-center justify-center rounded-full border border-gray-100 bg-gray-50 text-[13px] font-bold text-gray-500 transition-colors hover:text-gray-700 disabled:opacity-40 dark:border-white/[0.06] dark:bg-white/[0.03] dark:text-white/50 dark:hover:text-white/80">انصراف</button>
-                                    <m.button type="button" whileTap={{ scale: 0.97 }} onClick={submit} disabled={!valid || submitting} className="flex h-11 flex-[2] items-center justify-center gap-2 rounded-full bg-blue-600 text-[13px] font-bold text-white transition-colors hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-40">
-                                        {submitting ? <Loader2 size={15} className="animate-spin" /> : <><Check size={14} strokeWidth={3} /> ثبت درخواست و فروش</>}
+                                    <m.button type="button" whileTap={{ scale: 0.97 }} onClick={submit} disabled={!valid || submitting} className="relative flex h-11 flex-[2] items-center justify-center gap-2 rounded-full bg-blue-600 text-[13px] font-bold text-white transition-colors hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-40">
+                                        <BusyContent busy={submitting}>
+                                            <><Check size={14} strokeWidth={3} /> ثبت درخواست و فروش</>
+                                        </BusyContent>
                                     </m.button>
                                 </div>
                                 <div className="flex items-center justify-center gap-1.5 text-[9.5px] font-bold text-gray-400"><Paperclip size={10} /> ابتدا درخواست به انبار ارسال می‌شود و سپس فروش ثبت خواهد شد</div>
                             </div>
                         </m.div>
-                    </m.div>
+                    </div>
                 )}
             </AnimatePresence>
             <TimeRangeModal open={timeModalOpen} initialStartedAt={startedAt || null} initialDeadline={deadline || null} onClose={() => setTimeModalOpen(false)} onSubmit={async (s, d) => { setStartedAt(s); setDeadline(d); setTimeModalOpen(false); }} />

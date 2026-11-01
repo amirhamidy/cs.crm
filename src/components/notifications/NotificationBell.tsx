@@ -2,7 +2,8 @@
 
 import { useCallback, useState } from "react";
 import { m } from "framer-motion";
-import { Bell, BellOff, CheckCheck, ClipboardList, Clock, Inbox, Info, MessageSquare, Repeat, Trash2, type LucideIcon } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+import { Bell, BellOff, CheckCheck, ClipboardList, Clock, Inbox, Info, MessageSquare, Repeat, Trash2 } from "lucide-react";
 import Popover from "@/components/ui/Popover";
 import { useNotificationStore } from "@/store/notificationStore";
 import type { AppNotification, NotificationKind } from "./types";

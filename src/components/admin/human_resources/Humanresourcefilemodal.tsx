@@ -2,10 +2,11 @@
 
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, m } from "framer-motion";
-import { Check, FilePlus, FileText, Loader2, Upload, X } from "lucide-react";
+import { Check, FilePlus, FileText, Upload, X } from "lucide-react";
 import { HumanResource, uploadDocumentFile } from "./humanResourceApi";
 import { extractError } from "./hrUtils";
 
+import { BusyContent } from "@/components/ui/Button";
 interface Props {
     open: boolean;
     document: HumanResource | null;
@@ -146,10 +147,12 @@ export default function HumanResourceFileModal({ open, document, onClose, onSave
                             whileTap={{ scale: 0.97 }}
                             onClick={save}
                             disabled={!canSave}
-                            className="flex h-11 w-full items-center justify-center gap-2 rounded-full bg-indigo-600 text-[13px] font-bold text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-40"
+                            className="relative flex h-11 w-full items-center justify-center gap-2 rounded-full bg-indigo-600 text-[13px] font-bold text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-40"
                         >
-                            {saving ? <Loader2 size={15} className="animate-spin" /> : <Check size={14} strokeWidth={3} />}
-                            {saving ? "در حال آپلود..." : "افزودن فایل"}
+                            <BusyContent busy={saving}>
+                                <Check size={14} strokeWidth={3} />
+                                افزودن فایل
+                            </BusyContent>
                         </m.button>
                     </div>
                 </m.div>

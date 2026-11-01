@@ -1,7 +1,10 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
-import { AnimatePresence, m } from "framer-motion";
-import { Check, Loader, Send, UserRound, X } from "lucide-react";
+import { BusyContent } from "@/components/ui/Button";
+import { AnimatePresence, m, useReducedMotion } from "framer-motion";
+import { Backdrop } from "@/components/ui/Backdrop";
+import { panelMotion } from "@/lib/motion";
+import { Check, Send, UserRound, X } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useAuthStore } from "@/store/authStore";
 import { accountsApi } from "@/lib/api/accounts";
@@ -38,6 +41,7 @@ export default function CreateTicketModal({
     onCreated,
     employees: employeesProp,
 }: CreateTicketModalProps) {
+    const reduced = useReducedMotion() ?? false;
     const { resolvedTheme } = useTheme();
     const isDark = resolvedTheme === "dark";
     const { userId } = useAuthStore();
@@ -156,26 +160,18 @@ export default function CreateTicketModal({
     return (
         <AnimatePresence>
             {isOpen && (
-                <m.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
+                <div
                     className="fixed inset-0 z-50 flex items-center justify-center px-4"
-                    style={{ background: "rgba(0,0,0,0.5)", backdropFilter: "blur(3px)" }}
-                    onClick={onClose}
                 >
+                    <Backdrop onClick={onClose} />
                     <m.div
-                        initial={{ scale: 0.94, y: 18 }}
-                        animate={{ scale: 1, y: 0 }}
-                        exit={{ scale: 0.94, y: 18 }}
-                        transition={{ duration: 0.22, ease: "easeOut" }}
-                        className="w-full max-w-[430px] overflow-hidden rounded-3xl border"
+                        {...panelMotion(false, reduced)}
+                        className="relative w-full max-w-[430px] overflow-hidden rounded-3xl border"
                         style={{
                             background: isDark ? "#111827" : "#ffffff",
                             borderColor: isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.06)",
                             boxShadow: "0 24px 64px rgba(0,0,0,0.28)",
                         }}
-                        onClick={(e) => e.stopPropagation()}
                         dir="rtl"
                     >
                         <div
@@ -299,28 +295,21 @@ export default function CreateTicketModal({
                                 <button
                                     type="submit"
                                     disabled={loading}
-                                    className="flex flex-1 items-center justify-center gap-2 rounded-xl py-2.5 text-[12.5px] font-bold text-white transition-opacity disabled:cursor-not-allowed disabled:opacity-40"
+                                    className="relative flex flex-1 items-center justify-center gap-2 rounded-xl py-2.5 text-[12.5px] font-bold text-white transition-opacity disabled:cursor-not-allowed disabled:opacity-40"
                                     style={{
                                         background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
                                         boxShadow: "0 4px 14px rgba(99,102,241,0.3)",
                                     }}
                                 >
-                                    {loading ? (
-                                        <>
-                                            <Loader className="h-3.5 w-3.5 animate-spin" />
-                                            در حال ارسال...
-                                        </>
-                                    ) : (
-                                        <>
+                                    <BusyContent busy={loading}>
                                             <Check size={13} />
                                             ارسال تیکت
-                                        </>
-                                    )}
+                                        </BusyContent>
                                 </button>
                             </div>
                         </form>
                     </m.div>
-                </m.div>
+                </div>
             )}
         </AnimatePresence>
     );

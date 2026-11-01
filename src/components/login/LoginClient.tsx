@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { m } from "framer-motion";
-import { Eye, EyeOff, Loader2 } from "lucide-react";
+import { Eye, EyeOff } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useLogin } from "@/hooks/useLogin";
@@ -10,6 +10,7 @@ import { useLogout } from "@/hooks/useLogout";
 import { usePortalLogin } from "@/hooks/usePortalLogin";
 import { FloatingInput } from "@/components/login/login";
 
+import { BusyContent } from "@/components/ui/Button";
 type LoginMode = "staff" | "customer";
 
 interface LoginClientProps {
@@ -154,10 +155,11 @@ export default function LoginClient({ initialMode = "staff" }: LoginClientProps)
                         type="submit"
                         disabled={loading}
                         whileTap={loading ? undefined : { scale: 0.98 }}
-                        className={`flex min-h-11 items-center justify-center gap-2 rounded-full py-3 text-sm font-bold text-white transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${mode === "customer" ? "bg-indigo-600 hover:bg-indigo-500" : "bg-blue-600 hover:bg-blue-500"}`}
+                        className={`relative flex min-h-11 items-center justify-center gap-2 rounded-full py-3 text-sm font-bold text-white transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${mode === "customer" ? "bg-indigo-600 hover:bg-indigo-500" : "bg-blue-600 hover:bg-blue-500"}`}
                     >
-                        {loading ? <Loader2 size={18} className="animate-spin" aria-label="در حال ورود" /> : null}
-                        {loading ? "در حال ورود..." : mode === "customer" ? "ورود به پرتال مشتریان" : "ورود به پنل"}
+                        <BusyContent busy={loading}>
+                            {mode === "customer" ? "ورود به پرتال مشتریان" : "ورود به پنل"}
+                        </BusyContent>
                     </m.button>
                 </form>
 

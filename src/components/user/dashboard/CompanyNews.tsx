@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { BusyContent } from "@/components/ui/Button";
 import { Send } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
 import { useAuthStore } from "@/store/authStore";
@@ -93,9 +94,9 @@ export default function CompanyNews({
                         aria-label="ثبت یادداشت"
                         title="ثبت یادداشت"
                         aria-busy={submitting}
-                        className={`absolute bottom-4 left-4 flex h-11 w-11 items-center justify-center rounded-full bg-blue-600 text-white shadow-lg shadow-blue-600/20 transition-all hover:bg-blue-700 hover:shadow-blue-600/30 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none ${submitting ? "is-busy" : ""}`}
+                        className={`absolute bottom-4 left-4 flex h-11 w-11 items-center justify-center rounded-full bg-blue-600 text-white shadow-lg shadow-blue-600/20 transition-all hover:bg-blue-700 hover:shadow-blue-600/30 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none `}
                     >
-                        <Send size={18} />
+                        <BusyContent busy={submitting}><Send size={18} /></BusyContent>
                     </button>
                 </div>
             </div>

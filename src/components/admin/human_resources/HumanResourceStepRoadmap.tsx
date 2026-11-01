@@ -1,9 +1,10 @@
 "use client";
 
-import { Check, Flag, MapPin, Sparkles, Compass, Milestone, Pencil, Trash2, X, Loader2 } from "lucide-react";
+import { Check, Flag, MapPin, Sparkles, Compass, Milestone, Pencil, Trash2, X } from "lucide-react";
 import { useState } from "react";
 import { HumanResourceStep } from "./humanResourceApi";
 
+import { BusyContent } from "@/components/ui/Button";
 interface Props {
     steps: HumanResourceStep[];
     canManage?: boolean;
@@ -208,13 +209,11 @@ export default function HumanResourceStepRoadmap({
                                                     type="button"
                                                     onClick={() => commitEdit(step)}
                                                     disabled={isSaving}
-                                                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-indigo-600 text-white transition hover:bg-indigo-500 disabled:opacity-50"
+                                                    className="relative flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-indigo-600 text-white transition hover:bg-indigo-500 disabled:opacity-50"
                                                 >
-                                                    {isSaving ? (
-                                                        <Loader2 size={11} className="animate-spin" />
-                                                    ) : (
+                                                    <BusyContent busy={isSaving}>
                                                         <Check size={11} strokeWidth={3} />
-                                                    )}
+                                                    </BusyContent>
                                                 </button>
                                                 <button
                                                     type="button"

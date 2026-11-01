@@ -2,14 +2,17 @@
 
 import { useEffect, useState, useRef, useMemo, useLayoutEffect, forwardRef, type InputHTMLAttributes } from "react";
 import { createPortal } from "react-dom";
-import { AnimatePresence, m } from "framer-motion";
-import { Check, ChevronDown, Loader, Pencil, Search, X } from "lucide-react";
+import { AnimatePresence, m, useReducedMotion } from "framer-motion";
+import { Backdrop } from "@/components/ui/Backdrop";
+import { panelMotion } from "@/lib/motion";
+import { Check, ChevronDown, Pencil, Search, X } from "lucide-react";
 import type { AxiosError } from "axios";
 import axiosInstance from "@/lib/axiosInstance";
 import { ApiCategory, ApiProduct, unitDetailKey } from "@/types/warehouse";
 import { SHELF_CODE_MAX_LENGTH, normalizeShelfCode } from "@/utils/warehouseShelf";
 import type { WithShelf } from "@/types/warehouseShelf";
 
+import { BusyContent } from "@/components/ui/Button";
 interface Props {
     isOpen: boolean;
     onClose: () => void;
@@ -402,6 +405,7 @@ export default function WarehouseEmployeeProductEditModal({
     categories,
     onUpdated,
 }: Props) {
+    const reduced = useReducedMotion() ?? false;
     const [name, setName] = useState("");
     const [shelfCode, setShelfCode] = useState("");
     const [salePrice, setSalePrice] = useState("");
@@ -515,25 +519,14 @@ export default function WarehouseEmployeeProductEditModal({
     return (
         <AnimatePresence>
             {isOpen && (
-                <m.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
+                <div
                     className="fixed inset-0 z-50 flex items-center justify-center px-4"
-                    style={{
-                        background: "rgba(0,0,0,0.45)",
-                        backdropFilter: "blur(3px)",
-                    }}
-                    onClick={handleClose}
                 >
+                    <Backdrop onClick={handleClose} />
                     <m.div
-                        initial={{ opacity: 0, y: 16 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: 16 }}
-                        transition={{ duration: 0.35, ease: "easeOut" }}
-                        onClick={(e) => e.stopPropagation()}
+                        {...panelMotion(false, reduced)}
                         dir="rtl"
-                        className="w-full max-w-sm overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-sm dark:border-white/[0.06] dark:bg-[#111827]"
+                        className="relative w-full max-w-sm overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-sm dark:border-white/[0.06] dark:bg-[#111827]"
                     >
                         <div className="flex items-center justify-between px-8 pb-6 pt-8">
                             <div className="flex items-center gap-2.5">
@@ -635,17 +628,15 @@ export default function WarehouseEmployeeProductEditModal({
                                 type="submit"
                                 disabled={loading}
                                 whileTap={{ scale: 0.97 }}
-                                className="flex items-center justify-center rounded-full bg-blue-600 py-3 text-[13px] font-bold text-white transition-colors hover:bg-blue-500 disabled:opacity-50"
+                                className="relative flex items-center justify-center rounded-full bg-blue-600 py-3 text-[13px] font-bold text-white transition-colors hover:bg-blue-500 disabled:opacity-50"
                             >
-                                {loading ? (
-                                    <Loader size={18} className="animate-spin" />
-                                ) : (
-                                    "ذخیره تغییرات"
-                                )}
+                                <BusyContent busy={loading}>
+                                    ذخیره تغییرات
+                                </BusyContent>
                             </m.button>
                         </form>
                     </m.div>
-                </m.div>
+                </div>
             )}
         </AnimatePresence>
     );

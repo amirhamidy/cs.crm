@@ -1,9 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { AnimatePresence, m } from "framer-motion";
+import { AnimatePresence, m, useReducedMotion } from "framer-motion";
+import { Backdrop } from "@/components/ui/Backdrop";
+import { panelMotion } from "@/lib/motion";
 import { useVisibleInterval } from "@/hooks/useVisibility";
-import { Building2, CalendarClock, ClipboardX, Clock, FolderKanban, Loader, Loader2, MessageSquareText, Paperclip, Pencil, Trash2, UserRound, X } from "lucide-react";
+import { Building2, CalendarClock, ClipboardX, Clock, FolderKanban, MessageSquareText, Paperclip, Pencil, Trash2, UserRound, X } from "lucide-react";
 import { useTheme } from "next-themes";
 import type { Task, TaskStatus, TaskEmployeeRef } from "@/types/task";
 import type { Employee } from "@/types/employee";
@@ -13,6 +15,7 @@ import TimeRangeModal from "@/components/tasks/TimeRangeModal";
 import TaskDeadlineModal, { fetchStepDeadline, type StepDeadline } from "@/components/tasks/TaskDeadlineModal";
 import api from "@/lib/axiosInstance";
 
+import { BusyContent } from "@/components/ui/Button";
 const AVATAR_GRADIENTS = [
     ["#6366f1", "#8b5cf6"],
     ["#3b82f6", "#6366f1"],
@@ -172,6 +175,7 @@ export default function TaskCard({
     onUpdated,
     canManageDeadline = true,
 }: TaskCardProps) {
+    const reduced = useReducedMotion() ?? false;
     const { resolvedTheme } = useTheme();
     const isDark = resolvedTheme === "dark";
 
@@ -445,7 +449,7 @@ export default function TaskCard({
                             type="button"
                             onClick={() => setShowConfirm(true)}
                             disabled={deleting}
-                            className="flex h-7 w-7 items-center justify-center rounded-xl transition-colors disabled:opacity-40"
+                            className="relative flex h-7 w-7 items-center justify-center rounded-xl transition-colors disabled:opacity-40"
                             style={{
                                 background: isDark
                                     ? "rgba(239,68,68,0.1)"
@@ -454,11 +458,9 @@ export default function TaskCard({
                             }}
                             title="حذف تسک"
                         >
-                            {deleting ? (
-                                <Loader2 size={11} className="animate-spin" />
-                            ) : (
+                            <BusyContent busy={deleting}>
                                 <Trash2 size={11} />
-                            )}
+                            </BusyContent>
                         </button>
                     </div>
                 </div>
@@ -546,22 +548,14 @@ export default function TaskCard({
 
             <AnimatePresence>
                 {showConfirm && (
-                    <m.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
+                    <div
                         className="fixed inset-0 z-50 flex items-center justify-center px-4"
-                        style={{ background: "rgba(0,0,0,0.45)", backdropFilter: "blur(3px)" }}
-                        onClick={handleCloseConfirm}
                     >
+                        <Backdrop onClick={handleCloseConfirm} />
                         <m.div
-                            initial={{ opacity: 0, y: 16 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: 16 }}
-                            transition={{ duration: 0.35, ease: "easeOut" }}
-                            onClick={(e) => e.stopPropagation()}
+                            {...panelMotion(false, reduced)}
                             dir="rtl"
-                            className="flex w-full max-w-md flex-col overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-sm dark:border-white/[0.06] dark:bg-[#111827]"
+                            className="relative flex w-full max-w-md flex-col overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-sm dark:border-white/[0.06] dark:bg-[#111827]"
                         >
                             <div className="flex shrink-0 items-center justify-between px-8 pb-6 pt-8">
                                 <div className="flex items-center gap-2.5">
@@ -620,20 +614,18 @@ export default function TaskCard({
                                     type="button"
                                     onClick={handleDelete}
                                     disabled={deleting}
-                                    className="flex h-11 flex-1 items-center justify-center gap-2 rounded-full bg-red-600 text-[13px] font-bold text-white transition-colors hover:bg-red-500 disabled:opacity-40"
+                                    className="relative flex h-11 flex-1 items-center justify-center gap-2 rounded-full bg-red-600 text-[13px] font-bold text-white transition-colors hover:bg-red-500 disabled:opacity-40"
                                 >
-                                    {deleting ? (
-                                        <Loader size={14} className="animate-spin" />
-                                    ) : (
+                                    <BusyContent busy={deleting}>
                                         <>
-                                            <Trash2 size={13} strokeWidth={2.5} />
-                                            حذف کن
-                                        </>
-                                    )}
+                                                <Trash2 size={13} strokeWidth={2.5} />
+                                                حذف کن
+                                            </>
+                                    </BusyContent>
                                 </button>
                             </div>
                         </m.div>
-                    </m.div>
+                    </div>
                 )}
             </AnimatePresence>
 

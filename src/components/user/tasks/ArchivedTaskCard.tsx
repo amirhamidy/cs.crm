@@ -11,6 +11,7 @@ import { Backdrop } from "@/components/ui/Backdrop";
 import { panelMotion } from "@/lib/motion";
 import AdminTaskNotesModal from "@/components/tasks/AdminTaskNotesModal";
 
+import { BusyContent } from "@/components/ui/Button";
 interface ArchiveTask {
     id: number;
     task_id: number;
@@ -479,14 +480,12 @@ export default function ArchivedTaskCard({ task, onReopened }: Props) {
                                     !selectedEmployee ||
                                     !selectedStep
                                 }
-                                className="flex h-10 flex-1 items-center justify-center gap-2 rounded-full bg-indigo-500 text-[11px] font-extrabold text-white transition hover:bg-indigo-600 disabled:cursor-not-allowed disabled:opacity-60"
+                                className="relative flex h-10 flex-1 items-center justify-center gap-2 rounded-full bg-indigo-500 text-[11px] font-extrabold text-white transition hover:bg-indigo-600 disabled:cursor-not-allowed disabled:opacity-60"
                             >
-                                {submitting ? (
-                                    <Loader2 size={14} className="animate-spin" />
-                                ) : (
+                                <BusyContent busy={submitting}>
                                     <RotateCcw size={14} />
-                                )}
-                                {submitting ? "در حال بازگردانی..." : "بازگرداندن"}
+                                    بازگرداندن
+                                </BusyContent>
                             </button>
                         </div>
                     </m.div>

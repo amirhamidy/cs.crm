@@ -8,6 +8,7 @@ import type { CaseItem } from "@/types/case";
 import type { TaskItem } from "@/types/task";
 import { fetchAllTasks } from "@/lib/fetchAllTasks";
 
+import { BusyContent } from "@/components/ui/Button";
 interface CaseTasksModalProps {
     isOpen: boolean;
     onClose: () => void;
@@ -246,11 +247,11 @@ export default function CaseTasksModal({
                                     title="بارگذاری مجدد"
                                     onClick={() => setReloadTick((n) => n + 1)}
                                     disabled={loading}
-                                    className={`flex h-8 w-8 items-center justify-center rounded-xl transition-colors disabled:opacity-40 ${loading ? "is-busy" : ""}`}
+                                    className={`flex h-8 w-8 items-center justify-center rounded-xl transition-colors disabled:opacity-40 `}
                                     style={{ background: softBg, color: textMuted }}
                                 >
-                                    <RefreshCw
-                                        size={13} />
+                                    {loading ? <Loader2 size={13} className="animate-spin" /> : <RefreshCw
+                                        size={13} />}
                                 </button>
                                 <button
                                     type="button"
@@ -483,20 +484,15 @@ export default function CaseTasksModal({
                                                                         setDeleteError("");
                                                                         setConfirmId(t.id);
                                                                     }}
-                                                                    className="flex h-7 w-7 items-center justify-center rounded-xl transition-colors"
+                                                                    className="relative flex h-7 w-7 items-center justify-center rounded-xl transition-colors"
                                                                     style={{
                                                                         background: "rgba(239,68,68,0.08)",
                                                                         color: "#ef4444",
                                                                     }}
                                                                 >
-                                                                    {isDeleting ? (
-                                                                        <Loader2
-                                                                            size={11}
-                                                                            className="animate-spin"
-                                                                        />
-                                                                    ) : (
+                                                                    <BusyContent busy={isDeleting}>
                                                                         <Trash2 size={11} />
-                                                                    )}
+                                                                    </BusyContent>
                                                                 </button>
                                                             </>
                                                         )}

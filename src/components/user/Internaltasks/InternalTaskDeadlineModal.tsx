@@ -2,7 +2,9 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { AnimatePresence, m } from "framer-motion";
+import { AnimatePresence, m, useReducedMotion } from "framer-motion";
+import { Backdrop } from "@/components/ui/Backdrop";
+import { panelMotion } from "@/lib/motion";
 import { AlertTriangle, CalendarClock, CalendarDays, Clock, Loader2, RefreshCw, X } from "lucide-react";
 import { useTheme } from "next-themes";
 import api from "@/lib/axiosInstance";
@@ -82,6 +84,7 @@ export default function InternalTaskDeadlineModal({
     taskTitle,
     onLoaded,
 }: InternalTaskDeadlineModalProps) {
+    const reduced = useReducedMotion() ?? false;
     const { resolvedTheme } = useTheme();
     const isDark = resolvedTheme === "dark";
 
@@ -146,25 +149,16 @@ export default function InternalTaskDeadlineModal({
     return createPortal(
         <AnimatePresence>
             {open && (
-                <m.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.15 }}
+                <div
                     className="fixed inset-0 z-[2147483647] flex items-center justify-center px-4"
-                    style={{ background: isDark ? "rgba(0,0,0,0.62)" : "rgba(15,23,42,0.38)", backdropFilter: "blur(6px)" }}
-                    onClick={onClose}
                 >
+                    <Backdrop onClick={onClose} />
                     <m.div
-                        initial={{ opacity: 0, y: 14, scale: 0.98 }}
-                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                        exit={{ opacity: 0, y: 14, scale: 0.98 }}
-                        transition={{ duration: 0.2, ease: "easeOut" }}
-                        onClick={(e) => e.stopPropagation()}
+                        {...panelMotion(false, reduced)}
                         dir="rtl"
                         role="dialog"
                         aria-modal="true"
-                        className="w-full max-w-md overflow-hidden rounded-[2rem] border shadow-2xl"
+                        className="relative w-full max-w-md overflow-hidden rounded-[2rem] border"
                         style={{ background: isDark ? "#0b1220" : "#ffffff", borderColor: border }}
                     >
                         <div className="flex items-center justify-between gap-3 border-b px-6 py-5" style={{ borderColor: border }}>
@@ -272,7 +266,7 @@ export default function InternalTaskDeadlineModal({
                             )}
                         </div>
                     </m.div>
-                </m.div>
+                </div>
             )}
         </AnimatePresence>,
         document.body

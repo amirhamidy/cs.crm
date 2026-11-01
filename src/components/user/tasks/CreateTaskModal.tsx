@@ -1,14 +1,17 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { m, AnimatePresence } from "framer-motion";
-import { X, ChevronDown, Upload, Check, Loader, ClipboardList, Search, Paperclip, AlertCircle, UserPlus } from "lucide-react";
+import { m, AnimatePresence, useReducedMotion } from "framer-motion";
+import { Backdrop } from "@/components/ui/Backdrop";
+import { panelMotion } from "@/lib/motion";
+import { X, ChevronDown, Upload, Check, ClipboardList, Search, Paperclip, AlertCircle, UserPlus } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
 import { departmentsApi, fetchPage } from "@/lib/api";
 import { apiRoutes } from "@/lib/apiRoutes";
 import AsyncSelect, { type AsyncOption } from "@/components/ui/AsyncSelect";
 import type { Customer } from "@/types/customer";
 
+import { BusyContent } from "@/components/ui/Button";
 interface Case {
     id: number;
     title: string;
@@ -391,6 +394,7 @@ export default function CreateTaskModal({
     departments: initialDepartments = EMPTY_DEPARTMENTS,
     employees: initialEmployees = EMPTY_EMPLOYEES,
 }: Props) {
+    const reduced = useReducedMotion() ?? false;
     const [submitting, setSubmitting] = useState(false);
     const [submitError, setSubmitError] = useState("");
     const [departmentList, setDepartmentList] = useState<Department[]>(initialDepartments);
@@ -556,25 +560,14 @@ export default function CreateTaskModal({
     return (
         <AnimatePresence>
             {open && (
-                <m.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
+                <div
                     className="fixed inset-0 z-50 flex items-center justify-center px-4"
-                    style={{
-                        background: "rgba(0,0,0,0.45)",
-                        backdropFilter: "blur(3px)",
-                    }}
-                    onClick={handleClose}
                 >
+                    <Backdrop onClick={handleClose} />
                     <m.div
-                        initial={{ opacity: 0, y: 16 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: 16 }}
-                        transition={{ duration: 0.35, ease: "easeOut" }}
-                        onClick={(e) => e.stopPropagation()}
+                        {...panelMotion(false, reduced)}
                         dir="rtl"
-                        className="flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-sm dark:border-white/[0.06] dark:bg-[#111827]"
+                        className="relative flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-sm dark:border-white/[0.06] dark:bg-[#111827]"
                     >
                         <div className="flex shrink-0 items-center justify-between px-8 pb-6 pt-8">
                             <div className="flex items-center gap-2.5">
@@ -790,20 +783,18 @@ export default function CreateTaskModal({
                                 whileTap={{ scale: 0.97 }}
                                 onClick={handleSubmit}
                                 disabled={!canSubmit}
-                                className="flex h-11 flex-1 items-center justify-center gap-2 rounded-full bg-blue-600 text-[13px] font-bold text-white transition-colors hover:bg-blue-500 disabled:opacity-40"
+                                className="relative flex h-11 flex-1 items-center justify-center gap-2 rounded-full bg-blue-600 text-[13px] font-bold text-white transition-colors hover:bg-blue-500 disabled:opacity-40"
                             >
-                                {submitting ? (
-                                    <Loader size={15} className="animate-spin" />
-                                ) : (
+                                <BusyContent busy={submitting}>
                                     <>
-                                        <Check size={14} strokeWidth={3} />
-                                        ثبت وظیفه
-                                    </>
-                                )}
+                                            <Check size={14} strokeWidth={3} />
+                                            ثبت وظیفه
+                                        </>
+                                </BusyContent>
                             </m.button>
                         </div>
                     </m.div>
-                </m.div>
+                </div>
             )}
         </AnimatePresence>
     );

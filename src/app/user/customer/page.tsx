@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { ListSkeleton } from "@/components/ui/skeletons";
 import { m, AnimatePresence } from "framer-motion";
-import { Users, Plus, RefreshCw, Filter, FileSpreadsheet, Search, X } from "lucide-react";
+import { Users, Plus, RefreshCw, Filter, FileSpreadsheet, Search, X, Loader2 } from "lucide-react";
 import { useTheme } from "next-themes";
 import dynamic from "next/dynamic";
 import CustomerCard from "@/components/user/customer/CustomerCard";
@@ -393,7 +393,7 @@ export default function CustomersPage() {
                     <button
                         onClick={refresh}
                         disabled={loading}
-                        className={`flex h-9 w-9 items-center justify-center rounded-xl text-gray-400 transition-colors hover:text-gray-600 disabled:opacity-40 dark:hover:text-gray-300 ${loading ? "is-busy" : ""}`}
+                        className={`flex h-9 w-9 items-center justify-center rounded-xl text-gray-400 transition-colors hover:text-gray-600 disabled:opacity-40 dark:hover:text-gray-300 `}
                         style={{
                             background: isDark
                                 ? "rgba(255,255,255,0.05)"
@@ -402,7 +402,7 @@ export default function CustomersPage() {
                         title="بارگذاری مجدد"
                         type="button"
                     >
-                        <RefreshCw size={13} />
+                        {loading ? <Loader2 size={13} className="animate-spin" /> : <RefreshCw size={13} />}
                     </button>
 
                     <button

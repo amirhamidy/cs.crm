@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Loader, UserPlus } from "lucide-react";
+import { UserPlus } from "lucide-react";
 import { m } from "framer-motion";
 import AsyncSelect, { type AsyncOption } from "@/components/ui/AsyncSelect";
 import { customersApi, customerPortalApi } from "@/lib/api";
@@ -11,6 +11,7 @@ import { ModalShell } from "@/components/ui/ModalShell";
 import type { Customer } from "@/types/customer";
 import type { CreatePortalAccountResponse } from "@/types/portal";
 
+import { BusyContent } from "@/components/ui/Button";
 interface CreatePortalAccountModalProps {
     onClose: () => void;
     onCreated: (r: CreatePortalAccountResponse) => void;
@@ -126,9 +127,11 @@ export default function CreatePortalAccountModal({
                     type="submit"
                     disabled={busy}
                     whileTap={{ scale: 0.97 }}
-                    className="flex w-full items-center justify-center gap-2 rounded-full bg-blue-600 py-3 text-sm font-bold text-white transition-colors hover:bg-blue-500 disabled:opacity-50"
+                    className="relative flex w-full items-center justify-center gap-2 rounded-full bg-blue-600 py-3 text-sm font-bold text-white transition-colors hover:bg-blue-500 disabled:opacity-50"
                 >
-                    {busy ? <Loader size={18} className="animate-spin" /> : "ساخت حساب پرتال"}
+                    <BusyContent busy={busy}>
+                        ساخت حساب پرتال
+                    </BusyContent>
                 </m.button>
             </form>
         </ModalShell>

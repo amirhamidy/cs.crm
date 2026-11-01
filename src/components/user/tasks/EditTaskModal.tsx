@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { m, AnimatePresence } from "framer-motion";
-import { Check, ChevronDown, ChevronLeft, ClipboardList, Loader, Search, X, Upload, Paperclip, AlertCircle, UserPlus, FolderOpen, Users } from "lucide-react";
+import { m, AnimatePresence, useReducedMotion } from "framer-motion";
+import { Backdrop } from "@/components/ui/Backdrop";
+import { panelMotion } from "@/lib/motion";
+import { Check, ChevronDown, ChevronLeft, ClipboardList, Search, X, Upload, Paperclip, AlertCircle, UserPlus, FolderOpen, Users } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
 import { casesApi, departmentsApi, accountsApi } from "@/lib/api";
 import { apiRoutes } from "@/lib/apiRoutes";
@@ -12,6 +14,7 @@ import type { Department } from "@/types/department";
 import type { Employee } from "@/types/employee";
 import type { TaskItem } from "@/types/task";
 
+import { BusyContent } from "@/components/ui/Button";
 interface DepartmentEmployee {
     id: number;
     employee: number;
@@ -372,6 +375,7 @@ export default function EditTaskModal({
     onClose,
     onSuccess,
 }: EditTaskModalProps) {
+    const reduced = useReducedMotion() ?? false;
     const [title, setTitle] = useState("");
     const [selectedCase, setSelectedCase] = useState<number | null>(null);
     const [selectedDepartment, setSelectedDepartment] = useState<number | null>(null);
@@ -643,22 +647,14 @@ export default function EditTaskModal({
 
     return (
         <AnimatePresence>
-            <m.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
+            <div
                 className="fixed inset-0 z-50 flex items-center justify-center px-4"
-                style={{ background: "rgba(0,0,0,0.45)", backdropFilter: "blur(3px)" }}
-                onClick={handleClose}
             >
+                <Backdrop onClick={handleClose} />
                 <m.div
-                    initial={{ opacity: 0, y: 16 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: 16 }}
-                    transition={{ duration: 0.35, ease: "easeOut" }}
-                    onClick={(e) => e.stopPropagation()}
+                    {...panelMotion(false, reduced)}
                     dir="rtl"
-                    className="flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-sm dark:border-white/[0.06] dark:bg-[#111827]"
+                    className="relative flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-sm dark:border-white/[0.06] dark:bg-[#111827]"
                 >
                     <div className="flex shrink-0 items-center justify-between px-8 pb-6 pt-8">
                         <div className="flex items-center gap-3">
@@ -927,17 +923,15 @@ export default function EditTaskModal({
                             type="button"
                             onClick={handleSubmit}
                             disabled={!canSubmit}
-                            className="flex h-[48px] min-w-[140px] items-center justify-center gap-2 rounded-2xl bg-blue-600 px-6 text-[12.5px] font-bold text-white transition-all hover:bg-blue-700 disabled:opacity-40"
+                            className="relative flex h-[48px] min-w-[140px] items-center justify-center gap-2 rounded-2xl bg-blue-600 px-6 text-[12.5px] font-bold text-white transition-all hover:bg-blue-700 disabled:opacity-40"
                         >
-                            {submitting ? (
-                                <Loader className="animate-spin" size={15} />
-                            ) : (
-                                "ذخیره تغییرات"
-                            )}
+                            <BusyContent busy={submitting}>
+                                ذخیره تغییرات
+                            </BusyContent>
                         </button>
                     </div>
                 </m.div>
-            </m.div>
+            </div>
         </AnimatePresence>
     );
 }

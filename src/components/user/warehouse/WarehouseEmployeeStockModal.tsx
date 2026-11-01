@@ -2,12 +2,15 @@
 
 import { useEffect, useMemo, useRef, useState, forwardRef, useLayoutEffect, type InputHTMLAttributes } from "react";
 import { createPortal } from "react-dom";
-import { AnimatePresence, m } from "framer-motion";
-import { ArrowDownCircle, ArrowUpCircle, Boxes, Check, ChevronDown, Loader, Paperclip, Search, Upload, X } from "lucide-react";
+import { AnimatePresence, m, useReducedMotion } from "framer-motion";
+import { Backdrop } from "@/components/ui/Backdrop";
+import { panelMotion } from "@/lib/motion";
+import { ArrowDownCircle, ArrowUpCircle, Boxes, Check, ChevronDown, Paperclip, Search, Upload, X } from "lucide-react";
 import type { AxiosError } from "axios";
 import axiosInstance from "@/lib/axiosInstance";
 import { ApiProduct, ApiStockTransaction, ApiWarehouseStaff, STOCK_OUT_REASON_OPTIONS, StockOutReason } from "@/types/warehouse";
 
+import { BusyContent } from "@/components/ui/Button";
 interface Props {
     isOpen: boolean;
     onClose: () => void;
@@ -338,6 +341,7 @@ export default function WarehouseEmployeeStockModal({
     warehouseId,
     onCompleted,
 }: Props) {
+    const reduced = useReducedMotion() ?? false;
     const [mode, setMode] = useState<Mode>("in");
     const [quantity, setQuantity] = useState("");
     const [reason, setReason] = useState<StockOutReason>("sale");
@@ -456,24 +460,13 @@ export default function WarehouseEmployeeStockModal({
     return (
         <AnimatePresence>
             {isOpen && (
-                <m.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    onClick={() => !loading && onClose()}
+                <div
                     className="fixed inset-0 z-50 flex items-center justify-center px-4"
-                    style={{
-                        background: "rgba(0,0,0,0.45)",
-                        backdropFilter: "blur(3px)",
-                    }}
                 >
+                    <Backdrop onClick={() => !loading && onClose()} />
                     <m.div
-                        initial={{ opacity: 0, y: 16 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: 16 }}
-                        transition={{ duration: 0.35, ease: "easeOut" }}
-                        onClick={(e) => e.stopPropagation()}
-                        className="w-full max-w-md rounded-[2rem] border border-gray-100 bg-white shadow-sm dark:border-white/[0.06] dark:bg-[#111827]"
+                        {...panelMotion(false, reduced)}
+                        className="relative w-full max-w-md rounded-[2rem] border border-gray-100 bg-white shadow-sm dark:border-white/[0.06] dark:bg-[#111827]"
                         dir="rtl"
                     >
                         <div className="flex items-center justify-between px-8 pb-5 pt-7">
@@ -677,18 +670,18 @@ export default function WarehouseEmployeeStockModal({
                                 type="submit"
                                 disabled={!canSubmit}
                                 whileTap={{ scale: 0.97 }}
-                                className={`mt-1 flex h-11 items-center justify-center gap-2 rounded-full text-[12.5px] font-bold text-white transition-all disabled:opacity-40 ${mode === "in"
+                                className={`relative mt-1 flex h-11 items-center justify-center gap-2 rounded-full text-[12.5px] font-bold text-white transition-all disabled:opacity-40 ${mode === "in"
                                     ? "bg-emerald-600 hover:bg-emerald-500"
                                     : "bg-red-600 hover:bg-red-500"
                                     }`}
                             >
-                                {loading ? (
-                                    <Loader size={15} className="animate-spin" />
-                                ) : mode === "in" ? (
-                                    "ثبت افزایش موجودی"
-                                ) : (
-                                    "ثبت کاهش موجودی"
-                                )}
+                                <BusyContent busy={loading}>
+                                    {mode === "in" ? (
+                                        "ثبت افزایش موجودی"
+                                    ) : (
+                                        "ثبت کاهش موجودی"
+                                    )}
+                                </BusyContent>
                             </m.button>
 
                             {!noteValid && (
@@ -698,7 +691,7 @@ export default function WarehouseEmployeeStockModal({
                             )}
                         </form>
                     </m.div>
-                </m.div>
+                </div>
             )}
         </AnimatePresence>
     );

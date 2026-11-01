@@ -1,6 +1,7 @@
 "use client";
 
 import { m, AnimatePresence } from "framer-motion";
+import { BusyContent } from "@/components/ui/Button";
 import { useTheme } from "next-themes";
 import { Trash2 } from "lucide-react";
 
@@ -71,9 +72,9 @@ export default function CustomerDeleteModal({
                                     whileTap={{ scale: 0.96 }}
                                     onClick={onConfirm}
                                     disabled={isDeleting}
-                                    className="flex-1 py-2.5 rounded-xl text-sm font-semibold bg-red-500 hover:bg-red-600 text-white transition-colors disabled:opacity-60"
+                                    className="relative flex-1 py-2.5 rounded-xl text-sm font-semibold bg-red-500 hover:bg-red-600 text-white transition-colors disabled:opacity-60"
                                 >
-                                    {isDeleting ? "در حال حذف..." : "بله، حذف شود"}
+                                    <BusyContent busy={isDeleting}>بله، حذف شود</BusyContent>
                                 </m.button>
                             </div>
                         </div>

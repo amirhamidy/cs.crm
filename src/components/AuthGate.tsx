@@ -7,7 +7,7 @@ import { useAuthStore } from "@/store/authStore";
 
 export function FullPageLoader() {
     return (
-        <div aria-busy="true" className="min-h-screen bg-gray-50 dark:bg-[#090d18]">
+        <div aria-busy="true" className="animate-pulse motion-reduce:animate-none min-h-screen bg-gray-50 dark:bg-[#090d18]">
             <div className="flex h-16 items-center justify-between border-b border-gray-100 bg-white px-4 dark:border-white/[0.08] dark:bg-[#111827]">
                 <Skeleton className="h-8 w-32" />
                 <SkeletonAvatar size={36} />

@@ -10,6 +10,7 @@ import axiosInstance from "@/lib/axiosInstance";
 import { listAll } from "@/lib/api";
 import type { ApiPurchasingStep, ApiPurchasingTask } from "@/types/purchasing";
 
+import { BusyContent } from "@/components/ui/Button";
 interface Product {
     id: number;
     name: string;
@@ -846,21 +847,15 @@ export default function PurchasingCreateTaskModal({
                                 whileTap={{ scale: 0.97 }}
                                 onClick={submit}
                                 disabled={!canSubmit}
-                                className="flex h-11 flex-1 items-center justify-center gap-2 rounded-full bg-blue-600 text-[13px] font-bold text-white transition-colors hover:bg-blue-500 disabled:opacity-40"
+                                className="relative flex h-11 flex-1 items-center justify-center gap-2 rounded-full bg-blue-600 text-[13px] font-bold text-white transition-colors hover:bg-blue-500 disabled:opacity-40"
                             >
-                                {submitting ? (
-                                    <Loader
-                                        size={15}
-                                        className="animate-spin"
-                                    />
-                                ) : (
+                                <BusyContent busy={submitting}>
                                     <Check
-                                        size={14}
-                                        strokeWidth={3}
-                                    />
-                                )}
-
-                                ایجاد درخواست
+                                            size={14}
+                                            strokeWidth={3}
+                                        />
+                                    ایجاد درخواست
+                                </BusyContent>
                             </m.button>
                         </div>
                     </m.div>

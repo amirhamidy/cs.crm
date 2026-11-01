@@ -12,7 +12,7 @@ export function CardGridSkeleton({
     className?: string;
 }) {
     return (
-        <div className={className} aria-busy="true" aria-live="polite">
+        <div className={cn("animate-pulse motion-reduce:animate-none", className)} aria-busy="true" aria-live="polite">
             {Array.from({ length: count }, (_, i) => (
                 <div key={i} className={CARD}>
                     <div className="flex items-center justify-between gap-3">
@@ -32,7 +32,7 @@ export function CardGridSkeleton({
 
 export function ListSkeleton({ rows = 5, className }: { rows?: number; className?: string }) {
     return (
-        <div className={cn("space-y-2.5", className)} aria-busy="true" aria-live="polite">
+        <div className={cn("animate-pulse motion-reduce:animate-none space-y-2.5", className)} aria-busy="true" aria-live="polite">
             {Array.from({ length: rows }, (_, i) => (
                 <div key={i} className={cn(CARD, "flex items-center gap-3 !rounded-2xl !p-3")}>
                     <SkeletonAvatar size={36} />
@@ -58,7 +58,7 @@ export function TableSkeleton({
 }) {
     return (
         <div
-            className={cn("overflow-hidden rounded-2xl border border-gray-100 bg-white dark:border-white/[0.07] dark:bg-[#111a2d]", className)}
+            className={cn("animate-pulse motion-reduce:animate-none overflow-hidden rounded-2xl border border-gray-100 bg-white dark:border-white/[0.07] dark:bg-[#111a2d]", className)}
             aria-busy="true"
             aria-live="polite"
         >
@@ -80,7 +80,7 @@ export function TableSkeleton({
 
 export function FormSkeleton({ fields = 4, className }: { fields?: number; className?: string }) {
     return (
-        <div className={cn("space-y-4", className)} aria-busy="true" aria-live="polite">
+        <div className={cn("animate-pulse motion-reduce:animate-none space-y-4", className)} aria-busy="true" aria-live="polite">
             {Array.from({ length: fields }, (_, i) => (
                 <div key={i} className="space-y-2">
                     <Skeleton className="h-3 w-24" />
@@ -95,7 +95,7 @@ export function FormSkeleton({ fields = 4, className }: { fields?: number; class
 export function StatCardsSkeleton({ count = 4, className }: { count?: number; className?: string }) {
     return (
         <div
-            className={cn("grid grid-cols-2 gap-3 lg:grid-cols-4", className)}
+            className={cn("animate-pulse motion-reduce:animate-none grid grid-cols-2 gap-3 lg:grid-cols-4", className)}
             aria-busy="true"
             aria-live="polite"
         >
@@ -112,7 +112,7 @@ export function StatCardsSkeleton({ count = 4, className }: { count?: number; cl
 
 export function BoardSkeleton({ columns = 3, className }: { columns?: number; className?: string }) {
     return (
-        <div className={cn("flex gap-3 overflow-hidden", className)} aria-busy="true" aria-live="polite">
+        <div className={cn("animate-pulse motion-reduce:animate-none flex gap-3 overflow-hidden", className)} aria-busy="true" aria-live="polite">
             {Array.from({ length: columns }, (_, c) => (
                 <div
                     key={c}
@@ -133,7 +133,7 @@ export function BoardSkeleton({ columns = 3, className }: { columns?: number; cl
 
 export function DetailSkeleton({ className }: { className?: string }) {
     return (
-        <div className={cn("space-y-4", className)} aria-busy="true" aria-live="polite">
+        <div className={cn("animate-pulse motion-reduce:animate-none space-y-4", className)} aria-busy="true" aria-live="polite">
             <div className="flex items-center gap-3">
                 <SkeletonAvatar size={48} />
                 <div className="flex-1 space-y-2">

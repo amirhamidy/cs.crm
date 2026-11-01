@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence, m } from "framer-motion";
-import { AlertTriangle, Ban, CalendarClock, CheckCircle2, History, Loader, Loader2, Plus, RefreshCw, Repeat, RotateCcw, Timer, Trash2 } from "lucide-react";
+import { AlertTriangle, Ban, CalendarClock, CheckCircle2, History, Loader, Plus, RefreshCw, Repeat, RotateCcw, Timer, Trash2, Loader2 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useAuthStore } from "@/store/authStore";
 import { useIsVisible, useVisibleInterval } from "@/hooks/useVisibility";
@@ -11,6 +11,7 @@ import CreateTaskRoutineModal from "./Createtaskroutinemodal";
 import InternalTaskActionModal from "@/components/user/Internaltasks/InternalTaskActionModal";
 import type { InternalTask, InternalTaskRoutine } from "./Types";
 
+import { BusyContent } from "@/components/ui/Button";
 const NEVER_REPEAT_VALUE = 2147483647;
 
 function formatDate(value?: string | null) {
@@ -257,14 +258,12 @@ function RoutineCard({
                             type="button"
                             onClick={() => setShowConfirm(true)}
                             disabled={isDeleting}
-                            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-red-500/[0.08] text-red-500 transition-all hover:bg-red-500/[0.14] disabled:opacity-40"
+                            className="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-red-500/[0.08] text-red-500 transition-all hover:bg-red-500/[0.14] disabled:opacity-40"
                             title="حذف تسک روتین"
                         >
-                            {isDeleting ? (
-                                <Loader2 size={13} className="animate-spin" />
-                            ) : (
+                            <BusyContent busy={isDeleting}>
                                 <Trash2 size={13} />
-                            )}
+                            </BusyContent>
                         </button>
                     </div>
                 </div>
@@ -621,10 +620,10 @@ export default function AdminTaskRoutineBoard() {
                         type="button"
                         onClick={() => void loadData()}
                         disabled={refreshing}
-                        className={`flex h-9 w-9 items-center justify-center rounded-2xl bg-gray-100 text-gray-500 transition-colors hover:bg-gray-200 disabled:opacity-40 dark:bg-white/[0.05] dark:text-gray-400 dark:hover:bg-white/[0.08] ${refreshing ? "is-busy" : ""}`}
+                        className={`flex h-9 w-9 items-center justify-center rounded-2xl bg-gray-100 text-gray-500 transition-colors hover:bg-gray-200 disabled:opacity-40 dark:bg-white/[0.05] dark:text-gray-400 dark:hover:bg-white/[0.08] `}
                         title="به‌روزرسانی"
                     >
-                        <RefreshCw size={14} />
+                        {refreshing ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
                     </button>
                 </div>
             </div>

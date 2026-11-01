@@ -4,7 +4,7 @@ import { useState } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, m } from "framer-motion";
 import { useVisibleInterval } from "@/hooks/useVisibility";
-import { Building2, CalendarClock, ClipboardX, Clock, FolderKanban, Loader, Loader2, Paperclip, Pencil, Trash2, UserRound, X, MessageSquareText } from "lucide-react";
+import { Building2, CalendarClock, ClipboardX, Clock, FolderKanban, Paperclip, Pencil, Trash2, UserRound, X, MessageSquareText } from "lucide-react";
 import { useTheme } from "next-themes";
 import type { Task, TaskStatus, TaskEmployeeRef } from "@/types/task";
 import AdminTaskNotesModal from "./AdminTaskNotesModal";
@@ -14,6 +14,7 @@ import api from "@/lib/axiosInstance";
 import { useEmployeeInfo } from "@/hooks/useEmployeeInfo";
 import type { Employee } from "@/types/employee";
 
+import { BusyContent } from "@/components/ui/Button";
 const AVATAR_GRADIENTS = [
     ["#6366f1", "#8b5cf6"], ["#3b82f6", "#6366f1"],
     ["#8b5cf6", "#ec4899"], ["#06b6d4", "#6366f1"],
@@ -334,8 +335,10 @@ export default function TaskCard({
                                 <button onClick={() => onEdit?.(toTask(task))} className="flex h-7 w-7 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-400" title="ویرایش تسک">
                                     <Pencil size={11} />
                                 </button>
-                                <button onClick={() => setShowConfirm(true)} disabled={deleting} className="flex h-7 w-7 items-center justify-center rounded-xl bg-red-500/10 text-red-500 disabled:opacity-40" title="حذف تسک">
-                                    {deleting ? <Loader2 size={11} className="animate-spin" /> : <Trash2 size={11} />}
+                                <button onClick={() => setShowConfirm(true)} disabled={deleting} className="relative flex h-7 w-7 items-center justify-center rounded-xl bg-red-500/10 text-red-500 disabled:opacity-40" title="حذف تسک">
+                                    <BusyContent busy={deleting}>
+                                        <Trash2 size={11} />
+                                    </BusyContent>
                                 </button>
                             </>
                         )}
@@ -415,8 +418,10 @@ export default function TaskCard({
                                     <button onClick={closeConfirm} disabled={deleting} className="h-11 flex-1 rounded-full bg-gray-100 text-[13px] font-bold text-gray-600 dark:bg-white/[0.05] dark:text-gray-300">
                                         انصراف
                                     </button>
-                                    <button onClick={handleDelete} disabled={deleting} className="flex h-11 flex-1 items-center justify-center gap-2 rounded-full bg-red-600 text-[13px] font-bold text-white">
-                                        {deleting ? <Loader size={14} className="animate-spin" /> : <><Trash2 size={13} />حذف کن</>}
+                                    <button onClick={handleDelete} disabled={deleting} className="relative flex h-11 flex-1 items-center justify-center gap-2 rounded-full bg-red-600 text-[13px] font-bold text-white">
+                                        <BusyContent busy={deleting}>
+                                            <><Trash2 size={13} />حذف کن</>
+                                        </BusyContent>
                                     </button>
                                 </div>
                             </m.div>

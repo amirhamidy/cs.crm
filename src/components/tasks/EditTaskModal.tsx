@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { m, AnimatePresence } from "framer-motion";
-import { Check, ChevronDown, ChevronLeft, ClipboardList, Loader, Search, X, Upload, Paperclip, AlertCircle, UserPlus, FolderOpen, Users } from "lucide-react";
+import { Check, ChevronDown, ChevronLeft, ClipboardList, Search, X, Upload, Paperclip, AlertCircle, UserPlus, FolderOpen, Users } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
 import { apiRoutes } from "@/lib/apiRoutes";
 import type { CaseItem } from "@/types/case";
@@ -10,6 +10,7 @@ import type { Customer } from "@/types/customer";
 import type { Department } from "@/types/department";
 import type { TaskItem } from "@/types/task";
 
+import { BusyContent } from "@/components/ui/Button";
 interface DepartmentEmployee {
     id: number;
     employee: number;
@@ -939,13 +940,11 @@ export default function EditTaskModal({
                             type="button"
                             onClick={handleSubmit}
                             disabled={!canSubmit}
-                            className="flex h-[48px] min-w-[140px] items-center justify-center gap-2 rounded-2xl bg-blue-600 px-6 text-[12.5px] font-bold text-white transition-all hover:bg-blue-700 disabled:opacity-40"
+                            className="relative flex h-[48px] min-w-[140px] items-center justify-center gap-2 rounded-2xl bg-blue-600 px-6 text-[12.5px] font-bold text-white transition-all hover:bg-blue-700 disabled:opacity-40"
                         >
-                            {submitting ? (
-                                <Loader className="animate-spin" size={15} />
-                            ) : (
-                                "ذخیره تغییرات"
-                            )}
+                            <BusyContent busy={submitting}>
+                                ذخیره تغییرات
+                            </BusyContent>
                         </button>
                     </div>
                 </m.div>

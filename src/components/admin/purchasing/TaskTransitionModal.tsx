@@ -3,11 +3,12 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, m } from "framer-motion";
-import { AlertCircle, ArrowLeftCircle, ArrowRightCircle, Loader2, Upload, X } from "lucide-react";
+import { AlertCircle, ArrowLeftCircle, ArrowRightCircle, Upload, X } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
 import type { ApiPurchasingTask } from "@/types/purchasing";
 import { usePurchasingAccess } from "@/hooks/usePurchasingAccess";
 
+import { BusyContent } from "@/components/ui/Button";
 interface Props {
     isOpen: boolean;
     onClose: () => void;
@@ -187,10 +188,12 @@ export default function TaskTransitionModal({ isOpen, onClose, mode, task, onCom
                                 whileTap={{ scale: 0.97 }}
                                 onClick={handleSubmit}
                                 disabled={!canSubmit}
-                                className={`flex h-11 flex-1 items-center justify-center gap-2 rounded-full text-[13px] font-bold text-white transition disabled:cursor-not-allowed disabled:opacity-40 ${tone.btn}`}
+                                className={`relative flex h-11 flex-1 items-center justify-center gap-2 rounded-full text-[13px] font-bold text-white transition disabled:cursor-not-allowed disabled:opacity-40 ${tone.btn}`}
                             >
-                                {submitting ? <Loader2 size={15} className="animate-spin" /> : <Icon size={14} />}
-                                {isAdvance ? "انتقال" : "بازگشت"}
+                                <BusyContent busy={submitting}>
+                                    <Icon size={14} />
+                                    {isAdvance ? "انتقال" : "بازگشت"}
+                                </BusyContent>
                             </m.button>
                         </div>
                     </m.div>

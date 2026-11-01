@@ -3,10 +3,11 @@
 import { useState } from "react";
 import { AnimatePresence, m } from "framer-motion";
 import { useTheme } from "next-themes";
-import { AlertCircle, Check, CheckCircle2, Clock3, FileText, Loader2, Package, PackageCheck, Paperclip, RotateCcw, ShieldCheck, Upload, User, X, XCircle } from "lucide-react";
+import { AlertCircle, Check, CheckCircle2, Clock3, FileText, Package, PackageCheck, Paperclip, RotateCcw, ShieldCheck, Upload, User, X, XCircle } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
 import type { ApiWarehouseTask } from "@/types/warehouse";
 
+import { BusyContent } from "@/components/ui/Button";
 interface WarehouseEmployeeTaskCardProps {
     task: ApiWarehouseTask;
     index?: number;
@@ -833,26 +834,24 @@ export default function WarehouseEmployeeTaskCard({
                                             whileTap={{ scale: 0.97 }}
                                             onClick={submitAction}
                                             disabled={submitting}
-                                            className="flex h-12 flex-[1.4] items-center justify-center gap-2 rounded-full text-[13px] font-extrabold text-white transition-opacity disabled:opacity-50"
+                                            className="relative flex h-12 flex-[1.4] items-center justify-center gap-2 rounded-full text-[13px] font-extrabold text-white transition-opacity disabled:opacity-50"
                                             style={{
                                                 background: tone.gradient,
                                                 boxShadow: tone.shadow,
                                             }}
                                         >
-                                            {submitting ? (
-                                                <Loader2 size={16} className="animate-spin" />
-                                            ) : (
+                                            <BusyContent busy={submitting}>
                                                 <>
-                                                    {action === "complete" ? (
-                                                        <Check size={15} strokeWidth={3} />
-                                                    ) : isCancel ? (
-                                                        <XCircle size={16} />
-                                                    ) : (
-                                                        <RotateCcw size={16} />
-                                                    )}
-                                                    {tone.submit}
-                                                </>
-                                            )}
+                                                        {action === "complete" ? (
+                                                            <Check size={15} strokeWidth={3} />
+                                                        ) : isCancel ? (
+                                                            <XCircle size={16} />
+                                                        ) : (
+                                                            <RotateCcw size={16} />
+                                                        )}
+                                                        {tone.submit}
+                                                    </>
+                                            </BusyContent>
                                         </m.button>
                                     </div>
                                 </m.div>

@@ -6,6 +6,7 @@ import { AlertCircle, ChevronDown, Download, FileText, GitBranch, Loader2, Paper
 import HumanResourceStepRoadmap from "./HumanResourceStepRoadmap";
 import { HumanResource, HumanResourceFile, HumanResourceStep, createStep, deleteStep, deleteStepFile, getDocumentSteps, getStepFiles, updateStep, uploadStepFile } from "./humanResourceApi";
 
+import { BusyContent } from "@/components/ui/Button";
 interface Props {
     open: boolean;
     document: HumanResource | null;
@@ -272,10 +273,12 @@ export default function HumanResourceStepsModal({ open, document, canManage, onC
                                                 type="button"
                                                 onClick={saveStep}
                                                 disabled={saving || !title.trim()}
-                                                className="flex h-10 items-center justify-center gap-1.5 rounded-xl bg-indigo-600 px-4 text-[11px] font-extrabold text-white transition hover:bg-indigo-500 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40"
+                                                className="relative flex h-10 items-center justify-center gap-1.5 rounded-xl bg-indigo-600 px-4 text-[11px] font-extrabold text-white transition hover:bg-indigo-500 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40"
                                             >
-                                                {saving ? <Loader2 size={13} className="animate-spin" /> : <Plus size={13} />}
-                                                افزودن مرحله
+                                                <BusyContent busy={saving}>
+                                                    <Plus size={13} />
+                                                    افزودن مرحله
+                                                </BusyContent>
                                             </button>
                                         </div>
                                     </div>
@@ -310,10 +313,12 @@ export default function HumanResourceStepsModal({ open, document, canManage, onC
                                                 type="button"
                                                 onClick={confirmStepFile}
                                                 disabled={uploadingStepId !== null}
-                                                className="flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-xl bg-indigo-600 px-4 text-[10.5px] font-extrabold text-white transition hover:bg-indigo-500 active:scale-[0.97] disabled:opacity-40"
+                                                className="relative flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-xl bg-indigo-600 px-4 text-[10.5px] font-extrabold text-white transition hover:bg-indigo-500 active:scale-[0.97] disabled:opacity-40"
                                             >
-                                                {uploadingStepId !== null ? <Loader2 size={12} className="animate-spin" /> : <Upload size={12} />}
-                                                بارگذاری
+                                                <BusyContent busy={uploadingStepId !== null}>
+                                                    <Upload size={12} />
+                                                    بارگذاری
+                                                </BusyContent>
                                             </button>
                                             <button
                                                 type="button"
@@ -375,9 +380,11 @@ export default function HumanResourceStepsModal({ open, document, canManage, onC
                                                                     onClick={() => pickStepFile(step.id)}
                                                                     disabled={isUploading}
                                                                     title="افزودن فایل به این مرحله"
-                                                                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-indigo-50 text-indigo-500 transition hover:bg-indigo-100 disabled:opacity-50 dark:bg-indigo-500/10 dark:text-indigo-400 dark:hover:bg-indigo-500/20"
+                                                                    className="relative flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-indigo-50 text-indigo-500 transition hover:bg-indigo-100 disabled:opacity-50 dark:bg-indigo-500/10 dark:text-indigo-400 dark:hover:bg-indigo-500/20"
                                                                 >
-                                                                    {isUploading ? <Loader2 size={11} className="animate-spin" /> : <Upload size={11} />}
+                                                                    <BusyContent busy={isUploading}>
+                                                                        <Upload size={11} />
+                                                                    </BusyContent>
                                                                 </button>
                                                             )}
                                                         </div>

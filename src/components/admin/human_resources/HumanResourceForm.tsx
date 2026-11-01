@@ -2,10 +2,11 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, m } from "framer-motion";
-import { Check, ChevronDown, FileText, Loader2, Search, X } from "lucide-react";
+import { Check, ChevronDown, FileText, Search, X } from "lucide-react";
 import { Department, HumanResource, createDocument, updateDocument } from "./humanResourceApi";
 import { extractError, gradientOf, initialOf } from "./hrUtils";
 
+import { BusyContent } from "@/components/ui/Button";
 interface Props {
     open: boolean;
     document: HumanResource | null;
@@ -303,10 +304,12 @@ export default function HumanResourceForm({ open, document, departments, onClose
                             whileTap={{ scale: 0.97 }}
                             onClick={save}
                             disabled={saving || !title.trim()}
-                            className="flex h-11 w-full items-center justify-center gap-2 rounded-full bg-indigo-600 text-[13px] font-bold text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-40"
+                            className="relative flex h-11 w-full items-center justify-center gap-2 rounded-full bg-indigo-600 text-[13px] font-bold text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-40"
                         >
-                            {saving ? <Loader2 size={15} className="animate-spin" /> : <Check size={14} strokeWidth={3} />}
-                            {document ? "ذخیره تغییرات" : "ایجاد منبع انسانی"}
+                            <BusyContent busy={saving}>
+                                <Check size={14} strokeWidth={3} />
+                                {document ? "ذخیره تغییرات" : "ایجاد منبع انسانی"}
+                            </BusyContent>
                         </m.button>
                     </div>
                 </m.div>

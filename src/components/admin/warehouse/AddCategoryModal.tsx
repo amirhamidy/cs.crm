@@ -1,10 +1,11 @@
 "use client";
 import { FormEvent, useState } from "react";
 import { AnimatePresence, m } from "framer-motion";
-import { Check, Loader, Package, X } from "lucide-react";
+import { Check, Package, X } from "lucide-react";
 import { useTheme } from "next-themes";
 import axiosInstance from "@/lib/axiosInstance";
 
+import { BusyContent } from "@/components/ui/Button";
 interface AddCategoryModalProps {
     isOpen: boolean;
     onClose: () => void;
@@ -121,16 +122,14 @@ export default function AddCategoryModal({
                             type="submit"
                             disabled={loading}
                             whileTap={{ scale: 0.97 }}
-                            className="flex items-center justify-center gap-2 rounded-full bg-blue-600 py-3 text-sm font-bold text-white transition-colors hover:bg-blue-500 disabled:opacity-50"
+                            className="relative flex items-center justify-center gap-2 rounded-full bg-blue-600 py-3 text-sm font-bold text-white transition-colors hover:bg-blue-500 disabled:opacity-50"
                         >
-                            {loading ? (
-                                <Loader size={15} className="animate-spin" />
-                            ) : (
+                            <BusyContent busy={loading}>
                                 <>
-                                    <Check size={14} />
-                                    ثبت دسته‌بندی
-                                </>
-                            )}
+                                        <Check size={14} />
+                                        ثبت دسته‌بندی
+                                    </>
+                            </BusyContent>
                         </m.button>
                     </form>
                 </m.div>

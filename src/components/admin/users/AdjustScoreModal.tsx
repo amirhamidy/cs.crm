@@ -136,7 +136,7 @@ export default function AdjustScoreModal({
                             boxShadow: `0 10px 24px ${accent}38`,
                         }}
                     >
-                        {loading ? "در حال ثبت..." : isAdd ? "افزایش امتیاز" : "کسر امتیاز"}
+                        {isAdd ? "افزایش امتیاز" : "کسر امتیاز"}
                     </Button>
                 </div>
             }

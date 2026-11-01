@@ -1,9 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { AnimatePresence, m } from "framer-motion";
+import { AnimatePresence, m, useReducedMotion } from "framer-motion";
+import { Backdrop } from "@/components/ui/Backdrop";
+import { panelMotion } from "@/lib/motion";
 import { useTheme } from "next-themes";
-import { AlertTriangle, ArrowDownUp, Boxes, CalendarDays, Loader2, MapPin, Package, Pencil, Scale, Tag, Trash2, Wallet, X } from "lucide-react";
+import { AlertTriangle, ArrowDownUp, Boxes, CalendarDays, MapPin, Package, Pencil, Scale, Tag, Trash2, Wallet, X } from "lucide-react";
 import type { AxiosError } from "axios";
 import axiosInstance from "@/lib/axiosInstance";
 import { ApiCategory, ApiProduct, ApiStockInfo, ApiWarehouseStaff, UNIT_TYPE_LABELS } from "@/types/warehouse";
@@ -12,6 +14,7 @@ import WarehouseEmployeeProductEditModal from "./WarehouseEmployeeProductEditMod
 import WarehouseEmployeeStockModal from "./WarehouseEmployeeStockModal";
 import WarehouseEmployeeInitialStockModal from "./WarehouseEmployeeInitialStockModal";
 
+import { BusyContent } from "@/components/ui/Button";
 interface ProductCardProps {
     product: ApiProduct;
     stockInfo: ApiStockInfo | null;
@@ -163,6 +166,7 @@ export default function WarehouseEmployeeProductCard({
     onStockChanged,
     onDeleted,
 }: ProductCardProps) {
+    const reduced = useReducedMotion() ?? false;
     const { resolvedTheme } = useTheme();
     const isDark = resolvedTheme === "dark";
     const [hovered, setHovered] = useState(false);
@@ -697,23 +701,13 @@ export default function WarehouseEmployeeProductCard({
 
             <AnimatePresence>
                 {showConfirm && (
-                    <m.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        onClick={() => !deleting && setShowConfirm(false)}
+                    <div
                         className="fixed inset-0 z-50 flex items-center justify-center px-4"
-                        style={{
-                            background: "rgba(0,0,0,.5)",
-                            backdropFilter: "blur(4px)",
-                        }}
                     >
+                        <Backdrop onClick={() => !deleting && setShowConfirm(false)} />
                         <m.div
-                            initial={{ opacity: 0, scale: 0.96, y: 16 }}
-                            animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.96, y: 16 }}
-                            onClick={(e) => e.stopPropagation()}
-                            className="w-full max-w-[360px] rounded-[2rem] bg-white p-5 dark:bg-[#111827]"
+                            {...panelMotion(false, reduced)}
+                            className="relative w-full max-w-[360px] rounded-[2rem] bg-white p-5 dark:bg-[#111827]"
                             dir="rtl"
                         >
                             <div className="mb-4 flex items-center justify-between">
@@ -768,20 +762,15 @@ export default function WarehouseEmployeeProductCard({
                                     type="button"
                                     onClick={handleDelete}
                                     disabled={deleting}
-                                    className="flex flex-1 items-center justify-center gap-1.5 rounded-2xl bg-red-600 py-2.5 text-[12.5px] font-bold text-white disabled:opacity-60"
+                                    className="relative flex flex-1 items-center justify-center gap-1.5 rounded-2xl bg-red-600 py-2.5 text-[12.5px] font-bold text-white disabled:opacity-60"
                                 >
-                                    {deleting ? (
-                                        <Loader2
-                                            size={14}
-                                            className="animate-spin"
-                                        />
-                                    ) : (
-                                        "حذف کن"
-                                    )}
+                                    <BusyContent busy={deleting}>
+                                        حذف کن
+                                    </BusyContent>
                                 </button>
                             </div>
                         </m.div>
-                    </m.div>
+                    </div>
                 )}
             </AnimatePresence>
         </>

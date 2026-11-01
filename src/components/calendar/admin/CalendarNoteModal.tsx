@@ -3,10 +3,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, m, MotionConfig } from "framer-motion";
-import { CalendarDays, Clock3, Loader2, Send, StickyNote, Tag, Trash2, UserRound, X } from "lucide-react";
+import { CalendarDays, Clock3, Send, StickyNote, Tag, Trash2, UserRound, X } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
 import { useAuthStore } from "@/store/authStore";
 
+import { BusyContent } from "@/components/ui/Button";
 export interface CalendarPerson {
     id: number;
     full_name: string;
@@ -211,7 +212,11 @@ function DayPanel({ onClose, selectedDate, notes, events, onCreated, onDeleted }
                             <h4 className="flex items-center gap-1.5 text-[12.5px] font-extrabold text-gray-800 dark:text-gray-100"><StickyNote size={13} className="text-emerald-500" />یادداشت‌ها</h4>
                             {dayNotes.length === 0 ? <div className={EMPTY_BOX}>هنوز یادداشتی برای این روز نوشته نشده</div> : <AnimatePresence initial={false} mode="popLayout">{dayNotes.map((note) => <m.div key={note.id} initial={{ opacity: 0, y: 10, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, x: -24, scale: 0.97 }} transition={{ duration: 0.2 }} className="rounded-2xl border border-emerald-500/15 bg-emerald-500/[0.06] p-4">
                                 <div className="flex items-start justify-between gap-3"><div className="min-w-0 flex-1"><p className="whitespace-pre-wrap break-words text-[12px] font-semibold leading-7 text-gray-700 dark:text-gray-200">{note.description}</p>{note.created_at && <p className="mt-2 text-[9.5px] font-medium text-gray-500 dark:text-gray-400">{formatEventDate(note.created_at)}</p>}</div>
-                                    <button type="button" aria-label="حذف یادداشت" onClick={() => handleDelete(note.id)} disabled={deletingId === note.id} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-colors hover:bg-rose-500/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-400/60 disabled:opacity-50">{deletingId === note.id ? <Loader2 size={15} className="animate-spin text-rose-500" /> : <Trash2 size={15} className="text-rose-500" />}</button>
+                                    <button type="button" aria-label="حذف یادداشت" onClick={() => handleDelete(note.id)} disabled={deletingId === note.id} className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-colors hover:bg-rose-500/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-400/60 disabled:opacity-50">
+                                        <BusyContent busy={deletingId === note.id}>
+    <Trash2 size={15} className="text-rose-500" />
+                                        </BusyContent>
+                                    </button>
                                 </div>
                             </m.div>)}</AnimatePresence>}
                         </section>
@@ -220,7 +225,11 @@ function DayPanel({ onClose, selectedDate, notes, events, onCreated, onDeleted }
                         {error && <p className="mb-2 text-[11.5px] font-semibold text-red-500">{error}</p>}
                         <div className="relative">
                             <textarea value={description} onChange={(e) => setDescription(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) handleSubmit(); }} placeholder={placeholder} rows={3} disabled={!canWrite} className="w-full resize-none rounded-2xl border border-gray-300/70 bg-white/80 py-3 pl-16 pr-4 text-[12.5px] leading-7 text-gray-800 outline-none transition placeholder:text-gray-500 focus:border-indigo-500/60 focus:ring-4 focus:ring-indigo-500/15 disabled:cursor-not-allowed disabled:opacity-60 dark:border-white/[0.08] dark:bg-white/[0.04] dark:text-gray-100 dark:placeholder:text-gray-500" />
-                            <button type="button" aria-label="ثبت یادداشت" onClick={handleSubmit} disabled={submitting || !description.trim() || !canWrite} className="absolute bottom-3 left-3 flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 text-white transition-transform hover:scale-105 active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/60 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:scale-100">{submitting ? <Loader2 size={18} className="animate-spin" /> : <Send size={17} className="-scale-x-100" />}</button>
+                            <button type="button" aria-label="ثبت یادداشت" onClick={handleSubmit} disabled={submitting || !description.trim() || !canWrite} className="absolute bottom-3 left-3 flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 text-white transition-transform hover:scale-105 active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/60 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:scale-100">
+                                <BusyContent busy={submitting}>
+    <Send size={17} className="-scale-x-100" />
+                                </BusyContent>
+                            </button>
                         </div>
                     </div>
                 </m.aside>

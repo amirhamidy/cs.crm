@@ -7,7 +7,7 @@ export function Skeleton({ className, style }: { className?: string; style?: CSS
             aria-hidden="true"
             style={style}
             className={cn(
-                "animate-pulse rounded-lg bg-gray-200/80 motion-reduce:animate-none dark:bg-white/10",
+                "rounded-lg bg-gray-200/80 dark:bg-white/10",
                 className,
             )}
         />
@@ -33,7 +33,7 @@ export function SkeletonAvatar({ size = 32, className }: { size?: number; classN
 
 export function SkeletonText({ lines = 3, className }: { lines?: number; className?: string }) {
     return (
-        <div aria-hidden="true" className={cn("space-y-2", className)}>
+        <div aria-hidden="true" className={cn("animate-pulse space-y-2 motion-reduce:animate-none", className)}>
             {Array.from({ length: lines }, (_, i) => (
                 <Skeleton
                     key={i}

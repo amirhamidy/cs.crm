@@ -1,9 +1,11 @@
 "use client";
 
 import { memo, useEffect, useState } from "react";
-import { AnimatePresence, m } from "framer-motion";
+import { AnimatePresence, m, useReducedMotion } from "framer-motion";
+import { Backdrop } from "@/components/ui/Backdrop";
+import { panelMotion } from "@/lib/motion";
 import { useVisibleInterval } from "@/hooks/useVisibility";
-import { Ban, CalendarClock, CheckCircle2, ClipboardX, Clock, Loader, Loader2, MessageSquareText, RotateCcw, Trash2, UserRound, X } from "lucide-react";
+import { Ban, CalendarClock, CheckCircle2, ClipboardX, Clock, MessageSquareText, RotateCcw, Trash2, UserRound, X } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useAuthStore } from "@/store/authStore";
 import type { InternalTask, InternalTaskStatus, EmployeeRef } from "./types";
@@ -20,6 +22,7 @@ const InternalTaskChatModal = dynamic(() => import("./InternalTaskChatModal"), {
 import InternalTaskActionModal from "./InternalTaskActionModal";
 import { reopenInternalTask } from "./Api";
 
+import { BusyContent } from "@/components/ui/Button";
 const AVATAR_GRADIENTS = [
     ["#6366f1", "#8b5cf6"], ["#3b82f6", "#6366f1"], ["#8b5cf6", "#ec4899"],
     ["#06b6d4", "#6366f1"], ["#f59e0b", "#ef4444"], ["#10b981", "#3b82f6"],
@@ -84,6 +87,7 @@ interface SentTaskCardProps {
 }
 
 function SentTaskCard({ task, index = 0, onDelete, onUpdated, isDeleting = false }: SentTaskCardProps) {
+    const reduced = useReducedMotion() ?? false;
     const { resolvedTheme } = useTheme();
     const isDark = resolvedTheme === "dark";
     const userId = useAuthStore((state) => state.userId);
@@ -251,9 +255,13 @@ function SentTaskCard({ task, index = 0, onDelete, onUpdated, isDeleting = false
                             title="تعیین بازه زمانی"><Clock size={11} /></button>
                         {onDelete && (
                             <button type="button" onClick={() => setShowConfirm(true)} disabled={effectiveDeleting}
-                                className="flex h-7 w-7 items-center justify-center rounded-xl transition-colors disabled:opacity-40"
+                                className="relative flex h-7 w-7 items-center justify-center rounded-xl transition-colors disabled:opacity-40"
                                 style={{ background: isDark ? "rgba(239,68,68,.1)" : "rgba(239,68,68,.07)", color: "#ef4444" }}
-                                title="حذف تسک">{effectiveDeleting ? <Loader2 size={11} className="animate-spin" /> : <Trash2 size={11} />}</button>
+                                title="حذف تسک">
+                                <BusyContent busy={effectiveDeleting}>
+    <Trash2 size={11} />
+                                </BusyContent>
+                            </button>
                         )}
                     </div>
                 </div>
@@ -281,20 +289,24 @@ function SentTaskCard({ task, index = 0, onDelete, onUpdated, isDeleting = false
 
                 {!isActiveTask && (
                     <button type="button" onClick={() => void handleReopen()} disabled={reopening}
-                        className="flex h-9 w-full items-center justify-center gap-1.5 rounded-xl bg-amber-500 text-[10.5px] font-extrabold text-white transition-opacity hover:opacity-90 disabled:opacity-50">
-                        {reopening ? <Loader2 size={13} className="animate-spin" /> : <RotateCcw size={13} />}بازگشایی تیکت
+                        className="relative flex h-9 w-full items-center justify-center gap-1.5 rounded-xl bg-amber-500 text-[10.5px] font-extrabold text-white transition-opacity hover:opacity-90 disabled:opacity-50">
+                        <BusyContent busy={reopening}>
+                            <RotateCcw size={13} />بازگشایی تیکت
+                        </BusyContent>
                     </button>
                 )}
             </m.div>
 
             <AnimatePresence>
                 {showConfirm && (
-                    <m.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                    <div
                         className="fixed inset-0 z-50 flex items-center justify-center px-4"
-                        style={{ background: "rgba(0,0,0,.45)", backdropFilter: "blur(3px)" }} onClick={closeConfirm}>
-                        <m.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 16 }}
-                            onClick={e => e.stopPropagation()} dir="rtl"
-                            className="flex w-full max-w-md flex-col overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-sm dark:border-white/[.06] dark:bg-[#111827]">
+                         >
+                        <Backdrop onClick={closeConfirm} />
+                        <m.div
+                            {...panelMotion(false, reduced)}
+                             dir="rtl"
+                            className="relative flex w-full max-w-md flex-col overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-sm dark:border-white/[.06] dark:bg-[#111827]">
                             <div className="flex items-center justify-between px-8 pb-6 pt-8">
                                 <div className="flex items-center gap-2.5">
                                     <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-red-50 dark:bg-red-500/10"><Trash2 size={15} className="text-red-500" /></div>
@@ -308,10 +320,14 @@ function SentTaskCard({ task, index = 0, onDelete, onUpdated, isDeleting = false
                             </div>
                             <div className="flex items-center gap-2 px-8 pb-8 pt-5">
                                 <button type="button" onClick={closeConfirm} disabled={deleting} className="h-11 flex-1 rounded-full bg-gray-100 text-[13px] font-bold text-gray-600 dark:bg-white/[.05] dark:text-gray-300">انصراف</button>
-                                <button type="button" onClick={handleDelete} disabled={deleting} className="flex h-11 flex-1 items-center justify-center gap-2 rounded-full bg-red-600 text-[13px] font-bold text-white">{deleting ? <Loader size={14} className="animate-spin" /> : <><Trash2 size={13} />حذف کن</>}</button>
+                                <button type="button" onClick={handleDelete} disabled={deleting} className="relative flex h-11 flex-1 items-center justify-center gap-2 rounded-full bg-red-600 text-[13px] font-bold text-white">
+                                    <BusyContent busy={deleting}>
+    <><Trash2 size={13} />حذف کن</>
+                                    </BusyContent>
+                                </button>
                             </div>
                         </m.div>
-                    </m.div>
+                    </div>
                 )}
             </AnimatePresence>
 

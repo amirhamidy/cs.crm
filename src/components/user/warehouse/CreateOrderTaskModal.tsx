@@ -1,14 +1,17 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { AnimatePresence, m } from "framer-motion";
-import { Boxes, Calendar, Check, ChevronDown, Loader, Paperclip, Search, X, AlertCircle, Upload } from "lucide-react";
+import { AnimatePresence, m, useReducedMotion } from "framer-motion";
+import { Backdrop } from "@/components/ui/Backdrop";
+import { panelMotion } from "@/lib/motion";
+import { Boxes, Calendar, Check, ChevronDown, Paperclip, Search, X, AlertCircle, Upload } from "lucide-react";
 import type { AxiosError } from "axios";
 import axiosInstance from "@/lib/axiosInstance";
 import { ApiOrderTaskStockProduct, useOrderTaskLookups } from "@/hooks/useOrderTaskLookups";
 import { ApiOrderTask, ApiTask } from "@/types/warehouse";
 import TimeRangeModal from "@/components/tasks/TimeRangeModal";
 
+import { BusyContent } from "@/components/ui/Button";
 interface CreateOrderTaskModalProps {
     isOpen: boolean;
     onClose: () => void;
@@ -338,6 +341,7 @@ export default function CreateOrderTaskModal({
     onCreated,
     warehouseId,
 }: CreateOrderTaskModalProps) {
+    const reduced = useReducedMotion() ?? false;
     const {
         tasks,
         products,
@@ -419,21 +423,14 @@ export default function CreateOrderTaskModal({
 
     return (
         <AnimatePresence>
-            <m.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="fixed inset-0 z-50 flex items-center justify-center bg-gray-950/55 px-3 py-4 backdrop-blur-md sm:px-4"
-                onClick={handleClose}
+            <div
+                className="fixed inset-0 z-50 flex items-center justify-center px-3 py-4 sm:px-4"
             >
+                <Backdrop onClick={handleClose} />
                 <m.div
-                    initial={{ opacity: 0, y: 18, scale: 0.98 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: 18, scale: 0.98 }}
-                    transition={{ duration: 0.25, ease: "easeOut" }}
-                    onClick={(e) => e.stopPropagation()}
+                    {...panelMotion(false, reduced)}
                     dir="rtl"
-                    className="flex max-h-[92vh] w-full max-w-md flex-col overflow-hidden rounded-[2rem] border border-white/80 bg-white shadow-2xl shadow-black/20 dark:border-white/[0.07] dark:bg-[#10151d]"
+                    className="relative flex max-h-[92vh] w-full max-w-md flex-col overflow-hidden rounded-[2rem] border border-white/80 bg-white shadow-black/20 dark:border-white/[0.07] dark:bg-[#10151d]"
                 >
                     <div className="h-1 w-full shrink-0 bg-gradient-to-l from-blue-600 via-cyan-500 to-violet-500" />
 
@@ -672,16 +669,14 @@ export default function CreateOrderTaskModal({
                             whileTap={{ scale: 0.98 }}
                             onClick={handleSubmit}
                             disabled={loading}
-                            className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-l from-blue-600 to-blue-500 text-[13px] font-extrabold text-white shadow-lg shadow-blue-500/20 transition-all hover:from-blue-500 hover:to-cyan-500 hover:shadow-blue-500/30 disabled:cursor-not-allowed disabled:opacity-40"
+                            className="relative flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-l from-blue-600 to-blue-500 text-[13px] font-extrabold text-white shadow-lg shadow-blue-500/20 transition-all hover:from-blue-500 hover:to-cyan-500 hover:shadow-blue-500/30 disabled:cursor-not-allowed disabled:opacity-40"
                         >
-                            {loading ? (
-                                <Loader size={15} className="animate-spin" />
-                            ) : (
+                            <BusyContent busy={loading}>
                                 <>
-                                    <Check size={14} strokeWidth={3} />
-                                    ثبت وظیفه
-                                </>
-                            )}
+                                        <Check size={14} strokeWidth={3} />
+                                        ثبت وظیفه
+                                    </>
+                            </BusyContent>
                         </m.button>
                     </div>
                 </m.div>
@@ -697,7 +692,7 @@ export default function CreateOrderTaskModal({
                         setTimeModalOpen(false);
                     }}
                 />
-            </m.div>
+            </div>
         </AnimatePresence>
     );
 }

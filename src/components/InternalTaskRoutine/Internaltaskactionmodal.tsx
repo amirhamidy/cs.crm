@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { BusyContent } from "@/components/ui/Button";
 import { AnimatePresence, m } from "framer-motion";
-import { Ban, Check, CheckCircle2, FileUp, Loader, X } from "lucide-react";
+import { Ban, Check, CheckCircle2, FileUp, X } from "lucide-react";
 import { useTheme } from "next-themes";
 import type { InternalTask } from "./Types";
 import { cancelInternalTask, completeInternalTask } from "./Api";
@@ -214,23 +215,16 @@ export default function InternalTaskActionModal({
                             <button
                                 type="submit"
                                 disabled={loading}
-                                className="flex flex-1 items-center justify-center gap-2 rounded-xl py-2.5 text-[12.5px] font-bold text-white transition-opacity disabled:cursor-not-allowed disabled:opacity-40"
+                                className="relative flex flex-1 items-center justify-center gap-2 rounded-xl py-2.5 text-[12.5px] font-bold text-white transition-opacity disabled:cursor-not-allowed disabled:opacity-40"
                                 style={{
                                     background: config.buttonGradient,
                                     boxShadow: config.buttonShadow,
                                 }}
                             >
-                                {loading ? (
-                                    <>
-                                        <Loader className="h-3.5 w-3.5 animate-spin" />
-                                        {config.loadingLabel}
-                                    </>
-                                ) : (
-                                    <>
+                                <BusyContent busy={loading}>
                                         <Check size={13} />
                                         {config.submitLabel}
-                                    </>
-                                )}
+                                    </BusyContent>
                             </button>
                         </div>
                     </form>

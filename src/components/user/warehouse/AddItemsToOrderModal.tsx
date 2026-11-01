@@ -1,7 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { AnimatePresence, m } from "framer-motion";
+import { AnimatePresence, m, useReducedMotion } from "framer-motion";
+import { Backdrop } from "@/components/ui/Backdrop";
+import { panelMotion } from "@/lib/motion";
 import { AlertTriangle, Check, CheckCircle2, Loader2, MapPin, PackagePlus, Search, X } from "lucide-react";
 import type { ApiOrderTask } from "@/types/warehouse";
 import type { PicklistProduct } from "@/types/warehouseShelf";
@@ -10,6 +12,7 @@ import { useWarehouseShelves } from "@/hooks/useWarehouseShelves";
 import { extractApiError, formatQuantity, formatToman, parseQuantity, sanitizeQuantityInput } from "@/utils/warehouseShelf";
 import ShelfFilterBar from "./ShelfFilterBar";
 
+import { BusyContent } from "@/components/ui/Button";
 interface Props {
   isOpen: boolean;
   orderTaskId: number;
@@ -40,6 +43,7 @@ export default function AddItemsToOrderModal({
   onClose,
   onAdded,
 }: Props) {
+    const reduced = useReducedMotion() ?? false;
   const [shelfCode, setShelfCode] = useState("");
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
@@ -248,21 +252,14 @@ export default function AddItemsToOrderModal({
   return (
     <AnimatePresence>
       {isOpen && (
-        <m.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          onClick={handleClose}
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-3 backdrop-blur-sm sm:p-4"
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4"
         >
-          <m.div
-            initial={{ opacity: 0, scale: 0.96, y: 12 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.96, y: 12 }}
-            transition={{ duration: 0.2 }}
-            onClick={(e) => e.stopPropagation()}
+            <Backdrop onClick={handleClose} />
+            <m.div
+                {...panelMotion(false, reduced)}
             dir="rtl"
-            className="relative flex max-h-[94vh] w-full max-w-3xl flex-col overflow-hidden rounded-3xl border border-gray-100 bg-white shadow-2xl dark:border-white/[0.06] dark:bg-[#111827]"
+            className="relative flex max-h-[94vh] w-full max-w-3xl flex-col overflow-hidden rounded-3xl border border-gray-100 bg-white dark:border-white/[0.06] dark:bg-[#111827]"
           >
             <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4 dark:border-white/[0.06]">
               <div className="flex min-w-0 items-center gap-3">
@@ -467,10 +464,11 @@ export default function AddItemsToOrderModal({
                         type="button"
                         onClick={loadMore}
                         disabled={loadingMore}
-                        className="flex items-center gap-2 rounded-2xl bg-gray-100 px-4 py-2 text-[12px] font-bold text-gray-700 transition-colors hover:bg-gray-200 disabled:opacity-60 dark:bg-white/[0.06] dark:text-gray-200 dark:hover:bg-white/[0.1]"
+                        className="relative flex items-center gap-2 rounded-2xl bg-gray-100 px-4 py-2 text-[12px] font-bold text-gray-700 transition-colors hover:bg-gray-200 disabled:opacity-60 dark:bg-white/[0.06] dark:text-gray-200 dark:hover:bg-white/[0.1]"
                       >
-                        {loadingMore && <Loader2 size={13} className="animate-spin" />}
-                        نمایش بیشتر
+                          <BusyContent busy={loadingMore}>
+                            نمایش بیشتر
+                          </BusyContent>
                       </button>
                     </div>
                   )}
@@ -541,20 +539,18 @@ export default function AddItemsToOrderModal({
                     whileTap={{ scale: 0.97 }}
                     onClick={handleSubmit}
                     disabled={submitting || selectedCount === 0}
-                    className="flex items-center gap-2 rounded-2xl bg-indigo-600 px-5 py-2.5 text-[12.5px] font-extrabold text-white shadow-lg shadow-indigo-600/25 transition-colors hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="relative flex items-center gap-2 rounded-2xl bg-indigo-600 px-5 py-2.5 text-[12.5px] font-extrabold text-white shadow-lg shadow-indigo-600/25 transition-colors hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    {submitting ? (
-                      <Loader2 size={14} className="animate-spin" />
-                    ) : (
-                      <PackagePlus size={14} />
-                    )}
-                    افزودن به فاکتور
+                      <BusyContent busy={submitting}>
+                        <PackagePlus size={14} />
+                        افزودن به فاکتور
+                      </BusyContent>
                   </m.button>
                 </div>
               </div>
             </div>
           </m.div>
-        </m.div>
+        </div>
       )}
     </AnimatePresence>
   );

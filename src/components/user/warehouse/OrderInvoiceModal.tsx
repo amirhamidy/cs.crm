@@ -2,7 +2,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { AnimatePresence, m } from "framer-motion";
+import { AnimatePresence, m, useReducedMotion } from "framer-motion";
+import { Backdrop } from "@/components/ui/Backdrop";
+import { panelMotion } from "@/lib/motion";
 import { useTheme } from "next-themes";
 import { AlertCircle, Building2, FileText, Hash, Loader2, Package, ReceiptText, User, Users, X } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
@@ -116,6 +118,7 @@ export default function OrderInvoiceModal({
     onClose,
     invoice,
 }: Props) {
+    const reduced = useReducedMotion() ?? false;
     const { resolvedTheme } = useTheme();
     const isDark = resolvedTheme === "dark";
 
@@ -240,21 +243,14 @@ export default function OrderInvoiceModal({
     return (
         <AnimatePresence>
             {isOpen && (
-                <m.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    onClick={onClose}
-                    className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-3 backdrop-blur-sm sm:p-5"
+                <div
+                    className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-5"
                     dir="rtl"
                 >
+                    <Backdrop onClick={onClose} />
                     <m.div
-                        initial={{ opacity: 0, scale: 0.96, y: 12 }}
-                        animate={{ opacity: 1, scale: 1, y: 0 }}
-                        exit={{ opacity: 0, scale: 0.96, y: 12 }}
-                        transition={{ duration: 0.2 }}
-                        onClick={(event) => event.stopPropagation()}
-                        className="flex max-h-[92dvh] w-full max-w-3xl flex-col overflow-hidden rounded-3xl"
+                        {...panelMotion(false, reduced)}
+                        className="relative flex max-h-[92dvh] w-full max-w-3xl flex-col overflow-hidden rounded-3xl"
                         style={{
                             background: isDark ? "#111827" : "#fff",
                             border: isDark
@@ -565,7 +561,7 @@ export default function OrderInvoiceModal({
                             </button>
                         </footer>
                     </m.div>
-                </m.div>
+                </div>
             )}
         </AnimatePresence>
     );

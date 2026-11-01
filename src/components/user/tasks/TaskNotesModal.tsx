@@ -2,7 +2,9 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { AnimatePresence, m } from "framer-motion";
+import { AnimatePresence, m, useReducedMotion } from "framer-motion";
+import { Backdrop } from "@/components/ui/Backdrop";
+import { panelMotion } from "@/lib/motion";
 import { X, Loader2, AlertCircle, ClipboardList, Paperclip, MessageSquareText, RefreshCw, FileText, ArrowLeftCircle, ArrowRightCircle, ArrowLeftRight, User, Calendar, Clock3, History, CheckCircle2, ShoppingBag, Ban, RotateCcw, Layers3, Hash } from "lucide-react";
 import { useTheme } from "next-themes";
 import { tasksApi } from "@/lib/api";
@@ -173,6 +175,7 @@ function AttachmentUploader({ employeeId, username }: { employeeId?: number; use
 }
 
 export default function TaskNotesModal({ isOpen, onClose, taskId, taskTitle }: Props) {
+    const reduced = useReducedMotion() ?? false;
     const { resolvedTheme } = useTheme();
     const isDark = resolvedTheme === "dark";
 
@@ -217,29 +220,18 @@ export default function TaskNotesModal({ isOpen, onClose, taskId, taskTitle }: P
 
     return createPortal(
         <AnimatePresence>
-            <m.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
+            <div
                 className="fixed inset-0 z-50 flex items-center justify-center px-4"
-                style={{
-                    background: "rgba(0,0,0,0.55)",
-                    backdropFilter: "blur(4px)",
-                }}
-                onClick={onClose}
             >
+                <Backdrop onClick={onClose} />
                 <m.div
-                    initial={{ scale: 0.94, y: 20 }}
-                    animate={{ scale: 1, y: 0 }}
-                    exit={{ scale: 0.94, y: 20 }}
-                    transition={{ duration: 0.22, ease: "easeOut" }}
-                    className="flex max-h-[85vh] w-full max-w-[560px] flex-col overflow-hidden rounded-3xl border"
+                    {...panelMotion(false, reduced)}
+                    className="relative flex max-h-[85vh] w-full max-w-[560px] flex-col overflow-hidden rounded-3xl border"
                     style={{
                         background: surface,
                         borderColor: border,
                         boxShadow: "0 28px 72px rgba(0,0,0,0.32)",
                     }}
-                    onClick={(event) => event.stopPropagation()}
                     dir="rtl"
                 >
                     <div className="flex shrink-0 items-center justify-between border-b px-5 py-4" style={{ borderColor: divider }}>
@@ -280,10 +272,10 @@ export default function TaskNotesModal({ isOpen, onClose, taskId, taskTitle }: P
                                 type="button"
                                 onClick={fetchLogs}
                                 disabled={loading}
-                                className={`flex h-8 w-8 items-center justify-center rounded-xl text-gray-400 hover:text-gray-300 disabled:opacity-40 transition-colors ${loading ? "is-busy" : ""}`}
+                                className={`flex h-8 w-8 items-center justify-center rounded-xl text-gray-400 hover:text-gray-300 disabled:opacity-40 transition-colors `}
                                 style={{ background: buttonBg }}
                             >
-                                <RefreshCw size={13} />
+                                {loading ? <Loader2 size={13} className="animate-spin" /> : <RefreshCw size={13} />}
                             </button>
 
                             <button
@@ -438,7 +430,7 @@ export default function TaskNotesModal({ isOpen, onClose, taskId, taskTitle }: P
                         )}
                     </div>
                 </m.div>
-            </m.div>
+            </div>
         </AnimatePresence>,
         document.body
     );

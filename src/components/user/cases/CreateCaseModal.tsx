@@ -7,12 +7,15 @@ import React, {
     useState,
     forwardRef,
 } from "react";
-import { AnimatePresence, m } from "framer-motion";
+import { AnimatePresence, m, useReducedMotion } from "framer-motion";
+import { Backdrop } from "@/components/ui/Backdrop";
+import { panelMotion } from "@/lib/motion";
 import { ArrowRight, Check, ClipboardList, Loader, Search, User, X } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
 import { casesApi, customersApi } from "@/lib/api";
 import type { Customer } from "@/types/customer";
 
+import { BusyContent } from "@/components/ui/Button";
 type CreateCaseModalProps = {
     open: boolean;
     onClose: () => void;
@@ -102,6 +105,7 @@ export default function CreateCaseModal({
     onClose,
     onCreated,
 }: CreateCaseModalProps) {
+    const reduced = useReducedMotion() ?? false;
     const [step, setStep] = useState(0);
     const [customers, setCustomers] = useState<Customer[]>([]);
     const [customerPage, setCustomerPage] = useState(1);
@@ -245,22 +249,14 @@ export default function CreateCaseModal({
     return (
         <AnimatePresence>
             {open && (
-                <m.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.18 }}
-                    className="fixed inset-0 z-[100] flex items-end justify-center bg-gray-900/40 p-0 backdrop-blur-md sm:items-center sm:p-4 dark:bg-black/60"
-                    onClick={() => !submitting && onClose()}
+                <div
+                    className="fixed inset-0 z-[100] flex items-end justify-center p-0 sm:items-center sm:p-4 dark:"
                     dir="rtl"
                 >
+                    <Backdrop onClick={() => !submitting && onClose()} />
                     <m.div
-                        initial={{ opacity: 0, y: 24, scale: 0.98 }}
-                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                        exit={{ opacity: 0, y: 16, scale: 0.98 }}
-                        transition={{ type: "spring", stiffness: 320, damping: 30 }}
-                        onClick={(e) => e.stopPropagation()}
-                        className="flex max-h-[92vh] w-full max-w-lg flex-col overflow-hidden rounded-t-4xl border border-gray-100 bg-white shadow-2xl sm:rounded-4xl dark:border-white/10 dark:bg-[#111113]"
+                        {...panelMotion(false, reduced)}
+                        className="relative flex max-h-[92vh] w-full max-w-lg flex-col overflow-hidden rounded-t-4xl border border-gray-100 bg-white sm:rounded-4xl dark:border-white/10 dark:bg-[#111113]"
                     >
                         
                         <div className="flex items-center justify-between gap-3 border-b border-gray-100 px-5 py-4 dark:border-white/10">
@@ -500,15 +496,13 @@ export default function CreateCaseModal({
                                 disabled={step === 0 ? !selected : !canSubmit}
                                 className="relative flex h-11 flex-1 items-center justify-center gap-2 overflow-hidden rounded-2xl bg-blue-600 text-[13px] font-extrabold text-white transition-all hover:bg-blue-500 active:scale-[0.98] disabled:opacity-50 dark:bg-blue-500 dark:hover:bg-blue-400"
                             >
-                                {submitting ? (
-                                    <Loader size={16} className="animate-spin" />
-                                ) : (
+                                <BusyContent busy={submitting}>
                                     <>{step === 0 ? "مرحله بعد" : "ثبت نهایی پرونده"}</>
-                                )}
+                                </BusyContent>
                             </button>
                         </div>
                     </m.div>
-                </m.div>
+                </div>
             )}
         </AnimatePresence>
     );

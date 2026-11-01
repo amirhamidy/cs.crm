@@ -2,14 +2,18 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
-import { AnimatePresence, m } from "framer-motion";
-import { AlertTriangle, ArrowLeft, ArrowLeftRight, Building2, Check, FileText, Layers3, Loader2, Paperclip, Search, Trash2, UserRound, X, type LucideIcon } from "lucide-react";
+import { AnimatePresence, m, useReducedMotion } from "framer-motion";
+import { Backdrop } from "@/components/ui/Backdrop";
+import { panelMotion } from "@/lib/motion";
+import type { LucideIcon } from "lucide-react";
+import { AlertTriangle, ArrowLeft, ArrowLeftRight, Building2, Check, FileText, Layers3, Loader2, Paperclip, Search, Trash2, UserRound, X } from "lucide-react";
 import { departmentsApi, tasksApi, parseTransferError } from "@/lib/api";
 import { toast } from "@/components/notifications/toast";
 import { toPersianDigits } from "@/lib/jalali";
 import type { Department, DepartmentEmployee, DepartmentStep } from "@/types/department";
 import type { TransferTaskResponse } from "@/types/task";
 
+import { BusyContent } from "@/components/ui/Button";
 interface Props {
     isOpen: boolean;
     onClose: () => void;
@@ -64,6 +68,7 @@ export default function TaskTransferModal({
     currentDepartmentName,
     onTransferred,
 }: Props) {
+    const reduced = useReducedMotion() ?? false;
     const [departments, setDepartments] = useState<Department[]>([]);
     const [steps, setSteps] = useState<DepartmentStep[]>([]);
     const [members, setMembers] = useState<DepartmentEmployee[]>([]);
@@ -223,22 +228,14 @@ export default function TaskTransferModal({
     return createPortal(
         <AnimatePresence>
             {isOpen && (
-                <m.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    className="fixed inset-0 z-[99999] flex items-center justify-center bg-gray-950/60 p-4 backdrop-blur-md"
+                <div
+                    className="fixed inset-0 z-[99999] flex items-center justify-center p-4"
                     dir="rtl"
-                    onMouseDown={(e) => {
-                        if (e.target === e.currentTarget) close();
-                    }}
                 >
+                    <Backdrop onClick={() => { close(); }} />
                     <m.div
-                        initial={{ opacity: 0, y: 18, scale: 0.97 }}
-                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                        exit={{ opacity: 0, y: 12, scale: 0.98 }}
-                        transition={{ duration: 0.2 }}
-                        className="w-full max-w-lg overflow-hidden rounded-[1.7rem] border border-white/10 bg-white shadow-2xl dark:bg-[#101827]"
+                        {...panelMotion(false, reduced)}
+                        className="relative w-full max-w-lg overflow-hidden rounded-[1.7rem] border border-white/10 bg-white dark:bg-[#101827]"
                     >
                         
                         <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4 dark:border-white/[.06]">
@@ -574,14 +571,12 @@ export default function TaskTransferModal({
                                         type="button"
                                         disabled={submitting}
                                         onClick={submit}
-                                        className="flex h-11 flex-[1.5] items-center justify-center gap-2 rounded-xl bg-indigo-600 text-[11px] font-extrabold text-white shadow-lg shadow-indigo-500/20 disabled:opacity-60"
+                                        className="relative flex h-11 flex-[1.5] items-center justify-center gap-2 rounded-xl bg-indigo-600 text-[11px] font-extrabold text-white shadow-lg shadow-indigo-500/20 disabled:opacity-60"
                                     >
-                                        {submitting ? (
-                                            <Loader2 size={15} className="animate-spin" />
-                                        ) : (
+                                        <BusyContent busy={submitting}>
                                             <Check size={15} />
-                                        )}
-                                        تأیید و انتقال تسک
+                                            تأیید و انتقال تسک
+                                        </BusyContent>
                                     </button>
                                 </>
                             ) : (
@@ -606,7 +601,7 @@ export default function TaskTransferModal({
                             )}
                         </div>
                     </m.div>
-                </m.div>
+                </div>
             )}
         </AnimatePresence>,
         document.body

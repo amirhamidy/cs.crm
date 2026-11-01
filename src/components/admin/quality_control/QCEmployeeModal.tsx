@@ -10,6 +10,7 @@ import { listAll } from "@/lib/api";
 import type { ApiQualityControlEmployee, ApiUser } from "@/types/quality_control";
 import { gradientOf, initialOf } from "./qcUtils";
 
+import { BusyContent } from "@/components/ui/Button";
 interface Props {
     isOpen: boolean;
     existingEmployees: ApiQualityControlEmployee[];
@@ -159,10 +160,12 @@ export default function QCEmployeeModal({ isOpen, existingEmployees, names, onCl
                                 whileTap={{ scale: 0.97 }}
                                 onClick={create}
                                 disabled={loading || !selected}
-                                className="flex h-11 w-full items-center justify-center gap-2 rounded-full bg-blue-600 text-[13px] font-bold text-white transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-40"
+                                className="relative flex h-11 w-full items-center justify-center gap-2 rounded-full bg-blue-600 text-[13px] font-bold text-white transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-40"
                             >
-                                {loading ? <Loader2 size={15} className="animate-spin" /> : <UserPlus size={14} />}
-                                افزودن به تیم
+                                <BusyContent busy={loading}>
+                                    <UserPlus size={14} />
+                                    افزودن به تیم
+                                </BusyContent>
                             </m.button>
                         </div>
                     </m.div>

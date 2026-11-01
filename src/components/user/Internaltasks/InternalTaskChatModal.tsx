@@ -1,7 +1,10 @@
 "use client";
 
 import { ChangeEvent, KeyboardEvent, useEffect, useMemo, useRef, useState } from "react";
-import { AnimatePresence, m } from "framer-motion";
+import { BusyContent } from "@/components/ui/Button";
+import { AnimatePresence, m, useReducedMotion } from "framer-motion";
+import { Backdrop } from "@/components/ui/Backdrop";
+import { panelMotion } from "@/lib/motion";
 import { Check, Download, File, MessageSquareText, Paperclip, Send, UserRound, X } from "lucide-react";
 import api from "@/lib/axiosInstance";
 import { useAuthStore } from "@/store/authStore";
@@ -118,6 +121,7 @@ function getSenderName(uploadedById: number, users: UserListItem[], employees: E
 }
 
 export default function InternalTaskChatModal({ open, task, onClose, onUpdated }: InternalTaskChatModalProps) {
+    const reduced = useReducedMotion() ?? false;
     const { userId } = useAuthStore();
     const [message, setMessage] = useState("");
     const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
@@ -471,20 +475,13 @@ export default function InternalTaskChatModal({ open, task, onClose, onUpdated }
     return (
         <AnimatePresence>
             {open && (
-                <m.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    className="fixed inset-0 z-[120] flex items-center justify-center bg-black/55 p-3 backdrop-blur-xl sm:p-5"
-                    onMouseDown={onClose}
+                <div
+                    className="fixed inset-0 z-[120] flex items-center justify-center p-3 sm:p-5"
                     dir="rtl"
                 >
+                    <Backdrop onClick={onClose} />
                     <m.div
-                        initial={{ opacity: 0, y: 24, scale: 0.97 }}
-                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                        exit={{ opacity: 0, y: 24, scale: 0.97 }}
-                        transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
-                        onMouseDown={(event) => event.stopPropagation()}
+                        {...panelMotion(false, reduced)}
                         className="relative flex h-[min(780px,94vh)] w-full max-w-2xl flex-col overflow-hidden rounded-[32px] border border-black/[0.07] bg-[#f7f7f8] shadow-[0_40px_120px_rgba(0,0,0,0.25)] dark:border-white/[0.08] dark:bg-[#101113]"
                     >
                         <div className="relative z-10 shrink-0 border-b border-black/[0.06] bg-white/85 px-4 py-4 backdrop-blur-2xl dark:border-white/[0.06] dark:bg-[#151619]/90 sm:px-5">
@@ -846,9 +843,9 @@ export default function InternalTaskChatModal({ open, task, onClose, onUpdated }
                                         (!message.trim() && !selectedFiles.length)
                                     }
                                     aria-busy={sending}
-                                    className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-[18px] bg-blue-500 text-white shadow-[0_8px_20px_rgba(59,130,246,0.2)] transition-all hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-35 ${sending ? "is-busy" : ""}`}
+                                    className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-[18px] bg-blue-500 text-white shadow-[0_8px_20px_rgba(59,130,246,0.2)] transition-all hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-35 `}
                                 >
-                                    <Send size={17} className="translate-x-[-1px]" />
+                                    <BusyContent busy={sending}><Send size={17} className="translate-x-[-1px]" /></BusyContent>
                                 </button>
                             </div>
 
@@ -857,7 +854,7 @@ export default function InternalTaskChatModal({ open, task, onClose, onUpdated }
                             </div>
                         </div>
                     </m.div>
-                </m.div>
+                </div>
             )}
         </AnimatePresence>
     );

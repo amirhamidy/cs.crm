@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence } from "framer-motion";
 import { ListSkeleton } from "@/components/ui/skeletons";
-import { Award, Plus, Minus, RefreshCw, Users } from "lucide-react";
+import { Award, Plus, Minus, RefreshCw, Users, Loader2 } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
 import { listAll } from "@/lib/api";
 import { useAuthStore } from "@/store/authStore";
@@ -125,8 +125,8 @@ export default function DepartmentScoreManager() {
             <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">امتیاز اعضای دپارتمان‌های تحت مدیریت شما</p>
           </div>
         </div>
-        <button onClick={() => void load(true)} disabled={refreshing} className={`flex items-center gap-2 rounded-xl border border-gray-200 px-3 py-2 text-xs font-bold text-gray-600 disabled:opacity-50 ${refreshing ? "is-busy" : ""} dark:border-white/10 dark:text-gray-300`}>
-          <RefreshCw size={14} /> بروزرسانی
+        <button onClick={() => void load(true)} disabled={refreshing} className={`flex items-center gap-2 rounded-xl border border-gray-200 px-3 py-2 text-xs font-bold text-gray-600 disabled:opacity-50  dark:border-white/10 dark:text-gray-300`}>
+          {refreshing ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />} بروزرسانی
         </button>
       </div>
       {error && <p className="rounded-xl bg-red-500/10 px-3 py-2 text-xs text-red-500">{error}</p>}

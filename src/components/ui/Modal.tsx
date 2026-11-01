@@ -2,7 +2,7 @@
 
 import { useId, useRef, type ReactNode } from "react";
 import { m, AnimatePresence, useReducedMotion } from "framer-motion";
-import { X } from "lucide-react";
+import { ArrowRight, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { panelMotion } from "@/lib/motion";
 import { Backdrop } from "./Backdrop";
@@ -17,6 +17,10 @@ export interface ModalProps {
     icon?: ReactNode;
     /** Blocks backdrop / Esc / X while a request runs */
     busy?: boolean;
+    /** Shows a back arrow (previous view in a flow) */
+    onBack?: () => void;
+    /** "auto": sheet on mobile, card on desktop. "center": centered card on all sizes */
+    presentation?: "auto" | "center";
     /** Tailwind max-width class for desktop, e.g. "max-w-lg" */
     maxWidth?: string;
     footer?: ReactNode;
@@ -31,11 +35,15 @@ export function Modal({
     subtitle,
     icon,
     busy = false,
+    onBack,
+    presentation = "auto",
     maxWidth = "max-w-lg",
     footer,
     children,
 }: ModalProps) {
-    const mobile = useIsMobile();
+    const isMobile = useIsMobile();
+    const center = presentation === "center";
+    const mobile = !center && isMobile;
     const reduced = !!useReducedMotion();
     const ref = useRef<HTMLDivElement>(null);
     const titleId = useId();
@@ -46,7 +54,12 @@ export function Modal({
         <AnimatePresence>
             {open && (
                 <Portal>
-                    <div className="fixed inset-0 z-[100] flex items-end justify-center md:items-center md:p-4">
+                    <div
+                        className={cn(
+                            "fixed inset-0 z-[100] flex justify-center",
+                            center ? "items-center p-4" : "items-end md:items-center md:p-4",
+                        )}
+                    >
                         <Backdrop onClick={() => !busy && onClose()} />
                         <m.div
                             ref={ref}
@@ -56,17 +69,26 @@ export function Modal({
                             tabIndex={-1}
                             {...panelMotion(mobile, reduced)}
                             className={cn(
-                                "relative flex max-h-[92dvh] w-full flex-col overflow-hidden bg-white outline-none dark:bg-surface-dark",
-                                "rounded-t-3xl md:max-h-[88dvh] md:rounded-3xl md:border md:border-gray-100 md:dark:border-white/10",
-                                "md:shadow-xl",
+                                "relative flex w-full flex-col overflow-hidden bg-white outline-none dark:bg-surface-dark",
+                                center
+                                    ? "max-h-[85dvh] rounded-3xl border border-gray-100 shadow-xl dark:border-white/10"
+                                    : "max-h-[92dvh] rounded-t-3xl md:max-h-[88dvh] md:rounded-3xl md:border md:border-gray-100 md:shadow-xl md:dark:border-white/10",
                                 maxWidth,
                             )}
                         >
                             <div
                                 aria-hidden="true"
-                                className="mx-auto mt-2 h-1 w-10 shrink-0 rounded-full bg-gray-300 md:hidden dark:bg-white/20"
+                                className={cn(
+                                    "mx-auto mt-2 h-1 w-10 shrink-0 rounded-full bg-gray-300 md:hidden dark:bg-white/20",
+                                    center && "hidden",
+                                )}
                             />
                             <header className="flex shrink-0 items-center gap-3 border-b border-gray-100 px-5 py-3 dark:border-white/10">
+                                {onBack && (
+                                    <IconButton aria-label="بازگشت" onClick={onBack} disabled={busy}>
+                                        <ArrowRight size={18} />
+                                    </IconButton>
+                                )}
                                 {icon && (
                                     <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-brand-soft text-brand">
                                         {icon}

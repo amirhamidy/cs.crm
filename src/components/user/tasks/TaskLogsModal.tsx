@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect } from "react";
-import { AnimatePresence, m } from "framer-motion";
+import { AnimatePresence, m, useReducedMotion } from "framer-motion";
+import { Backdrop } from "@/components/ui/Backdrop";
+import { panelMotion } from "@/lib/motion";
 import { X, History, Loader2, AlertCircle, ClipboardList, ArrowLeftCircle, ArrowRightCircle, ArrowLeftRight, ShoppingBag, XCircle, Ban, RotateCcw, CheckCircle2, Paperclip, UserRound, MessageSquareText, RefreshCw } from "lucide-react";
 import { useTheme } from "next-themes";
 import { createPortal } from "react-dom";
@@ -209,6 +211,7 @@ function LogItem({ log, isLast, isDark }: { log: TaskLog; isLast: boolean; isDar
 const LOGS_PAGE_SIZE = 10;
 
 export default function TaskLogsModal({ isOpen, onClose, taskId, taskTitle }: Props) {
+    const reduced = useReducedMotion() ?? false;
     const { resolvedTheme } = useTheme();
     const isDark = resolvedTheme === "dark";
 
@@ -239,26 +242,18 @@ export default function TaskLogsModal({ isOpen, onClose, taskId, taskTitle }: Pr
 
     return createPortal(
         <AnimatePresence>
-            <m.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
+            <div
                 className="fixed inset-0 z-50 flex items-center justify-center px-4"
-                style={{ background: "rgba(0,0,0,0.5)", backdropFilter: "blur(3px)" }}
-                onClick={onClose}
             >
+                <Backdrop onClick={onClose} />
                 <m.div
-                    initial={{ scale: 0.94, y: 18 }}
-                    animate={{ scale: 1, y: 0 }}
-                    exit={{ scale: 0.94, y: 18 }}
-                    transition={{ duration: 0.22, ease: "easeOut" }}
-                    className="flex max-h-[85vh] w-full max-w-[460px] flex-col overflow-hidden rounded-3xl border"
+                    {...panelMotion(false, reduced)}
+                    className="relative flex max-h-[85vh] w-full max-w-[460px] flex-col overflow-hidden rounded-3xl border"
                     style={{
                         background: isDark ? "#111827" : "#ffffff",
                         borderColor: isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.06)",
                         boxShadow: "0 24px 64px rgba(0,0,0,0.28)",
                     }}
-                    onClick={(e) => e.stopPropagation()}
                     dir="rtl"
                 >
                     <div
@@ -286,11 +281,11 @@ export default function TaskLogsModal({ isOpen, onClose, taskId, taskTitle }: Pr
                                 type="button"
                                 onClick={fetchLogs}
                                 disabled={loading}
-                                className={`flex h-8 w-8 items-center justify-center rounded-xl text-gray-400 transition-colors hover:text-gray-600 disabled:opacity-40 dark:hover:text-gray-300 ${loading ? "is-busy" : ""}`}
+                                className={`flex h-8 w-8 items-center justify-center rounded-xl text-gray-400 transition-colors hover:text-gray-600 disabled:opacity-40 dark:hover:text-gray-300 `}
                                 style={{ background: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.04)" }}
                                 title="بروزرسانی"
                             >
-                                <RefreshCw size={13} />
+                                {loading ? <Loader2 size={13} className="animate-spin" /> : <RefreshCw size={13} />}
                             </button>
                             <button
                                 type="button"
@@ -344,7 +339,7 @@ export default function TaskLogsModal({ isOpen, onClose, taskId, taskTitle }: Pr
                         )}
                     </div>
                 </m.div>
-            </m.div>
+            </div>
         </AnimatePresence>,
         document.body
     );

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence, m } from "framer-motion";
-import { Archive, Check, ClipboardList, Eye, Plus, RefreshCw } from "lucide-react";
+import { Archive, Check, ClipboardList, Eye, Plus, RefreshCw, Loader2 } from "lucide-react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import axiosInstance from "@/lib/axiosInstance";
@@ -159,11 +159,11 @@ function AdminTasksPageContent() {
                         type="button"
                         onClick={fetchAll}
                         disabled={loading}
-                        className={`flex h-10 w-10 items-center justify-center rounded-2xl transition-colors disabled:opacity-50 ${loading ? "is-busy" : ""}`}
+                        className={`flex h-10 w-10 items-center justify-center rounded-2xl transition-colors disabled:opacity-50 `}
                         style={{ background: isDark ? "rgba(255,255,255,0.05)" : "rgba(15,23,42,0.05)", color: isDark ? "#d1d5db" : "#4b5563" }}
                         title="بارگذاری مجدد"
                     >
-                        <RefreshCw size={15} />
+                        {loading ? <Loader2 size={15} className="animate-spin" /> : <RefreshCw size={15} />}
                     </button>
 
                     <button

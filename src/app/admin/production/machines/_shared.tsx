@@ -7,13 +7,14 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 
 import { m, AnimatePresence } from "framer-motion";
-import { Power, Check, X, AlertCircle, Loader2, ChevronDown, ChevronLeft, ChevronRight, Search, CalendarDays, Info, Sparkles } from "lucide-react";
+import { Power, Check, X, AlertCircle, ChevronDown, ChevronLeft, ChevronRight, Search, CalendarDays, Info, Sparkles } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
 import TimePicker from "@/components/TimePicker";
 import { cached, listAll } from "@/lib/api";
 
 import { toPersianDigits, toJalali, toGregorian, jalaliMonthLength, jalaliWeekday, JALALI_MONTHS, JALALI_WEEKDAYS, pad2, todayJalali } from "@/lib/jalali";
 
+import { BusyContent } from "@/components/ui/Button";
 export interface Machine {
     id: number;
     name: string;
@@ -686,46 +687,42 @@ export function NiceSelect({
                 type="button"
                 disabled={disabled}
                 onClick={() => setOpen((v) => !v)}
-                className={`flex h-[52px] w-full items-center gap-2.5 rounded-2xl border px-3 text-right transition-all duration-200 ${open
+                className={`relative flex h-[52px] w-full items-center gap-2.5 rounded-2xl border px-3 text-right transition-all duration-200 ${open
                     ? "border-blue-500 bg-blue-50/50 dark:border-blue-500/50 dark:bg-blue-500/[0.06]"
                     : "border-gray-100 bg-gray-50 hover:border-gray-200 dark:border-white/[0.06] dark:bg-white/[0.03] dark:hover:border-white/[0.12]"
                     } ${disabled ? "cursor-not-allowed opacity-40" : "cursor-pointer"}`}
             >
-                {selected ? (
-                    <span
-                        className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br text-[12px] font-extrabold text-white ${gradientOf(
-                            selected.id
-                        )}`}
-                    >
-                        {initialOf(selected.label)}
-                    </span>
-                ) : (
-                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gray-100 dark:bg-white/[0.06]">
-                        {loading ? (
-                            <Loader2 size={13} className="animate-spin text-gray-400" />
-                        ) : (
+                <BusyContent busy={loading}>
+                    {selected ? (
+                        <span
+                            className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br text-[12px] font-extrabold text-white ${gradientOf(
+                                selected.id
+                            )}`}
+                        >
+                            {initialOf(selected.label)}
+                        </span>
+                    ) : (
+                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gray-100 dark:bg-white/[0.06]">
                             <ChevronDown size={13} className="text-gray-400" />
-                        )}
-                    </span>
-                )}
-
-                <span className="min-w-0 flex-1">
-                    <span
-                        className={`block truncate text-[12.5px] font-bold ${selected ? "text-gray-900 dark:text-white" : "text-gray-400"
-                            }`}
-                    >
-                        {loading ? "در حال بارگذاری..." : selected?.label || placeholder}
-                    </span>
-                    {selected?.sub && (
-                        <span className="mt-0.5 block truncate text-[10.5px] text-gray-400">
-                            {selected.sub}
                         </span>
                     )}
-                </span>
-
-                <m.span animate={{ rotate: open ? 180 : 0 }} transition={{ duration: 0.2 }}>
-                    <ChevronDown size={14} className="shrink-0 text-gray-400" />
-                </m.span>
+                    <span className="min-w-0 flex-1">
+                        <span
+                            className={`block truncate text-[12.5px] font-bold ${selected ? "text-gray-900 dark:text-white" : "text-gray-400"
+                                }`}
+                        >
+                            {loading ? "در حال بارگذاری..." : selected?.label || placeholder}
+                        </span>
+                        {selected?.sub && (
+                            <span className="mt-0.5 block truncate text-[10.5px] text-gray-400">
+                                {selected.sub}
+                            </span>
+                        )}
+                    </span>
+                    <m.span animate={{ rotate: open ? 180 : 0 }} transition={{ duration: 0.2 }}>
+                        <ChevronDown size={14} className="shrink-0 text-gray-400" />
+                    </m.span>
+                </BusyContent>
             </button>
 
             <AnimatePresence>
@@ -851,17 +848,17 @@ export function StatusSwitch({
             className={`relative inline-flex h-7 w-[52px] shrink-0 items-center rounded-full border-[1.5px] transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60 ${trackClass} ${disabled ? "cursor-not-allowed opacity-55" : loading ? "cursor-wait" : "cursor-pointer"
                 }`}
         >
-            <span
-                className={`absolute left-[1.5px] top-[1.5px] flex h-6 w-6 items-center justify-center rounded-full text-white shadow-[0_2px_6px_rgba(15,23,42,0.22)] transition-[transform,background-color] duration-200 ${knobClass}`}
-            >
-                {loading ? (
-                    <Loader2 size={12} className="animate-spin" />
-                ) : isActive ? (
-                    <Check size={13} strokeWidth={3.2} />
-                ) : (
-                    <Power size={12} strokeWidth={2.6} />
-                )}
-            </span>
+            <BusyContent busy={loading}>
+                <span
+                    className={`absolute left-[1.5px] top-[1.5px] flex h-6 w-6 items-center justify-center rounded-full text-white shadow-[0_2px_6px_rgba(15,23,42,0.22)] transition-[transform,background-color] duration-200 ${knobClass}`}
+                >
+                    {isActive ? (
+                        <Check size={13} strokeWidth={3.2} />
+                    ) : (
+                        <Power size={12} strokeWidth={2.6} />
+                    )}
+                </span>
+            </BusyContent>
         </button>
     );
 }

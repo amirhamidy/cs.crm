@@ -5,7 +5,7 @@ import { m, AnimatePresence, useReducedMotion } from "framer-motion";
 import { Backdrop } from "@/components/ui/Backdrop";
 import { panelMotion } from "@/lib/motion";
 import { useTheme } from "next-themes";
-import { Plus, Building2, Loader, AlertCircle, Check, X, Pencil, CheckCircle2, RefreshCw } from "lucide-react";
+import { Plus, Building2, Loader, Loader2, AlertCircle, Check, X, Pencil, CheckCircle2, RefreshCw } from "lucide-react";
 import { useDepartmentStore } from "@/components/admin/departments/departmentStore";
 import { Department } from "@/components/admin/departments/types";
 import DepartmentCard from "@/components/admin/departments/DepartmentCard";
@@ -13,6 +13,7 @@ import DeleteModal from "@/components/admin/departments/DeleteModal";
 import AddDepartmentModal from "@/components/admin/departments/AddDepartmentDrawer";
 import { listAll } from "@/lib/api";
 
+import { BusyContent } from "@/components/ui/Button";
 interface FloatingInputProps
     extends InputHTMLAttributes<HTMLInputElement> {
     label: string;
@@ -436,19 +437,14 @@ export default function DepartmentsPage() {
                                                     whileTap={{
                                                         scale: 0.97,
                                                     }}
-                                                    className="flex flex-1 items-center justify-center gap-2 rounded-full bg-blue-600 py-3 text-sm font-bold text-white transition-colors hover:bg-blue-500 disabled:opacity-50"
+                                                    className="relative flex flex-1 items-center justify-center gap-2 rounded-full bg-blue-600 py-3 text-sm font-bold text-white transition-colors hover:bg-blue-500 disabled:opacity-50"
                                                 >
-                                                    {editLoading ? (
-                                                        <Loader
-                                                            size={18}
-                                                            className="animate-spin"
-                                                        />
-                                                    ) : (
+                                                    <BusyContent busy={editLoading}>
                                                         <Check
-                                                            size={16}
-                                                        />
-                                                    )}
-                                                    ذخیره تغییرات
+                                                                size={16}
+                                                            />
+                                                        ذخیره تغییرات
+                                                    </BusyContent>
                                                 </m.button>
                                             </m.div>
                                         )}
@@ -514,14 +510,11 @@ export default function DepartmentsPage() {
                             title="بارگذاری مجدد"
                             type="button"
                         >
-                            <RefreshCw
-                                size={15}
-                                className={
-                                    loading
-                                        ? "animate-spin"
-                                        : ""
-                                }
-                            />
+                            {loading ? (
+                                <Loader2 size={15} className="animate-spin" />
+                            ) : (
+                                <RefreshCw size={15} />
+                            )}
                         </button>
 
                         <button

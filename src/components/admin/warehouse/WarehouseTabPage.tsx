@@ -3,7 +3,8 @@
 import { ComponentType, useCallback, useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { AnimatePresence, m } from "framer-motion";
-import { BellRing, Boxes, ClipboardList, Archive, FileText, Loader2, Package, PackagePlus, PackageSearch, Plus, ReceiptText, ShieldCheck, Power, PowerOff, ShieldAlert, ShoppingBag, UploadCloud, UsersRound, UserPlus } from "lucide-react";
+import { BusyContent } from "@/components/ui/Button";
+import { BellRing, Boxes, ClipboardList, Archive, FileText, Loader2, Package, RefreshCw, PackagePlus, PackageSearch, Plus, ReceiptText, ShieldCheck, Power, PowerOff, ShieldAlert, ShoppingBag, UploadCloud, UsersRound, UserPlus } from "lucide-react";
 import { useTheme } from "next-themes";
 
 import AddCategoryModal from "@/components/admin/warehouse/AddCategoryModal";
@@ -451,10 +452,12 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
                         whileTap={{ scale: 0.96 }}
                         onClick={refresh}
                         disabled={refreshing}
-                        className="flex h-10 items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-4 text-[12.5px] font-bold text-white transition-colors hover:bg-indigo-700 disabled:opacity-50"
+                        className="relative flex h-10 items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-4 text-[12.5px] font-bold text-white transition-colors hover:bg-indigo-700 disabled:opacity-50"
                     >
-                        <Loader2 size={15} className={refreshing ? "animate-spin" : ""} />
-                        بروزرسانی
+                        <BusyContent busy={refreshing}>
+<RefreshCw size={15} />
+بروزرسانی
+</BusyContent>
                     </m.button>
                 </div>
             </div>
@@ -478,14 +481,14 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
                             key={id}
                             type="button"
                             onClick={() => goToTab(id)}
-                            className={`relative flex items-center gap-1.5 rounded-xl px-4 py-2 text-[12px] font-extrabold ${archiveLoading ? "is-busy" : ""}`}
+                            className={`relative flex items-center gap-1.5 rounded-xl px-4 py-2 text-[12px] font-extrabold `}
                             style={{
                                 background: active ? "linear-gradient(135deg,#6366f1,#8b5cf6)" : "transparent",
                                 color: active ? "#fff" : isDark ? "#9ca3af" : "#4b5563",
                                 boxShadow: active ? "0 4px 12px rgba(99,102,241,.25)" : "none",
                             }}
                         >
-                            <Icon size={14} />
+                            {archiveLoading ? <Loader2 size={14} className="animate-spin" /> : <Icon size={14} />}
                             {label}
                             {count > 0 && (
                                 <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[9px] text-white">

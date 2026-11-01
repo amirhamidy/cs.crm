@@ -8,6 +8,7 @@ import { fetchPage } from "@/lib/api";
 import { useInfiniteOptions, type InfiniteFetcher } from "@/hooks/useInfiniteOptions";
 import { WAREHOUSE_ENDPOINTS, fetchAll } from "@/lib/warehouseApi";
 
+import { BusyContent } from "@/components/ui/Button";
 interface Employee {
     id: number;
     full_name: string;
@@ -320,16 +321,14 @@ export default function AddWarehouseStaffModal({
                             type="submit"
                             disabled={loading || fetching || !selectedEmployee || selectedWarehouses.length === 0}
                             whileTap={{ scale: 0.98 }}
-                            className="mt-1 flex items-center justify-center gap-2 rounded-2xl bg-blue-600 py-3 text-[13px] font-bold text-white shadow-md shadow-blue-500/20 transition-colors hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="relative mt-1 flex items-center justify-center gap-2 rounded-2xl bg-blue-600 py-3 text-[13px] font-bold text-white shadow-md shadow-blue-500/20 transition-colors hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            {loading ? (
-                                <Loader size={16} className="animate-spin" />
-                            ) : (
+                            <BusyContent busy={loading}>
                                 <>
-                                    <Check size={15} />
-                                    ثبت انباردار
-                                </>
-                            )}
+                                        <Check size={15} />
+                                        ثبت انباردار
+                                    </>
+                            </BusyContent>
                         </m.button>
                     </form>
                 </m.div>

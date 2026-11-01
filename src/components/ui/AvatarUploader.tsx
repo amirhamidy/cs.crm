@@ -1,7 +1,8 @@
 "use client";
 import { useEffect, useState } from "react";
 import Image from "next/image";
-import { ImagePlus, Trash2, Loader2 } from "lucide-react";
+import { ImagePlus, Trash2 } from "lucide-react";
+import { BusyContent } from "./Button";
 import UserAvatar from "@/components/ui/UserAvatar";
 import { validateAvatarFile } from "@/lib/avatar";
 
@@ -45,9 +46,11 @@ export default function AvatarUploader({ current, name, id, onUpload, onRemove }
         <Image src={preview} alt={name} width={96} height={96} unoptimized className="h-24 w-24 rounded-[1.5rem] object-cover" />
       ) : <UserAvatar src={current} name={name} id={id} size="h-24 w-24" />}
       <div className="flex flex-wrap justify-center gap-2">
-        <label className="inline-flex cursor-pointer items-center gap-2 h-9 rounded-xl bg-indigo-600 px-3.5 text-[11.5px] font-bold hover:bg-indigo-500 text-white">
-          {busy ? <Loader2 size={15} className="animate-spin" /> : <ImagePlus size={15} />}
-          تغییر عکس
+        <label className="relative inline-flex cursor-pointer items-center gap-2 h-9 rounded-xl bg-indigo-600 px-3.5 text-[11.5px] font-bold hover:bg-indigo-500 text-white">
+          <BusyContent busy={busy}>
+            <ImagePlus size={15} />
+            تغییر عکس
+          </BusyContent>
           <input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" disabled={busy} onChange={(e) => { void selectFile(e.target.files?.[0]); e.currentTarget.value = ""; }} />
         </label>
         {hasCurrent && <button type="button" disabled={busy} onClick={async () => { setBusy(true); setError(""); try { await onRemove(); setPreview(""); setHasCurrent(false); } catch (e) { setError(e instanceof Error ? e.message : "حذف عکس انجام نشد"); } finally { setBusy(false); } }} className="inline-flex items-center gap-2 h-9 rounded-xl border border-red-200 px-3.5 text-[11.5px] font-bold text-red-600 hover:bg-red-50 disabled:opacity-50"><Trash2 size={15} /> حذف عکس</button>}

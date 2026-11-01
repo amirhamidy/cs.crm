@@ -4,11 +4,12 @@ import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, m, useReducedMotion } from "framer-motion";
 import { Backdrop } from "@/components/ui/Backdrop";
 import { panelMotion } from "@/lib/motion";
-import { AlertCircle, CheckCircle2, Loader2, Upload, X, XCircle } from "lucide-react";
+import { AlertCircle, CheckCircle2, Upload, X, XCircle } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
 import type { AxiosError } from "axios";
 import type { ApiQualityControlEmployee, ApiQualityControlItem, QualityControlActionResponse } from "@/types/quality_control";
 
+import { BusyContent } from "@/components/ui/Button";
 interface Props {
     isOpen: boolean;
     mode: "approve" | "reject";
@@ -153,10 +154,12 @@ export default function QCActionModal({ isOpen, mode, item, reviewer, reviewerNa
                                     type="submit"
                                     whileTap={{ scale: 0.97 }}
                                     disabled={loading || !reviewer}
-                                    className={`flex h-11 flex-1 items-center justify-center gap-2 rounded-full text-[13px] font-bold text-white transition disabled:cursor-not-allowed disabled:opacity-40 ${tone.btn}`}
+                                    className={`relative flex h-11 flex-1 items-center justify-center gap-2 rounded-full text-[13px] font-bold text-white transition disabled:cursor-not-allowed disabled:opacity-40 ${tone.btn}`}
                                 >
-                                    {loading ? <Loader2 size={15} className="animate-spin" /> : <Icon size={14} />}
-                                    {isApprove ? "تایید نهایی" : "رد نهایی"}
+                                    <BusyContent busy={loading}>
+                                        <Icon size={14} />
+                                        {isApprove ? "تایید نهایی" : "رد نهایی"}
+                                    </BusyContent>
                                 </m.button>
                             </div>
                         </form>

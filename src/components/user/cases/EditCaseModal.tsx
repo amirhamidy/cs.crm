@@ -1,14 +1,17 @@
 "use client";
 
 import { useEffect, useState, forwardRef, InputHTMLAttributes, TextareaHTMLAttributes } from "react";
-import { m, AnimatePresence } from "framer-motion";
-import { X, FolderOpen, CheckCircle2, Loader, AlertCircle } from "lucide-react";
+import { m, AnimatePresence, useReducedMotion } from "framer-motion";
+import { Backdrop } from "@/components/ui/Backdrop";
+import { panelMotion } from "@/lib/motion";
+import { X, FolderOpen, CheckCircle2, AlertCircle } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
 import type { CaseItem } from "@/types/case";
 import type { Customer } from "@/types/customer";
 import type { Department } from "@/types/department";
 import type { Employee } from "@/types/employee";
 
+import { BusyContent } from "@/components/ui/Button";
 interface EditCaseModalProps {
     isOpen: boolean;
     onClose: () => void;
@@ -81,6 +84,7 @@ export default function EditCaseModal({
     users,
     onSuccess,
 }: EditCaseModalProps) {
+    const reduced = useReducedMotion() ?? false;
     const [title, setTitle] = useState("");
     const [description, setDescription] = useState("");
     const [submitting, setSubmitting] = useState(false);
@@ -160,21 +164,13 @@ export default function EditCaseModal({
     return (
         <AnimatePresence>
             {isOpen && caseItem && (
-                <m.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
+                <div
                     className="fixed inset-0 z-50 flex items-center justify-center px-4"
-                    style={{ background: "rgba(0,0,0,0.45)", backdropFilter: "blur(3px)" }}
-                    onClick={handleClose}
                 >
+                    <Backdrop onClick={handleClose} />
                     <m.div
-                        initial={{ opacity: 0, y: 16 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: 16 }}
-                        transition={{ duration: 0.35, ease: "easeOut" }}
-                        className="w-full max-w-sm overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-sm dark:border-white/[0.06] dark:bg-[#111827]"
-                        onClick={(e) => e.stopPropagation()}
+                        {...panelMotion(false, reduced)}
+                        className="relative w-full max-w-sm overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-sm dark:border-white/[0.06] dark:bg-[#111827]"
                         dir="rtl"
                     >
                         <div className="flex items-center justify-between px-8 pb-6 pt-8">
@@ -258,19 +254,17 @@ export default function EditCaseModal({
                                         type="submit"
                                         disabled={!canSubmit}
                                         whileTap={{ scale: 0.97 }}
-                                        className="flex items-center justify-center rounded-full bg-blue-600 py-3 text-sm font-bold text-white transition-colors hover:bg-blue-500 disabled:opacity-50"
+                                        className="relative flex items-center justify-center rounded-full bg-blue-600 py-3 text-sm font-bold text-white transition-colors hover:bg-blue-500 disabled:opacity-50"
                                     >
-                                        {submitting ? (
-                                            <Loader size={18} className="animate-spin" />
-                                        ) : (
-                                            "ذخیره تغییرات"
-                                        )}
+                                        <BusyContent busy={submitting}>
+                                            ذخیره تغییرات
+                                        </BusyContent>
                                     </m.button>
                                 )}
                             </AnimatePresence>
                         </form>
                     </m.div>
-                </m.div>
+                </div>
             )}
         </AnimatePresence>
     );

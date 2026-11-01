@@ -3,11 +3,12 @@
 import { ReactNode, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, m } from "framer-motion";
-import { AlertCircle, Hash, Loader2, Pencil, Tag, Trash2, X } from "lucide-react";
+import { AlertCircle, Hash, Pencil, Tag, Trash2, X } from "lucide-react";
 import { useTheme } from "next-themes";
 import axiosInstance from "@/lib/axiosInstance";
 import { toPersianDigits } from "@/lib/jalali";
 
+import { BusyContent } from "@/components/ui/Button";
 interface Category {
     id: number;
     name: string;
@@ -383,7 +384,7 @@ export default function WarehouseCategoryCard({
                                             type="button"
                                             onClick={handleDelete}
                                             disabled={deleting}
-                                            className="flex h-11 flex-1 items-center justify-center gap-1.5 rounded-2xl text-[12.5px] font-bold text-white disabled:opacity-60"
+                                            className="relative flex h-11 flex-1 items-center justify-center gap-1.5 rounded-2xl text-[12.5px] font-bold text-white disabled:opacity-60"
                                             style={{
                                                 background:
                                                     "linear-gradient(135deg, #ef4444, #dc2626)",
@@ -391,14 +392,12 @@ export default function WarehouseCategoryCard({
                                                     "0 10px 24px rgba(239,68,68,0.22)",
                                             }}
                                         >
-                                            {deleting ? (
-                                                <Loader2 size={15} className="animate-spin" />
-                                            ) : (
+                                            <BusyContent busy={deleting}>
                                                 <>
-                                                    <Trash2 size={13} />
-                                                    حذف کن
-                                                </>
-                                            )}
+                                                        <Trash2 size={13} />
+                                                        حذف کن
+                                                    </>
+                                            </BusyContent>
                                         </button>
                                     </div>
                                 </ModalShell>
@@ -466,7 +465,7 @@ export default function WarehouseCategoryCard({
                                             type="button"
                                             onClick={handleEdit}
                                             disabled={editing}
-                                            className="flex h-11 flex-1 items-center justify-center gap-1.5 rounded-2xl text-[12.5px] font-bold text-white disabled:opacity-60"
+                                            className="relative flex h-11 flex-1 items-center justify-center gap-1.5 rounded-2xl text-[12.5px] font-bold text-white disabled:opacity-60"
                                             style={{
                                                 background:
                                                     "linear-gradient(135deg, #6366f1, #8b5cf6)",
@@ -474,14 +473,12 @@ export default function WarehouseCategoryCard({
                                                     "0 10px 24px rgba(99,102,241,0.22)",
                                             }}
                                         >
-                                            {editing ? (
-                                                <Loader2 size={15} className="animate-spin" />
-                                            ) : (
+                                            <BusyContent busy={editing}>
                                                 <>
-                                                    <Pencil size={13} />
-                                                    ذخیره
-                                                </>
-                                            )}
+                                                        <Pencil size={13} />
+                                                        ذخیره
+                                                    </>
+                                            </BusyContent>
                                         </button>
                                     </div>
                                 </ModalShell>

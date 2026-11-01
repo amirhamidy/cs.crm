@@ -7,6 +7,7 @@ import { panelMotion } from "@/lib/motion";
 import { X, User, CheckCircle2, Search, Loader } from "lucide-react";
 import type { Department, Employee } from "./types";
 
+import { BusyContent } from "@/components/ui/Button";
 interface Props {
     open: boolean;
     department: Department | null;
@@ -275,13 +276,11 @@ export default function AddEmployeeModal({
                                         type="submit"
                                         disabled={!selectedId || submitting}
                                         whileTap={{ scale: 0.97 }}
-                                        className="flex items-center justify-center rounded-full bg-blue-600 py-3 text-sm font-bold text-white transition-colors hover:bg-blue-500 disabled:opacity-50"
+                                        className="relative flex items-center justify-center rounded-full bg-blue-600 py-3 text-sm font-bold text-white transition-colors hover:bg-blue-500 disabled:opacity-50"
                                     >
-                                        {submitting ? (
-                                            <Loader size={18} className="animate-spin" />
-                                        ) : (
-                                            "افزودن عضو"
-                                        )}
+                                        <BusyContent busy={submitting}>
+                                            افزودن عضو
+                                        </BusyContent>
                                     </m.button>
                                 )}
                             </AnimatePresence>

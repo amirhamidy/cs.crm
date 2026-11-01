@@ -4,8 +4,10 @@ import { JSX, memo, useEffect, useMemo, useState } from "react";
 import Pagination from "@/components/ui/Pagination";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import { internalTasksApi } from "@/lib/api";
-import { AnimatePresence, m } from "framer-motion";
-import { Ban, CalendarClock, CheckCircle2, ClipboardX, Clock3, Inbox, LayoutGrid, Loader, Loader2, MessageSquareText, Plus, RefreshCw, RotateCcw, Ticket, Trash2, Users, X } from "lucide-react";
+import { AnimatePresence, m, useReducedMotion } from "framer-motion";
+import { Backdrop } from "@/components/ui/Backdrop";
+import { panelMotion } from "@/lib/motion";
+import { Ban, CalendarClock, CheckCircle2, ClipboardX, Clock3, Inbox, LayoutGrid, Loader, MessageSquareText, Plus, RefreshCw, RotateCcw, Ticket, Trash2, Users, X, Loader2 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useAuthStore } from "@/store/authStore";
 import { deleteInternalTask, fetchEmployeeList, reopenInternalTask, patchInternalTaskDeadline } from "./Api";
@@ -17,6 +19,7 @@ import TimeRangeModal from "@/components/tasks/TimeRangeModal";
 import InternalTaskDeadlineModal from "./InternalTaskDeadlineModal";
 
 
+import { BusyContent } from "@/components/ui/Button";
 const AdminInternalTaskChatModal = dynamic(() => import("./AdminInternalTaskChatModal"), {
     ssr: false,
     loading: () => null,
@@ -146,6 +149,7 @@ const AdminInternalTaskCard = memo(function AdminInternalTaskCard({
     onStatusChange: (task: InternalTask) => void;
     isDeleting?: boolean;
 }) {
+    const reduced = useReducedMotion() ?? false;
     const { resolvedTheme } = useTheme();
     const isDark = resolvedTheme === "dark";
     const [hovered, setHovered] = useState(false);
@@ -232,7 +236,11 @@ const AdminInternalTaskCard = memo(function AdminInternalTaskCard({
                     <button type="button" onClick={event => { event.stopPropagation(); setDeadlineModalOpen(true); }} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-indigo-500/[0.08] text-indigo-500 transition-all hover:bg-indigo-500/[0.14] hover:text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-300 dark:hover:bg-indigo-500/15" title="مشاهده ددلاین"><CalendarClock size={13} /></button>
                     {isSent && <button type="button" onClick={event => { event.stopPropagation(); setTimeError(null); setTimeModalOpen(true); }} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-indigo-500/[0.08] text-indigo-500 transition-all hover:bg-indigo-500/[0.14] hover:text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-300 dark:hover:bg-indigo-500/15" title="تعیین بازه زمانی"><Clock3 size={13} /></button>}
                     <button type="button" onClick={event => { event.stopPropagation(); onOpen(task); }} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-indigo-500/[0.08] text-indigo-500 transition-all hover:bg-indigo-500/[0.14] hover:text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-300 dark:hover:bg-indigo-500/15" title="مشاهده گفتگو"><MessageSquareText size={13} /></button>
-                    {onDelete && <button type="button" onClick={event => { event.stopPropagation(); setDeleteError(null); setShowConfirm(true); }} disabled={isDeleting} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-red-500/[0.08] text-red-500 transition-all hover:bg-red-500/[0.14] hover:text-red-600 disabled:opacity-40 dark:bg-red-500/10 dark:text-red-400 dark:hover:bg-red-500/15" title="حذف تیکت">{isDeleting ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}</button>}
+                    {onDelete && <button type="button" onClick={event => { event.stopPropagation(); setDeleteError(null); setShowConfirm(true); }} disabled={isDeleting} className="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-red-500/[0.08] text-red-500 transition-all hover:bg-red-500/[0.14] hover:text-red-600 disabled:opacity-40 dark:bg-red-500/10 dark:text-red-400 dark:hover:bg-red-500/15" title="حذف تیکت">
+                        <BusyContent busy={isDeleting}>
+    <Trash2 size={13} />
+                        </BusyContent>
+                    </button>}
                 </div>
             </div>
 
@@ -275,7 +283,11 @@ const AdminInternalTaskCard = memo(function AdminInternalTaskCard({
                     <button type="button" onClick={event => { event.stopPropagation(); setStatusError(null); setActionModal("complete"); }} className="flex h-8 flex-1 items-center justify-center gap-1.5 rounded-xl bg-emerald-500 text-[10px] font-extrabold text-white transition-opacity hover:opacity-90"><CheckCircle2 size={12} />انجام شد</button>
                     <button type="button" onClick={event => { event.stopPropagation(); setStatusError(null); setActionModal("cancel"); }} className="flex h-8 flex-1 items-center justify-center gap-1.5 rounded-xl bg-red-500 text-[10px] font-extrabold text-white transition-opacity hover:opacity-90"><Ban size={12} />لغو تیکت</button>
                 </>}
-                {(isCompleted || isCancelled) && <button type="button" onClick={handleReopen} disabled={reopening} className="flex h-8 flex-1 items-center justify-center gap-1.5 rounded-xl bg-amber-500 text-[10px] font-extrabold text-white transition-opacity hover:opacity-90 disabled:opacity-50">{reopening ? <Loader2 size={12} className="animate-spin" /> : <RotateCcw size={12} />}بازگشایی تیکت</button>}
+                {(isCompleted || isCancelled) && <button type="button" onClick={handleReopen} disabled={reopening} className="relative flex h-8 flex-1 items-center justify-center gap-1.5 rounded-xl bg-amber-500 text-[10px] font-extrabold text-white transition-opacity hover:opacity-90 disabled:opacity-50">
+                    <BusyContent busy={reopening}>
+    <RotateCcw size={12} />بازگشایی تیکت
+                    </BusyContent>
+                </button>}
             </div>}
 
             <div onClick={event => event.stopPropagation()}>
@@ -293,8 +305,11 @@ const AdminInternalTaskCard = memo(function AdminInternalTaskCard({
             {actionModal && canAct && hasResponse && <div onClick={event => event.stopPropagation()}><InternalTaskActionModal isOpen={true} action={actionModal} task={task} onClose={() => setActionModal(null)} onDone={handleActionDone} /></div>}
 
             <AnimatePresence>
-                {showConfirm && <m.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center px-4" style={{ background: "rgba(0,0,0,.45)", backdropFilter: "blur(3px)" }} onClick={event => { event.stopPropagation(); if (isDeleting) return; setShowConfirm(false); setDeleteError(null); }}>
-                    <m.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 16 }} transition={{ duration: .35, ease: "easeOut" }} onClick={event => event.stopPropagation()} dir="rtl" className="flex w-full max-w-md flex-col overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-sm dark:border-white/[0.06] dark:bg-[#111827]">
+                {showConfirm && <div className="fixed inset-0 z-50 flex items-center justify-center px-4" >
+                <Backdrop onClick={() => { if (isDeleting) return; setShowConfirm(false); setDeleteError(null); }} />
+                <m.div
+                    {...panelMotion(false, reduced)}
+      dir="rtl" className="relative flex w-full max-w-md flex-col overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-sm dark:border-white/[0.06] dark:bg-[#111827]">
                         <div className="flex shrink-0 items-center justify-between px-8 pb-6 pt-8">
                             <div className="flex items-center gap-2.5"><div className="flex h-8 w-8 items-center justify-center rounded-xl bg-red-50 dark:bg-red-500/10"><Trash2 size={15} className="text-red-500" /></div><div><h3 className="text-[14px] font-extrabold text-gray-900 dark:text-white">حذف تیکت</h3><p className="mt-0.5 text-[11px] text-gray-400">این عملیات قابل بازگشت نیست</p></div></div>
                             <button type="button" onClick={() => { if (isDeleting) return; setShowConfirm(false); setDeleteError(null); }} disabled={isDeleting} className="flex h-8 w-8 items-center justify-center rounded-xl bg-gray-100 text-gray-400 transition-colors hover:text-gray-600 disabled:opacity-40 dark:bg-white/[0.05] dark:hover:text-gray-300"><X size={15} /></button>
@@ -302,10 +317,14 @@ const AdminInternalTaskCard = memo(function AdminInternalTaskCard({
                         <div className="flex-1 px-8 pb-2"><p className="text-[12.5px] font-semibold leading-6 text-gray-500 dark:text-gray-400">تیکت <span className="font-extrabold text-gray-900 dark:text-white">{task.title || "بدون عنوان"}</span> برای همیشه حذف خواهد شد.</p>{deleteError && <div className="mt-4 flex items-start gap-2.5 rounded-2xl bg-red-50 px-3.5 py-3 dark:bg-red-500/10"><ClipboardX size={14} className="mt-0.5 shrink-0 text-red-500" /><p className="flex-1 text-[11.5px] font-semibold leading-5 text-red-500 dark:text-red-400">{deleteError}</p></div>}</div>
                         <div className="flex shrink-0 items-center gap-2 px-8 pb-8 pt-5">
                             <button type="button" onClick={() => { if (isDeleting) return; setShowConfirm(false); setDeleteError(null); }} disabled={isDeleting} className="flex h-11 flex-1 items-center justify-center rounded-full bg-gray-100 text-[13px] font-bold text-gray-600 transition-colors hover:bg-gray-200 disabled:opacity-40 dark:bg-white/[0.05] dark:text-gray-300 dark:hover:bg-white/[0.08]">انصراف</button>
-                            <button type="button" onClick={async () => { if (!onDelete) return; setDeleteError(null); try { await onDelete(task.id); setShowConfirm(false); } catch { setDeleteError("حذف تیکت با خطا مواجه شد."); } }} disabled={isDeleting} className="flex h-11 flex-1 items-center justify-center gap-2 rounded-full bg-red-600 text-[13px] font-bold text-white transition-colors hover:bg-red-500 disabled:opacity-40">{isDeleting ? <Loader size={14} className="animate-spin" /> : <><Trash2 size={13} strokeWidth={2.5} />حذف کن</>}</button>
+                            <button type="button" onClick={async () => { if (!onDelete) return; setDeleteError(null); try { await onDelete(task.id); setShowConfirm(false); } catch { setDeleteError("حذف تیکت با خطا مواجه شد."); } }} disabled={isDeleting} className="relative flex h-11 flex-1 items-center justify-center gap-2 rounded-full bg-red-600 text-[13px] font-bold text-white transition-colors hover:bg-red-500 disabled:opacity-40">
+                                <BusyContent busy={isDeleting}>
+    <><Trash2 size={13} strokeWidth={2.5} />حذف کن</>
+                                </BusyContent>
+                            </button>
                         </div>
                     </m.div>
-                </m.div>}
+                </div>}
             </AnimatePresence>
         </m.div>
     );
@@ -380,7 +399,7 @@ export default function AdminInternalTasksBoard(): JSX.Element {
                 <div className="flex items-center gap-2.5"><div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-indigo-500/10"><Ticket size={17} className="text-indigo-500" /></div><div><h3 className="text-[14px] font-extrabold text-gray-900 dark:text-white">گفتگوهای کارکنان</h3><p className="text-[11px] text-gray-400 dark:text-gray-600">مشاهده گفتگوهای داخلی و فایل‌های رد و بدل شده</p></div></div>
                 <div className="flex shrink-0 items-center gap-2">
                     <button type="button" onClick={() => setCreateOpen(true)} className="flex items-center gap-1.5 rounded-2xl bg-indigo-600 px-3.5 py-2 text-[11.5px] font-bold text-white transition-colors hover:bg-indigo-500"><Plus size={13} />تیکت جدید</button>
-                    <button type="button" onClick={() => loadData()} disabled={refreshing} className={`flex h-9 w-9 items-center justify-center rounded-2xl bg-gray-100 text-gray-500 transition-colors hover:bg-gray-200 disabled:opacity-40 dark:bg-white/[0.05] dark:text-gray-400 dark:hover:bg-white/[0.08] ${refreshing ? "is-busy" : ""}`} title="به‌روزرسانی"><RefreshCw size={14} /></button>
+                    <button type="button" onClick={() => loadData()} disabled={refreshing} className={`flex h-9 w-9 items-center justify-center rounded-2xl bg-gray-100 text-gray-500 transition-colors hover:bg-gray-200 disabled:opacity-40 dark:bg-white/[0.05] dark:text-gray-400 dark:hover:bg-white/[0.08] `} title="به‌روزرسانی">{refreshing ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}</button>
                 </div>
             </div>
 

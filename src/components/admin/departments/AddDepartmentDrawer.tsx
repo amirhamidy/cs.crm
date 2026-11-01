@@ -4,8 +4,9 @@ import { useEffect, useState, forwardRef, InputHTMLAttributes } from "react";
 import { m, AnimatePresence, useReducedMotion } from "framer-motion";
 import { Backdrop } from "@/components/ui/Backdrop";
 import { panelMotion } from "@/lib/motion";
-import { X, Building2, CheckCircle2, Loader } from "lucide-react";
+import { X, Building2, CheckCircle2 } from "lucide-react";
 
+import { BusyContent } from "@/components/ui/Button";
 interface Props {
 open: boolean;
 onClose: () => void;
@@ -171,16 +172,11 @@ return (
                                     type="submit"
                                     disabled={!name.trim() || loading}
                                     whileTap={{ scale: 0.97 }}
-                                    className="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-bold rounded-full py-3 text-sm transition-colors flex items-center justify-center gap-2"
+                                    className="relative bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-bold rounded-full py-3 text-sm transition-colors flex items-center justify-center gap-2"
                                 >
-                                    {loading ? (
-                                        <Loader
-                                            size={18}
-                                            className="animate-spin"
-                                        />
-                                    ) : (
-                                        "ایجاد دپارتمان"
-                                    )}
+                                    <BusyContent busy={loading}>
+                                        ایجاد دپارتمان
+                                    </BusyContent>
                                 </m.button>
                             )}
                         </AnimatePresence>

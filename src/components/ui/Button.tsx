@@ -1,7 +1,32 @@
 "use client";
 
 import { forwardRef, type ButtonHTMLAttributes, type ReactNode } from "react";
+import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+
+/** Spinning Loader2 for buttons; inherits text colour. Centered absolutely so button size never changes. */
+export function ButtonSpinner() {
+    return (
+        <span aria-hidden="true" className="absolute inset-0 flex items-center justify-center">
+            <Loader2 size={16} className="animate-spin motion-reduce:[animation-duration:2.5s]" />
+        </span>
+    );
+}
+
+/**
+ * For custom (non-`Button`) buttons: wrap ALL button children. While `busy`, content stays
+ * (invisible, keeps size) and a single centered Loader2 spins. Parent must be `relative`.
+ */
+export function BusyContent({ busy, children }: { busy?: boolean; children: ReactNode }) {
+    return (
+        <>
+            {busy && <ButtonSpinner />}
+            <span className={cn("inline-flex items-center justify-center gap-[inherit]", busy && "invisible")}>
+                {children}
+            </span>
+        </>
+    );
+}
 
 export type ButtonVariant = "primary" | "secondary" | "soft" | "danger" | "ghost";
 export type ButtonSize = "sm" | "md" | "lg";
@@ -27,7 +52,6 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
     variant?: ButtonVariant;
     size?: ButtonSize;
     loading?: boolean;
-    loadingLabel?: string;
     icon?: ReactNode;
     fullWidth?: boolean;
 }
@@ -37,7 +61,6 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
         variant = "primary",
         size = "md",
         loading = false,
-        loadingLabel,
         icon,
         fullWidth,
         className,
@@ -55,19 +78,22 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
             disabled={disabled || loading}
             aria-busy={loading || undefined}
             className={cn(
-                "inline-flex select-none items-center justify-center gap-2 rounded-2xl font-bold transition-colors",
+                "relative inline-flex select-none items-center justify-center gap-2 rounded-2xl font-bold transition-colors",
                 "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand",
                 "disabled:cursor-not-allowed disabled:opacity-60",
                 VARIANTS[variant],
                 SIZES[size],
                 fullWidth && "w-full",
-                loading && "is-busy",
+                loading && "cursor-progress",
                 className,
             )}
             {...rest}
         >
-            {!loading && icon}
-            {loading && loadingLabel ? loadingLabel : children}
+            {loading && <ButtonSpinner />}
+            <span className={cn("contents", loading && "invisible")}>
+                {icon}
+                {children}
+            </span>
         </button>
     );
 });
@@ -92,16 +118,17 @@ export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(
                 disabled={disabled || loading}
                 aria-busy={loading || undefined}
                 className={cn(
-                    "inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl transition-colors md:h-9 md:w-9",
+                    "relative inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl transition-colors md:h-9 md:w-9",
                     "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand",
                     "disabled:cursor-not-allowed disabled:opacity-50",
-                    loading && "is-busy",
+                    loading && "cursor-progress",
                     VARIANTS[variant],
                     className,
                 )}
                 {...rest}
             >
-                {children}
+                {loading && <ButtonSpinner />}
+                <span className={cn("contents", loading && "invisible")}>{children}</span>
             </button>
         );
     },

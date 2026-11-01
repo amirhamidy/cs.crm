@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { AnimatePresence, m } from "framer-motion";
+import { AnimatePresence, m, useReducedMotion } from "framer-motion";
+import { Backdrop } from "@/components/ui/Backdrop";
+import { panelMotion } from "@/lib/motion";
 import { CalendarDays, Loader2, MessageCircle, Sparkles, Star, UserRound, X } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
 
@@ -54,6 +56,7 @@ export default function CustomerScoresModal({
     isOpen,
     onClose,
 }: CustomerScoresModalProps) {
+    const reduced = useReducedMotion() ?? false;
     const [scores, setScores] = useState<ScoreItem[]>([]);
     const [employees, setEmployees] = useState<Employee[]>([]);
     const [loading, setLoading] = useState(false);
@@ -132,21 +135,13 @@ export default function CustomerScoresModal({
     return (
         <AnimatePresence>
             {isOpen && (
-                <m.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    className="fixed inset-0 z-[999] flex items-center justify-center bg-black/60 p-4 backdrop-blur-md"
-                    onMouseDown={(event) => {
-                        if (event.target === event.currentTarget) onClose();
-                    }}
+                <div
+                    className="fixed inset-0 z-[999] flex items-center justify-center p-4"
                 >
+                    <Backdrop onClick={() => { onClose(); }} />
                     <m.div
-                        initial={{ opacity: 0, y: 25, scale: 0.97 }}
-                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                        exit={{ opacity: 0, y: 25, scale: 0.97 }}
-                        transition={{ duration: 0.2 }}
-                        className="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-[30px] border border-gray-200 bg-white shadow-2xl dark:border-white/10 dark:bg-[#17191f]"
+                        {...panelMotion(false, reduced)}
+                        className="relative flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-[30px] border border-gray-200 bg-white dark:border-white/10 dark:bg-[#17191f]"
                         dir="rtl"
                     >
                         <div className="flex items-center justify-between border-b border-gray-200 px-5 py-5 dark:border-white/10">
@@ -300,7 +295,7 @@ export default function CustomerScoresModal({
                             )}
                         </div>
                     </m.div>
-                </m.div>
+                </div>
             )}
         </AnimatePresence>
     );

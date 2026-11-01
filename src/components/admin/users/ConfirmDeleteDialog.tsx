@@ -1,10 +1,11 @@
 "use client";
 
 import { m } from "framer-motion";
-import { Loader2, Trash2 } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import { ModalFrame } from "./ModalFrame";
 import { PANEL_BASE, SOFT_BUTTON } from "./userCardUtils";
 
+import { BusyContent } from "@/components/ui/Button";
 export function ConfirmDeleteDialog({
     name,
     isDeleting,
@@ -63,14 +64,12 @@ export function ConfirmDeleteDialog({
                         type="button"
                         onClick={onConfirm}
                         disabled={isDeleting}
-                        className="flex flex-1 items-center justify-center gap-1.5 rounded-2xl bg-gradient-to-br from-red-500 to-red-600 py-2.5 text-[12.5px] font-bold text-white shadow-[0_10px_24px_rgba(239,68,68,0.22)] disabled:opacity-60"
+                        className="relative flex flex-1 items-center justify-center gap-1.5 rounded-2xl bg-gradient-to-br from-red-500 to-red-600 py-2.5 text-[12.5px] font-bold text-white shadow-[0_10px_24px_rgba(239,68,68,0.22)] disabled:opacity-60"
                     >
-                        {isDeleting ? (
-                            <Loader2 size={15} className="animate-spin" />
-                        ) : (
+                        <BusyContent busy={isDeleting}>
                             <Trash2 size={14} />
-                        )}
-                        {isDeleting ? "در حال حذف..." : "حذف کن"}
+                            حذف کن
+                        </BusyContent>
                     </button>
                 </div>
             </m.div>

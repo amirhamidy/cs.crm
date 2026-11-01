@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { BusyContent } from "@/components/ui/Button";
 import { useRouter } from "next/navigation";
 import { Trash2, ShoppingBag } from "lucide-react";
 import { usePortalCartStore, type PortalCartItem } from "@/store/portalCartStore";
@@ -155,9 +156,9 @@ export default function PortalCartPage() {
             <button
               disabled={busy}
               onClick={() => void submit()}
-              className="w-full rounded-xl bg-indigo-600 py-3 text-sm font-black text-white disabled:opacity-50"
+              className="relative w-full rounded-xl bg-indigo-600 py-3 text-sm font-black text-white disabled:opacity-50"
             >
-              {busy ? "در حال ثبت..." : "ثبت سفارش"}
+              <BusyContent busy={busy}>ثبت سفارش</BusyContent>
             </button>
           </aside>
         </div>

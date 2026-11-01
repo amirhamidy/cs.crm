@@ -2,9 +2,10 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Eye, EyeOff, Loader2 } from "lucide-react";
+import { Eye, EyeOff } from "lucide-react";
 import { usePortalLogin } from "@/hooks/usePortalLogin";
 
+import { BusyContent } from "@/components/ui/Button";
 export default function PortalLoginClient() {
   const [username,setUsername] = useState(""); const [password,setPassword] = useState("");
   const [show,setShow] = useState(false); const [error,setError] = useState("");
@@ -16,7 +17,11 @@ export default function PortalLoginClient() {
       <label className="mb-2 block text-xs text-slate-300" htmlFor="portal-username">نام کاربری</label><input id="portal-username" autoComplete="new-password" name="radco-portal-username" value={username} onChange={e=>setUsername(e.target.value)} className="mb-4 w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm outline-none focus:border-indigo-400" readOnly onFocus={(event) => { event.currentTarget.readOnly = false; }}/>
       <label className="mb-2 block text-xs text-slate-300" htmlFor="portal-password">رمز عبور</label><div className="relative"><input id="portal-password" autoComplete="new-password" name="radco-portal-password" type={show?"text":"password"} value={password} onChange={e=>setPassword(e.target.value)} className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 pl-12 text-sm outline-none focus:border-indigo-400" readOnly onFocus={(event) => { event.currentTarget.readOnly = false; }}/><button type="button" onClick={()=>setShow(!show)} className="absolute left-4 top-3.5 text-slate-400">{show?<EyeOff size={18}/>:<Eye size={18}/>}</button></div>
       {error && <p role="alert" className="mt-4 rounded-xl bg-rose-500/10 p-3 text-xs text-rose-300">{error}</p>}
-      <button disabled={loading || !username.trim() || !password} className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-500 py-3.5 text-sm font-black disabled:opacity-50">{loading?<Loader2 className="animate-spin" size={17}/>:null}ورود به پرتال</button>
+      <button disabled={loading || !username.trim() || !password} className="relative mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-500 py-3.5 text-sm font-black disabled:opacity-50">
+          <BusyContent busy={loading}>
+    ورود به پرتال
+          </BusyContent>
+      </button>
       <Link href="/login/" className="mt-5 block text-center text-xs text-slate-400 hover:text-white">ورود کارمندان</Link>
     </form>
   </main>;

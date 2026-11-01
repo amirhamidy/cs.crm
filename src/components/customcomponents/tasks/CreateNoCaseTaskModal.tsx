@@ -3,10 +3,11 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { m, AnimatePresence } from "framer-motion";
-import { X, ChevronDown, Upload, Check, Loader, Search, Paperclip, AlertCircle, UserPlus, Info, Briefcase } from "lucide-react";
+import { X, ChevronDown, Upload, Check, Search, Paperclip, AlertCircle, UserPlus, Info, Briefcase } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
 import { listAll } from "@/lib/api";
 
+import { BusyContent } from "@/components/ui/Button";
 interface Department { id: number; name: string }
 interface DepartmentStep { id: number; department: number; name: string; order: number }
 interface DepartmentEmployee {
@@ -530,11 +531,11 @@ export default function CreateNoCaseTaskModal({ isOpen, onClose, onSuccess }: Pr
                             whileTap={{ scale: 0.97 }}
                             onClick={handleSubmit}
                             disabled={!canSubmit}
-                            className="flex h-11 flex-1 items-center justify-center gap-2 rounded-full bg-emerald-600 text-[13px] font-bold text-white shadow-lg shadow-emerald-500/20 transition-colors hover:bg-emerald-500 disabled:opacity-40 disabled:shadow-none"
+                            className="relative flex h-11 flex-1 items-center justify-center gap-2 rounded-full bg-emerald-600 text-[13px] font-bold text-white shadow-lg shadow-emerald-500/20 transition-colors hover:bg-emerald-500 disabled:opacity-40 disabled:shadow-none"
                         >
-                            {submitting
-                                ? <Loader size={15} className="animate-spin" />
-                                : <><Check size={14} strokeWidth={3} />ثبت وظیفه بدون پرونده</>}
+                            <BusyContent busy={submitting}>
+                                <><Check size={14} strokeWidth={3} />ثبت وظیفه بدون پرونده</>
+                            </BusyContent>
                         </m.button>
                     </div>
                 </m.div>

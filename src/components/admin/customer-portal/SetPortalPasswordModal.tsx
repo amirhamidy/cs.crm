@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Eye, EyeOff, KeyRound, Loader } from "lucide-react";
+import { Eye, EyeOff, KeyRound } from "lucide-react";
 import { m } from "framer-motion";
 import { customerPortalApi } from "@/lib/api";
 import { apiMessage } from "@/lib/apiMessage";
@@ -9,6 +9,7 @@ import { toast } from "@/components/notifications/toast";
 import { FloatingInput } from "@/components/ui/FloatingField";
 import { ModalShell } from "@/components/ui/ModalShell";
 
+import { BusyContent } from "@/components/ui/Button";
 interface SetPortalPasswordModalProps {
     accountId: number;
     onClose: () => void;
@@ -104,9 +105,11 @@ export default function SetPortalPasswordModal({
                     type="submit"
                     disabled={busy}
                     whileTap={{ scale: 0.97 }}
-                    className="flex w-full items-center justify-center gap-2 rounded-full bg-blue-600 py-3 text-sm font-bold text-white transition-colors hover:bg-blue-500 disabled:opacity-50"
+                    className="relative flex w-full items-center justify-center gap-2 rounded-full bg-blue-600 py-3 text-sm font-bold text-white transition-colors hover:bg-blue-500 disabled:opacity-50"
                 >
-                    {busy ? <Loader size={18} className="animate-spin" /> : "ثبت رمز جدید"}
+                    <BusyContent busy={busy}>
+                        ثبت رمز جدید
+                    </BusyContent>
                 </m.button>
             </form>
         </ModalShell>

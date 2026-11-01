@@ -343,12 +343,11 @@ export default function AdminTaskNotesModal({
                                     className="flex h-8 w-8 items-center justify-center rounded-xl text-gray-400 transition-colors hover:text-gray-300 disabled:opacity-40"
                                     style={{ background: buttonBg }}
                                 >
-                                    <RefreshCw
-                                        size={13}
-                                        className={
-                                            loading ? "animate-spin" : ""
-                                        }
-                                    />
+                                    {loading ? (
+                                        <Loader2 size={13} className="animate-spin" />
+                                    ) : (
+                                        <RefreshCw size={13} />
+                                    )}
                                 </button>
 
                                 <button

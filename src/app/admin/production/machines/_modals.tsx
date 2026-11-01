@@ -8,13 +8,14 @@ import { createPortal } from "react-dom";
 import { m, useReducedMotion } from "framer-motion";
 import { Backdrop } from "@/components/ui/Backdrop";
 import { panelMotion } from "@/lib/motion";
-import { Check, ClipboardList, Eye, Factory, Loader2, Trash2, X } from "lucide-react";
+import { Check, ClipboardList, Eye, Factory, Trash2, X } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
 import { calcHoursWorked } from "@/lib/productionTime";
 import { toPersianDigits } from "@/lib/jalali";
 import { ErrorBanner, FloatingInput, InfoBanner, JalaliDatePicker, NiceSelect, NumberField, SOFT_BUTTON, StatusSwitch, TimeField, fetchAllEmployeesCached, isoToJalaliString, parseBackendError, todayGregorian } from "./_shared";
 import type { EmployeeItem, Machine, Option, ProductionLog } from "./_shared";
 
+import { BusyContent } from "@/components/ui/Button";
 export function ModalShell({
     icon,
     iconTone = "blue",
@@ -173,16 +174,14 @@ export function MachineModal({
                         whileTap={{ scale: 0.97 }}
                         onClick={handleSave}
                         disabled={!canSubmit}
-                        className="flex h-11 flex-1 items-center justify-center gap-2 rounded-full bg-blue-600 text-[13px] font-bold text-white transition-colors hover:bg-blue-500 disabled:opacity-40"
+                        className="relative flex h-11 flex-1 items-center justify-center gap-2 rounded-full bg-blue-600 text-[13px] font-bold text-white transition-colors hover:bg-blue-500 disabled:opacity-40"
                     >
-                        {saving ? (
-                            <Loader2 size={15} className="animate-spin" />
-                        ) : (
+                        <BusyContent busy={saving}>
                             <>
-                                <Check size={14} strokeWidth={3} />
-                                ذخیره اطلاعات
-                            </>
-                        )}
+                                    <Check size={14} strokeWidth={3} />
+                                    ذخیره اطلاعات
+                                </>
+                        </BusyContent>
                     </m.button>
                     <button
                         type="button"
@@ -351,16 +350,14 @@ export function LogModal({
                         whileTap={{ scale: 0.97 }}
                         onClick={handleSave}
                         disabled={!canSubmit}
-                        className="flex h-11 flex-1 items-center justify-center gap-2 rounded-full bg-blue-600 text-[13px] font-bold text-white transition-colors hover:bg-blue-500 disabled:opacity-40"
+                        className="relative flex h-11 flex-1 items-center justify-center gap-2 rounded-full bg-blue-600 text-[13px] font-bold text-white transition-colors hover:bg-blue-500 disabled:opacity-40"
                     >
-                        {saving ? (
-                            <Loader2 size={15} className="animate-spin" />
-                        ) : (
+                        <BusyContent busy={saving}>
                             <>
-                                <Check size={14} strokeWidth={3} />
-                                ثبت نهایی
-                            </>
-                        )}
+                                    <Check size={14} strokeWidth={3} />
+                                    ثبت نهایی
+                                </>
+                        </BusyContent>
                     </m.button>
                     <button
                         type="button"
@@ -474,10 +471,12 @@ export function ConfirmDeleteLog({
                         type="button"
                         onClick={handleDelete}
                         disabled={deleting}
-                        className="flex h-11 flex-1 items-center justify-center gap-2 rounded-full bg-red-600 text-[13px] font-bold text-white transition-colors hover:bg-red-500 disabled:opacity-50"
+                        className="relative flex h-11 flex-1 items-center justify-center gap-2 rounded-full bg-red-600 text-[13px] font-bold text-white transition-colors hover:bg-red-500 disabled:opacity-50"
                     >
-                        {deleting ? <Loader2 size={15} className="animate-spin" /> : <Trash2 size={14} />}
-                        {deleting ? "در حال حذف..." : "حذف کن"}
+                        <BusyContent busy={deleting}>
+                            <Trash2 size={14} />
+                            حذف کن
+                        </BusyContent>
                     </button>
                     <button
                         type="button"

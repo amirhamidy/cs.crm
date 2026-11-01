@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence } from "framer-motion";
-import { ClipboardList, Plus, RefreshCw } from "lucide-react";
+import { ClipboardList, Plus, RefreshCw, Loader2 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { casesApi, customersApi, metaApi, tasksApi, fetchAllTasks, fetchTasksForCases } from "@/lib/api";
 import type { Department } from "@/types/department";
@@ -213,13 +213,13 @@ export default function UserCasesPage() {
                         disabled={loading}
                         type="button"
                         title="بارگذاری مجدد"
-                        className={`flex h-10 w-10 items-center justify-center rounded-2xl transition-colors disabled:opacity-50 ${loading || isFetching ? "is-busy" : ""}`}
+                        className={`flex h-10 w-10 items-center justify-center rounded-2xl transition-colors disabled:opacity-50 `}
                         style={{
                             background: isDark ? "rgba(255,255,255,0.05)" : "rgba(15,23,42,0.05)",
                             color: isDark ? "#d1d5db" : "#4b5563",
                         }}
                     >
-                        <RefreshCw size={15} />
+                        {loading || isFetching ? <Loader2 size={15} className="animate-spin" /> : <RefreshCw size={15} />}
                     </button>
 
                     <button
