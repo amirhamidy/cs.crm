@@ -4,7 +4,8 @@ import { useId, useRef, type ReactNode } from "react";
 import { m, AnimatePresence, useReducedMotion } from "framer-motion";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { fade, panelMotion } from "@/lib/motion";
+import { panelMotion } from "@/lib/motion";
+import { Backdrop } from "./Backdrop";
 import { Portal, useIsMobile, useModalBehavior } from "./Portal";
 import { IconButton } from "./Button";
 
@@ -46,12 +47,7 @@ export function Modal({
             {open && (
                 <Portal>
                     <div className="fixed inset-0 z-[100] flex items-end justify-center md:items-center md:p-4">
-                        <m.div
-                            {...fade}
-                            aria-hidden="true"
-                            onClick={() => !busy && onClose()}
-                            className="absolute inset-0 bg-black/50"
-                        />
+                        <Backdrop onClick={() => !busy && onClose()} />
                         <m.div
                             ref={ref}
                             role="dialog"

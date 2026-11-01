@@ -3,7 +3,8 @@
 import { useId, useRef, type ReactNode } from "react";
 import { m, AnimatePresence, useReducedMotion } from "framer-motion";
 import { AlertTriangle } from "lucide-react";
-import { fade, panelMotion } from "@/lib/motion";
+import { panelMotion } from "@/lib/motion";
+import { Backdrop } from "./Backdrop";
 import { Portal, useIsMobile, useModalBehavior } from "./Portal";
 import { Button } from "./Button";
 import { cn } from "@/lib/utils";
@@ -43,12 +44,7 @@ export function ConfirmDialog({
             {open && (
                 <Portal>
                     <div className="fixed inset-0 z-[110] flex items-end justify-center md:items-center md:p-4">
-                        <m.div
-                            {...fade}
-                            aria-hidden="true"
-                            onClick={() => !loading && onCancel()}
-                            className="absolute inset-0 bg-black/50"
-                        />
+                        <Backdrop onClick={() => !loading && onCancel()} />
                         <m.div
                             ref={ref}
                             role="alertdialog"

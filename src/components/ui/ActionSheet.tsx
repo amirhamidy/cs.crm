@@ -3,7 +3,8 @@
 import { useRef, type ReactNode } from "react";
 import { m, AnimatePresence, useReducedMotion } from "framer-motion";
 import { cn } from "@/lib/utils";
-import { fade, panelMotion } from "@/lib/motion";
+import { panelMotion } from "@/lib/motion";
+import { Backdrop } from "./Backdrop";
 import { Portal, useIsMobile, useModalBehavior } from "./Portal";
 
 export interface ActionSheetItem {
@@ -34,12 +35,7 @@ export function ActionSheet({ open, onClose, title, items }: ActionSheetProps) {
             {open && (
                 <Portal>
                     <div className="fixed inset-0 z-[100] flex items-end justify-center md:items-center md:p-4">
-                        <m.div
-                            {...fade}
-                            aria-hidden="true"
-                            onClick={onClose}
-                            className="absolute inset-0 bg-black/40"
-                        />
+                        <Backdrop onClick={onClose} />
                         <m.div
                             ref={ref}
                             role="dialog"

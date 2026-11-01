@@ -276,7 +276,7 @@ export default function TimeRangeModal({
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         transition={{ duration: 0.18 }}
-                        className="absolute inset-0 bg-black/45"
+                        className="modal-backdrop absolute inset-0"
                         style={{
                             backdropFilter: "blur(5px)",
                             WebkitBackdropFilter: "blur(5px)",

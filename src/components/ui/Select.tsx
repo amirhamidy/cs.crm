@@ -4,7 +4,8 @@ import { useId, useMemo, useRef, useState } from "react";
 import { m, AnimatePresence, useReducedMotion } from "framer-motion";
 import { Check, ChevronDown, X } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { fade, panelMotion } from "@/lib/motion";
+import { panelMotion } from "@/lib/motion";
+import { Backdrop } from "./Backdrop";
 import { Portal, useIsMobile, useModalBehavior } from "./Portal";
 import { SearchInput } from "./Feedback";
 import { Button } from "./Button";
@@ -166,12 +167,7 @@ export function Select(props: SelectProps) {
                 {open && (
                     <Portal>
                         <div className="fixed inset-0 z-[120] flex items-end justify-center md:items-center md:p-4">
-                            <m.div
-                                {...fade}
-                                aria-hidden="true"
-                                onClick={close}
-                                className="absolute inset-0 bg-black/40"
-                            />
+                            <Backdrop onClick={close} />
                             <m.div
                                 ref={panelRef}
                                 role="dialog"

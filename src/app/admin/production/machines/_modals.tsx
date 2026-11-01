@@ -5,7 +5,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { m } from "framer-motion";
+import { m, useReducedMotion } from "framer-motion";
+import { Backdrop } from "@/components/ui/Backdrop";
+import { panelMotion } from "@/lib/motion";
 import { Check, ClipboardList, Eye, Factory, Loader2, Trash2, X } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
 import { calcHoursWorked } from "@/lib/productionTime";
@@ -34,6 +36,7 @@ export function ModalShell({
     children: ReactNode;
     footer: ReactNode;
 }) {
+    const reduced = useReducedMotion() ?? false;
     const onCloseRef = useRef(onClose);
     const lockedRef = useRef(locked);
 
@@ -58,11 +61,7 @@ export function ModalShell({
     }[iconTone];
 
     return createPortal(
-        <m.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.18, ease: "easeOut" }}
+        <div
             className="fixed inset-0 z-[99999] flex items-center justify-center px-4"
             style={{ isolation: "isolate" }}
             onClick={() => {
@@ -70,25 +69,15 @@ export function ModalShell({
             }}
             dir="rtl"
         >
+            <Backdrop />
             <m.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.18 }}
-                className="absolute inset-0 bg-black/45"
-                style={{ backdropFilter: "blur(5px)", WebkitBackdropFilter: "blur(5px)", pointerEvents: "none" }}
-            />
-            <m.div
-                initial={{ opacity: 0, y: 16, scale: 0.97 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: 16, scale: 0.97 }}
-                transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+                {...panelMotion(false, reduced)}
                 onClick={(e) => e.stopPropagation()}
                 dir="rtl"
                 role="dialog"
                 aria-modal="true"
                 aria-label={title}
-                className={`relative flex max-h-[90vh] w-full ${maxWidth} flex-col overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-[0_24px_70px_rgba(0,0,0,0.22)] dark:border-white/[0.06] dark:bg-[#111827]`}
+                className={`relative flex max-h-[90vh] w-full ${maxWidth} flex-col overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-xl dark:border-white/[0.06] dark:bg-[#111827]`}
             >
                 <div className="flex shrink-0 items-center justify-between px-8 pb-6 pt-8">
                     <div className="flex items-center gap-2.5">
@@ -119,7 +108,7 @@ export function ModalShell({
 
                 <div className="flex shrink-0 items-center gap-2 px-8 pb-8 pt-5">{footer}</div>
             </m.div>
-        </m.div>,
+        </div>,
         document.body
     );
 }

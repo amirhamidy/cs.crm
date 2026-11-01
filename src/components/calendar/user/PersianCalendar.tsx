@@ -2,7 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { m } from "framer-motion";
+import { AnimatePresence, m, useReducedMotion } from "framer-motion";
+import { panelMotion } from "@/lib/motion";
 import { ChevronRight, ChevronLeft, CalendarDays, CalendarClock, CalendarRange, ChevronDown, ClipboardCheck, Layers3, FileText, MessageSquareText, Plus } from "lucide-react";
 import api from "@/lib/axiosInstance";
 import { listAll } from "@/lib/api/index";
@@ -186,6 +187,7 @@ function CalendarMonthGrid({ month, eventsByDay, noteCountByDay, todayISO, compa
 
 
 export default function PersianCalendar() {
+    const reduced = useReducedMotion() ?? false;
     const router = useRouter();
     const pathname = usePathname();
     const searchParams = useSearchParams();
@@ -506,14 +508,13 @@ export default function PersianCalendar() {
                                         <ChevronDown size={15} className={`text-gray-400 transition-transform ${pickerOpen ? "rotate-180" : ""}`} />
                                     </button>
 
+                                    <AnimatePresence>
                                     {pickerOpen && pickerYear !== null && (
                                         <>
                                             <div className="fixed inset-0 z-20" onClick={() => setPickerOpen(false)} />
                                             <m.div
-                                                initial={{ opacity: 0, y: -8, scale: 0.97 }}
-                                                animate={{ opacity: 1, y: 0, scale: 1 }}
-                                                transition={{ duration: 0.15 }}
-                                                className="absolute right-0 top-[calc(100%+10px)] z-30 w-[min(19rem,calc(100vw-3rem))] rounded-[1.5rem] border border-white/80 bg-white/90 p-4 shadow-[0_30px_60px_-20px_rgba(30,64,175,0.45)] backdrop-blur-2xl dark:border-white/[0.1] dark:bg-[#0c1a42]/95"
+                                                {...panelMotion(false, reduced)}
+                                                className="absolute right-0 top-[calc(100%+10px)] z-30 w-[min(19rem,calc(100vw-3rem))] rounded-[1.5rem] border border-white/80 bg-white/90 p-4 shadow-xl dark:border-white/[0.1] dark:bg-[#0c1a42]/95"
                                             >
                                                 <div className="mb-3 flex items-center justify-between">
                                                     <button type="button" aria-label="سال بعد" onClick={() => setPickerYear((y) => (y ?? currentJy) + 1)} className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-500/10 text-blue-600 transition hover:bg-blue-500 hover:text-white dark:text-blue-300"><ChevronRight size={13} /></button>
@@ -532,6 +533,7 @@ export default function PersianCalendar() {
                                             </m.div>
                                         </>
                                     )}
+                                    </AnimatePresence>
                                 </div>
 
                                 <button type="button" aria-label="بعدی" onClick={() => changeDate(-1)} className={`flex h-10 w-10 items-center justify-center rounded-full border border-white/80 bg-white/70 text-gray-500 transition hover:bg-blue-500 hover:text-white dark:border-white/[0.08] dark:bg-white/[0.05] dark:text-gray-300 dark:hover:bg-blue-500 ${focusRing}`}><ChevronLeft size={16} /></button>

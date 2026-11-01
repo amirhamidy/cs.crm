@@ -1,12 +1,14 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { m } from "framer-motion";
+import { AnimatePresence, m, useReducedMotion } from "framer-motion";
 import { Archive, Ban, Building2, CalendarDays, CheckCircle2, Clock3, FileText, Loader2, MessageSquareText, RotateCcw, ShoppingBag, User } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
 import { departmentsApi } from "@/lib/api";
 import { useCurrentEmployee } from "@/hooks/usecurrentemployee";
 import { NiceSelect } from "@/components/ui/NiceSelect";
+import { Backdrop } from "@/components/ui/Backdrop";
+import { panelMotion } from "@/lib/motion";
 import AdminTaskNotesModal from "@/components/tasks/AdminTaskNotesModal";
 
 interface ArchiveTask {
@@ -114,6 +116,7 @@ export default function ArchivedTaskCard({ task, onReopened }: Props) {
         error: employeeError,
     } = useCurrentEmployee();
 
+    const reduced = useReducedMotion() ?? false;
     const [confirmOpen, setConfirmOpen] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -377,17 +380,16 @@ export default function ArchivedTaskCard({ task, onReopened }: Props) {
                 taskTitle={task.title}
             />
 
-            {confirmOpen && (
+            <AnimatePresence>
+                {confirmOpen && (
                 <div
-                    className="fixed inset-0 z-[9999] flex items-center justify-center bg-gray-950/50 px-4 backdrop-blur-sm"
+                    className="fixed inset-0 z-[9999] flex items-center justify-center px-4"
                     dir="rtl"
-                    onClick={() => !submitting && setConfirmOpen(false)}
                 >
+                    <Backdrop onClick={() => !submitting && setConfirmOpen(false)} />
                     <m.div
-                        initial={{ opacity: 0, scale: 0.95 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        onClick={(e) => e.stopPropagation()}
-                        className="w-full max-w-sm rounded-[2rem] border border-gray-100 bg-white p-6 text-right shadow-2xl dark:border-white/[0.08] dark:bg-[#111a2d]"
+                        {...panelMotion(false, reduced)}
+                        className="relative w-full max-w-sm rounded-[2rem] border border-gray-100 bg-white p-6 text-right shadow-xl dark:border-white/[0.08] dark:bg-[#111a2d]"
                     >
                         <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-500 dark:bg-indigo-500/10 dark:text-indigo-300">
                             <RotateCcw size={19} />
@@ -489,7 +491,8 @@ export default function ArchivedTaskCard({ task, onReopened }: Props) {
                         </div>
                     </m.div>
                 </div>
-            )}
+                )}
+            </AnimatePresence>
         </>
     );
 }

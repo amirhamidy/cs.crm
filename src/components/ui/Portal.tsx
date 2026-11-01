@@ -20,6 +20,11 @@ const stack: number[] = [];
 let lockCount = 0;
 let prevOverflow = "";
 
+/** Number of currently open overlays registered via useModalBehavior. */
+export function getOverlayCount() {
+    return stack.length;
+}
+
 function lockScroll() {
     if (lockCount++ === 0) {
         prevOverflow = document.body.style.overflow;

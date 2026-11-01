@@ -32,7 +32,7 @@ export default function CustomerDeleteModal({
                     exit={{ opacity: 0 }}
                 >
                     <m.div
-                        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+                        className="modal-backdrop absolute inset-0"
                         onClick={() => !isDeleting && onClose()}
                     />
                     <m.div

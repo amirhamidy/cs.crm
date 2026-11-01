@@ -2,6 +2,7 @@
 "use client";
 
 import { useState } from "react";
+import { AnimatePresence, m, useReducedMotion } from "framer-motion";
 import { CheckCircle2, XCircle, X } from "lucide-react";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import { customerPortalApi, customersApi } from "@/lib/api";
@@ -13,6 +14,8 @@ import { NiceSelect, type SelectOption } from "@/components/ui/NiceSelect";
 import { FloatingInput, FloatingTextarea } from "@/components/ui/FloatingField";
 import { apiMessage } from "@/lib/apiMessage";
 import { toast } from "@/components/notifications/toast";
+import { Backdrop } from "@/components/ui/Backdrop";
+import { panelMotion } from "@/lib/motion";
 
 type Decision = "confirmed" | "rejected";
 type Filters = { status?: OrderStatus; customer?: number };
@@ -67,9 +70,14 @@ function OrderDetailModal({
   onDecide: (d: Decision) => void;
   onClose: () => void;
 }) {
+  const reduced = useReducedMotion() ?? false;
   return (
-    <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/60 p-4">
-      <div className="max-h-[85vh] w-full max-w-xl overflow-y-auto rounded-3xl bg-white p-5 dark:bg-gray-900">
+    <div className="fixed inset-0 z-[90] flex items-center justify-center p-4">
+      <Backdrop onClick={onClose} />
+      <m.div
+        {...panelMotion(false, reduced)}
+        className="relative max-h-[85vh] w-full max-w-xl overflow-y-auto rounded-3xl bg-white p-5 dark:bg-gray-900"
+      >
         <div className="mb-4 flex justify-between">
           <div>
             <h2 className="font-black">سفارش #{order.id}</h2>
@@ -139,7 +147,7 @@ function OrderDetailModal({
         >
           بستن
         </button>
-      </div>
+      </m.div>
     </div>
   );
 }
@@ -162,10 +170,15 @@ function DecisionModal({
   onClose: () => void;
 }) {
   const isReject = decision === "rejected";
+  const reduced = useReducedMotion() ?? false;
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/65 p-4">
-      <div className="w-full max-w-md rounded-3xl bg-white p-6 dark:bg-gray-900">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+      <Backdrop onClick={() => !busy && onClose()} />
+      <m.div
+        {...panelMotion(false, reduced)}
+        className="relative w-full max-w-md rounded-3xl bg-white p-6 dark:bg-gray-900"
+      >
         <h3 className="font-black">
           {isReject ? "رد درخواست مشتری" : "تأیید درخواست مشتری"}
         </h3>
@@ -212,7 +225,7 @@ function DecisionModal({
             انصراف
           </button>
         </div>
-      </div>
+      </m.div>
     </div>
   );
 }
@@ -432,25 +445,31 @@ export default function CustomerOrdersPage() {
         </div>
       )}
 
-      {selected && (
-        <OrderDetailModal
-          order={selected}
-          onDecide={(value) => openDecision(selected, value)}
-          onClose={() => setSelected(null)}
-        />
-      )}
+      <AnimatePresence>
+        {selected && (
+          <OrderDetailModal
+            key="detail"
+            order={selected}
+            onDecide={(value) => openDecision(selected, value)}
+            onClose={() => setSelected(null)}
+          />
+        )}
+      </AnimatePresence>
 
-      {decision && selected && (
-        <DecisionModal
-          decision={decision}
-          busy={busy}
-          error={decisionError}
-          note={note}
-          onNote={setNote}
-          onSubmit={() => void submitDecision()}
-          onClose={closeDecision}
-        />
-      )}
+      <AnimatePresence>
+        {decision && selected && (
+          <DecisionModal
+            key="decision"
+            decision={decision}
+            busy={busy}
+            error={decisionError}
+            note={note}
+            onNote={setNote}
+            onSubmit={() => void submitDecision()}
+            onClose={closeDecision}
+          />
+        )}
+      </AnimatePresence>
     </section>
   );
 }

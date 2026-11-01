@@ -289,3 +289,35 @@ body {
     border-radius: 9999px;
   }
 }
+
+/* ── Shared modal backdrop: static blur, only opacity is animated ── */
+.modal-backdrop {
+    background: rgb(0 0 0 / 0.42);
+}
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    .modal-backdrop {
+        -webkit-backdrop-filter: blur(6px);
+        backdrop-filter: blur(6px);
+    }
+    @media (max-width: 767px) {
+        .modal-backdrop {
+            -webkit-backdrop-filter: blur(4px);
+            backdrop-filter: blur(4px);
+        }
+    }
+    /* Nested modals: darken only, so a single blur layer is processed */
+    .modal-backdrop[data-depth="2"],
+    .modal-backdrop[data-depth="3"] {
+        -webkit-backdrop-filter: none;
+        backdrop-filter: none;
+    }
+}
+@media (prefers-reduced-transparency: reduce) {
+    .modal-backdrop,
+    .modal-backdrop[data-depth="2"],
+    .modal-backdrop[data-depth="3"] {
+        background: rgb(0 0 0 / 0.65);
+        -webkit-backdrop-filter: none;
+        backdrop-filter: none;
+    }
+}

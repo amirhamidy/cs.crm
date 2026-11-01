@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { m, AnimatePresence } from "framer-motion";
+import { Backdrop } from "./Backdrop";
 import { AlertTriangle, Loader, X } from "lucide-react";
 
 interface ConfirmModalProps {
@@ -42,13 +43,12 @@ export function ConfirmModal({
     return (
         <AnimatePresence>
             {open && (
-                <m.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    className="fixed inset-0 z-[200] flex items-start justify-center overflow-y-auto bg-black/40 p-4 backdrop-blur-sm"
-                    onClick={() => !loading && onClose()}
-                >
+                <div className="fixed inset-0 z-[200]">
+                    <Backdrop />
+                    <div
+                        className="relative flex h-full items-start justify-center overflow-y-auto p-4"
+                        onClick={() => !loading && onClose()}
+                    >
                     <m.div
                         initial={{ opacity: 0, y: 24, scale: 0.98 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -121,7 +121,8 @@ export function ConfirmModal({
                             </div>
                         </div>
                     </m.div>
-                </m.div>
+                    </div>
+                </div>
             )}
         </AnimatePresence>
     );

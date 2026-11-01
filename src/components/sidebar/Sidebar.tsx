@@ -3,7 +3,9 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
+import { AnimatePresence } from "framer-motion";
 import { LogOut, X } from "lucide-react";
+import { Backdrop } from "@/components/ui/Backdrop";
 import { cn, normalizePath } from "@/lib/utils";
 import { useSidebarIsOpen, useSidebarActions } from "@/store/mobileSidebarStore";
 import { useMenuItems } from "@/hooks/useMenuItems";
@@ -24,14 +26,13 @@ export default function Sidebar() {
 
   return (
     <>
-      <div
-        aria-hidden
-        onClick={close}
-        className={cn(
-          "fixed inset-0 z-40 bg-black/30 transition-opacity duration-200 md:hidden",
-          isOpen ? "opacity-100" : "pointer-events-none opacity-0",
+      <AnimatePresence>
+        {isOpen && (
+          <div key="sidebar-backdrop" className="fixed inset-0 z-40 md:hidden">
+            <Backdrop onClick={close} />
+          </div>
         )}
-      />
+      </AnimatePresence>
 
       <aside
         inert={!isOpen}
