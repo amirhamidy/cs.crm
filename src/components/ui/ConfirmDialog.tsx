@@ -17,6 +17,7 @@ interface ConfirmDialogProps {
     cancelLabel?: string;
     danger?: boolean;
     loading?: boolean;
+    error?: string | null;
     onConfirm: () => void;
     onCancel: () => void;
 }
@@ -29,6 +30,7 @@ export function ConfirmDialog({
     cancelLabel = "انصراف",
     danger = false,
     loading = false,
+    error = null,
     onConfirm,
     onCancel,
 }: ConfirmDialogProps) {
@@ -79,6 +81,11 @@ export function ConfirmDialog({
                                     )}
                                 </div>
                             </div>
+                            {error && (
+                                <p role="alert" className="mt-3 rounded-2xl bg-red-50 px-4 py-2.5 text-[12px] font-medium text-red-600 dark:bg-red-500/10 dark:text-red-400">
+                                    {error}
+                                </p>
+                            )}
                             <div className="mt-5 grid grid-cols-2 gap-2">
                                 <Button
                                     variant="secondary"

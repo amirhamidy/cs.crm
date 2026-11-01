@@ -7,22 +7,15 @@ import {
     useMemo,
     useRef,
     useState,
-    type ReactNode,
 } from "react";
+import dynamic from "next/dynamic";
 import { AnimatePresence } from "framer-motion";
 import {
-    AlertCircle,
     CalendarDays,
-    Camera,
-    Crown,
-    KeyRound,
     MoreVertical,
     Phone,
     ShieldCheck,
-    SlidersHorizontal,
-    SquarePen,
     Star,
-    Trash2,
 } from "lucide-react";
 import { accountsApi } from "@/lib/api";
 import type { ApiEmployee } from "@/types/users";
@@ -34,19 +27,14 @@ import UserAvatar from "@/components/ui/UserAvatar";
 import { useAuthStore } from "@/store/authStore";
 import { useAvatarStore } from "@/store/avatarStore";
 import { apiMessage } from "@/lib/apiMessage";
-import { ActionButton } from "./ActionButton";
-import { ConfirmDeleteDialog } from "./ConfirmDeleteDialog";
 import { DepartmentManagerModal } from "./DepartmentManagerModal";
-import { MobileSheet } from "./MobileSheet";
-import { StatusSwitch } from "./StatusSwitch";
+const UserActionsModal = dynamic(() => import("./UserActionsModal"), { ssr: false });
 import {
     EMPTY_TITLES,
     formatDate,
     getErrorMessage,
     useLoggedUserId,
     useMountedOnce,
-    type ActionKey,
-    type Placement,
     type UserCardProps,
 } from "./userCardUtils";
 
@@ -63,7 +51,6 @@ function UserCard({
     onUpdated,
     onScoreChanged,
 }: UserCardProps) {
-    const cardRef = useRef<HTMLDivElement>(null);
     const aliveRef = useRef(true);
 
     useEffect(() => {
@@ -73,9 +60,7 @@ function UserCard({
         };
     }, []);
 
-    const [placement, setPlacement] = useState<Placement>("right");
 
-    const [showConfirm, setShowConfirm] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
     const [deleteError, setDeleteError] = useState("");
     const [showEdit, setShowEdit] = useState(false);
@@ -89,6 +74,7 @@ function UserCard({
     const canManageProfile = loggedUserType === 1;
 
     const editMounted = useMountedOnce(showEdit);
+    const sheetMounted = useMountedOnce(showMobileSheet);
 
     const phoneNumber = userInfo?.phone ?? null;
     const userId = userInfo?.id ?? employee.user_id ?? employee.user ?? null;
@@ -103,22 +89,6 @@ function UserCard({
     useEffect(() => {
         if (typeof userInfo?.isActive === "boolean") setIsActive(userInfo.isActive);
     }, [userInfo?.isActive]);
-
-    const isRight = placement === "right";
-
-    const checkPosition = useCallback(() => {
-        const card = cardRef.current;
-        const parent = card?.parentElement;
-        if (!card || !parent) return;
-
-        const cardRect = card.getBoundingClientRect();
-        const parentRect = parent.getBoundingClientRect();
-
-        const spaceRight = parentRect.right - cardRect.right;
-        const spaceLeft = cardRect.left - parentRect.left;
-
-        setPlacement(spaceRight >= spaceLeft ? "right" : "left");
-    }, []);
 
     const loggedUserId = useLoggedUserId();
     const isSelf = userId !== null && loggedUserId !== null && loggedUserId === userId;
@@ -197,7 +167,7 @@ function UserCard({
             }
 
             onDelete(employee.id);
-            if (aliveRef.current) setShowConfirm(false);
+            if (aliveRef.current) setShowMobileSheet(false);
         } catch (err) {
             if (aliveRef.current) {
                 setDeleteError(getErrorMessage(err, "حذف کاربر با خطا مواجه شد"));
@@ -207,162 +177,12 @@ function UserCard({
         }
     }, [canDelete, employee.id, employee.username, onDelete]);
 
-    const closeSheetThen = useCallback((fn: () => void) => {
-        setShowMobileSheet(false);
-        fn();
-    }, []);
-
-    const actions: {
-        key: ActionKey;
-        tooltip: string;
-        disabled: boolean;
-        icon: ReactNode;
-        onClick: () => void;
-    }[] = [
-            {
-                key: "toggleActive",
-                tooltip: isSelf
-                    ? "امکان تغییر وضعیت حساب خود وجود ندارد"
-                    : isActive
-                        ? "غیرفعال‌سازی کاربر"
-                        : "فعال‌سازی کاربر",
-                disabled: isSelf,
-                icon: null,
-                onClick: handleToggleActive,
-            },
-            {
-                key: "edit",
-                tooltip: "ویرایش اطلاعات",
-                disabled: false,
-                icon: <SquarePen size={16} />,
-                onClick: () => setShowEdit(true),
-            },
-            {
-                key: "adjustScore",
-                tooltip: isAdmin ? "امتیاز مدیر سیستم قابل تغییر نیست" : "تغییر امتیاز",
-                disabled: isAdmin,
-                icon: <SlidersHorizontal size={16} />,
-                onClick: () => setShowAdjust(true),
-            },
-            {
-                key: "manager",
-                tooltip: "تعیین مدیر دپارتمان",
-                disabled: false,
-                icon: <Crown size={16} />,
-                onClick: () => setShowManager(true),
-            },
-            ...(canManageProfile ? [
-                {
-                    key: "password" as const,
-                    tooltip: userId == null ? "شناسه کاربر در دسترس نیست" : "تغییر رمز عبور",
-                    disabled: userId == null,
-                    icon: <KeyRound size={16} />,
-                    onClick: () => setShowPasswordModal(true),
-                },
-                {
-                    key: "avatar" as const,
-                    tooltip: userId == null ? "شناسه کاربر در دسترس نیست" : "تغییر عکس پروفایل",
-                    disabled: userId == null,
-                    icon: <Camera size={16} />,
-                    onClick: () => setShowAvatarModal(true),
-                },
-            ] : []),
-            {
-                key: "delete",
-                tooltip: deleteTooltipText,
-                disabled: !canDelete,
-                icon: <Trash2 size={16} />,
-                onClick: () => setShowConfirm(true),
-            },
-        ];
-
-    const tooltipPositionClass = isRight
-        ? "left-full top-1/2 ml-2.5 -translate-y-1/2"
-        : "right-full top-1/2 mr-2.5 -translate-y-1/2";
-
     return (
         <>
             <div
-                ref={cardRef}
-                onMouseEnter={checkPosition}
                 dir="rtl"
-                className="user-card group/card relative z-[1] flex flex-col gap-3 rounded-2xl border border-black/[0.06] bg-[#fafafa] p-4 transition-shadow duration-200 hover:z-50 hover:shadow-[0_0_0_1px_rgba(99,102,241,0.35),0_14px_40px_rgba(99,102,241,0.25)] focus-within:z-50 dark:border-white/[0.06] dark:bg-white/[0.02] dark:hover:shadow-[0_0_0_1px_rgba(129,140,248,0.45),0_14px_44px_rgba(99,102,241,0.35)]"
+                className="user-card relative z-[1] flex flex-col gap-3 rounded-2xl border border-black/[0.06] bg-[#fafafa] p-4 transition-shadow duration-200 dark:border-white/[0.06] dark:bg-white/[0.02]"
             >
-
-                <div
-                    className={`peer pointer-events-none absolute top-1/2 z-40 hidden -translate-y-1/2 flex-col items-center gap-2.5 opacity-0 transition-opacity duration-150 group-focus-within/card:pointer-events-auto group-focus-within/card:opacity-100 group-hover/card:pointer-events-auto group-hover/card:opacity-100 md:flex ${isRight ? "-right-[59px] pl-6" : "-left-[59px] pr-6"
-                        }`}
-                >
-                    {actions.map((act) => (
-                        <div
-                            key={act.key}
-                            className="group/btn relative flex items-center justify-center"
-                        >
-                            {act.key === "toggleActive" ? (
-                                <StatusSwitch
-                                    isActive={isActive}
-                                    loading={togglingActive}
-                                    disabled={isSelf}
-                                    onToggle={handleToggleActive}
-                                />
-                            ) : (
-                                <ActionButton
-                                    sweepKey={act.key}
-                                    icon={act.icon}
-                                    label={act.tooltip}
-                                    disabled={act.disabled}
-                                    onClick={act.onClick}
-                                />
-                            )}
-
-                            <span
-                                role="tooltip"
-                                dir="rtl"
-                                className={`pointer-events-none absolute z-[60] whitespace-nowrap rounded-2xl border border-white/[0.08] bg-gray-800 px-3 py-2 text-center text-[11px] font-bold text-white opacity-0 shadow-xl transition-opacity duration-150 group-hover/btn:opacity-100 dark:bg-gray-900 ${tooltipPositionClass}`}
-                            >
-                                {act.tooltip}
-                            </span>
-                        </div>
-                    ))}
-                </div>
-
-
-                {hasActiveTasks && (
-                    <div
-                        className={`pointer-events-none absolute top-1/2 z-[70] hidden -translate-y-1/2 opacity-0 transition-opacity duration-150 group-hover/card:opacity-100 peer-hover:!opacity-0 md:block ${isRight ? "left-full ml-[70px]" : "right-full mr-[70px]"
-                            }`}
-                    >
-                        <div
-                            dir="rtl"
-                            className="w-56 rounded-2xl border border-white/[0.08] bg-gray-800 p-3 shadow-xl dark:bg-gray-900"
-                        >
-                            <div className="flex items-center gap-1.5 border-b border-white/10 pb-1.5 text-[11px] font-bold text-rose-400">
-                                <AlertCircle size={13} />
-                                <span>لیست تسک‌های در حال انجام</span>
-                            </div>
-                            {activeTaskTitles.length > 0 ? (
-                                <ul className="mt-2 space-y-1.5">
-                                    {activeTaskTitles.map((title, idx) => (
-                                        <li
-                                            key={`${title}-${idx}`}
-                                            className="flex items-start gap-1.5 text-[10.5px] leading-4 text-gray-300"
-                                        >
-                                            <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-rose-400" />
-                                            <span className="line-clamp-2 min-w-0 break-words">
-                                                {title}
-                                            </span>
-                                        </li>
-                                    ))}
-                                </ul>
-                            ) : (
-                                <p className="mt-1.5 text-[10px] text-gray-400">
-                                    این کاربر تسک دارد ولی هیچ‌کدام در حال انجام نیست
-                                </p>
-                            )}
-                        </div>
-                    </div>
-                )}
-
 
                 <div className="absolute left-3 top-3 z-10 flex items-center gap-2">
                     <button
@@ -371,7 +191,7 @@ function UserCard({
                             e.stopPropagation();
                             setShowMobileSheet(true);
                         }}
-                        className="flex h-7 w-7 items-center justify-center rounded-full bg-black/5 text-gray-500 transition-transform active:scale-95 dark:bg-white/10 dark:text-gray-300 md:hidden"
+                        className="flex h-7 w-7 items-center justify-center rounded-full bg-black/5 text-gray-500 transition-transform active:scale-95 dark:bg-white/10 dark:text-gray-300"
                         aria-label="گزینه‌ها"
                     >
                         <MoreVertical size={15} />
@@ -447,48 +267,30 @@ function UserCard({
             </div>
 
 
-            <AnimatePresence>
-                {showMobileSheet && (
-                    <MobileSheet
-                        key="mobile-sheet"
-                        employee={employee}
-                        departmentName={departmentName}
-                        isActive={isActive}
-                        togglingActive={togglingActive}
-                        isSelf={isSelf}
-                        isAdmin={isAdmin}
-                        canDelete={canDelete}
-                        deleteTooltipText={deleteTooltipText}
-                        onClose={() => setShowMobileSheet(false)}
-                        onToggleActive={handleToggleActive}
-                        onEdit={() => closeSheetThen(() => setShowEdit(true))}
-                        onAdjust={() => {
-                            if (!isAdmin) closeSheetThen(() => setShowAdjust(true));
-                        }}
-                        onManager={() => closeSheetThen(() => setShowManager(true))}
-                        onRequestDelete={() => {
-                            if (canDelete) closeSheetThen(() => setShowConfirm(true));
-                        }}
-                        canManageProfile={canManageProfile}
-                        userId={userId}
-                        onPassword={() => closeSheetThen(() => setShowPasswordModal(true))}
-                        onAvatar={() => closeSheetThen(() => setShowAvatarModal(true))}
-                    />
-                )}
-            </AnimatePresence>
-
-            <AnimatePresence>
-                {showConfirm && (
-                    <ConfirmDeleteDialog
-                        key="confirm-delete"
-                        name={employee.full_name || employee.username}
-                        isDeleting={isDeleting}
-                        error={deleteError}
-                        onCancel={() => setShowConfirm(false)}
-                        onConfirm={handleDelete}
-                    />
-                )}
-            </AnimatePresence>
+            {sheetMounted && (
+                <UserActionsModal
+                    open={showMobileSheet}
+                    name={employee.full_name || employee.username}
+                    isActive={isActive}
+                    togglingActive={togglingActive}
+                    isSelf={isSelf}
+                    isAdmin={isAdmin}
+                    canDelete={canDelete}
+                    deleteHint={deleteTooltipText}
+                    canManageProfile={canManageProfile}
+                    hasUserId={userId !== null}
+                    isDeleting={isDeleting}
+                    deleteError={deleteError}
+                    onClose={() => setShowMobileSheet(false)}
+                    onToggleActive={handleToggleActive}
+                    onEdit={() => setShowEdit(true)}
+                    onAdjust={() => setShowAdjust(true)}
+                    onManager={() => setShowManager(true)}
+                    onPassword={() => setShowPasswordModal(true)}
+                    onAvatar={() => setShowAvatarModal(true)}
+                    onConfirmDelete={handleDelete}
+                />
+            )}
 
             <AnimatePresence>
                 {showManager && (

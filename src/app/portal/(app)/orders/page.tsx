@@ -8,7 +8,7 @@ import { portalApi } from "@/lib/portal/portalApi";
 import type { PortalOrder, OrderStatus } from "@/types/portal";
 import Pagination from "@/components/ui/Pagination";
 import { apiMessage } from "@/lib/apiMessage";
-import { ConfirmModal } from "@/components/ui/ConfirmModal";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { ModalShell } from "@/components/ui/ModalShell";
 import { toast } from "@/components/notifications/toast";
 
@@ -187,7 +187,7 @@ export default function PortalOrdersPage() {
                 )}
             </ModalShell>
 
-            <ConfirmModal
+            <ConfirmDialog
                 open={confirming}
                 danger
                 title="لغو سفارش"
@@ -196,7 +196,7 @@ export default function PortalOrdersPage() {
                 loading={busy}
                 error={cancelError}
                 onConfirm={() => void cancel()}
-                onClose={() => {
+                onCancel={() => {
                     if (!busy) {
                         setConfirming(false);
                         setCancelError(null);

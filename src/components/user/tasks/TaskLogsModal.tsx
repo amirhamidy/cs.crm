@@ -234,7 +234,6 @@ export default function TaskLogsModal({ isOpen, onClose, taskId, taskTitle }: Pr
         setListPage(1);
     }, [isOpen, taskId, setListPage]);
 
-    if (!isOpen) return null;
 
     if (typeof document === "undefined") {
         return null;
@@ -242,6 +241,7 @@ export default function TaskLogsModal({ isOpen, onClose, taskId, taskTitle }: Pr
 
     return createPortal(
         <AnimatePresence>
+{isOpen && (
             <div
                 className="fixed inset-0 z-50 flex items-center justify-center px-4"
             >
@@ -340,7 +340,8 @@ export default function TaskLogsModal({ isOpen, onClose, taskId, taskTitle }: Pr
                     </div>
                 </m.div>
             </div>
-        </AnimatePresence>,
+        )}
+</AnimatePresence>,
         document.body
     );
 }

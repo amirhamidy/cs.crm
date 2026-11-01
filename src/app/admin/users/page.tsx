@@ -1,16 +1,15 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { AnimatePresence } from "framer-motion";
+import dynamic from "next/dynamic";
 import { Loader2, RefreshCw, Search, UserPlus, Users } from "lucide-react";
-import { useTheme } from "next-themes";
 
 import { accountsApi, departmentsApi, internalTasksApi, scoreApi, tasksApi } from "@/lib/api";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import Pagination from "@/components/ui/Pagination";
 import UserCard from "@/components/admin/users/UserCard";
 import type { UserInfo } from "@/components/admin/users/UserCard";
-import AddUserModal from "@/components/admin/users/AddUserModal";
+const AddUserModal = dynamic(() => import("@/components/admin/users/AddUserModal"), { ssr: false });
 import type { ApiEmployee, ApiUser } from "@/types/users";
 
 const PAGE_SIZE = 20;
@@ -39,8 +38,6 @@ const getErrorDetail = (err: unknown) =>
     (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail ?? "خطا در دریافت لیست کاربران";
 
 export default function UsersPage() {
-    const { resolvedTheme } = useTheme();
-    const isDark = resolvedTheme === "dark";
 
     const list = usePaginatedList<ApiEmployee>(
         (params, signal) => accountsApi.employees.list(params, signal),
@@ -256,8 +253,7 @@ export default function UsersPage() {
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-start gap-3">
                     <div
-                        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl"
-                        style={{ background: isDark ? "rgba(99,102,241,0.14)" : "rgba(99,102,241,0.08)" }}
+                        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-indigo-500/[0.08] dark:bg-indigo-500/[0.14]"
                     >
                         <Users size={18} className="text-indigo-500" />
                     </div>
@@ -277,22 +273,14 @@ export default function UsersPage() {
                             value={list.search}
                             onChange={(event) => list.setSearch(event.target.value)}
                             placeholder="جستجوی کاربر..."
-                            className="h-10 w-40 rounded-2xl border-0 pl-3 pr-9 text-[12.5px] outline-none sm:w-52"
-                            style={{
-                                background: isDark ? "rgba(255,255,255,0.05)" : "rgba(15,23,42,0.05)",
-                                color: isDark ? "#e5e7eb" : "#111827",
-                            }}
+                            className="h-10 w-40 rounded-2xl border-0 bg-slate-900/5 pl-3 pr-9 text-[12.5px] text-gray-900 outline-none dark:bg-white/5 dark:text-gray-200 sm:w-52"
                         />
                     </div>
                     <button
                         type="button"
                         onClick={handleRefresh}
                         disabled={loading}
-                        className="flex h-10 w-10 items-center justify-center rounded-2xl transition-colors disabled:opacity-50"
-                        style={{
-                            background: isDark ? "rgba(255,255,255,0.05)" : "rgba(15,23,42,0.05)",
-                            color: isDark ? "#d1d5db" : "#4b5563",
-                        }}
+                        className="flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-900/5 text-gray-600 transition-colors disabled:opacity-50 dark:bg-white/5 dark:text-gray-300"
                         title="بارگذاری مجدد"
                     >
                         {loading || list.loading ? <Loader2 size={15} className="animate-spin" /> : <RefreshCw size={15} />}
@@ -317,11 +305,7 @@ export default function UsersPage() {
 
             {!loading && error && (
                 <div
-                    className="flex flex-col items-center gap-3 rounded-3xl border py-12"
-                    style={{
-                        background: isDark ? "rgba(239,68,68,0.05)" : "rgba(239,68,68,0.03)",
-                        borderColor: isDark ? "rgba(239,68,68,0.14)" : "rgba(239,68,68,0.1)",
-                    }}
+                    className="flex flex-col items-center gap-3 rounded-3xl border border-red-500/10 bg-red-500/[0.03] py-12 dark:border-red-500/[0.14] dark:bg-red-500/5"
                 >
                     <p className="text-[12.5px] font-semibold text-red-500">{error}</p>
                     <button type="button" onClick={handleRefresh} className="text-[12px] font-bold text-indigo-500 hover:underline">
@@ -339,7 +323,6 @@ export default function UsersPage() {
 
             {!loading && !error && (employees.length > 0 || adminEmployees.length > 0) && (
                 <div className={GRID_CLASS}>
-                    <AnimatePresence>
                         {employees.map((employee, index) => (
                             <UserCard
                                 key={employee.id}
@@ -368,7 +351,6 @@ export default function UsersPage() {
                                 onUpdated={handleAdminUpdated}
                             />
                         ))}
-                    </AnimatePresence>
                 </div>
             )}
 

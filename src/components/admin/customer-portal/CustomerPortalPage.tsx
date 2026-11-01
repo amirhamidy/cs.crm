@@ -6,7 +6,7 @@ import { Plus, Trash2, KeyRound, Power, Loader, UserX } from "lucide-react";
 import { customerPortalApi } from "@/lib/api";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import Pagination from "@/components/ui/Pagination";
-import { ConfirmModal } from "@/components/ui/ConfirmModal";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { FloatingInput } from "@/components/ui/FloatingField";
 import CreatePortalAccountModal from "./CreatePortalAccountModal";
 import OneTimePasswordModal from "./OneTimePasswordModal";
@@ -189,7 +189,7 @@ export default function CustomerPortalPage() {
             )}
             {password && <OneTimePasswordModal password={password} onClose={() => setPassword("")} />}
 
-            <ConfirmModal
+            <ConfirmDialog
                 open={!!toDelete}
                 title="حذف حساب پرتال"
                 message={`حساب ${toDelete?.username ?? ""} حذف شود؟ این کار قابل بازگشت نیست.`}
@@ -199,7 +199,7 @@ export default function CustomerPortalPage() {
                 loading={busyId === toDelete?.id}
                 error={deleteError || undefined}
                 onConfirm={() => void remove()}
-                onClose={() => setToDelete(null)}
+                onCancel={() => setToDelete(null)}
             />
         </section>
     );

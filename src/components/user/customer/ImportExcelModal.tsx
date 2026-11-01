@@ -129,10 +129,10 @@ export default function ImportExcelModal({
         }
     };
 
-    if (!isOpen) return null;
 
     return (
         <AnimatePresence>
+{isOpen && (
             <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
                 <Backdrop />
                 <m.div
@@ -315,6 +315,7 @@ export default function ImportExcelModal({
                     </div>
                 </m.div>
             </div>
-        </AnimatePresence>
+        )}
+</AnimatePresence>
     );
 }

@@ -62,7 +62,6 @@ export default function TaskCaseDescriptionModal({
             });
     }, [isOpen, caseId]);
 
-    if (!isOpen) return null;
 
     if (typeof document === "undefined") {
         return null;
@@ -70,6 +69,7 @@ export default function TaskCaseDescriptionModal({
 
     return createPortal(
         <AnimatePresence>
+{isOpen && (
             <div
                 className="fixed inset-0 z-50 flex items-center justify-center px-4"
             >
@@ -163,7 +163,8 @@ export default function TaskCaseDescriptionModal({
                     </div>
                 </m.div>
             </div>
-        </AnimatePresence>,
+        )}
+</AnimatePresence>,
         document.body
     );
 }

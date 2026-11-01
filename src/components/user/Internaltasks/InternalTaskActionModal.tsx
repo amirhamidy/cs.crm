@@ -43,7 +43,6 @@ export default function InternalTaskActionModal({
         }
     }, [isOpen, action]);
 
-    if (!isOpen) return null;
 
     const isComplete = action === "complete";
 
@@ -94,6 +93,7 @@ export default function InternalTaskActionModal({
 
     return (
         <AnimatePresence>
+{isOpen && (
             <div
                 className="fixed inset-0 z-[130] flex items-center justify-center px-4"
             >
@@ -225,6 +225,7 @@ export default function InternalTaskActionModal({
                     </form>
                 </m.div>
             </div>
-        </AnimatePresence>
+        )}
+</AnimatePresence>
     );
 }
