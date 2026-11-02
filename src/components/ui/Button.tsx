@@ -1,7 +1,7 @@
 "use client";
 
 import { forwardRef, type ButtonHTMLAttributes, type ReactNode } from "react";
-import { Loader2 } from "lucide-react";
+import { Spinner as Loader2 } from "@/components/ui/Spinner";
 import { cn } from "@/lib/utils";
 
 /** Spinning Loader2 for buttons; inherits text colour. Centered absolutely so button size never changes. */

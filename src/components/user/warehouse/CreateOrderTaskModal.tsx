@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, m, useReducedMotion } from "framer-motion";
 import { Backdrop } from "@/components/ui/Backdrop";
 import { panelMotion } from "@/lib/motion";
-import { Boxes, Calendar, Check, ChevronDown, Paperclip, Search, X, AlertCircle, Upload } from "lucide-react";
+import { Boxes, Calendar, Check, ChevronDown, ChevronRight, Paperclip, Search, X, AlertCircle, Upload } from "lucide-react";
 import type { AxiosError } from "axios";
 import axiosInstance from "@/lib/axiosInstance";
 import { ApiOrderTaskStockProduct, useOrderTaskLookups } from "@/hooks/useOrderTaskLookups";
@@ -434,7 +434,28 @@ export default function CreateOrderTaskModal({
                 >
                     <div className="h-1 w-full shrink-0 bg-gradient-to-l from-blue-600 via-cyan-500 to-violet-500" />
 
-                    <div className="flex shrink-0 items-center justify-between border-b border-gray-100 px-6 pb-5 pt-6 dark:border-white/[0.06] sm:px-7">
+                    {timeModalOpen && (
+                        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
+                            <div className="flex shrink-0 items-center gap-2.5 px-6 pb-4 pt-6 sm:px-7">
+                                <button type="button" onClick={() => setTimeModalOpen(false)} aria-label="بازگشت" className="flex h-9 w-9 items-center justify-center rounded-xl bg-gray-100 text-gray-400 transition-all hover:bg-gray-200 hover:text-gray-700 dark:bg-white/[0.05]"><ChevronRight size={15} /></button>
+                                <h3 className="text-[14px] font-extrabold text-gray-900 dark:text-white">تعیین بازه زمانی</h3>
+                            </div>
+                            <TimeRangeModal
+                                embedded
+                                open
+                                initialStartedAt={startedAt}
+                                initialDeadline={deadline}
+                                onClose={() => setTimeModalOpen(false)}
+                                onSubmit={async (start: string, end: string) => {
+                                    setStartedAt(start);
+                                    setDeadline(end);
+                                    setTimeModalOpen(false);
+                                }}
+                            />
+                        </div>
+                    )}
+
+                    <div className={`flex shrink-0 items-center justify-between border-b border-gray-100 px-6 pb-5 pt-6 dark:border-white/[0.06] sm:px-7 ${timeModalOpen ? "hidden" : ""}`}>
                         <div className="flex items-center gap-3">
                             <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-lg shadow-blue-500/20">
                                 <Boxes size={19} />
@@ -459,7 +480,7 @@ export default function CreateOrderTaskModal({
                         </button>
                     </div>
 
-                    <div className="flex-1 overflow-y-auto px-6 py-5 sm:px-7">
+                    <div className={`flex-1 overflow-y-auto px-6 py-5 sm:px-7 ${timeModalOpen ? "hidden" : ""}`}>
                         <div className="flex flex-col gap-4">
                             <AnimatePresence>
                                 {(lookupsError || error) && (
@@ -663,7 +684,7 @@ export default function CreateOrderTaskModal({
                         </div>
                     </div>
 
-                    <div className="shrink-0 border-t border-gray-100 bg-white/95 px-6 pb-6 pt-4 backdrop-blur sm:px-7 dark:border-white/[0.06] dark:bg-[#10151d]/95">
+                    <div className={`shrink-0 border-t border-gray-100 bg-white/95 px-6 pb-6 pt-4 backdrop-blur sm:px-7 dark:border-white/[0.06] dark:bg-[#10151d]/95 ${timeModalOpen ? "hidden" : ""}`}>
                         <m.button
                             type="button"
                             whileTap={{ scale: 0.98 }}
@@ -681,17 +702,6 @@ export default function CreateOrderTaskModal({
                     </div>
                 </m.div>
 
-                <TimeRangeModal
-                    open={timeModalOpen}
-                    initialStartedAt={startedAt}
-                    initialDeadline={deadline}
-                    onClose={() => setTimeModalOpen(false)}
-                    onSubmit={async (start: string, end: string) => {
-                        setStartedAt(start);
-                        setDeadline(end);
-                        setTimeModalOpen(false);
-                    }}
-                />
             </div>
         </AnimatePresence>
     );

@@ -134,12 +134,7 @@ export default function ImportExcelModal({
         <AnimatePresence>
 {isOpen && (
             <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-                <Backdrop />
-                <m.div
-                    {...panelMotion(false, reduced)}
-                    onClick={handleClose}
-                    className="modal-backdrop fixed inset-0"
-                />
+                <Backdrop onClick={handleClose} />
 
                 
                 <m.div

@@ -2,7 +2,8 @@
 
 import { createPortal } from "react-dom";
 import { AnimatePresence, m } from "framer-motion";
-import { ArrowLeftCircle, ArrowRightCircle, FileText, History, Loader2, RefreshCw, StickyNote, UserRound, X } from "lucide-react";
+import { ArrowLeftCircle, ArrowRightCircle, FileText, History, RefreshCw, StickyNote, UserRound, X } from "lucide-react";
+import { Spinner as Loader2 } from "@/components/ui/Spinner";
 import { JALALI_MONTHS, pad2, toJalali, toPersianDigits } from "@/lib/jalali";
 
 export interface PurchasingTaskHistoryEntry {

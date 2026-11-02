@@ -147,3 +147,24 @@ export function DetailSkeleton({ className }: { className?: string }) {
         </div>
     );
 }
+
+export function CaseCardSkeleton({ count = 6, className = "grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3" }: { count?: number; className?: string }) {
+    return (
+        <div className={cn("animate-pulse motion-reduce:animate-none", className)} aria-busy="true" aria-live="polite">
+            {Array.from({ length: count }, (_, i) => (
+                <div key={i} className={CARD}>
+                    <div className="flex items-center justify-between gap-3">
+                        <Skeleton className="h-4 w-2/5" />
+                        <Skeleton className="h-6 w-6 rounded-full" />
+                    </div>
+                    <Skeleton className="mt-3 h-3 w-1/3" />
+                    <SkeletonText lines={2} className="mt-4" />
+                    <div className="mt-5 flex items-center justify-between">
+                        <Skeleton className="h-5 w-20 rounded-full" />
+                        <Skeleton className="h-3 w-16" />
+                    </div>
+                </div>
+            ))}
+        </div>
+    );
+}

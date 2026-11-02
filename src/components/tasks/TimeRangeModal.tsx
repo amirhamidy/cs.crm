@@ -23,6 +23,7 @@ interface TimeRangeModalProps {
     onClose: () => void;
     onSubmit: (startedAt: string, deadline: string) => Promise<void>;
     error?: string | null;
+    embedded?: boolean;
 }
 
 function parseIsoToField(iso?: string | null): FieldState {
@@ -161,6 +162,7 @@ export default function TimeRangeModal({
     onClose,
     onSubmit,
     error: externalError,
+    embedded = false,
 }: TimeRangeModalProps) {
     const [start, setStart] = useState<FieldState>(() =>
         parseIsoToField(initialStartedAt)
@@ -198,7 +200,7 @@ export default function TimeRangeModal({
         setViewJm(cur.jm);
     }, [activeField]);
 
-    if (!open || typeof document === "undefined") return null;
+    if (!open || (!embedded && typeof document === "undefined")) return null;
 
     const current = activeField === "start" ? start : deadline;
     const setCurrent = activeField === "start" ? setStart : setDeadline;
@@ -257,75 +259,8 @@ export default function TimeRangeModal({
         label: toPersianDigits(pad2(m)),
     }));
 
-    return createPortal(
-        <AnimatePresence mode="wait">
-            {open && (
-                <m.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.18, ease: "easeOut" }}
-                    className="fixed inset-0 z-[99999] flex items-center justify-center px-4"
-                    style={{
-                        isolation: "isolate",
-                    }}
-                    onClick={onClose}
-                    dir="rtl"
-                >
-                    <m.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        transition={{ duration: 0.18 }}
-                        className="modal-backdrop absolute inset-0"
-                        style={{
-                            backdropFilter: "blur(5px)",
-                            WebkitBackdropFilter: "blur(5px)",
-                            pointerEvents: "none",
-                        }}
-                    />
-
-                    <m.div
-                        initial={{ opacity: 0, y: 16, scale: 0.97 }}
-                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                        exit={{ opacity: 0, y: 16, scale: 0.97 }}
-                        transition={{
-                            duration: 0.22,
-                            ease: [0.22, 1, 0.36, 1],
-                        }}
-                        onClick={(e) => e.stopPropagation()}
-                        dir="rtl"
-                        className="relative flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-[0_24px_70px_rgba(0,0,0,0.22)] dark:border-white/[0.06] dark:bg-[#111827]"
-                    >
-                        <div className="flex shrink-0 items-center justify-between px-8 pb-6 pt-8">
-                            <div className="flex items-center gap-2.5">
-                                <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-50 dark:bg-blue-500/10">
-                                    <Clock
-                                        size={15}
-                                        className="text-blue-500"
-                                    />
-                                </div>
-
-                                <div>
-                                    <h3 className="text-[14px] font-extrabold text-gray-900 dark:text-white">
-                                        تعیین بازه زمانی
-                                    </h3>
-
-                                    <p className="mt-0.5 text-[11px] text-gray-400">
-                                        شروع و مهلت انجام
-                                    </p>
-                                </div>
-                            </div>
-
-                            <button
-                                type="button"
-                                onClick={onClose}
-                                className="flex h-8 w-8 items-center justify-center rounded-xl bg-gray-100 text-gray-400 transition-colors hover:text-gray-600 dark:bg-white/[0.05] dark:hover:text-gray-300"
-                            >
-                                <X size={15} />
-                            </button>
-                        </div>
-
+    const bodyAndFooter = (
+        <>
                         <div className="flex-1 overflow-y-auto px-8 pb-2">
                             <div className="flex flex-col gap-4">
                                 <div className="grid grid-cols-2 gap-2">
@@ -545,6 +480,83 @@ export default function TimeRangeModal({
                                 </BusyContent>
                             </m.button>
                         </div>
+        </>
+    );
+
+    if (embedded) {
+        return <div dir="rtl" className="flex flex-col">{bodyAndFooter}</div>;
+    }
+
+    return createPortal(
+        <AnimatePresence mode="wait">
+            {open && (
+                <m.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.18, ease: "easeOut" }}
+                    className="fixed inset-0 z-[99999] flex items-center justify-center px-4"
+                    style={{
+                        isolation: "isolate",
+                    }}
+                    onClick={onClose}
+                    dir="rtl"
+                >
+                    <m.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.18 }}
+                        className="modal-backdrop absolute inset-0"
+                        style={{
+                            backdropFilter: "blur(5px)",
+                            WebkitBackdropFilter: "blur(5px)",
+                            pointerEvents: "none",
+                        }}
+                    />
+
+                    <m.div
+                        initial={{ opacity: 0, y: 16, scale: 0.97 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: 16, scale: 0.97 }}
+                        transition={{
+                            duration: 0.22,
+                            ease: [0.22, 1, 0.36, 1],
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                        dir="rtl"
+                        className="relative flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-[0_24px_70px_rgba(0,0,0,0.22)] dark:border-white/[0.06] dark:bg-[#111827]"
+                    >
+                        <div className="flex shrink-0 items-center justify-between px-8 pb-6 pt-8">
+                            <div className="flex items-center gap-2.5">
+                                <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-50 dark:bg-blue-500/10">
+                                    <Clock
+                                        size={15}
+                                        className="text-blue-500"
+                                    />
+                                </div>
+
+                                <div>
+                                    <h3 className="text-[14px] font-extrabold text-gray-900 dark:text-white">
+                                        تعیین بازه زمانی
+                                    </h3>
+
+                                    <p className="mt-0.5 text-[11px] text-gray-400">
+                                        شروع و مهلت انجام
+                                    </p>
+                                </div>
+                            </div>
+
+                            <button
+                                type="button"
+                                onClick={onClose}
+                                className="flex h-8 w-8 items-center justify-center rounded-xl bg-gray-100 text-gray-400 transition-colors hover:text-gray-600 dark:bg-white/[0.05] dark:hover:text-gray-300"
+                            >
+                                <X size={15} />
+                            </button>
+                        </div>
+
+                        {bodyAndFooter}
                     </m.div>
                 </m.div>
             )}

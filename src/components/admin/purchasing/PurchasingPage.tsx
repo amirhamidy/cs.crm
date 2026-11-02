@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { m } from "framer-motion";
-import { CheckCircle2, Clock3, Loader2, RefreshCw, ShieldCheck, ShoppingCart, UserCheck, Users, XCircle, type LucideIcon } from "lucide-react";
+import { CheckCircle2, Clock3, RefreshCw, ShieldCheck, ShoppingCart, UserCheck, Users, XCircle, type LucideIcon } from "lucide-react";
+import { Spinner as Loader2 } from "@/components/ui/Spinner";
 import axiosInstance from "@/lib/axiosInstance";
 import { purchasingApi, type PurchasingCounts } from "@/lib/api";
 import { toPersianDigits } from "@/lib/jalali";

@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { m } from "framer-motion";
-import { CalendarClock, Clock, Loader2, UserRound } from "lucide-react";
+import { CalendarClock, Clock, UserRound } from "lucide-react";
+import { Spinner as Loader2 } from "@/components/ui/Spinner";
 import { useTheme } from "next-themes";
 import api from "@/lib/axiosInstance";
 import { listAll } from "@/lib/api";

@@ -3,7 +3,8 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { m, AnimatePresence, animate } from "framer-motion";
 import { useTheme } from "next-themes";
-import { Phone, Building2, Trash2, SquarePen, User, CalendarDays, Star, MessageCircle, Loader2, MoreVertical, AlertCircle, KeyRound } from "lucide-react";
+import { Phone, Building2, Trash2, SquarePen, User, CalendarDays, Star, MessageCircle, MoreVertical, AlertCircle, KeyRound } from "lucide-react";
+import { Spinner as Loader2 } from "@/components/ui/Spinner";
 import dynamic from "next/dynamic";
 import type { Customer } from "@/types/customer";
 import { useEmployeeDirectory } from "@/hooks/useEmployeeDirectory";

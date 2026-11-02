@@ -5,7 +5,8 @@ import type { ReactNode } from "react";
 import dynamic from "next/dynamic";
 
 import { m, AnimatePresence } from "framer-motion";
-import { Factory, Plus, SquarePen, X, Loader2, TrendingUp, BarChart3, AlertTriangle, ClipboardList, Trash2, CalendarDays, Gauge, Filter, LineChart, Users, Eye, CalendarCogIcon } from "lucide-react";
+import { Factory, Plus, SquarePen, X, TrendingUp, BarChart3, AlertTriangle, ClipboardList, Trash2, CalendarDays, Gauge, Filter, LineChart, Users, Eye, CalendarCogIcon } from "lucide-react";
+import { Spinner as Loader2 } from "@/components/ui/Spinner";
 import axiosInstance from "@/lib/axiosInstance";
 
 import { listAll } from "@/lib/api";

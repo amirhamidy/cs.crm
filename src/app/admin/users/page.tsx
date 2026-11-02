@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
-import { Loader2, RefreshCw, Search, UserPlus, Users } from "lucide-react";
+import { RefreshCw, Search, UserPlus, Users } from "lucide-react";
+import { Spinner as Loader2 } from "@/components/ui/Spinner";
 
 import { accountsApi, departmentsApi, internalTasksApi, scoreApi, tasksApi } from "@/lib/api";
 import { usePaginatedList } from "@/hooks/usePaginatedList";

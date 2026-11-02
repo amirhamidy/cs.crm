@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Archive, CheckCircle2, Loader2, Search, X, XCircle } from "lucide-react";
+import { Archive, CheckCircle2, Search, X, XCircle } from "lucide-react";
+import { Spinner as Loader2 } from "@/components/ui/Spinner";
 import { purchasingApi, type PurchasingArchiveStatus } from "@/lib/api";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import Pagination from "@/components/ui/Pagination";

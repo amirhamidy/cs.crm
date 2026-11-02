@@ -3,7 +3,8 @@
 import { useMemo, useState } from "react";
 import { ListSkeleton } from "@/components/ui/skeletons";
 import { AnimatePresence, m } from "framer-motion";
-import { Archive, ArrowRight, Ban, CheckCircle2, ClipboardList, Layers3, RefreshCw, ShoppingBag, Loader2 } from "lucide-react";
+import { Archive, ArrowRight, Ban, CheckCircle2, ClipboardList, Layers3, RefreshCw, ShoppingBag } from "lucide-react";
+import { Spinner as Loader2 } from "@/components/ui/Spinner";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import { tasksApi } from "@/lib/api";

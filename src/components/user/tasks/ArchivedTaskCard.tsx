@@ -2,7 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, m, useReducedMotion } from "framer-motion";
-import { Archive, Ban, Building2, CalendarDays, CheckCircle2, Clock3, FileText, Loader2, MessageSquareText, RotateCcw, ShoppingBag, User } from "lucide-react";
+import { Archive, Ban, Building2, CalendarDays, CheckCircle2, Clock3, FileText, MessageSquareText, RotateCcw, ShoppingBag, User } from "lucide-react";
+import { Spinner as Loader2 } from "@/components/ui/Spinner";
 import axiosInstance from "@/lib/axiosInstance";
 import { departmentsApi } from "@/lib/api";
 import { useCurrentEmployee } from "@/hooks/usecurrentemployee";

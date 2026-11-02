@@ -3,7 +3,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { ListSkeleton } from "@/components/ui/skeletons";
 import { m, AnimatePresence } from "framer-motion";
-import { Users, Plus, RefreshCw, Filter, FileSpreadsheet, Search, X, Loader2 } from "lucide-react";
+import { Users, Plus, RefreshCw, Filter, FileSpreadsheet, Search, X } from "lucide-react";
+import { Spinner as Loader2 } from "@/components/ui/Spinner";
 import { useTheme } from "next-themes";
 import dynamic from "next/dynamic";
 import CustomerCard from "@/components/user/customer/CustomerCard";

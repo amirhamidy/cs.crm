@@ -6,7 +6,8 @@ import { AnimatePresence, m, useReducedMotion } from "framer-motion";
 import { Backdrop } from "@/components/ui/Backdrop";
 import { panelMotion } from "@/lib/motion";
 import { useTheme } from "next-themes";
-import { AlertCircle, Building2, FileText, Hash, Loader2, Package, ReceiptText, User, Users, X } from "lucide-react";
+import { AlertCircle, Building2, FileText, Hash, Package, ReceiptText, User, Users, X } from "lucide-react";
+import { Spinner as Loader2 } from "@/components/ui/Spinner";
 import axiosInstance from "@/lib/axiosInstance";
 import { formatDate, formatNumber, getStatusLabel, getStatusTone, type SalesInvoice } from "@/utils/warehouseEmployee";
 

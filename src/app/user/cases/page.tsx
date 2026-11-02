@@ -2,7 +2,8 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence } from "framer-motion";
-import { ClipboardList, Plus, RefreshCw, Loader2 } from "lucide-react";
+import { ClipboardList, Plus, RefreshCw } from "lucide-react";
+import { Spinner as Loader2 } from "@/components/ui/Spinner";
 import { useTheme } from "next-themes";
 import { casesApi, customersApi, metaApi, tasksApi, fetchAllTasks, fetchTasksForCases } from "@/lib/api";
 import type { Department } from "@/types/department";
@@ -11,10 +12,13 @@ import type { TaskItem } from "@/types/task";
 import type { CaseItem } from "@/types/case";
 import type { Customer } from "@/types/customer";
 import CreateCaseModal from "@/components/user/cases/CreateCaseModal";
-import EditCaseModal from "@/components/user/cases/EditCaseModal";
 import dynamic from "next/dynamic";
-import CaseCard from "@/components/user/cases/CaseCard";
-import CaseTasksModal from "@/components/cases/CaseTasksModal";
+import CaseCard, { type CaseView } from "@/components/user/cases/CaseCard";
+
+const CaseActionsModal = dynamic(() => import("@/components/cases/CaseActionsModal"), {
+    ssr: false,
+    loading: () => null,
+});
 
 
 const EditTaskModal = dynamic(() => import("@/components/tasks/EditTaskModal"), {
@@ -22,7 +26,7 @@ const EditTaskModal = dynamic(() => import("@/components/tasks/EditTaskModal"), 
     loading: () => null,
 });
 import Pagination from "@/components/ui/Pagination";
-import CardSkeletonGrid from "@/components/ui/CardSkeletonGrid";
+import { CaseCardSkeleton } from "@/components/ui/skeletons";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 
 const PAGE_SIZE = 12;
@@ -38,14 +42,13 @@ export default function UserCasesPage() {
     const [tasksByCase, setTasksByCase] = useState<Map<string, TaskItem[]>>(new Map());
     const [isFetching, setIsFetching] = useState(false);
     const [caseModalOpen, setCaseModalOpen] = useState(false);
-    const [editingCase, setEditingCase] = useState<CaseItem | null>(null);
-    const [editCaseModalOpen, setEditCaseModalOpen] = useState(false);
+    const [actionCase, setActionCase] = useState<CaseItem | null>(null);
+    const [actionView, setActionView] = useState<CaseView>("tasks");
+    const [actionOpen, setActionOpen] = useState(false);
     const [deletingId, setDeletingId] = useState<number | null>(null);
     const [editingTask, setEditingTask] = useState<TaskItem | null>(null);
     const [editTaskModalOpen, setEditTaskModalOpen] = useState(false);
     const [deletingTaskId, setDeletingTaskId] = useState<number | null>(null);
-    const [tasksModalOpen, setTasksModalOpen] = useState(false);
-    const [selectedCaseForTasks, setSelectedCaseForTasks] = useState<CaseItem | null>(null);
     const [tasksRefreshKey, setTasksRefreshKey] = useState(0);
 
     const requestId = useRef(0);
@@ -143,15 +146,15 @@ export default function UserCasesPage() {
         [cases.length, page, refetchCases, setListPage, syncCaseTasks],
     );
 
-    const handleEditCase = useCallback((item: CaseItem) => {
-        setEditingCase(item);
-        setEditCaseModalOpen(true);
+    const handleOpenCase = useCallback((item: CaseItem, view: CaseView) => {
+        setActionCase(item);
+        setActionView(view);
+        setActionOpen(true);
     }, []);
 
     const handleCaseUpdate = useCallback(() => {
         refetchCases();
-        setEditCaseModalOpen(false);
-        setEditingCase(null);
+        setActionOpen(false);
     }, [refetchCases]);
 
     const handleCaseCreated = useCallback(() => {
@@ -187,11 +190,6 @@ export default function UserCasesPage() {
         setEditTaskModalOpen(false);
         setEditingTask(null);
     }, [refetchCases]);
-
-    const handleOpenTasksModal = useCallback((item: CaseItem) => {
-        setSelectedCaseForTasks(item);
-        setTasksModalOpen(true);
-    }, []);
 
     return (
         <div className="flex flex-col gap-5 p-3 sm:p-4 md:p-6" dir="rtl">
@@ -246,7 +244,7 @@ export default function UserCasesPage() {
                 </div>
             )}
 
-            {loading && <CardSkeletonGrid count={6} />}
+            {loading && <CaseCardSkeleton count={6} />}
 
             {!loading && !error && cases.length === 0 && (
                 <div className="flex flex-col items-center justify-center gap-2 py-16">
@@ -274,9 +272,8 @@ export default function UserCasesPage() {
                                     isDeleting={deletingId === Number(item.id)}
                                     hasActiveTasks={!!caseTasks && caseTasks.length > 0}
                                     caseTasks={caseTasks}
-                                    onEdit={handleEditCase}
+                                    onOpen={handleOpenCase}
                                     onDelete={() => handleDeleteCase(item)}
-                                    onClick={() => handleOpenTasksModal(item)}
                                 />
                             );
                         })}
@@ -288,28 +285,12 @@ export default function UserCasesPage() {
 
             <CreateCaseModal open={caseModalOpen} onClose={() => setCaseModalOpen(false)} onCreated={handleCaseCreated} />
 
-            {editCaseModalOpen && editingCase && (
-                <EditCaseModal
-                    isOpen={editCaseModalOpen}
-                    caseItem={editingCase}
-                    customers={customers}
-                    departments={departments}
-                    users={employees}
-                    onClose={() => {
-                        setEditCaseModalOpen(false);
-                        setEditingCase(null);
-                    }}
-                    onSuccess={handleCaseUpdate}
-                />
-            )}
-
-            <CaseTasksModal
-                isOpen={tasksModalOpen}
-                onClose={() => {
-                    setTasksModalOpen(false);
-                    setSelectedCaseForTasks(null);
-                }}
-                caseItem={selectedCaseForTasks}
+            <CaseActionsModal
+                open={actionOpen}
+                caseItem={actionCase}
+                initialView={actionView}
+                onClose={() => setActionOpen(false)}
+                onCaseUpdated={handleCaseUpdate}
                 employees={employees}
                 refreshKey={tasksRefreshKey}
                 onEditTask={handleEditTask}

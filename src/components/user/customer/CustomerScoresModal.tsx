@@ -4,7 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, m, useReducedMotion } from "framer-motion";
 import { Backdrop } from "@/components/ui/Backdrop";
 import { panelMotion } from "@/lib/motion";
-import { CalendarDays, Loader2, MessageCircle, Sparkles, Star, UserRound, X } from "lucide-react";
+import { CalendarDays, MessageCircle, Sparkles, Star, UserRound, X } from "lucide-react";
+import { Spinner as Loader2 } from "@/components/ui/Spinner";
 import axiosInstance from "@/lib/axiosInstance";
 
 interface ScoreItem {

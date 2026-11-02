@@ -3,7 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { AnimatePresence, m } from "framer-motion";
-import { Boxes, Loader2, Lock, Pencil, Plus, Power, PowerOff, X } from "lucide-react";
+import { Boxes, Lock, Pencil, Plus, Power, PowerOff, X } from "lucide-react";
+import { Spinner as Loader2 } from "@/components/ui/Spinner";
 import { useTheme } from "next-themes";
 
 import useWarehouses from "@/hooks/useWarehouses";

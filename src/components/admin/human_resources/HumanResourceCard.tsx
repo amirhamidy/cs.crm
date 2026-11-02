@@ -2,7 +2,8 @@
 
 import { memo, useEffect, useMemo, useState } from "react";
 import { m } from "framer-motion";
-import { ExternalLink, FilePlus, FileText, GitBranch, Loader2, Pencil, Trash2, Users, X } from "lucide-react";
+import { ExternalLink, FilePlus, FileText, GitBranch, Pencil, Trash2, Users, X } from "lucide-react";
+import { Spinner as Loader2 } from "@/components/ui/Spinner";
 import { Department, HumanResource, HumanResourceFile, deleteDocumentFile, getDocumentFiles } from "./humanResourceApi";
 import { extractError, gradientOf, initialOf } from "./hrUtils";
 

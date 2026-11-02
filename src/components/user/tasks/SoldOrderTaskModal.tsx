@@ -4,7 +4,8 @@ import { createPortal } from "react-dom";
 import { AnimatePresence, m, useReducedMotion } from "framer-motion";
 import { Backdrop } from "@/components/ui/Backdrop";
 import { panelMotion } from "@/lib/motion";
-import { AlertCircle, CalendarDays, Check, ChevronDown, ClipboardList, Loader2, Package, Paperclip, Pencil, Plus, Search, ShoppingBag, Star, Trash2, Upload, X } from "lucide-react";
+import { AlertCircle, CalendarDays, Check, ChevronDown, ChevronRight, ClipboardList, Package, Paperclip, Pencil, Plus, Search, ShoppingBag, Star, Trash2, Upload, X } from "lucide-react";
+import { Spinner as Loader2 } from "@/components/ui/Spinner";
 import axiosInstance from "@/lib/axiosInstance";
 import type { ApiStockInfo, ApiWarehouse } from "@/types/warehouse";
 import { fetchWarehouseStocks, fetchWarehouses } from "@/lib/warehouseApi";
@@ -301,7 +302,16 @@ export default function SoldOrderTaskModal({ isOpen, onClose, taskId, staffId, o
                         <m.div
                             {...panelMotion(false, reduced)}
       dir="rtl" className="relative flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-[0_24px_70px_rgba(0,0,0,0.22)] dark:border-white/[0.06] dark:bg-[#111827]">
-                            <div className="flex shrink-0 items-center justify-between px-8 pb-6 pt-8">
+                            {timeModalOpen && (
+                                <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
+                                    <div className="flex shrink-0 items-center gap-2.5 px-8 pb-4 pt-8">
+                                        <button type="button" onClick={() => setTimeModalOpen(false)} aria-label="بازگشت" className="flex h-8 w-8 items-center justify-center rounded-xl bg-gray-100 text-gray-400 transition-colors hover:text-gray-600 dark:bg-white/[0.05] dark:hover:text-gray-300"><ChevronRight size={15} /></button>
+                                        <h3 className="text-[14px] font-extrabold text-gray-900 dark:text-white">تعیین بازه زمانی</h3>
+                                    </div>
+                                    <TimeRangeModal embedded open initialStartedAt={startedAt || null} initialDeadline={deadline || null} onClose={() => setTimeModalOpen(false)} onSubmit={async (s, d) => { setStartedAt(s); setDeadline(d); setTimeModalOpen(false); }} />
+                                </div>
+                            )}
+                            <div className={`flex shrink-0 items-center justify-between px-8 pb-6 pt-8 ${timeModalOpen ? "hidden" : ""}`}>
                                 <div className="flex items-center gap-2.5">
                                     <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-50 dark:bg-blue-500/10"><ShoppingBag size={15} className="text-blue-500" /></div>
                                     <div>
@@ -311,7 +321,7 @@ export default function SoldOrderTaskModal({ isOpen, onClose, taskId, staffId, o
                                 </div>
                                 <button type="button" onClick={onClose} disabled={submitting} className="flex h-8 w-8 items-center justify-center rounded-xl bg-gray-100 text-gray-400 transition-colors hover:text-gray-600 disabled:opacity-40 dark:bg-white/[0.05] dark:hover:text-gray-300"><X size={15} /></button>
                             </div>
-                            <div className="flex-1 overflow-y-auto px-8 pb-2">
+                            <div className={`flex-1 overflow-y-auto px-8 pb-2 ${timeModalOpen ? "hidden" : ""}`}>
                                 {loading ? (
                                     <div className="flex h-48 items-center justify-center"><Loader2 className="animate-spin text-blue-500" size={25} /></div>
                                 ) : (
@@ -443,7 +453,7 @@ export default function SoldOrderTaskModal({ isOpen, onClose, taskId, staffId, o
                                     </div>
                                 )}
                             </div>
-                            <div className="flex shrink-0 flex-col gap-2 px-8 pb-8 pt-5">
+                            <div className={`flex shrink-0 flex-col gap-2 px-8 pb-8 pt-5 ${timeModalOpen ? "hidden" : ""}`}>
                                 <div className="flex items-center gap-2">
                                     <button type="button" onClick={onClose} disabled={submitting} className="flex h-11 flex-1 items-center justify-center rounded-full border border-gray-100 bg-gray-50 text-[13px] font-bold text-gray-500 transition-colors hover:text-gray-700 disabled:opacity-40 dark:border-white/[0.06] dark:bg-white/[0.03] dark:text-white/50 dark:hover:text-white/80">انصراف</button>
                                     <m.button type="button" whileTap={{ scale: 0.97 }} onClick={submit} disabled={!valid || submitting} className="relative flex h-11 flex-[2] items-center justify-center gap-2 rounded-full bg-blue-600 text-[13px] font-bold text-white transition-colors hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-40">
@@ -458,7 +468,6 @@ export default function SoldOrderTaskModal({ isOpen, onClose, taskId, staffId, o
                     </div>
                 )}
             </AnimatePresence>
-            <TimeRangeModal open={timeModalOpen} initialStartedAt={startedAt || null} initialDeadline={deadline || null} onClose={() => setTimeModalOpen(false)} onSubmit={async (s, d) => { setStartedAt(s); setDeadline(d); setTimeModalOpen(false); }} />
         </>,
         document.body
     );

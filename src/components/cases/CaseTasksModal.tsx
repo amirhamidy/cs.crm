@@ -3,17 +3,31 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, m } from "framer-motion";
 import { useTheme } from "next-themes";
-import { CalendarDays, Layers, Loader2, Pencil, RefreshCw, Trash2, User, X } from "lucide-react";
+import { CalendarDays, Layers, Pencil, RefreshCw, Trash2, User, X } from "lucide-react";
+import { Spinner as Loader2 } from "@/components/ui/Spinner";
 import type { CaseItem } from "@/types/case";
-import type { TaskItem } from "@/types/task";
+import type { TaskItem as BaseTaskItem } from "@/types/task";
 import { fetchAllTasks } from "@/lib/fetchAllTasks";
 
 import { BusyContent } from "@/components/ui/Button";
+type TaskItem = BaseTaskItem & { department_name?: string; current_step_name?: string };
+
+interface NameLike {
+    id?: number | string;
+    full_name?: string;
+    name?: string;
+    first_name?: string;
+    last_name?: string;
+    username?: string;
+}
+
 interface CaseTasksModalProps {
     isOpen: boolean;
+    /** بدون پوسته مودال؛ برای قرارگیری داخل CaseActionsModal */
+    embedded?: boolean;
     onClose: () => void;
     caseItem: CaseItem | null;
-    employees?: any[];
+    employees?: NameLike[];
     
     refreshKey?: number;
     onEditTask: (task: TaskItem) => void;
@@ -50,7 +64,7 @@ const formatDate = (value?: string | null) => {
     }).format(d);
 };
 
-const employeeName = (emp: any): string => {
+const employeeName = (emp: NameLike | null | undefined): string => {
     if (!emp || typeof emp !== "object") return "";
     const full = emp.full_name ?? emp.name ?? "";
     if (typeof full === "string" && full.trim()) return full.trim();
@@ -61,6 +75,7 @@ const employeeName = (emp: any): string => {
 
 export default function CaseTasksModal({
     isOpen,
+    embedded = false,
     onClose,
     caseItem,
     employees = [],
@@ -103,9 +118,10 @@ export default function CaseTasksModal({
                 setTasks(list);
                 onTasksLoadedRef.current?.(caseId, list);
             })
-            .catch((err: any) => {
+            .catch((err: unknown) => {
                 if (!active) return;
-                if (err?.code === "ERR_CANCELED" || err?.name === "CanceledError") {
+                const e = err as { code?: string; name?: string } | null;
+                if (e?.code === "ERR_CANCELED" || e?.name === "CanceledError") {
                     return;
                 }
                 setError("دریافت وظیفه‌ها از سرور با خطا مواجه شد");
@@ -133,7 +149,7 @@ export default function CaseTasksModal({
     const stats = useMemo(() => {
         const byStatus = new Map<string, number>();
         tasks.forEach((t) => {
-            const s = String((t as any).status ?? "unknown");
+            const s = String(t.status ?? "unknown");
             byStatus.set(s, (byStatus.get(s) ?? 0) + 1);
         });
         return { total: tasks.length, byStatus };
@@ -142,21 +158,21 @@ export default function CaseTasksModal({
     const visibleTasks = useMemo(() => {
         if (statusFilter === "all") return tasks;
         return tasks.filter(
-            (t) => String((t as any).status ?? "unknown") === statusFilter
+            (t) => String(t.status ?? "unknown") === statusFilter
         );
     }, [tasks, statusFilter]);
 
     const assigneeNames = useCallback(
         (task: TaskItem): string => {
-            const raw = (task as any).assigned_employee;
-            const ids: any[] = Array.isArray(raw) ? raw : raw != null ? [raw] : [];
+            const raw = task.assigned_employee;
+            const ids: Array<NameLike | number> = Array.isArray(raw) ? raw : raw != null ? [raw] : [];
             const names = ids
                 .map((entry) => {
                     if (entry && typeof entry === "object") {
                         return employeeName(entry);
                     }
                     const found = employees.find(
-                        (e: any) => e && String(e.id) === String(entry)
+                        (e) => e && String(e.id) === String(entry)
                     );
                     return employeeName(found);
                 })
@@ -182,40 +198,15 @@ export default function CaseTasksModal({
     const textMain = isDark ? "#f3f4f6" : "#1f2937";
     const textMuted = isDark ? "#9ca3af" : "#6b7280";
 
-    return (
-        <AnimatePresence>
-            {isOpen && caseItem && (
-                <m.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    className="fixed inset-0 z-50 flex items-center justify-center px-4"
-                    style={{
-                        background: "rgba(0,0,0,0.5)",
-                        backdropFilter: "blur(4px)",
-                    }}
-                    onClick={onClose}
-                >
-                    <m.div
-                        initial={{ scale: 0.95, y: 16, opacity: 0 }}
-                        animate={{ scale: 1, y: 0, opacity: 1 }}
-                        exit={{ scale: 0.95, y: 16, opacity: 0 }}
-                        transition={{ duration: 0.2, ease: "easeOut" }}
-                        className="flex max-h-[85vh] w-full max-w-[560px] flex-col overflow-hidden rounded-[2rem] border"
-                        style={{
-                            background: isDark ? "#111827" : "#ffffff",
-                            borderColor: border,
-                            boxShadow: "0 24px 64px rgba(0,0,0,0.35)",
-                        }}
-                        onClick={(e) => e.stopPropagation()}
-                        dir="rtl"
-                    >
-                        
+    if (!caseItem) return null;
+
+    const body = (
+        <>
                         <div
                             className="flex items-center justify-between gap-3 border-b px-5 py-4"
                             style={{ borderColor: border }}
                         >
-                            <div className="flex min-w-0 items-center gap-2.5">
+                            <div className={`min-w-0 items-center gap-2.5 ${embedded ? "hidden" : "flex"}`}>
                                 <div
                                     className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl"
                                     style={{
@@ -253,14 +244,14 @@ export default function CaseTasksModal({
                                     {loading ? <Loader2 size={13} className="animate-spin" /> : <RefreshCw
                                         size={13} />}
                                 </button>
-                                <button
+                                {!embedded && <button
                                     type="button"
                                     onClick={onClose}
                                     className="flex h-8 w-8 items-center justify-center rounded-xl transition-colors"
                                     style={{ background: softBg, color: textMuted }}
                                 >
                                     <X size={14} />
-                                </button>
+                                </button>}
                             </div>
                         </div>
 
@@ -374,7 +365,7 @@ export default function CaseTasksModal({
                                     )}
 
                                     {visibleTasks.map((task) => {
-                                        const t = task as any;
+                                        const t = task;
                                         const meta = getStatusMeta(t.status);
                                         const assignees = assigneeNames(task);
                                         const created = formatDate(t.created_at);
@@ -504,6 +495,37 @@ export default function CaseTasksModal({
                                 </div>
                             )}
                         </div>
+        </>
+    );
+
+    if (embedded) return <div className="flex min-h-0 flex-1 flex-col" dir="rtl">{body}</div>;
+
+    return (
+        <AnimatePresence>
+            {isOpen && (
+                <m.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="fixed inset-0 z-50 flex items-center justify-center px-4"
+                    style={{ background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)" }}
+                    onClick={onClose}
+                >
+                    <m.div
+                        initial={{ scale: 0.95, y: 16, opacity: 0 }}
+                        animate={{ scale: 1, y: 0, opacity: 1 }}
+                        exit={{ scale: 0.95, y: 16, opacity: 0 }}
+                        transition={{ duration: 0.2, ease: "easeOut" }}
+                        className="flex max-h-[85vh] w-full max-w-[560px] flex-col overflow-hidden rounded-[2rem] border"
+                        style={{
+                            background: isDark ? "#111827" : "#ffffff",
+                            borderColor: border,
+                            boxShadow: "0 24px 64px rgba(0,0,0,0.35)",
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                        dir="rtl"
+                    >
+                        {body}
                     </m.div>
                 </m.div>
             )}

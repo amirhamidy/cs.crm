@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence, m } from "framer-motion";
-import { AlertTriangle, Ban, CalendarClock, CheckCircle2, History, Inbox, Loader, Plus, RefreshCw, Repeat, RotateCcw, Timer, Trash2, Users, Loader2 } from "lucide-react";
+import { AlertTriangle, Ban, CalendarClock, CheckCircle2, History, Inbox, Loader, Plus, RefreshCw, Repeat, RotateCcw, Timer, Trash2, Users } from "lucide-react";
+import { Spinner as Loader2 } from "@/components/ui/Spinner";
 import { useAuthStore } from "@/store/authStore";
 import { useIsVisible, useVisibleInterval } from "@/hooks/useVisibility";
 import { deleteInternalTaskRoutine, fetchEmployeeList, fetchInternalTaskRoutines, fetchInternalTasks } from "./Api";

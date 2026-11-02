@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { m } from "framer-motion";
-import { Archive, CheckCircle2, ClipboardCheck, Clock3, Loader2, RefreshCw, Search, ShieldCheck, UserCheck, Users, X, XCircle, type LucideIcon } from "lucide-react";
+import { Archive, CheckCircle2, ClipboardCheck, Clock3, RefreshCw, Search, ShieldCheck, UserCheck, Users, X, XCircle, type LucideIcon } from "lucide-react";
+import { Spinner as Loader2 } from "@/components/ui/Spinner";
 import axiosInstance from "@/lib/axiosInstance";
 import { qualityControlApi, type QCCounts, type QCReviewedStatus } from "@/lib/api";
 import { usePaginatedList } from "@/hooks/usePaginatedList";

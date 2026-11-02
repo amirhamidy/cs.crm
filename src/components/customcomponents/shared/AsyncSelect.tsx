@@ -2,7 +2,8 @@
 
 import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, m } from "framer-motion";
-import { Check, ChevronDown, Loader2, Search } from "lucide-react";
+import { Check, ChevronDown, Search } from "lucide-react";
+import { Spinner as Loader2 } from "@/components/ui/Spinner";
 import { useInfiniteOptions, type InfiniteFetcher } from "@/hooks/useInfiniteOptions";
 
 export interface AsyncOption {

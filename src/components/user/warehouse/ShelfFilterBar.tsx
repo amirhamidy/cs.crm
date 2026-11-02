@@ -1,6 +1,7 @@
 "use client";
 
-import { Loader2, MapPin } from "lucide-react";
+import { MapPin } from "lucide-react";
+import { Spinner as Loader2 } from "@/components/ui/Spinner";
 import type { ShelfSummary } from "@/types/warehouseShelf";
 import { formatQuantity } from "@/utils/warehouseShelf";
 

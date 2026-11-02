@@ -5,7 +5,8 @@ import { createPortal } from "react-dom";
 import { AnimatePresence, m, useReducedMotion } from "framer-motion";
 import { Backdrop } from "@/components/ui/Backdrop";
 import { panelMotion } from "@/lib/motion";
-import { X, FileText, Loader2, AlertCircle } from "lucide-react";
+import { X, FileText, AlertCircle } from "lucide-react";
+import { Spinner as Loader2 } from "@/components/ui/Spinner";
 import { useTheme } from "next-themes";
 import axiosInstance from "@/lib/axiosInstance";
 

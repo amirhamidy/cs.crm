@@ -4,7 +4,8 @@ import { ComponentType, useCallback, useEffect, useMemo, useState } from "react"
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { AnimatePresence, m } from "framer-motion";
 import { BusyContent } from "@/components/ui/Button";
-import { BellRing, Boxes, ClipboardList, Archive, FileText, Loader2, Package, RefreshCw, PackagePlus, PackageSearch, Plus, ReceiptText, ShieldCheck, Power, PowerOff, ShieldAlert, ShoppingBag, UploadCloud, UsersRound, UserPlus } from "lucide-react";
+import { BellRing, Boxes, ClipboardList, Archive, FileText, Package, RefreshCw, PackagePlus, PackageSearch, Plus, ReceiptText, ShieldCheck, Power, PowerOff, ShieldAlert, ShoppingBag, UploadCloud, UsersRound, UserPlus } from "lucide-react";
+import { Spinner as Loader2 } from "@/components/ui/Spinner";
 import { useTheme } from "next-themes";
 
 import AddCategoryModal from "@/components/admin/warehouse/AddCategoryModal";

@@ -1,13 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { AnimatePresence, m } from "framer-motion";
+import { AnimatePresence, m, useReducedMotion } from "framer-motion";
 import { useTheme } from "next-themes";
 import { AlertCircle, Check, CheckCircle2, Clock3, FileText, Package, PackageCheck, Paperclip, RotateCcw, ShieldCheck, Upload, User, X, XCircle } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
 import type { ApiWarehouseTask } from "@/types/warehouse";
 
 import { BusyContent } from "@/components/ui/Button";
+import { Backdrop } from "@/components/ui/Backdrop";
+import { panelMotion } from "@/lib/motion";
 interface WarehouseEmployeeTaskCardProps {
     task: ApiWarehouseTask;
     index?: number;
@@ -270,6 +272,7 @@ export default function WarehouseEmployeeTaskCard({
     const hasQualityControl =
         task.quality_control_id !== null && task.quality_control_id !== undefined;
 
+    const reduced = useReducedMotion() ?? false;
     return (
         <>
             <m.article
@@ -593,17 +596,8 @@ export default function WarehouseEmployeeTaskCard({
 
             <AnimatePresence>
                 {action && (
-                    <m.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-[100] flex items-center justify-center px-4 py-4"
-                        style={{
-                            background: "rgba(2,6,23,0.55)",
-                            backdropFilter: "blur(6px)",
-                        }}
-                        onClick={closeAction}
-                    >
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center px-4 py-4">
+                        <Backdrop onClick={closeAction} />
                         {(() => {
                             const tone = ACTION_TONES[action];
                             const isReopen = action === "reopen";
@@ -615,13 +609,9 @@ export default function WarehouseEmployeeTaskCard({
 
                             return (
                                 <m.div
-                                    initial={{ opacity: 0, scale: 0.95, y: 18 }}
-                                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                                    exit={{ opacity: 0, scale: 0.95, y: 18 }}
-                                    transition={{ duration: 0.22, ease: "easeOut" }}
-                                    onClick={(e) => e.stopPropagation()}
+                                    {...panelMotion(false, reduced)}
                                     dir="rtl"
-                                    className="flex max-h-[92vh] w-full max-w-md flex-col overflow-hidden rounded-[2rem] border border-white/80 bg-white shadow-2xl shadow-black/20 dark:border-white/[0.07] dark:bg-[#111827]"
+                                    className="relative z-10 flex max-h-[92vh] w-full max-w-md flex-col overflow-hidden rounded-[2rem] border border-white/80 bg-white shadow-2xl shadow-black/20 dark:border-white/[0.07] dark:bg-[#111827]"
                                 >
                                     <div className="h-1.5 w-full shrink-0" style={{ background: tone.bar }} />
 
@@ -857,7 +847,7 @@ export default function WarehouseEmployeeTaskCard({
                                 </m.div>
                             );
                         })()}
-                    </m.div>
+                    </div>
                 )}
             </AnimatePresence>
         </>

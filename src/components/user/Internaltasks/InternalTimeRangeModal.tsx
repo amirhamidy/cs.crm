@@ -2,11 +2,13 @@
 
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { AnimatePresence, m } from "framer-motion";
+import { AnimatePresence, m, useReducedMotion } from "framer-motion";
 import { X, ChevronDown, ChevronLeft, ChevronRight, Clock, Check, CalendarDays } from "lucide-react";
 import { toJalali, toGregorian, jalaliMonthLength, jalaliWeekday, JALALI_MONTHS, JALALI_WEEKDAYS, toPersianDigits, pad2, todayJalali } from "@/lib/jalali";
 
 import { BusyContent } from "@/components/ui/Button";
+import { Backdrop } from "@/components/ui/Backdrop";
+import { panelMotion } from "@/lib/motion";
 interface FieldState {
     jy: number;
     jm: number;
@@ -257,45 +259,21 @@ export default function TimeRangeModal({
         label: toPersianDigits(pad2(m)),
     }));
 
+    const reduced = useReducedMotion() ?? false;
+
     return createPortal(
         <AnimatePresence mode="wait">
             {open && (
-                <m.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.18, ease: "easeOut" }}
+                <div
                     className="fixed inset-0 z-[99999] flex items-center justify-center px-4"
-                    style={{
-                        isolation: "isolate",
-                    }}
-                    onClick={onClose}
                     dir="rtl"
                 >
-                    <m.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        transition={{ duration: 0.18 }}
-                        className="absolute inset-0 bg-black/45"
-                        style={{
-                            backdropFilter: "blur(5px)",
-                            WebkitBackdropFilter: "blur(5px)",
-                            pointerEvents: "none",
-                        }}
-                    />
+                    <Backdrop onClick={onClose} />
 
                     <m.div
-                        initial={{ opacity: 0, y: 16, scale: 0.97 }}
-                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                        exit={{ opacity: 0, y: 16, scale: 0.97 }}
-                        transition={{
-                            duration: 0.22,
-                            ease: [0.22, 1, 0.36, 1],
-                        }}
-                        onClick={(e) => e.stopPropagation()}
+                        {...panelMotion(false, reduced)}
                         dir="rtl"
-                        className="relative flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-[0_24px_70px_rgba(0,0,0,0.22)] dark:border-white/[0.06] dark:bg-[#111827]"
+                        className="relative z-10 flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-[0_24px_70px_rgba(0,0,0,0.22)] dark:border-white/[0.06] dark:bg-[#111827]"
                     >
                         <div className="flex shrink-0 items-center justify-between px-8 pb-6 pt-8">
                             <div className="flex items-center gap-2.5">
@@ -546,7 +524,7 @@ export default function TimeRangeModal({
                             </m.button>
                         </div>
                     </m.div>
-                </m.div>
+                </div>
             )}
         </AnimatePresence>,
         document.body

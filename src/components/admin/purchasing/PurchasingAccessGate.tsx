@@ -1,6 +1,7 @@
 "use client";
 
-import { Loader2, ShieldAlert } from "lucide-react";
+import { ShieldAlert } from "lucide-react";
+import { Spinner as Loader2 } from "@/components/ui/Spinner";
 import { usePurchasingAccess } from "@/hooks/usePurchasingAccess";
 
 interface Props {

@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence } from "framer-motion";
 import { ListSkeleton } from "@/components/ui/skeletons";
-import { Award, Plus, Minus, RefreshCw, Users, Loader2 } from "lucide-react";
+import { Award, Plus, Minus, RefreshCw, Users } from "lucide-react";
+import { Spinner as Loader2 } from "@/components/ui/Spinner";
 import axiosInstance from "@/lib/axiosInstance";
 import { listAll } from "@/lib/api";
 import { useAuthStore } from "@/store/authStore";

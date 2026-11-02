@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, m } from "framer-motion";
-import { X, Loader2, AlertCircle, ClipboardList, Paperclip, MessageSquareText, RefreshCw, FileText, ArrowLeftCircle, ArrowRightCircle, ArrowLeftRight, User, Calendar, Clock3, History, CheckCircle2, ShoppingBag, Ban, RotateCcw, Layers3, Hash } from "lucide-react";
+import { X, AlertCircle, ClipboardList, Paperclip, MessageSquareText, RefreshCw, FileText, ArrowLeftCircle, ArrowRightCircle, ArrowLeftRight, User, Calendar, Clock3, History, CheckCircle2, ShoppingBag, Ban, RotateCcw, Layers3, Hash } from "lucide-react";
+import { Spinner as Loader2 } from "@/components/ui/Spinner";
 import { useTheme } from "next-themes";
 import { tasksApi } from "@/lib/api";
 import { toJalali, toPersianDigits, JALALI_MONTHS, pad2 } from "@/lib/jalali";

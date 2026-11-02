@@ -2,7 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { m } from "framer-motion";
-import { AlertCircle, Building2, Crown, Loader2, X } from "lucide-react";
+import { AlertCircle, Building2, Crown, X } from "lucide-react";
+import { Spinner as Loader2 } from "@/components/ui/Spinner";
 import { departmentsApi } from "@/lib/api";
 import { ModalFrame } from "./ModalFrame";
 import { StatusSwitch } from "./StatusSwitch";

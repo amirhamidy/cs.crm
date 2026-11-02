@@ -2,7 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import { AnimatePresence, m } from "framer-motion";
-import { AlertCircle, ChevronDown, Download, FileText, GitBranch, Loader2, Paperclip, Plus, Trash2, Upload, X } from "lucide-react";
+import { AlertCircle, ChevronDown, Download, FileText, GitBranch, Paperclip, Plus, Trash2, Upload, X } from "lucide-react";
+import { Spinner as Loader2 } from "@/components/ui/Spinner";
 import HumanResourceStepRoadmap from "./HumanResourceStepRoadmap";
 import { HumanResource, HumanResourceFile, HumanResourceStep, createStep, deleteStep, deleteStepFile, getDocumentSteps, getStepFiles, updateStep, uploadStepFile } from "./humanResourceApi";
 

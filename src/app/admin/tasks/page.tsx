@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence, m } from "framer-motion";
-import { Archive, Check, ClipboardList, Eye, Plus, RefreshCw, Loader2 } from "lucide-react";
+import { Archive, Check, ClipboardList, Eye, Plus, RefreshCw } from "lucide-react";
+import { Spinner as Loader2 } from "@/components/ui/Spinner";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import axiosInstance from "@/lib/axiosInstance";

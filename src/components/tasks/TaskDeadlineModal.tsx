@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, m } from "framer-motion";
-import { AlertTriangle, CalendarClock, CalendarDays, Clock, Loader2, RefreshCw, X } from "lucide-react";
+import { AlertTriangle, CalendarClock, CalendarDays, Clock, RefreshCw, X } from "lucide-react";
+import { Spinner as Loader2 } from "@/components/ui/Spinner";
 import { useTheme } from "next-themes";
 import api from "@/lib/axiosInstance";
 import { toJalali, toPersianDigits, JALALI_MONTHS, pad2 } from "@/lib/jalali";

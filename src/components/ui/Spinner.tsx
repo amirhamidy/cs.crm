@@ -1,40 +1,43 @@
-"use client";
+import type { CSSProperties } from "react";
 
-import { Loader2 } from "lucide-react";
-import { ListSkeleton } from "./skeletons";
-import { SkeletonText } from "./Skeleton";
-import { cn } from "@/lib/utils";
-
-const SIZES = { xs: 12, sm: 16, md: 20, lg: 28 } as const;
-
-interface SpinnerProps {
-    size?: keyof typeof SIZES;
-    className?: string;
-}
-
-/** @deprecated Use skeletons (ui/skeletons) or Button `loading`. */
-export function Spinner({ size = "sm", className }: SpinnerProps) {
-    return (
-        <Loader2
-            size={SIZES[size]}
-            aria-hidden="true"
-            className={cn(
-                "shrink-0 animate-spin motion-reduce:[animation-duration:2.5s]",
-                className,
-            )}
-        />
-    );
-}
-
-export function PageLoader({ rows = 5 }: { label?: string; rows?: number }) {
-    return <ListSkeleton rows={rows} />;
-}
-
-export function InlineLoader({
-    className,
+/**
+ * Thin 12-spoke spinner (iOS style). Uses currentColor, so it is white inside
+ * coloured buttons. Drop-in for lucide's Loader2 (`size`, `className`, `style`).
+ */
+export function Spinner({
+    size = 16,
+    className = "",
+    style,
 }: {
-    label?: string;
+    size?: number;
     className?: string;
+    style?: CSSProperties;
+    strokeWidth?: number;
 }) {
-    return <SkeletonText lines={1} className={cn("w-24", className)} />;
+    return (
+        <svg
+            width={size}
+            height={size}
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={1.5}
+            strokeLinecap="round"
+            aria-hidden="true"
+            className={`animate-spin motion-reduce:[animation-duration:2.5s] ${className}`}
+            style={{ animationTimingFunction: "linear", ...style }}
+        >
+            {Array.from({ length: 12 }, (_, i) => (
+                <line
+                    key={i}
+                    x1="12"
+                    y1="3"
+                    x2="12"
+                    y2="7"
+                    opacity={0.15 + (i / 11) * 0.85}
+                    transform={`rotate(${i * 30} 12 12)`}
+                />
+            ))}
+        </svg>
+    );
 }

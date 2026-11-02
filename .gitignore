@@ -5,6 +5,5 @@ next-env.d.ts
 # src/lib/axiosInstance.ts
 node_modules/
 .next/
-out/
 coverage/
 *.log
