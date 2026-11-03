@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { CalendarDays, FileSignature, Loader2, MapPin, PenLine, Plus, RefreshCw, Search, UserRound } from "lucide-react";
+import { CalendarDays, FileSignature, MapPin, PenLine, Plus, RefreshCw, Search, UserRound } from "lucide-react";
+import { ListSkeleton } from "@/components/ui/skeletons";
 import { minutesApi } from "@/lib/minutesApi";
 import { STATUS_FILTERS, formatDateTime, parseApiError } from "@/lib/minutesUtils";
 import MeetingStatusBadge from "./MeetingStatusBadge";
@@ -104,12 +105,7 @@ export default function MinutesListPage({ basePath }: { basePath: string }) {
       </div>
 
       
-      {loading && (
-        <div className="flex flex-col items-center justify-center gap-3 py-16">
-          <Loader2 size={24} className="animate-spin text-indigo-500" />
-          <p className="text-[12.5px] text-gray-500 dark:text-gray-400">در حال دریافت صورت‌جلسه‌ها...</p>
-        </div>
-      )}
+      {loading && <ListSkeleton rows={5} />}
 
       {!loading && error && (
         <div className="flex flex-col items-center gap-3 rounded-3xl border border-red-500/10 bg-red-500/[0.03] py-12">

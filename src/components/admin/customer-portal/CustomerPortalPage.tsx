@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { m, AnimatePresence } from "framer-motion";
-import { Plus, Trash2, KeyRound, Power, Loader, UserX } from "lucide-react";
+import { Plus, Trash2, KeyRound, Power, UserX } from "lucide-react";
+import CustomerPortalAccountsSkeleton from "./CustomerPortalAccountsSkeleton";
 import { customerPortalApi } from "@/lib/api";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import Pagination from "@/components/ui/Pagination";
@@ -121,10 +122,7 @@ export default function CustomerPortalPage() {
             </div>
 
             {list.loading ? (
-                <div className="flex flex-col items-center justify-center gap-3 py-16">
-                    <Loader size={24} className="animate-spin text-indigo-500" />
-                    <p className="text-[12.5px] text-gray-500 dark:text-gray-400">در حال دریافت حساب‌ها...</p>
-                </div>
+                <CustomerPortalAccountsSkeleton count={6} />
             ) : list.error ? (
                 <div className="flex flex-col items-center justify-center gap-2 py-16">
                     <p className="text-[12.5px] text-rose-500">خطا در دریافت حساب‌ها</p>

@@ -6,6 +6,7 @@ import { Backdrop } from "@/components/ui/Backdrop";
 import { panelMotion } from "@/lib/motion";
 import { X, History, AlertCircle, ClipboardList, ArrowLeftCircle, ArrowRightCircle, ArrowLeftRight, ShoppingBag, XCircle, Ban, RotateCcw, CheckCircle2, Paperclip, UserRound, MessageSquareText, RefreshCw } from "lucide-react";
 import { Spinner as Loader2 } from "@/components/ui/Spinner";
+import { ListSkeleton } from "@/components/ui/skeletons";
 import { useTheme } from "next-themes";
 import { createPortal } from "react-dom";
 import { tasksApi } from "@/lib/api";
@@ -301,12 +302,7 @@ export default function TaskLogsModal({ isOpen, onClose, taskId, taskTitle }: Pr
 
                     <div className="flex-1 overflow-y-auto px-5 py-5">
                         {loading ? (
-                            <div className="flex flex-col items-center justify-center gap-3 py-16">
-                                <Loader2 size={22} className="animate-spin text-indigo-500" />
-                                <p className="text-[12px] font-semibold text-gray-400 dark:text-gray-500">
-                                    در حال دریافت تاریخچه...
-                                </p>
-                            </div>
+                            <ListSkeleton rows={4} />
                         ) : error ? (
                             <div className="flex flex-col items-center justify-center gap-3 py-16">
                                 <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-red-50 dark:bg-red-500/10">

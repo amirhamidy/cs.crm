@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { ListSkeleton } from "@/components/ui/skeletons";
+import { CountSkeleton } from "@/components/ui/skeletons";
+import CustomerCardSkeleton from "./CustomerCardSkeleton";
 import { m, AnimatePresence } from "framer-motion";
 import { useTheme } from "next-themes";
 import { Users, Plus, RefreshCw, Filter, FileSpreadsheet } from "lucide-react";
@@ -129,7 +130,7 @@ export default function CustomersPage() {
                     <div className="min-w-0">
                         <h1 className="text-[15px] font-extrabold text-gray-900 dark:text-white">مدیریت مشتریان</h1>
                         <p className="mt-0.5 text-[11.5px] text-gray-500 dark:text-gray-400">
-                            {loading ? "در حال بارگذاری..." : `${totalCount} مشتری ثبت شده`}
+                            {loading ? <CountSkeleton /> : `${totalCount} مشتری ثبت شده`}
                         </p>
                     </div>
                 </div>
@@ -212,7 +213,7 @@ export default function CustomersPage() {
             </div>
 
             {loading ? (
-                <ListSkeleton />
+                <CustomerCardSkeleton count={6} />
             ) : (
                 <AnimatePresence mode="wait">
                     {customers.length === 0 ? (

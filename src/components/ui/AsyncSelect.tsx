@@ -6,6 +6,8 @@ import { Check, ChevronDown, Search } from "lucide-react";
 import { Spinner as Loader2 } from "@/components/ui/Spinner";
 import { useInfiniteOptions, type InfiniteFetcher } from "@/hooks/useInfiniteOptions";
 
+import { ListSkeleton } from "@/components/ui/skeletons";
+import { Skeleton } from "@/components/ui/Skeleton";
 export interface AsyncOption {
     id: number;
     label: string;
@@ -122,9 +124,7 @@ function AsyncSelectInner<T extends { id: number | string }>({
 
                         <div ref={listRef} onScroll={onScroll} className="max-h-56 overflow-y-auto p-1.5">
                             {loading && items.length === 0 ? (
-                                <div className="flex items-center justify-center gap-2 py-6 text-[12px] text-gray-400">
-                                    <Loader2 size={14} className="animate-spin" /> در حال دریافت...
-                                </div>
+                                <ListSkeleton rows={3} />
                             ) : error && items.length === 0 ? (
                                 <div className="flex flex-col items-center gap-2 py-5">
                                     <p className="text-[12px] text-red-500">دریافت اطلاعات با خطا مواجه شد</p>
@@ -165,9 +165,7 @@ function AsyncSelectInner<T extends { id: number | string }>({
                             )}
 
                             {loadingMore && (
-                                <div className="flex items-center justify-center gap-2 py-3 text-[11.5px] text-gray-400">
-                                    <Loader2 size={13} className="animate-spin" /> در حال دریافت بیشتر...
-                                </div>
+                                <Skeleton className="mx-1 my-2 h-8 rounded-lg" />
                             )}
                             {!loadingMore && hasMore && items.length > 0 && (
                                 <button type="button" onClick={loadMore} className="w-full py-2 text-center text-[11px] font-bold text-indigo-500">

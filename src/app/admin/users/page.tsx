@@ -4,6 +4,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import { RefreshCw, Search, UserPlus, Users } from "lucide-react";
 import { Spinner as Loader2 } from "@/components/ui/Spinner";
+import UserCardSkeleton from "@/components/admin/users/UserCardSkeleton";
+import { CountSkeleton } from "@/components/ui/skeletons";
 
 import { accountsApi, departmentsApi, internalTasksApi, scoreApi, tasksApi } from "@/lib/api";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
@@ -16,7 +18,7 @@ import type { ApiEmployee, ApiUser } from "@/types/users";
 const PAGE_SIZE = 20;
 
 const GRID_CLASS =
-    "grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 [&:has(.user-card:hover)_.user-card:not(:hover)]:[filter:opacity(0.3)]";
+    "grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4";
 
 const EMPTY_TITLES: string[] = [];
 
@@ -261,7 +263,7 @@ export default function UsersPage() {
                     <div className="min-w-0">
                         <h1 className="text-[15px] font-extrabold text-gray-900 dark:text-white">مدیریت کاربران</h1>
                         <p className="mt-0.5 text-[11.5px] text-gray-500 dark:text-gray-400">
-                            {loading ? "در حال بارگذاری..." : `${totalUsers} کاربر ثبت شده`}
+                            {loading ? <CountSkeleton /> : `${totalUsers} کاربر ثبت شده`}
                         </p>
                     </div>
                 </div>
@@ -297,12 +299,7 @@ export default function UsersPage() {
                 </div>
             </div>
 
-            {loading && (
-                <div className="flex flex-col items-center justify-center gap-3 py-16">
-                    <Loader2 size={24} className="animate-spin text-indigo-500" />
-                    <p className="text-[12.5px] text-gray-500 dark:text-gray-400">در حال دریافت اطلاعات کاربران...</p>
-                </div>
-            )}
+            {loading && <UserCardSkeleton count={8} />}
 
             {!loading && error && (
                 <div

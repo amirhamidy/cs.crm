@@ -11,6 +11,7 @@ import { toJalali, toPersianDigits, JALALI_MONTHS, pad2 } from "@/lib/jalali";
 import { useEmployeeInfo } from "@/hooks/useEmployeeInfo";
 import { resolveMediaUrl } from "@/lib/media";
 
+import { ListSkeleton } from "@/components/ui/skeletons";
 interface Attachment {
     id: number;
     file: string;
@@ -364,15 +365,7 @@ export default function AdminTaskNotesModal({
 
                         <div className="flex-1 overflow-y-auto px-5 py-4">
                             {loading ? (
-                                <div className="flex flex-col items-center justify-center gap-3 py-16">
-                                    <Loader2
-                                        size={22}
-                                        className="animate-spin text-indigo-500"
-                                    />
-                                    <p className="text-[12px] font-semibold text-gray-500">
-                                        در حال دریافت اطلاعات تسک...
-                                    </p>
-                                </div>
+                                <ListSkeleton rows={4} />
                             ) : error ? (
                                 <div className="flex flex-col items-center justify-center gap-3 py-16">
                                     <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-red-500/10">

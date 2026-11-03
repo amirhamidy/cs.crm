@@ -6,7 +6,8 @@ import dynamic from "next/dynamic";
 
 import { m, AnimatePresence } from "framer-motion";
 import { Factory, Plus, SquarePen, X, TrendingUp, BarChart3, AlertTriangle, ClipboardList, Trash2, CalendarDays, Gauge, Filter, LineChart, Users, Eye, CalendarCogIcon } from "lucide-react";
-import { Spinner as Loader2 } from "@/components/ui/Spinner";
+import MachineCardsSkeleton from "./MachineCardsSkeleton";
+import MachineReportSkeleton from "./MachineReportSkeleton";
 import axiosInstance from "@/lib/axiosInstance";
 
 import { listAll } from "@/lib/api";
@@ -404,9 +405,7 @@ export default function AdminProductionManagementPage() {
                         </h2>
 
                         {loading ? (
-                            <div className="flex justify-center py-10">
-                                <Loader2 size={22} className="animate-spin text-indigo-500" />
-                            </div>
+                            <MachineCardsSkeleton count={6} />
                         ) : machines.length === 0 ? (
                             <div className="rounded-2xl border border-dashed border-gray-200 py-10 text-center text-[12px] text-gray-400 dark:border-white/[0.1]">
                                 هنوز ماشینی تعریف نشده. با «تعریف ماشین» شروع کنید.
@@ -517,9 +516,7 @@ export default function AdminProductionManagementPage() {
                     </div>
 
                     {loading ? (
-                        <div className="flex justify-center py-10">
-                            <Loader2 size={22} className="animate-spin text-indigo-500" />
-                        </div>
+                        <MachineCardsSkeleton count={6} />
                     ) : filteredMachines.length === 0 ? (
                         <div className="rounded-2xl border border-dashed border-gray-200 py-10 text-center text-[12px] text-gray-400 dark:border-white/[0.1]">
                             ماشینی با این فیلتر یافت نشد.
@@ -857,9 +854,7 @@ export default function AdminProductionManagementPage() {
                     {monthlyError && <ErrorBanner message={monthlyError} onClose={() => setMonthlyError("")} />}
 
                     {monthlyLoading ? (
-                        <div className="flex justify-center py-10">
-                            <Loader2 size={22} className="animate-spin text-indigo-500" />
-                        </div>
+                        <MachineReportSkeleton />
                     ) : monthlyReport ? (
                         <div className="space-y-4">
                             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
@@ -1088,9 +1083,7 @@ export default function AdminProductionManagementPage() {
                     {summaryError && <ErrorBanner message={summaryError} onClose={() => setSummaryError("")} />}
 
                     {summaryLoading ? (
-                        <div className="flex justify-center py-10">
-                            <Loader2 size={22} className="animate-spin text-indigo-500" />
-                        </div>
+                        <MachineReportSkeleton />
                     ) : summaryReport ? (
                         <div className="space-y-4">
                             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
@@ -1296,9 +1289,7 @@ export default function AdminProductionManagementPage() {
                     )}
 
                     {machineMonthlyLoading ? (
-                        <div className="flex justify-center py-10">
-                            <Loader2 size={22} className="animate-spin text-indigo-500" />
-                        </div>
+                        <MachineReportSkeleton />
                     ) : machineMonthlyReport ? (
                         <div className="space-y-4">
                             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">

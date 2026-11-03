@@ -298,7 +298,7 @@ function AdminTasksPageContent() {
 
 export default function AdminTasksPage() {
     return (
-        <SuspenseWrapper>
+        <SuspenseWrapper fallback={<TaskCardSkeleton />}>
             <AdminTasksPageContent />
         </SuspenseWrapper>
     );

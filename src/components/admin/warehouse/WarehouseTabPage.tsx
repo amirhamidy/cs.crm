@@ -5,7 +5,6 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { AnimatePresence, m } from "framer-motion";
 import { BusyContent } from "@/components/ui/Button";
 import { BellRing, Boxes, ClipboardList, Archive, FileText, Package, RefreshCw, PackagePlus, PackageSearch, Plus, ReceiptText, ShieldCheck, Power, PowerOff, ShieldAlert, ShoppingBag, UploadCloud, UsersRound, UserPlus } from "lucide-react";
-import { Spinner as Loader2 } from "@/components/ui/Spinner";
 import { useTheme } from "next-themes";
 
 import AddCategoryModal from "@/components/admin/warehouse/AddCategoryModal";
@@ -32,7 +31,7 @@ import WarehouseEmployeeOrderTaskCard from "@/components/user/warehouse/Warehous
 import WarehouseEmployeeStockLedger from "@/components/user/warehouse/Warehouseemployeestockledger";
 import OrderInvoiceCard from "@/components/user/warehouse/OrderInvoiceCard";
 import OrderInvoiceModal from "@/components/user/warehouse/OrderInvoiceModal";
-import CardSkeletonGrid from "@/components/ui/CardSkeletonGrid";
+import WarehouseTabSkeleton from "@/components/admin/warehouse/WarehouseTabSkeleton";
 import ShelfFilterBar from "@/components/user/warehouse/ShelfFilterBar";
 import { useWarehouseShelves } from "@/hooks/useWarehouseShelves";
 import { buildSalesInvoices, getOrderTaskTitle } from "@/utils/warehouseEmployee";
@@ -318,8 +317,8 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
 
     if (!ready) {
         return (
-            <div dir="rtl" className="flex min-h-screen items-center justify-center" style={{ background: pageBg }}>
-                <Loader2 size={24} className="animate-spin" style={{ color: "#6366f1" }} />
+            <div dir="rtl" className="min-h-screen p-4" style={{ background: pageBg }}>
+                <WarehouseTabSkeleton tab={tab} count={8} />
             </div>
         );
     }
@@ -399,9 +398,7 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
     const sectionHeaderClass = "flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between";
     const titleClass = "text-[14px] font-extrabold text-gray-900 dark:text-white";
     const subtitleClass = "mt-1 text-[11.5px] text-gray-500 dark:text-gray-400";
-    const spinner = (
-        <CardSkeletonGrid count={8} className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3" />
-    );
+    const tabSkeleton = <WarehouseTabSkeleton tab={tab} count={8} />;
 
     return (
         <div dir="rtl" className="flex min-h-screen flex-col gap-6 p-6">
@@ -489,7 +486,7 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
                                 boxShadow: active ? "0 4px 12px rgba(99,102,241,.25)" : "none",
                             }}
                         >
-                            {archiveLoading ? <Loader2 size={14} className="animate-spin" /> : <Icon size={14} />}
+                            <Icon size={14} />
                             {label}
                             {count > 0 && (
                                 <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[9px] text-white">
@@ -523,7 +520,7 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
             )}
 
             {loading ? (
-                spinner
+                tabSkeleton
             ) : (
                 <AnimatePresence mode="wait">
                     <m.div
@@ -905,13 +902,13 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
                                         disabled={archiveLoading}
                                         className="flex h-10 items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-4 text-[12.5px] font-bold text-white transition-colors hover:bg-indigo-700 disabled:opacity-50"
                                     >
-                                        <Loader2 size={14} />
+                                        <RefreshCw size={14} />
                                         بروزرسانی
                                     </m.button>
                                 </div>
 
                                 {archiveLoading ? (
-                                    spinner
+                                    <WarehouseTabSkeleton tab="invoices" count={6} />
                                 ) : (
                                     <>
                                         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">

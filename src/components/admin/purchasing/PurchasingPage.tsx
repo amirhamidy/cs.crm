@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { m } from "framer-motion";
 import { CheckCircle2, Clock3, RefreshCw, ShieldCheck, ShoppingCart, UserCheck, Users, XCircle, type LucideIcon } from "lucide-react";
+import PurchasingPageSkeleton from "./PurchasingPageSkeleton";
 import { Spinner as Loader2 } from "@/components/ui/Spinner";
 import axiosInstance from "@/lib/axiosInstance";
 import { purchasingApi, type PurchasingCounts } from "@/lib/api";
@@ -203,9 +204,7 @@ export default function PurchasingPage() {
             )}
 
             {loading ? (
-                <div className={`${box} flex h-32 items-center justify-center`}>
-                    <Loader2 size={20} className="animate-spin text-indigo-500" />
-                </div>
+                <PurchasingPageSkeleton />
             ) : (
                 <>
                     <PurchasingEmployeesBar

@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { AnimatePresence, m } from "framer-motion";
 import { Boxes, Lock, Pencil, Plus, Power, PowerOff, X } from "lucide-react";
-import { Spinner as Loader2 } from "@/components/ui/Spinner";
+import WarehouseSelectorSkeleton from "./WarehouseSelectorSkeleton";
 import { useTheme } from "next-themes";
 
 import useWarehouses from "@/hooks/useWarehouses";
@@ -282,9 +282,7 @@ export default function WarehouseSelector() {
             )}
 
             {isPageLoading ? (
-                <div className="flex items-center justify-center py-20">
-                    <Loader2 size={22} className="animate-spin text-indigo-500" />
-                </div>
+                <WarehouseSelectorSkeleton count={8} />
             ) : (
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                     {visibleWarehouses.length ? (

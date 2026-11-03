@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence, m } from "framer-motion";
-import { AlertTriangle, Ban, CalendarClock, CheckCircle2, History, Loader, Plus, RefreshCw, Repeat, RotateCcw, Timer, Trash2 } from "lucide-react";
+import { AlertTriangle, Ban, CalendarClock, CheckCircle2, History, Plus, RefreshCw, Repeat, RotateCcw, Timer, Trash2 } from "lucide-react";
 import { Spinner as Loader2 } from "@/components/ui/Spinner";
 import { useTheme } from "next-themes";
 import { useAuthStore } from "@/store/authStore";
@@ -13,6 +13,7 @@ import InternalTaskActionModal from "@/components/user/Internaltasks/InternalTas
 import type { InternalTask, InternalTaskRoutine } from "./Types";
 
 import { BusyContent } from "@/components/ui/Button";
+import { BoardSkeleton } from "@/components/ui/skeletons";
 const NEVER_REPEAT_VALUE = 2147483647;
 
 function formatDate(value?: string | null) {
@@ -584,9 +585,7 @@ export default function AdminTaskRoutineBoard() {
 
     if (loading) {
         return (
-            <div dir="rtl" className="flex h-64 items-center justify-center">
-                <Loader size={22} className="animate-spin text-indigo-500" />
-            </div>
+            <BoardSkeleton columns={3} />
         );
     }
 

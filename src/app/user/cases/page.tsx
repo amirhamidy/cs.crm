@@ -22,7 +22,7 @@ const CaseActionsModal = dynamic(() => import("@/components/cases/CaseActionsMod
 
 
 import Pagination from "@/components/ui/Pagination";
-import { CaseCardSkeleton } from "@/components/ui/skeletons";
+import { CaseCardSkeleton, CountSkeleton } from "@/components/ui/skeletons";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 
 const PAGE_SIZE = 12;
@@ -186,7 +186,7 @@ export default function UserCasesPage() {
                         <h1 className="text-[15px] font-extrabold text-gray-900 dark:text-white">پرونده‌ها</h1>
                         <p className="mt-0.5 text-[11.5px] text-gray-500 dark:text-gray-400">
                             {loading
-                                ? "در حال بارگذاری..."
+                                ? <CountSkeleton />
                                 : `${totalCount} پرونده${totalTasksOnPage > 0 ? ` · ${totalTasksOnPage} وظیفه در این صفحه` : ""}`}
                         </p>
                     </div>

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { m, AnimatePresence } from "framer-motion";
-import { Kanban, Loader, Building2, Plus, ChevronLeft, UserRound } from "lucide-react";
+import { Kanban, Building2, Plus, ChevronLeft, UserRound } from "lucide-react";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { FreeMode } from "swiper/modules";
 import "swiper/css";
@@ -11,6 +11,7 @@ import { tasksApi, departmentsApi, accountsApi } from "@/lib/api";
 import TaskCardSwiper from "./TaskCardSwiper";
 import type { UserTask, UserStage, EmployeeAPIItem, DepartmentAPIItem, DepartmentEmployeeAPIItem } from "./types";
 import { useCurrentEmployee } from "@/hooks/usecurrentemployee";
+import UserTasksKanbanSkeleton from "./UserTasksKanbanSkeleton";
 
 interface DepartmentGroup {
     id: number;
@@ -262,7 +263,7 @@ export default function UserTasksKanban() {
     }
 
     if (loading || stagesLoading || employeeLoading) {
-        return <div className="flex h-64 items-center justify-center"><Loader size={22} className="animate-spin text-indigo-500" /></div>;
+        return <UserTasksKanbanSkeleton columns={3} />;
     }
 
     if (error) {

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { m } from "framer-motion";
 import { CalendarClock, Clock, UserRound } from "lucide-react";
-import { Spinner as Loader2 } from "@/components/ui/Spinner";
+import MyTaskDeadlinesSkeleton from "./MyTaskDeadlinesSkeleton";
 import { useTheme } from "next-themes";
 import api from "@/lib/axiosInstance";
 import { listAll } from "@/lib/api";
@@ -134,10 +134,7 @@ export default function MyTaskDeadlines() {
             </div>
 
             {loading ? (
-                <div className="flex min-h-32 items-center justify-center gap-2 text-[11px] font-semibold text-gray-400">
-                    <Loader2 size={16} className="animate-spin" />
-                    در حال بررسی Deadlineها...
-                </div>
+                <MyTaskDeadlinesSkeleton count={3} />
             ) : !tasks.length ? (
                 <div className="flex min-h-32 items-center justify-center rounded-2xl border border-dashed border-gray-200 text-[11px] font-semibold text-gray-400 dark:border-white/[0.06]">
                     هیچ تسکی با Deadline گذشته وجود ندارد.

@@ -1,11 +1,11 @@
 "use client";
+import { ListSkeleton } from "@/components/ui/skeletons";
 
 import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, m, useReducedMotion } from "framer-motion";
 import { Backdrop } from "@/components/ui/Backdrop";
 import { panelMotion } from "@/lib/motion";
 import { AlertCircle, Check, Search, UserPlus, X } from "lucide-react";
-import { Spinner as Loader2 } from "@/components/ui/Spinner";
 import axiosInstance from "@/lib/axiosInstance";
 import { listAll } from "@/lib/api";
 import type { ApiQualityControlEmployee, ApiUser } from "@/types/quality_control";
@@ -107,9 +107,7 @@ export default function QCEmployeeModal({ isOpen, existingEmployees, names, onCl
 
                             <div className="max-h-[280px] space-y-1.5 overflow-y-auto">
                                 {fetching ? (
-                                    <div className="flex justify-center py-8">
-                                        <Loader2 size={18} className="animate-spin text-blue-500" />
-                                    </div>
+                                    <ListSkeleton rows={4} />
                                 ) : available.length === 0 ? (
                                     <p className="py-8 text-center text-[11px] text-gray-400">کاربری برای افزودن یافت نشد</p>
                                 ) : (

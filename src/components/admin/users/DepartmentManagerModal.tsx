@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { m } from "framer-motion";
 import { AlertCircle, Building2, Crown, X } from "lucide-react";
-import { Spinner as Loader2 } from "@/components/ui/Spinner";
 import { departmentsApi } from "@/lib/api";
 import { ModalFrame } from "./ModalFrame";
 import { StatusSwitch } from "./StatusSwitch";
@@ -14,6 +13,7 @@ import {
     type DepartmentMembership,
 } from "./userCardUtils";
 
+import { ListSkeleton } from "@/components/ui/skeletons";
 export function DepartmentManagerModal({
     employeeId,
     employeeName,
@@ -141,9 +141,7 @@ export function DepartmentManagerModal({
 
                 <div className="max-h-[340px] overflow-y-auto">
                     {loading ? (
-                        <div className="flex items-center justify-center py-10">
-                            <Loader2 size={22} className="animate-spin text-indigo-500" />
-                        </div>
+                        <ListSkeleton rows={4} />
                     ) : loadError ? (
                         <div className="flex items-center gap-1.5 rounded-2xl p-3 text-[12px] font-bold text-red-500">
                             <AlertCircle size={15} className="shrink-0" />

@@ -4,7 +4,6 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import { m, AnimatePresence, animate } from "framer-motion";
 import { useTheme } from "next-themes";
 import { Phone, Building2, Trash2, SquarePen, User, CalendarDays, Star, MessageCircle, MoreVertical, AlertCircle, KeyRound } from "lucide-react";
-import { Spinner as Loader2 } from "@/components/ui/Spinner";
 import dynamic from "next/dynamic";
 import type { Customer } from "@/types/customer";
 import { useEmployeeDirectory } from "@/hooks/useEmployeeDirectory";
@@ -19,6 +18,7 @@ import { toast } from "@/components/notifications/toast";
 import { apiMessage } from "@/lib/apiMessage";
 
 
+import { Skeleton } from "@/components/ui/Skeleton";
 const CustomerEditModal = dynamic(() => import("./CustomerEditModal"), {
     ssr: false,
     loading: () => null,
@@ -713,10 +713,7 @@ export default function CustomerCard({
                                                             }}
                                                         >
                                                             {previewLoading ? (
-                                                                <span className="flex items-center gap-1.5 text-[11px] text-gray-300">
-                                                                    <Loader2 size={11} className="animate-spin" />
-                                                                    در حال دریافت...
-                                                                </span>
+                                                                <Skeleton className="h-3 w-24 rounded" />
                                                             ) : scoresPreview && scoresPreview.count > 0 ? (
                                                                 <>
                                                                     <span className="flex items-center gap-1 text-[12px] font-black text-amber-400">

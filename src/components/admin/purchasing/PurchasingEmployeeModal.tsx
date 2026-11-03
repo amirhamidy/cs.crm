@@ -1,4 +1,6 @@
 "use client";
+import { Skeleton } from "@/components/ui/Skeleton";
+import { ListSkeleton } from "@/components/ui/skeletons";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -6,7 +8,6 @@ import { AnimatePresence, m, useReducedMotion } from "framer-motion";
 import { Backdrop } from "@/components/ui/Backdrop";
 import { panelMotion } from "@/lib/motion";
 import { AlertCircle, Check, Search, UserPlus, X } from "lucide-react";
-import { Spinner as Loader2 } from "@/components/ui/Spinner";
 import axiosInstance from "@/lib/axiosInstance";
 import { fetchPage } from "@/lib/api";
 import { useInfiniteOptions, type InfiniteFetcher } from "@/hooks/useInfiniteOptions";
@@ -127,9 +128,7 @@ export default function PurchasingEmployeeModal({ open, existingEmployees, onClo
 
                             <div ref={listRef} onScroll={onListScroll} className="max-h-[280px] space-y-1.5 overflow-y-auto">
                                 {fetching && employees.length === 0 ? (
-                                    <div className="flex justify-center py-8">
-                                        <Loader2 size={18} className="animate-spin text-indigo-500" />
-                                    </div>
+                                    <ListSkeleton rows={4} />
                                 ) : loadError && employees.length === 0 ? (
                                     <p className="py-8 text-center text-[11px] text-red-500">دریافت لیست کارکنان انجام نشد.</p>
                                 ) : visible.length === 0 ? (
@@ -175,9 +174,7 @@ export default function PurchasingEmployeeModal({ open, existingEmployees, onClo
                                 )}
 
                                 {loadingMore && (
-                                    <div className="flex justify-center py-3">
-                                        <Loader2 size={14} className="animate-spin text-indigo-500" />
-                                    </div>
+                                    <Skeleton className="mx-auto h-6 w-24 rounded-lg" />
                                 )}
                                 {!loadingMore && hasMore && visible.length > 0 && (
                                     <button type="button" onClick={loadMore} className="w-full py-2 text-center text-[11px] font-bold text-indigo-500">

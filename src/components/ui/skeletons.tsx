@@ -152,16 +152,20 @@ export function CaseCardSkeleton({ count = 6, className = "grid grid-cols-1 gap-
     return (
         <div className={cn("animate-pulse motion-reduce:animate-none", className)} aria-busy="true" aria-live="polite">
             {Array.from({ length: count }, (_, i) => (
-                <div key={i} className={CARD}>
-                    <div className="flex items-center justify-between gap-3">
-                        <Skeleton className="h-4 w-2/5" />
-                        <Skeleton className="h-6 w-6 rounded-full" />
+                <div key={i} className="flex flex-col gap-3 rounded-2xl border border-gray-100 bg-white p-4 dark:border-white/[0.07] dark:bg-[#111a2d]">
+                    <div className="flex items-center gap-3 pt-1">
+                        <SkeletonAvatar size={44} className="rounded-2xl" />
+                        <div className="min-w-0 flex-1 space-y-2">
+                            <Skeleton className="h-3.5 w-2/3" />
+                            <Skeleton className="h-3 w-1/4" />
+                        </div>
+                        <Skeleton className="h-7 w-7 rounded-full" />
                     </div>
-                    <Skeleton className="mt-3 h-3 w-1/3" />
-                    <SkeletonText lines={2} className="mt-4" />
-                    <div className="mt-5 flex items-center justify-between">
-                        <Skeleton className="h-5 w-20 rounded-full" />
-                        <Skeleton className="h-3 w-16" />
+                    <div className="flex flex-col gap-2 border-t border-gray-100 pt-2.5 dark:border-white/[0.06]">
+                        <div className="flex items-center gap-2"><Skeleton className="h-3.5 w-3.5 rounded" /><Skeleton className="h-3 w-2/5" /></div>
+                        <div className="flex items-center gap-2"><Skeleton className="h-3.5 w-3.5 rounded" /><Skeleton className="h-3 w-3/5" /></div>
+                        <SkeletonText lines={2} />
+                        <div className="flex items-center justify-between"><Skeleton className="h-5 w-20 rounded-lg bg-indigo-500/10 dark:bg-indigo-400/10" /><Skeleton className="h-3 w-16" /></div>
                     </div>
                 </div>
             ))}
@@ -177,7 +181,7 @@ export function CountSkeleton({ className }: { className?: string }) {
 }
 
 const TASK_CARD =
-    "flex min-h-[130px] flex-col gap-3 rounded-2xl border border-gray-100 bg-gray-50 p-4 dark:border-white/[0.06] dark:bg-white/[0.02]";
+    "flex min-h-[130px] flex-col gap-3 rounded-2xl border border-gray-100 bg-white p-4 dark:border-white/[0.07] dark:bg-[#111a2d]";
 
 /** Matches tasks/TaskCard: status pill + action buttons, title, description, chips footer. */
 export function TaskCardSkeleton({ count = 6, className = "grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3" }: { count?: number; className?: string }) {
@@ -186,20 +190,24 @@ export function TaskCardSkeleton({ count = 6, className = "grid grid-cols-1 gap-
             {Array.from({ length: count }, (_, i) => (
                 <div key={i} className={TASK_CARD}>
                     <div className="flex items-start justify-between gap-3">
-                        <Skeleton className="h-6 w-24 rounded-full" />
+                        <div className="flex items-center gap-2">
+                            <Skeleton className="h-6 w-24 rounded-full bg-amber-500/10 dark:bg-amber-400/10" />
+                            <Skeleton className="h-6 w-16 rounded-full bg-rose-500/10 dark:bg-rose-400/10" />
+                        </div>
                         <div className="flex gap-1.5">
-                            <Skeleton className="h-7 w-7 rounded-xl" />
-                            <Skeleton className="h-7 w-7 rounded-xl" />
-                            <Skeleton className="h-7 w-7 rounded-xl" />
+                            <Skeleton className="h-8 w-8 rounded-xl bg-indigo-500/10 dark:bg-indigo-400/10" />
+                            <Skeleton className="h-7 w-7 rounded-xl bg-indigo-500/10 dark:bg-indigo-400/10" />
+                            <Skeleton className="h-7 w-7 rounded-xl bg-indigo-500/10 dark:bg-indigo-400/10" />
+                            <Skeleton className="h-7 w-7 rounded-xl bg-rose-500/10 dark:bg-rose-400/10" />
                         </div>
                     </div>
                     <div className="space-y-2">
                         <Skeleton className="h-4 w-3/5" />
                         <SkeletonText lines={2} />
                     </div>
-                    <div className="mt-auto flex gap-2 border-t border-gray-100 pt-2.5 dark:border-white/[0.05]">
-                        <Skeleton className="h-6 w-20 rounded-full" />
-                        <Skeleton className="h-6 w-24 rounded-full" />
+                    <div className="mt-auto flex flex-wrap gap-2 border-t border-gray-100 pt-2.5 dark:border-white/[0.05]">
+                        <Skeleton className="h-6 w-20 rounded-full bg-violet-500/10 dark:bg-violet-400/10" />
+                        <Skeleton className="h-6 w-24 rounded-full bg-sky-500/10 dark:bg-sky-400/10" />
                     </div>
                 </div>
             ))}

@@ -245,7 +245,7 @@ export default function WarehouseStaffCard({ staff, index, onDelete, onUpdated }
                         exit={{ opacity: 0 }}
                         onClick={handleCloseConfirm}
                         className="fixed inset-0 z-50 flex items-center justify-center px-4"
-                        style={{ background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)" }}
+                        style={{ background: "rgba(0,0,0,0.5)" }}
                     >
                         <m.div
                             initial={{ opacity: 0, scale: 0.96, y: 16 }}

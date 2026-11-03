@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, m } from "framer-motion";
 import { AlertTriangle, CalendarClock, CalendarDays, Clock, RefreshCw, X } from "lucide-react";
-import { Spinner as Loader2 } from "@/components/ui/Spinner";
+import { ListSkeleton } from "@/components/ui/skeletons";
 import { useTheme } from "next-themes";
 import api from "@/lib/axiosInstance";
 import { toJalali, toPersianDigits, JALALI_MONTHS, pad2 } from "@/lib/jalali";
@@ -202,10 +202,7 @@ export default function TaskDeadlineModal({
 
                         <div className="flex flex-col gap-3 p-6">
                             {loading ? (
-                                <div className="flex flex-col items-center justify-center gap-2 py-8" style={{ color: muted }}>
-                                    <Loader2 size={22} className="animate-spin text-indigo-500" />
-                                    <p className="text-[12px] font-semibold">در حال دریافت زمان‌بندی...</p>
-                                </div>
+                                <ListSkeleton rows={3} />
                             ) : error ? (
                                 <div className="flex flex-col items-center gap-3 py-6">
                                     <div className="flex items-center gap-2 text-[12.5px] font-bold text-red-500">

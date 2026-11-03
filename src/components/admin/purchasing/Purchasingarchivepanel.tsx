@@ -1,8 +1,8 @@
 "use client";
+import { ListSkeleton } from "@/components/ui/skeletons";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Archive, CheckCircle2, Search, X, XCircle } from "lucide-react";
-import { Spinner as Loader2 } from "@/components/ui/Spinner";
 import { purchasingApi, type PurchasingArchiveStatus } from "@/lib/api";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import Pagination from "@/components/ui/Pagination";
@@ -117,9 +117,7 @@ export default function PurchasingArchive({ steps, attachments, refreshKey = 0 }
             </div>
 
             {list.loading && list.data.length === 0 ? (
-                <div className="flex min-h-[130px] items-center justify-center">
-                    <Loader2 size={18} className="animate-spin text-indigo-500" />
-                </div>
+                <ListSkeleton rows={3} />
             ) : empty ? (
                 <div className="flex min-h-[130px] flex-col items-center justify-center gap-2 rounded-[1.45rem] border border-dashed border-gray-200 text-center dark:border-white/[0.07]">
                     <Archive size={22} className="text-gray-300 dark:text-gray-700" />

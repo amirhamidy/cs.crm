@@ -2,7 +2,7 @@
 
 import { Suspense } from "react";
 import dynamic from "next/dynamic";
-import { ListSkeleton } from "@/components/ui/skeletons";
+import { CalendarSkeleton } from "@/components/ui/skeletons";
 
 
 const PersianCalendar = dynamic(() => import("@/components/calendar/user/PersianCalendar"), {
@@ -13,7 +13,7 @@ const PersianCalendar = dynamic(() => import("@/components/calendar/user/Persian
 export default function CalendarPage() {
   return (
     <Suspense
-      fallback={<ListSkeleton rows={4} />}
+      fallback={<CalendarSkeleton />}
     >
       <PersianCalendar />
     </Suspense>

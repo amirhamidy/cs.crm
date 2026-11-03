@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { m, AnimatePresence } from "framer-motion";
-import { Loader, ClipboardList } from "lucide-react";
+import { ClipboardList } from "lucide-react";
+import PortalOrdersSkeleton from "../PortalOrdersSkeleton";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import { portalApi } from "@/lib/portal/portalApi";
 import type { PortalOrder, OrderStatus } from "@/types/portal";
@@ -74,10 +75,7 @@ export default function PortalOrdersPage() {
             </div>
 
             {list.loading ? (
-                <div className="flex flex-col items-center justify-center gap-3 py-16">
-                    <Loader size={24} className="animate-spin text-indigo-500" />
-                    <p className="text-[12.5px] text-gray-500 dark:text-gray-400">در حال دریافت سفارش‌ها...</p>
-                </div>
+                <PortalOrdersSkeleton count={5} />
             ) : list.error ? (
                 <div className="flex flex-col items-center justify-center gap-2 py-16">
                     <p className="text-[12.5px] text-rose-500">دریافت سفارش‌ها انجام نشد</p>

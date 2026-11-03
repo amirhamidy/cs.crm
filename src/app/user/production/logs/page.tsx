@@ -1,7 +1,7 @@
 "use client";
 
 import { NiceSelect } from "@/components/ui/NiceSelect";
-import { ListSkeleton } from "@/components/ui/skeletons";
+import ProductionLogsSkeleton from "./ProductionLogsSkeleton";
 import TimePicker from "@/components/TimePicker";
 import { useCallback, useRef, useState } from "react";
 import { m, AnimatePresence, useReducedMotion } from "framer-motion";
@@ -179,7 +179,7 @@ export default function UserProductionLogsPage() {
 
       
       {loading ? (
-        <ListSkeleton />
+        <ProductionLogsSkeleton rows={6} />
       ) : (
         <div className="bg-white dark:bg-[#111827] rounded-3xl border border-gray-100 dark:border-white/[0.07] overflow-hidden shadow-sm">
           <div className="flex items-center gap-2 border-b border-gray-100 dark:border-white/[0.06] px-4 py-3.5">

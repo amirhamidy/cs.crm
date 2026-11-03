@@ -1,4 +1,5 @@
 "use client";
+import { ListSkeleton } from "@/components/ui/skeletons";
 
 import { createPortal } from "react-dom";
 import { AnimatePresence, m } from "framer-motion";
@@ -137,9 +138,7 @@ export default function TaskHistoryModal({
 
                         <div className="flex-1 overflow-y-auto px-5 py-5">
                             {loading ? (
-                                <div className="flex h-40 items-center justify-center">
-                                    <Loader2 size={20} className="animate-spin text-indigo-500" />
-                                </div>
+                                <ListSkeleton rows={3} />
                             ) : entries.length === 0 ? (
                                 <div className="flex h-40 flex-col items-center justify-center gap-2 text-center">
                                     <History size={26} className="text-gray-300 dark:text-gray-700" />

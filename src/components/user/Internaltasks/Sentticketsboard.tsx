@@ -4,7 +4,8 @@ import { useMemo, useState } from "react";
 import Pagination from "@/components/ui/Pagination";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import { internalTasksApi } from "@/lib/api";
-import { LayoutGrid, Loader, Plus, Ticket } from "lucide-react";
+import { LayoutGrid, Plus, Ticket } from "lucide-react";
+import TicketBoardSkeleton from "./TicketBoardSkeleton";
 import { useCurrentEmployee } from "@/hooks/usecurrentemployee";
 import { deleteInternalTask } from "./Api";
 import type { InternalTask, InternalTaskStatus } from "./types";
@@ -112,7 +113,7 @@ export default function SentTicketsBoard() {
     };
 
     if (loading || employeeLoading) {
-        return <div className="flex h-64 items-center justify-center"><Loader size={22} className="animate-spin text-indigo-500" /></div>;
+        return <TicketBoardSkeleton count={4} />;
     }
 
     return (

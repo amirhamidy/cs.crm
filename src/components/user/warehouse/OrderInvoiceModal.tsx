@@ -7,7 +7,7 @@ import { Backdrop } from "@/components/ui/Backdrop";
 import { panelMotion } from "@/lib/motion";
 import { useTheme } from "next-themes";
 import { AlertCircle, Building2, FileText, Hash, Package, ReceiptText, User, Users, X } from "lucide-react";
-import { Spinner as Loader2 } from "@/components/ui/Spinner";
+import { ListSkeleton } from "@/components/ui/skeletons";
 import axiosInstance from "@/lib/axiosInstance";
 import { formatDate, formatNumber, getStatusLabel, getStatusTone, type SalesInvoice } from "@/utils/warehouseEmployee";
 
@@ -308,15 +308,7 @@ export default function OrderInvoiceModal({
 
                         <main className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-5">
                             {loading ? (
-                                <div className="flex min-h-64 flex-col items-center justify-center gap-3">
-                                    <Loader2
-                                        size={28}
-                                        className="animate-spin text-indigo-500"
-                                    />
-                                    <p className="text-[12px] font-semibold text-gray-500 dark:text-gray-400">
-                                        در حال دریافت جزئیات فاکتور...
-                                    </p>
-                                </div>
+                                <ListSkeleton rows={4} />
                             ) : error ? (
                                 <div className="flex min-h-52 flex-col items-center justify-center gap-3 rounded-3xl border border-red-200 bg-red-50 p-5 text-center dark:border-red-500/20 dark:bg-red-500/5">
                                     <AlertCircle

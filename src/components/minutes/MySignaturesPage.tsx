@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, Check, Clock, Loader2, PenLine, RefreshCw } from "lucide-react";
+import { ArrowRight, Check, Clock, PenLine, RefreshCw } from "lucide-react";
+import { ListSkeleton } from "@/components/ui/skeletons";
 import { minutesApi } from "@/lib/minutesApi";
 import { formatDateTime, parseApiError } from "@/lib/minutesUtils";
 import MeetingStatusBadge from "./MeetingStatusBadge";
@@ -92,11 +93,7 @@ export default function MySignaturesPage({ basePath }: { basePath: string }) {
         ))}
       </div>
 
-      {loading && (
-        <div className="flex justify-center py-16">
-          <Loader2 size={24} className="animate-spin text-indigo-500" />
-        </div>
-      )}
+      {loading && <ListSkeleton rows={4} />}
 
       {!loading && error && (
         <div className="flex flex-col items-center gap-3 rounded-3xl border border-red-500/10 bg-red-500/[0.03] py-12">

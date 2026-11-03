@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence, m } from "framer-motion";
-import { AlertTriangle, Ban, CalendarClock, CheckCircle2, History, Inbox, Loader, Plus, RefreshCw, Repeat, RotateCcw, Timer, Trash2, Users } from "lucide-react";
+import { AlertTriangle, Ban, CalendarClock, CheckCircle2, History, Inbox, Plus, RefreshCw, Repeat, RotateCcw, Timer, Trash2, Users } from "lucide-react";
 import { Spinner as Loader2 } from "@/components/ui/Spinner";
 import { useAuthStore } from "@/store/authStore";
 import { useIsVisible, useVisibleInterval } from "@/hooks/useVisibility";
@@ -12,6 +12,7 @@ import EmployeeCreateTaskRoutineModal from "./EmployeeCreateTaskRoutineModal";
 import type { EmployeeListItem, EmployeeRef, InternalTask, InternalTaskRoutine } from "./Types";
 
 import { BusyContent } from "@/components/ui/Button";
+import { BoardSkeleton } from "@/components/ui/skeletons";
 const NEVER_REPEAT_VALUE = 2147483647;
 
 const AVATAR_GRADIENTS = [
@@ -722,15 +723,7 @@ export default function EmployeeTaskRoutineBoard() {
 
     if (loading) {
         return (
-            <div
-                dir="rtl"
-                className="flex h-64 items-center justify-center"
-            >
-                <Loader
-                    size={22}
-                    className="animate-spin text-indigo-500"
-                />
-            </div>
+            <BoardSkeleton columns={3} />
         );
     }
 

@@ -5,9 +5,9 @@ import { AnimatePresence, m, useReducedMotion } from "framer-motion";
 import { Backdrop } from "@/components/ui/Backdrop";
 import { panelMotion } from "@/lib/motion";
 import { CalendarDays, MessageCircle, Sparkles, Star, UserRound, X } from "lucide-react";
-import { Spinner as Loader2 } from "@/components/ui/Spinner";
 import axiosInstance from "@/lib/axiosInstance";
 
+import { ListSkeleton } from "@/components/ui/skeletons";
 interface ScoreItem {
     id: number;
     created_by: number;
@@ -204,16 +204,7 @@ export default function CustomerScoresModal({
                             </div>
 
                             {loading && (
-                                <div className="flex min-h-52 flex-col items-center justify-center gap-3 text-gray-500 dark:text-gray-400">
-                                    <Loader2
-                                        size={30}
-                                        className="animate-spin text-indigo-500"
-                                    />
-
-                                    <span className="text-sm">
-                                        در حال دریافت نظرات...
-                                    </span>
-                                </div>
+                                <ListSkeleton rows={3} />
                             )}
 
                             {!loading && error && (

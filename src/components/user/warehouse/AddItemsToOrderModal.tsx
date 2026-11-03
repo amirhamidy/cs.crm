@@ -1,11 +1,11 @@
 "use client";
+import { ListSkeleton } from "@/components/ui/skeletons";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, m, useReducedMotion } from "framer-motion";
 import { Backdrop } from "@/components/ui/Backdrop";
 import { panelMotion } from "@/lib/motion";
 import { AlertTriangle, Check, CheckCircle2, MapPin, PackagePlus, Search, X } from "lucide-react";
-import { Spinner as Loader2 } from "@/components/ui/Spinner";
 import type { ApiOrderTask } from "@/types/warehouse";
 import type { PicklistProduct } from "@/types/warehouseShelf";
 import { addItemsToOrder, fetchPicklist } from "@/lib/warehouseShelfApi";
@@ -331,9 +331,7 @@ export default function AddItemsToOrderModal({
 
             <div className="min-h-[220px] flex-1 overflow-y-auto px-5 py-4">
               {loading ? (
-                <div className="flex h-48 items-center justify-center">
-                  <Loader2 size={22} className="animate-spin text-indigo-500" />
-                </div>
+                <ListSkeleton rows={4} />
               ) : listError && items.length === 0 ? (
                 <div className="flex h-48 flex-col items-center justify-center gap-2 text-center">
                   <AlertTriangle size={20} className="text-red-500" />

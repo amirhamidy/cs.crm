@@ -2,6 +2,7 @@
 "use client";
 
 import { useState } from "react";
+import CustomerOrdersSkeleton from "./CustomerOrdersSkeleton";
 import { AnimatePresence, m, useReducedMotion } from "framer-motion";
 import { CheckCircle2, XCircle, X } from "lucide-react";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
@@ -362,9 +363,7 @@ export default function CustomerOrdersPage() {
       )}
 
       {list.loading ? (
-        <div className="py-16 text-center text-sm text-gray-500">
-          در حال دریافت سفارش‌ها...
-        </div>
+        <CustomerOrdersSkeleton count={5} />
       ) : list.error ? (
         <div className="py-12 text-center text-sm text-rose-500">
           دریافت سفارش‌ها انجام نشد{" "}

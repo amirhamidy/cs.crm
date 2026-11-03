@@ -7,6 +7,7 @@ import { Backdrop } from "@/components/ui/Backdrop";
 import { panelMotion } from "@/lib/motion";
 import { X, AlertCircle, ClipboardList, Paperclip, MessageSquareText, RefreshCw, FileText, ArrowLeftCircle, ArrowRightCircle, ArrowLeftRight, User, Calendar, Clock3, History, CheckCircle2, ShoppingBag, Ban, RotateCcw, Layers3, Hash } from "lucide-react";
 import { Spinner as Loader2 } from "@/components/ui/Spinner";
+import { ListSkeleton } from "@/components/ui/skeletons";
 import { useTheme } from "next-themes";
 import { tasksApi } from "@/lib/api";
 import { toJalali, toPersianDigits, JALALI_MONTHS, pad2 } from "@/lib/jalali";
@@ -292,10 +293,7 @@ export default function TaskNotesModal({ isOpen, onClose, taskId, taskTitle }: P
 
                     <div className="flex-1 overflow-y-auto px-5 py-4">
                         {loading ? (
-                            <div className="flex flex-col items-center justify-center gap-3 py-16">
-                                <Loader2 size={22} className="animate-spin text-emerald-500" />
-                                <p className="text-[12px] font-semibold text-gray-500">در حال دریافت اطلاعات تسک...</p>
-                            </div>
+                            <ListSkeleton rows={3} />
                         ) : error ? (
                             <div className="flex flex-col items-center justify-center gap-3 py-16">
                                 <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-red-500/10">

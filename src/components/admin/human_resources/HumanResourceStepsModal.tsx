@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import { AnimatePresence, m } from "framer-motion";
 import { AlertCircle, ChevronDown, Download, FileText, GitBranch, Paperclip, Plus, Trash2, Upload, X } from "lucide-react";
-import { Spinner as Loader2 } from "@/components/ui/Spinner";
+import { ListSkeleton } from "@/components/ui/skeletons";
 import HumanResourceStepRoadmap from "./HumanResourceStepRoadmap";
 import { HumanResource, HumanResourceFile, HumanResourceStep, createStep, deleteStep, deleteStepFile, getDocumentSteps, getStepFiles, updateStep, uploadStepFile } from "./humanResourceApi";
 
@@ -241,9 +241,7 @@ export default function HumanResourceStepsModal({ open, document, canManage, onC
                                 </div>
 
                                 {loading ? (
-                                    <div className="flex h-44 items-center justify-center rounded-[1.5rem] border border-dashed border-gray-200 dark:border-white/[0.07]">
-                                        <Loader2 size={19} className="animate-spin text-indigo-500" />
-                                    </div>
+                                    <ListSkeleton rows={4} />
                                 ) : (
                                     <HumanResourceStepRoadmap steps={steps} canManage={canManage} onEdit={handleInlineEdit} onDelete={removeStep} savingId={editingInlineId} />
                                 )}
@@ -401,9 +399,7 @@ export default function HumanResourceStepsModal({ open, document, canManage, onC
                                                                 >
                                                                     <div className="space-y-1.5 px-3 pb-3 pt-0.5">
                                                                         {isLoadingFiles ? (
-                                                                            <div className="flex h-12 items-center justify-center rounded-xl border border-dashed border-gray-200 dark:border-white/[0.07]">
-                                                                                <Loader2 size={14} className="animate-spin text-indigo-400" />
-                                                                            </div>
+                                                                            <ListSkeleton rows={1} />
                                                                         ) : fileCount > 0 ? (
                                                                             stepFiles.map((f) => (
                                                                                 <m.div

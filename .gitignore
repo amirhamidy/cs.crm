@@ -6,4 +6,5 @@ next-env.d.ts
 node_modules/
 .next/
 coverage/
-*.log
+*.log No newline at end of file
+.agent/

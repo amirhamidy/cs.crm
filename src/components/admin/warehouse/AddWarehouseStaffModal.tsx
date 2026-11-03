@@ -1,7 +1,9 @@
 "use client";
+import { Skeleton } from "@/components/ui/Skeleton";
+import { FormSkeleton, ListSkeleton } from "@/components/ui/skeletons";
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, m } from "framer-motion";
-import { Check, CheckSquare, Loader, Square, UserPlus, X } from "lucide-react";
+import { Check, CheckSquare, Square, UserPlus, X } from "lucide-react";
 import { useTheme } from "next-themes";
 import axiosInstance from "@/lib/axiosInstance";
 import { fetchPage } from "@/lib/api";
@@ -186,10 +188,7 @@ export default function AddWarehouseStaffModal({
 
                     <form onSubmit={handleSubmit} className="flex flex-col gap-4 px-8 pb-8">
                         {initialLoading ? (
-                            <div className="flex flex-col items-center justify-center py-10 text-gray-400">
-                                <Loader size={22} className="animate-spin mb-2 text-blue-500" />
-                                <span className="text-[12px]">در حال دریافت اطلاعات...</span>
-                            </div>
+                            <FormSkeleton fields={3} />
                         ) : (
                             <>
                                 
@@ -199,9 +198,7 @@ export default function AddWarehouseStaffModal({
                                     </label>
                                     <div ref={listRef} onScroll={onListScroll} className="max-h-[140px] overflow-y-auto space-y-1.5 pr-0.5 scrollbar-thin">
                                         {fetching && employees.length === 0 ? (
-                                            <div className="flex justify-center py-2">
-                                                <Loader size={16} className="animate-spin text-blue-500" />
-                                            </div>
+                                            <ListSkeleton rows={3} />
                                         ) : employees.length === 0 ? (
                                             <p className="text-[11px] text-gray-400 py-2">کارمندی یافت نشد</p>
                                         ) : (
@@ -240,9 +237,7 @@ export default function AddWarehouseStaffModal({
                                             })
                                         )}
                                         {loadingMore && (
-                                            <div className="flex justify-center py-2">
-                                                <Loader size={14} className="animate-spin text-blue-500" />
-                                            </div>
+                                            <Skeleton className="mx-auto h-5 w-20 rounded-lg" />
                                         )}
                                         {!loadingMore && hasMore && employees.length > 0 && (
                                             <button type="button" onClick={loadMore} className="w-full py-1.5 text-center text-[10.5px] font-bold text-blue-500">

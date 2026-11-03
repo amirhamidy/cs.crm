@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { m } from "framer-motion";
 import { Archive, CheckCircle2, ClipboardCheck, Clock3, RefreshCw, Search, ShieldCheck, UserCheck, Users, X, XCircle, type LucideIcon } from "lucide-react";
+import QCItemCardSkeleton from "./QCItemCardSkeleton";
+import QCPageSkeleton from "./QCPageSkeleton";
 import { Spinner as Loader2 } from "@/components/ui/Spinner";
 import axiosInstance from "@/lib/axiosInstance";
 import { qualityControlApi, type QCCounts, type QCReviewedStatus } from "@/lib/api";
@@ -53,9 +55,7 @@ function Section({ icon: Icon, title, sub, count, children, empty, loading = fal
                 </div>
             </div>
             {loading ? (
-                <div className="flex min-h-[130px] items-center justify-center">
-                    <Loader2 size={18} className="animate-spin text-blue-500" />
-                </div>
+                <QCItemCardSkeleton count={3} />
             ) : count ? (
                 <>
                     {children}
@@ -242,9 +242,7 @@ export default function QualityControlPage() {
             )}
 
             {loading ? (
-                <div className={`${box} flex h-32 items-center justify-center`}>
-                    <Loader2 size={20} className="animate-spin text-blue-500" />
-                </div>
+                <QCPageSkeleton />
             ) : (
                 <>
                     <QCTeamBar employees={employees} names={names} canManage={Boolean(isAdmin)} onAdd={() => setEmployeeModal(true)} onDelete={setDeleteTarget} />

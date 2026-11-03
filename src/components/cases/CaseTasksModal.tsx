@@ -10,6 +10,7 @@ import type { TaskItem as BaseTaskItem } from "@/types/task";
 import { fetchAllTasks } from "@/lib/fetchAllTasks";
 
 import { BusyContent } from "@/components/ui/Button";
+import { ListSkeleton } from "@/components/ui/skeletons";
 type TaskItem = BaseTaskItem & { department_name?: string; current_step_name?: string };
 
 interface NameLike {
@@ -320,15 +321,7 @@ export default function CaseTasksModal({
                         
                         <div className="flex-1 overflow-y-auto px-5 py-4">
                             {loading && (
-                                <div className="flex flex-col items-center justify-center gap-3 py-14">
-                                    <Loader2
-                                        size={24}
-                                        className="animate-spin text-indigo-500"
-                                    />
-                                    <p className="text-[12.5px]" style={{ color: textMuted }}>
-                                        در حال دریافت وظیفه‌ها از سرور...
-                                    </p>
-                                </div>
+                                <ListSkeleton rows={4} />
                             )}
 
                             {!loading && error && (

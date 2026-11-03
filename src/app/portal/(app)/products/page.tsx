@@ -5,7 +5,7 @@ import { ShoppingCart, Package, AlertCircle, Check } from "lucide-react";
 import { portalApi } from "@/lib/portal/portalApi";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import Pagination from "@/components/ui/Pagination";
-import CardSkeletonGrid from "@/components/ui/CardSkeletonGrid";
+import PortalProductsSkeleton from "../PortalProductsSkeleton";
 import QuantityModal from "@/components/portal/QuantityModal";
 import { FloatingInput } from "@/components/ui/FloatingField";
 import { toast } from "@/components/notifications/toast";
@@ -169,7 +169,7 @@ export default function PortalProductsPage() {
             </div>
 
             {list.loading ? (
-                <CardSkeletonGrid />
+                <PortalProductsSkeleton count={8} />
             ) : list.error ? (
                 <div className="flex flex-col items-center gap-3 rounded-2xl border border-red-100 bg-red-50 p-8 text-center dark:border-red-500/20 dark:bg-red-500/10">
                     <AlertCircle size={28} className="text-red-500" />

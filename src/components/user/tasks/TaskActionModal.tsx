@@ -6,7 +6,7 @@ import { AnimatePresence, m, useReducedMotion } from "framer-motion";
 import { Backdrop } from "@/components/ui/Backdrop";
 import { panelMotion } from "@/lib/motion";
 import { Check, FileText, Paperclip, Star, User2, X } from "lucide-react";
-import { Spinner as Loader2 } from "@/components/ui/Spinner";
+import { ListSkeleton } from "@/components/ui/skeletons";
 import axiosInstance from "@/lib/axiosInstance";
 
 import { BusyContent } from "@/components/ui/Button";
@@ -244,10 +244,7 @@ export default function TaskActionModal({
                                     </div>
 
                                     {employeesLoading ? (
-                                        <div className="flex items-center gap-2 rounded-2xl border border-gray-200 px-3 py-4 text-[11px] text-gray-400 dark:border-white/[.08]">
-                                            <Loader2 size={15} className="animate-spin" />
-                                            در حال دریافت همکاران دپارتمان...
-                                        </div>
+                                        <ListSkeleton rows={3} />
                                     ) : employees.length === 0 ? (
                                         <p className="rounded-xl bg-amber-500/10 px-3 py-2 text-[10.5px] font-bold text-amber-600">
                                             برای دپارتمان فعلی کارمندی پیدا نشد.

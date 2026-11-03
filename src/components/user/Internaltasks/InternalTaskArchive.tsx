@@ -3,11 +3,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Pagination from "@/components/ui/Pagination";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
-import { Archive, CalendarDays, CheckCircle2, Layers, LayoutGrid, Loader, RotateCcw, Search, Ticket, XCircle } from "lucide-react";
+import { Archive, CalendarDays, CheckCircle2, Layers, LayoutGrid, RotateCcw, Search, Ticket, XCircle } from "lucide-react";
 import { fetchInternalTaskRoutines } from "./Api";
 import { internalTasksApi } from "@/lib/api";
 import type { InternalTaskArchive as InternalTaskArchiveType, InternalTaskRoutine } from "./types";
 import InternalTaskArchiveCard from "./InternalTaskArchiveCard";
+import TicketBoardSkeleton from "./TicketBoardSkeleton";
 
 type ArchiveTypeFilter = "all" | "routine" | "ticket";
 type DateFilter = "all" | "today" | "week" | "month" | "three_months";
@@ -312,16 +313,7 @@ export default function InternalTaskArchive() {
         dateFilter !== "all" ? `زمان: ${DATE_LABELS[dateFilter]}` : null,
     ].filter(Boolean) as string[];
 
-    if (loading) {
-        return (
-            <div className="flex h-64 items-center justify-center">
-                <Loader
-                    size={22}
-                    className="animate-spin text-indigo-500"
-                />
-            </div>
-        );
-    }
+    if (loading) return <TicketBoardSkeleton count={5} />;
 
     return (
         <div dir="rtl" className="flex flex-col gap-5">

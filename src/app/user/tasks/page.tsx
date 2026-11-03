@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence } from "framer-motion";
 import { Archive, ClipboardList, Plus, RefreshCw } from "lucide-react";
+import { CountSkeleton, TaskCardSkeleton } from "@/components/ui/skeletons";
 import { Spinner as Loader2 } from "@/components/ui/Spinner";
 import { useRouter } from "next/navigation";
 import axiosInstance from "@/lib/axiosInstance";
@@ -11,7 +12,6 @@ import { metaApi, tasksApi } from "@/lib/api";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import Pagination from "@/components/ui/Pagination";
 import dynamic from "next/dynamic";
-import CardSkeletonGrid from "@/components/ui/CardSkeletonGrid";
 import type { Task, TaskStatus } from "@/types/task";
 import type { Department } from "@/types/department";
 import TaskCard from "@/components/user/tasks/TaskCardx";
@@ -103,7 +103,7 @@ export default function UserTasksPage() {
                     <div className="min-w-0">
                         <h1 className="text-[14px] font-extrabold text-gray-900 dark:text-white">وظایف در حال انجام</h1>
                         <p className="mt-0.5 text-[11.5px] text-gray-400 dark:text-gray-500">
-                            {loading ? "در حال بارگذاری..." : `${list.count} وظیفه`}
+                            {loading ? <CountSkeleton /> : `${list.count} وظیفه`}
                         </p>
                     </div>
                 </div>
@@ -127,7 +127,7 @@ export default function UserTasksPage() {
             <input value={list.search} onChange={(e) => list.setSearch(e.target.value)} placeholder="جستجو در عنوان یا توضیحات..." className="w-full rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 text-[12.5px] text-gray-700 outline-none transition-colors focus:border-indigo-400 dark:border-white/10 dark:bg-white/[0.03] dark:text-gray-200" />
 
             {loading ? (
-                <CardSkeletonGrid count={6} className="grid grid-cols-1 gap-3 lg:grid-cols-2 xl:grid-cols-3" />
+                <TaskCardSkeleton count={6} className="grid grid-cols-1 gap-3 lg:grid-cols-2 xl:grid-cols-3" />
             ) : tasks.length === 0 ? (
                 <div className="flex flex-col items-center justify-center gap-3 py-20">
                     <p className="text-[13px] text-gray-400 dark:text-gray-500">تسک در حال انجامی برای شما یافت نشد</p>

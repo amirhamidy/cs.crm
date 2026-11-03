@@ -6,7 +6,7 @@ import { AnimatePresence, m, useReducedMotion } from "framer-motion";
 import { Backdrop } from "@/components/ui/Backdrop";
 import { panelMotion } from "@/lib/motion";
 import { X, FileText, AlertCircle } from "lucide-react";
-import { Spinner as Loader2 } from "@/components/ui/Spinner";
+import { ListSkeleton } from "@/components/ui/skeletons";
 import { useTheme } from "next-themes";
 import axiosInstance from "@/lib/axiosInstance";
 
@@ -119,10 +119,7 @@ export default function TaskCaseDescriptionModal({
 
                     <div className="max-h-[420px] overflow-y-auto p-5">
                         {loading ? (
-                            <div className="flex flex-col items-center justify-center gap-2 py-10 text-gray-400">
-                                <Loader2 size={20} className="animate-spin" />
-                                <p className="text-[12px] font-semibold">در حال دریافت اطلاعات...</p>
-                            </div>
+                            <ListSkeleton rows={2} />
                         ) : error ? (
                             <div className="flex flex-col items-center justify-center gap-2 py-10 text-red-500">
                                 <AlertCircle size={20} />

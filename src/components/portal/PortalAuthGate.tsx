@@ -1,10 +1,10 @@
 "use client";
 import { useEffect, useState } from "react";
-import { Loader } from "lucide-react";
 import { usePortalAuthStore } from "@/store/portalAuthStore";
 import { usePortalCartStore } from "@/store/portalCartStore";
 import { getPortalExpiry } from "@/lib/portal/portalAuth";
 
+import { PageSkeleton } from "@/components/ui/skeletons";
 export default function PortalAuthGate({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, hasHydrated, initFromStorage, account } = usePortalAuthStore();
   const bindAccount = usePortalCartStore((s) => s.bindAccount);
@@ -23,13 +23,7 @@ export default function PortalAuthGate({ children }: { children: React.ReactNode
   useEffect(() => { if (ready && hasHydrated && !isAuthenticated) window.location.replace("/portal/login/"); }, [ready, hasHydrated, isAuthenticated]);
   if (!ready || !hasHydrated || !isAuthenticated) {
     return (
-      <div
-        dir="rtl"
-        className="flex min-h-screen flex-col items-center justify-center gap-3 bg-gray-50 text-gray-500 dark:bg-[#090d18]"
-      >
-        <Loader size={22} className="animate-spin text-indigo-600" />
-        <p className="text-[12.5px]">در حال بررسی نشست مشتری...</p>
-      </div>
+      <PageSkeleton />
     );
   }
   return <>{children}</>;

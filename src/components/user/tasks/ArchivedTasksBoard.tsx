@@ -2,10 +2,9 @@
 
 import { useMemo, useState } from "react";
 import Pagination from "@/components/ui/Pagination";
-import CardSkeletonGrid from "@/components/ui/CardSkeletonGrid";
+import ArchivedTaskCardSkeleton from "./ArchivedTaskCardSkeleton";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import { Archive, CheckCircle2, Filter, PackageCheck, Search, X, XCircle } from "lucide-react";
-import { Spinner as Loader2 } from "@/components/ui/Spinner";
 import { tasksApi } from "@/lib/api/tasks";
 import { useCurrentEmployee } from "@/hooks/usecurrentemployee";
 import ArchivedTaskCard from "./ArchivedTaskCard";
@@ -145,18 +144,7 @@ export default function ArchivedTasksBoard() {
     const handleReopened = () => list.refetch();
 
     if (employeeLoading) {
-        return (
-            <div className="flex min-h-[320px] items-center justify-center" dir="rtl">
-                <div className="flex flex-col items-center gap-3">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-500/10">
-                        <Loader2 size={22} className="animate-spin text-indigo-500" />
-                    </div>
-                    <span className="text-[11px] font-bold text-gray-400">
-                        در حال دریافت آرشیو...
-                    </span>
-                </div>
-            </div>
-        );
+        return <div className="space-y-4" dir="rtl"><ArchivedTaskCardSkeleton count={8} /></div>;
     }
 
     if (error) {
@@ -272,7 +260,7 @@ export default function ArchivedTasksBoard() {
             </div>
 
             {loading ? (
-                <CardSkeletonGrid count={8} className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4" />
+                <ArchivedTaskCardSkeleton count={8} />
             ) : !tasks.length ? (
                 <div
                     className="flex min-h-[280px] flex-col items-center justify-center rounded-[1.7rem] border border-dashed border-gray-200 bg-white/60 px-5 dark:border-white/[.07] dark:bg-white/[.02]"

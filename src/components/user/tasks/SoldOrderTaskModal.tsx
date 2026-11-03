@@ -1,11 +1,11 @@
 "use client";
+import { FormSkeleton } from "@/components/ui/skeletons";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, m, useReducedMotion } from "framer-motion";
 import { Backdrop } from "@/components/ui/Backdrop";
 import { panelMotion } from "@/lib/motion";
 import { AlertCircle, CalendarDays, Check, ChevronDown, ChevronRight, ClipboardList, Package, Paperclip, Pencil, Plus, Search, ShoppingBag, Star, Trash2, Upload, X } from "lucide-react";
-import { Spinner as Loader2 } from "@/components/ui/Spinner";
 import axiosInstance from "@/lib/axiosInstance";
 import type { ApiStockInfo, ApiWarehouse } from "@/types/warehouse";
 import { fetchWarehouseStocks, fetchWarehouses } from "@/lib/warehouseApi";
@@ -323,7 +323,7 @@ export default function SoldOrderTaskModal({ isOpen, onClose, taskId, staffId, o
                             </div>
                             <div className={`flex-1 overflow-y-auto px-8 pb-2 ${timeModalOpen ? "hidden" : ""}`}>
                                 {loading ? (
-                                    <div className="flex h-48 items-center justify-center"><Loader2 className="animate-spin text-blue-500" size={25} /></div>
+                                    <FormSkeleton fields={4} />
                                 ) : (
                                     <div className="flex flex-col gap-4">
                                         <NiceSelect label="انبار" placeholder="انتخاب انبار" emptyText="انبار فعالی یافت نشد" options={warehouseOptions} value={warehouseId} onChange={(id) => { setWarehouseId(id); setError(""); }} />

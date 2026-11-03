@@ -7,7 +7,7 @@ import { Backdrop } from "@/components/ui/Backdrop";
 import { panelMotion } from "@/lib/motion";
 import type { LucideIcon } from "lucide-react";
 import { AlertTriangle, ArrowLeft, ArrowLeftRight, Building2, Check, FileText, Layers3, Paperclip, Search, Trash2, UserRound, X } from "lucide-react";
-import { Spinner as Loader2 } from "@/components/ui/Spinner";
+import { ListSkeleton } from "@/components/ui/skeletons";
 import { departmentsApi, tasksApi, parseTransferError } from "@/lib/api";
 import { toast } from "@/components/notifications/toast";
 import { toPersianDigits } from "@/lib/jalali";
@@ -375,10 +375,7 @@ export default function TaskTransferModal({
                                     )}
 
                                     {loading ? (
-                                        <div className="flex items-center gap-2 rounded-2xl border border-gray-200 px-3 py-4 text-[11px] text-gray-400 dark:border-white/[.08]">
-                                            <Loader2 size={15} className="animate-spin" />
-                                            در حال دریافت دپارتمان‌ها...
-                                        </div>
+                                        <ListSkeleton rows={3} />
                                     ) : loadError ? (
                                         <p className="rounded-xl bg-red-500/10 px-3 py-2.5 text-center text-[10.5px] font-bold text-red-500">
                                             {loadError}

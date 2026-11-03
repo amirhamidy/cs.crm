@@ -7,7 +7,7 @@ import { internalTasksApi } from "@/lib/api";
 import { AnimatePresence, m, useReducedMotion } from "framer-motion";
 import { Backdrop } from "@/components/ui/Backdrop";
 import { panelMotion } from "@/lib/motion";
-import { Ban, CalendarClock, CheckCircle2, ClipboardX, Clock3, Inbox, LayoutGrid, Loader, MessageSquareText, Plus, RefreshCw, RotateCcw, Ticket, Trash2, Users, X } from "lucide-react";
+import { Ban, CalendarClock, CheckCircle2, ClipboardX, Clock3, Inbox, LayoutGrid, MessageSquareText, Plus, RefreshCw, RotateCcw, Ticket, Trash2, Users, X } from "lucide-react";
 import { Spinner as Loader2 } from "@/components/ui/Spinner";
 import { useTheme } from "next-themes";
 import { useAuthStore } from "@/store/authStore";
@@ -18,6 +18,7 @@ import type { EmployeeListItem, InternalTask, InternalTaskStatus, EmployeeRef } 
 import CreateTicketModal from "./Createticketmodal";
 import TimeRangeModal from "@/components/tasks/TimeRangeModal";
 import InternalTaskDeadlineModal from "./InternalTaskDeadlineModal";
+import TicketBoardSkeleton from "./TicketBoardSkeleton";
 
 
 import { BusyContent } from "@/components/ui/Button";
@@ -392,7 +393,7 @@ export default function AdminInternalTasksBoard(): JSX.Element {
         }
     }
 
-    if (loading) return <div dir="rtl" className="flex h-64 items-center justify-center"><Loader size={22} className="animate-spin text-indigo-500" /></div>;
+    if (loading) return <TicketBoardSkeleton count={5} />;
 
     return (
         <div dir="rtl" className="flex flex-col gap-5">

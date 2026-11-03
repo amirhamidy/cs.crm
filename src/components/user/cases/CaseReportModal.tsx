@@ -9,6 +9,7 @@ import { casesApi } from "@/lib/api/cases";
 import { apiMessage } from "@/lib/apiMessage";
 import type { CaseReport, CaseReportTask } from "@/types/caseReport";
 
+import { DetailSkeleton } from "@/components/ui/skeletons";
 interface CaseReportModalProps {
     caseId: number;
     caseTitle: string;
@@ -273,9 +274,7 @@ export default function CaseReportModal({ caseId, caseTitle, onClose }: CaseRepo
 
                     <div className="flex-1 overflow-y-auto px-6 py-5">
                         {loading && (
-                            <div className="flex items-center justify-center py-16 text-gray-400">
-                                <Loader2 className="animate-spin" size={26} />
-                            </div>
+                            <DetailSkeleton />
                         )}
                         {!loading && error && (
                             <div className="flex flex-col items-center gap-2 py-16 text-red-500">

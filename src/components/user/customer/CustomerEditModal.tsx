@@ -4,12 +4,13 @@ import { useState, useEffect, useCallback, useRef, forwardRef, InputHTMLAttribut
 import { m, AnimatePresence, useReducedMotion } from "framer-motion";
 import { Backdrop } from "@/components/ui/Backdrop";
 import { panelMotion } from "@/lib/motion";
-import { X, Loader, SquarePen, CheckCircle2, ChevronDown, Check, Plus } from "lucide-react";
+import { X, SquarePen, CheckCircle2, ChevronDown, Check, Plus } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
 import { listAll } from "@/lib/api";
 import type { Customer, CustomerFormData } from "@/types/customer";
 
 import { BusyContent } from "@/components/ui/Button";
+import { FormSkeleton, ListSkeleton } from "@/components/ui/skeletons";
 interface CaseResource {
     id: number;
     title: string;
@@ -438,9 +439,7 @@ function SourceSelect({
 
                         <div className="max-h-60 overflow-y-auto overflow-x-hidden custom-scrollbar">
                             {loading ? (
-                                <div className="flex items-center justify-center py-8">
-                                    <Loader size={16} className="animate-spin text-blue-500" />
-                                </div>
+                                <ListSkeleton rows={3} />
                             ) : options.length === 0 ? (
                                 <div className="px-4 py-8 text-center">
                                     <p className="text-[12px] font-medium text-gray-400">
@@ -737,12 +736,7 @@ export default function CustomerEditModal({
 
                         <div className="px-8 pb-8">
                             {isLoadingDetails ? (
-                                <div className="flex flex-col items-center justify-center py-20 gap-3">
-                                    <Loader className="w-8 h-8 animate-spin text-blue-600" />
-                                    <span className="text-[11px] text-gray-400 font-bold">
-                                        در حال دریافت…
-                                    </span>
-                                </div>
+                                <FormSkeleton fields={6} />
                             ) : (
                                 <form
                                     onSubmit={handleSubmit}

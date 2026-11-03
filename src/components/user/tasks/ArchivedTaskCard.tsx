@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, m, useReducedMotion } from "framer-motion";
 import { Archive, Ban, Building2, CalendarDays, CheckCircle2, Clock3, FileText, MessageSquareText, RotateCcw, ShoppingBag, User } from "lucide-react";
-import { Spinner as Loader2 } from "@/components/ui/Spinner";
 import axiosInstance from "@/lib/axiosInstance";
 import { departmentsApi } from "@/lib/api";
 import { useCurrentEmployee } from "@/hooks/usecurrentemployee";
@@ -13,6 +12,7 @@ import { panelMotion } from "@/lib/motion";
 import AdminTaskNotesModal from "@/components/tasks/AdminTaskNotesModal";
 
 import { BusyContent } from "@/components/ui/Button";
+import { Skeleton } from "@/components/ui/Skeleton";
 interface ArchiveTask {
     id: number;
     task_id: number;
@@ -422,10 +422,7 @@ export default function ArchivedTaskCard({ task, onReopened }: Props) {
                         </div>
 
                         {optionsLoading || employeeLoading ? (
-                            <div className="mt-4 flex items-center justify-center gap-2 rounded-xl bg-gray-50 py-5 text-[11px] text-gray-400 dark:bg-white/[0.035]">
-                                <Loader2 size={15} className="animate-spin" />
-                                در حال دریافت اطلاعات...
-                            </div>
+                            <Skeleton className="mt-4 h-16 w-full rounded-xl" />
                         ) : employeeError ? (
                             <p className="mt-4 rounded-xl bg-red-500/10 px-3 py-2 text-[10.5px] font-bold text-red-500">
                                 {employeeError}

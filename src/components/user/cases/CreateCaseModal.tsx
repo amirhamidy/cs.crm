@@ -16,6 +16,8 @@ import { casesApi, customersApi } from "@/lib/api";
 import type { Customer } from "@/types/customer";
 
 import { BusyContent } from "@/components/ui/Button";
+import { ListSkeleton } from "@/components/ui/skeletons";
+import { Skeleton } from "@/components/ui/Skeleton";
 type CreateCaseModalProps = {
     open: boolean;
     onClose: () => void;
@@ -340,15 +342,7 @@ export default function CreateCaseModal({
                                             className="custom-scrollbar max-h-[320px] space-y-1.5 overflow-y-auto pr-0.5"
                                         >
                                             {loadingFirst && customers.length === 0 ? (
-                                                <div className="flex flex-col items-center justify-center gap-3 py-8">
-                                                    <Loader
-                                                        size={18}
-                                                        className="animate-spin text-blue-500"
-                                                    />
-                                                    <p className="text-[11.5px] text-gray-400">
-                                                        در حال جستجو…
-                                                    </p>
-                                                </div>
+                                                <ListSkeleton rows={4} />
                                             ) : customers.length > 0 ? (
                                                 <>
                                                     {customers.map((c) => {
@@ -399,12 +393,7 @@ export default function CreateCaseModal({
                                                     })}
 
                                                     {loadingMore && (
-                                                        <div className="flex justify-center py-3">
-                                                            <Loader
-                                                                size={16}
-                                                                className="animate-spin text-blue-500"
-                                                            />
-                                                        </div>
+                                                        <Skeleton className="mx-auto my-3 h-8 w-full rounded-xl" />
                                                     )}
                                                 </>
                                             ) : (

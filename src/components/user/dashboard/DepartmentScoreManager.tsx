@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence } from "framer-motion";
-import { ListSkeleton } from "@/components/ui/skeletons";
+import DepartmentScoreSkeleton from "./DepartmentScoreSkeleton";
 import { Award, Plus, Minus, RefreshCw, Users } from "lucide-react";
 import { Spinner as Loader2 } from "@/components/ui/Spinner";
 import axiosInstance from "@/lib/axiosInstance";
@@ -112,7 +112,7 @@ export default function DepartmentScoreManager() {
   }, [load, selected]);
 
   if (!hasHydrated || loading) {
-    return <ListSkeleton rows={2} />;
+    return <DepartmentScoreSkeleton />;
   }
   if (!managedAssignments.length) return null;
 

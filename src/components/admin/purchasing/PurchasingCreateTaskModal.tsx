@@ -5,12 +5,13 @@ import { createPortal } from "react-dom";
 import { AnimatePresence, m, useReducedMotion } from "framer-motion";
 import { Backdrop } from "@/components/ui/Backdrop";
 import { panelMotion } from "@/lib/motion";
-import { AlertCircle, Check, ChevronDown, Loader, PackagePlus, Search, X } from "lucide-react";
+import { AlertCircle, Check, ChevronDown, PackagePlus, Search, X } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
 import { listAll } from "@/lib/api";
 import type { ApiPurchasingStep, ApiPurchasingTask } from "@/types/purchasing";
 
 import { BusyContent } from "@/components/ui/Button";
+import { FormSkeleton } from "@/components/ui/skeletons";
 interface Product {
     id: number;
     name: string;
@@ -652,12 +653,7 @@ export default function PurchasingCreateTaskModal({
                                 </AnimatePresence>
 
                                 {loading ? (
-                                    <div className="flex h-48 items-center justify-center">
-                                        <Loader
-                                            size={22}
-                                            className="animate-spin text-blue-500"
-                                        />
-                                    </div>
+                                    <FormSkeleton fields={6} />
                                 ) : (
                                     <>
                                         <NiceSelect
