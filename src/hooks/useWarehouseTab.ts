@@ -74,13 +74,14 @@ interface LoadArgs {
   employeeId: number | string | null;
   
   shelfCode?: string;
+  search?: string;
 }
 
 const byNewestId = <T extends { id: number }>(items: T[]): T[] =>
   [...items].sort((x, y) => y.id - x.id);
 
 async function loadTab(args: LoadArgs): Promise<TabData> {
-  const { tab, warehouseId, page, hasFullAccess, employeeId, shelfCode } = args;
+  const { tab, warehouseId, page, hasFullAccess, employeeId, shelfCode, search } = args;
   const data: TabData = { ...EMPTY_TAB_DATA };
   const wp = warehouseParams(warehouseId);
 
@@ -102,6 +103,7 @@ async function loadTab(args: LoadArgs): Promise<TabData> {
       fetchWarehouseProductsPage(warehouseId, {
         page,
         shelfCode,
+        search,
         pageSize: PRODUCTS_PAGE_SIZE,
       }),
       fetchAll<ApiCategory>(EP.categories),
@@ -136,6 +138,7 @@ async function loadTab(args: LoadArgs): Promise<TabData> {
     const [res, pending] = await Promise.all([
       fetchWarehousePage<ApiWarehouseTask>(EP.tasks, warehouseId, {
         page,
+        search,
         clientFilter: taskFilter,
       }),
       hasFullAccess
@@ -152,6 +155,7 @@ async function loadTab(args: LoadArgs): Promise<TabData> {
   if (tab === "stock") {
     const res = await fetchWarehousePage<ApiStockInfo>(EP.stock, warehouseId, {
       page,
+      search,
     });
     data.stockInfos = res.items;
     setPaged(res);
@@ -162,7 +166,7 @@ async function loadTab(args: LoadArgs): Promise<TabData> {
     const res = await fetchWarehousePage<ApiStockTransaction>(
       EP.transactions,
       warehouseId,
-      { page },
+      { page, search },
     );
     data.transactions = res.items;
     setPaged(res);
@@ -173,6 +177,7 @@ async function loadTab(args: LoadArgs): Promise<TabData> {
     
     const res = await fetchWarehousePage<ApiOrderTask>(EP.orderTasks, warehouseId, {
       page,
+      search,
     });
     data.orderTasks = res.items;
     setPaged(res);
@@ -198,7 +203,7 @@ async function loadTab(args: LoadArgs): Promise<TabData> {
     const res = await fetchWarehousePage<ApiWarehouseTaskArchive>(
       EP.taskArchive,
       warehouseId,
-      { page },
+      { page, search },
     );
     data.taskArchive = res.items;
     setPaged(res);
@@ -209,7 +214,7 @@ async function loadTab(args: LoadArgs): Promise<TabData> {
     const res = await fetchWarehousePage<ApiArchivedOrderTask>(
       EP.archive,
       warehouseId,
-      { page },
+      { page, search },
     );
     data.archived = res.items;
     setPaged(res);
@@ -221,7 +226,7 @@ async function loadTab(args: LoadArgs): Promise<TabData> {
 }
 
 export default function useWarehouseTab(args: LoadArgs & { enabled: boolean }) {
-  const { enabled, tab, warehouseId, page, hasFullAccess, employeeId, shelfCode } =
+  const { enabled, tab, warehouseId, page, hasFullAccess, employeeId, shelfCode, search } =
     args;
 
   const [data, setData] = useState<TabData>(EMPTY_TAB_DATA);
@@ -247,6 +252,7 @@ export default function useWarehouseTab(args: LoadArgs & { enabled: boolean }) {
           hasFullAccess,
           employeeId,
           shelfCode,
+          search,
         });
         if (id === requestId.current) setData(next);
       } catch {
@@ -261,7 +267,7 @@ export default function useWarehouseTab(args: LoadArgs & { enabled: boolean }) {
         }
       }
     },
-    [enabled, tab, warehouseId, page, hasFullAccess, employeeId, shelfCode],
+    [enabled, tab, warehouseId, page, hasFullAccess, employeeId, shelfCode, search],
   );
 
   useEffect(() => {

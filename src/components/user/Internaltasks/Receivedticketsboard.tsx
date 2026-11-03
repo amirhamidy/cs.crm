@@ -1,5 +1,6 @@
 "use client";
 
+import TicketSearchInput from "./TicketSearchInput";
 import { useEffect, useMemo, useState } from "react";
 import Pagination from "@/components/ui/Pagination";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
@@ -134,6 +135,8 @@ export default function ReceivedTicketsBoard() {
                     <p className="text-[11px] text-gray-400 dark:text-gray-600">{list.count} تیکت</p>
                 </div>
             </div>
+
+            <TicketSearchInput value={list.search} onChange={list.setSearch} />
 
             {error && (
                 <div className="flex items-center justify-between gap-3 rounded-2xl border border-red-500/20 bg-red-500/5 px-4 py-3">

@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence } from "framer-motion";
-import { ClipboardList, Plus, RefreshCw } from "lucide-react";
+import { Search, X, ClipboardList, Plus, RefreshCw } from "lucide-react";
 import { Spinner as Loader2 } from "@/components/ui/Spinner";
 import { useTheme } from "next-themes";
 import { casesApi, customersApi, metaApi, tasksApi, fetchAllTasks, fetchTasksForCases } from "@/lib/api";
@@ -216,6 +216,21 @@ export default function UserCasesPage() {
                         <span>پرونده جدید</span>
                     </button>
                 </div>
+            </div>
+
+            <div className="relative">
+                <Search size={14} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <input
+                    value={list.search}
+                    onChange={(e) => list.setSearch(e.target.value)}
+                    placeholder="جستجو در پرونده‌ها (عنوان، مشتری...)"
+                    className="h-10 w-full rounded-xl border border-gray-200 bg-white pl-9 pr-9 text-[12px] font-semibold text-gray-700 outline-none transition-colors focus:border-indigo-400 dark:border-white/10 dark:bg-white/[0.03] dark:text-gray-200"
+                />
+                {list.search && (
+                    <button type="button" onClick={() => list.setSearch("")} className="absolute left-2.5 top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded-full text-gray-400 hover:text-gray-600">
+                        <X size={12} />
+                    </button>
+                )}
             </div>
 
             {error && !loading && (

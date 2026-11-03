@@ -1,5 +1,6 @@
 "use client";
 
+import TicketSearchInput from "./TicketSearchInput";
 import { JSX, memo, useEffect, useMemo, useState } from "react";
 import Pagination from "@/components/ui/Pagination";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
@@ -404,6 +405,8 @@ export default function AdminInternalTasksBoard(): JSX.Element {
                     <button type="button" onClick={() => loadData()} disabled={refreshing} className={`flex h-9 w-9 items-center justify-center rounded-2xl bg-gray-100 text-gray-500 transition-colors hover:bg-gray-200 disabled:opacity-40 dark:bg-white/[0.05] dark:text-gray-400 dark:hover:bg-white/[0.08] `} title="به‌روزرسانی">{refreshing ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}</button>
                 </div>
             </div>
+
+            <TicketSearchInput value={list.search} onChange={list.setSearch} />
 
             {error && <div className="flex items-center justify-between gap-3 rounded-2xl border border-red-500/20 bg-red-500/5 px-4 py-3"><p className="text-[12px] font-semibold text-red-500">{error}</p><button type="button" onClick={() => loadData()} className="rounded-xl bg-red-500/10 px-3 py-1.5 text-[11px] font-bold text-red-500">تلاش مجدد</button></div>}
 

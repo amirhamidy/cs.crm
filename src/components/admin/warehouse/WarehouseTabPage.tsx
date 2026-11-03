@@ -1,10 +1,10 @@
 "use client";
 
-import { ComponentType, useCallback, useEffect, useMemo, useState } from "react";
+import { ComponentType, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { AnimatePresence, m } from "framer-motion";
 import { BusyContent } from "@/components/ui/Button";
-import { BellRing, Boxes, ClipboardList, Archive, FileText, Package, RefreshCw, PackagePlus, PackageSearch, Plus, ReceiptText, ShieldCheck, Power, PowerOff, ShieldAlert, ShoppingBag, UploadCloud, UsersRound, UserPlus } from "lucide-react";
+import { BellRing, Boxes, ClipboardList, Archive, FileText, Package, RefreshCw, PackagePlus, PackageSearch, Plus, ReceiptText, ShieldCheck, Power, PowerOff, ShieldAlert, ShoppingBag, UploadCloud, UsersRound, UserPlus, Search, X } from "lucide-react";
 import { useTheme } from "next-themes";
 
 import AddCategoryModal from "@/components/admin/warehouse/AddCategoryModal";
@@ -114,6 +114,14 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
 
     const tabAllowed = tab === "staff" ? isAdmin : hasFullWarehouseAccess || LIMITED_TABS.includes(tab);
 
+    const SEARCHABLE_TABS: Tab[] = ["products", "stock", "tasks", "task-archive", "transactions", "orders", "invoices"];
+    const searchable = SEARCHABLE_TABS.includes(tab);
+    const [searchInput, setSearchInput] = useState("");
+    const [search, setSearch] = useState("");
+    useEffect(() => {
+        const t = setTimeout(() => setSearch(searchInput.trim().replace(/\s+/g, " ")), 300);
+        return () => clearTimeout(t);
+    }, [searchInput]);
     const { data, setData, loading, refreshing, error, reload } = useWarehouseTab({
         enabled:
             ready &&
@@ -129,6 +137,7 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
         hasFullAccess: hasFullWarehouseAccess,
         employeeId,
         shelfCode,
+        search: searchable ? search : "",
     });
 
     const buildUrl = useCallback(
@@ -141,6 +150,16 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
         () => (shelfCode ? `&shelf=${encodeURIComponent(shelfCode)}` : ""),
         [shelfCode],
     );
+
+    const firstSearchRun = useRef(true);
+    useEffect(() => {
+        if (firstSearchRun.current) {
+            firstSearchRun.current = false;
+            return;
+        }
+        if (currentPage > 1) router.push(buildUrl(tab, 1, tab === "products" ? shelfQuery : ""));
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [search]);
 
     const goToPage = useCallback(
         (page: number) => router.push(buildUrl(tab, page, tab === "products" ? shelfQuery : "")),
@@ -519,6 +538,28 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
                     );
                 })}
             </div>
+
+            {searchable && (
+                <div className="relative">
+                    <Search size={16} className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                    <input
+                        type="text"
+                        value={searchInput}
+                        onChange={(e) => setSearchInput(e.target.value)}
+                        placeholder="جستجو..."
+                        className="h-12 w-full rounded-2xl border border-gray-200 bg-gray-50 pr-10 pl-4 text-[12.5px] font-medium text-gray-900 outline-none transition-all placeholder:text-gray-400 focus:border-indigo-500/40 focus:bg-white dark:border-white/[0.06] dark:bg-white/[0.03] dark:text-white dark:placeholder:text-gray-600 dark:focus:bg-white/[0.04]"
+                    />
+                    {searchInput && (
+                        <button
+                            type="button"
+                            onClick={() => setSearchInput("")}
+                            className="absolute left-3 top-1/2 flex -translate-y-1/2 items-center justify-center rounded-lg p-1 text-gray-400 transition-colors hover:bg-gray-200 hover:text-gray-700 dark:hover:bg-white/[0.08] dark:hover:text-white"
+                        >
+                            <X size={15} />
+                        </button>
+                    )}
+                </div>
+            )}
 
             {error && (
                 <div
