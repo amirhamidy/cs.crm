@@ -1,5 +1,7 @@
 "use client";
 
+import { Skeleton } from "@/components/ui/Skeleton";
+
 import { NiceSelect } from "@/components/ui/NiceSelect";
 import ProductionLogsSkeleton from "./ProductionLogsSkeleton";
 import TimePicker from "@/components/TimePicker";
@@ -152,7 +154,20 @@ export default function UserProductionLogsPage() {
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6" dir="rtl">
       
-      <div className="flex items-center justify-between">
+      {loading ? (
+        <div aria-hidden="true" className="flex animate-pulse items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Skeleton className="h-12 w-12 rounded-2xl" />
+            <div className="space-y-2">
+              <Skeleton className="h-5 w-56 rounded-md" />
+              <Skeleton className="h-3 w-72 max-w-full rounded-md" />
+            </div>
+          </div>
+          <Skeleton className="h-11 w-44 rounded-2xl" />
+        </div>
+      ) : null}
+
+      <div className={`flex items-center justify-between ${loading ? "hidden" : ""}`}>
         <div className="flex items-center gap-3">
           <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-500/10 text-indigo-500 shadow-inner">
             <ClipboardList size={24} />

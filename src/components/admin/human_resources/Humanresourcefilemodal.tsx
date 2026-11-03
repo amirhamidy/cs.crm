@@ -47,16 +47,16 @@ export default function HumanResourceFileModal({ open, document, onClose, onSave
         }
     };
 
-    if (!open || !document) return null;
 
     return (
         <AnimatePresence>
+{open && document && (
             <m.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="fixed inset-0 z-50 flex items-center justify-center px-4"
-                style={{ background: "rgba(0,0,0,0.45)", backdropFilter: "blur(3px)" }}
+                className="backdrop-blur-layer fixed inset-0 z-50 flex items-center justify-center px-4"
+                style={{ background: "rgba(0,0,0,0.45)" }}
                 onMouseDown={() => !saving && onClose()}
             >
                 <m.div
@@ -157,6 +157,7 @@ export default function HumanResourceFileModal({ open, document, onClose, onSave
                     </div>
                 </m.div>
             </m.div>
-        </AnimatePresence>
+        )}
+</AnimatePresence>
     );
 }

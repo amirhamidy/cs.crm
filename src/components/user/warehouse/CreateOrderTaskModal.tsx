@@ -419,10 +419,10 @@ export default function CreateOrderTaskModal({
         }
     }
 
-    if (!isOpen) return null;
 
     return (
         <AnimatePresence>
+{isOpen && (
             <div
                 className="fixed inset-0 z-50 flex items-center justify-center px-3 py-4 sm:px-4"
             >
@@ -702,6 +702,7 @@ export default function CreateOrderTaskModal({
                     </div>
                 </m.div>
             </div>
-        </AnimatePresence>
+        )}
+</AnimatePresence>
     );
 }

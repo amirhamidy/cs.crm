@@ -3,7 +3,6 @@
 import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, m } from "framer-motion";
 import { Check, ChevronDown, Search } from "lucide-react";
-import { Spinner as Loader2 } from "@/components/ui/Spinner";
 import { useInfiniteOptions, type InfiniteFetcher } from "@/hooks/useInfiniteOptions";
 
 import { ListSkeleton } from "@/components/ui/skeletons";
@@ -118,7 +117,7 @@ function AsyncSelectInner<T extends { id: number | string }>({
                                     placeholder="جستجو..."
                                     className="w-full bg-transparent text-[12px] font-bold text-gray-900 outline-none placeholder:text-gray-400 dark:text-white"
                                  autoComplete="off"/>
-                                {loading && <Loader2 size={13} className="shrink-0 animate-spin text-gray-400" />}
+                                {loading && <span aria-hidden="true" className="h-3 w-3 shrink-0 animate-pulse rounded-full bg-gray-300 dark:bg-white/20" />}
                             </div>
                         </div>
 

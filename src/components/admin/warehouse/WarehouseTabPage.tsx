@@ -31,6 +31,7 @@ import WarehouseEmployeeOrderTaskCard from "@/components/user/warehouse/Warehous
 import WarehouseEmployeeStockLedger from "@/components/user/warehouse/Warehouseemployeestockledger";
 import OrderInvoiceCard from "@/components/user/warehouse/OrderInvoiceCard";
 import OrderInvoiceModal from "@/components/user/warehouse/OrderInvoiceModal";
+import { Skeleton } from "@/components/ui/Skeleton";
 import WarehouseTabSkeleton from "@/components/admin/warehouse/WarehouseTabSkeleton";
 import ShelfFilterBar from "@/components/user/warehouse/ShelfFilterBar";
 import { useWarehouseShelves } from "@/hooks/useWarehouseShelves";
@@ -318,6 +319,19 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
     if (!ready) {
         return (
             <div dir="rtl" className="min-h-screen p-4" style={{ background: pageBg }}>
+                <div aria-hidden="true" className="mb-6 flex animate-pulse flex-wrap items-center justify-between gap-3">
+                    <div className="flex items-start gap-3">
+                        <Skeleton className="h-10 w-10 shrink-0 rounded-2xl" />
+                        <div className="space-y-2">
+                            <Skeleton className="h-4 w-32 rounded-md" />
+                            <Skeleton className="h-3 w-64 max-w-full rounded-md" />
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <Skeleton className="h-10 w-24 rounded-2xl" />
+                        <Skeleton className="h-10 w-28 rounded-2xl" />
+                    </div>
+                </div>
                 <WarehouseTabSkeleton tab={tab} count={8} />
             </div>
         );

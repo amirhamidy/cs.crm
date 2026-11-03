@@ -381,7 +381,6 @@ function RoutineCard({
                                 background: isDark
                                     ? "rgba(15,23,42,0.96)"
                                     : "rgba(255,255,255,0.97)",
-                                backdropFilter: "blur(4px)",
                             }}
                         >
                             <AlertTriangle size={22} className="text-red-500" />

@@ -38,7 +38,7 @@ export function ModalFrame({
                 aria-modal="true"
                 aria-label={label}
                 dir="rtl"
-                className={`fixed inset-0 z-[100] flex justify-center bg-black/60 outline-none ${position === "bottom" ? "items-end" : "items-center p-4"
+                className={`backdrop-blur-layer fixed inset-0 z-[100] flex justify-center bg-black/60 outline-none ${position === "bottom" ? "items-end" : "items-center p-4"
                     } ${className}`}
             >
                 {children}

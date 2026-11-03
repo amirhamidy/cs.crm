@@ -68,7 +68,7 @@ const UPCOMING_DAYS = 60;
 const UPCOMING_LIMIT = 6;
 const weekDays = ["شنبه", "یکشنبه", "دوشنبه", "سه‌شنبه", "چهارشنبه", "پنجشنبه", "جمعه"];
 const PANEL =
-    "rounded-2xl border border-slate-300/55 bg-white/70 backdrop-blur-md dark:border-white/[0.08] dark:bg-slate-900/55";
+    "rounded-2xl border border-slate-300/55 bg-white/70 dark:border-white/[0.08] dark:bg-slate-900/55";
 const CELL_GLOW =
     "hover:z-10 hover:-translate-y-0.5 hover:border-indigo-400/50 hover:bg-indigo-500/[0.06] dark:hover:bg-indigo-400/[0.08]";
 const FOCUS = "focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/60";

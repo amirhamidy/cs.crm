@@ -6,6 +6,7 @@ import dynamic from "next/dynamic";
 
 import { m, AnimatePresence } from "framer-motion";
 import { Factory, Plus, SquarePen, X, TrendingUp, BarChart3, AlertTriangle, ClipboardList, Trash2, CalendarDays, Gauge, Filter, LineChart, Users, Eye, CalendarCogIcon } from "lucide-react";
+import { Skeleton } from "@/components/ui/Skeleton";
 import MachineCardsSkeleton from "./MachineCardsSkeleton";
 import MachineReportSkeleton from "./MachineReportSkeleton";
 import axiosInstance from "@/lib/axiosInstance";
@@ -317,7 +318,22 @@ export default function AdminProductionManagementPage() {
 
     return (
         <div className="mx-auto max-w-7xl space-y-6 p-6" dir="rtl">
-            <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
+            {loading ? (
+                <div aria-hidden="true" className="flex animate-pulse flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
+                    <div className="flex items-center gap-3">
+                        <Skeleton className="h-11 w-11 rounded-2xl" />
+                        <div className="space-y-2">
+                            <Skeleton className="h-4 w-48 rounded-md" />
+                            <Skeleton className="h-3 w-64 max-w-full rounded-md" />
+                        </div>
+                    </div>
+                    <div className="flex gap-2">
+                        <Skeleton className="h-11 w-36 rounded-full" />
+                        <Skeleton className="h-11 w-32 rounded-full" />
+                    </div>
+                </div>
+            ) : null}
+            <div className={`flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center ${loading ? "hidden" : ""}`}>
                 <div className="flex items-center gap-3">
                     <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-indigo-500/10 text-indigo-500">
                         <Factory size={20} />

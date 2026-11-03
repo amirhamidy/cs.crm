@@ -552,10 +552,9 @@ export default function AddUserModal({ onClose, onSuccess, onNotify }: Props) {
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className="fixed inset-0 z-50 flex items-center justify-center px-4"
+                    className="backdrop-blur-layer fixed inset-0 z-50 flex items-center justify-center px-4"
                     style={{
                         background: "rgba(0,0,0,0.45)",
-                        backdropFilter: "blur(3px)",
                     }}
                     onClick={handleClose}
                 >

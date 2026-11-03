@@ -162,8 +162,8 @@ function DayPanel({ onClose, selectedDate, notes, events, onCreated, onDeleted }
     };
     return (
         <MotionConfig reducedMotion="user">
-            <m.div role="dialog" aria-modal="true" aria-label="جزئیات روز" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.18 }} onClick={onClose} className="fixed inset-0 z-[120] flex items-stretch justify-start bg-black/50 p-2 sm:p-4">
-                <m.aside dir="rtl" initial={{ x: -56, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -56, opacity: 0 }} transition={{ type: "spring", damping: 30, stiffness: 340 }} onClick={(e) => e.stopPropagation()} className="flex h-full w-full max-w-[30rem] flex-col overflow-hidden rounded-[2.5rem] border border-gray-300/60 bg-[#f7faff]/95 shadow-xl backdrop-blur-xl dark:border-white/[0.08] dark:bg-gray-900/95">
+            <m.div role="dialog" aria-modal="true" aria-label="جزئیات روز" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.18 }} onClick={onClose} className="backdrop-blur-layer fixed inset-0 z-[120] flex items-stretch justify-start bg-black/50 p-2 sm:p-4">
+                <m.aside dir="rtl" initial={{ x: -56, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -56, opacity: 0 }} transition={{ type: "spring", damping: 30, stiffness: 340 }} onClick={(e) => e.stopPropagation()} className="flex h-full w-full max-w-[30rem] flex-col overflow-hidden rounded-[2.5rem] border border-gray-300/60 bg-[#f7faff]/95 shadow-xl dark:border-white/[0.08] dark:bg-gray-900/95">
                     <div className="relative shrink-0 overflow-hidden bg-gradient-to-br from-indigo-500 to-violet-600 px-6 pb-6 pt-5 text-white">
                         <span aria-hidden className="pointer-events-none absolute -left-4 top-6 select-none text-[150px] font-black leading-none text-white/10">{dayFmt.format(selectedDate)}</span>
                         <div className="relative flex items-start justify-between">

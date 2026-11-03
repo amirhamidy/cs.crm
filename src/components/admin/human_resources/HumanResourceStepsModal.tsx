@@ -183,17 +183,17 @@ export default function HumanResourceStepsModal({ open, document, canManage, onC
 
     const orderedSteps = useMemo(() => steps.slice().sort(byOrder), [steps]);
 
-    if (!open || !document) return null;
 
     return (
         <AnimatePresence>
+{open && document && (
             <m.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.2 }}
-                className="fixed inset-0 z-50 flex items-center justify-center px-4"
-                style={{ background: "rgba(0,0,0,0.45)", backdropFilter: "blur(3px)" }}
+                className="backdrop-blur-layer fixed inset-0 z-50 flex items-center justify-center px-4"
+                style={{ background: "rgba(0,0,0,0.45)" }}
                 onMouseDown={onClose}
             >
                 <m.div
@@ -471,6 +471,7 @@ export default function HumanResourceStepsModal({ open, document, canManage, onC
                     </div>
                 </m.div>
             </m.div>
-        </AnimatePresence>
+        )}
+</AnimatePresence>
     );
 }

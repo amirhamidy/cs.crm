@@ -273,8 +273,6 @@ export default function AdminTaskNotesModal({
                         transition={{ duration: 0.18 }}
                         className="modal-backdrop absolute inset-0"
                         style={{
-                            backdropFilter: "blur(5px)",
-                            WebkitBackdropFilter: "blur(5px)",
                             pointerEvents: "none",
                         }}
                     />

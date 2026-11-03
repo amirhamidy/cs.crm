@@ -216,7 +216,7 @@ export default function CalendarNoteModal({ isOpen, onClose, selectedDate, notes
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className="fixed inset-0 z-[120] flex items-stretch justify-start bg-gray-950/40 p-2 backdrop-blur-sm sm:p-4"
+                    className="fixed inset-0 z-[120] flex items-stretch justify-start bg-gray-950/40 p-2 backdrop-blur-layer sm:p-4"
                     onClick={onClose}
                 >
                     <m.aside
@@ -233,11 +233,11 @@ export default function CalendarNoteModal({ isOpen, onClose, selectedDate, notes
                             <div className="pointer-events-none absolute -left-10 -top-12 h-40 w-40 rounded-full bg-white/20 blur-2xl" />
                             <div className="pointer-events-none absolute -bottom-16 right-10 h-40 w-40 rounded-full bg-indigo-400/40 blur-3xl" />
                             <div className="relative flex items-start justify-between">
-                                <div className="flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-[10.5px] font-bold backdrop-blur-md">
+                                <div className="flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-[10.5px] font-bold">
                                     <CalendarDays size={12} />
                                     جزئیات روز
                                 </div>
-                                <button type="button" onClick={onClose} aria-label="بستن" className="flex h-9 w-9 items-center justify-center rounded-full bg-white/15 text-white backdrop-blur-md transition hover:bg-white/30 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white"><X size={16} /></button>
+                                <button type="button" onClick={onClose} aria-label="بستن" className="flex h-9 w-9 items-center justify-center rounded-full bg-white/15 text-white transition hover:bg-white/30 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white"><X size={16} /></button>
                             </div>
                             <div className="relative mt-5 flex items-end gap-4">
                                 <span className="text-[56px] font-black leading-none tracking-tight">{fa(selectedDate, { day: "numeric" })}</span>
@@ -248,8 +248,8 @@ export default function CalendarNoteModal({ isOpen, onClose, selectedDate, notes
                             </div>
                             <div className="relative mt-4 flex flex-wrap gap-2">
                                 {holiday && <span className="rounded-full bg-rose-500/90 px-2.5 py-1 text-[10px] font-bold shadow-sm">{holidayText}</span>}
-                                <span className="rounded-full bg-white/15 px-2.5 py-1 text-[10px] font-bold backdrop-blur-md">{dayEvents.length.toLocaleString("fa-IR")} رویداد</span>
-                                <span className="rounded-full bg-white/15 px-2.5 py-1 text-[10px] font-bold backdrop-blur-md">{dayNotes.length.toLocaleString("fa-IR")} یادداشت</span>
+                                <span className="rounded-full bg-white/15 px-2.5 py-1 text-[10px] font-bold">{dayEvents.length.toLocaleString("fa-IR")} رویداد</span>
+                                <span className="rounded-full bg-white/15 px-2.5 py-1 text-[10px] font-bold">{dayNotes.length.toLocaleString("fa-IR")} یادداشت</span>
                             </div>
                         </div>
 
@@ -269,7 +269,7 @@ export default function CalendarNoteModal({ isOpen, onClose, selectedDate, notes
                                             layout
                                             initial={{ opacity: 0, y: 8 }}
                                             animate={{ opacity: 1, y: 0 }}
-                                            className="relative overflow-hidden rounded-2xl border border-white/70 bg-white/70 p-4 pr-5 shadow-[0_6px_24px_-14px_rgba(37,99,235,0.35)] backdrop-blur-md dark:border-white/[0.07] dark:bg-white/[0.04] dark:shadow-none"
+                                            className="relative overflow-hidden rounded-2xl border border-white/70 bg-white/70 p-4 pr-5 shadow-[0_6px_24px_-14px_rgba(37,99,235,0.35)] dark:border-white/[0.07] dark:bg-white/[0.04] dark:shadow-none"
                                         >
                                             <span className={`absolute inset-y-3 right-0 w-1 rounded-full ${style.bar}`} />
                                             <p className="break-words text-[13px] font-extrabold text-gray-800 dark:text-white">{event.title}</p>
@@ -346,7 +346,7 @@ export default function CalendarNoteModal({ isOpen, onClose, selectedDate, notes
                         </div>
 
                         
-                        <div className="shrink-0 border-t border-blue-100/80 bg-white/70 p-4 backdrop-blur-xl dark:border-white/[0.06] dark:bg-white/[0.02]">
+                        <div className="shrink-0 border-t border-blue-100/80 bg-white/70 p-4 dark:border-white/[0.06] dark:bg-white/[0.02]">
                             <div className="relative">
                                 <textarea
                                     value={description}

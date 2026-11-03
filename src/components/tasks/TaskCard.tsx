@@ -373,8 +373,8 @@ export default function TaskCard({
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
-                            className="fixed inset-0 z-[2147483647] flex items-center justify-center bg-gray-950/45 px-4"
-                            style={{ backdropFilter: "blur(5px)", WebkitBackdropFilter: "blur(5px)" }}
+                            className="backdrop-blur-layer fixed inset-0 z-[2147483647] flex items-center justify-center bg-gray-950/45 px-4"
+                            style={{ }}
                             onClick={closeConfirm}
                         >
                             <m.div

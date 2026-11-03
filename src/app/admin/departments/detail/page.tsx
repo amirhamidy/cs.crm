@@ -179,7 +179,7 @@ function DepartmentDetailPage() {
                 <div className="relative">
                     <AnimatePresence>
                         {stageRefreshing && (
-                            <m.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 z-10 flex items-center justify-center rounded-[1.5rem] bg-white/70 backdrop-blur-sm dark:bg-black/50">
+                            <m.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 z-10 flex items-center justify-center rounded-[1.5rem] bg-white/70 dark:bg-black/50">
                                 <BoardSkeleton className="w-full" />
                             </m.div>
                         )}

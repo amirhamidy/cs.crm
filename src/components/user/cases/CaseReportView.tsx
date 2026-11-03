@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { AlertCircle, CheckCircle2, Clock, Package, User, Workflow } from "lucide-react";
-import { Spinner as Loader2 } from "@/components/ui/Spinner";
+import { DetailSkeleton } from "../../ui/skeletons";
 import { casesApi } from "@/lib/api/cases";
 import { apiMessage } from "@/lib/apiMessage";
 import type { CaseReport, CaseReportTask } from "@/types/caseReport";
@@ -222,11 +222,7 @@ export default function CaseReportView({ caseId }: CaseReportViewProps) {
 
     return (
         <div>
-            {loading && (
-                <div className="flex items-center justify-center py-16 text-gray-400">
-                    <Loader2 size={26} />
-                </div>
-            )}
+            {loading && <DetailSkeleton />}
             {!loading && error && (
                 <div className="flex flex-col items-center gap-2 py-16 text-red-500">
                     <AlertCircle size={26} />

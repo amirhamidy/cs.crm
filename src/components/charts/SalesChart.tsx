@@ -183,7 +183,7 @@ export default function SalesChart({ data: chartData }: { data: SalesChartData }
                   scale: 0.96,
                 }}
                 transition={{ duration: 0.15 }}
-                className="pointer-events-none rounded-xl border border-gray-200/60 bg-white/95 px-3 py-2 shadow-lg backdrop-blur-sm dark:border-white/10 dark:bg-gray-900/95"
+                className="pointer-events-none rounded-xl border border-gray-200/60 bg-white/95 px-3 py-2 shadow-lg dark:border-white/10 dark:bg-gray-900/95"
                 style={{
                   boxShadow:
                     "0 4px 20px rgba(56,189,248,0.35)",

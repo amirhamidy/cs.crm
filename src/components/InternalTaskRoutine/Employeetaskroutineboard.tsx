@@ -448,7 +448,6 @@ function RoutineCard({
                             className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 rounded-[2rem] p-5 text-center"
                             style={{
                                 background: "rgba(15,23,42,0.96)",
-                                backdropFilter: "blur(4px)",
                             }}
                         >
                             <AlertTriangle size={22} className="text-red-500" />

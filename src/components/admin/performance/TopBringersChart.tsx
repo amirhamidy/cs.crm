@@ -113,7 +113,7 @@ export default function TopBringersChart({ items, loading }: Props) {
                             animate={{ opacity: 1, y: 0, scale: 1 }}
                             exit={{ opacity: 0, y: 4, scale: 0.96 }}
                             transition={{ duration: 0.15, ease: [0.25, 0.46, 0.45, 0.94] }}
-                            className="pointer-events-none rounded-xl border border-gray-200/60 bg-white/95 px-3 py-2 shadow-lg backdrop-blur-sm dark:border-white/10 dark:bg-gray-900/95"
+                            className="pointer-events-none rounded-xl border border-gray-200/60 bg-white/95 px-3 py-2 shadow-lg dark:border-white/10 dark:bg-gray-900/95"
                             style={{ boxShadow: `0 4px 20px ${activeSlice.glow}` }}
                         >
                             <div className="mb-1 flex items-center gap-1.5">

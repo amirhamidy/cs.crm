@@ -45,7 +45,7 @@ function ModalShell({
             onMouseDown={(e) => {
                 if (e.target === e.currentTarget) onClose();
             }}
-            className="fixed inset-0 z-[9999] flex items-center justify-center bg-gray-950/50 px-4 backdrop-blur-sm"
+            className="fixed inset-0 z-[9999] flex items-center justify-center bg-gray-950/50 px-4 backdrop-blur-layer"
             dir="rtl"
         >
             <m.div

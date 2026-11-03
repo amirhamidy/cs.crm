@@ -200,7 +200,7 @@ export default function TimeRangeModal({
         setViewJm(cur.jm);
     }, [activeField]);
 
-    if (!open || (!embedded && typeof document === "undefined")) return null;
+    if (embedded ? !open : typeof document === "undefined") return null;
 
     const current = activeField === "start" ? start : deadline;
     const setCurrent = activeField === "start" ? setStart : setDeadline;
@@ -509,8 +509,6 @@ export default function TimeRangeModal({
                         transition={{ duration: 0.18 }}
                         className="modal-backdrop absolute inset-0"
                         style={{
-                            backdropFilter: "blur(5px)",
-                            WebkitBackdropFilter: "blur(5px)",
                             pointerEvents: "none",
                         }}
                     />

@@ -191,7 +191,7 @@ export default function CustomerScoresModal({
                                         </div>
                                     </div>
 
-                                    <div className="rounded-2xl bg-white/15 px-4 py-3 text-center backdrop-blur-sm">
+                                    <div className="rounded-2xl bg-white/15 px-4 py-3 text-center">
                                         <div className="text-2xl font-black">
                                             {scores.length}
                                         </div>

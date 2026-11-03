@@ -10,7 +10,7 @@ import React, {
 import { AnimatePresence, m, useReducedMotion } from "framer-motion";
 import { Backdrop } from "@/components/ui/Backdrop";
 import { panelMotion } from "@/lib/motion";
-import { ArrowRight, Check, ClipboardList, Loader, Search, User, X } from "lucide-react";
+import { ArrowRight, Check, ClipboardList, Search, User, X } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
 import { casesApi, customersApi } from "@/lib/api";
 import type { Customer } from "@/types/customer";
@@ -314,11 +314,7 @@ export default function CreateCaseModal({
                                     >
                                         <div className="group relative">
                                             <div className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 transition-colors group-focus-within:text-blue-500">
-                                                {loadingFirst ? (
-                                                    <Loader size={14} className="animate-spin" />
-                                                ) : (
-                                                    <Search size={14} />
-                                                )}
+                                                <Search size={14} />
                                             </div>
                                             <input
                                                 autoFocus

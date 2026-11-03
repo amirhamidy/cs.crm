@@ -28,7 +28,7 @@ export function ChartTooltip({ title, rows, footer, dark, colorKey, glowColor }:
     return (
         <div
             className={`
-                pointer-events-none rounded-xl backdrop-blur-sm
+                pointer-events-none rounded-xl
                 border min-w-[132px] px-3 py-2
                 ${dark ? "bg-gray-900/95 border-white/10" : "bg-white/95 border-gray-200/60"}
             `}

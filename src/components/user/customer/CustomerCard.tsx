@@ -642,13 +642,11 @@ export default function CustomerCard({
                                 duration: 0.18,
                                 ease: "easeOut",
                             }}
-                            className="absolute inset-0 z-30 hidden items-center justify-center rounded-2xl md:flex"
+                            className="backdrop-blur-layer absolute inset-0 z-30 hidden items-center justify-center rounded-2xl md:flex"
                             style={{
                                 background: isDark
                                     ? "rgba(10,12,20,0.55)"
                                     : "rgba(255,255,255,0.55)",
-                                backdropFilter: "blur(6px)",
-                                WebkitBackdropFilter: "blur(6px)",
                             }}
                         >
                             <div className="relative h-24 w-40">

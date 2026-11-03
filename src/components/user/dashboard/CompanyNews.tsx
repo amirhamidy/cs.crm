@@ -61,7 +61,7 @@ export default function CompanyNews({
             dir="rtl"
             className="w-full"
         >
-            <div className="overflow-hidden rounded-[2rem] border border-zinc-200/70 bg-white/80 p-4 shadow-[0_20px_60px_-25px_rgba(0,0,0,0.15)] backdrop-blur-xl dark:border-zinc-800 dark:bg-zinc-900/80 sm:p-6">
+            <div className="overflow-hidden rounded-[2rem] border border-zinc-200/70 bg-white/80 p-4 shadow-[0_20px_60px_-25px_rgba(0,0,0,0.15)] dark:border-zinc-800 dark:bg-zinc-900/80 sm:p-6">
                 <div className="relative">
                     <textarea
                         value={description}

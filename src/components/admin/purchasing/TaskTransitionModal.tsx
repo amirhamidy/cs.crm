@@ -96,8 +96,8 @@ export default function TaskTransitionModal({ isOpen, onClose, mode, task, onCom
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className="fixed inset-0 z-[999] flex items-center justify-center px-4"
-                    style={{ background: "rgba(0,0,0,0.45)", backdropFilter: "blur(3px)" }}
+                    className="backdrop-blur-layer fixed inset-0 z-[999] flex items-center justify-center px-4"
+                    style={{ background: "rgba(0,0,0,0.45)" }}
                     onMouseDown={close}
                 >
                     <m.div

@@ -5,6 +5,7 @@ import { m } from "framer-motion";
 import { Archive, CheckCircle2, ClipboardCheck, Clock3, RefreshCw, Search, ShieldCheck, UserCheck, Users, X, XCircle, type LucideIcon } from "lucide-react";
 import QCItemCardSkeleton from "./QCItemCardSkeleton";
 import QCPageSkeleton from "./QCPageSkeleton";
+import QCHeaderSkeleton from "./QCHeaderSkeleton";
 import { Spinner as Loader2 } from "@/components/ui/Spinner";
 import axiosInstance from "@/lib/axiosInstance";
 import { qualityControlApi, type QCCounts, type QCReviewedStatus } from "@/lib/api";
@@ -185,7 +186,8 @@ export default function QualityControlPage() {
 
     return (
         <div dir="rtl" className="space-y-4 p-3 sm:p-5">
-            <m.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className={`${box} p-3`}>
+            {loading ? <QCHeaderSkeleton search /> : (
+<m.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className={`${box} p-3`}>
                 <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                     <div className="flex min-w-0 items-center gap-3">
                         <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-500 text-white shadow-sm">
@@ -232,6 +234,7 @@ export default function QualityControlPage() {
                     <Stat label="اعضای فعال" value={`${toPersianDigits(stats.active)}/${toPersianDigits(employees.length)}`} icon={Users} tone="bg-blue-50/70 text-blue-600 dark:bg-blue-500/[0.07] dark:text-blue-400" />
                 </div>
             </m.div>
+)}
 
             {error && (
                 <div className="flex items-center gap-2.5 rounded-2xl bg-red-50 px-3.5 py-3 dark:bg-red-500/10">

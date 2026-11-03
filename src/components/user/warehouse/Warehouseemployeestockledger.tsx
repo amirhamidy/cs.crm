@@ -1,4 +1,5 @@
 "use client";
+import { ListSkeleton } from "../../ui/skeletons";
 
 import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, m } from "framer-motion";
@@ -400,13 +401,12 @@ export default function WarehouseEmployeeStockLedger({
                 </div>
 
                 <div className="flex max-h-[600px] flex-col gap-1.5 overflow-y-auto pr-1 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-gray-200 dark:scrollbar-thumb-white/10">
-                    {list.data.length === 0 && (
+                    {list.data.length === 0 && list.loading && <ListSkeleton rows={6} />}
+                    {list.data.length === 0 && !list.loading && (
                         <div className="flex flex-col items-center justify-center py-10 text-gray-400">
                             <Boxes size={24} className="mb-2 opacity-50" />
                             <span className="text-xs font-medium">
-                                {list.loading
-                                    ? "در حال دریافت محصولات..."
-                                    : list.error
+                                {list.error
                                         ? "دریافت محصولات انجام نشد"
                                         : "محصولی یافت نشد"}
                             </span>
@@ -564,7 +564,7 @@ export default function WarehouseEmployeeStockLedger({
                                                     className="py-12 text-center text-sm text-gray-400"
                                                 >
                                                     {txLoading
-                                                        ? "در حال دریافت گردش کالا..."
+                                                        ? <ListSkeleton rows={5} />
                                                         : txError
                                                             ? "دریافت گردش کالا انجام نشد"
                                                             : "رویدادی برای نمایش وجود ندارد"}

@@ -95,8 +95,8 @@ export default function InternalTaskActionModal({
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="fixed inset-0 z-[130] flex items-center justify-center px-4"
-                style={{ background: "rgba(0,0,0,0.5)", backdropFilter: "blur(3px)" }}
+                className="backdrop-blur-layer fixed inset-0 z-[130] flex items-center justify-center px-4"
+                style={{ background: "rgba(0,0,0,0.5)" }}
                 onClick={() => {
                     if (!loading) onClose();
                 }}

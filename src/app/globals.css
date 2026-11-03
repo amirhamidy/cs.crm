@@ -291,19 +291,24 @@ body {
 }
 
 /* ── Shared modal backdrop: static blur, only opacity is animated ── */
+/* Single source for overlay blur. Change here only. */
+:root {
+    --backdrop-blur: 6px;
+}
+@media (max-width: 767px) {
+    :root {
+        --backdrop-blur: 4px;
+    }
+}
 .modal-backdrop {
     background: rgb(0 0 0 / 0.42);
 }
+/* Blur layer for any full-screen overlay (inline background stays on the element). */
 @supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-    .modal-backdrop {
-        -webkit-backdrop-filter: blur(6px);
-        backdrop-filter: blur(6px);
-    }
-    @media (max-width: 767px) {
-        .modal-backdrop {
-            -webkit-backdrop-filter: blur(4px);
-            backdrop-filter: blur(4px);
-        }
+    .modal-backdrop,
+    .backdrop-blur-layer {
+        -webkit-backdrop-filter: blur(var(--backdrop-blur));
+        backdrop-filter: blur(var(--backdrop-blur));
     }
     /* Nested modals: darken only, so a single blur layer is processed */
     .modal-backdrop[data-depth="2"],
@@ -314,11 +319,14 @@ body {
 }
 @media (prefers-reduced-transparency: reduce) {
     .modal-backdrop,
+    .backdrop-blur-layer,
     .modal-backdrop[data-depth="2"],
     .modal-backdrop[data-depth="3"] {
-        background: rgb(0 0 0 / 0.65);
         -webkit-backdrop-filter: none;
         backdrop-filter: none;
+    }
+    .modal-backdrop {
+        background: rgb(0 0 0 / 0.65);
     }
 }
 

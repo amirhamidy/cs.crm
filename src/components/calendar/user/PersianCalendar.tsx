@@ -52,7 +52,7 @@ const timeFmt = new Intl.DateTimeFormat("fa-IR", { hour: "2-digit", minute: "2-d
 
 
 const glass =
-    "border border-white/70 bg-white/55 backdrop-blur-xl shadow-[0_10px_40px_-18px_rgba(37,99,235,0.35)] dark:border-white/[0.08] dark:bg-white/[0.04] dark:shadow-none";
+    "border border-white/70 bg-white/55 shadow-[0_10px_40px_-18px_rgba(37,99,235,0.35)] dark:border-white/[0.08] dark:bg-white/[0.04] dark:shadow-none";
 
 const focusRing = "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500";
 
@@ -417,7 +417,7 @@ export default function PersianCalendar() {
                                 </div>
                             </div>
                             {todayHoliday && <span className="relative mt-3 inline-block rounded-full bg-rose-500/90 px-2.5 py-1 text-[10px] font-bold">امروز تعطیل است</span>}
-                            <button type="button" onClick={gotoToday} className={`relative mt-4 flex w-full items-center justify-center gap-1.5 rounded-xl bg-white/20 py-2.5 text-[11.5px] font-bold backdrop-blur-md transition hover:bg-white/30 ${focusRing}`}>
+                            <button type="button" onClick={gotoToday} className={`relative mt-4 flex w-full items-center justify-center gap-1.5 rounded-xl bg-white/20 py-2.5 text-[11.5px] font-bold transition hover:bg-white/30 ${focusRing}`}>
                                 <Plus size={13} />یادداشت و برنامه امروز
                             </button>
                         </div>
@@ -557,7 +557,7 @@ export default function PersianCalendar() {
                                 const selected = jy === currentJy && jm === currentJm;
                                 const realToday = jy === realTodayJy && jm === realTodayJm;
                                 return (
-                                    <button key={`${jy}-${jm}`} type="button" onClick={() => goToMonth(jy, jm)} className={`flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-3.5 py-1.5 text-[11px] font-bold transition ${focusRing} ${selected ? "border-transparent bg-gradient-to-br from-blue-600 to-cyan-400 text-white shadow-[0_8px_20px_-8px_rgba(37,99,235,0.9)]" : "border-white/80 bg-white/55 text-gray-500 backdrop-blur-md hover:bg-white hover:text-blue-600 dark:border-white/[0.07] dark:bg-white/[0.04] dark:text-gray-400 dark:hover:bg-white/[0.08]"}`}>
+                                    <button key={`${jy}-${jm}`} type="button" onClick={() => goToMonth(jy, jm)} className={`flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-3.5 py-1.5 text-[11px] font-bold transition ${focusRing} ${selected ? "border-transparent bg-gradient-to-br from-blue-600 to-cyan-400 text-white shadow-[0_8px_20px_-8px_rgba(37,99,235,0.9)]" : "border-white/80 bg-white/55 text-gray-500 hover:bg-white hover:text-blue-600 dark:border-white/[0.07] dark:bg-white/[0.04] dark:text-gray-400 dark:hover:bg-white/[0.08]"}`}>
                                         {realToday && <span className={`h-1.5 w-1.5 rounded-full ${selected ? "bg-white" : "bg-blue-500"}`} />}
                                         {jy === realTodayJy ? JALALI_MONTHS[jm - 1] : `${JALALI_MONTHS[jm - 1]} ${toPersianDigits(jy)}`}
                                     </button>

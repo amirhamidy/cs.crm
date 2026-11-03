@@ -120,10 +120,9 @@ export default function WarehouseEmployeeBulkImportModal({
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                     onClick={handleClose}
-                    className="fixed inset-0 z-50 flex items-center justify-center px-4"
+                    className="backdrop-blur-layer fixed inset-0 z-50 flex items-center justify-center px-4"
                     style={{
                         background: "rgba(0,0,0,.5)",
-                        backdropFilter: "blur(4px)",
                     }}
                 >
                     <m.div

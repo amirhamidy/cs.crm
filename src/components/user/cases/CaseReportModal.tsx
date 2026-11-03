@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import type { ReactNode } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { AlertCircle, CheckCircle2, Clock, Loader2, Package, User, X, Workflow } from "lucide-react";
+import { AlertCircle, CheckCircle2, Clock, Package, User, X, Workflow } from "lucide-react";
 import { casesApi } from "@/lib/api/cases";
 import { apiMessage } from "@/lib/apiMessage";
 import type { CaseReport, CaseReportTask } from "@/types/caseReport";
@@ -246,8 +246,8 @@ export default function CaseReportModal({ caseId, caseTitle, onClose }: CaseRepo
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="fixed inset-0 z-[300] flex items-center justify-center p-4"
-                style={{ background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)" }}
+                className="backdrop-blur-layer fixed inset-0 z-[300] flex items-center justify-center p-4"
+                style={{ background: "rgba(0,0,0,0.5)" }}
                 onClick={onClose}
             >
                 <motion.div

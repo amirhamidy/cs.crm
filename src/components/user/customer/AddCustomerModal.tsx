@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback, forwardRef, InputHTMLAttribut
 import { m, AnimatePresence, useReducedMotion } from "framer-motion";
 import { Backdrop } from "@/components/ui/Backdrop";
 import { panelMotion } from "@/lib/motion";
-import { X, UserPlus, CheckCircle2, Loader, ChevronDown, Check, Plus, AlertCircle } from "lucide-react";
+import { X, UserPlus, CheckCircle2, ChevronDown, Check, Plus, AlertCircle } from "lucide-react";
 import { Customer, CustomerFormData } from "@/types/customer";
 import axiosInstance from "@/lib/axiosInstance";
 
@@ -858,10 +858,7 @@ export default function AddCustomerModal({
                                                     exit={{ opacity: 0 }}
                                                     className="flex items-center gap-1.5 pr-1 text-[11px] text-gray-400"
                                                 >
-                                                    <Loader
-                                                        size={10}
-                                                        className="animate-spin"
-                                                    />
+                                                    <span aria-hidden="true" className="h-2.5 w-2.5 animate-pulse rounded-full bg-gray-300 dark:bg-white/20" />
                                                     در حال بررسی...
                                                 </m.span>
                                             )}
