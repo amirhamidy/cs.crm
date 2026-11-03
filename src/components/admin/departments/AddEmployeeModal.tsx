@@ -4,7 +4,8 @@ import { useEffect, useState, forwardRef, InputHTMLAttributes } from "react";
 import { m, AnimatePresence, useReducedMotion } from "framer-motion";
 import { Backdrop } from "@/components/ui/Backdrop";
 import { panelMotion } from "@/lib/motion";
-import { X, User, CheckCircle2, Search, Loader } from "lucide-react";
+import { ListSkeleton } from "@/components/ui/skeletons";
+import { X, User, CheckCircle2, Search } from "lucide-react";
 import type { Department, Employee } from "./types";
 
 import { BusyContent } from "@/components/ui/Button";
@@ -192,12 +193,7 @@ export default function AddEmployeeModal({
 
                             <div className="max-h-56 space-y-2 overflow-y-auto pr-1">
                                 {loading ? (
-                                    <div className="flex items-center justify-center py-8">
-                                        <Loader
-                                            size={18}
-                                            className="animate-spin text-blue-600"
-                                        />
-                                    </div>
+                                    <ListSkeleton rows={3} />
                                 ) : filteredEmployees.length === 0 ? (
                                     <p className="py-6 text-center text-[12px] text-gray-400 dark:text-gray-500">
                                         {employees.length === 0

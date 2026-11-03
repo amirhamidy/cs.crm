@@ -1,8 +1,9 @@
 "use client";
 
 import { AnimatePresence, m } from "framer-motion";
-import { ChevronLeft, Loader, Pencil, Plus, Trash2 } from "lucide-react";
+import { ChevronLeft, Pencil, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
+import { StageTasksSkeleton } from "@/components/ui/skeletons";
 import { createPortal } from "react-dom";
 import type { TaskStatus } from "@/types/task";
 import type { Stage, Task } from "./types";
@@ -406,12 +407,7 @@ export default function StageCard({
                 />
 
                 {tasksLoading ? (
-                    <div className="flex h-28 items-center justify-center">
-                        <Loader
-                            size={17}
-                            className="animate-spin text-indigo-500"
-                        />
-                    </div>
+                    <StageTasksSkeleton />
                 ) : !tasks ||
                     tasks.length === 0 ? (
                     <div className="flex h-28 flex-col items-center justify-center gap-1.5 px-4 text-center">

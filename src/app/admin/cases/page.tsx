@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { CaseCardSkeleton } from "@/components/ui/skeletons";
+import { CaseCardSkeleton, CountSkeleton } from "@/components/ui/skeletons";
 import { AnimatePresence, m } from "framer-motion";
 import { ClipboardList, Plus, RefreshCw } from "lucide-react";
 import { Spinner as Loader2 } from "@/components/ui/Spinner";
@@ -22,10 +22,6 @@ const CaseActionsModal = dynamic(() => import("@/components/cases/CaseActionsMod
 });
 
 
-const EditTaskModal = dynamic(() => import("@/components/tasks/EditTaskModal"), {
-    ssr: false,
-    loading: () => null,
-});
 import Pagination from "@/components/ui/Pagination";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 
@@ -46,8 +42,6 @@ export default function UserCasesPage() {
     const [actionView, setActionView] = useState<CaseView>("tasks");
     const [actionOpen, setActionOpen] = useState(false);
     const [deletingId, setDeletingId] = useState<number | null>(null);
-    const [editingTask, setEditingTask] = useState<TaskItem | null>(null);
-    const [editTaskModalOpen, setEditTaskModalOpen] = useState(false);
     const [deletingTaskId, setDeletingTaskId] = useState<number | null>(null);
     const [tasksRefreshKey, setTasksRefreshKey] = useState(0);
 
@@ -204,18 +198,11 @@ export default function UserCasesPage() {
         }
     }, []);
 
-    const handleEditTask = useCallback((task: TaskItem) => {
-        setEditingTask(task);
-        setEditTaskModalOpen(true);
-    }, []);
-
     const handleTaskUpdate = useCallback(() => {
         tasksApi.invalidate();
         refetchCases();
         fetchTasks();
         setTasksRefreshKey((k) => k + 1);
-        setEditTaskModalOpen(false);
-        setEditingTask(null);
     }, [refetchCases, fetchTasks]);
 
     return (
@@ -225,7 +212,7 @@ export default function UserCasesPage() {
                     <div className="min-w-0">
                         <h1 className="text-[15px] font-extrabold text-gray-900 dark:text-white">پرونده‌ها</h1>
                         <p className="mt-0.5 text-[11.5px] text-gray-500 dark:text-gray-400">
-                            {loading ? "در حال بارگذاری..." : `${totalCount} پرونده و ${taskTotal} وظیفه`}
+                            {loading ? <CountSkeleton /> : `${totalCount} پرونده و ${taskTotal} وظیفه`}
                         </p>
                     </div>
                 </div>
@@ -242,7 +229,7 @@ export default function UserCasesPage() {
                             color: isDark ? "#d1d5db" : "#4b5563",
                         }}
                     >
-                        {loading || isFetching ? <Loader2 size={15} className="animate-spin" /> : <RefreshCw size={15} />}
+                        {loading || isFetching ? <Loader2 size={15} /> : <RefreshCw size={15} />}
                     </button>
 
                     <button
@@ -320,24 +307,13 @@ export default function UserCasesPage() {
                 onCaseUpdated={handleCaseUpdate}
                 employees={employees}
                 refreshKey={tasksRefreshKey}
-                onEditTask={handleEditTask}
+                customers={customers}
+                departments={departments}
+                onTaskUpdated={handleTaskUpdate}
                 onDeleteTask={handleDeleteTask}
                 deletingTaskId={deletingTaskId}
                 onTasksLoaded={syncCaseTasks}
             />
-
-            {editTaskModalOpen && editingTask && (
-                <EditTaskModal
-                    task={editingTask}
-                    customers={customers}
-                    departments={departments}
-                    onClose={() => {
-                        setEditTaskModalOpen(false);
-                        setEditingTask(null);
-                    }}
-                    onSuccess={handleTaskUpdate}
-                />
-            )}
         </div>
     );
 }

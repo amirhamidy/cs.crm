@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ListSkeleton } from "@/components/ui/skeletons";
+import { CountSkeleton, TaskCardSkeleton } from "@/components/ui/skeletons";
 import { AnimatePresence, m } from "framer-motion";
 import { Archive, ArrowRight, Ban, CheckCircle2, ClipboardList, Layers3, RefreshCw, ShoppingBag } from "lucide-react";
 import { Spinner as Loader2 } from "@/components/ui/Spinner";
@@ -47,7 +47,7 @@ export default function AdminArchivedTasksPage() {
 
                     <div className="min-w-0">
                         <h1 className="text-[15px] font-extrabold text-gray-900 dark:text-white">بایگانی تسک‌ها</h1>
-                        <p className="mt-0.5 text-[11.5px] text-gray-500 dark:text-gray-400">{loading ? "در حال بارگذاری..." : `${list.count} تسک`}</p>
+                        <p className="mt-0.5 text-[11.5px] text-gray-500 dark:text-gray-400">{loading ? <CountSkeleton /> : `${list.count} تسک`}</p>
                     </div>
                 </div>
 
@@ -70,7 +70,7 @@ export default function AdminArchivedTasksPage() {
                         style={{ background: isDark ? "rgba(255,255,255,0.05)" : "rgba(15,23,42,0.05)", color: isDark ? "#d1d5db" : "#4b5563" }}
                         title="بارگذاری مجدد"
                     >
-                        {loading ? <Loader2 size={15} className="animate-spin" /> : <RefreshCw size={15} />}
+                        {loading ? <Loader2 size={15} /> : <RefreshCw size={15} />}
                     </button>
                 </div>
             </div>
@@ -102,7 +102,7 @@ export default function AdminArchivedTasksPage() {
                 })}
             </div>
 
-            {loading && <ListSkeleton />}
+            {loading && <TaskCardSkeleton />}
 
             {!loading && !list.error && filteredTasks.length === 0 && (
                 <div className="flex flex-col items-center justify-center gap-2 py-16">

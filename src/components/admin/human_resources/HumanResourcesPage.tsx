@@ -10,7 +10,7 @@ import HumanResourceFileModal from "./Humanresourcefilemodal";
 import { Department, DepartmentEmployee, HumanResource, getDepartmentEmployees, getDepartments, getDocumentsPage, getEmployees, getMe, deleteDocument } from "./humanResourceApi";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import Pagination from "@/components/ui/Pagination";
-import CardSkeletonGrid from "@/components/ui/CardSkeletonGrid";
+import { CountSkeleton, HumanResourceCardSkeleton } from "@/components/ui/skeletons";
 
 const PAGE_SIZE = 12;
 
@@ -128,7 +128,7 @@ export default function HumanResourcesPage({ canManage = false }: { canManage?: 
                             <div className="flex items-center gap-2">
                                 <h1 className="text-[15px] font-extrabold text-gray-900 dark:text-white">منابع انسانی</h1>
                                 <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-indigo-50 px-1.5 text-[9.5px] font-extrabold text-indigo-500 dark:bg-indigo-500/10 dark:text-indigo-400">
-                                    {count}
+                                    {loading ? <CountSkeleton className="w-5" /> : count}
                                 </span>
                             </div>
                             <p className="mt-0.5 text-[10.5px] font-semibold text-gray-400">اطلاعات و فرآیندهای منابع انسانی</p>
@@ -171,7 +171,7 @@ export default function HumanResourcesPage({ canManage = false }: { canManage?: 
                 <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
                     <div className="rounded-xl bg-gray-50 px-3 py-2 dark:bg-white/[0.03]">
                         <p className="text-[9.5px] font-semibold text-gray-400">کل منابع</p>
-                        <p className="mt-0.5 text-[13px] font-extrabold text-gray-800 dark:text-white">{count}</p>
+                        <p className="mt-0.5 text-[13px] font-extrabold text-gray-800 dark:text-white">{loading ? <CountSkeleton className="w-5" /> : count}</p>
                     </div>
                     <div className="rounded-xl bg-indigo-50/70 px-3 py-2 dark:bg-indigo-500/[0.07]">
                         <p className="text-[9.5px] font-semibold text-indigo-400">قابل مشاهده</p>
@@ -189,7 +189,7 @@ export default function HumanResourcesPage({ canManage = false }: { canManage?: 
             </m.div>
 
             {loading ? (
-                <CardSkeletonGrid count={PAGE_SIZE} className={GRID_CLASS} />
+                <HumanResourceCardSkeleton count={PAGE_SIZE} className={GRID_CLASS} />
             ) : error ? (
                 <div className="flex min-h-[230px] flex-col items-center justify-center gap-3 rounded-[1.45rem] border border-rose-100 bg-white text-center dark:border-rose-500/20 dark:bg-[#111827]">
                     <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-rose-50 dark:bg-rose-500/10">

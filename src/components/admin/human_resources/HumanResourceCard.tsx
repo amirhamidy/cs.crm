@@ -3,7 +3,7 @@
 import { memo, useEffect, useMemo, useState } from "react";
 import { m } from "framer-motion";
 import { ExternalLink, FilePlus, FileText, GitBranch, Pencil, Trash2, Users, X } from "lucide-react";
-import { Spinner as Loader2 } from "@/components/ui/Spinner";
+import { SkeletonText } from "@/components/ui/Skeleton";
 import { Department, HumanResource, HumanResourceFile, deleteDocumentFile, getDocumentFiles } from "./humanResourceApi";
 import { extractError, gradientOf, initialOf } from "./hrUtils";
 
@@ -126,10 +126,7 @@ function HumanResourceCard({ document, departments, canManage, onEdit, onDelete,
 
                 <div className="mt-3">
                     {fetching && files.length === 0 ? (
-                        <div className="flex items-center gap-2 rounded-xl bg-gray-50 px-2.5 py-2 dark:bg-white/[0.035]">
-                            <Loader2 size={12} className="animate-spin text-indigo-500" />
-                            <span className="text-[10.5px] font-semibold text-gray-400">در حال دریافت فایل‌ها...</span>
-                        </div>
+                        <SkeletonText lines={2} />
                     ) : files.length > 0 ? (
                         <div className="space-y-1.5">
                             {files.map((f) => (

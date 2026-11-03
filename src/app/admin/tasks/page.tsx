@@ -11,7 +11,7 @@ import { apiRoutes } from "@/lib/apiRoutes";
 import { metaApi, tasksApi } from "@/lib/api";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import Pagination from "@/components/ui/Pagination";
-import CardSkeletonGrid from "@/components/ui/CardSkeletonGrid";
+import { CountSkeleton, TaskCardSkeleton } from "@/components/ui/skeletons";
 import { Task, TaskStatus } from "@/types/task";
 import { Department } from "@/types/department";
 import dynamic from "next/dynamic";
@@ -141,7 +141,7 @@ function AdminTasksPageContent() {
 
                     <div className="min-w-0">
                         <h1 className="text-[15px] font-extrabold text-gray-900 dark:text-white">وظایف در حال انجام</h1>
-                        <p className="mt-0.5 text-[11.5px] text-gray-500 dark:text-gray-400">{loading ? "در حال بارگذاری..." : `${list.count} وظیفه`}</p>
+                        <p className="mt-0.5 text-[11.5px] text-gray-500 dark:text-gray-400">{loading ? <CountSkeleton /> : `${list.count} وظیفه`}</p>
                     </div>
                 </div>
 
@@ -164,7 +164,7 @@ function AdminTasksPageContent() {
                         style={{ background: isDark ? "rgba(255,255,255,0.05)" : "rgba(15,23,42,0.05)", color: isDark ? "#d1d5db" : "#4b5563" }}
                         title="بارگذاری مجدد"
                     >
-                        {loading ? <Loader2 size={15} className="animate-spin" /> : <RefreshCw size={15} />}
+                        {loading ? <Loader2 size={15} /> : <RefreshCw size={15} />}
                     </button>
 
                     <button
@@ -194,7 +194,7 @@ function AdminTasksPageContent() {
                 className="w-full rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 text-[12.5px] text-gray-700 outline-none transition-colors focus:border-indigo-400 dark:border-white/10 dark:bg-white/[0.03] dark:text-gray-200"
             />
 
-            {loading && <CardSkeletonGrid count={6} />}
+            {loading && <TaskCardSkeleton count={6} />}
 
             {!loading && tasks.length === 0 && (
                 <div className="flex flex-col items-center justify-center gap-2 py-16">

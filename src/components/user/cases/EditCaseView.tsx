@@ -7,6 +7,7 @@ import axiosInstance from "@/lib/axiosInstance";
 import type { CaseItem } from "@/types/case";
 
 import { BusyContent } from "@/components/ui/Button";
+
 interface EditCaseViewProps {
     caseItem: CaseItem;
     onSuccess: (updatedCase: CaseItem) => void;
@@ -123,72 +124,72 @@ export default function EditCaseView({ caseItem, onSuccess, onClose }: EditCaseV
 
     return (
         <div dir="rtl">
-                        <form onSubmit={handleSubmit} className="flex flex-col gap-4 pt-2">
-                            <FloatingInput
-                                label="عنوان پرونده"
-                                id="edit_case_title"
-                                value={title}
-                                onChange={(e) => {
-                                    setTitle(e.target.value);
-                                    setError(null);
-                                }}
-                                disabled={submitting || success}
-                                dir="rtl"
-                            />
+            <form onSubmit={handleSubmit} className="flex flex-col gap-4 pt-2">
+                <FloatingInput
+                    label="عنوان پرونده"
+                    id="edit_case_title"
+                    value={title}
+                    onChange={(e) => {
+                        setTitle(e.target.value);
+                        setError(null);
+                    }}
+                    disabled={submitting || success}
+                    dir="rtl"
+                />
 
-                            <FloatingTextarea
-                                label="توضیحات"
-                                id="edit_case_description"
-                                value={description}
-                                onChange={(e) => {
-                                    setDescription(e.target.value);
-                                    setError(null);
-                                }}
-                                disabled={submitting || success}
-                                dir="rtl"
-                            />
+                <FloatingTextarea
+                    label="توضیحات"
+                    id="edit_case_description"
+                    value={description}
+                    onChange={(e) => {
+                        setDescription(e.target.value);
+                        setError(null);
+                    }}
+                    disabled={submitting || success}
+                    dir="rtl"
+                />
 
-                            <AnimatePresence>
-                                {error && (
-                                    <m.div
-                                        initial={{ opacity: 0, y: 6 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        exit={{ opacity: 0, y: 4 }}
-                                        className="flex items-center gap-2 rounded-2xl bg-red-50 px-3.5 py-2.5 text-xs text-red-600 dark:bg-red-500/10 dark:text-red-400"
-                                    >
-                                        <AlertCircle size={14} className="shrink-0" />
-                                        <span className="flex-1 font-medium">{error}</span>
-                                    </m.div>
-                                )}
-                            </AnimatePresence>
+                <AnimatePresence>
+                    {error && (
+                        <m.div
+                            initial={{ opacity: 0, y: 6 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: 4 }}
+                            className="flex items-center gap-2 rounded-2xl bg-red-50 px-3.5 py-2.5 text-xs text-red-600 dark:bg-red-500/10 dark:text-red-400"
+                        >
+                            <AlertCircle size={14} className="shrink-0" />
+                            <span className="flex-1 font-medium">{error}</span>
+                        </m.div>
+                    )}
+                </AnimatePresence>
 
-                            <AnimatePresence mode="wait">
-                                {success ? (
-                                    <m.div
-                                        key="success"
-                                        initial={{ opacity: 0, scale: 0.9 }}
-                                        animate={{ opacity: 1, scale: 1 }}
-                                        exit={{ opacity: 0, scale: 0.9 }}
-                                        className="flex items-center justify-center gap-2 rounded-2xl bg-green-50 py-3 text-sm font-medium text-green-600 dark:bg-green-500/10 dark:text-green-400"
-                                    >
-                                        <CheckCircle2 size={16} />
-                                        تغییرات با موفقیت ذخیره شد
-                                    </m.div>
-                                ) : (
-                                    <m.button
-                                        key="submit"
-                                        type="submit"
-                                        disabled={!canSubmit}
-                                        whileTap={{ scale: 0.97 }}
-                                        className="relative flex items-center justify-center rounded-full bg-blue-600 py-3 text-sm font-bold text-white transition-colors hover:bg-blue-500 disabled:opacity-50"
-                                    >
-                                        <BusyContent busy={submitting}>
-                                            ذخیره تغییرات
-                                        </BusyContent>
-                                    </m.button>
-                                )}
-                            </AnimatePresence>
-                        </form>
+                <AnimatePresence mode="wait">
+                    {success ? (
+                        <m.div
+                            key="success"
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.9 }}
+                            className="flex items-center justify-center gap-2 rounded-2xl bg-green-50 py-3 text-sm font-medium text-green-600 dark:bg-green-500/10 dark:text-green-400"
+                        >
+                            <CheckCircle2 size={16} />
+                            تغییرات با موفقیت ذخیره شد
+                        </m.div>
+                    ) : (
+                        <m.button
+                            key="submit"
+                            type="submit"
+                            disabled={!canSubmit}
+                            whileTap={{ scale: 0.97 }}
+                            className="relative flex items-center justify-center rounded-full bg-blue-600 py-3 text-sm font-bold text-white transition-colors hover:bg-blue-500 disabled:opacity-50"
+                        >
+                            <BusyContent busy={submitting}>
+                                ذخیره تغییرات
+                            </BusyContent>
+                        </m.button>
+                    )}
+                </AnimatePresence>
+            </form>
         </div>
     );
 }

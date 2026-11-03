@@ -4,49 +4,22 @@ import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import StatsCard from "@/components/charts/StatsCard";
 import UsersCard from "@/components/charts/UsersCard";
+import { ChartSkeleton, DashboardStatsSkeleton } from "@/components/ui/skeletons";
 
 
 const SalesChart = dynamic(() => import("@/components/charts/SalesChart"), {
     ssr: false,
-    loading: () => null,
+    loading: () => <ChartSkeleton />,
 });
 const CategoryChart = dynamic(() => import("@/components/charts/CategoryChart"), {
     ssr: false,
-    loading: () => null,
+    loading: () => <ChartSkeleton />,
 });
 const VisitsChart = dynamic(() => import("@/components/charts/VisitsChart"), {
     ssr: false,
-    loading: () => null,
+    loading: () => <ChartSkeleton />,
 });
 import { DashboardForbiddenError, getCancelledTasksByDepartment, getCustomerSourcesData, getSalesChartData, getSummary, getTopUsers } from "@/lib/dashboard";
-
-export function StatsSkeleton() {
-    return (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {[0, 1, 2].map((i) => (
-                <div
-                    key={i}
-                    className="animate-pulse rounded-2xl border border-black/5 bg-black/[0.02] p-4 dark:border-white/5 dark:bg-white/[0.02]"
-                >
-                    <div className="flex items-start justify-between gap-2">
-                        <div className="flex-1 space-y-3">
-                            <div className="h-3 w-24 rounded-full bg-black/10 dark:bg-white/10" />
-                            <div className="h-5 w-32 rounded-full bg-black/10 dark:bg-white/10" />
-                            <div className="h-5 w-20 rounded-full bg-black/10 dark:bg-white/10" />
-                        </div>
-                        <div className="h-10 w-10 rounded-xl bg-black/10 dark:bg-white/10" />
-                    </div>
-                </div>
-            ))}
-        </div>
-    );
-}
-
-export function ChartSkeleton() {
-    return (
-        <div className="h-[300px] animate-pulse rounded-2xl border border-gray-100 bg-gray-50 dark:border-white/5 dark:bg-gray-900/40" />
-    );
-}
 
 function SectionError({
     title,
@@ -102,7 +75,7 @@ function useSection<T>(loader: () => Promise<T>, label: string): LoadState<T> {
 export function StatsSection() {
     const state = useSection(getSummary, "stats section");
 
-    if (state.status === "loading") return <StatsSkeleton />;
+    if (state.status === "loading") return <DashboardStatsSkeleton />;
     if (state.status === "forbidden") return null;
     if (state.status === "error") {
         return <SectionError title="آمار کلی" className="h-28" />;

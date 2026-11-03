@@ -25,7 +25,7 @@ const CreateNoCaseTaskModal = dynamic(() => import("@/components/tasks/CreateNoC
     ssr: false,
     loading: () => null,
 });
-const EditTaskModal = dynamic(() => import("@/components/user/tasks/EditTaskModal"), {
+const EditTaskModal = dynamic(() => import("@/components/tasks/EditTaskModal"), {
     ssr: false,
     loading: () => null,
 });

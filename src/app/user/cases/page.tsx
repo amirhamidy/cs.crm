@@ -21,10 +21,6 @@ const CaseActionsModal = dynamic(() => import("@/components/cases/CaseActionsMod
 });
 
 
-const EditTaskModal = dynamic(() => import("@/components/tasks/EditTaskModal"), {
-    ssr: false,
-    loading: () => null,
-});
 import Pagination from "@/components/ui/Pagination";
 import { CaseCardSkeleton } from "@/components/ui/skeletons";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
@@ -46,8 +42,6 @@ export default function UserCasesPage() {
     const [actionView, setActionView] = useState<CaseView>("tasks");
     const [actionOpen, setActionOpen] = useState(false);
     const [deletingId, setDeletingId] = useState<number | null>(null);
-    const [editingTask, setEditingTask] = useState<TaskItem | null>(null);
-    const [editTaskModalOpen, setEditTaskModalOpen] = useState(false);
     const [deletingTaskId, setDeletingTaskId] = useState<number | null>(null);
     const [tasksRefreshKey, setTasksRefreshKey] = useState(0);
 
@@ -178,17 +172,10 @@ export default function UserCasesPage() {
         }
     }, []);
 
-    const handleEditTask = useCallback((task: TaskItem) => {
-        setEditingTask(task);
-        setEditTaskModalOpen(true);
-    }, []);
-
     const handleTaskUpdate = useCallback(() => {
         tasksApi.invalidate();
         refetchCases();
         setTasksRefreshKey((k) => k + 1);
-        setEditTaskModalOpen(false);
-        setEditingTask(null);
     }, [refetchCases]);
 
     return (
@@ -293,24 +280,13 @@ export default function UserCasesPage() {
                 onCaseUpdated={handleCaseUpdate}
                 employees={employees}
                 refreshKey={tasksRefreshKey}
-                onEditTask={handleEditTask}
+                customers={customers}
+                departments={departments}
+                onTaskUpdated={handleTaskUpdate}
                 onDeleteTask={handleDeleteTask}
                 deletingTaskId={deletingTaskId}
                 onTasksLoaded={syncCaseTasks}
             />
-
-            {editTaskModalOpen && editingTask && (
-                <EditTaskModal
-                    task={editingTask}
-                    customers={customers}
-                    departments={departments}
-                    onClose={() => {
-                        setEditTaskModalOpen(false);
-                        setEditingTask(null);
-                    }}
-                    onSuccess={handleTaskUpdate}
-                />
-            )}
         </div>
     );
 }

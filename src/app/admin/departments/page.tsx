@@ -5,8 +5,9 @@ import { m, AnimatePresence, useReducedMotion } from "framer-motion";
 import { Backdrop } from "@/components/ui/Backdrop";
 import { panelMotion } from "@/lib/motion";
 import { useTheme } from "next-themes";
-import { Plus, Building2, Loader, AlertCircle, Check, X, Pencil, CheckCircle2, RefreshCw } from "lucide-react";
+import { Plus, Building2, AlertCircle, Check, X, Pencil, CheckCircle2, RefreshCw } from "lucide-react";
 import { Spinner as Loader2 } from "@/components/ui/Spinner";
+import { CountSkeleton, DepartmentCardSkeleton } from "@/components/ui/skeletons";
 import { useDepartmentStore } from "@/components/admin/departments/departmentStore";
 import { Department } from "@/components/admin/departments/types";
 import DepartmentCard from "@/components/admin/departments/DepartmentCard";
@@ -233,20 +234,6 @@ export default function DepartmentsPage() {
         return departments;
     }, [departments]);
 
-    if (loading && departments.length === 0) {
-        return (
-            <div className="flex flex-col items-center justify-center gap-3 py-16">
-                <Loader
-                    size={22}
-                    className="text-indigo-500 animate-spin"
-                />
-
-                <p className="text-[12.5px] text-gray-400 dark:text-gray-500">
-                    در حال دریافت لیست دپارتمان‌ها...
-                </p>
-            </div>
-        );
-    }
 
     if (error && departments.length === 0) {
         return (
@@ -483,7 +470,7 @@ export default function DepartmentsPage() {
 
                             <p className="mt-0.5 text-[11.5px] text-gray-500 dark:text-gray-400">
                                 {loading
-                                    ? "در حال بارگذاری..."
+                                    ? <CountSkeleton />
                                     : `${departments.length} دپارتمان فعال در سیستم`}
                             </p>
                         </div>
@@ -512,7 +499,7 @@ export default function DepartmentsPage() {
                             type="button"
                         >
                             {loading ? (
-                                <Loader2 size={15} className="animate-spin" />
+                                <Loader2 size={15} />
                             ) : (
                                 <RefreshCw size={15} />
                             )}
@@ -531,18 +518,7 @@ export default function DepartmentsPage() {
                     </div>
                 </div>
 
-                {loading && departments.length === 0 && (
-                    <div className="flex flex-col items-center justify-center gap-3 py-16">
-                        <Loader
-                            size={24}
-                            className="animate-spin text-indigo-500"
-                        />
-
-                        <p className="text-[12.5px] text-gray-500 dark:text-gray-400">
-                            در حال دریافت لیست دپارتمان‌ها...
-                        </p>
-                    </div>
-                )}
+                {loading && departments.length === 0 && <DepartmentCardSkeleton />}
 
                 {!loading &&
                     filteredDepartments.length === 0 && (
