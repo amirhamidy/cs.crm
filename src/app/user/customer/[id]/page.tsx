@@ -1,5 +1,5 @@
-import CustomerProfilePage from "@/components/user/customer/CustomerProfilePage";
+import CustomerProfilePage from "@/components/crm/CustomerProfilePage";
 
 export default function Page() {
-  return <CustomerProfilePage />;
+    return <CustomerProfilePage basePath="/user" />;
 }

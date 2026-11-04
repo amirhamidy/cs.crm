@@ -120,9 +120,11 @@ function ReportBody({ report }: { report: CaseReport }) {
 
             <section>
                 <SectionTitle icon={<CheckCircle2 size={16} />} title="خلاصه" />
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                     <StatBox label="وظایف" value={formatNumber(summary.tasks_count)} />
+                    <StatBox label="فروخته‌شده" value={formatNumber(summary.tasks_by_status?.sold ?? 0)} />
                     <StatBox label="مدت کل" value={formatDuration(summary.total_duration_seconds)} />
+                    <StatBox label="مراحل با تأخیر" value={formatNumber(summary.overdue_steps)} />
                 </div>
             </section>
 

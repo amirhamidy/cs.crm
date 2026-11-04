@@ -7,7 +7,6 @@ import { panelMotion } from "@/lib/motion";
 import { CalendarDays, MessageCircle, Sparkles, Star, UserRound, X } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
 
-import CustomerComments from "./CustomerComments";
 import { ListSkeleton } from "@/components/ui/skeletons";
 interface ScoreItem {
     id: number;
@@ -286,8 +285,6 @@ export default function CustomerScoresModal({
                                     ))}
                                 </div>
                             )}
-
-                            <CustomerComments customerId={customerId} />
                         </div>
                     </m.div>
                 </div>

@@ -32,8 +32,6 @@ export type {
 } from "./internalTasks";
 export { fetchStatusPage, fetchStatusCount, listAllByStatus, isStatusFilterServerSide } from "./statusPage";
 
-export { salesApi } from "./sales";
-export type { ProductListParams } from "./sales";
 
-export { rankingApi } from "./ranking";
-export { commentsApi } from "./comments";
+export { rankingApi, commentsApi, casePathApi, productsApi, salesApi } from "./crm";
+export type { RankingParams } from "./crm";

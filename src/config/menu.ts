@@ -1,4 +1,4 @@
-import { Home, Users, ClipboardList, Building2, FolderKanban, CalendarCheck2, Ticket, Archive, MessageSquareText, UserRound, ListTodo, BarChart3, Trophy, ShoppingBag, Package, Crown } from "lucide-react";
+import { Home, Users, ClipboardList, Building2, FolderKanban, CalendarCheck2, Ticket, Archive, MessageSquareText, UserRound, ListTodo, BarChart3, Trophy, ShoppingBag } from "lucide-react";
 
 import { LucideIcon } from "lucide-react";
 
@@ -52,22 +52,12 @@ export const adminMenuItems: MenuItem[] = [
   {
     icon: Trophy,
     label: "رتبه‌بندی مشتریان",
-    href: "/admin/ranking",
+    href: "/admin/customer-ranking",
   },
   {
     icon: ShoppingBag,
-    label: "فروش‌ها",
+    label: "فروش",
     href: "/admin/sales",
-  },
-  {
-    icon: Crown,
-    label: "برترین مشتریان فروش",
-    href: "/admin/reports/top-customers",
-  },
-  {
-    icon: Package,
-    label: "محصولات",
-    href: "/admin/products",
   },
   {
     icon: Users,
@@ -155,17 +145,12 @@ export const userMenuItems: MenuItem[] = [
   {
     icon: Trophy,
     label: "رتبه‌بندی مشتریان",
-    href: "/user/ranking",
+    href: "/user/customer-ranking",
   },
   {
     icon: ShoppingBag,
-    label: "فروش‌ها",
+    label: "فروش",
     href: "/user/sales",
-  },
-  {
-    icon: Crown,
-    label: "برترین مشتریان فروش",
-    href: "/user/reports/top-customers",
   },
   {
     icon: CalendarCheck2,

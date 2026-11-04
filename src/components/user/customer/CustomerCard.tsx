@@ -3,7 +3,8 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { m, AnimatePresence, animate } from "framer-motion";
 import { useTheme } from "next-themes";
-import { Phone, Building2, Trash2, SquarePen, User, CalendarDays, Star, MessageCircle, MoreVertical, AlertCircle } from "lucide-react";
+import { Phone, Building2, Trash2, SquarePen, User, CalendarDays, Star, MessageCircle, MoreVertical, AlertCircle, FolderOpen } from "lucide-react";
+import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import type { Customer } from "@/types/customer";
 import { useEmployeeDirectory } from "@/hooks/useEmployeeDirectory";
@@ -262,7 +263,9 @@ export default function CustomerCard({
     const [showEdit, setShowEdit] = useState(false);
     const [showScores, setShowScores] = useState(false);
     const [showMobileSheet, setShowMobileSheet] = useState(false);
+    const router = useRouter();
     const userType = useAuthStore((state) => state.userType);
+    const profileHref = `/${userType === 1 ? "admin" : "user"}/customer/${customer.id}/`;
     const [tooltipVisible, setTooltipVisible] = useState(false);
 
     const [scoresPreview, setScoresPreview] = useState<{
@@ -447,6 +450,18 @@ export default function CustomerCard({
                 e.stopPropagation();
             },
             title: "تماس",
+        },
+        {
+            key: "profile",
+            icon: <FolderOpen size={16} />,
+            offset: { x: 0, y: 54 },
+            delay: 0.32,
+            disabled: false,
+            onClick: (e: React.MouseEvent) => {
+                e.stopPropagation();
+                router.push(profileHref);
+            },
+            title: "پرونده مشتری",
         },
     ];
 
@@ -896,6 +911,21 @@ export default function CustomerCard({
                                     <span>امتیازها و نظرات</span>
                                 </button>
 
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setShowMobileSheet(false);
+                                        router.push(profileHref);
+                                    }}
+                                    className="flex w-full items-center gap-3 rounded-2xl p-3.5 text-[13.5px] font-bold text-indigo-600 transition-all active:scale-[0.98] dark:text-indigo-300"
+                                    style={{
+                                        background: isDark ? "rgba(99,102,241,0.14)" : "rgba(99,102,241,0.08)",
+                                        border: `1px solid ${isDark ? "rgba(99,102,241,0.22)" : "rgba(99,102,241,0.14)"}`,
+                                    }}
+                                >
+                                    <FolderOpen size={18} />
+                                    <span>پرونده مشتری (فروش، نظرات، مسیر)</span>
+                                </button>
 
                                 <div className="flex flex-col gap-1.5 pt-1">
                                     <button

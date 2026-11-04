@@ -1,19 +1,18 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { m } from "framer-motion";
 
 import { AlarmClock, ArrowLeftCircle, ArrowLeftRight, ArrowRightCircle, Building2, CalendarDays, CheckCircle2, Clock3, History, Layers3, MessageSquareText, RotateCcw, ShoppingBag, XCircle, FileText, Users } from "lucide-react";
 
 import axiosInstance from "@/lib/axiosInstance";
-import { tasksApi, casesApi, customersApi } from "@/lib/api";
+import { tasksApi, casesApi, customersApi, salesApi } from "@/lib/api";
 
 import TaskCaseDescriptionModal from "./TaskCaseDescriptionModal";
 import TaskNotesModal from "./TaskNotesModal";
 import TaskActionModal from "./TaskActionModal";
-import SaleRegistrationModal, { type SaleSubmitData } from "./SaleRegistrationModal";
-import { salesApi } from "@/lib/api/sales";
+import SoldSaleModal, { type SoldSaleData } from "./SoldSaleModal";
 import TaskLogsModal from "./TaskLogsModal";
 import TaskTransferModal from "./TaskTransferModal";
 import ActionBtn from "./ActionBtn";
@@ -197,10 +196,7 @@ function deadlineState(deadline?: string | null) {
 function parseError(error: any) {
     const data = error?.response?.data;
 
-    if (!data) {
-        const message = error instanceof Error ? error.message : "";
-        return !error?.response && message ? message : "خطا در ثبت تغییرات";
-    }
+    if (!data) return "خطا در ثبت تغییرات";
 
     if (typeof data === "string") return data;
 
@@ -239,7 +235,6 @@ export default function UserTaskCard({
     const [notesOpen, setNotesOpen] = useState(false);
     const [caseDescOpen, setCaseDescOpen] = useState(false);
     const [submitting, setSubmitting] = useState(false);
-    const saleRegisteredRef = useRef(false);
     const [blockMsg, setBlockMsg] = useState<string | null>(null);
     const [latestLog, setLatestLog] = useState<LatestLog | null>(null);
     const [customerName, setCustomerName] = useState(
@@ -466,31 +461,31 @@ export default function UserTaskCard({
         (onTransferred ?? onUpdated)(merged);
     }
 
-    async function submitSale(data: SaleSubmitData) {
+    async function submitSale(data: SoldSaleData) {
         setSubmitting(true);
         setBlockMsg(null);
 
-        try {
-            if (!saleRegisteredRef.current) {
-                const caseData = (await casesApi.get(Number(ext.case))) as unknown as {
-                    customer?: number;
-                };
-                if (!caseData.customer) {
-                    throw new Error("مشتری این پرونده پیدا نشد.");
-                }
+        let createdSaleId: number | null = null;
 
-                await salesApi.create({
-                    customer: caseData.customer,
-                    case: Number(ext.case),
-                    product: data.product,
-                    quantity_kg: data.quantity_kg,
-                    unit_price: data.unit_price,
-                    sale_date: data.sale_date,
-                    description: data.description || undefined,
-                });
-                // Guard against duplicate sales if mark-as-sold fails and the user retries.
-                saleRegisteredRef.current = true;
+        try {
+            const caseData = (await casesApi.get(Number(ext.case))) as unknown as {
+                customer?: number;
+            };
+
+            if (!caseData.customer) {
+                throw new Error("مشتری این پرونده مشخص نیست.");
             }
+
+            const sale = await salesApi.create({
+                customer: caseData.customer,
+                case: Number(ext.case),
+                product: data.product,
+                quantity_kg: data.quantity_kg,
+                unit_price: data.unit_price,
+                sale_date: data.sale_date,
+                description: data.description,
+            });
+            createdSaleId = sale.id;
 
             const soldForm = new FormData();
 
@@ -515,10 +510,14 @@ export default function UserTaskCard({
                 status: "sold",
             });
 
-            saleRegisteredRef.current = false;
             fetchLog();
             setOpenModal(null);
         } catch (error) {
+            // اگر فروش ثبت شد ولی وضعیت وظیفه عوض نشد، فروش را برمی‌گردانیم
+            // تا با تلاش مجدد فروش تکراری ساخته نشود.
+            if (createdSaleId != null) {
+                await salesApi.remove(createdSaleId).catch(() => undefined);
+            }
             setBlockMsg(parseError(error));
             throw error;
         } finally {
@@ -865,9 +864,10 @@ export default function UserTaskCard({
                 })}
 
             {hasCase && (
-                <SaleRegistrationModal
+                <SoldSaleModal
                     isOpen={openModal === "sold"}
                     onClose={() => setOpenModal(null)}
+                    customerName={customerName}
                     onSubmit={submitSale}
                     submitting={submitting}
                 />

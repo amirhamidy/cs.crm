@@ -9,7 +9,6 @@ import { useLogout } from "@/hooks/useLogout";
 import { FloatingInput } from "@/components/login/login";
 
 import { BusyContent } from "@/components/ui/Button";
-
 export default function LoginClient() {
     const [username, setUsername] = useState("");
     const [password, setPassword] = useState("");
@@ -17,9 +16,8 @@ export default function LoginClient() {
     const [showPassword, setShowPassword] = useState(false);
     const [typedSlogan, setTypedSlogan] = useState("");
 
-    const { login: staffLogin, loading: staffLoading, error: staffError } = useLogin();
+    const { login: staffLogin, loading, error: staffError } = useLogin();
     const { silentLogout } = useLogout();
-    const loading = staffLoading;
 
     useEffect(() => {
         if (staffError) setErrorMsg(staffError);
@@ -62,7 +60,7 @@ export default function LoginClient() {
                     <div>
                         <p className="text-sm font-bold text-gray-800">{typedSlogan}</p>
                         <span className="mt-1 block h-4 text-[11px] text-gray-400">
-                            ورود به سامانه مدیریت
+                            ورود به سامانه مدیریت رادکو
                         </span>
                     </div>
                     <Image src="/radco.png" alt="رادکو" width={100} height={100} priority className="rounded-xl object-cover" />
@@ -73,7 +71,7 @@ export default function LoginClient() {
                         label="نام کاربری"
                         id="staff-username"
                         type="text"
-                        autoComplete="new-password" name="crm-staff-username"
+                        autoComplete="new-password" name="radco-staff-username"
                         value={username}
                         onChange={(e) => setUsername(e.target.value)}
                     />
@@ -83,7 +81,7 @@ export default function LoginClient() {
                             label="رمز عبور"
                             id="staff-password"
                             type={showPassword ? "text" : "password"}
-                            autoComplete="new-password" name="crm-staff-password"
+                            autoComplete="new-password" name="radco-staff-password"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                             className="pl-12"
@@ -108,7 +106,7 @@ export default function LoginClient() {
                         type="submit"
                         disabled={loading}
                         whileTap={loading ? undefined : { scale: 0.98 }}
-                        className={`relative flex min-h-11 items-center justify-center gap-2 rounded-full py-3 text-sm font-bold text-white transition-colors disabled:cursor-not-allowed disabled:opacity-60 bg-blue-600 hover:bg-blue-500`}
+                        className="relative flex min-h-11 items-center justify-center gap-2 rounded-full bg-blue-600 py-3 text-sm font-bold text-white transition-colors hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-60"
                     >
                         <BusyContent busy={loading}>
                             ورود به پنل
@@ -117,7 +115,7 @@ export default function LoginClient() {
                 </form>
 
                 <p className="mt-6 text-center text-[11px] leading-5 text-gray-400">
-                    ورود ویژه کاربران و مدیران سامانه
+                    ورود ویژه کاربران و مدیران سامانه رادکو
                 </p>
             </m.div>
         </div>
