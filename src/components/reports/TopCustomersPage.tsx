@@ -72,7 +72,7 @@ export default function TopCustomersPage() {
       setRows(res.results);
       setBy(res.by);
     } catch (e) {
-      const fe = extractFieldErrors(e);
+      const fe = extractFieldErrors(e, ["by", "limit", "product", "date_from", "date_to"]);
       if (fe && Object.keys(fe).length) setFieldErrors(fe);
       setError(apiMessage(e, "دریافت گزارش با خطا مواجه شد"));
     } finally {

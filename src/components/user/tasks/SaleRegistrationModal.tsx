@@ -190,7 +190,7 @@ export default function SaleRegistrationModal({ isOpen, onClose, onSubmit, submi
                 <div className="fixed inset-0 z-[9999] flex items-center justify-center px-4">
                     <Backdrop onClick={onClose} />
                     <m.div
-                        {...panelMotion(false, reduced)}
+                        {...panelMotion(false, !!reduced)}
                         dir="rtl"
                         className="relative flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-[0_24px_70px_rgba(0,0,0,0.22)] dark:border-white/[0.06] dark:bg-[#111827]"
                     >

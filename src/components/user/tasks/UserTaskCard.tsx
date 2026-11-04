@@ -198,9 +198,8 @@ function parseError(error: any) {
     const data = error?.response?.data;
 
     if (!data) {
-        return error instanceof Error && !error?.response && error.message
-            ? error.message
-            : "خطا در ثبت تغییرات";
+        const message = error instanceof Error ? error.message : "";
+        return !error?.response && message ? message : "خطا در ثبت تغییرات";
     }
 
     if (typeof data === "string") return data;
