@@ -66,6 +66,7 @@ const SWEEP_COLORS: Record<string, string> = {
     edit: "linear-gradient(90deg, #3b82f6, #8b5cf6)",
     scores: "#eab308",
     call: "#22c55e",
+    profile: "linear-gradient(90deg, #6366f1, #8b5cf6)",
 };
 
 function SweepButton({
@@ -403,7 +404,7 @@ export default function CustomerCard({
         {
             key: "delete",
             icon: <Trash2 size={16} />,
-            offset: { x: 36, y: -22 },
+            offset: { x: 49, y: -24.5 },
             delay: 0,
             disabled: hasActiveCase,
             onClick: (e: React.MouseEvent) => {
@@ -418,7 +419,7 @@ export default function CustomerCard({
         {
             key: "edit",
             icon: <SquarePen size={16} />,
-            offset: { x: -36, y: -22 },
+            offset: { x: -49, y: -24.5 },
             delay: 0.08,
             disabled: false,
             onClick: (e: React.MouseEvent) => {
@@ -430,7 +431,7 @@ export default function CustomerCard({
         {
             key: "scores",
             icon: <MessageCircle size={16} />,
-            offset: { x: 36, y: 30 },
+            offset: { x: 0, y: -24.5 },
             delay: 0.16,
             disabled: false,
             onClick: (e: React.MouseEvent) => {
@@ -442,7 +443,7 @@ export default function CustomerCard({
         {
             key: "call",
             icon: <Phone size={16} />,
-            offset: { x: -36, y: 30 },
+            offset: { x: -24.5, y: 24.5 },
             delay: 0.24,
             disabled: false,
             href: phoneHref,
@@ -454,7 +455,7 @@ export default function CustomerCard({
         {
             key: "profile",
             icon: <FolderOpen size={16} />,
-            offset: { x: 0, y: 54 },
+            offset: { x: 24.5, y: 24.5 },
             delay: 0.32,
             disabled: false,
             onClick: (e: React.MouseEvent) => {
