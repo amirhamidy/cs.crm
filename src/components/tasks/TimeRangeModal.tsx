@@ -200,7 +200,7 @@ export default function TimeRangeModal({
         setViewJm(cur.jm);
     }, [activeField]);
 
-    if (embedded ? !open : typeof document === "undefined") return null;
+    if (!open || (!embedded && typeof document === "undefined")) return null;
 
     const current = activeField === "start" ? start : deadline;
     const setCurrent = activeField === "start" ? setStart : setDeadline;

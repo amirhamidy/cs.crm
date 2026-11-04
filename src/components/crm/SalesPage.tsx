@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { EmptyState, ErrorState, PageHeader, SearchInput } from "@/components/ui/Feedback";
 import Pagination from "@/components/ui/Pagination";
-import { Select } from "@/components/ui/Select";
+import { NiceSelect } from "@/components/ui/NiceSelect";
 import { ListSkeleton, TableSkeleton } from "@/components/ui/skeletons";
 import { toast } from "@/components/notifications/toast";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
@@ -101,16 +101,16 @@ function SalesList() {
           onChange={list.setSearch}
           placeholder="مشتری، شرکت، کالا..."
           className="xl:col-span-1"
+          hideIcon
         />
-        <Select
-          aria-label="کالا"
+        <NiceSelect
+          label="کالا"
           options={[
-            { value: "", label: "همه کالاها" },
-            ...products.map((p) => ({ value: String(p.id), label: p.name })),
+            { id: 0, label: "همه کالاها" },
+            ...products.map((p) => ({ id: p.id, label: p.name })),
           ]}
-          value={filters.product != null ? String(filters.product) : ""}
-          onChange={(v) => list.setFilters({ product: v ? Number(v) : undefined })}
-          searchable={products.length > 8}
+          value={filters.product ?? 0}
+          onChange={(v) => list.setFilters({ product: v || undefined })}
         />
         <JalaliDateField
           label="از تاریخ"
@@ -253,31 +253,31 @@ function TopCustomers({ basePath }: { basePath: "/admin" | "/user" }) {
   return (
     <div className="flex flex-col gap-4">
       <div className={`${CARD} grid grid-cols-1 gap-3 p-4 md:grid-cols-2 xl:grid-cols-5`}>
-        <Select
-          aria-label="مرتب‌سازی بر اساس"
+        <NiceSelect
+          label="مرتب‌سازی بر اساس"
           options={[
-            { value: "amount", label: "بر اساس مبلغ فروش" },
-            { value: "quantity", label: "بر اساس مقدار (کیلوگرم)" },
+            { id: 1, label: "بر اساس مبلغ فروش" },
+            { id: 2, label: "بر اساس مقدار (کیلوگرم)" },
           ]}
-          value={by}
-          onChange={(v) => setBy(v as "amount" | "quantity")}
+          value={by === "amount" ? 1 : 2}
+          onChange={(v) => setBy(v === 1 ? "amount" : "quantity")}
         />
-        <Select
-          aria-label="کالا"
+        <NiceSelect
+          label="کالا"
           options={[
-            { value: "", label: "همه کالاها" },
-            ...products.map((p) => ({ value: String(p.id), label: p.name })),
+            { id: 0, label: "همه کالاها" },
+            ...products.map((p) => ({ id: p.id, label: p.name })),
           ]}
-          value={product != null ? String(product) : ""}
-          onChange={(v) => setProduct(v ? Number(v) : undefined)}
+          value={product ?? 0}
+          onChange={(v) => setProduct(v || undefined)}
         />
         <JalaliDateField label="از تاریخ" clearable value={from} onChange={setFrom} />
         <JalaliDateField label="تا تاریخ" clearable value={to} onChange={setTo} />
-        <Select
-          aria-label="تعداد نمایش"
-          options={[10, 20, 50, 100].map((n) => ({ value: String(n), label: `${n.toLocaleString("fa-IR")} مشتری برتر` }))}
-          value={String(limit)}
-          onChange={(v) => setLimit(Number(v))}
+        <NiceSelect
+          label="تعداد نمایش"
+          options={[10, 20, 50, 100].map((n) => ({ id: n, label: `${n.toLocaleString("fa-IR")} مشتری برتر` }))}
+          value={limit}
+          onChange={(v) => setLimit(v)}
         />
       </div>
 
