@@ -139,3 +139,28 @@ export function flattenApiErrors(
     fallback
   );
 }
+
+/**
+ * Maps a DRF 400 body `{field: ["message"]}` to `{field: "message"}`.
+ * Fields not in `fields` (and `detail` / `non_field_errors`) go to `general`.
+ */
+export function extractFieldErrors(
+  error: unknown,
+  fields: readonly string[],
+  fallback = "انجام عملیات با خطا مواجه شد",
+): Record<string, string> {
+  const data = (error as { response?: { data?: unknown } })?.response?.data;
+  const out: Record<string, string> = {};
+  if (!data || typeof data !== "object") {
+    out.general = fallback;
+    return out;
+  }
+  for (const [key, value] of Object.entries(data as Record<string, unknown>)) {
+    const first = Array.isArray(value) ? value[0] : value;
+    if (typeof first !== "string") continue;
+    if (fields.includes(key)) out[key] = first;
+    else out.general = out.general ? `${out.general}، ${first}` : first;
+  }
+  if (!Object.keys(out).length) out.general = fallback;
+  return out;
+}

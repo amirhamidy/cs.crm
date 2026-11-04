@@ -1,4 +1,4 @@
-import { Home, Users, ClipboardList, Building2, FolderKanban, CalendarCheck2, Ticket, Archive, MessageSquareText, UserRound, ListTodo, BarChart3, Boxes, ShoppingCart, ShieldCheck, Factory, ClipboardCheck, KeyRound } from "lucide-react";
+import { Home, Users, ClipboardList, Building2, FolderKanban, CalendarCheck2, Ticket, Archive, MessageSquareText, UserRound, ListTodo, BarChart3, Trophy, ShoppingBag, Package, Crown } from "lucide-react";
 
 import { LucideIcon } from "lucide-react";
 
@@ -50,19 +50,24 @@ export const adminMenuItems: MenuItem[] = [
     href: "/admin/customer",
   },
   {
-    icon: Boxes,
-    label: "انبار",
-    href: "/admin/warehouse",
+    icon: Trophy,
+    label: "رتبه‌بندی مشتریان",
+    href: "/admin/ranking",
   },
   {
-    icon: ShoppingCart,
-    label: "فرآیند خرید و تولید",
-    href: "/admin/purchasing",
+    icon: ShoppingBag,
+    label: "فروش‌ها",
+    href: "/admin/sales",
   },
   {
-    icon: ShieldCheck,
-    label: "کنترل کیفی",
-    href: "/admin/qualityControl",
+    icon: Crown,
+    label: "برترین مشتریان فروش",
+    href: "/admin/reports/top-customers",
+  },
+  {
+    icon: Package,
+    label: "محصولات",
+    href: "/admin/products",
   },
   {
     icon: Users,
@@ -88,21 +93,6 @@ export const adminMenuItems: MenuItem[] = [
     icon: BarChart3,
     label: "آمار و عملکرد",
     href: "/admin/performance",
-  },
-  {
-    icon: Factory,
-    label: "تولید",
-    href: "/admin/production/machines",
-  },
-  {
-    icon: ClipboardCheck,
-    label: "سفارش‌های مشتریان",
-    href: "/admin/customer-orders/",
-  },
-  {
-    icon: KeyRound,
-    label: "حساب‌های پرتال مشتریان",
-    href: "/admin/customer-portal/",
   },
   {
     icon: CalendarCheck2,
@@ -163,24 +153,19 @@ export const userMenuItems: MenuItem[] = [
     href: "/user/customer",
   },
   {
-    icon: Boxes,
-    label: "انبارداری",
-    href: "/user/warehouse",
+    icon: Trophy,
+    label: "رتبه‌بندی مشتریان",
+    href: "/user/ranking",
   },
   {
-    icon: ShoppingCart,
-    label: "فرآیند خرید و تولید",
-    href: "/user/purchasing",
+    icon: ShoppingBag,
+    label: "فروش‌ها",
+    href: "/user/sales",
   },
   {
-    icon: ShieldCheck,
-    label: "کنترل کیفی",
-    href: "/user/qualityControl",
-  },
-  {
-    icon: ClipboardCheck,
-    label: "سفارش‌های مشتریان",
-    href: "/user/customer-orders/",
+    icon: Crown,
+    label: "برترین مشتریان فروش",
+    href: "/user/reports/top-customers",
   },
   {
     icon: CalendarCheck2,

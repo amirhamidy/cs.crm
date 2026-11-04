@@ -1,6 +1,7 @@
 import { isAxiosError } from "axios";
 import axiosInstance from "@/lib/axiosInstance";
 import type { Customer, CustomerDetail, CustomerPayload, CustomerStatus } from "@/types/customer";
+import type { CustomerPath, CustomerScore } from "@/types/customerPath";
 import type { PageParams } from "@/types/pagination";
 import { cached, createSearch, dedupe, fetchPage, getOne, invalidate, listAll as listAllPages, normalizeQuery, toPaginated, uniqueIds, type Paginated, type RawList } from "./_core";
 
@@ -133,6 +134,16 @@ export const customersApi = {
   getMany,
 
   peek: (id: number) => summaries.get(id),
+
+  scores: async (id: number): Promise<CustomerScore[]> => {
+    const { data } = await axiosInstance.get<RawList<CustomerScore>>(`${BASE}${id}/scores/`);
+    return toPaginated<CustomerScore>(data).results;
+  },
+
+  path: async (id: number): Promise<CustomerPath> => {
+    const { data } = await axiosInstance.get<CustomerPath>(`${BASE}${id}/path/`);
+    return data;
+  },
 
   create: async (payload: CustomerPayload) => {
     const { data } = await axiosInstance.post<CustomerDetail>(BASE, payload);

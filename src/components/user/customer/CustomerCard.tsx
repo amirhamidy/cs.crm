@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { m, AnimatePresence, animate } from "framer-motion";
 import { useTheme } from "next-themes";
-import { Phone, Building2, Trash2, SquarePen, User, CalendarDays, Star, MessageCircle, MoreVertical, AlertCircle, KeyRound } from "lucide-react";
+import { Phone, Building2, Trash2, SquarePen, User, CalendarDays, Star, MessageCircle, MoreVertical, AlertCircle } from "lucide-react";
 import dynamic from "next/dynamic";
 import type { Customer } from "@/types/customer";
 import { useEmployeeDirectory } from "@/hooks/useEmployeeDirectory";
@@ -11,9 +11,6 @@ import CustomerDeleteModal from "./DeleteModal";
 import CustomerScoresModal from "./CustomerScoresModal";
 import axiosInstance from "@/lib/axiosInstance";
 import { useAuthStore } from "@/store/authStore";
-import CreatePortalAccountModal from "@/components/admin/customer-portal/CreatePortalAccountModal";
-import OneTimePasswordModal from "@/components/admin/customer-portal/OneTimePasswordModal";
-import type { CreatePortalAccountResponse } from "@/types/portal";
 import { toast } from "@/components/notifications/toast";
 import { apiMessage } from "@/lib/apiMessage";
 
@@ -265,8 +262,6 @@ export default function CustomerCard({
     const [showEdit, setShowEdit] = useState(false);
     const [showScores, setShowScores] = useState(false);
     const [showMobileSheet, setShowMobileSheet] = useState(false);
-    const [showPortalAccess, setShowPortalAccess] = useState(false);
-    const [generatedPassword, setGeneratedPassword] = useState("");
     const userType = useAuthStore((state) => state.userType);
     const [tooltipVisible, setTooltipVisible] = useState(false);
 
@@ -453,18 +448,6 @@ export default function CustomerCard({
             },
             title: "تماس",
         },
-        ...(userType === 1 ? [{
-            key: "portal",
-            icon: <KeyRound size={16} />,
-            offset: { x: 0, y: 54 },
-            delay: 0.32,
-            disabled: false,
-            onClick: (e: React.MouseEvent) => {
-                e.stopPropagation();
-                setShowPortalAccess(true);
-            },
-            title: "ساخت دسترسی پرتال",
-        }] : []),
     ];
 
     return (
@@ -913,23 +896,6 @@ export default function CustomerCard({
                                     <span>امتیازها و نظرات</span>
                                 </button>
 
-                                {userType === 1 && (
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            setShowMobileSheet(false);
-                                            setShowPortalAccess(true);
-                                        }}
-                                        className="flex w-full items-center gap-3 rounded-2xl p-3.5 text-[13.5px] font-bold text-indigo-600 transition-all active:scale-[0.98] dark:text-indigo-300"
-                                        style={{
-                                            background: isDark ? "rgba(99,102,241,0.14)" : "rgba(99,102,241,0.08)",
-                                            border: `1px solid ${isDark ? "rgba(99,102,241,0.22)" : "rgba(99,102,241,0.14)"}`,
-                                        }}
-                                    >
-                                        <KeyRound size={18} />
-                                        <span>ساخت دسترسی پرتال</span>
-                                    </button>
-                                )}
 
                                 <div className="flex flex-col gap-1.5 pt-1">
                                     <button
@@ -1010,20 +976,6 @@ export default function CustomerCard({
                 isOpen={showScores}
                 onClose={() => setShowScores(false)}
             />
-            {showPortalAccess && userType === 1 && (
-                <CreatePortalAccountModal
-                    initialCustomer={customer}
-                    onClose={() => setShowPortalAccess(false)}
-                    onCreated={(result: CreatePortalAccountResponse) => {
-                        setShowPortalAccess(false);
-                        if (result.generated_password) setGeneratedPassword(result.generated_password);
-                        else toast.success("دسترسی پرتال برای مشتری ساخته شد");
-                    }}
-                />
-            )}
-            {generatedPassword && (
-                <OneTimePasswordModal password={generatedPassword} onClose={() => setGeneratedPassword("")} />
-            )}
         </>
     );
 }

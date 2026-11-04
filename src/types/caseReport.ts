@@ -38,34 +38,6 @@ export interface CaseReportTask {
     };
 }
 
-export interface CaseReportOrderItem {
-    id: number;
-    product_name: string;
-    quantity: number;
-    completed_quantity: number;
-    unit_price: number | null;
-    line_total: number | null;
-    status: string;
-    status_display: string;
-    error_message: string | null;
-}
-
-export interface CaseReportOrderTask {
-    id: number;
-    task_id: number;
-    title: string;
-    note: string;
-    status: string;
-    status_display: string;
-    warehouse: { id: number; name: string } | null;
-    current_step: string;
-    performed_by: string | null;
-    created_at: string;
-    items: CaseReportOrderItem[];
-    total_amount: number;
-    deadline: { deadline: string | null; is_overdue: boolean } | null;
-}
-
 export interface CaseReportTimelineEvent {
     at: string;
     type: string;
@@ -73,7 +45,6 @@ export interface CaseReportTimelineEvent {
     detail?: string;
     note?: string;
     task_id?: number;
-    order_task_id?: number;
 }
 
 export interface CaseReport {
@@ -99,9 +70,6 @@ export interface CaseReport {
     summary: {
         tasks_count: number;
         tasks_by_status: Record<string, number>;
-        order_tasks_count: number;
-        order_tasks_by_status: Record<string, number>;
-        total_order_amount: number;
         total_duration_seconds: number;
         step_actions: { advanced: number; reverted: number; transferred: number };
         attachments_count: number;
@@ -110,6 +78,5 @@ export interface CaseReport {
         involved_employees: CaseReportPerson[];
     };
     tasks: CaseReportTask[];
-    order_tasks: CaseReportOrderTask[];
     timeline: CaseReportTimelineEvent[];
 }

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import type { ReactNode } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { AlertCircle, CheckCircle2, Clock, Package, User, X, Workflow } from "lucide-react";
+import { AlertCircle, CheckCircle2, Clock, User, X, Workflow } from "lucide-react";
 import { casesApi } from "@/lib/api/cases";
 import { apiMessage } from "@/lib/apiMessage";
 import type { CaseReport, CaseReportTask } from "@/types/caseReport";
@@ -124,11 +124,9 @@ function ReportBody({ report }: { report: CaseReport }) {
 
             <section>
                 <SectionTitle icon={<CheckCircle2 size={16} />} title="خلاصه" />
-                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                <div className="grid grid-cols-2 gap-2">
                     <StatBox label="وظایف" value={formatNumber(summary.tasks_count)} />
-                    <StatBox label="سفارش‌ها" value={formatNumber(summary.order_tasks_count)} />
                     <StatBox label="مدت کل" value={formatDuration(summary.total_duration_seconds)} />
-                    <StatBox label="مبلغ کل" value={formatNumber(summary.total_order_amount)} />
                 </div>
             </section>
 
@@ -144,37 +142,6 @@ function ReportBody({ report }: { report: CaseReport }) {
                     </div>
                 )}
             </section>
-
-            {report.order_tasks.length > 0 && (
-                <section>
-                    <SectionTitle icon={<Package size={16} />} title="سفارش‌های انبار" />
-                    <div className="space-y-3">
-                        {report.order_tasks.map((order) => (
-                            <div key={order.id} className="rounded-2xl border border-gray-200 p-4 dark:border-white/10">
-                                <div className="flex flex-wrap items-center justify-between gap-2">
-                                    <span className="text-[15px] font-bold text-gray-800 dark:text-gray-100">
-                                        {order.warehouse?.name ?? order.title}
-                                    </span>
-                                    <StatusPill status={order.status} label={order.status_display} />
-                                </div>
-                                <ul className="mt-2 space-y-1 text-[11.5px] text-gray-600 dark:text-gray-300">
-                                    {order.items.map((item) => (
-                                        <li key={item.id} className="flex justify-between gap-2">
-                                            <span>{item.product_name}</span>
-                                            <span>
-                                                {formatNumber(item.completed_quantity)} از {formatNumber(item.quantity)}
-                                            </span>
-                                        </li>
-                                    ))}
-                                </ul>
-                                <div className="mt-2 text-[11.5px] font-bold text-gray-700 dark:text-gray-200">
-                                    جمع: {formatNumber(order.total_amount)}
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </section>
-            )}
 
             <section>
                 <SectionTitle icon={<Clock size={16} />} title="خط زمانی" />

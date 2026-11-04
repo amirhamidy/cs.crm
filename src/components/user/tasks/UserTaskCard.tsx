@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { m } from "framer-motion";
 
@@ -12,7 +12,8 @@ import { tasksApi, casesApi, customersApi } from "@/lib/api";
 import TaskCaseDescriptionModal from "./TaskCaseDescriptionModal";
 import TaskNotesModal from "./TaskNotesModal";
 import TaskActionModal from "./TaskActionModal";
-import SoldOrderTaskModal from "./SoldOrderTaskModal";
+import SaleRegistrationModal, { type SaleSubmitData } from "./SaleRegistrationModal";
+import { salesApi } from "@/lib/api/sales";
 import TaskLogsModal from "./TaskLogsModal";
 import TaskTransferModal from "./TaskTransferModal";
 import ActionBtn from "./ActionBtn";
@@ -196,7 +197,11 @@ function deadlineState(deadline?: string | null) {
 function parseError(error: any) {
     const data = error?.response?.data;
 
-    if (!data) return "خطا در ثبت تغییرات";
+    if (!data) {
+        return error instanceof Error && !error?.response && error.message
+            ? error.message
+            : "خطا در ثبت تغییرات";
+    }
 
     if (typeof data === "string") return data;
 
@@ -235,6 +240,7 @@ export default function UserTaskCard({
     const [notesOpen, setNotesOpen] = useState(false);
     const [caseDescOpen, setCaseDescOpen] = useState(false);
     const [submitting, setSubmitting] = useState(false);
+    const saleRegisteredRef = useRef(false);
     const [blockMsg, setBlockMsg] = useState<string | null>(null);
     const [latestLog, setLatestLog] = useState<LatestLog | null>(null);
     const [customerName, setCustomerName] = useState(
@@ -461,43 +467,31 @@ export default function UserTaskCard({
         (onTransferred ?? onUpdated)(merged);
     }
 
-    async function submitSale(data: {
-        task_id: number;
-        warehouse_id: number;
-        staff_id: number;
-        items: Array<{ product_id: number; quantity: number }>;
-        note: string;
-        file?: File;
-        started_at?: string;
-        deadline?: string;
-        score: number;
-        score_reason: string;
-    }) {
+    async function submitSale(data: SaleSubmitData) {
         setSubmitting(true);
         setBlockMsg(null);
 
         try {
-            const form = new FormData();
-
-            form.append("task_id", String(data.task_id));
-            form.append("warehouse_id", String(data.warehouse_id));
-            form.append("staff_id", String(data.staff_id));
-            form.append("items", JSON.stringify(data.items));
-
-            if (data.note) form.append("note", data.note);
-            if (data.file) form.append("file", data.file);
-            if (data.started_at) form.append("started_at", data.started_at);
-            if (data.deadline) form.append("deadline", data.deadline);
-
-            await axiosInstance.post(
-                "/warehouse/api/v1/order_task/create/",
-                form,
-                {
-                    headers: {
-                        "Content-Type": "multipart/form-data",
-                    },
+            if (!saleRegisteredRef.current) {
+                const caseData = (await casesApi.get(Number(ext.case))) as unknown as {
+                    customer?: number;
+                };
+                if (!caseData.customer) {
+                    throw new Error("مشتری این پرونده پیدا نشد.");
                 }
-            );
+
+                await salesApi.create({
+                    customer: caseData.customer,
+                    case: Number(ext.case),
+                    product: data.product,
+                    quantity_kg: data.quantity_kg,
+                    unit_price: data.unit_price,
+                    sale_date: data.sale_date,
+                    description: data.description || undefined,
+                });
+                // Guard against duplicate sales if mark-as-sold fails and the user retries.
+                saleRegisteredRef.current = true;
+            }
 
             const soldForm = new FormData();
 
@@ -522,6 +516,7 @@ export default function UserTaskCard({
                 status: "sold",
             });
 
+            saleRegisteredRef.current = false;
             fetchLog();
             setOpenModal(null);
         } catch (error) {
@@ -871,12 +866,10 @@ export default function UserTaskCard({
                 })}
 
             {hasCase && (
-                <SoldOrderTaskModal
+                <SaleRegistrationModal
                     isOpen={openModal === "sold"}
                     onClose={() => setOpenModal(null)}
-                    taskId={task.id}
                     onSubmit={submitSale}
-                    staffId={staffId}
                     submitting={submitting}
                 />
             )}
