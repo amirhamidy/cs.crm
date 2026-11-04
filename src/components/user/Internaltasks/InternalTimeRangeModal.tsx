@@ -9,6 +9,7 @@ import { toJalali, toGregorian, jalaliMonthLength, jalaliWeekday, JALALI_MONTHS,
 import { BusyContent } from "@/components/ui/Button";
 import { Backdrop } from "@/components/ui/Backdrop";
 import { panelMotion } from "@/lib/motion";
+import { useReloadOnClose } from "@/lib/useReloadOnClose";
 interface FieldState {
     jy: number;
     jm: number;
@@ -164,6 +165,7 @@ export default function TimeRangeModal({
     onSubmit,
     error: externalError,
 }: TimeRangeModalProps) {
+    useReloadOnClose(open, true);
     const [start, setStart] = useState<FieldState>(() =>
         parseIsoToField(initialStartedAt)
     );

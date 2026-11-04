@@ -9,6 +9,7 @@ import {
   toJalali,
   toPersianDigits,
 } from "@/lib/jalali";
+import { SalesSelect } from "./SalesSelect";
 
 interface Props {
   /** تاریخ میلادی به شکل YYYY-MM-DD یا رشته‌ی خالی */
@@ -20,9 +21,6 @@ interface Props {
   disabled?: boolean;
   className?: string;
 }
-
-const selectCls =
-  "h-11 w-full rounded-2xl border border-gray-200 bg-white px-2 text-[12.5px] font-semibold text-gray-900 outline-none transition-colors focus:border-brand disabled:opacity-50 dark:border-white/10 dark:bg-white/5 dark:text-white";
 
 function parse(value: string): [number, number, number] | null {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
@@ -92,48 +90,42 @@ export default function JalaliDateField({
         </div>
       )}
       <div className="grid grid-cols-[1fr_1.6fr_1.2fr] gap-2" dir="rtl">
-        <select
-          aria-label="روز"
+        <SalesSelect
+          compact
+          searchable={false}
           disabled={disabled}
-          value={jd || ""}
-          onChange={(e) => commit(jy, jm, Number(e.target.value))}
-          className={selectCls}
-        >
-          <option value="">روز</option>
-          {Array.from({ length: dayCount }, (_, i) => i + 1).map((d) => (
-            <option key={d} value={d}>
-              {toPersianDigits(d)}
-            </option>
-          ))}
-        </select>
-        <select
-          aria-label="ماه"
+          placeholder="روز"
+          value={jd || null}
+          onChange={(v) => commit(jy, jm, v)}
+          options={[
+            { id: 0, label: "روز" },
+            ...Array.from({ length: dayCount }, (_, i) => ({ id: i + 1, label: toPersianDigits(i + 1) })),
+          ]}
+        />
+        <SalesSelect
+          compact
+          searchable={false}
           disabled={disabled}
-          value={jm || ""}
-          onChange={(e) => commit(jy, Number(e.target.value), jd)}
-          className={selectCls}
-        >
-          <option value="">ماه</option>
-          {JALALI_MONTHS.map((name, i) => (
-            <option key={name} value={i + 1}>
-              {name}
-            </option>
-          ))}
-        </select>
-        <select
-          aria-label="سال"
+          placeholder="ماه"
+          value={jm || null}
+          onChange={(v) => commit(jy, v, jd)}
+          options={[
+            { id: 0, label: "ماه" },
+            ...JALALI_MONTHS.map((name, i) => ({ id: i + 1, label: name })),
+          ]}
+        />
+        <SalesSelect
+          compact
+          searchable={false}
           disabled={disabled}
-          value={jy || ""}
-          onChange={(e) => commit(Number(e.target.value), jm, jd)}
-          className={selectCls}
-        >
-          <option value="">سال</option>
-          {years.map((y) => (
-            <option key={y} value={y}>
-              {toPersianDigits(y)}
-            </option>
-          ))}
-        </select>
+          placeholder="سال"
+          value={jy || null}
+          onChange={(v) => commit(v, jm, jd)}
+          options={[
+            { id: 0, label: "سال" },
+            ...years.map((y) => ({ id: y, label: toPersianDigits(y) })),
+          ]}
+        />
       </div>
     </div>
   );

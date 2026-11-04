@@ -8,6 +8,7 @@ import { ListSkeleton } from "@/components/ui/skeletons";
 import { useTheme } from "next-themes";
 import api from "@/lib/axiosInstance";
 import { toJalali, toPersianDigits, JALALI_MONTHS, pad2 } from "@/lib/jalali";
+import { useReloadOnClose } from "@/lib/useReloadOnClose";
 
 export interface StepDeadline {
     started_at: string | null;
@@ -80,6 +81,7 @@ export default function TaskDeadlineModal({
     stepId,
     onLoaded,
 }: TaskDeadlineModalProps) {
+    useReloadOnClose(open, true);
     const { resolvedTheme } = useTheme();
     const isDark = resolvedTheme === "dark";
 

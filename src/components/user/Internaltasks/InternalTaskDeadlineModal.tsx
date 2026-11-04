@@ -10,6 +10,7 @@ import { AlertTriangle, CalendarClock, CalendarDays, Clock, RefreshCw, X } from 
 import { useTheme } from "next-themes";
 import api from "@/lib/axiosInstance";
 import { toJalali, toPersianDigits, JALALI_MONTHS, pad2 } from "@/lib/jalali";
+import { useReloadOnClose } from "@/lib/useReloadOnClose";
 
 export interface InternalDeadline {
     started_at: string | null;
@@ -85,6 +86,7 @@ export default function InternalTaskDeadlineModal({
     taskTitle,
     onLoaded,
 }: InternalTaskDeadlineModalProps) {
+    useReloadOnClose(open, true);
     const reduced = useReducedMotion() ?? false;
     const { resolvedTheme } = useTheme();
     const isDark = resolvedTheme === "dark";

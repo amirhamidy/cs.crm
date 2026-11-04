@@ -7,6 +7,7 @@ import { X, ChevronDown, ChevronLeft, ChevronRight, Clock, Check, CalendarDays }
 import { toJalali, toGregorian, jalaliMonthLength, jalaliWeekday, JALALI_MONTHS, JALALI_WEEKDAYS, toPersianDigits, pad2, todayJalali } from "@/lib/jalali";
 
 import { BusyContent } from "@/components/ui/Button";
+import { useReloadOnClose } from "@/lib/useReloadOnClose";
 interface FieldState {
     jy: number;
     jm: number;
@@ -164,6 +165,7 @@ export default function TimeRangeModal({
     error: externalError,
     embedded = false,
 }: TimeRangeModalProps) {
+    useReloadOnClose(open, !embedded);
     const [start, setStart] = useState<FieldState>(() =>
         parseIsoToField(initialStartedAt)
     );

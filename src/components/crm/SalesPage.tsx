@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { EmptyState, ErrorState, PageHeader, SearchInput } from "@/components/ui/Feedback";
 import Pagination from "@/components/ui/Pagination";
-import { NiceSelect } from "@/components/ui/NiceSelect";
+import { SalesSelect } from "./SalesSelect";
 import { ListSkeleton, TableSkeleton } from "@/components/ui/skeletons";
 import { toast } from "@/components/notifications/toast";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
@@ -103,7 +103,7 @@ function SalesList() {
           className="xl:col-span-1"
           hideIcon
         />
-        <NiceSelect
+        <SalesSelect
           label="کالا"
           options={[
             { id: 0, label: "همه کالاها" },
@@ -253,7 +253,7 @@ function TopCustomers({ basePath }: { basePath: "/admin" | "/user" }) {
   return (
     <div className="flex flex-col gap-4">
       <div className={`${CARD} grid grid-cols-1 gap-3 p-4 md:grid-cols-2 xl:grid-cols-5`}>
-        <NiceSelect
+        <SalesSelect
           label="مرتب‌سازی بر اساس"
           options={[
             { id: 1, label: "بر اساس مبلغ فروش" },
@@ -262,7 +262,7 @@ function TopCustomers({ basePath }: { basePath: "/admin" | "/user" }) {
           value={by === "amount" ? 1 : 2}
           onChange={(v) => setBy(v === 1 ? "amount" : "quantity")}
         />
-        <NiceSelect
+        <SalesSelect
           label="کالا"
           options={[
             { id: 0, label: "همه کالاها" },
@@ -273,7 +273,7 @@ function TopCustomers({ basePath }: { basePath: "/admin" | "/user" }) {
         />
         <JalaliDateField label="از تاریخ" clearable value={from} onChange={setFrom} />
         <JalaliDateField label="تا تاریخ" clearable value={to} onChange={setTo} />
-        <NiceSelect
+        <SalesSelect
           label="تعداد نمایش"
           options={[10, 20, 50, 100].map((n) => ({ id: n, label: `${n.toLocaleString("fa-IR")} مشتری برتر` }))}
           value={limit}
