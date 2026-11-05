@@ -27,7 +27,7 @@ export function SectionTitle({
 }) {
   return (
     <div className="mb-3 flex items-center justify-between gap-2">
-      <h2 className="flex items-center gap-2 text-[13.5px] font-extrabold text-gray-800 dark:text-gray-100">
+      <h2 className="flex items-center gap-2 text-[13px] font-extrabold text-gray-800 dark:text-gray-100">
         {icon && <span className="text-brand">{icon}</span>}
         {title}
       </h2>
@@ -56,14 +56,14 @@ export function StatTile({
         tone === "warn" &&
           "border-amber-100 bg-amber-50/60 dark:border-amber-500/20 dark:bg-amber-500/10",
         tone === "default" &&
-          "border-gray-100 bg-gray-50/70 dark:border-white/[0.06] dark:bg-white/[0.03]",
+          "border-gray-100 bg-transparent dark:border-white/[0.06] dark:bg-transparent",
       )}
     >
-      <div className="text-[11px] font-bold text-gray-500 dark:text-gray-400">{label}</div>
-      <div className="mt-1 truncate text-[15px] font-black text-gray-900 dark:text-white">
+      <div className="text-[13px] font-bold text-gray-500 dark:text-gray-400">{label}</div>
+      <div className="mt-1 truncate text-[13px] font-black text-gray-900 dark:text-white">
         {value}
       </div>
-      {hint && <div className="mt-0.5 truncate text-[10.5px] text-gray-400">{hint}</div>}
+      {hint && <div className="mt-0.5 truncate text-[13px] text-gray-400">{hint}</div>}
     </div>
   );
 }
@@ -90,7 +90,7 @@ export function Tabs<K extends string>({
     <div
       role="tablist"
       aria-label={label}
-      className="flex gap-1 overflow-x-auto rounded-2xl bg-gray-100 p-1 dark:bg-white/[0.05]"
+      className="flex gap-1 overflow-x-auto rounded-2xl border border-gray-100 p-1 dark:border-white/[0.06]"
     >
       {items.map((item) => {
         const active = item.key === value;
@@ -102,16 +102,16 @@ export function Tabs<K extends string>({
             aria-selected={active}
             onClick={() => onChange(item.key)}
             className={cn(
-              "flex min-h-10 shrink-0 items-center gap-1.5 rounded-xl px-3.5 text-[12.5px] font-bold transition-all",
+              "flex min-h-10 shrink-0 items-center gap-1.5 rounded-xl px-3.5 text-[13px] font-bold transition-all",
               active
-                ? "bg-white text-brand shadow-sm dark:bg-white/10"
+                ? "bg-brand-soft text-brand"
                 : "text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200",
             )}
           >
             {item.icon}
             {item.label}
             {item.badge != null && item.badge !== "" && (
-              <span className="rounded-full bg-gray-200/80 px-1.5 text-[10px] font-extrabold text-gray-600 dark:bg-white/10 dark:text-gray-300">
+              <span className="rounded-full bg-transparent px-1.5 text-[13px] font-extrabold text-gray-600 dark:bg-transparent dark:text-gray-300">
                 {typeof item.badge === "number" ? item.badge.toLocaleString("fa-IR") : item.badge}
               </span>
             )}
@@ -127,7 +127,7 @@ export const STATUS_TONE: Record<string, string> = {
   sold: "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-300",
   completed: "bg-indigo-50 text-indigo-600 dark:bg-indigo-500/15 dark:text-indigo-300",
   cancelled: "bg-rose-50 text-rose-600 dark:bg-rose-500/15 dark:text-rose-300",
-  no_tasks: "bg-gray-100 text-gray-500 dark:bg-white/10 dark:text-gray-400",
+  no_tasks: "bg-transparent text-gray-500 dark:bg-transparent dark:text-gray-400",
 };
 
 export const CASE_STATUS_LABEL: Record<string, string> = {
@@ -142,7 +142,7 @@ export function StatusPill({ status, label }: { status: string; label?: string }
   return (
     <span
       className={cn(
-        "rounded-full px-2.5 py-1 text-[10.5px] font-extrabold",
+        "rounded-full px-2.5 py-1 text-[13px] font-extrabold",
         STATUS_TONE[status] ?? STATUS_TONE.no_tasks,
       )}
     >

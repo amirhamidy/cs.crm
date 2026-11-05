@@ -137,7 +137,7 @@ export default function OverviewTab({ customerId, onAverage, refreshKey = 0 }: P
               const pct = Math.round((toNumber(p.amount) / maxAmount) * 100);
               return (
                 <li key={p.product_id}>
-                  <div className="mb-1 flex items-center justify-between gap-2 text-[12px]">
+                  <div className="mb-1 flex items-center justify-between gap-2 text-[13px]">
                     <span className="flex min-w-0 items-center gap-1.5 font-bold text-gray-800 dark:text-gray-100">
                       <Package size={12} className="shrink-0 text-gray-400" />
                       <span className="truncate">{p.product_name}</span>
@@ -146,13 +146,13 @@ export default function OverviewTab({ customerId, onAverage, refreshKey = 0 }: P
                       {formatMoney(p.amount)}
                     </span>
                   </div>
-                  <div className="h-2 overflow-hidden rounded-full bg-gray-100 dark:bg-white/[0.06]">
+                  <div className="h-2 overflow-hidden rounded-full bg-transparent dark:bg-transparent">
                     <div
                       className="h-full rounded-full bg-gradient-to-l from-indigo-400 to-brand"
                       style={{ width: `${Math.max(pct, 3)}%` }}
                     />
                   </div>
-                  <div className="mt-1 flex items-center gap-3 text-[10.5px] text-gray-400">
+                  <div className="mt-1 flex items-center gap-3 text-[13px] text-gray-400">
                     <span className="flex items-center gap-1">
                       <Weight size={10} /> {formatWeight(p.quantity_kg)}
                     </span>
@@ -172,7 +172,7 @@ export default function OverviewTab({ customerId, onAverage, refreshKey = 0 }: P
           actions={avg != null ? <StarRating value={avg} count={scores.length} /> : undefined}
         />
         {scores.length === 0 ? (
-          <p className="py-6 text-center text-[12px] text-gray-400">
+          <p className="py-6 text-center text-[13px] text-gray-400">
             هنوز امتیازی برای این مشتری ثبت نشده است. امتیاز هنگام «فروخته شد» یا از کارت مشتری ثبت می‌شود.
           </p>
         ) : (
@@ -180,19 +180,19 @@ export default function OverviewTab({ customerId, onAverage, refreshKey = 0 }: P
             {scores.map((s) => (
               <li
                 key={s.id}
-                className="rounded-2xl border border-gray-100 bg-gray-50/60 p-3 dark:border-white/[0.06] dark:bg-white/[0.03]"
+                className="rounded-2xl border border-gray-100 bg-transparent p-3 dark:border-white/[0.06] dark:bg-transparent"
               >
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <StarRating value={s.score} showNumber={false} />
-                  <span className="flex items-center gap-1 text-[10.5px] text-gray-400">
+                  <span className="flex items-center gap-1 text-[13px] text-gray-400">
                     <CalendarDays size={11} />
                     {formatJalaliDateTime(s.created_at)}
                   </span>
                 </div>
                 {s.reason && (
-                  <p className="mt-1.5 text-[12px] leading-6 text-gray-700 dark:text-gray-200">{s.reason}</p>
+                  <p className="mt-1.5 text-[13px] leading-6 text-gray-700 dark:text-gray-200">{s.reason}</p>
                 )}
-                <div className="mt-1 text-[10.5px] font-bold text-gray-400">
+                <div className="mt-1 text-[13px] font-bold text-gray-400">
                   {names.get(Number(s.created_by)) || "کارمند"}
                 </div>
               </li>

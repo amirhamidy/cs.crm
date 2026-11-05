@@ -4,19 +4,18 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import { m, AnimatePresence, animate } from "framer-motion";
 import { useTheme } from "next-themes";
 import { Phone, Building2, Trash2, SquarePen, User, CalendarDays, Star, MessageCircle, MoreVertical, AlertCircle, FolderOpen } from "lucide-react";
-import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import type { Customer } from "@/types/customer";
 import { useEmployeeDirectory } from "@/hooks/useEmployeeDirectory";
 import CustomerDeleteModal from "./DeleteModal";
 import CustomerScoresModal from "./CustomerScoresModal";
 import axiosInstance from "@/lib/axiosInstance";
-import { useAuthStore } from "@/store/authStore";
 import { toast } from "@/components/notifications/toast";
 import { apiMessage } from "@/lib/apiMessage";
 
 
 import { Skeleton } from "@/components/ui/Skeleton";
+const CustomerProfileModal = dynamic(() => import("@/components/crm/CustomerProfileModal"), { ssr: false });
 const CustomerEditModal = dynamic(() => import("./CustomerEditModal"), {
     ssr: false,
     loading: () => null,
@@ -264,9 +263,7 @@ export default function CustomerCard({
     const [showEdit, setShowEdit] = useState(false);
     const [showScores, setShowScores] = useState(false);
     const [showMobileSheet, setShowMobileSheet] = useState(false);
-    const router = useRouter();
-    const userType = useAuthStore((state) => state.userType);
-    const profileHref = `/${userType === 1 ? "admin" : "user"}/customer/${customer.id}/`;
+    const [showProfile, setShowProfile] = useState(false);
     const [tooltipVisible, setTooltipVisible] = useState(false);
 
     const [scoresPreview, setScoresPreview] = useState<{
@@ -460,7 +457,7 @@ export default function CustomerCard({
             disabled: false,
             onClick: (e: React.MouseEvent) => {
                 e.stopPropagation();
-                router.push(profileHref);
+                setShowProfile(true);
             },
             title: "پرونده مشتری",
         },
@@ -916,7 +913,7 @@ export default function CustomerCard({
                                     type="button"
                                     onClick={() => {
                                         setShowMobileSheet(false);
-                                        router.push(profileHref);
+                                        setShowProfile(true);
                                     }}
                                     className="flex w-full items-center gap-3 rounded-2xl p-3.5 text-[13.5px] font-bold text-indigo-600 transition-all active:scale-[0.98] dark:text-indigo-300"
                                     style={{
@@ -983,6 +980,8 @@ export default function CustomerCard({
                     </div>
                 )}
             </AnimatePresence>
+
+            {showProfile && <CustomerProfileModal key={customer.id} customerId={customer.id} onClose={() => setShowProfile(false)} />}
 
             <CustomerDeleteModal
                 customerName={customer.full_name}

@@ -1,10 +1,10 @@
 "use client";
 
-import { useMemo } from "react";
-import { useRouter } from "next/navigation";
+import { useMemo, useState } from "react";
+import dynamic from "next/dynamic";
 import { m } from "framer-motion";
 import { Building2, MessageCircle, Phone, ShoppingBag, Star, Trophy } from "lucide-react";
-import { Select } from "@/components/ui/Select";
+import { NiceSelect } from "@/components/ui/NiceSelect";
 import Pagination from "@/components/ui/Pagination";
 import { EmptyState, ErrorState, PageHeader, SearchInput } from "@/components/ui/Feedback";
 import { ListSkeleton } from "@/components/ui/skeletons";
@@ -15,6 +15,8 @@ import { cn } from "@/lib/utils";
 import type { RankedCustomer, RankingOrdering } from "@/types/crm";
 import StarRating from "./StarRating";
 import { CARD } from "./ui";
+
+const CustomerProfileModal = dynamic(() => import("./CustomerProfileModal"), { ssr: false });
 
 interface Props {
   /** مسیر پایه‌ی نقش کاربر، مثل /admin یا /user */
@@ -57,17 +59,17 @@ const RATED_OPTIONS = [
 ];
 
 const MEDAL = [
-  "bg-gradient-to-br from-amber-300 to-yellow-500 text-white",
-  "bg-gradient-to-br from-slate-300 to-slate-400 text-white",
-  "bg-gradient-to-br from-orange-300 to-amber-600 text-white",
+  "bg-amber-500/15 text-amber-600 dark:text-amber-300",
+  "bg-slate-500/15 text-slate-600 dark:text-slate-300",
+  "bg-orange-500/15 text-orange-600 dark:text-orange-300",
 ];
 
 function RankBadge({ rank, medal }: { rank: number; medal: boolean }) {
-  const cls = medal && rank <= 3 ? MEDAL[rank - 1] : "bg-gray-100 text-gray-500 dark:bg-white/10 dark:text-gray-300";
+  const cls = medal && rank <= 3 ? MEDAL[rank - 1] : "border border-gray-200 text-gray-500 dark:border-white/10 dark:text-gray-300";
   return (
     <span
       className={cn(
-        "flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl text-[14px] font-black",
+        "flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl text-[13px] font-bold",
         cls,
       )}
     >
@@ -86,14 +88,12 @@ function Metric({
   value: React.ReactNode;
 }) {
   return (
-    <div className="flex min-w-0 items-center gap-2">
-      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-gray-400 dark:bg-white/[0.06]">
+    <div className="flex min-w-0 items-center justify-between gap-2">
+      <span className="flex shrink-0 items-center gap-1 text-[13px] text-gray-400">
         {icon}
+        {label}
       </span>
-      <div className="min-w-0">
-        <div className="text-[10px] font-bold text-gray-400">{label}</div>
-        <div className="truncate text-[12px] font-extrabold text-gray-800 dark:text-gray-100">{value}</div>
-      </div>
+      <span className="truncate text-[13px] font-normal text-gray-800 dark:text-gray-100">{value}</span>
     </div>
   );
 }
@@ -110,6 +110,7 @@ function Row({
   onOpen: () => void;
 }) {
   const hasSales = toNumber(customer.total_sales) > 0;
+  const important = customer.rank <= 3 && customer.avg_score != null;
   return (
     <m.button
       type="button"
@@ -119,69 +120,78 @@ function Row({
       transition={{ duration: 0.18, delay: Math.min(index, 10) * 0.025 }}
       className={cn(
         CARD,
-        "group flex w-full flex-col gap-3 p-3.5 text-right transition-shadow hover:shadow-md md:flex-row md:items-center md:gap-4",
+        "flex w-full flex-col justify-around overflow-hidden p-3.5 text-right text-[13px] transition-shadow hover:shadow-md",
       )}
     >
-      <div className="flex min-w-0 flex-1 items-center gap-3">
-        <RankBadge rank={customer.rank} medal={medal && customer.avg_score != null} />
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <span className="truncate text-[14px] font-extrabold text-gray-900 group-hover:text-brand dark:text-white">
-              {customer.full_name}
-            </span>
-            <span
-              className={cn(
-                "shrink-0 rounded-full px-2 py-0.5 text-[9.5px] font-extrabold",
-                customer.status === 2
-                  ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-300"
-                  : "bg-amber-50 text-amber-600 dark:bg-amber-500/15 dark:text-amber-300",
-              )}
-            >
-              {customer.status_display}
-            </span>
-          </div>
-          <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px] text-gray-500 dark:text-gray-400">
-            {customer.company_name && (
-              <span className="flex items-center gap-1">
-                <Building2 size={11} /> {customer.company_name}
-              </span>
+      <div className="flex justify-around items-center w-full">
+        <div className="flex justify-between items-center w-full">
+          <RankBadge rank={customer.rank} medal={medal && customer.avg_score != null} />
+          <span
+            className={cn(
+              "shrink-0 rounded-full p-2 text-[13px]",
+              customer.status === 2
+                ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-300"
+                : "bg-amber-50 text-amber-600 dark:bg-amber-500/15 dark:text-amber-300",
             )}
-            {customer.phone_number && (
-              <span className="flex items-center gap-1" dir="ltr">
-                <Phone size={11} /> {customer.phone_number}
-              </span>
-            )}
-          </div>
+          >
+            {customer.status_display}
+          </span>
         </div>
       </div>
+      <div className="min-w-0 w-full flex justify-between items-center my-2">
+        <div
+          className={cn(
+            "truncate text-[13px] text-gray-900 group-hover:text-brand dark:text-white",
+            important ? "font-bold" : "font-normal",
+          )}
+        >
+          {customer.full_name}
+        </div>
+        <div className="mt-0.5 flex flex-col gap-2 text-[13px] text-gray-500 dark:text-gray-400">
+          <span className="flex items-center gap-1 truncate">
+            <Building2 size={12} className="shrink-0" />
+            <span className="truncate">
+              {customer.company_name ? customer.company_name : "شرکت ندارد"}
+            </span>
+          </span>
 
-      <div className="flex items-center justify-between gap-4 md:w-[230px] md:shrink-0 md:flex-col md:items-start md:gap-1">
+          {customer.phone_number && (
+            <span className="flex items-center gap-1" dir="ltr">
+              <Phone size={12} className="shrink-0" /> {customer.phone_number}
+            </span>
+          )}
+        </div>
+      </div>
+      <div className="[&_*]:text-[13px] min-w-0 w-full flex justify-between my-2">
+        <span>
+          امتیاز  :
+        </span>
+
         <StarRating value={customer.avg_score} count={customer.scores_count || undefined} />
       </div>
-
-      <div className="grid grid-cols-3 gap-3 md:w-[400px] md:shrink-0">
+      <div className="flex w-full flex-col gap-3  border-t border-gray-100  dark:border-white/[0.06] my-2">
         <Metric
           icon={<ShoppingBag size={13} />}
           label="مجموع فروش"
-          value={hasSales ? formatMoney(customer.total_sales) : "—"}
+          value={customer.total_sales ? formatMoney(customer.total_sales) : "داده‌ای نیست"}
         />
         <Metric
           icon={<Star size={13} />}
           label="آخرین خرید"
-          value={formatJalaliDate(customer.last_sale_date)}
+          value={customer.last_sale_date ? formatJalaliDate(customer.last_sale_date) : "داده‌ای نیست"}
         />
         <Metric
           icon={<MessageCircle size={13} />}
           label="نظرات"
-          value={formatNumber(customer.comments_count)}
+          value={customer.comments_count ? formatNumber(customer.comments_count) : "داده‌ای نیست"}
         />
       </div>
     </m.button>
   );
 }
 
-export default function CustomerRankingPage({ basePath }: Props) {
-  const router = useRouter();
+export default function CustomerRankingPage({ basePath: _basePath }: Props) {
+  const [customerId, setCustomerId] = useState<number | null>(null);
 
   const list = usePaginatedList<RankedCustomer, Filters>(
     (params, signal) =>
@@ -216,44 +226,48 @@ export default function CustomerRankingPage({ basePath }: Props) {
   );
 
   return (
-    <div className="flex flex-col gap-5" dir="rtl">
+    <div className="flex flex-col gap-5 [&_h1]:text-[13px] [&_h1]:font-bold [&_h1+p]:text-[13px]" dir="rtl">
       <PageHeader
         icon={<Trophy size={20} />}
         title="رتبه‌بندی مشتریان"
         subtitle="بر اساس میانگین امتیازی که کارکنان به مشتریان داده‌اند"
       />
 
-      <div className={cn(CARD, "grid grid-cols-1 gap-3 p-4 md:grid-cols-2 xl:grid-cols-5")}>
+      <div
+        className={cn(
+          CARD,
+          "flex flex-wrap items-end justify-center gap-1 p-4 [&>div]:min-w-0 [&>div]:flex-[1_1_200px] [&_label]:text-center [&_label]:text-[13px] [&_label]:font-bold [&_input]:h-12 [&_input]:text-[13px] [&>div>button]:h-12 [&>div>button]:py-0 [&>div>button]:text-center [&>div>button>span:first-child]:text-center [&>div>button>span:first-child]:text-[13px] [&>div>button>span:first-child]:font-bold [&>div>div_button>div>span:first-child]:text-[13px] [&>div>div_button>div>span:first-child]:font-bold [&>div>div_button>span]:text-[13px]",
+        )}
+      >
         <SearchInput
           value={list.search}
           onChange={list.setSearch}
           placeholder="نام، شرکت یا موبایل..."
-          className="xl:col-span-2"
+          hideIcon
         />
-        <Select
-          aria-label="مرتب‌سازی"
-          options={ORDERING_OPTIONS}
-          value={filters.ordering}
-          onChange={(v) => list.setFilters({ ordering: v as RankingOrdering })}
+        <NiceSelect
+          label="مرتب‌سازی"
+          options={ORDERING_OPTIONS.map((option, id) => ({ id, label: option.label }))}
+          value={ORDERING_OPTIONS.findIndex((option) => option.value === filters.ordering)}
+          onChange={(id) => list.setFilters({ ordering: ORDERING_OPTIONS[id].value })}
         />
-        <Select
-          aria-label="حداقل امتیاز"
-          options={MIN_SCORE_OPTIONS}
-          value={filters.min_score != null ? String(filters.min_score) : ""}
-          onChange={(v) => list.setFilters({ min_score: v ? Number(v) : undefined })}
+        <NiceSelect
+          label="حداقل امتیاز"
+          options={MIN_SCORE_OPTIONS.map((option) => ({ id: Number(option.value), label: option.label }))}
+          value={filters.min_score ?? 0}
+          onChange={(id) => list.setFilters({ min_score: id || undefined })}
         />
-        <Select
-          aria-label="وضعیت مشتری"
-          options={STATUS_OPTIONS}
-          value={filters.status != null ? String(filters.status) : ""}
-          onChange={(v) => list.setFilters({ status: v ? Number(v) : undefined })}
+        <NiceSelect
+          label="وضعیت مشتری"
+          options={STATUS_OPTIONS.map((option) => ({ id: Number(option.value), label: option.label }))}
+          value={filters.status ?? 0}
+          onChange={(id) => list.setFilters({ status: id || undefined })}
         />
-        <Select
-          aria-label="فقط دارای امتیاز"
-          options={RATED_OPTIONS}
-          value={filters.rated ? "true" : ""}
-          onChange={(v) => list.setFilters({ rated: v === "true" ? true : undefined })}
-          className="md:col-span-2 xl:col-span-1"
+        <NiceSelect
+          label="فقط دارای امتیاز"
+          options={RATED_OPTIONS.map((option, id) => ({ id, label: option.label }))}
+          value={filters.rated ? 1 : 0}
+          onChange={(id) => list.setFilters({ rated: id === 1 ? true : undefined })}
         />
       </div>
 
@@ -269,14 +283,14 @@ export default function CustomerRankingPage({ basePath }: Props) {
         />
       ) : (
         <>
-          <div className="flex flex-col gap-2.5">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {list.data.map((customer, i) => (
               <Row
                 key={customer.id}
                 customer={customer}
                 index={i}
                 medal={medal}
-                onOpen={() => router.push(`${basePath}/customer/${customer.id}/`)}
+                onOpen={() => setCustomerId(customer.id)}
               />
             ))}
           </div>
@@ -290,6 +304,7 @@ export default function CustomerRankingPage({ basePath }: Props) {
           )}
         </>
       )}
+      {customerId !== null && <CustomerProfileModal key={customerId} customerId={customerId} onClose={() => setCustomerId(null)} />}
     </div>
   );
 }

@@ -33,7 +33,7 @@ function StepStrip({ task }: { task: PathTask }) {
   if (current && steps[steps.length - 1] !== current) steps.push(current);
 
   if (steps.length === 0) {
-    return <p className="text-[11px] text-gray-400">هنوز مرحله‌ای طی نشده است.</p>;
+    return <p className="text-[13px] text-gray-400">هنوز مرحله‌ای طی نشده است.</p>;
   }
 
   return (
@@ -45,10 +45,10 @@ function StepStrip({ task }: { task: PathTask }) {
             {i > 0 && <ArrowLeft size={11} className="text-gray-300 dark:text-gray-600" />}
             <span
               className={cn(
-                "rounded-full px-2.5 py-1 text-[11px] font-bold",
+                "rounded-full px-2.5 py-1 text-[13px] font-bold",
                 isCurrent
                   ? "bg-brand text-white shadow-sm"
-                  : "bg-gray-100 text-gray-600 dark:bg-white/10 dark:text-gray-300",
+                  : "bg-transparent text-gray-600 dark:bg-transparent dark:text-gray-300",
               )}
             >
               {name}
@@ -68,11 +68,11 @@ function useStateToggle(): [boolean, () => void] {
 function TaskBlock({ task }: { task: PathTask }) {
   const [open, setOpen] = useStateToggle();
   return (
-    <div className="rounded-2xl border border-gray-100 bg-gray-50/60 p-3.5 dark:border-white/[0.06] dark:bg-white/[0.03]">
+    <div className="rounded-2xl border border-gray-100 bg-transparent p-3.5 dark:border-white/[0.06] dark:bg-transparent">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="min-w-0">
           <div className="truncate text-[13px] font-extrabold text-gray-900 dark:text-white">{task.title}</div>
-          <div className="mt-0.5 flex flex-wrap items-center gap-x-3 text-[10.5px] text-gray-400">
+          <div className="mt-0.5 flex flex-wrap items-center gap-x-3 text-[13px] text-gray-400">
             {task.department && (
               <span className="flex items-center gap-1">
                 <Building2 size={10} /> {task.department.name}
@@ -98,7 +98,7 @@ function TaskBlock({ task }: { task: PathTask }) {
             type="button"
             onClick={setOpen}
             aria-expanded={open}
-            className="mt-3 flex items-center gap-1 text-[11.5px] font-bold text-brand"
+            className="mt-3 flex items-center gap-1 text-[13px] font-bold text-brand"
           >
             <History size={12} />
             جزئیات {formatNumber(task.path.length)} اقدام
@@ -115,14 +115,14 @@ function TaskBlock({ task }: { task: PathTask }) {
                       ACTION_TONE[item.action] ?? "bg-gray-400",
                     )}
                   />
-                  <div className="text-[12.5px] font-extrabold text-gray-800 dark:text-gray-100">
+                  <div className="text-[13px] font-extrabold text-gray-800 dark:text-gray-100">
                     {item.action_display}
                     {item.step_name && <span className="font-bold text-gray-500"> — {item.step_name}</span>}
                   </div>
                   {item.note && (
-                    <p className="mt-0.5 text-[11.5px] leading-6 text-gray-600 dark:text-gray-300">{item.note}</p>
+                    <p className="mt-0.5 text-[13px] leading-6 text-gray-600 dark:text-gray-300">{item.note}</p>
                   )}
-                  <div className="mt-0.5 text-[10.5px] text-gray-400">
+                  <div className="mt-0.5 text-[13px] text-gray-400">
                     {formatJalaliDateTime(item.at)}
                     {item.employees.length > 0 && ` • ${item.employees.map((e) => e.full_name).join("، ")}`}
                   </div>
@@ -145,8 +145,8 @@ function CaseBlock({ c }: { c: PathCase }) {
             <FolderKanban size={16} />
           </span>
           <div className="min-w-0">
-            <div className="truncate text-[14px] font-extrabold text-gray-900 dark:text-white">{c.title}</div>
-            <div className="text-[10.5px] text-gray-400">
+            <div className="truncate text-[13px] font-extrabold text-gray-900 dark:text-white">{c.title}</div>
+            <div className="text-[13px] text-gray-400">
               {formatJalaliDateTime(c.created_at)}
               {!c.active && " • بسته‌شده"}
             </div>
@@ -154,7 +154,7 @@ function CaseBlock({ c }: { c: PathCase }) {
         </div>
         <div className="flex items-center gap-2">
           {c.sales_count > 0 && (
-            <span className="flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-[10.5px] font-extrabold text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-300">
+            <span className="flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-[13px] font-extrabold text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-300">
               <ShoppingBag size={11} /> {formatMoney(c.sales_total)}
             </span>
           )}
@@ -163,7 +163,7 @@ function CaseBlock({ c }: { c: PathCase }) {
       </div>
 
       {c.tasks.length === 0 ? (
-        <p className="text-[11.5px] text-gray-400">برای این پرونده وظیفه‌ای ثبت نشده است.</p>
+        <p className="text-[13px] text-gray-400">برای این پرونده وظیفه‌ای ثبت نشده است.</p>
       ) : (
         <div className="flex flex-col gap-2.5">
           {c.tasks.map((t) => (
@@ -241,7 +241,7 @@ export default function CasePathTab({ customerId, refreshKey = 0 }: { customerId
         <StatTile label="فروخته‌شده" value={formatNumber(s.sold_tasks)} tone="good" hint={s.cancelled_tasks ? `${formatNumber(s.cancelled_tasks)} لغو` : undefined} />
       </div>
 
-      <div className="flex gap-1 self-start rounded-2xl bg-gray-100 p-1 dark:bg-white/[0.05]">
+      <div className="flex gap-1 self-start rounded-2xl border border-gray-100 p-1 dark:border-white/[0.06]">
         {(
           [
             ["cases", "به تفکیک پرونده"],
@@ -253,8 +253,8 @@ export default function CasePathTab({ customerId, refreshKey = 0 }: { customerId
             type="button"
             onClick={() => setView(key)}
             className={cn(
-              "min-h-9 rounded-xl px-3.5 text-[12px] font-bold transition-all",
-              view === key ? "bg-white text-brand shadow-sm dark:bg-white/10" : "text-gray-500 dark:text-gray-400",
+              "min-h-9 rounded-xl px-3.5 text-[13px] font-bold transition-all",
+              view === key ? "bg-white text-brand shadow-sm dark:bg-transparent" : "text-gray-500 dark:text-gray-400",
             )}
           >
             {label}
@@ -272,7 +272,7 @@ export default function CasePathTab({ customerId, refreshKey = 0 }: { customerId
         <Card>
           <SectionTitle icon={<History size={16} />} title="همه‌ی رویدادهای مشتری" />
           {data.timeline.length === 0 ? (
-            <p className="py-6 text-center text-[12px] text-gray-400">رویدادی ثبت نشده است.</p>
+            <p className="py-6 text-center text-[13px] text-gray-400">رویدادی ثبت نشده است.</p>
           ) : (
             <ol className="relative space-y-4 border-r-2 border-gray-200 pr-4 dark:border-white/10">
               {data.timeline.map((e, i) => (
@@ -288,9 +288,9 @@ export default function CasePathTab({ customerId, refreshKey = 0 }: { customerId
                     {e.title}
                   </div>
                   {e.detail && (
-                    <div className="text-[11.5px] leading-6 text-gray-600 dark:text-gray-300">{e.detail}</div>
+                    <div className="text-[13px] leading-6 text-gray-600 dark:text-gray-300">{e.detail}</div>
                   )}
-                  <div className="mt-0.5 text-[10.5px] text-gray-400">{formatJalaliDateTime(e.at)}</div>
+                  <div className="mt-0.5 text-[13px] text-gray-400">{formatJalaliDateTime(e.at)}</div>
                 </li>
               ))}
             </ol>

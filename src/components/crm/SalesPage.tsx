@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import Link from "next/link";
+import dynamic from "next/dynamic";
 import { BarChart3, Package, Plus, ShoppingBag } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
@@ -21,6 +21,8 @@ import SaleFormModal from "./SaleFormModal";
 import SalesTable from "./SalesTable";
 import { Card, CARD, SectionTitle, StatTile, Tabs } from "./ui";
 import ProductsPanel from "./ProductsPanel";
+
+const CustomerProfileModal = dynamic(() => import("./CustomerProfileModal"), { ssr: false });
 
 type TabKey = "sales" | "top" | "products";
 
@@ -45,7 +47,6 @@ function useProducts() {
   return products;
 }
 
-/* ───────────── تب فروش‌ها ───────────── */
 function SalesList() {
   const userId = useAuthStore((s) => s.userId);
   const userType = useAuthStore((s) => s.userType);
@@ -208,7 +209,8 @@ function SalesList() {
 }
 
 /* ───────────── تب مشتریان برتر ───────────── */
-function TopCustomers({ basePath }: { basePath: "/admin" | "/user" }) {
+function TopCustomers({ basePath: _basePath }: { basePath: "/admin" | "/user" }) {
+  const [customerId, setCustomerId] = useState<number | null>(null);
   const products = useProducts();
   const [by, setBy] = useState<"amount" | "quantity">("amount");
   const [product, setProduct] = useState<number | undefined>();
@@ -314,9 +316,10 @@ function TopCustomers({ basePath }: { basePath: "/admin" | "/user" }) {
                 const pct = Math.max(3, Math.round((value / maxValue) * 100));
                 return (
                   <li key={r.customer_id}>
-                    <Link
-                      href={`${basePath}/customer/${r.customer_id}/`}
-                      className="group block rounded-2xl p-2 transition-colors hover:bg-gray-50 dark:hover:bg-white/[0.04]"
+                    <button
+                      type="button"
+                      onClick={() => setCustomerId(r.customer_id)}
+                      className="group block w-full rounded-2xl p-2 text-right transition-colors hover:bg-gray-50 dark:hover:bg-white/[0.04]"
                     >
                       <div className="mb-1.5 flex items-center justify-between gap-3">
                         <div className="flex min-w-0 items-center gap-2.5">
@@ -356,7 +359,7 @@ function TopCustomers({ basePath }: { basePath: "/admin" | "/user" }) {
                           </span>
                         )}
                       </div>
-                    </Link>
+                    </button>
                   </li>
                 );
               })}
@@ -364,6 +367,7 @@ function TopCustomers({ basePath }: { basePath: "/admin" | "/user" }) {
           </Card>
         </>
       )}
+      {customerId !== null && <CustomerProfileModal key={customerId} customerId={customerId} onClose={() => setCustomerId(null)} />}
     </div>
   );
 }

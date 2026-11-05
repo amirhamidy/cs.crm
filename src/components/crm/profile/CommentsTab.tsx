@@ -50,18 +50,18 @@ function CommentItem({
   }
 
   return (
-    <li className="rounded-2xl border border-gray-100 bg-gray-50/60 p-3.5 dark:border-white/[0.06] dark:bg-white/[0.03]">
+    <li className="rounded-2xl border border-gray-100 bg-transparent p-3.5 dark:border-white/[0.06] dark:bg-transparent">
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
-            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand-soft text-[11px] font-black text-brand">
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand-soft text-[13px] font-black text-brand">
               {comment.created_by_name.trim().charAt(0) || "؟"}
             </span>
-            <span className="truncate text-[12.5px] font-extrabold text-gray-800 dark:text-gray-100">
+            <span className="truncate text-[13px] font-extrabold text-gray-800 dark:text-gray-100">
               {comment.created_by_name}
             </span>
           </div>
-          <div className="mt-0.5 pr-9 text-[10.5px] text-gray-400">
+          <div className="mt-0.5 pr-9 text-[13px] text-gray-400">
             {formatJalaliDateTime(comment.created_at)}
             {edited && " • ویرایش‌شده"}
           </div>
@@ -76,7 +76,7 @@ function CommentItem({
                 setText(comment.text);
                 setEditing(true);
               }}
-              className="flex h-8 w-8 items-center justify-center rounded-xl text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-white/10"
+              className="flex h-8 w-8 items-center justify-center rounded-xl text-gray-400 transition-colors hover:bg-transparent hover:text-gray-700 dark:hover:bg-white/10"
             >
               <Pencil size={14} />
             </button>
@@ -100,7 +100,7 @@ function CommentItem({
             maxLength={MAX_LENGTH}
             rows={3}
             autoFocus
-            className="w-full resize-none rounded-2xl border border-gray-200 bg-white p-3 text-[12.5px] leading-6 text-gray-900 outline-none focus:border-brand dark:border-white/10 dark:bg-white/5 dark:text-white"
+            className="w-full resize-none rounded-2xl border border-gray-200 bg-white p-3 text-[13px] leading-6 text-gray-900 outline-none focus:border-brand dark:border-white/10 dark:bg-white/5 dark:text-white"
           />
           <div className="mt-2 flex justify-end gap-2">
             <Button
@@ -121,7 +121,7 @@ function CommentItem({
           </div>
         </div>
       ) : (
-        <p className="mt-2.5 whitespace-pre-wrap break-words text-[12.5px] leading-7 text-gray-700 dark:text-gray-200">
+        <p className="mt-2.5 whitespace-pre-wrap break-words text-[13px] leading-7 text-gray-700 dark:text-gray-200">
           {comment.text}
         </p>
       )}
@@ -203,10 +203,10 @@ export default function CommentsTab({
           maxLength={MAX_LENGTH}
           rows={3}
           placeholder="مثلاً: پرداخت‌ها به موقع است، ترجیح می‌دهد تحویل درب کارخانه باشد..."
-          className="w-full resize-none rounded-2xl border border-gray-200 bg-white p-3 text-[12.5px] leading-6 text-gray-900 outline-none placeholder:text-gray-400 focus:border-brand dark:border-white/10 dark:bg-white/5 dark:text-white"
+          className="w-full resize-none rounded-2xl border border-gray-200 bg-white p-3 text-[13px] leading-6 text-gray-900 outline-none placeholder:text-gray-400 focus:border-brand dark:border-white/10 dark:bg-white/5 dark:text-white"
         />
         <div className="mt-2.5 flex items-center justify-between">
-          <span className="text-[10.5px] text-gray-400">
+          <span className="text-[13px] text-gray-400">
             {draft.length.toLocaleString("fa-IR")} / {MAX_LENGTH.toLocaleString("fa-IR")}
           </span>
           <Button icon={<Send size={14} />} loading={posting} disabled={!draft.trim()} onClick={post}>
@@ -217,10 +217,10 @@ export default function CommentsTab({
 
       <Card>
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-          <h2 className="text-[13.5px] font-extrabold text-gray-800 dark:text-gray-100">
+          <h2 className="text-[13px] font-extrabold text-gray-800 dark:text-gray-100">
             نظرات کارکنان
             {list.count > 0 && (
-              <span className="mr-2 text-[11px] font-bold text-gray-400">
+              <span className="mr-2 text-[13px] font-bold text-gray-400">
                 ({list.count.toLocaleString("fa-IR")})
               </span>
             )}

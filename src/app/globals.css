@@ -30,6 +30,22 @@ body {
   @apply bg-gray-950 text-gray-50;
 }
 
+/* ---- iOS-style spinner (components/ui/Spinner.tsx) ---- */
+@keyframes spinner-spoke {
+    0%   { opacity: 1; }
+    100% { opacity: 0.15; }
+}
+
+.spinner-spoke {
+    opacity: 0.15;
+    animation: spinner-spoke var(--spinner-dur, 1s) linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .spinner-spoke {
+        --spinner-dur: 2.4s;
+    }
+}
 /* NOTE: single source of truth for the body font is the `@layer base` rule below.
    Tailwind v4 is loaded via `@import "tailwindcss"`, so the legacy
    `@tailwind base/components/utilities` directives were removed. */

@@ -13,7 +13,7 @@ interface Props {
 export default function StarRating({ value, size = 14, showNumber = true, count }: Props) {
   if (value == null) {
     return (
-      <span className="text-[11.5px] font-semibold text-gray-400">بدون امتیاز</span>
+      <span className="text-[13px] font-semibold text-gray-400">بدون امتیاز</span>
     );
   }
 
@@ -48,12 +48,12 @@ export default function StarRating({ value, size = 14, showNumber = true, count 
         })}
       </span>
       {showNumber && (
-        <span className="text-[12px] font-extrabold text-gray-800 dark:text-gray-100">
+        <span className="text-[13px] font-extrabold text-gray-800 dark:text-gray-100">
           {formatScore(value)}
         </span>
       )}
       {count != null && (
-        <span className="text-[10.5px] font-semibold text-gray-400">
+        <span className="text-[13px] font-semibold text-gray-400">
           ({count.toLocaleString("fa-IR")})
         </span>
       )}
