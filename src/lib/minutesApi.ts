@@ -1,14 +1,25 @@
 import axios from "axios";
 import axiosInstance from "@/lib/axiosInstance";
+import { getApiUrl } from "@/lib/config";
+import { attachOrgToken } from "@/lib/gateway";
 import { listAll } from "@/lib/api";
 import type { MeetingCreatePayload, MeetingDetail, MeetingListItem, MeetingStatus, MeetingUpdatePayload, PublicSigner, SignerCreatePayload, SignerItem, SignerUpdatePayload } from "@/types/minutes";
 
 const BASE = "/minutes/api/v1";
 
 
+// No user token here (public signing link), but the gateway still needs the
+// org token to route the request. The base URL is resolved per request:
+// axiosInstance.defaults.baseURL is never set (its interceptor sets it on the
+// config), so the previous code always sent these calls to the page origin.
 const publicClient = axios.create({
-  baseURL: axiosInstance.defaults.baseURL,
   headers: { "Content-Type": "application/json" },
+});
+
+publicClient.interceptors.request.use(async (config) => {
+  config.baseURL = getApiUrl();
+  await attachOrgToken(config.headers);
+  return config;
 });
 
 export const minutesApi = {

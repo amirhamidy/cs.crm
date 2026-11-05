@@ -1,5 +1,6 @@
 import { isAxiosError } from "axios";
 import axiosInstance from "@/lib/axiosInstance";
+import { onSessionScopeChange } from "@/lib/sessionScope";
 import type { Customer, CustomerDetail, CustomerPayload, CustomerStatus } from "@/types/customer";
 import type { PageParams } from "@/types/pagination";
 import { cached, createSearch, dedupe, fetchPage, getOne, invalidate, listAll as listAllPages, normalizeQuery, toPaginated, uniqueIds, type Paginated, type RawList } from "./_core";
@@ -22,6 +23,11 @@ export interface CustomerCounts {
 
 const summaries = new Map<number, Customer>();
 const notFound = new Set<number>();
+
+onSessionScopeChange(() => {
+  summaries.clear();
+  notFound.clear();
+});
 
 const detailUrl = (id: number) => `${BASE}${id}/`;
 

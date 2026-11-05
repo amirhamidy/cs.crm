@@ -1,5 +1,7 @@
 import axios from "axios";
 import { getApiUrl } from "@/lib/config";
+import { gatewayHeaders } from "@/lib/gateway";
+import { resetSessionScope } from "@/lib/sessionScope";
 import type { SessionUser } from "@/types/auth";
 
 const ACCESS_KEY = "crm-access";
@@ -93,6 +95,8 @@ export function saveSession(params: {
   write(USER_ID_KEY, String(params.user.id));
   write(LEGACY_TYPE_KEY, String(params.user.type));
   write(LEGACY_USERNAME_KEY, params.user.username);
+
+  resetSessionScope();
 }
 
 export function clearSession() {
@@ -102,6 +106,8 @@ export function clearSession() {
   write(USER_ID_KEY, null);
   write(LEGACY_TYPE_KEY, null);
   write(LEGACY_USERNAME_KEY, null);
+
+  resetSessionScope();
 }
 
 let refreshPromise: Promise<string | null> | null = null;
@@ -118,7 +124,7 @@ export function refreshAccessToken(): Promise<string | null> {
       const { data } = await axios.post(
         `${getApiUrl()}/accounts/api/v1/auth/refresh/`,
         { refresh },
-        { timeout: 15_000 },
+        { timeout: 15_000, headers: await gatewayHeaders() },
       );
 
       if (typeof data?.access !== "string" || !data.access) {

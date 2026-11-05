@@ -1,4 +1,5 @@
 import axiosInstance from "@/lib/axiosInstance";
+import { onSessionScopeChange } from "@/lib/sessionScope";
 import type { ApiEmployee, ApiUser } from "@/types/users";
 import type { Paginated, SearchParams } from "@/types/pagination";
 import { cached, createSearch, dedupe, fetchPage, getOne, invalidate, listAll, uniqueIds } from "./_core";
@@ -35,6 +36,8 @@ export type EmployeePayload = Record<string, unknown>;
 export type UserPayload = Record<string, unknown>;
 
 const employeeById = new Map<number, ApiEmployee>();
+
+onSessionScopeChange(() => employeeById.clear());
 
 function remember(list: ApiEmployee[]) {
   list.forEach((e) => employeeById.set(e.id, { ...employeeById.get(e.id), ...e }));

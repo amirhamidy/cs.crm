@@ -1,4 +1,5 @@
 "use client";
+import { resetSessionScope } from "@/lib/sessionScope";
 import type { PortalAccount } from "@/types/portal";
 
 const ACCESS = "portal-access";
@@ -17,6 +18,7 @@ export function savePortalSession(access: string, account: PortalAccount, expire
     window.localStorage.setItem(ACCOUNT, JSON.stringify(account));
     window.localStorage.setItem(EXPIRES, String(Date.now() + Math.max(0, expiresIn) * 1000));
   } catch { /* storage may be unavailable */ }
+  resetSessionScope();
 }
 export function isPortalSessionValid(): boolean {
   try {
@@ -36,4 +38,5 @@ export function clearPortalSession(accountId?: number | null) {
     window.localStorage.removeItem(EXPIRES);
     if (id != null) window.localStorage.removeItem(`portal-cart:${id}`);
   } catch { /* storage may be unavailable */ }
+  resetSessionScope();
 }

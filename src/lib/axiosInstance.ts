@@ -2,6 +2,7 @@ import axios, { type InternalAxiosRequestConfig } from "axios";
 import { getApiUrl } from "@/lib/config";
 import { installRequestGovernor } from "@/lib/requestGovernor";
 import { clearSession, getAccessToken, refreshAccessToken } from "@/lib/clientAuth";
+import { attachOrgToken } from "@/lib/gateway";
 
 type RetriableConfig = InternalAxiosRequestConfig & {
   _retry?: boolean;
@@ -26,6 +27,8 @@ function redirectToLogin() {
 
 axiosInstance.interceptors.request.use(async (config) => {
   config.baseURL = getApiUrl();
+
+  await attachOrgToken(config.headers);
 
   if (config.data instanceof FormData) {
     delete config.headers["Content-Type"];

@@ -1,6 +1,7 @@
 import axios from "axios";
 import axiosInstance from "@/lib/axiosInstance";
 import { getApiUrl } from "@/lib/config";
+import { gatewayHeaders } from "@/lib/gateway";
 
 export interface LoginPayload {
   username: string;
@@ -28,7 +29,7 @@ export const authService = {
       await axios.post(
         `${getApiUrl()}/accounts/api/v1/auth/logout/`,
         { refresh },
-        { timeout: 8_000 },
+        { timeout: 8_000, headers: await gatewayHeaders() },
       );
     } catch {
     }

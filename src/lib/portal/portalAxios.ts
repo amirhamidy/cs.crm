@@ -1,11 +1,13 @@
 "use client";
 import axios from "axios";
 import { getApiUrl } from "@/lib/config";
+import { attachOrgToken } from "@/lib/gateway";
 import { clearPortalSession, getPortalAccess } from "./portalAuth";
 
 const portalAxios = axios.create({ baseURL: getApiUrl(), timeout: 15_000 });
-portalAxios.interceptors.request.use((config) => {
+portalAxios.interceptors.request.use(async (config) => {
   config.baseURL = getApiUrl();
+  await attachOrgToken(config.headers);
   config.headers["Content-Type"] = "application/json";
   const token = getPortalAccess();
   if (token && !String(config.url || "").includes("/portal/login/")) config.headers.Authorization = `Bearer ${token}`;

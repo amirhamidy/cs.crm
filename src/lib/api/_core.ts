@@ -1,4 +1,5 @@
 import axiosInstance from "@/lib/axiosInstance";
+import { onSessionScopeChange } from "@/lib/sessionScope";
 import type { Paginated } from "@/types/pagination";
 
 export type { Paginated };
@@ -57,6 +58,9 @@ export function invalidate(prefix?: string) {
     versions.set(k, versionOf(k) + 1);
   });
 }
+
+// Cached data belongs to one user/tenant: drop everything when it changes.
+onSessionScopeChange(() => invalidate());
 
 export function toPaginated<T>(data: RawList<T> | unknown): Paginated<T> {
   if (Array.isArray(data)) {

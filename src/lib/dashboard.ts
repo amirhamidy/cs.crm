@@ -1,4 +1,5 @@
 import axiosInstance from "@/lib/axiosInstance";
+import { onSessionScopeChange } from "@/lib/sessionScope";
 import { toPersianDigits } from "@/lib/jalali";
 
 
@@ -55,6 +56,8 @@ async function fetchJson<T>(
 
 
 const cache = new Map<string, { at: number; promise: Promise<unknown> }>();
+
+onSessionScopeChange(() => cache.clear());
 
 function cached<T>(key: string, loader: () => Promise<T>): Promise<T> {
   const hit = cache.get(key);

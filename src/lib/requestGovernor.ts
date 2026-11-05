@@ -4,6 +4,8 @@ import axios, {
   type AxiosResponse,
   type GenericAbortSignal,
 } from "axios";
+import { ORG_TOKEN_HEADER } from "@/lib/gateway";
+import { onSessionScopeChange } from "@/lib/sessionScope";
 
 declare module "axios" {
   interface AxiosRequestConfig {
@@ -59,6 +61,9 @@ export function installRequestGovernor(
   const inflight = new Map<string, Promise<AxiosResponse>>();
   let active = 0;
   let activeBackground = 0;
+
+  // A different user or tenant must never join a request that is still in flight.
+  onSessionScopeChange(() => inflight.clear());
 
   const pump = () => {
     let i = 0;
@@ -139,7 +144,7 @@ export function installRequestGovernor(
 
     if (!dedupable) return run();
 
-    const key = `${instance.getUri(config)}|${String(config.headers?.Authorization ?? "")}`;
+    const key = `${instance.getUri(config)}|${String(config.headers?.Authorization ?? "")}|${String(config.headers?.[ORG_TOKEN_HEADER] ?? "")}`;
     const existing = inflight.get(key);
 
     if (existing) {

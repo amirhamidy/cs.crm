@@ -1,4 +1,4 @@
-import { getApiUrl } from "@/lib/config";
+import { getMediaUrl } from "@/lib/config";
 
 const G = [
   "from-indigo-500 to-violet-500",
@@ -21,7 +21,7 @@ export function resolveFileUrl(url?: string | null): string {
   if (!url) return "";
   if (/^(blob:|data:)/i.test(url)) return url;
 
-  const base = getApiUrl();
+  const base = getMediaUrl();
 
   if (url.startsWith("//")) return `https:${url}`;
 
