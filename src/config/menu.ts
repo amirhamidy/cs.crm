@@ -1,4 +1,4 @@
-import { Home, Users, ClipboardList, Building2, FolderKanban, CalendarCheck2, Ticket, Archive, MessageSquareText, UserRound, ListTodo, BarChart3, Trophy, ShoppingBag } from "lucide-react";
+import { Home, Users, ClipboardList, Building2, FolderKanban, CalendarCheck2, Ticket, Archive, MessageSquareText, UserRound, ListTodo, BarChart3, Trophy, ShoppingBag, Sprout } from "lucide-react";
 
 import { LucideIcon } from "lucide-react";
 
@@ -59,6 +59,7 @@ export const adminMenuItems: MenuItem[] = [
     label: "فروش",
     href: "/admin/sales",
   },
+  { icon: Sprout, label: "مشتریان فصلی", href: "/admin/seasonal" },
   {
     icon: Users,
     label: "منابع انسانی",
@@ -152,6 +153,7 @@ export const userMenuItems: MenuItem[] = [
     label: "فروش",
     href: "/user/sales",
   },
+  { icon: Sprout, label: "مشتریان فصلی", href: "/user/seasonal" },
   {
     icon: CalendarCheck2,
     label: "تقویم",

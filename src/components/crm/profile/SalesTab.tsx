@@ -15,6 +15,7 @@ import { useAuthStore } from "@/store/authStore";
 import type { Sale } from "@/types/crm";
 import SaleFormModal from "../SaleFormModal";
 import SalesTable from "../SalesTable";
+import SaleDetailsModal from "../SaleDetailsModal";
 import { Card, SectionTitle } from "../ui";
 
 interface Props {
@@ -34,6 +35,7 @@ export default function SalesTab({ customerId, customerName, onChanged }: Props)
 
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Sale | null>(null);
+  const [details, setDetails] = useState<Sale | null>(null);
   const [toDelete, setToDelete] = useState<Sale | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
@@ -61,7 +63,7 @@ export default function SalesTab({ customerId, customerName, onChanged }: Props)
     <Card>
       <SectionTitle
         icon={<ShoppingBag size={16} />}
-        title="فروش‌های ثبت‌شده"
+        title="خرید و فروش‌های ثبت‌شده"
         actions={
           <Button
             size="sm"
@@ -71,7 +73,7 @@ export default function SalesTab({ customerId, customerName, onChanged }: Props)
               setFormOpen(true);
             }}
           >
-            ثبت فروش
+            ثبت معامله
           </Button>
         }
       />
@@ -90,8 +92,8 @@ export default function SalesTab({ customerId, customerName, onChanged }: Props)
         <>
           <SalesTable
             sales={list.data}
-            showCustomer={false}
             canModify={canModify}
+            onDetails={setDetails}
             onEdit={(s) => {
               setEditing(s);
               setFormOpen(true);
@@ -118,6 +120,17 @@ export default function SalesTab({ customerId, customerName, onChanged }: Props)
           list.refetch();
           onChanged?.();
           toast.success(editing ? "فروش ویرایش شد" : "فروش ثبت شد");
+        }}
+      />
+
+      <SaleDetailsModal
+        open={details != null}
+        saleId={details?.id ?? null}
+        title={details ? `${details.summary_label} · ${details.product_name}` : ""}
+        onClose={() => setDetails(null)}
+        onChanged={() => {
+          list.refetch();
+          onChanged?.();
         }}
       />
 

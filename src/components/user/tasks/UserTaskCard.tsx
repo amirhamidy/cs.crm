@@ -477,7 +477,7 @@ export default function UserTaskCard({
             }
 
             const sale = await salesApi.create({
-                customer: caseData.customer,
+                seller: null, buyer: caseData.customer,
                 case: Number(ext.case),
                 product: data.product,
                 quantity_kg: data.quantity_kg,

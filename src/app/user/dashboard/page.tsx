@@ -8,6 +8,7 @@ import axiosInstance from "@/lib/axiosInstance";
 import { useAuthStore } from "@/store/authStore";
 import EmployeePerformanceChart from "@/components/user/dashboard/EmployeePerformanceChart";
 import DepartmentScoreManager from "@/components/user/dashboard/DepartmentScoreManager";
+import SeasonalSuggestionCard from "@/components/crm/SeasonalSuggestionCard";
 
 interface CalendarEvent {
     id: number;
@@ -108,6 +109,8 @@ export default function EmployeeDashboardPage() {
                         />
 
                         {employeeId !== null && <ScoreCard />}
+
+                        <SeasonalSuggestionCard basePath="/user" />
                     </div>
                 </div>
                 <DepartmentScoreManager />

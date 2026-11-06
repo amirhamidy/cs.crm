@@ -1,5 +1,6 @@
 "use client";
 
+import { usePermissions } from "@/hooks/usePermissions";
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
@@ -7,6 +8,7 @@ import {
   ArrowRight,
   Building2,
   FolderKanban,
+  KeyRound,
   LayoutDashboard,
   MapPin,
   MessageCircle,
@@ -22,13 +24,15 @@ import StarRating from "./StarRating";
 import { Card, Tabs } from "./ui";
 import CasePathTab from "./profile/CasePathTab";
 import CommentsTab from "./profile/CommentsTab";
+import MarketplaceTab from "./profile/MarketplaceTab";
 import OverviewTab from "./profile/OverviewTab";
 import SalesTab from "./profile/SalesTab";
 
-type TabKey = "overview" | "comments" | "sales" | "path";
+type TabKey = "overview" | "comments" | "sales" | "path" | "marketplace";
 
 export default function CustomerProfilePage({ basePath }: { basePath: "/admin" | "/user" }) {
   const params = useParams<{ id: string }>();
+  const { can } = usePermissions();
   const customerId = Number(params?.id);
   const valid = Number.isInteger(customerId) && customerId > 0;
 
@@ -37,7 +41,6 @@ export default function CustomerProfilePage({ basePath }: { basePath: "/admin" |
   const [error, setError] = useState("");
   const [tab, setTab] = useState<TabKey>("overview");
   const [avg, setAvg] = useState<{ value: number | null; count: number } | null>(null);
-  // با هر تغییر در فروش/نظر، خلاصه و مسیر دوباره خوانده می‌شوند
   const [refreshKey, setRefreshKey] = useState(0);
   const bump = useCallback(() => setRefreshKey((n) => n + 1), []);
 
@@ -135,8 +138,11 @@ export default function CustomerProfilePage({ basePath }: { basePath: "/admin" |
         items={[
           { key: "overview", label: "خلاصه", icon: <LayoutDashboard size={14} /> },
           { key: "comments", label: "نظرات", icon: <MessageCircle size={14} /> },
-          { key: "sales", label: "فروش‌ها", icon: <ShoppingBag size={14} /> },
+          { key: "sales", label: "خرید و فروش", icon: <ShoppingBag size={14} /> },
           { key: "path", label: "مسیر پرونده‌ها", icon: <FolderKanban size={14} /> },
+          ...(can("customer_credentials", "view")
+            ? [{ key: "marketplace" as const, label: "حساب بازارگاه", icon: <KeyRound size={14} /> }]
+            : []),
         ]}
       />
 
@@ -148,6 +154,9 @@ export default function CustomerProfilePage({ basePath }: { basePath: "/admin" |
         <SalesTab customerId={customerId} customerName={customer.full_name} onChanged={bump} />
       )}
       {tab === "path" && <CasePathTab customerId={customerId} refreshKey={refreshKey} />}
+      {tab === "marketplace" && can("customer_credentials", "view") && (
+        <MarketplaceTab customerId={customerId} />
+      )}
     </div>
   );
 }

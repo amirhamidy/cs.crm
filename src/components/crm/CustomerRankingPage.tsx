@@ -257,6 +257,7 @@ export default function CustomerRankingPage({ basePath: _basePath }: Props) {
           value={filters.min_score ?? 0}
           onChange={(id) => list.setFilters({ min_score: id || undefined })}
         />
+        
         <NiceSelect
           label="وضعیت مشتری"
           options={STATUS_OPTIONS.map((option) => ({ id: Number(option.value), label: option.label }))}
@@ -304,7 +305,11 @@ export default function CustomerRankingPage({ basePath: _basePath }: Props) {
           )}
         </>
       )}
-      {customerId !== null && <CustomerProfileModal key={customerId} customerId={customerId} onClose={() => setCustomerId(null)} />}
+      {customerId !== null &&
+        <CustomerProfileModal
+          key={customerId}
+          customerId={customerId}
+          onClose={() => setCustomerId(null)} />}
     </div>
   );
 }

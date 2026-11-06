@@ -4,8 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { BarChart3, CalendarDays, Package, ShoppingBag, Star, Weight } from "lucide-react";
 import { ErrorState, EmptyState } from "@/components/ui/Feedback";
 import { StatCardsSkeleton, ListSkeleton } from "@/components/ui/skeletons";
-import axiosInstance from "@/lib/axiosInstance";
-import { accountsApi, salesApi } from "@/lib/api";
+import { accountsApi, salesApi, scoresApi } from "@/lib/api";
 import { apiMessage } from "@/lib/apiMessage";
 import {
   formatJalaliDateTime,
@@ -15,17 +14,9 @@ import {
   formatWeight,
   toNumber,
 } from "@/lib/crm/format";
-import type { CustomerSalesSummary } from "@/types/crm";
+import type { CustomerScore, CustomerSalesSummary } from "@/types/crm";
 import StarRating from "../StarRating";
 import { Card, SectionTitle, StatTile } from "../ui";
-
-interface ScoreItem {
-  id: number;
-  created_by: number;
-  score: number;
-  reason: string;
-  created_at: string;
-}
 
 interface Props {
   customerId: number;
@@ -37,7 +28,7 @@ interface Props {
 
 export default function OverviewTab({ customerId, onAverage, refreshKey = 0 }: Props) {
   const [summary, setSummary] = useState<CustomerSalesSummary | null>(null);
-  const [scores, setScores] = useState<ScoreItem[]>([]);
+  const [scores, setScores] = useState<CustomerScore[]>([]);
   const [names, setNames] = useState<Map<number, string>>(new Map());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -48,12 +39,11 @@ export default function OverviewTab({ customerId, onAverage, refreshKey = 0 }: P
     try {
       const [sum, scoreRes, employees] = await Promise.all([
         salesApi.customerSummary(customerId),
-        axiosInstance.get(`/customers/api/v1/customers/${customerId}/scores/`),
+        scoresApi.page(customerId),
         accountsApi.employees.all().catch(() => []),
       ]);
 
-      const raw = scoreRes.data;
-      const items: ScoreItem[] = Array.isArray(raw) ? raw : (raw?.results ?? []);
+      const items = scoreRes.results;
 
       setSummary(sum);
       setScores(items);

@@ -33,5 +33,7 @@ export type {
 export { fetchStatusPage, fetchStatusCount, listAllByStatus, isStatusFilterServerSide } from "./statusPage";
 
 
-export { rankingApi, commentsApi, casePathApi, productsApi, salesApi } from "./crm";
+export { rankingApi, commentsApi, scoresApi, casePathApi, productsApi, salesApi, attachmentsApi, issuesApi, seasonalApi, marketplaceApi } from "./crm";
 export type { RankingParams } from "./crm";
+
+export { accessApi } from "./access";

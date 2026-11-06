@@ -10,6 +10,7 @@ import { ListSkeleton } from "@/components/ui/skeletons";
 import { Switch } from "@/components/ui/Switch";
 import { toast } from "@/components/notifications/toast";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
+import { usePermissions } from "@/hooks/usePermissions";
 import { productsApi } from "@/lib/api";
 import { apiMessage } from "@/lib/apiMessage";
 import type { FeedProduct } from "@/types/crm";
@@ -19,10 +20,14 @@ function ProductRow({
   product,
   onChanged,
   onDelete,
+  canEdit,
+  canDelete,
 }: {
   product: FeedProduct;
   onChanged: () => void;
   onDelete: (p: FeedProduct) => void;
+  canEdit: boolean;
+  canDelete: boolean;
 }) {
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(product.name);
@@ -104,27 +109,27 @@ function ProductRow({
           <span className="hidden text-[10.5px] font-bold text-gray-400 sm:inline">
             {product.is_active ? "فعال" : "غیرفعال"}
           </span>
-          <Switch
+          {canEdit && <Switch
             checked={product.is_active}
             disabled={busy}
             onChange={(v) => void patch({ is_active: v })}
-          />
-          <button
+          />}
+          {canEdit && <button
             type="button"
             aria-label="تغییر نام"
             onClick={() => setEditing(true)}
             className="flex h-8 w-8 items-center justify-center rounded-xl text-gray-400 hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-white/10"
           >
             <Pencil size={14} />
-          </button>
-          <button
+          </button>}
+          {canDelete && <button
             type="button"
             aria-label="حذف"
             onClick={() => onDelete(product)}
             className="flex h-8 w-8 items-center justify-center rounded-xl text-gray-400 hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-500/10"
           >
             <Trash2 size={14} />
-          </button>
+          </button>}
         </div>
       )}
     </li>
@@ -133,6 +138,10 @@ function ProductRow({
 
 /** مدیریت کالاها (فقط ادمین): نهاده‌هایی که می‌شود فروخت */
 export default function ProductsPanel() {
+  const { can } = usePermissions();
+  const canCreate = can("products", "create");
+  const canEdit = can("products", "edit");
+  const canDelete = can("products", "delete");
   const list = usePaginatedList<FeedProduct>(
     (params, signal) => productsApi.page(params, signal),
     { pageSize: 20 },
@@ -180,7 +189,7 @@ export default function ProductsPanel() {
     <Card>
       <SectionTitle icon={<Package size={16} />} title="کالاهای قابل فروش" />
 
-      <form
+      {canCreate && <form
         onSubmit={(e) => {
           e.preventDefault();
           void add();
@@ -197,7 +206,7 @@ export default function ProductsPanel() {
         <Button type="submit" icon={<Plus size={14} />} loading={adding} disabled={!name.trim()}>
           افزودن کالا
         </Button>
-      </form>
+      </form>}
 
       {list.loading ? (
         <ListSkeleton rows={4} />
@@ -217,6 +226,8 @@ export default function ProductsPanel() {
                 key={p.id}
                 product={p}
                 onChanged={list.refetch}
+                canEdit={canEdit}
+                canDelete={canDelete}
                 onDelete={(item) => {
                   setDeleteError(null);
                   setToDelete(item);

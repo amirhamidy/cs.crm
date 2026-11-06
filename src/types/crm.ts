@@ -1,6 +1,6 @@
 import type { CustomerStatus } from "./customer";
 
-/* ───────────── رتبه‌بندی مشتریان ───────────── */
+
 
 export interface RankedCustomer {
   rank: number;
@@ -10,11 +10,11 @@ export interface RankedCustomer {
   phone_number: string;
   status: CustomerStatus;
   status_display: string;
-  /** null = هنوز امتیازی ثبت نشده */
+  
   avg_score: number | null;
   scores_count: number;
   comments_count: number;
-  /** رشته‌ی عددی، مثل "2000.00" */
+  
   total_sales: string;
   last_sale_date: string | null;
 }
@@ -28,7 +28,15 @@ export type RankingOrdering =
   | "-last_sale_date"
   | "full_name";
 
-/* ───────────── نظرات ───────────── */
+
+
+export interface CustomerScore {
+  id: number;
+  created_by: number;
+  score: number;
+  reason: string;
+  created_at: string;
+}
 
 export interface CustomerComment {
   id: number;
@@ -41,7 +49,7 @@ export interface CustomerComment {
   updated_at: string;
 }
 
-/* ───────────── فروش ───────────── */
+
 
 export interface FeedProduct {
   id: number;
@@ -50,11 +58,28 @@ export interface FeedProduct {
   created_at: string;
 }
 
+export type TradeType = "sale" | "purchase" | "brokerage";
+
 export interface Sale {
   id: number;
-  customer: number;
-  customer_name: string;
-  company_name: string;
+  
+  trade_type: TradeType;
+  trade_type_display: string;
+  
+  seller: number | null;
+  buyer: number | null;
+  
+  seller_name: string;
+  buyer_name: string;
+  seller_company: string;
+  buyer_company: string;
+  
+  summary_label: string;
+  shortage_kg: string;
+  spillage_kg: string;
+  returned_kg: string;
+  open_issues_count: number;
+  attachments_count: number;
   case: number | null;
   case_title: string | null;
   product: number;
@@ -62,7 +87,7 @@ export interface Sale {
   quantity_kg: string;
   unit_price: string;
   total_amount: string;
-  /** YYYY-MM-DD میلادی */
+  
   sale_date: string;
   description: string;
   created_by: number;
@@ -72,7 +97,9 @@ export interface Sale {
 }
 
 export interface SalePayload {
-  customer: number;
+  
+  seller: number | null;
+  buyer: number | null;
   product: number;
   quantity_kg: string;
   unit_price: string;
@@ -82,7 +109,12 @@ export interface SalePayload {
 }
 
 export interface SaleListParams {
+  trade_type?: TradeType;
+  has_open_issues?: 1;
+  
   customer?: number;
+  seller?: number;
+  buyer?: number;
   product?: number;
   case?: number;
   date_from?: string;
@@ -142,7 +174,7 @@ export interface CustomerSalesSummary {
   by_product: CustomerSalesByProduct[];
 }
 
-/* ───────────── مسیر پرونده‌های مشتری ───────────── */
+
 
 export interface PathPerson {
   id: number;
@@ -178,7 +210,7 @@ export interface PathCase {
   id: number;
   title: string;
   active: boolean;
-  /** in_progress | sold | completed | cancelled | no_tasks */
+  
   status: string;
   created_at: string | null;
   tasks: PathTask[];
@@ -213,4 +245,138 @@ export interface CustomerPath {
   };
   cases: PathCase[];
   timeline: PathTimelineEvent[];
+}
+
+
+
+export interface SaleAttachment {
+  id: number;
+  sale: number;
+  title: string;
+  original_name: string;
+  size: number;
+  uploaded_by: number;
+  uploaded_by_username: string;
+  created_at: string;
+}
+
+
+
+export type IssueType = "shortage" | "spillage" | "returned";
+export type IssueStatus = "open" | "in_progress" | "resolved";
+
+export interface LoadIssue {
+  id: number;
+  sale: number;
+  sale_label: string;
+  seller: number | null;
+  buyer: number | null;
+  product_name: string;
+  sale_date: string;
+  issue_type: IssueType;
+  issue_type_display: string;
+  quantity_kg: string;
+  loss_amount: string;
+  status: IssueStatus;
+  status_display: string;
+  issue_date: string;
+  description: string;
+  resolution_note: string;
+  resolved_at: string | null;
+  created_by_username: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface LoadIssuePayload {
+  issue_type: IssueType;
+  quantity_kg: string;
+  issue_date?: string;
+  description?: string;
+  status?: IssueStatus;
+  resolution_note?: string;
+}
+
+
+
+export interface SeasonalSupply {
+  id: number;
+  customer: number;
+  customer_name: string;
+  company_name: string;
+  phone_number: string;
+  product: number;
+  product_name: string;
+  
+  start_month: number;
+  end_month: number;
+  expected_quantity_kg: string | null;
+  notes: string;
+  created_at: string;
+}
+
+export interface SeasonalSupplyPayload {
+  customer: number;
+  product: number;
+  start_month: number;
+  end_month: number;
+  expected_quantity_kg?: string | null;
+  notes?: string;
+}
+
+export interface SuggestedCustomer {
+  id: number;
+  full_name: string;
+  company_name: string;
+  phone_number: string;
+  
+  start_month?: number;
+  end_month?: number;
+  expected_quantity_kg?: string | null;
+  notes?: string;
+  
+  last_purchase_date?: string;
+  total_quantity_kg?: string;
+  purchases_count?: number;
+}
+
+export interface SuggestionGroup {
+  product: { id: number; name: string };
+  customers: SuggestedCustomer[];
+}
+
+export interface SeasonalSuggestions {
+  month: number;
+  month_name: string;
+  next_month: number;
+  next_month_name: string;
+  current: SuggestionGroup[];
+  upcoming: SuggestionGroup[];
+  from_history: SuggestionGroup[];
+}
+
+
+
+export interface MarketplaceAccount {
+  id: number;
+  customer: number;
+  marketplace_name: string;
+  username: string;
+  has_password: boolean;
+  url: string;
+  notes: string;
+  created_by_username: string;
+  created_at: string;
+  updated_at: string;
+  last_revealed_at: string | null;
+  last_revealed_by_username: string | null;
+}
+
+export interface MarketplaceAccountPayload {
+  marketplace_name?: string;
+  username: string;
+  
+  password?: string;
+  url?: string;
+  notes?: string;
 }

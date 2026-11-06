@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import dynamic from "next/dynamic";
-import { BarChart3, Package, Plus, ShoppingBag } from "lucide-react";
+import { BarChart3, Package, Plus, ShoppingBag, TriangleAlert } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { EmptyState, ErrorState, PageHeader, SearchInput } from "@/components/ui/Feedback";
@@ -11,22 +11,27 @@ import { SalesSelect } from "./SalesSelect";
 import { ListSkeleton, TableSkeleton } from "@/components/ui/skeletons";
 import { toast } from "@/components/notifications/toast";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
+import { usePermissions } from "@/hooks/usePermissions";
 import { productsApi, salesApi } from "@/lib/api";
 import { apiMessage } from "@/lib/apiMessage";
 import { formatJalaliDate, formatMoney, formatNumber, formatWeight, toNumber } from "@/lib/crm/format";
 import { useAuthStore } from "@/store/authStore";
-import type { FeedProduct, Sale, TopCustomerRow } from "@/types/crm";
+import type { FeedProduct, Sale, TopCustomerRow, TradeType } from "@/types/crm";
 import JalaliDateField from "./JalaliDateField";
 import SaleFormModal from "./SaleFormModal";
 import SalesTable from "./SalesTable";
 import { Card, CARD, SectionTitle, StatTile, Tabs } from "./ui";
 import ProductsPanel from "./ProductsPanel";
+import IssuesPanel from "./IssuesPanel";
+import SaleDetailsModal from "./SaleDetailsModal";
 
 const CustomerProfileModal = dynamic(() => import("./CustomerProfileModal"), { ssr: false });
 
-type TabKey = "sales" | "top" | "products";
+type TabKey = "sales" | "top" | "products" | "issues";
 
 type SaleFilters = {
+  trade_type: TradeType | undefined;
+  has_open_issues: 1 | undefined;
   product: number | undefined;
   date_from: string | undefined;
   date_to: string | undefined;
@@ -37,8 +42,8 @@ function useProducts() {
   useEffect(() => {
     let alive = true;
     productsApi
-      .page({ page_size: 100 })
-      .then((r) => alive && setProducts(r.results))
+      .active()
+      .then((r) => alive && setProducts(r))
       .catch(() => undefined);
     return () => {
       alive = false;
@@ -50,6 +55,7 @@ function useProducts() {
 function SalesList() {
   const userId = useAuthStore((s) => s.userId);
   const userType = useAuthStore((s) => s.userType);
+  const { can } = usePermissions();
   const products = useProducts();
 
   const list = usePaginatedList<Sale, SaleFilters>(
@@ -59,17 +65,20 @@ function SalesList() {
           page: params.page,
           page_size: params.page_size,
           search: params.search,
+          trade_type: params.trade_type,
+          has_open_issues: params.has_open_issues,
           product: params.product,
           date_from: params.date_from,
           date_to: params.date_to,
         },
         signal,
       ),
-    { pageSize: 15, filters: { product: undefined, date_from: undefined, date_to: undefined } },
+    { pageSize: 15, filters: { trade_type: undefined, has_open_issues: undefined, product: undefined, date_from: undefined, date_to: undefined } },
   );
 
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Sale | null>(null);
+  const [details, setDetails] = useState<Sale | null>(null);
   const [toDelete, setToDelete] = useState<Sale | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
@@ -96,13 +105,21 @@ function SalesList() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className={`${CARD} grid grid-cols-1 gap-3 p-4 md:grid-cols-2 xl:grid-cols-4`}>
+      <div className={`${CARD} grid grid-cols-1 gap-3 p-4 md:grid-cols-2 xl:grid-cols-5`}>
         <SearchInput
           value={list.search}
           onChange={list.setSearch}
-          placeholder="مشتری، شرکت، کالا..."
+          placeholder="فروشنده، خریدار، کالا..."
           className="xl:col-span-1"
           hideIcon
+        />
+        <SalesSelect
+          label="نوع معامله"
+          avatar={false}
+          searchable={false}
+          options={[{ id: 0, label: "همه معامله‌ها" }, { id: 1, label: "فروش ما به مشتری" }, { id: 2, label: "خرید ما از مشتری" }, { id: 3, label: "معامله بین دو مشتری" }, { id: 4, label: "دارای پیگیری باز" }]}
+          value={filters.has_open_issues ? 4 : filters.trade_type === "sale" ? 1 : filters.trade_type === "purchase" ? 2 : filters.trade_type === "brokerage" ? 3 : 0}
+          onChange={(v) => list.setFilters({ trade_type: v === 1 ? "sale" : v === 2 ? "purchase" : v === 3 ? "brokerage" : undefined, has_open_issues: v === 4 ? 1 : undefined })}
         />
         <SalesSelect
           label="کالا"
@@ -130,9 +147,9 @@ function SalesList() {
       <Card>
         <SectionTitle
           icon={<ShoppingBag size={16} />}
-          title={`فروش‌ها${list.count ? ` (${formatNumber(list.count)})` : ""}`}
+          title={`معامله‌ها${list.count ? ` (${formatNumber(list.count)})` : ""}`}
           actions={
-            <Button
+            can("sales", "create") ? <Button
               size="sm"
               icon={<Plus size={14} />}
               onClick={() => {
@@ -140,8 +157,8 @@ function SalesList() {
                 setFormOpen(true);
               }}
             >
-              ثبت فروش
-            </Button>
+              ثبت معامله
+            </Button> : undefined
           }
         />
 
@@ -160,6 +177,7 @@ function SalesList() {
             <SalesTable
               sales={list.data}
               canModify={canModify}
+              onDetails={setDetails}
               onEdit={(s) => {
                 setEditing(s);
                 setFormOpen(true);
@@ -182,6 +200,14 @@ function SalesList() {
           </>
         )}
       </Card>
+
+      <SaleDetailsModal
+        open={details != null}
+        saleId={details?.id ?? null}
+        title={details?.summary_label ?? ""}
+        onClose={() => setDetails(null)}
+        onChanged={list.refetch}
+      />
 
       <SaleFormModal
         open={formOpen}
@@ -208,7 +234,6 @@ function SalesList() {
   );
 }
 
-/* ───────────── تب مشتریان برتر ───────────── */
 function TopCustomers({ basePath: _basePath }: { basePath: "/admin" | "/user" }) {
   const [customerId, setCustomerId] = useState<number | null>(null);
   const products = useProducts();
@@ -372,15 +397,15 @@ function TopCustomers({ basePath: _basePath }: { basePath: "/admin" | "/user" })
   );
 }
 
-/* ───────────── صفحه ───────────── */
 export default function SalesPage({ basePath }: { basePath: "/admin" | "/user" }) {
-  const userType = useAuthStore((s) => s.userType);
+  const { can } = usePermissions();
   const [tab, setTab] = useState<TabKey>("sales");
 
   const items = [
-    { key: "sales" as const, label: "فروش‌ها", icon: <ShoppingBag size={14} /> },
+    { key: "sales" as const, label: "خرید و فروش", icon: <ShoppingBag size={14} /> },
     { key: "top" as const, label: "مشتریان برتر", icon: <BarChart3 size={14} /> },
-    ...(userType === 1
+    { key: "issues" as const, label: "پیگیری بار", icon: <TriangleAlert size={14} /> },
+    ...(can("products", "view")
       ? [{ key: "products" as const, label: "کالاها", icon: <Package size={14} /> }]
       : []),
   ];
@@ -389,13 +414,14 @@ export default function SalesPage({ basePath }: { basePath: "/admin" | "/user" }
     <div className="flex flex-col gap-5" dir="rtl">
       <PageHeader
         icon={<ShoppingBag size={20} />}
-        title="فروش"
-        subtitle="ثبت فروش به مشتریان و گزارش بیشترین خرید"
+        title="خرید و فروش"
+        subtitle="ثبت خرید، فروش و معامله بین مشتریان به همراه پیگیری بار"
       />
       <Tabs<TabKey> label="بخش‌های فروش" items={items} value={tab} onChange={setTab} />
       {tab === "sales" && <SalesList />}
       {tab === "top" && <TopCustomers basePath={basePath} />}
-      {tab === "products" && userType === 1 && <ProductsPanel />}
+      {tab === "issues" && <IssuesPanel />}
+      {tab === "products" && can("products", "view") && <ProductsPanel />}
     </div>
   );
 }
