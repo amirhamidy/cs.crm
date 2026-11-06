@@ -6,6 +6,7 @@ import {
     Camera,
     Crown,
     KeyRound,
+    ShieldCheck,
     SlidersHorizontal,
     SquarePen,
     Trash2,
@@ -64,6 +65,7 @@ interface Props {
     onAdjust: () => void;
     onManager: () => void;
     onPassword: () => void;
+    onPermissions: () => void;
     onAvatar: () => void;
     onConfirmDelete: () => void;
 }
@@ -107,6 +109,7 @@ export default function UserActionsModal(p: Props) {
                         <Row tone="blue" icon={<SquarePen size={18} />} label="ویرایش اطلاعات کاربر" onClick={pick(p.onEdit)} />
                         <Row tone="emerald" icon={<SlidersHorizontal size={18} />} label="تغییر امتیاز" disabled={p.isAdmin} onClick={pick(p.onAdjust)} />
                         <Row tone="amber" icon={<Crown size={18} />} label="تعیین مدیر دپارتمان" onClick={pick(p.onManager)} />
+                        <Row tone="blue" icon={<ShieldCheck size={18} />} label="سطح دسترسی" disabled={p.isAdmin || !p.hasUserId} onClick={pick(p.onPermissions)} />
                         {p.canManageProfile && (
                             <>
                                 <Row tone="blue" icon={<KeyRound size={18} />} label="تغییر رمز عبور" disabled={!p.hasUserId} onClick={pick(p.onPassword)} />

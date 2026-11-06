@@ -2,6 +2,7 @@
 
 import AuthGate from "@/components/AuthGate";
 import AppShell from "@/components/shell/AppShell";
+import PermissionGuard from "@/components/PermissionGuard";
 
 export default function UserLayout({
     children,
@@ -10,7 +11,7 @@ export default function UserLayout({
 }) {
     return (
         <AuthGate role={2}>
-            <AppShell>{children}</AppShell>
+            <AppShell><PermissionGuard>{children}</PermissionGuard></AppShell>
         </AuthGate>
     );
 }

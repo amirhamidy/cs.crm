@@ -23,6 +23,7 @@ import EditUserModal from "./EditUserModal";
 import AdjustScoreModal from "./AdjustScoreModal";
 import AvatarUploadModal from "./AvatarUploadModal";
 import SetPasswordModal from "./SetPasswordModal";
+import PermissionsModal from "./PermissionsModal";
 import UserAvatar from "@/components/ui/UserAvatar";
 import { useAuthStore } from "@/store/authStore";
 import { useAvatarStore } from "@/store/avatarStore";
@@ -68,6 +69,7 @@ function UserCard({
     const [showManager, setShowManager] = useState(false);
     const [showMobileSheet, setShowMobileSheet] = useState(false);
     const [showPasswordModal, setShowPasswordModal] = useState(false);
+    const [showPermissions, setShowPermissions] = useState(false);
     const [showAvatarModal, setShowAvatarModal] = useState(false);
     const loggedUserType = useAuthStore((state) => state.userType);
     const setMyAvatar = useAvatarStore((state) => state.setMyAvatar);
@@ -287,6 +289,7 @@ function UserCard({
                     onAdjust={() => setShowAdjust(true)}
                     onManager={() => setShowManager(true)}
                     onPassword={() => setShowPasswordModal(true)}
+                    onPermissions={() => setShowPermissions(true)}
                     onAvatar={() => setShowAvatarModal(true)}
                     onConfirmDelete={handleDelete}
                 />
@@ -317,6 +320,14 @@ function UserCard({
             )}
 
 
+            {userId != null && !isAdmin && showPermissions && (
+                <PermissionsModal
+                    open={showPermissions}
+                    userId={userId}
+                    userName={employee.full_name || employee.username}
+                    onClose={() => setShowPermissions(false)}
+                />
+            )}
             {userId != null && (
                 <SetPasswordModal open={showPasswordModal} userId={userId} userName={employee.full_name || employee.username} onClose={() => setShowPasswordModal(false)} />
             )}
