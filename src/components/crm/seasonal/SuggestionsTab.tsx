@@ -1,12 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { CalendarRange, ListChecks, Sprout } from "lucide-react";
+import { CalendarRange, ListChecks, Sprout, Users } from "lucide-react";
 import { EmptyState, ErrorState } from "@/components/ui/Feedback";
 import { ListSkeleton } from "@/components/ui/skeletons";
 import { SalesSelect } from "../shared/SalesSelect";
 import type { BasePath } from "../shared/types";
 import { Card, SectionTitle } from "../shared/ui";
+import { ColorStatsPanel } from "../shared/ColorStats";
+import { formatNumber } from "@/lib/crm/format";
 import { MONTH_OPTIONS } from "./months";
 import { SuggestionGroupList } from "./SuggestionGroupList";
 import { useSeasonalSuggestions } from "./useSeasonalSuggestions";
@@ -20,9 +22,19 @@ export default function SuggestionsTab({ basePath }: { basePath: BasePath }) {
     const isEmpty =
         data && !data.current.length && !data.upcoming.length && !data.from_history.length;
 
+    const countCustomers = (groups: { customers: unknown[] }[] | undefined) =>
+        (groups ?? []).reduce((n, g) => n + g.customers.length, 0);
+
     return (
         <div className="flex flex-col gap-4">
-            <div className="w-full sm:max-w-xs">
+            <ColorStatsPanel
+                stats={[
+                    { label: "پیشنهاد این ماه", value: formatNumber(countCustomers(data?.current)), icon: Sprout },
+                    { label: "ماه بعد", value: formatNumber(countCustomers(data?.upcoming)), icon: CalendarRange },
+                    { label: "از سابقه", value: formatNumber(countCustomers(data?.from_history)), icon: ListChecks },
+                    { label: "کالاهای پیشنهادی", value: formatNumber((data?.current.length ?? 0) + (data?.upcoming.length ?? 0) + (data?.from_history.length ?? 0)), icon: Users },
+                ]}
+            >
                 <SalesSelect
                     label="ماه"
                     avatar={false}
@@ -31,7 +43,7 @@ export default function SuggestionsTab({ basePath }: { basePath: BasePath }) {
                     value={shownMonth}
                     onChange={setMonth}
                 />
-            </div>
+            </ColorStatsPanel>
 
             {loading && !data ? (
                 <ListSkeleton rows={3} />

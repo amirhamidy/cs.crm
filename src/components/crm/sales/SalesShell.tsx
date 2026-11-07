@@ -42,9 +42,6 @@ export default function SalesShell({
 
     return (
         <TabbedPageShell
-            icon={<ShoppingBag size={20} />}
-            title="خرید و فروش"
-            subtitle="ثبت خرید، فروش و معامله بین مشتریان به همراه پیگیری بار"
             tabsLabel="بخش‌های فروش"
             tabs={tabs}
         >

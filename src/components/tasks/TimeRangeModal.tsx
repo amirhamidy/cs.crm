@@ -24,6 +24,9 @@ interface TimeRangeModalProps {
     onSubmit: (startedAt: string, deadline: string) => Promise<void>;
     error?: string | null;
     embedded?: boolean;
+    title?: string;
+    subtitle?: string;
+    dateOnly?: boolean;
 }
 
 function parseIsoToField(iso?: string | null): FieldState {
@@ -163,6 +166,9 @@ export default function TimeRangeModal({
     onSubmit,
     error: externalError,
     embedded = false,
+    title = "تعیین بازه زمانی",
+    subtitle = "شروع و مهلت انجام",
+    dateOnly = false,
 }: TimeRangeModalProps) {
     const [start, setStart] = useState<FieldState>(() =>
         parseIsoToField(initialStartedAt)
@@ -238,7 +244,7 @@ export default function TimeRangeModal({
         const s = fieldToIso(start);
         const d = fieldToIso(deadline);
 
-        if (new Date(d) <= new Date(s)) {
+        if (dateOnly ? new Date(d) < new Date(s) : new Date(d) <= new Date(s)) {
             setError("مهلت انجام باید بعد از زمان شروع باشد");
             return;
         }
@@ -413,7 +419,7 @@ export default function TimeRangeModal({
                                     </div>
                                 </div>
 
-                                <div className="grid grid-cols-2 gap-3">
+                                {!dateOnly && <div className="grid grid-cols-2 gap-3">
                                     <NiceSelect
                                         label="ساعت"
                                         value={current.hour}
@@ -430,7 +436,7 @@ export default function TimeRangeModal({
                                         }
                                         options={minutesOptions}
                                     />
-                                </div>
+                                </div>}
 
                                 <AnimatePresence>
                                     {(error || externalError) && (
@@ -536,11 +542,11 @@ export default function TimeRangeModal({
 
                                 <div>
                                     <h3 className="text-[14px] font-extrabold text-gray-900 dark:text-white">
-                                        تعیین بازه زمانی
+                                        {title}
                                     </h3>
 
                                     <p className="mt-0.5 text-[11px] text-gray-400">
-                                        شروع و مهلت انجام
+                                        {subtitle}
                                     </p>
                                 </div>
                             </div>

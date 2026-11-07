@@ -1,22 +1,21 @@
 "use client";
 
+import { ColorStatsPanel } from "../shared/ColorStats";
 import { useCallback, useState } from "react";
-import { Plus, ShoppingBag } from "lucide-react";
+import { AlertCircle, Plus, Scale, ShoppingBag, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { EmptyState, ErrorState } from "@/components/ui/Feedback";
 import Pagination from "@/components/ui/Pagination";
-import { TableSkeleton } from "@/components/ui/skeletons";
 import { toast } from "@/components/notifications/toast";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import { usePermissions } from "@/hooks/usePermissions";
 import { salesApi } from "@/lib/api";
 import { apiMessage } from "@/lib/apiMessage";
-import { formatNumber } from "@/lib/crm/format";
+import { formatMoney, formatNumber, formatWeight, toNumber } from "@/lib/crm/format";
 import { useAuthStore } from "@/store/authStore";
 import type { Sale } from "@/types/crm";
 import { useActiveProducts } from "../shared/useActiveProducts";
-import { Card, SectionTitle } from "../shared/ui";
 import SaleDetailsModal from "./SaleDetailsModal";
 import SaleFormModal from "./SaleFormModal";
 import { SALE_FILTER_DEFAULTS, type SaleFilters } from "./saleFilters";
@@ -88,35 +87,44 @@ export default function SalesListTab() {
         }
     }
 
-    return (
-        <div className="flex flex-col gap-4">
-            <SalesFilterBar
-                search={list.search}
-                filters={list.filters}
-                products={products}
-                onSearch={list.setSearch}
-                onFilters={list.setFilters}
-            />
+    const pageTotal = list.data.reduce((a, x) => a + toNumber(x.total_amount), 0);
+    const pageKg = list.data.reduce((a, x) => a + toNumber(x.quantity_kg), 0);
+    const pageIssues = list.data.reduce((a, x) => a + x.open_issues_count, 0);
 
-            <Card>
-                <SectionTitle
-                    icon={<ShoppingBag size={16} />}
-                    title={`معامله‌ها${list.count ? ` (${formatNumber(list.count)})` : ""}`}
-                    actions={
-                        can("sales", "create") ? (
-                            <Button
-                                size="sm"
-                                icon={<Plus size={14} />}
-                                onClick={() => openForm(null)}
-                            >
-                                ثبت معامله
-                            </Button>
-                        ) : undefined
-                    }
+    const stats = [
+        { label: "معامله‌ها", value: formatNumber(list.count), icon: ShoppingBag },
+        { label: "جمع مبلغ این صفحه", value: formatMoney(pageTotal), icon: Wallet },
+        { label: "جمع وزن این صفحه", value: formatWeight(pageKg), icon: Scale },
+        { label: "پیگیری باز", value: formatNumber(pageIssues), icon: AlertCircle },
+    ];
+
+    return (
+        <div className="flex min-w-0 flex-col gap-4 sm:gap-5">
+            <ColorStatsPanel stats={stats}>
+                <SalesFilterBar
+                    search={list.search}
+                    filters={list.filters}
+                    products={products}
+                    onSearch={list.setSearch}
+                    onFilters={list.setFilters}
                 />
+            </ColorStatsPanel>
+
+            <div className="flex flex-col gap-3">
+                {can("sales", "create") && (
+                    <div className="flex justify-end">
+                        <Button size="sm" icon={<Plus size={14} />} onClick={() => openForm(null)}>
+                            ثبت معامله
+                        </Button>
+                    </div>
+                )}
 
                 {list.loading ? (
-                    <TableSkeleton rows={8} cols={6} />
+                    <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                        {Array.from({ length: 6 }).map((_, i) => (
+                            <div key={i} className="h-56 animate-pulse rounded-3xl bg-gray-100 dark:bg-white/[0.05]" />
+                        ))}
+                    </div>
                 ) : list.error ? (
                     <ErrorState message="دریافت فروش‌ها ناموفق بود" onRetry={refetch} />
                 ) : list.data.length === 0 ? (
@@ -146,7 +154,7 @@ export default function SalesListTab() {
                         )}
                     </>
                 )}
-            </Card>
+            </div>
 
             <SaleDetailsModal
                 open={details != null}

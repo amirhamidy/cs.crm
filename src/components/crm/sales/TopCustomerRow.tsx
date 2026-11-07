@@ -17,11 +17,11 @@ function TopCustomerRowBase({ row, by, percent, onOpen }: Props) {
     const weight = formatWeight(row.total_quantity_kg);
 
     return (
-        <li>
+        <li className="min-w-0">
             <button
                 type="button"
                 onClick={() => onOpen(row.customer_id)}
-                className="group block w-full rounded-2xl p-2.5 text-right transition-colors hover:bg-gray-50 dark:hover:bg-white/[0.04]"
+                className="group block h-full w-full rounded-3xl border border-gray-100 bg-white p-3.5 text-right shadow-sm transition-shadow hover:shadow-md dark:border-white/[0.06] dark:bg-white/[0.03]"
             >
                 <div className="mb-2 flex items-center justify-between gap-3">
                     <div className="flex min-w-0 items-center gap-2.5">
@@ -55,12 +55,14 @@ function TopCustomerRowBase({ row, by, percent, onOpen }: Props) {
                     />
                 </div>
 
-                <div className="mt-1.5 flex flex-wrap items-center gap-x-4 text-[10.5px] text-gray-400">
+                <div className="mt-2.5 flex flex-col gap-1.5 text-[11px] text-gray-400">
                     <span>{formatNumber(row.sales_count)} فروش</span>
                     {row.top_product && (
-                        <span className="flex items-center gap-1">
-                            <Package size={10} /> پرفروش‌ترین کالا: {row.top_product.name} (
-                            {formatWeight(row.top_product.quantity_kg)})
+                        <span className="flex min-w-0 items-center gap-1.5 rounded-xl bg-emerald-50 px-2.5 py-1.5 text-[12px] font-bold text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300">
+                            <Package size={12} className="shrink-0" />
+                            <span className="truncate">
+                                {row.top_product.name} ({formatWeight(row.top_product.quantity_kg)})
+                            </span>
                         </span>
                     )}
                 </div>

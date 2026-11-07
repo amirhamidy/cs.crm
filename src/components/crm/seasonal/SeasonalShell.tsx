@@ -13,9 +13,6 @@ export default function SeasonalShell({
 }) {
     return (
         <TabbedPageShell
-            icon={<Sprout size={20} />}
-            title="مشتریان فصلی"
-            subtitle="هر ماه ببینید کدام مشتری‌ها چه کالایی دارند و از چه کسی بخرید"
             tabsLabel="بخش‌های مشتریان فصلی"
             tabs={[
                 { href: `${basePath}/seasonal`, label: "پیشنهاد ماه", icon: <Sprout size={14} /> },

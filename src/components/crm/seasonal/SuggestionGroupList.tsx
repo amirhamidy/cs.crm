@@ -44,7 +44,7 @@ function CustomerRow({
     history: boolean;
 }) {
     return (
-        <li className="rounded-xl border border-gray-200/70 bg-white px-3 py-2 dark:border-transparent dark:bg-white/[0.04]">
+        <li className="rounded-2xl bg-white px-3.5 py-2.5 shadow-sm dark:bg-white/[0.05]">
             <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
                 <Link
                     href={`${basePath}/customer/${customer.id}/`}
@@ -84,8 +84,8 @@ function GroupCard({
     history: boolean;
 }) {
     return (
-        <div className="rounded-2xl border border-gray-200/80 bg-gray-50/70 p-3 sm:p-3.5 dark:border-white/[0.06] dark:bg-white/[0.03]">
-            <div className="mb-2 flex items-center gap-1.5 text-[13.5px] font-extrabold text-gray-900 dark:text-white">
+        <div className="rounded-3xl bg-gray-50 p-3 sm:p-3.5 dark:bg-gray-800/40">
+            <div className="mb-2 flex items-center gap-1.5 text-[14px] font-bold text-gray-900 dark:text-white">
                 <Sprout size={14} className="text-emerald-500" />
                 {group.product.name}
                 <span className="text-[11px] font-bold text-gray-400">

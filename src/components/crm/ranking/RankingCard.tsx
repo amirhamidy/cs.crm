@@ -36,7 +36,7 @@ function RankingCardBase({ customer, highlight, onOpen }: Props) {
     return (
         <div
             className={cn(
-                "group relative flex min-w-0 flex-col gap-3 overflow-hidden rounded-3xl border p-4 text-[13px] transition-shadow hover:shadow-md",
+                "group relative flex min-w-0 flex-col gap-3 overflow-hidden rounded-3xl border p-4 text-[14px] transition-shadow hover:shadow-md",
                 highlight
                     ? "border-emerald-400 bg-emerald-400 text-white dark:border-emerald-500 dark:bg-emerald-600"
                     : "border-gray-100 bg-white text-gray-900 dark:border-white/[0.08] dark:bg-white/[0.04] dark:text-white",
@@ -104,7 +104,7 @@ function RankingCardBase({ customer, highlight, onOpen }: Props) {
                 <div className={cn(highlight && "[&_*]:!text-white")}>
                     <StarRating value={customer.avg_score} count={customer.scores_count || undefined} />
                 </div>
-                <span className={cn("truncate text-[12px]", highlight ? "text-white/90" : "text-gray-500")}>
+                <span className={cn("truncate text-[14px]", highlight ? "text-white/90" : "text-gray-500")}>
                     {customer.total_sales ? formatMoney(customer.total_sales) : ""}
                 </span>
             </div>

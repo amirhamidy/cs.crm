@@ -1,5 +1,6 @@
 "use client";
 
+import { ColorStatsPanel } from "../shared/ColorStats";
 import { useState } from "react";
 import dynamic from "next/dynamic";
 import { LayoutGrid, Star, Trophy, Users } from "lucide-react";
@@ -40,38 +41,22 @@ export default function CustomerRankingPage() {
     const ratedCount = scores.length;
 
     const stats = [
-        { label: "کل مشتریان", value: list.count.toLocaleString("fa-IR"), icon: Users, tone: "bg-emerald-400 dark:bg-emerald-600" },
-        { label: "بالاترین امتیاز", value: topScore != null ? topScore.toLocaleString("fa-IR") : "—", icon: Trophy, tone: "bg-rose-400 dark:bg-rose-600" },
-        { label: "دارای امتیاز", value: ratedCount.toLocaleString("fa-IR"), icon: Star, tone: "bg-amber-300 !text-gray-900 dark:bg-amber-500" },
-        { label: "نمایش در این صفحه", value: list.data.length.toLocaleString("fa-IR"), icon: LayoutGrid, tone: "bg-indigo-500 dark:bg-indigo-600" },
+        { label: "کل مشتریان", value: list.count.toLocaleString("fa-IR"), icon: Users },
+        { label: "بالاترین امتیاز", value: topScore != null ? topScore.toLocaleString("fa-IR") : "—", icon: Trophy },
+        { label: "دارای امتیاز", value: ratedCount.toLocaleString("fa-IR"), icon: Star },
+        { label: "نمایش در این صفحه", value: list.data.length.toLocaleString("fa-IR"), icon: LayoutGrid },
     ];
 
     return (
         <div className="flex min-w-0 flex-col gap-4 sm:gap-5" dir="rtl">
-            <div className="flex flex-col gap-3 md:flex-row md:items-stretch">
-                <div className="grid min-w-0 flex-1 grid-cols-1 gap-2 rounded-3xl bg-gray-50 p-2 sm:grid-cols-2 dark:bg-gray-800/40">
-                    {stats.map(({ label, value, icon: Icon, tone }) => (
-                        <div
-                            key={label}
-                            className={`relative flex min-w-0 items-center justify-between gap-2 overflow-hidden rounded-2xl p-4 text-white ${tone}`}
-                        >
-                            <div className="min-w-0">
-                                <div className="truncate text-[12px] opacity-90">{label}</div>
-                                <div className="mt-1 text-2xl font-extrabold">{value}</div>
-                            </div>
-                            <Icon size={40} className="shrink-0 opacity-25" strokeWidth={1.5} />
-                        </div>
-                    ))}
-                </div>
-                <div className="min-w-0 flex-1 rounded-3xl bg-gray-50 p-2 dark:bg-gray-800/40">
-                    <RankingFilterBar
-                        search={list.search}
-                        filters={list.filters}
-                        onSearch={list.setSearch}
-                        onFilters={list.setFilters}
-                    />
-                </div>
-            </div>
+            <ColorStatsPanel stats={stats}>
+                <RankingFilterBar
+                    search={list.search}
+                    filters={list.filters}
+                    onSearch={list.setSearch}
+                    onFilters={list.setFilters}
+                />
+            </ColorStatsPanel>
 
                 {list.loading ? (
                     <ListSkeleton rows={8} />

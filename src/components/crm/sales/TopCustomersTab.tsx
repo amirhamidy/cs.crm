@@ -91,7 +91,7 @@ export default function TopCustomersTab() {
                             icon={<BarChart3 size={16} />}
                             title="بیشترین فروش ما به مشتریان"
                         />
-                        <ol className="flex flex-col gap-3.5">
+                        <ol className="grid grid-cols-1 gap-3 md:grid-cols-3">
                             {rows.map((row) => (
                                 <TopCustomerRowItem
                                     key={row.customer_id}

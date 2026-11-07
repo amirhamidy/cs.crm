@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ListChecks, Pencil, Plus, Sprout, Trash2 } from "lucide-react";
+import { Layers, ListChecks, Pencil, Plus, Sprout, Trash2, Users, FileText } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { EmptyState, ErrorState, SearchInput } from "@/components/ui/Feedback";
@@ -17,6 +17,7 @@ import { formatNumber, formatWeight } from "@/lib/crm/format";
 import type { SeasonalSupply } from "@/types/crm";
 import type { BasePath } from "../shared/types";
 import { Card, SectionTitle } from "../shared/ui";
+import { ColorStatsPanel } from "../shared/ColorStats";
 import { monthRange } from "./months";
 import SupplyFormModal from "./SupplyFormModal";
 
@@ -34,7 +35,7 @@ interface RowProps {
 
 function SupplyRow({ supply, basePath, canEdit, canDelete, onEdit, onDelete }: RowProps) {
     return (
-        <li className="flex flex-col gap-2 rounded-2xl border border-gray-200/80 bg-white p-3 transition-colors hover:border-brand/30 hover:bg-gray-50/60 sm:flex-row sm:items-center sm:justify-between sm:gap-3 sm:p-3.5 dark:border-white/[0.06] dark:bg-white/[0.03] dark:hover:bg-white/[0.05]">
+        <li className="flex flex-col gap-2 rounded-3xl bg-white p-3.5 shadow-sm transition-shadow hover:shadow-md dark:bg-white/[0.05]">
             <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[13px] font-extrabold text-gray-900 dark:text-white">
                     <Link
@@ -115,7 +116,27 @@ export default function SupplyListTab({ basePath }: { basePath: BasePath }) {
         }
     }
 
+    const customersShown = new Set(list.data.map((x) => x.customer)).size;
+    const productsShown = new Set(list.data.map((x) => x.product_name)).size;
+
     return (
+        <div className="flex flex-col gap-4">
+        <ColorStatsPanel
+            stats={[
+                { label: "کل موارد", value: formatNumber(list.count), icon: ListChecks },
+                { label: "مشتریان این صفحه", value: formatNumber(customersShown), icon: Users },
+                { label: "کالاهای این صفحه", value: formatNumber(productsShown), icon: Layers },
+                { label: "صفحه", value: `${formatNumber(list.page)} از ${formatNumber(list.totalPages || 1)}`, icon: FileText },
+            ]}
+        >
+            <SearchInput
+                value={list.search}
+                onChange={list.setSearch}
+                placeholder="مشتری یا کالا..."
+                className="[&_input]:h-12 [&_input]:rounded-[2rem] [&_input]:px-5 [&_input]:text-[13px]"
+                hideIcon
+            />
+        </ColorStatsPanel>
         <Card>
             <SectionTitle
                 icon={<ListChecks size={16} />}
@@ -128,15 +149,6 @@ export default function SupplyListTab({ basePath }: { basePath: BasePath }) {
                     ) : undefined
                 }
             />
-            <div className="mb-4 w-full sm:max-w-sm">
-                <SearchInput
-                    value={list.search}
-                    onChange={list.setSearch}
-                    placeholder="مشتری یا کالا..."
-                    hideIcon
-                />
-            </div>
-
             {list.loading ? (
                 <TableSkeleton rows={6} cols={4} />
             ) : list.error ? (
@@ -148,7 +160,7 @@ export default function SupplyListTab({ basePath }: { basePath: BasePath }) {
                     icon={<Sprout size={26} />}
                 />
             ) : (
-                <ul className="flex flex-col gap-2">
+                <ul className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
                     {list.data.map((supply) => (
                         <SupplyRow
                             key={supply.id}
@@ -194,5 +206,6 @@ export default function SupplyListTab({ basePath }: { basePath: BasePath }) {
                 onCancel={() => setToDelete(null)}
             />
         </Card>
+        </div>
     );
 }
