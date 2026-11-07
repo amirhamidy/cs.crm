@@ -118,16 +118,16 @@ export default function SentTicketsBoard() {
     }
 
     return (
-        <div dir="rtl" className="flex flex-col gap-5">
-            <div className="flex items-center justify-between gap-4">
-                <div className="flex items-center gap-2.5">
+        <div dir="rtl" className="flex min-w-0 flex-col gap-4 sm:gap-5">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex min-w-0 items-center gap-2.5">
                     <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-indigo-500/10"><Ticket size={17} className="text-indigo-500" /></div>
                     <div>
                         <h3 className="text-[14px] font-extrabold text-gray-900 dark:text-white">تیکت‌های ارسال شده</h3>
                         <p className="text-[11px] text-gray-400 dark:text-gray-600">{list.count} تیکت</p>
                     </div>
                 </div>
-                <button type="button" onClick={() => setCreateOpen(true)} className="flex shrink-0 items-center gap-1.5 rounded-2xl bg-indigo-600 px-3.5 py-2 text-[11.5px] font-bold text-white transition-colors hover:bg-indigo-500">
+                <button type="button" onClick={() => setCreateOpen(true)} className="flex shrink-0 items-center gap-1.5 rounded-2xl bg-indigo-600 px-4 py-2.5 text-[12px] font-bold text-white transition-colors hover:bg-indigo-500">
                     <Plus size={13} />تیکت جدید
                 </button>
             </div>

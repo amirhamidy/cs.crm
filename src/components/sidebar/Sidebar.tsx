@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import { AnimatePresence } from "framer-motion";
 import { LogOut, X } from "lucide-react";
 import { Backdrop } from "@/components/ui/Backdrop";
-import { cn, normalizePath } from "@/lib/utils";
+import { cn, isRouteActive } from "@/lib/utils";
 import { useSidebarIsOpen, useSidebarActions } from "@/store/mobileSidebarStore";
 import { useMenuItems } from "@/hooks/useMenuItems";
 import { useLogout } from "@/hooks/useLogout";
@@ -63,7 +63,7 @@ export default function Sidebar() {
         <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto p-3">
           {menuItems.map((item) => {
             const Icon = item.icon;
-            const isActive = normalizePath(pathname) === normalizePath(item.href);
+            const isActive = isRouteActive(pathname, item.href);
 
             return (
               <Link

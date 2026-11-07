@@ -6,7 +6,7 @@ import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { FloatingInput, FloatingTextarea } from "@/components/ui/FloatingField";
 import { NiceSelect } from "@/components/ui/NiceSelect";
-import JalaliDateField from "@/components/crm/JalaliDateField";
+import JalaliDateField from "@/components/crm/shared/JalaliDateField";
 import { productsApi } from "@/lib/api";
 import { apiMessage } from "@/lib/apiMessage";
 import {

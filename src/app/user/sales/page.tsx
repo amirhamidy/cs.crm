@@ -1,5 +1,5 @@
-import SalesPage from "@/components/crm/SalesPage";
+import SalesListTab from "@/components/crm/sales/SalesListTab";
 
 export default function Page() {
-    return <SalesPage basePath="/user" />;
+    return <SalesListTab />;
 }

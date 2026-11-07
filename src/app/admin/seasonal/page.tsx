@@ -1,5 +1,5 @@
-import SeasonalPage from "@/components/crm/SeasonalPage";
+import SuggestionsTab from "@/components/crm/seasonal/SuggestionsTab";
 
 export default function Page() {
-  return <SeasonalPage basePath="/admin" />;
+    return <SuggestionsTab basePath="/admin" />;
 }

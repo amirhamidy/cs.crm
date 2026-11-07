@@ -13,7 +13,7 @@ export default function AppShell({
     const isOpen = useSidebarIsOpen();
 
     return (
-        <div className="min-h-screen bg-gray-50/30 transition-colors duration-300 dark:bg-black">
+        <div className="min-h-screen bg-white transition-colors duration-300 dark:bg-black">
             <Topbar />
             <Sidebar />
 

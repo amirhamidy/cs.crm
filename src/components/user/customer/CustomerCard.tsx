@@ -15,7 +15,7 @@ import { apiMessage } from "@/lib/apiMessage";
 
 
 import { Skeleton } from "@/components/ui/Skeleton";
-const CustomerProfileModal = dynamic(() => import("@/components/crm/CustomerProfileModal"), { ssr: false });
+const CustomerProfileModal = dynamic(() => import("@/components/crm/profile/CustomerProfileModal"), { ssr: false });
 const CustomerEditModal = dynamic(() => import("./CustomerEditModal"), {
     ssr: false,
     loading: () => null,

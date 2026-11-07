@@ -8,7 +8,7 @@ import axiosInstance from "@/lib/axiosInstance";
 import { useAuthStore } from "@/store/authStore";
 import EmployeePerformanceChart from "@/components/user/dashboard/EmployeePerformanceChart";
 import DepartmentScoreManager from "@/components/user/dashboard/DepartmentScoreManager";
-import SeasonalSuggestionCard from "@/components/crm/SeasonalSuggestionCard";
+import SeasonalSuggestionCard from "@/components/crm/seasonal/SeasonalSuggestionCard";
 
 interface CalendarEvent {
     id: number;
