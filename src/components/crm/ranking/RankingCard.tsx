@@ -1,143 +1,138 @@
 "use client";
 
-import { memo, type ReactNode } from "react";
-import { m } from "framer-motion";
-import { Building2, MessageCircle, Phone, ShoppingBag, Star, Trophy } from "lucide-react";
-import { formatJalaliDate, formatMoney, formatNumber } from "@/lib/crm/format";
+import { memo, useState } from "react";
+import { BarChart3, Building2, MessageCircle, MoreVertical, Phone, Route, ShoppingBag } from "lucide-react";
+import { ActionSheet, type ActionSheetItem } from "@/components/ui/ActionSheet";
+import { formatMoney } from "@/lib/crm/format";
 import { cn } from "@/lib/utils";
 import type { RankedCustomer } from "@/types/crm";
 import StarRating from "../shared/StarRating";
-import { CARD } from "../shared/ui";
 
-const NO_DATA = "داده‌ای نیست";
+export type RankingView = "overview" | "comments" | "sales" | "path";
 
-const MEDAL_TONES = [
-    "bg-amber-500/15 text-amber-600 dark:text-amber-300",
-    "bg-slate-500/15 text-slate-600 dark:text-slate-300",
-    "bg-orange-500/15 text-orange-600 dark:text-orange-300",
+const ACTIONS: { key: RankingView; label: string; icon: typeof BarChart3; tone: string }[] = [
+    { key: "overview", label: "خلاصه", icon: BarChart3, tone: "text-indigo-600 bg-indigo-50 dark:bg-indigo-500/15 dark:text-indigo-300" },
+    { key: "comments", label: "نظرات", icon: MessageCircle, tone: "text-sky-600 bg-sky-50 dark:bg-sky-500/15 dark:text-sky-300" },
+    { key: "sales", label: "فروش‌ها", icon: ShoppingBag, tone: "text-emerald-600 bg-emerald-50 dark:bg-emerald-500/15 dark:text-emerald-300" },
+    { key: "path", label: "مسیر پرونده", icon: Route, tone: "text-amber-600 bg-amber-50 dark:bg-amber-500/15 dark:text-amber-300" },
 ];
-
-const PLAIN_RANK_TONE =
-    "border border-gray-200 text-gray-500 dark:border-white/10 dark:text-gray-300";
-
-function RankBadge({ rank, medal }: { rank: number; medal: boolean }) {
-    const tone = medal && rank <= 3 ? MEDAL_TONES[rank - 1] : PLAIN_RANK_TONE;
-    return (
-        <span
-            className={cn(
-                "flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl text-[13px] font-bold",
-                tone,
-            )}
-        >
-            {medal && rank === 1 ? <Trophy size={18} /> : rank.toLocaleString("fa-IR")}
-        </span>
-    );
-}
-
-function Metric({ icon, label, value }: { icon: ReactNode; label: string; value: ReactNode }) {
-    return (
-        <div className="flex min-w-0 items-center justify-between gap-2">
-            <span className="flex shrink-0 items-center gap-1 text-[13px] text-gray-400">
-                {icon}
-                {label}
-            </span>
-            <span className="truncate text-[13px] font-normal text-gray-800 dark:text-gray-100">
-                {value}
-            </span>
-        </div>
-    );
-}
 
 interface Props {
     customer: RankedCustomer;
-    /** ترتیب در صفحه؛ فقط برای انیمیشن ورود پله‌ای */
-    index: number;
-    /** نمایش مدال برای سه نفر اول */
-    medal: boolean;
-    onOpen: (customerId: number) => void;
+    highlight: boolean;
+    onOpen: (customerId: number, view: RankingView) => void;
 }
 
-function RankingCardBase({ customer, index, medal, onOpen }: Props) {
-    const isTopRanked = customer.rank <= 3 && customer.avg_score != null;
+function RankingCardBase({ customer, highlight, onOpen }: Props) {
     const isActive = customer.status === 2;
+    const [sheetOpen, setSheetOpen] = useState(false);
+    const sheetItems: ActionSheetItem[] = ACTIONS.map(({ key, label, icon: Icon }) => ({
+        key,
+        label,
+        icon: <Icon size={16} />,
+        onSelect: () => onOpen(customer.id, key),
+    }));
 
     return (
-        <m.button
-            type="button"
-            onClick={() => onOpen(customer.id)}
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.18, delay: Math.min(index, 10) * 0.025 }}
+        <div
             className={cn(
-                CARD,
-                "flex w-full flex-col justify-around overflow-hidden p-3.5 text-right text-[13px] transition-shadow hover:shadow-md",
+                "group relative flex min-w-0 flex-col gap-3 overflow-hidden rounded-3xl border p-4 text-[13px] transition-shadow hover:shadow-md",
+                highlight
+                    ? "border-emerald-400 bg-emerald-400 text-white dark:border-emerald-500 dark:bg-emerald-600"
+                    : "border-gray-100 bg-white text-gray-900 dark:border-white/[0.08] dark:bg-white/[0.04] dark:text-white",
             )}
         >
-            <div className="flex w-full items-center justify-between">
-                <RankBadge rank={customer.rank} medal={medal && customer.avg_score != null} />
+            <div className="flex items-center justify-between gap-2">
+                <span className="flex justify-center items-center">
+                    <button
+                        type="button"
+                        onClick={() => setSheetOpen(true)}
+                        aria-label="گزینه‌ها"
+                        className={cn(
+                            "-m-1 flex h-8 w-8 items-center justify-center rounded-full transition-colors md:hidden",
+                            highlight ? "text-white/90 hover:bg-white/20" : "text-gray-500 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-white/10",
+                        )}
+                    >
+                        <MoreVertical size={16} />
+                    </button>
+                    <span
+                        className={cn(
+                            "flex h-9 min-w-9 items-center justify-center rounded-xl px-2 text-[13px] font-extrabold",
+                            highlight
+                                ? "bg-white/25 text-white"
+                                : "bg-gray-50 text-gray-500 dark:bg-white/[0.06] dark:text-gray-300",
+                        )}
+                    >
+                        {customer.rank.toLocaleString("fa-IR")}
+                    </span>
+                </span>
                 <span
                     className={cn(
-                        "shrink-0 rounded-full px-3 py-1.5 text-[13px]",
-                        isActive
-                            ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-300"
-                            : "bg-amber-50 text-amber-600 dark:bg-amber-500/15 dark:text-amber-300",
+                        "shrink-0 rounded-full px-3 py-1 text-[12px]",
+                        highlight
+                            ? "bg-white/25 text-white"
+                            : isActive
+                                ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-300"
+                                : "bg-amber-50 text-amber-600 dark:bg-amber-500/15 dark:text-amber-300",
                     )}
                 >
                     {customer.status_display}
                 </span>
             </div>
 
-            <div className="my-2 flex w-full min-w-0 items-center justify-between gap-3">
+            <div className="min-w-0">
+                <div className="truncate text-[14px] font-bold">{customer.full_name}</div>
                 <div
                     className={cn(
-                        "min-w-0 flex-1 truncate text-[13px] text-gray-900 dark:text-white",
-                        isTopRanked ? "font-bold" : "font-normal",
+                        "mt-2 flex flex-col gap-1.5",
+                        highlight ? "text-white/90" : "text-gray-500 dark:text-gray-400",
                     )}
                 >
-                    {customer.full_name}
-                </div>
-                <div className="mt-0.5 flex min-w-0 flex-col gap-2 text-[13px] text-gray-500 dark:text-gray-400">
-                    <span className="flex items-center gap-1 truncate">
-                        <Building2 size={12} className="shrink-0" />
+                    <span className="flex items-center gap-1.5 truncate">
+                        <Building2 size={13} className="shrink-0" />
                         <span className="truncate">{customer.company_name || "شرکت ندارد"}</span>
                     </span>
                     {customer.phone_number && (
-                        <span className="flex items-center gap-1" dir="ltr">
-                            <Phone size={12} className="shrink-0" /> {customer.phone_number}
+                        <span className="flex items-center gap-1.5" dir="ltr">
+                            <Phone size={13} className="shrink-0" /> {customer.phone_number}
                         </span>
                     )}
                 </div>
             </div>
 
-            <div className="my-2 flex w-full min-w-0 justify-between [&_*]:text-[13px]">
-                <span>امتیاز :</span>
-                <StarRating value={customer.avg_score} count={customer.scores_count || undefined} />
+            <div className="flex items-center justify-between gap-2">
+                <div className={cn(highlight && "[&_*]:!text-white")}>
+                    <StarRating value={customer.avg_score} count={customer.scores_count || undefined} />
+                </div>
+                <span className={cn("truncate text-[12px]", highlight ? "text-white/90" : "text-gray-500")}>
+                    {customer.total_sales ? formatMoney(customer.total_sales) : ""}
+                </span>
             </div>
 
-            <div className="my-2 flex w-full flex-col gap-3 border-t border-gray-100 pt-3 dark:border-white/[0.06]">
-                <Metric
-                    icon={<ShoppingBag size={13} />}
-                    label="مجموع فروش"
-                    value={customer.total_sales ? formatMoney(customer.total_sales) : NO_DATA}
-                />
-                <Metric
-                    icon={<Star size={13} />}
-                    label="آخرین خرید"
-                    value={
-                        customer.last_sale_date
-                            ? formatJalaliDate(customer.last_sale_date)
-                            : NO_DATA
-                    }
-                />
-                <Metric
-                    icon={<MessageCircle size={13} />}
-                    label="نظرات"
-                    value={
-                        customer.comments_count ? formatNumber(customer.comments_count) : NO_DATA
-                    }
-                />
+            <div className="hidden absolute inset-x-0 bottom-0 items-center justify-center gap-2 bg-white/95 p-2.5 backdrop-blur transition-all translate-y-full opacity-0 group-focus-within:translate-y-0 group-focus-within:opacity-100 group-hover:translate-y-0 group-hover:opacity-100 md:flex dark:bg-[#1b1b24]/95">
+                {ACTIONS.map(({ key, label, icon: Icon, tone }) => (
+                    <button
+                        key={key}
+                        type="button"
+                        title={label}
+                        aria-label={label}
+                        onClick={() => onOpen(customer.id, key)}
+                        className={cn(
+                            "flex h-9 w-9 items-center justify-center rounded-xl transition-transform hover:scale-110",
+                            tone,
+                        )}
+                    >
+                        <Icon size={16} />
+                    </button>
+                ))}
             </div>
-        </m.button>
+            <ActionSheet
+                open={sheetOpen}
+                onClose={() => setSheetOpen(false)}
+                title={customer.full_name}
+                items={sheetItems}
+            />
+        </div>
     );
 }
 

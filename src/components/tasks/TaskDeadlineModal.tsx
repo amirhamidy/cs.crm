@@ -8,7 +8,6 @@ import { ListSkeleton } from "@/components/ui/skeletons";
 import { useTheme } from "next-themes";
 import api from "@/lib/axiosInstance";
 import { toJalali, toPersianDigits, JALALI_MONTHS, pad2 } from "@/lib/jalali";
-import { useReloadOnClose } from "@/lib/useReloadOnClose";
 
 export interface StepDeadline {
     started_at: string | null;
@@ -81,7 +80,6 @@ export default function TaskDeadlineModal({
     stepId,
     onLoaded,
 }: TaskDeadlineModalProps) {
-    useReloadOnClose(open, true);
     const { resolvedTheme } = useTheme();
     const isDark = resolvedTheme === "dark";
 
@@ -156,7 +154,7 @@ export default function TaskDeadlineModal({
                 <m.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
+                    exit={{ opacity: 0, pointerEvents: "none" }}
                     transition={{ duration: 0.15 }}
                     className="backdrop-blur-layer fixed inset-0 z-[2147483647] flex items-center justify-center px-4"
                     style={{ background: isDark ? "rgba(0,0,0,0.62)" : "rgba(15,23,42,0.38)" }}

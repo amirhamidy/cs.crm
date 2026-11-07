@@ -2,15 +2,11 @@
 import { FormSkeleton } from "@/components/ui/skeletons";
 
 import { useCallback, useEffect, useState } from "react";
-import { createPortal } from "react-dom";
-import { AnimatePresence, m, useReducedMotion } from "framer-motion";
-import { Backdrop } from "@/components/ui/Backdrop";
-import { panelMotion } from "@/lib/motion";
-import { AlertTriangle, CalendarClock, CalendarDays, Clock, RefreshCw, X } from "lucide-react";
+import { Modal } from "@/components/ui/Modal";
+import { AlertTriangle, CalendarClock, CalendarDays, Clock, RefreshCw } from "lucide-react";
 import { useTheme } from "next-themes";
 import api from "@/lib/axiosInstance";
 import { toJalali, toPersianDigits, JALALI_MONTHS, pad2 } from "@/lib/jalali";
-import { useReloadOnClose } from "@/lib/useReloadOnClose";
 
 export interface InternalDeadline {
     started_at: string | null;
@@ -86,8 +82,6 @@ export default function InternalTaskDeadlineModal({
     taskTitle,
     onLoaded,
 }: InternalTaskDeadlineModalProps) {
-    useReloadOnClose(open, true);
-    const reduced = useReducedMotion() ?? false;
     const { resolvedTheme } = useTheme();
     const isDark = resolvedTheme === "dark";
 
@@ -130,13 +124,6 @@ export default function InternalTaskDeadlineModal({
         }
     }, [open]);
 
-    useEffect(() => {
-        if (!open) return;
-        const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
-        window.addEventListener("keydown", onKey);
-        return () => window.removeEventListener("keydown", onKey);
-    }, [open, onClose]);
-
     const retry = useCallback(() => setTick((t) => t + 1), []);
 
     const started = formatJalali(data?.started_at);
@@ -144,55 +131,19 @@ export default function InternalTaskDeadlineModal({
     const remaining = describeRemaining(data?.deadline);
     const hasAny = Boolean(started || deadline);
 
-    if (typeof document === "undefined") return null;
-
     const muted = isDark ? "#9ca3af" : "#6b7280";
-    const border = isDark ? "rgba(255,255,255,0.06)" : "rgba(15,23,42,0.06)";
 
-    return createPortal(
-        <AnimatePresence>
-            {open && (
-                <div
-                    className="fixed inset-0 z-[2147483647] flex items-center justify-center px-4"
-                >
-                    <Backdrop onClick={onClose} />
-                    <m.div
-                        {...panelMotion(false, reduced)}
-                        dir="rtl"
-                        role="dialog"
-                        aria-modal="true"
-                        className="relative w-full max-w-md overflow-hidden rounded-[2rem] border"
-                        style={{ background: isDark ? "#0b1220" : "#ffffff", borderColor: border }}
-                    >
-                        <div className="flex items-center justify-between gap-3 border-b px-6 py-5" style={{ borderColor: border }}>
-                            <div className="flex min-w-0 items-center gap-3">
-                                <div
-                                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl"
-                                    style={{
-                                        background: isDark ? "rgba(99,102,241,0.14)" : "rgba(99,102,241,0.08)",
-                                        color: isDark ? "#a5b4fc" : "#6366f1",
-                                    }}
-                                >
-                                    <CalendarClock size={18} />
-                                </div>
-                                <div className="min-w-0">
-                                    <h3 className="text-[14.5px] font-extrabold text-gray-900 dark:text-white">زمان‌بندی تسک اینترنال</h3>
-                                    {taskTitle && <p className="mt-0.5 truncate text-[11px] text-gray-400">{taskTitle}</p>}
-                                </div>
-                            </div>
-
-                            <button
-                                type="button"
-                                onClick={onClose}
-                                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl transition-colors"
-                                style={{ background: isDark ? "rgba(255,255,255,0.05)" : "rgba(15,23,42,0.05)", color: muted }}
-                                aria-label="بستن"
-                            >
-                                <X size={16} />
-                            </button>
-                        </div>
-
-                        <div className="flex flex-col gap-3 p-6">
+    return (
+        <Modal
+            open={open}
+            onClose={onClose}
+            title="زمان‌بندی تسک اینترنال"
+            subtitle={taskTitle}
+            icon={<CalendarClock size={18} />}
+            presentation="center"
+            maxWidth="max-w-md"
+        >
+                        <div dir="rtl" className="flex flex-col gap-3">
                             {loading ? (
                                 <FormSkeleton fields={3} />
                             ) : error ? (
@@ -265,10 +216,6 @@ export default function InternalTaskDeadlineModal({
                                 </>
                             )}
                         </div>
-                    </m.div>
-                </div>
-            )}
-        </AnimatePresence>,
-        document.body
+        </Modal>
     );
 }

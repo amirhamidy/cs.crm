@@ -2,13 +2,13 @@
 
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, m, useReducedMotion } from "framer-motion";
+import { ModalLayer } from "@/components/ui/ModalLayer";
 import { Backdrop } from "@/components/ui/Backdrop";
 import { panelMotion } from "@/lib/motion";
 import { X, ChevronDown, ChevronLeft, ChevronRight, Clock, Check, CalendarDays } from "lucide-react";
 import { toJalali, toGregorian, jalaliMonthLength, jalaliWeekday, JALALI_MONTHS, JALALI_WEEKDAYS, toPersianDigits, pad2, todayJalali } from "@/lib/jalali";
 
 import { BusyContent } from "@/components/ui/Button";
-import { useReloadOnClose } from "@/lib/useReloadOnClose";
 interface FieldState {
     jy: number;
     jm: number;
@@ -156,7 +156,6 @@ export default function TimeRangeModal({
     onSubmit,
     error: externalError,
 }: TimeRangeModalProps) {
-    useReloadOnClose(open, true);
     const reduced = useReducedMotion() ?? false;
     const [start, setStart] = useState<FieldState>(() =>
         parseIsoToField(initialStartedAt)
@@ -242,9 +241,7 @@ export default function TimeRangeModal({
 
     return (
         <AnimatePresence>
-            <div
-                className="fixed inset-0 z-[10000] flex items-center justify-center px-4"
-            >
+            <ModalLayer className="fixed inset-0 z-[10000] flex items-center justify-center px-4">
                 <Backdrop onClick={onClose} />
                 <m.div
                     {...panelMotion(false, reduced)}
@@ -480,7 +477,7 @@ export default function TimeRangeModal({
                         </m.button>
                     </div>
                 </m.div>
-            </div>
+            </ModalLayer>
         </AnimatePresence>
     );
 }

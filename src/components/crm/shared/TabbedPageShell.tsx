@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { PageHeader } from "@/components/ui/Feedback";
+import { PageToolbar } from "./ui";
 import { RouteTabs, type RouteTabItem } from "./RouteTabs";
 
 interface Props {
@@ -15,7 +15,7 @@ interface Props {
 export function TabbedPageShell({ icon, title, subtitle, tabsLabel, tabs, children }: Props) {
     return (
         <div className="flex flex-col gap-5" dir="rtl">
-            <PageHeader icon={icon} title={title} subtitle={subtitle} />
+            <PageToolbar icon={icon} title={title} subtitle={subtitle} />
             <RouteTabs items={tabs} label={tabsLabel} />
             {children}
         </div>

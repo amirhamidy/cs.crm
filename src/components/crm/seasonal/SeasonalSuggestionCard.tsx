@@ -52,7 +52,7 @@ export default function SeasonalSuggestionCard({ basePath }: { basePath: "/admin
                             {g.customers.slice(0, 3).map((c) => (
                                 <li
                                     key={c.id}
-                                    className="flex items-center justify-between gap-2 rounded-xl bg-white px-3 py-2 shadow-sm ring-1 ring-gray-100 text-[12px] dark:bg-white/[0.04]"
+                                    className="flex items-center justify-between gap-2 rounded-xl bg-gray-50 px-3 py-2 text-[12px] dark:bg-white/[0.04]"
                                 >
                                     <Link
                                         href={`${basePath}/customer/${c.id}/`}

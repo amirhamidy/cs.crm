@@ -7,9 +7,9 @@ import { X, ChevronDown, ChevronLeft, ChevronRight, Clock, Check, CalendarDays }
 import { toJalali, toGregorian, jalaliMonthLength, jalaliWeekday, JALALI_MONTHS, JALALI_WEEKDAYS, toPersianDigits, pad2, todayJalali } from "@/lib/jalali";
 
 import { BusyContent } from "@/components/ui/Button";
+import { ModalLayer } from "@/components/ui/ModalLayer";
 import { Backdrop } from "@/components/ui/Backdrop";
 import { panelMotion } from "@/lib/motion";
-import { useReloadOnClose } from "@/lib/useReloadOnClose";
 interface FieldState {
     jy: number;
     jm: number;
@@ -165,7 +165,6 @@ export default function TimeRangeModal({
     onSubmit,
     error: externalError,
 }: TimeRangeModalProps) {
-    useReloadOnClose(open, true);
     const [start, setStart] = useState<FieldState>(() =>
         parseIsoToField(initialStartedAt)
     );
@@ -266,7 +265,7 @@ export default function TimeRangeModal({
     return createPortal(
         <AnimatePresence mode="wait">
             {open && (
-                <div
+                <ModalLayer
                     className="fixed inset-0 z-[99999] flex items-center justify-center px-4"
                     dir="rtl"
                 >
@@ -526,7 +525,7 @@ export default function TimeRangeModal({
                             </m.button>
                         </div>
                     </m.div>
-                </div>
+                </ModalLayer>
             )}
         </AnimatePresence>,
         document.body
