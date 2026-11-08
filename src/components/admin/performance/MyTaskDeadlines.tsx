@@ -1,13 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { m } from "framer-motion";
-import { CalendarClock, Clock, UserRound } from "lucide-react";
-import MyTaskDeadlinesSkeleton from "./MyTaskDeadlinesSkeleton";
+import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { ChartCard, COLORS, Tip, axisProps } from "./chartKit";
 import { useTheme } from "next-themes";
 import api from "@/lib/axiosInstance";
 import { listAll } from "@/lib/api";
-import { toJalali, toPersianDigits, JALALI_MONTHS, pad2 } from "@/lib/jalali";
 
 interface Task {
     id: number;
@@ -27,17 +25,6 @@ interface Employee {
 interface ExpiredTask extends Task {
     deadline: string;
     started_at: string | null;
-}
-
-function formatDate(value: string) {
-    const date = new Date(value);
-    const [jy, jm, jd] = toJalali(date.getFullYear(), date.getMonth() + 1, date.getDate());
-    return `${toPersianDigits(jd)} ${JALALI_MONTHS[jm - 1]} ${toPersianDigits(jy)} ساعت ${toPersianDigits(pad2(date.getHours()))}:${toPersianDigits(pad2(date.getMinutes()))}`;
-}
-
-function getEmployeeName(id: number, employees: Employee[]) {
-    const employee = employees.find((item) => item.id === id);
-    return employee?.full_name || employee?.username || `کارمند ${id}`;
 }
 
 export default function MyTaskDeadlines() {
@@ -102,99 +89,28 @@ export default function MyTaskDeadlines() {
         };
     }, []);
 
+    const now = Date.now();
+    const data = tasks.slice(0, 12).map((t) => ({
+        name: t.title.length > 14 ? t.title.slice(0, 14) + "…" : t.title,
+        days: Math.max(1, Math.ceil((now - new Date(t.deadline).getTime()) / 86400000)),
+    }));
+
     return (
-        <m.section
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="rounded-[1.5rem] border p-4 sm:p-5"
-            style={{
-                borderColor: isDark ? "rgba(255,255,255,.06)" : "rgba(0,0,0,.06)",
-                background: isDark ? "rgba(255,255,255,.02)" : "#fff",
-            }}
-            dir="rtl"
+        <ChartCard
+            title="تسک‌های دارای Deadline گذشته"
+            hint="هر نقطه یک تسک است؛ هرچه بالاتر باشد، تعداد روزهای تأخیر بیشتر است."
+            loading={loading}
+            empty={!data.length}
         >
-            <div className="mb-4 flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2.5">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-red-500/10 text-red-400">
-                        <CalendarClock size={17} />
-                    </div>
-                    <div>
-                        <h2 className="text-[13px] font-extrabold text-gray-900 dark:text-white">
-                            تسک‌های دارای Deadline گذشته
-                        </h2>
-                        <p className="mt-0.5 text-[10.5px] text-gray-400">
-                            وظایفی که مهلت انجام آن‌ها به پایان رسیده است
-                        </p>
-                    </div>
-                </div>
-
-                <span className="rounded-xl bg-red-500/10 px-2.5 py-1 text-[10px] font-bold text-red-400">
-                    {tasks.length.toLocaleString("fa-IR")} تسک
-                </span>
-            </div>
-
-            {loading ? (
-                <MyTaskDeadlinesSkeleton count={3} />
-            ) : !tasks.length ? (
-                <div className="flex min-h-32 items-center justify-center rounded-2xl border border-dashed border-gray-200 text-[11px] font-semibold text-gray-400 dark:border-white/[0.06]">
-                    هیچ تسکی با Deadline گذشته وجود ندارد.
-                </div>
-            ) : (
-                <div className="grid gap-2.5">
-                    {tasks.map((task, index) => (
-                        <m.div
-                            key={task.id}
-                            initial={{ opacity: 0, y: 6 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: index * 0.025 }}
-                            className="rounded-2xl border border-red-500/15 bg-red-500/[0.035] p-3.5"
-                        >
-                            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                                <div className="min-w-0">
-                                    <div className="flex flex-wrap items-center gap-2">
-                                        <h3 className="truncate text-[12px] font-extrabold text-gray-900 dark:text-white">
-                                            {task.title}
-                                        </h3>
-                                        <span className="rounded-full border border-red-500/20 bg-red-500/10 px-2 py-0.5 text-[9px] font-bold text-red-400">
-                                            منقضی شده
-                                        </span>
-                                    </div>
-
-                                    <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5">
-                                        {task.assigned_employee?.map((id) => (
-                                            <span
-                                                key={id}
-                                                className="flex items-center gap-1.5 text-[10px] font-bold text-gray-500 dark:text-gray-400"
-                                            >
-                                                <UserRound size={11} className="text-indigo-400" />
-                                                {getEmployeeName(id, employees)}
-                                            </span>
-                                        ))}
-
-                                        {task.current_step_name && (
-                                            <span className="text-[10px] font-semibold text-gray-400">
-                                                مرحله: {task.current_step_name}
-                                            </span>
-                                        )}
-                                    </div>
-                                </div>
-
-                                <div className="shrink-0 text-[10px] font-bold sm:text-left">
-                                    {task.started_at && (
-                                        <div className="mb-1 text-gray-400">
-                                            شروع: {formatDate(task.started_at)}
-                                        </div>
-                                    )}
-                                    <div className="text-red-400">
-                                        <Clock size={11} className="mr-1 inline" />
-                                        مهلت: {formatDate(task.deadline)}
-                                    </div>
-                                </div>
-                            </div>
-                        </m.div>
-                    ))}
-                </div>
-            )}
-        </m.section>
+            <ResponsiveContainer>
+                <LineChart data={data} margin={{ left: -10, right: 10 }}>
+                    <CartesianGrid vertical={false} stroke="rgba(150,150,150,.12)" />
+                    <XAxis dataKey="name" {...axisProps} />
+                    <YAxis {...axisProps} />
+                    <Tooltip content={<Tip dark={isDark} names={{ days: "روز تأخیر" }} />} />
+                    <Line type="stepAfter" dataKey="days" stroke={COLORS.purple} strokeWidth={2.5} dot={{ r: 5, fill: COLORS.red, stroke: "none" }} />
+                </LineChart>
+            </ResponsiveContainer>
+        </ChartCard>
     );
 }
