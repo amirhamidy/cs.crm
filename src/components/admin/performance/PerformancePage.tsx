@@ -1,26 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import dynamic from "next/dynamic";
 import { useTheme } from "next-themes";
 import { m } from "framer-motion";
 import { Activity, ListTodo, TrendingUp, Ban } from "lucide-react";
 import { useAnalytics, type TimeRange } from "@/hooks/useAnalytics";
 import TimeRangeSelector from "./TimeRangeSelector";
-import BestEmployeesChart from "./BestEmployeesChart";
-import WeakestEmployeesChart from "./WeakestEmployeesChart";
-import DepartmentChurn from "./DepartmentChurn";
-import MyTaskDeadlines from "./MyTaskDeadlines";
+import PerformanceDashboard from "./dashboard/PerformanceDashboard";
 
-
-const TopBringersChart = dynamic(() => import("./TopBringersChart"), {
-    ssr: false,
-    loading: () => null,
-});
-const TopStagesChart = dynamic(() => import("./TopStagesChart"), {
-    ssr: false,
-    loading: () => null,
-});
 
 export default function PerformancePage() {
     const { resolvedTheme } = useTheme();
@@ -151,38 +138,17 @@ export default function PerformancePage() {
                 </m.div>
             )}
 
-            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-
-                <DepartmentChurn
-                    departments={departments}
-                    loading={loading}
-                />
-
-                <WeakestEmployeesChart
-                    items={weakestEmployees}
-                    loading={loading}
-                />
-
-                <TopBringersChart
-                    items={topBringers}
-                    loading={loading}
-                />
-                <BestEmployeesChart
-                    items={bestEmployees}
-                    loading={loading}
-                />
-
-                <TopStagesChart
-                    topSoldStages={topSoldStages}
-                    topCompletedStages={topCompletedStages}
-                    topInProgressStages={topInProgressStages}
-                    topCancelledStages={topCancelledStages}
-                    loading={loading}
-                    activeRange={range}
-                />
-                <MyTaskDeadlines />
-
-            </div>
+            <PerformanceDashboard
+                loading={loading}
+                departments={departments}
+                bestEmployees={bestEmployees}
+                weakestEmployees={weakestEmployees}
+                topBringers={topBringers}
+                topSoldStages={topSoldStages}
+                topCompletedStages={topCompletedStages}
+                topInProgressStages={topInProgressStages}
+                topCancelledStages={topCancelledStages}
+            />
         </div>
     );
 }
