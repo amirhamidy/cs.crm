@@ -752,10 +752,19 @@ export function useAnalytics(range: TimeRange = "monthly") {
       };
     });
 
-    const weakestEmployees = Array.from(employeeAcc.values())
+    const weakestEmployees: EmployeeOverallStat[] = Array.from(employeeAcc.values())
       .filter((e) => e.total > 0)
       .sort((a, b) => b.cancelled - a.cancelled || b.total - a.total)
-      .slice(0, 10);
+      .slice(0, 10)
+      .map((employee) => {
+        const department = employeeDepartmentMap.get(employee.key);
+
+        return {
+          ...employee,
+          department_key: department?.department_key ?? "unknown",
+          department_name: department?.department_name ?? "دپارتمان نامشخص",
+        };
+      });
 
     const allStageRanks: StageRankItem[] = departmentsList.flatMap((dep) =>
       dep.stages.map((stage) => ({
