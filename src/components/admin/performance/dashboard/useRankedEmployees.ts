@@ -2,21 +2,21 @@
 
 import { useEffect, useMemo, useState } from "react";
 import axiosInstance from "@/lib/axiosInstance";
-import type { EmployeeOverallStat } from "@/hooks/useAnalytics";
+import type { EmployeeStat } from "@/hooks/useAnalytics";
 
 interface ScoreInfo {
     score: number;
     total_deducted: number;
 }
 
-export interface RankedEmployee extends EmployeeOverallStat {
+export interface RankedEmployee extends EmployeeStat {
     score: number | null;
     total_deducted: number | null;
 }
 
-const done = (e: EmployeeOverallStat) => (e.sold ?? 0) + (e.completed ?? 0);
-const successRate = (e: EmployeeOverallStat) => (e.total > 0 ? done(e) / e.total : 0);
-const cancelRate = (e: EmployeeOverallStat) => (e.total > 0 ? e.cancelled / e.total : 1);
+const done = (e: EmployeeStat) => (e.sold ?? 0) + (e.completed ?? 0);
+const successRate = (e: EmployeeStat) => (e.total > 0 ? done(e) / e.total : 0);
+const cancelRate = (e: EmployeeStat) => (e.total > 0 ? e.cancelled / e.total : 1);
 
 /** ترتیب «بهترین» — همان منطق قبلی: نرخ موفقیت، نرخ لغو، امتیاز، ... */
 export function rankBest(items: RankedEmployee[]) {
@@ -58,7 +58,7 @@ export function rankWeakest(items: RankedEmployee[]) {
 }
 
 /** امتیاز هر کارمند را از API می‌گیرد و به آمار تحلیلی اضافه می‌کند */
-export function useEmployeeScores<T extends EmployeeOverallStat>(items: T[]) {
+export function useEmployeeScores<T extends EmployeeStat>(items: T[]) {
     const [scores, setScores] = useState<Record<string, ScoreInfo>>({});
     const safe = useMemo(() => (Array.isArray(items) ? items : []), [items]);
 

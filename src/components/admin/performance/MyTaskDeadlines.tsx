@@ -91,6 +91,8 @@ export default function MyTaskDeadlines() {
                     );
                     setEmployees(employeeSource);
                 }
+            } catch {
+                /* timeout / network: show empty state */
             } finally {
                 if (!cancelled) setLoading(false);
             }
