@@ -73,14 +73,14 @@ export default function JalaliDateField({
         <div className={className}>
             {label && (
                 <div className="mb-1.5 flex items-center justify-between">
-                    <span className="text-[11.5px] font-bold text-gray-500 dark:text-gray-400">
+                    <span className="text-[10.5px] font-bold text-gray-400">
                         {label}
                     </span>
                     {clearable && value && (
                         <button
                             type="button"
                             onClick={() => commit(0, 0, 0)}
-                            className="text-[11px] font-bold text-gray-400 hover:text-red-500"
+                            className="text-[10px] font-bold text-gray-400 hover:text-red-500"
                         >
                             پاک کردن
                         </button>

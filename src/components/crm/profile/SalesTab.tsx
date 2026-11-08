@@ -91,6 +91,7 @@ export default function SalesTab({ customerId, customerName, onChanged }: Props)
             ) : (
                 <>
                     <SalesTable
+                        compact
                         sales={list.data}
                         canModify={canModify}
                         onDetails={setDetails}

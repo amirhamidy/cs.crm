@@ -1,18 +1,30 @@
 "use client";
 
 import { memo, useState } from "react";
-import { TriangleAlert } from "lucide-react";
-import { EmptyState, ErrorState } from "@/components/ui/Feedback";
+import { CalendarDays, CheckCircle2, Clock, Eye, TriangleAlert } from "lucide-react";
 import Pagination from "@/components/ui/Pagination";
-import { TableSkeleton } from "@/components/ui/skeletons";
+import { HumanResourceCardSkeleton } from "@/components/ui/skeletons";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import { issuesApi } from "@/lib/api";
-import { formatJalaliDate, formatMoney, formatNumber, formatWeight } from "@/lib/crm/format";
-import { cn } from "@/lib/utils";
+import { formatJalaliDate, formatMoney, formatNumber, formatWeight, toNumber } from "@/lib/crm/format";
 import type { IssueStatus, LoadIssue } from "@/types/crm";
 import type { SearchParams } from "@/types/pagination";
-import { Segmented } from "../shared/Segmented";
-import { Card, SectionTitle } from "../shared/ui";
+import {
+    CARD_HOVER,
+    Chip,
+    Divider,
+    FilterChips,
+    GRID,
+    IconTile,
+    MiniStat,
+    PageToolbar,
+    PillButton,
+    SURFACE,
+    StateCard,
+    Stagger,
+    type Tone,
+} from "../shared/kit";
+import { cn } from "@/lib/utils";
 import SaleDetailsModal from "./SaleDetailsModal";
 
 type Filter = "active" | IssueStatus | "all";
@@ -23,13 +35,18 @@ const FILTERS: { value: Filter; label: string }[] = [
     { value: "all", label: "همه" },
 ];
 
-const ISSUE_STATUS_TONE: Record<IssueStatus, string> = {
-    open: "bg-red-50 text-red-600 dark:bg-red-500/10 dark:text-red-400",
-    in_progress: "bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400",
-    resolved: "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400",
+const STATUS_TONE: Record<IssueStatus, Tone> = {
+    open: "rose",
+    in_progress: "amber",
+    resolved: "emerald",
 };
 
-/** «نیازمند پیگیری» یعنی باز + در حال پیگیری؛ بک‌اند این دو را با هم نمی‌دهد، پس دو درخواست موازی می‌زنیم. */
+const STATUS_ICON = {
+    open: TriangleAlert,
+    in_progress: Clock,
+    resolved: CheckCircle2,
+};
+
 async function fetchIssues(params: SearchParams & { filter: Filter }, signal: AbortSignal) {
     const { page, page_size, filter } = params;
 
@@ -52,53 +69,68 @@ async function fetchIssues(params: SearchParams & { filter: Filter }, signal: Ab
     );
 }
 
-const IssueRow = memo(function IssueRow({
+const IssueCard = memo(function IssueCard({
     issue,
     onOpen,
 }: {
     issue: LoadIssue;
     onOpen: (issue: LoadIssue) => void;
 }) {
+    const tone = STATUS_TONE[issue.status];
+    const Icon = STATUS_ICON[issue.status];
+
     return (
-        <li>
-            <button
-                type="button"
-                onClick={() => onOpen(issue)}
-                className="flex w-full flex-wrap items-center justify-between gap-2 rounded-2xl border border-gray-100 bg-white p-3.5 text-right shadow-sm transition-colors hover:bg-gray-50 dark:border-white/[0.06] dark:bg-white/[0.03] dark:hover:bg-white/[0.06]"
-            >
-                <div className="min-w-0 max-w-full">
-                    <div className="text-[13px] font-extrabold text-gray-900 dark:text-white">
-                        {issue.issue_type_display} · {formatWeight(issue.quantity_kg)}
+        <div className={cn(SURFACE, CARD_HOVER, "flex h-full min-w-0 flex-col p-3")}>
+            <div className="flex items-start gap-3">
+                <IconTile tone={tone}>
+                    <Icon size={18} />
+                </IconTile>
+                <div className="min-w-0 flex-1">
+                    <div className="flex items-start justify-between gap-2">
+                        <h3 className="truncate text-[13px] font-extrabold text-gray-900 dark:text-white">
+                            {issue.issue_type_display}
+                        </h3>
+                        <Chip tone={tone}>{issue.status_display}</Chip>
                     </div>
-                    <div className="text-[11.5px] text-gray-500 dark:text-gray-400">
-                        {issue.sale_label} · {issue.product_name} ·{" "}
-                        {formatJalaliDate(issue.issue_date)}
+                    <div className="mt-1.5 flex items-center gap-1.5">
+                        <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-gray-100 dark:bg-white/[0.06]">
+                            <CalendarDays size={10} className="text-gray-400" />
+                        </span>
+                        <span className="truncate text-[10.5px] font-semibold text-gray-400">
+                            {formatJalaliDate(issue.issue_date)}
+                        </span>
                     </div>
-                    {issue.description && (
-                        <div className="mt-0.5 max-w-full truncate sm:max-w-[420px] text-[11px] text-gray-400">
-                            {issue.description}
-                        </div>
-                    )}
                 </div>
-                <div className="flex items-center gap-2">
-                    <span className="text-[11.5px] font-bold text-gray-600 dark:text-gray-300">
-                        {formatMoney(issue.loss_amount)}
-                    </span>
-                    <span
-                        className={cn(
-                            "rounded-lg px-2 py-0.5 text-[10.5px] font-extrabold",
-                            ISSUE_STATUS_TONE[issue.status],
-                        )}
-                    >
-                        {issue.status_display}
-                    </span>
-                </div>
-            </button>
-        </li>
+            </div>
+
+            <div className="mt-3"><Divider /></div>
+
+            <div className="mt-3 rounded-xl bg-gray-50 px-2.5 py-2 dark:bg-white/[0.035]">
+                <p className="truncate text-[11px] font-extrabold text-gray-700 dark:text-gray-200">{issue.sale_label}</p>
+                <p className="mt-0.5 truncate text-[10.5px] font-semibold text-gray-400">{issue.product_name}</p>
+                {issue.description && (
+                    <p className="mt-1 line-clamp-2 text-[10.5px] font-semibold leading-5 text-gray-400">{issue.description}</p>
+                )}
+            </div>
+
+            <div className="mt-1.5 grid grid-cols-2 gap-1.5">
+                <MiniStat label="مقدار" value={formatWeight(issue.quantity_kg)} />
+                <MiniStat
+                    label="زیان"
+                    value={formatMoney(issue.loss_amount)}
+                    tone={toNumber(issue.loss_amount) > 0 ? "rose" : "gray"}
+                />
+            </div>
+
+            <div className="mt-auto pt-3">
+                <PillButton variant="soft" className="w-full" icon={<Eye size={13} />} onClick={() => onOpen(issue)}>
+                    مشاهده معامله
+                </PillButton>
+            </div>
+        </div>
     );
 });
 
-/** تب «پیگیری بار»: کسری، سرک و بار برگشتی. */
 export default function IssuesTab() {
     const [opened, setOpened] = useState<LoadIssue | null>(null);
 
@@ -108,47 +140,55 @@ export default function IssuesTab() {
     });
     const { filter } = list.filters;
 
+    const pageLoss = list.data.reduce((a, x) => a + toNumber(x.loss_amount), 0);
+    const pageKg = list.data.reduce((a, x) => a + toNumber(x.quantity_kg), 0);
+    const openCount = list.data.filter((x) => x.status !== "resolved").length;
+
     return (
-        <Card>
-            <SectionTitle
-                icon={<TriangleAlert size={16} />}
-                title={`پیگیری کسری، سرک و بار برگشتی${list.count ? ` (${formatNumber(list.count)})` : ""}`}
+        <>
+            <PageToolbar
+                icon={<TriangleAlert size={18} />}
+                title="پیگیری بار"
+                subtitle="کسری، سرک و بار برگشتی"
+                count={list.count}
+                stats={[
+                    { label: "کل موارد", value: formatNumber(list.count) },
+                    { label: "نیازمند پیگیری در صفحه", value: formatNumber(openCount), tone: "amber" },
+                    { label: "وزن این صفحه", value: formatWeight(pageKg), tone: "indigo" },
+                    { label: "زیان این صفحه", value: formatMoney(pageLoss), tone: "rose" },
+                ]}
+                footer={
+                    <FilterChips
+                        label="وضعیت پیگیری"
+                        items={FILTERS}
+                        value={filter}
+                        onChange={(value) => list.setFilters({ filter: value })}
+                    />
+                }
             />
 
-            <div className="mb-3 max-w-md">
-                <Segmented
-                    options={FILTERS}
-                    value={filter}
-                    onChange={(value) => list.setFilters({ filter: value })}
-                />
-            </div>
-
             {list.loading ? (
-                <TableSkeleton rows={5} cols={5} />
+                <HumanResourceCardSkeleton count={6} className={GRID} />
             ) : list.error ? (
-                <ErrorState message="دریافت لیست ناموفق بود" onRetry={list.refetch} />
+                <StateCard kind="error" title="دریافت لیست ناموفق بود" description="ارتباط با سرور برقرار نشد. لطفاً دوباره تلاش کنید." onRetry={list.refetch} />
             ) : list.data.length === 0 ? (
-                <EmptyState
+                <StateCard
+                    icon={<TriangleAlert size={19} />}
                     title="موردی برای پیگیری نیست"
-                    description="کسری، سرک و بار برگشتی را از دکمه‌ی گیره (📎) روی هر معامله ثبت کنید."
-                    icon={<TriangleAlert size={26} />}
+                    description="کسری، سرک و بار برگشتی را از دکمه‌ی «فایل‌ها و پیگیری بار» روی هر معامله ثبت کنید."
                 />
             ) : (
-                <ul className="flex flex-col gap-2">
-                    {list.data.map((issue) => (
-                        <IssueRow key={issue.id} issue={issue} onOpen={setOpened} />
+                <div className={GRID}>
+                    {list.data.map((issue, i) => (
+                        <Stagger key={issue.id} index={i}>
+                            <IssueCard issue={issue} onOpen={setOpened} />
+                        </Stagger>
                     ))}
-                </ul>
+                </div>
             )}
 
             {list.totalPages > 1 && filter !== "active" && (
-                <div className="mt-3">
-                    <Pagination
-                        page={list.page}
-                        totalPages={list.totalPages}
-                        onChange={list.setPage}
-                    />
-                </div>
+                <Pagination page={list.page} totalPages={list.totalPages} onChange={list.setPage} />
             )}
 
             <SaleDetailsModal
@@ -158,6 +198,6 @@ export default function IssuesTab() {
                 onClose={() => setOpened(null)}
                 onChanged={list.refetch}
             />
-        </Card>
+        </>
     );
 }

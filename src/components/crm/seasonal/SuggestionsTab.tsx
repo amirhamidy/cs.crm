@@ -1,19 +1,17 @@
 "use client";
 
 import { useState } from "react";
-import { CalendarRange, ListChecks, Sprout, Users } from "lucide-react";
-import { EmptyState, ErrorState } from "@/components/ui/Feedback";
-import { ListSkeleton } from "@/components/ui/skeletons";
-import { SalesSelect } from "../shared/SalesSelect";
-import type { BasePath } from "../shared/types";
-import { Card, SectionTitle } from "../shared/ui";
-import { ColorStatsPanel } from "../shared/ColorStats";
+import { CalendarRange, ListChecks, Sprout } from "lucide-react";
+import { HumanResourceCardSkeleton } from "@/components/ui/skeletons";
 import { formatNumber } from "@/lib/crm/format";
+import { FilterChips, GRID, PageToolbar, SectionHead, StateCard } from "../shared/kit";
+import type { BasePath } from "../shared/types";
 import { MONTH_OPTIONS } from "./months";
 import { SuggestionGroupList } from "./SuggestionGroupList";
 import { useSeasonalSuggestions } from "./useSeasonalSuggestions";
 
-/** تب «پیشنهاد ماه»: کدام کالا را از کدام مشتری بخریم. */
+const MONTH_ITEMS = MONTH_OPTIONS.map((o) => ({ value: o.id, label: o.label }));
+
 export default function SuggestionsTab({ basePath }: { basePath: BasePath }) {
     const [month, setMonth] = useState<number | undefined>();
     const { data, loading, error, retry } = useSeasonalSuggestions(month);
@@ -25,71 +23,74 @@ export default function SuggestionsTab({ basePath }: { basePath: BasePath }) {
     const countCustomers = (groups: { customers: unknown[] }[] | undefined) =>
         (groups ?? []).reduce((n, g) => n + g.customers.length, 0);
 
+    const productCount =
+        (data?.current.length ?? 0) + (data?.upcoming.length ?? 0) + (data?.from_history.length ?? 0);
+
     return (
-        <div className="flex flex-col gap-4">
-            <ColorStatsPanel
+        <>
+            <PageToolbar
+                icon={<Sprout size={18} />}
+                title="پیشنهاد ماه"
+                subtitle="کدام کالا را از کدام مشتری بخریم"
+                count={productCount}
                 stats={[
-                    { label: "پیشنهاد این ماه", value: formatNumber(countCustomers(data?.current)), icon: Sprout },
-                    { label: "ماه بعد", value: formatNumber(countCustomers(data?.upcoming)), icon: CalendarRange },
-                    { label: "از سابقه", value: formatNumber(countCustomers(data?.from_history)), icon: ListChecks },
-                    { label: "کالاهای پیشنهادی", value: formatNumber((data?.current.length ?? 0) + (data?.upcoming.length ?? 0) + (data?.from_history.length ?? 0)), icon: Users },
+                    { label: "پیشنهاد این ماه", value: formatNumber(countCustomers(data?.current)), tone: "emerald" },
+                    { label: "ماه بعد", value: formatNumber(countCustomers(data?.upcoming)), tone: "indigo" },
+                    { label: "از سابقه", value: formatNumber(countCustomers(data?.from_history)), tone: "amber" },
+                    { label: "کالاهای پیشنهادی", value: formatNumber(productCount) },
                 ]}
-            >
-                <SalesSelect
-                    label="ماه"
-                    avatar={false}
-                    searchable={false}
-                    options={MONTH_OPTIONS}
-                    value={shownMonth}
-                    onChange={setMonth}
-                />
-            </ColorStatsPanel>
+                footer={
+                    <FilterChips label="ماه" items={MONTH_ITEMS} value={shownMonth} onChange={setMonth} />
+                }
+            />
 
             {loading && !data ? (
-                <ListSkeleton rows={3} />
+                <HumanResourceCardSkeleton count={4} className={GRID} />
             ) : error ? (
-                <ErrorState message={error} onRetry={retry} />
+                <StateCard kind="error" title={error} description="ارتباط با سرور برقرار نشد. لطفاً دوباره تلاش کنید." onRetry={retry} />
             ) : !data || isEmpty ? (
-                <EmptyState
+                <StateCard
+                    icon={<Sprout size={19} />}
                     title="پیشنهادی برای این ماه نیست"
                     description="از تب «فهرست فصلی» مشخص کنید هر مشتری چه کالایی را در چه ماه‌هایی دارد."
-                    icon={<Sprout size={26} />}
                 />
             ) : (
                 <>
                     {data.current.length > 0 && (
-                        <Card>
-                            <SectionTitle
+                        <section className="space-y-3">
+                            <SectionHead
                                 icon={<Sprout size={16} />}
-                                title={`${data.month_name}: این کالاها را از این مشتری‌ها بخرید`}
+                                title={data.month_name}
+                                subtitle="این کالاها را از این مشتری‌ها بخرید"
+                                count={data.current.length}
                             />
                             <SuggestionGroupList groups={data.current} basePath={basePath} />
-                        </Card>
+                        </section>
                     )}
                     {data.upcoming.length > 0 && (
-                        <Card>
-                            <SectionTitle
+                        <section className="space-y-3">
+                            <SectionHead
                                 icon={<CalendarRange size={16} />}
-                                title={`از ${data.next_month_name} شروع می‌شود (آماده‌ی هماهنگی)`}
+                                title={`شروع از ${data.next_month_name}`}
+                                subtitle="آماده‌ی هماهنگی"
+                                count={data.upcoming.length}
                             />
                             <SuggestionGroupList groups={data.upcoming} basePath={basePath} />
-                        </Card>
+                        </section>
                     )}
                     {data.from_history.length > 0 && (
-                        <Card>
-                            <SectionTitle
+                        <section className="space-y-3">
+                            <SectionHead
                                 icon={<ListChecks size={16} />}
-                                title={`در ${data.month_name}‌های قبل از اینها خرید کرده‌اید`}
+                                title="از روی سابقه"
+                                subtitle={`در ${data.month_name}‌های قبل از این مشتری‌ها خرید کرده‌اید`}
+                                count={data.from_history.length}
                             />
-                            <SuggestionGroupList
-                                groups={data.from_history}
-                                basePath={basePath}
-                                history
-                            />
-                        </Card>
+                            <SuggestionGroupList groups={data.from_history} basePath={basePath} history />
+                        </section>
                     )}
                 </>
             )}
-        </div>
+        </>
     );
 }

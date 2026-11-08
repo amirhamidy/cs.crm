@@ -1,12 +1,12 @@
 "use client";
 
-import { memo, useState } from "react";
-import { CalendarDays, MoreVertical, Package, Paperclip, Pencil, Trash2 } from "lucide-react";
+import { memo } from "react";
+import { CalendarDays, Paperclip, Pencil, Repeat, ShoppingBag, ShoppingCart, Trash2 } from "lucide-react";
 import { formatJalaliDate, formatMoney, formatWeight } from "@/lib/crm/format";
-import { ActionSheet, type ActionSheetItem } from "@/components/ui/ActionSheet";
 import { cn } from "@/lib/utils";
 import type { Sale } from "@/types/crm";
-import { IssueChips, TradeBadge } from "../shared/TradeBits";
+import { IssueChips, TRADE_LABEL } from "../shared/TradeBits";
+import { CARD_HOVER, Chip, Divider, IconAction, IconTile, MiniStat, PillButton, SURFACE, type Tone } from "../shared/kit";
 
 interface Props {
     sale: Sale;
@@ -17,164 +17,113 @@ interface Props {
     onDetails?: (sale: Sale) => void;
 }
 
-const SIDE: Record<Sale["trade_type"], string> = {
-    sale: "bg-emerald-400",
-    purchase: "bg-amber-400",
-    brokerage: "bg-sky-400",
+const TRADE_TONE: Record<Sale["trade_type"], Tone> = {
+    sale: "emerald",
+    purchase: "amber",
+    brokerage: "sky",
 };
 
+const TRADE_ICON = {
+    sale: ShoppingBag,
+    purchase: ShoppingCart,
+    brokerage: Repeat,
+};
+
+function Party({ label, name, company, dot }: { label: string; name: string; company: string; dot: string }) {
+    return (
+        <div className="relative flex items-start gap-2.5">
+            <span className={cn("relative z-10 mt-1 h-2.5 w-2.5 shrink-0 rounded-full ring-4 ring-white dark:ring-[#111827]", dot)} />
+            <div className="min-w-0 flex-1">
+                <p className="text-[9.5px] font-semibold text-gray-400">{label}</p>
+                <p className="truncate text-[11.5px] font-extrabold text-gray-800 dark:text-gray-100">
+                    {name}
+                    {company && <span className="ms-1 text-[10px] font-semibold text-gray-400">{company}</span>}
+                </p>
+            </div>
+        </div>
+    );
+}
+
 function SaleCardBase({ sale, canEdit, canDelete, onEdit, onDelete, onDetails }: Props) {
-    const [sheetOpen, setSheetOpen] = useState(false);
+    const tone = TRADE_TONE[sale.trade_type];
+    const Icon = TRADE_ICON[sale.trade_type];
     const badge = sale.attachments_count + sale.open_issues_count;
 
-    const sheetItems: ActionSheetItem[] = [];
-    if (onDetails) {
-        sheetItems.push({
-            key: "details",
-            label: "فایل‌ها و پیگیری بار",
-            icon: <Paperclip size={16} />,
-            onSelect: () => onDetails(sale),
-        });
-    }
-    if (canEdit) {
-        sheetItems.push({
-            key: "edit",
-            label: "ویرایش معامله",
-            icon: <Pencil size={16} />,
-            onSelect: () => onEdit(sale),
-        });
-    }
-    if (canDelete) {
-        sheetItems.push({
-            key: "delete",
-            label: "حذف معامله",
-            icon: <Trash2 size={16} />,
-            danger: true,
-            onSelect: () => onDelete(sale),
-        });
-    }
-
-    const bar = [
-        onDetails && {
-            key: "details",
-            label: "فایل‌ها و پیگیری",
-            icon: Paperclip,
-            tone: "text-indigo-600 bg-indigo-50 dark:bg-indigo-500/15 dark:text-indigo-300",
-            run: () => onDetails(sale),
-        },
-        canEdit && {
-            key: "edit",
-            label: "ویرایش",
-            icon: Pencil,
-            tone: "text-sky-600 bg-sky-50 dark:bg-sky-500/15 dark:text-sky-300",
-            run: () => onEdit(sale),
-        },
-        canDelete && {
-            key: "delete",
-            label: "حذف",
-            icon: Trash2,
-            tone: "text-red-600 bg-red-50 dark:bg-red-500/15 dark:text-red-300",
-            run: () => onDelete(sale),
-        },
-    ].filter(Boolean) as {
-        key: string;
-        label: string;
-        icon: typeof Paperclip;
-        tone: string;
-        run: () => void;
-    }[];
-
     return (
-        <div className="group relative flex min-w-0 flex-col gap-3 overflow-hidden rounded-3xl border border-gray-100 bg-white p-4 text-[13px] text-gray-900 transition-shadow hover:shadow-md dark:border-white/[0.08] dark:bg-white/[0.04] dark:text-white">
-            <span className={cn("absolute inset-x-0 top-0 h-1", SIDE[sale.trade_type])} />
+        <div className={cn(SURFACE, CARD_HOVER, "flex h-full min-w-0 flex-col p-3")}>
+            <div className="flex items-start gap-3">
+                <IconTile tone={tone}>
+                    <Icon size={18} />
+                </IconTile>
 
-            <div className="flex items-center justify-between gap-2 pt-1">
-                {sheetItems.length > 0 ? (
-                    <button
-                        type="button"
-                        onClick={() => setSheetOpen(true)}
-                        aria-label="گزینه‌ها"
-                        className="relative -m-1 flex h-8 w-8 items-center justify-center rounded-full text-gray-500 transition-colors hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-white/10 md:hidden"
-                    >
-                        <MoreVertical size={16} />
-                        {badge > 0 && (
-                            <span className="absolute -end-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-brand" />
+                <div className="min-w-0 flex-1">
+                    <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                            <h3 className="truncate text-[13px] font-extrabold text-gray-900 dark:text-white">{sale.product_name}</h3>
+                            <div className="mt-1.5 flex items-center gap-1.5">
+                                <Chip tone={tone}>{TRADE_LABEL[sale.trade_type]}</Chip>
+                                <span className="flex items-center gap-1 truncate text-[10.5px] font-semibold text-gray-400">
+                                    <CalendarDays size={10} className="shrink-0" />
+                                    {formatJalaliDate(sale.sale_date)}
+                                </span>
+                            </div>
+                        </div>
+
+                        {(canEdit || canDelete) && (
+                            <div className="flex shrink-0 items-center gap-1">
+                                {canEdit && (
+                                    <IconAction label="ویرایش معامله" tone="sky" onClick={() => onEdit(sale)}>
+                                        <Pencil size={13} />
+                                    </IconAction>
+                                )}
+                                {canDelete && (
+                                    <IconAction label="حذف معامله" tone="rose" onClick={() => onDelete(sale)}>
+                                        <Trash2 size={13} />
+                                    </IconAction>
+                                )}
+                            </div>
                         )}
-                    </button>
-                ) : (
-                    <span className="md:hidden" />
-                )}
-                <TradeBadge type={sale.trade_type} />
-                <span className="flex items-center gap-1 text-[11px] text-gray-400">
-                    <CalendarDays size={12} />
-                    {formatJalaliDate(sale.sale_date)}
-                </span>
-            </div>
-
-            <div className="min-w-0">
-                <div className="flex items-center gap-1.5 text-[14px] font-bold">
-                    <Package size={14} className="shrink-0 text-gray-400" />
-                    <span className="truncate">{sale.product_name}</span>
-                </div>
-                <div className="mt-2 flex flex-col gap-1 text-[12px] text-gray-500 dark:text-gray-400">
-                    <span className="truncate">
-                        از <b className="font-bold text-gray-800 dark:text-gray-100">{sale.seller_name}</b>
-                    </span>
-                    <span className="truncate">
-                        به <b className="font-bold text-gray-800 dark:text-gray-100">{sale.buyer_name}</b>
-                    </span>
+                    </div>
                 </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-2 rounded-2xl bg-gray-50 p-2.5 text-[11.5px] dark:bg-white/[0.05]">
-                <div className="min-w-0">
-                    <div className="text-[10px] text-gray-400">مقدار</div>
-                    <div className="truncate font-bold">{formatWeight(sale.quantity_kg)}</div>
-                </div>
-                <div className="min-w-0">
-                    <div className="text-[10px] text-gray-400">قیمت واحد</div>
-                    <div className="truncate font-bold">{formatMoney(sale.unit_price)}</div>
-                </div>
+            <div className="mt-3"><Divider /></div>
+
+            <div className="relative mt-3 space-y-2.5">
+                <span className="absolute bottom-3 right-[4.5px] top-3 w-px bg-gray-200 dark:bg-white/10" />
+                <Party label="فروشنده" name={sale.seller_name} company={sale.seller_company} dot="bg-emerald-500" />
+                <Party label="خریدار" name={sale.buyer_name} company={sale.buyer_company} dot="bg-indigo-500" />
+            </div>
+
+            <div className="mt-3 grid grid-cols-2 gap-1.5">
+                <MiniStat label="مقدار" value={formatWeight(sale.quantity_kg)} />
+                <MiniStat label="قیمت واحد" value={formatMoney(sale.unit_price)} />
             </div>
 
             <IssueChips sale={sale} />
 
-            <div className="mt-auto flex items-center justify-between border-t border-gray-100 pt-2.5 dark:border-white/[0.06]">
-                <span className="text-[10.5px] text-gray-400">مبلغ کل</span>
-                <span className="truncate text-[14px] font-black">{formatMoney(sale.total_amount)}</span>
+            <div className="mt-1.5 flex items-center justify-between gap-2 rounded-xl bg-indigo-50/70 px-3 py-2 dark:bg-indigo-500/[0.07]">
+                <span className="text-[9.5px] font-semibold text-indigo-400">مبلغ کل</span>
+                <span className="truncate text-[13px] font-extrabold text-indigo-600 dark:text-indigo-400">{formatMoney(sale.total_amount)}</span>
             </div>
 
-            {bar.length > 0 && (
-                <div className="absolute inset-x-0 bottom-0 hidden translate-y-full items-center justify-center gap-2 bg-white/95 p-2.5 opacity-0 backdrop-blur transition-all group-focus-within:translate-y-0 group-focus-within:opacity-100 group-hover:translate-y-0 group-hover:opacity-100 md:flex dark:bg-[#1b1b24]/95">
-                    {bar.map(({ key, label, icon: Icon, tone, run }) => (
-                        <button
-                            key={key}
-                            type="button"
-                            title={label}
-                            aria-label={label}
-                            onClick={run}
-                            className={cn(
-                                "relative flex h-9 w-9 items-center justify-center rounded-xl transition-transform hover:scale-110",
-                                tone,
-                            )}
-                        >
-                            <Icon size={16} />
-                            {key === "details" && badge > 0 && (
-                                <span className="absolute -end-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-brand px-1 text-[9px] font-black text-white">
-                                    {badge}
-                                </span>
-                            )}
-                        </button>
-                    ))}
+            {onDetails && (
+                <div className="mt-auto pt-3">
+                    <PillButton
+                        variant="primary"
+                        className="w-full"
+                        icon={<Paperclip size={13} />}
+                        onClick={() => onDetails(sale)}
+                    >
+                        فایل‌ها و پیگیری بار
+                        {badge > 0 && (
+                            <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-white/25 px-1 text-[9px] font-extrabold">
+                                {badge.toLocaleString("fa-IR")}
+                            </span>
+                        )}
+                    </PillButton>
                 </div>
             )}
-
-            <ActionSheet
-                open={sheetOpen}
-                onClose={() => setSheetOpen(false)}
-                title={sale.product_name}
-                items={sheetItems}
-            />
         </div>
     );
 }

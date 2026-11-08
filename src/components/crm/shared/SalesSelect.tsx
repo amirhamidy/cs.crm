@@ -40,6 +40,7 @@ interface Props {
     searchable?: boolean;
     /** نسخه‌ی کوتاه‌تر برای روز/ماه/سال */
     compact?: boolean;
+    dense?: boolean;
     className?: string;
 }
 
@@ -54,6 +55,7 @@ export function SalesSelect({
     avatar = true,
     searchable = true,
     compact = false,
+    dense = false,
     className,
 }: Props) {
     const [open, setOpen] = useState(false);
@@ -84,21 +86,22 @@ export function SalesSelect({
     return (
         <div ref={ref} className={`relative ${className ?? ""}`}>
             {label && (
-                <label className="mb-2 block text-[11.5px] font-bold text-gray-400">{label}</label>
+                <label className="mb-1.5 block text-[10.5px] font-bold text-gray-400">{label}</label>
             )}
             <button
                 type="button"
                 disabled={disabled}
                 onClick={() => setOpen((v) => !v)}
                 className={`flex w-full items-center gap-2.5 rounded-2xl border text-right transition-all duration-200 ${
-                    compact ? "h-11 px-3" : "h-[52px] px-3"
+                    dense ? "h-10 px-3" : compact ? "h-11 px-3" : "h-[52px] px-3"
                 } ${
                     open
-                        ? "border-blue-500 bg-blue-50/50 dark:border-blue-500/50 dark:bg-blue-500/[0.06]"
+                        ? "border-indigo-500 bg-indigo-50/50 dark:border-indigo-500/50 dark:bg-indigo-500/[0.06]"
                         : "border-gray-100 bg-gray-50 hover:border-gray-200 dark:border-white/[0.06] dark:bg-white/[0.03] dark:hover:border-white/[0.12]"
                 } ${disabled ? "cursor-not-allowed opacity-40" : "cursor-pointer"}`}
             >
                 {!compact &&
+                    !dense &&
                     avatar &&
                     (selected ? (
                         <span
@@ -169,11 +172,11 @@ export function SalesSelect({
                                             }}
                                             className={`flex w-full items-center gap-2.5 rounded-2xl px-2.5 py-2 text-right transition-colors ${
                                                 active
-                                                    ? "bg-blue-50 dark:bg-blue-500/10"
+                                                    ? "bg-indigo-50 dark:bg-indigo-500/10"
                                                     : "hover:bg-gray-50 dark:hover:bg-white/[0.04]"
                                             }`}
                                         >
-                                            {!compact && avatar && (
+                                            {!compact && !dense && avatar && (
                                                 <span
                                                     className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br text-[12px] font-extrabold text-white ${gradientOf(o.id)}`}
                                                 >
@@ -184,7 +187,7 @@ export function SalesSelect({
                                                 <span
                                                     className={`block truncate text-[12.5px] font-bold ${
                                                         active
-                                                            ? "text-blue-600 dark:text-blue-400"
+                                                            ? "text-indigo-600 dark:text-indigo-400"
                                                             : "text-gray-900 dark:text-white"
                                                     }`}
                                                 >
@@ -197,7 +200,7 @@ export function SalesSelect({
                                                 )}
                                             </span>
                                             {active && (
-                                                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-600">
+                                                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-indigo-600">
                                                     <Check
                                                         size={11}
                                                         className="text-white"

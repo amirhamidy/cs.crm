@@ -1,12 +1,10 @@
 "use client";
 
-import { ColorStatsPanel } from "../shared/ColorStats";
 import { useCallback, useState } from "react";
-import { AlertCircle, Plus, Scale, ShoppingBag, Wallet } from "lucide-react";
-import { Button } from "@/components/ui/Button";
+import { Plus, ShoppingBag } from "lucide-react";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
-import { EmptyState, ErrorState } from "@/components/ui/Feedback";
 import Pagination from "@/components/ui/Pagination";
+import { HumanResourceCardSkeleton } from "@/components/ui/skeletons";
 import { toast } from "@/components/notifications/toast";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -15,6 +13,7 @@ import { apiMessage } from "@/lib/apiMessage";
 import { formatMoney, formatNumber, formatWeight, toNumber } from "@/lib/crm/format";
 import { useAuthStore } from "@/store/authStore";
 import type { Sale } from "@/types/crm";
+import { FilterToggle, GRID, PillButton, PageToolbar, SearchPill, StateCard } from "../shared/kit";
 import { useActiveProducts } from "../shared/useActiveProducts";
 import SaleDetailsModal from "./SaleDetailsModal";
 import SaleFormModal from "./SaleFormModal";
@@ -22,7 +21,6 @@ import { SALE_FILTER_DEFAULTS, type SaleFilters } from "./saleFilters";
 import { SalesFilterBar } from "./SalesFilterBar";
 import SalesTable from "./SalesTable";
 
-/** تب «خرید و فروش»: فهرست معامله‌ها با فیلتر، ثبت، ویرایش و حذف. */
 export default function SalesListTab() {
     const userId = useAuthStore((s) => s.userId);
     const userType = useAuthStore((s) => s.userType);
@@ -44,10 +42,11 @@ export default function SalesListTab() {
                 },
                 signal,
             ),
-        { pageSize: 15, filters: SALE_FILTER_DEFAULTS },
+        { pageSize: 16, filters: SALE_FILTER_DEFAULTS },
     );
     const { refetch } = list;
 
+    const [panelOpen, setPanelOpen] = useState(false);
     const [formOpen, setFormOpen] = useState(false);
     const [editing, setEditing] = useState<Sale | null>(null);
     const [details, setDetails] = useState<Sale | null>(null);
@@ -55,7 +54,6 @@ export default function SalesListTab() {
     const [deleting, setDeleting] = useState(false);
     const [deleteError, setDeleteError] = useState<string | null>(null);
 
-    // کال‌بک‌ها پایدارند تا SalesTable با هر کلید جستجو دوباره رندر نشود
     const canModify = useCallback(
         (s: Sale) => userType === 1 || s.created_by === userId,
         [userType, userId],
@@ -91,70 +89,72 @@ export default function SalesListTab() {
     const pageKg = list.data.reduce((a, x) => a + toNumber(x.quantity_kg), 0);
     const pageIssues = list.data.reduce((a, x) => a + x.open_issues_count, 0);
 
-    const stats = [
-        { label: "معامله‌ها", value: formatNumber(list.count), icon: ShoppingBag },
-        { label: "جمع مبلغ این صفحه", value: formatMoney(pageTotal), icon: Wallet },
-        { label: "جمع وزن این صفحه", value: formatWeight(pageKg), icon: Scale },
-        { label: "پیگیری باز", value: formatNumber(pageIssues), icon: AlertCircle },
-    ];
+    const activeFilters =
+        (list.filters.product ? 1 : 0) + (list.filters.date_from || list.filters.date_to ? 1 : 0);
 
     return (
-        <div className="flex min-w-0 flex-col gap-4 sm:gap-5">
-            <ColorStatsPanel stats={stats}>
-                <SalesFilterBar
-                    search={list.search}
-                    filters={list.filters}
-                    products={products}
-                    onSearch={list.setSearch}
-                    onFilters={list.setFilters}
-                />
-            </ColorStatsPanel>
-
-            <div className="flex flex-col gap-3">
-                {can("sales", "create") && (
-                    <div className="flex justify-end">
-                        <Button size="sm" icon={<Plus size={14} />} onClick={() => openForm(null)}>
-                            ثبت معامله
-                        </Button>
-                    </div>
-                )}
-
-                {list.loading ? (
-                    <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-                        {Array.from({ length: 6 }).map((_, i) => (
-                            <div key={i} className="h-56 animate-pulse rounded-3xl bg-gray-100 dark:bg-white/[0.05]" />
-                        ))}
-                    </div>
-                ) : list.error ? (
-                    <ErrorState message="دریافت فروش‌ها ناموفق بود" onRetry={refetch} />
-                ) : list.data.length === 0 ? (
-                    <EmptyState
-                        title="فروشی پیدا نشد"
-                        description="فیلترها را تغییر دهید یا فروش جدید ثبت کنید."
-                        icon={<ShoppingBag size={26} />}
-                    />
-                ) : (
+        <>
+            <PageToolbar
+                icon={<ShoppingBag size={18} />}
+                title="خرید و فروش"
+                subtitle="معامله‌ها، مبلغ و پیگیری بار"
+                count={list.count}
+                search={<SearchPill value={list.search} onChange={list.setSearch} placeholder="فروشنده، خریدار، کالا..." />}
+                actions={
                     <>
-                        <SalesTable
-                            sales={list.data}
-                            canModify={canModify}
-                            onDetails={setDetails}
-                            onEdit={openForm}
-                            onDelete={askDelete}
-                        />
-                        {list.totalPages > 1 && (
-                            <div className="mt-3">
-                                <Pagination
-                                    page={list.page}
-                                    totalPages={list.totalPages}
-                                    onChange={list.setPage}
-                                    summary={`${formatNumber(list.count)} فروش`}
-                                />
-                            </div>
+                        <FilterToggle open={panelOpen} onToggle={() => setPanelOpen((v) => !v)} activeCount={activeFilters} />
+                        {can("sales", "create") && (
+                            <PillButton icon={<Plus size={13} />} onClick={() => openForm(null)}>
+                                ثبت معامله
+                            </PillButton>
                         )}
                     </>
-                )}
-            </div>
+                }
+                stats={[
+                    { label: "معامله‌ها", value: formatNumber(list.count) },
+                    { label: "جمع مبلغ این صفحه", value: formatMoney(pageTotal), tone: "emerald" },
+                    { label: "جمع وزن این صفحه", value: formatWeight(pageKg), tone: "indigo" },
+                    { label: "پیگیری باز", value: formatNumber(pageIssues), tone: "amber" },
+                ]}
+                footer={
+                    <SalesFilterBar
+                        open={panelOpen}
+                        filters={list.filters}
+                        products={products}
+                        onFilters={list.setFilters}
+                    />
+                }
+            />
+
+            {list.loading ? (
+                <HumanResourceCardSkeleton count={8} className={GRID} />
+            ) : list.error ? (
+                <StateCard kind="error" title="دریافت فروش‌ها ناموفق بود" description="ارتباط با سرور برقرار نشد. لطفاً دوباره تلاش کنید." onRetry={refetch} />
+            ) : list.data.length === 0 ? (
+                <StateCard
+                    icon={<ShoppingBag size={19} />}
+                    title="فروشی پیدا نشد"
+                    description="فیلترها را تغییر دهید یا معامله جدید ثبت کنید."
+                />
+            ) : (
+                <>
+                    <SalesTable
+                        sales={list.data}
+                        canModify={canModify}
+                        onDetails={setDetails}
+                        onEdit={openForm}
+                        onDelete={askDelete}
+                    />
+                    {list.totalPages > 1 && (
+                        <Pagination
+                            page={list.page}
+                            totalPages={list.totalPages}
+                            onChange={list.setPage}
+                            summary={`${formatNumber(list.count)} فروش`}
+                        />
+                    )}
+                </>
+            )}
 
             <SaleDetailsModal
                 open={details != null}
@@ -185,6 +185,6 @@ export default function SalesListTab() {
                 onConfirm={confirmDelete}
                 onCancel={() => setToDelete(null)}
             />
-        </div>
+        </>
     );
 }

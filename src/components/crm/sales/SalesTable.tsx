@@ -3,7 +3,7 @@
 import { memo } from "react";
 import { usePermissions } from "@/hooks/usePermissions";
 import type { Sale } from "@/types/crm";
-
+import { GRID, Stagger } from "../shared/kit";
 import SaleCard from "./SaleCard";
 
 interface Props {
@@ -13,26 +13,29 @@ interface Props {
     onEdit: (sale: Sale) => void;
     onDelete: (sale: Sale) => void;
     onDetails?: (sale: Sale) => void;
+    compact?: boolean;
 }
 
-function SalesTable({ sales, canModify, onEdit, onDelete, onDetails }: Props) {
+function SalesTable({ sales, canModify, onEdit, onDelete, onDetails, compact = false }: Props) {
     const { can } = usePermissions();
     const allowEdit = can("sales", "edit");
     const allowDelete = can("sales", "delete");
+
     return (
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-            {sales.map((sale) => {
+        <div className={compact ? "grid grid-cols-1 gap-3 sm:grid-cols-2" : GRID}>
+            {sales.map((sale, i) => {
                 const mine = canModify(sale);
                 return (
-                    <SaleCard
-                        key={sale.id}
-                        sale={sale}
-                        canEdit={mine && allowEdit}
-                        canDelete={mine && allowDelete}
-                        onEdit={onEdit}
-                        onDelete={onDelete}
-                        onDetails={onDetails}
-                    />
+                    <Stagger key={sale.id} index={i}>
+                        <SaleCard
+                            sale={sale}
+                            canEdit={mine && allowEdit}
+                            canDelete={mine && allowDelete}
+                            onEdit={onEdit}
+                            onDelete={onDelete}
+                            onDetails={onDetails}
+                        />
+                    </Stagger>
                 );
             })}
         </div>

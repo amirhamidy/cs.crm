@@ -3,16 +3,14 @@
 import { useCallback, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import { BarChart3 } from "lucide-react";
-import { EmptyState, ErrorState } from "@/components/ui/Feedback";
-import { ListSkeleton } from "@/components/ui/skeletons";
-import { formatMoney, formatWeight, toNumber } from "@/lib/crm/format";
+import { HumanResourceCardSkeleton } from "@/components/ui/skeletons";
+import { formatMoney, formatNumber, formatWeight, toNumber } from "@/lib/crm/format";
+import { FilterToggle, GRID, PageToolbar, StateCard, Stagger } from "../shared/kit";
 import { useActiveProducts } from "../shared/useActiveProducts";
-import { Card, SectionTitle, StatTile } from "../shared/ui";
 import { TopCustomerRowItem } from "./TopCustomerRow";
 import { TopCustomersFilterBar } from "./TopCustomersFilterBar";
 import { useTopCustomers, type TopCustomersQuery } from "./useTopCustomers";
 
-// فقط وقتی کاربر روی یک مشتری کلیک کند دانلود می‌شود
 const CustomerProfileModal = dynamic(() => import("../profile/CustomerProfileModal"), {
     ssr: false,
 });
@@ -25,10 +23,10 @@ const DEFAULT_QUERY: TopCustomersQuery = {
     dateTo: "",
 };
 
-/** تب «مشتریان برتر»: رتبه‌بندی مشتریان بر اساس مبلغ یا مقدار خرید. */
 export default function TopCustomersTab() {
     const products = useActiveProducts();
     const [query, setQuery] = useState(DEFAULT_QUERY);
+    const [panelOpen, setPanelOpen] = useState(false);
     const [customerId, setCustomerId] = useState<number | null>(null);
     const { rows, loading, error, retry } = useTopCustomers(query);
 
@@ -49,64 +47,59 @@ export default function TopCustomersTab() {
         };
     }, [rows, by]);
 
+    const activeFilters =
+        (query.product ? 1 : 0) +
+        (query.dateFrom ? 1 : 0) +
+        (query.dateTo ? 1 : 0) +
+        (query.limit !== DEFAULT_QUERY.limit ? 1 : 0);
+
     return (
-        <div className="flex flex-col gap-4">
-            <TopCustomersFilterBar query={query} products={products} onChange={updateQuery} />
+        <>
+            <PageToolbar
+                icon={<BarChart3 size={18} />}
+                title="مشتریان برتر"
+                subtitle="رتبه‌بندی مشتریان بر اساس مبلغ یا مقدار خرید"
+                count={loading ? undefined : rows.length}
+                actions={<FilterToggle open={panelOpen} onToggle={() => setPanelOpen((v) => !v)} activeCount={activeFilters} />}
+                stats={[
+                    { label: "مشتریان فهرست", value: loading ? "…" : formatNumber(rows.length) },
+                    { label: "مجموع فروش", value: loading ? "…" : formatMoney(stats.totalAmount), tone: "emerald" },
+                    { label: "مجموع مقدار", value: loading ? "…" : formatWeight(stats.totalKg), tone: "indigo" },
+                    { label: "مشتری برتر", value: loading || !rows[0] ? "—" : rows[0].full_name, tone: "amber" },
+                ]}
+                footer={
+                    <TopCustomersFilterBar
+                        open={panelOpen}
+                        query={query}
+                        products={products}
+                        onChange={updateQuery}
+                    />
+                }
+            />
 
             {loading ? (
-                <ListSkeleton rows={6} />
+                <HumanResourceCardSkeleton count={8} className={GRID} />
             ) : error ? (
-                <ErrorState message={error} onRetry={retry} />
+                <StateCard kind="error" title={error} description="ارتباط با سرور برقرار نشد. لطفاً دوباره تلاش کنید." onRetry={retry} />
             ) : rows.length === 0 ? (
-                <Card>
-                    <EmptyState
-                        title="در این بازه فروشی ثبت نشده است"
-                        description="بازه‌ی زمانی یا کالا را تغییر دهید."
-                        icon={<BarChart3 size={26} />}
-                    />
-                </Card>
+                <StateCard
+                    icon={<BarChart3 size={19} />}
+                    title="در این بازه فروشی ثبت نشده است"
+                    description="بازه‌ی زمانی یا کالا را تغییر دهید."
+                />
             ) : (
-                <>
-                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                        <StatTile
-                            label="مجموع فروش این فهرست"
-                            value={formatMoney(stats.totalAmount)}
-                            tone="good"
-                        />
-                        <StatTile label="مجموع مقدار" value={formatWeight(stats.totalKg)} />
-                        <StatTile
-                            label="مشتری برتر"
-                            value={rows[0].full_name}
-                            hint={
-                                by === "amount"
-                                    ? formatMoney(rows[0].total_amount)
-                                    : formatWeight(rows[0].total_quantity_kg)
-                            }
-                            tone="warn"
-                        />
-                    </div>
-
-                    <Card>
-                        <SectionTitle
-                            icon={<BarChart3 size={16} />}
-                            title="بیشترین فروش ما به مشتریان"
-                        />
-                        <ol className="grid grid-cols-1 gap-3 md:grid-cols-3">
-                            {rows.map((row) => (
-                                <TopCustomerRowItem
-                                    key={row.customer_id}
-                                    row={row}
-                                    by={by}
-                                    percent={Math.max(
-                                        3,
-                                        Math.round((stats.valueOf(row) / stats.maxValue) * 100),
-                                    )}
-                                    onOpen={setCustomerId}
-                                />
-                            ))}
-                        </ol>
-                    </Card>
-                </>
+                <div className={GRID}>
+                    {rows.map((row, i) => (
+                        <Stagger key={row.customer_id} index={i}>
+                            <TopCustomerRowItem
+                                row={row}
+                                by={by}
+                                percent={Math.max(3, Math.round((stats.valueOf(row) / stats.maxValue) * 100))}
+                                onOpen={setCustomerId}
+                            />
+                        </Stagger>
+                    ))}
+                </div>
             )}
 
             {customerId !== null && (
@@ -116,6 +109,6 @@ export default function TopCustomersTab() {
                     onClose={() => setCustomerId(null)}
                 />
             )}
-        </div>
+        </>
     );
 }
