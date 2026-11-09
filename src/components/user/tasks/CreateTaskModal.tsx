@@ -6,7 +6,7 @@ import { Backdrop } from "@/components/ui/Backdrop";
 import { panelMotion } from "@/lib/motion";
 import { X, ChevronDown, Upload, Check, ClipboardList, Search, Paperclip, AlertCircle, UserPlus } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
-import { departmentsApi, fetchPage } from "@/lib/api";
+import { departmentsApi, fetchPage, listAll } from "@/lib/api";
 import { apiRoutes } from "@/lib/apiRoutes";
 import AsyncSelect, { type AsyncOption } from "@/components/ui/AsyncSelect";
 import type { Customer } from "@/types/customer";
@@ -25,6 +25,8 @@ interface Department {
     id: number;
     name: string;
 }
+
+interface DepartmentStep { id: number; department: number; name: string; order: number }
 
 interface DepartmentEmployee {
     id: number;
@@ -404,11 +406,22 @@ export default function CreateTaskModal({
     const [selectedCaseOpt, setSelectedCaseOpt] = useState<AsyncOption | null>(null);
     const [selectedCase, setSelectedCase] = useState<number | null>(null);
     const [selectedDepartment, setSelectedDepartment] = useState<number | null>(null);
+    const [selectedStep, setSelectedStep] = useState<number | null>(null);
+    const [departmentSteps, setDepartmentSteps] = useState<DepartmentStep[]>([]);
     const [selectedEmployees, setSelectedEmployees] = useState<number[]>([]);
     const [title, setTitle] = useState("");
     const [files, setFiles] = useState<File[]>([]);
 
     const requestIdRef = useRef(0);
+
+    useEffect(() => {
+        if (!open) return;
+        listAll<DepartmentStep>("/department/api/v1/department_step/")
+            .then((all) => setDepartmentSteps(all))
+            .catch(() => setDepartmentSteps([]));
+    }, [open]);
+
+    useEffect(() => { setSelectedStep(null); }, [selectedDepartment]);
 
     useEffect(() => {
         if (!open) return;
@@ -478,6 +491,13 @@ export default function CreateTaskModal({
         );
     }, [employeeList, selectedDepartment]);
 
+    const filteredSteps = useMemo(() => {
+        if (!selectedDepartment) return [];
+        return departmentSteps
+            .filter((step) => step.department === selectedDepartment)
+            .sort((a, b) => a.order - b.order);
+    }, [departmentSteps, selectedDepartment]);
+
     const canSubmit =
         title.trim().length > 0 &&
         selectedCase !== null &&
@@ -491,6 +511,7 @@ export default function CreateTaskModal({
         setSelectedCaseOpt(null);
         setSelectedCase(null);
         setSelectedDepartment(null);
+        setSelectedStep(null);
         setSelectedEmployees([]);
         setTitle("");
         setFiles([]);
@@ -530,6 +551,10 @@ export default function CreateTaskModal({
             formData.append("title", title);
             formData.append("case", String(selectedCase));
             formData.append("department", String(selectedDepartment));
+
+            if (selectedStep !== null) {
+                formData.append("current_step", String(selectedStep));
+            }
 
             selectedEmployees.forEach((id) => {
                 formData.append("assigned_employee", String(id));
@@ -678,6 +703,26 @@ export default function CreateTaskModal({
                                     value={selectedDepartment}
                                     onChange={(id) => {
                                         setSelectedDepartment(id as number);
+                                        setSubmitError("");
+                                    }}
+                                />
+
+                                <NiceSelect
+                                    label="مرحله شروع وظیفه (اختیاری)"
+                                    placeholder={
+                                        selectedDepartment
+                                            ? "انتخاب مرحله شروع"
+                                            : "ابتدا دپارتمان را انتخاب کنید"
+                                    }
+                                    emptyText="مرحله‌ای برای این دپارتمان یافت نشد"
+                                    disabled={!selectedDepartment || filteredSteps.length === 0}
+                                    options={filteredSteps.map((step) => ({
+                                        id: step.id,
+                                        label: step.name,
+                                    }))}
+                                    value={selectedStep}
+                                    onChange={(id) => {
+                                        setSelectedStep(id as number);
                                         setSubmitError("");
                                     }}
                                 />

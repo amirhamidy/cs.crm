@@ -148,13 +148,14 @@ export default function TaskDeadlineModal({
     const muted = isDark ? "#9ca3af" : "#6b7280";
     const border = isDark ? "rgba(255,255,255,0.06)" : "rgba(15,23,42,0.06)";
 
+    if (!open) return null;
+
     return createPortal(
         <AnimatePresence>
             {open && (
                 <m.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
-                    exit={{ opacity: 0, pointerEvents: "none" }}
                     transition={{ duration: 0.15 }}
                     className="backdrop-blur-layer fixed inset-0 z-[2147483647] flex items-center justify-center px-4"
                     style={{ background: isDark ? "rgba(0,0,0,0.62)" : "rgba(15,23,42,0.38)" }}
