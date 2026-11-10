@@ -14,10 +14,6 @@ import { useMenuItems } from "@/hooks/useMenuItems";
 import { useSidebarActions, useSidebarLauncher } from "@/store/mobileSidebarStore";
 import MenuIcon from "./MenuIcon";
 
-/**
- * مودال بزرگ «همه‌ی بخش‌ها»
- * آیکون‌های بزرگ + نام + توضیح هر بخش، با جست‌وجوی سریع.
- */
 export default function MenuLauncher() {
   const open = useSidebarLauncher();
   const { closeLauncher } = useSidebarActions();
@@ -45,22 +41,12 @@ export default function MenuLauncher() {
     const q = query.trim().toLowerCase();
     if (!q) return menuItems;
     return menuItems.filter((item) =>
-      [item.label, item.description, item.group, item.href]
+      [item.label, item.description, item.href]
         .join(" ")
         .toLowerCase()
         .includes(q),
     );
   }, [menuItems, query]);
-
-  const groups = useMemo(() => {
-    const map = new Map<string, typeof filtered>();
-    for (const item of filtered) {
-      const list = map.get(item.group) ?? [];
-      list.push(item);
-      map.set(item.group, list);
-    }
-    return Array.from(map.entries());
-  }, [filtered]);
 
   return (
     <AnimatePresence>
@@ -70,7 +56,7 @@ export default function MenuLauncher() {
             dir="rtl"
             className={cn(
               "fixed inset-0 z-[110] flex justify-center",
-              isMobile ? "items-end" : "items-center p-4 md:p-8",
+              isMobile ? "items-end" : "items-center",
             )}
           >
             <Backdrop onClick={closeLauncher} />
@@ -86,15 +72,14 @@ export default function MenuLauncher() {
                 "relative flex w-full flex-col overflow-hidden outline-none",
                 "border border-white/10 text-white shadow-[0_40px_120px_-30px_rgba(2,8,23,0.95)]",
                 isMobile
-                  ? "max-h-[92dvh] rounded-t-[28px]"
-                  : "max-h-[86dvh] max-w-6xl rounded-[28px]",
+                  ? "max-h-[95dvh] rounded-t-[28px]"
+                  : "max-h-[95dvh] max-w-[95wh] rounded-[28px]",
               )}
               style={{
                 background:
                   "linear-gradient(160deg, #0B1526 0%, #0E1A31 45%, #0A1020 100%)",
               }}
             >
-              {/* هاله‌های نوری */}
               <div
                 aria-hidden
                 className="pointer-events-none absolute -top-40 left-1/2 h-80 w-[36rem] -translate-x-1/2 rounded-full opacity-70 blur-3xl"
@@ -112,7 +97,6 @@ export default function MenuLauncher() {
                 }}
               />
 
-              {/* هدر */}
               <div className="relative flex shrink-0 items-start gap-3 border-b border-white/10 px-5 py-4 md:px-7 md:py-5">
                 <div className="min-w-0 flex-1">
                   <h2
@@ -135,108 +119,68 @@ export default function MenuLauncher() {
                   <X size={18} strokeWidth={1.7} />
                 </button>
               </div>
-
-              {/* جست‌وجو */}
-              <div className="relative shrink-0 px-5 pb-3 pt-4 md:px-7">
-                <div className="flex items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.05] px-3 py-2.5 transition-colors focus-within:border-sky-300/40 focus-within:bg-white/[0.08]">
-                  <Search size={16} className="shrink-0 text-white/40" strokeWidth={1.8} />
-                  <input
-                    ref={inputRef}
-                    value={query}
-                    onChange={(e) => setQuery(e.target.value)}
-                    placeholder="جست‌وجوی بخش…"
-                    className="min-w-0 flex-1 bg-transparent text-[13px] text-white placeholder:text-white/35 focus:outline-none"
-                  />
-                  {query && (
-                    <button
-                      type="button"
-                      onClick={() => setQuery("")}
-                      aria-label="پاک کردن جست‌وجو"
-                      className="rounded-lg p-1 text-white/40 transition-colors hover:text-white"
-                    >
-                      <X size={14} />
-                    </button>
-                  )}
-                  <span className="hidden items-center gap-1 rounded-lg border border-white/10 px-1.5 py-0.5 text-[10px] text-white/35 md:flex">
-                    Esc
-                  </span>
-                </div>
-              </div>
-
-              {/* شبکه‌ی بخش‌ها */}
               <div className="custom-scrollbar relative min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-6 md:px-7">
-                {groups.length === 0 && (
+                {filtered.length === 0 ? (
                   <p className="py-16 text-center text-[13px] text-white/40">
                     بخشی با این نام پیدا نشد.
                   </p>
-                )}
-
-                {groups.map(([group, items]) => (
-                  <section key={group} className="mb-5 last:mb-0">
-                    <div className="mb-2.5 flex items-center gap-2">
-                      <span className="text-[11px] font-semibold tracking-wide text-white/45">
-                        {group}
-                      </span>
-                      <span className="h-px flex-1 bg-gradient-to-l from-white/10 to-transparent" />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-4">
-                      {items.map((item, i) => {
-                        const isActive = isRouteActive(pathname, item.href);
-                        return (
-                          <m.div
-                            key={item.href}
-                            initial={reduced ? false : { opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{
-                              duration: 0.22,
-                              ease: EASE_OUT,
-                              delay: reduced ? 0 : Math.min(i * 0.025, 0.25),
-                            }}
+                ) : (
+                  <div className="grid grid-cols-4 gap-2 md:gap-2.5">
+                    {filtered.map((item, i) => {
+                      const isActive = isRouteActive(pathname, item.href);
+                      return (
+                        <m.div
+                          key={item.href}
+                          initial={reduced ? false : { opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{
+                            duration: 0.22,
+                            ease: EASE_OUT,
+                            delay: reduced ? 0 : Math.min(i * 0.025, 0.25),
+                          }}
+                        >
+                          <Link
+                            href={item.href}
+                            onClick={closeLauncher}
+                            aria-current={isActive ? "page" : undefined}
+                            className={cn(
+                              "group relative flex h-full flex-col items-center gap-2 rounded-2xl border p-2 text-center transition-all duration-200 md:gap-1.5 md:p-1.5",
+                              "hover:-translate-y-1 hover:shadow-[0_18px_40px_-18px_rgba(2,8,23,0.9)]",
+                              isActive
+                                ? "border-sky-300/40 bg-sky-400/[0.12]"
+                                : "border-white/[0.08] bg-white/[0.035] hover:border-white/20 hover:bg-white/[0.07]",
+                            )}
                           >
-                            <Link
-                              href={item.href}
-                              onClick={closeLauncher}
-                              aria-current={isActive ? "page" : undefined}
-                              className={cn(
-                                "group relative flex h-full flex-col items-center gap-2.5 rounded-2xl border p-3.5 text-center transition-all duration-200",
-                                "hover:-translate-y-1 hover:shadow-[0_18px_40px_-18px_rgba(2,8,23,0.9)]",
-                                isActive
-                                  ? "border-sky-300/40 bg-sky-400/[0.12]"
-                                  : "border-white/[0.08] bg-white/[0.035] hover:border-white/20 hover:bg-white/[0.07]",
-                              )}
-                            >
-                              {isActive && (
-                                <span className="absolute right-3 top-3 h-1.5 w-1.5 rounded-full bg-sky-300 shadow-[0_0_8px_rgba(96,165,250,0.9)]" />
-                              )}
+                            {isActive && (
+                              <span className="absolute right-3 top-3 h-1.5 w-1.5 rounded-full bg-sky-300 shadow-[0_0_8px_rgba(96,165,250,0.9)]" />
+                            )}
 
-                              <span className="mt-1 flex h-[68px] w-[68px] items-center justify-center transition-transform duration-200 group-hover:scale-110 group-hover:-rotate-2">
-                                <MenuIcon
-                                  slug={item.iconSlug}
-                                  fallback={item.icon}
-                                  size={64}
-                                  alt={item.label}
-                                />
-                              </span>
+                            <span className="mt-1 flex  items-center justify-center transition-transform duration-200 group-hover:scale-110 group-hover:-rotate-2">
+                              <MenuIcon
+                                image={item.image}
+                                fallback={item.icon}
+                                size={108}
+                                alt={item.label}
+                                className="md:h-16 md:w-16"
+                              />
+                            </span>
 
-                              <span className="flex flex-col gap-1">
-                                <span className="text-[13px] font-semibold leading-tight text-white">
-                                  {item.label}
-                                </span>
-                                <span className="line-clamp-2 text-[10.5px] leading-relaxed text-white/45">
-                                  {item.description}
-                                </span>
+                            <span className="flex flex-col gap-1">
+                              <span className="text-[13px] font-semibold leading-tight text-white">
+                                {item.label}
                               </span>
-                            </Link>
-                          </m.div>
-                        );
-                      })}
-                    </div>
-                  </section>
-                ))}
+                              <span className="line-clamp-2 text-[10.5px] leading-relaxed text-white/45">
+                                {item.description}
+                              </span>
+                            </span>
+                          </Link>
+                        </m.div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
 
-              {/* فوتر */}
               <div className="relative flex shrink-0 items-center justify-between gap-3 border-t border-white/10 px-5 py-3 md:px-7">
                 <p className="text-[10.5px] text-white/35">
                   {menuItems.length} بخش در دسترس شما

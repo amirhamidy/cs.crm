@@ -18,30 +18,17 @@ import {
 } from "lucide-react";
 import type { PermissionAction } from "@/types/access";
 
-/**
- * آیکون‌های سه‌بعدی منو در پوشه‌ی public قرار می‌گیرند.
- * برای عوض کردن هر آیکون کافی است فایل png/svg خودت را با همان نام
- * در `public/icons/menu/` جایگزین کنی — هیچ تغییری در کد لازم نیست.
- *
- * نمونه: public/icons/menu/dashboard.png
- */
-export const MENU_ICON_BASE = "/icons/menu";
+export const MENU_IMAGE_BASE = "/img";
 
-/** آدرس کامل آیکون یک منو بر اساس slug آن */
-export function menuIconSrc(slug: string) {
-  return `${MENU_ICON_BASE}/${slug}.png`;
+export function menuImageSrc(index: number) {
+  return `${MENU_IMAGE_BASE}/${index}.png`;
 }
 
 export interface MenuItem {
-  /** آیکون خطی (فقط برای fallback و حالت‌های بدون تصویر) */
   icon: LucideIcon;
-  /** نام فایل آیکون سه‌بعدی داخل public/icons/menu (بدون پسوند) */
-  iconSlug: string;
+  image: number;
   label: string;
-  /** توضیح کوتاه — در مودال بزرگ زیر نام نمایش داده می‌شود */
   description: string;
-  /** گروه‌بندی در مودال بزرگ */
-  group: string;
   href: string;
   permission?: { section: string; action: PermissionAction };
 }
@@ -49,138 +36,121 @@ export interface MenuItem {
 export const adminMenuItems: MenuItem[] = [
   {
     icon: Home,
-    iconSlug: "dashboard",
+    image: 1,
     label: "داشبورد",
     description: "نمای کلی عملکرد، امتیازها و رویدادهای امروز",
-    group: "عمومی",
     href: "/admin/dashboard",
   },
   {
     icon: FolderKanban,
-    iconSlug: "cases",
+    image: 2,
     label: "پرونده‌ها",
     description: "مدیریت پرونده‌های فروش و پیگیری مراحل",
-    group: "فروش",
     href: "/admin/cases",
   },
   {
     icon: ListTodo,
-    iconSlug: "tasks",
+    image: 3,
     label: "وظایف",
     description: "همه‌ی وظایف تیم در یک نگاه",
-    group: "کار",
     href: "/admin/tasks",
   },
   {
     icon: Archive,
-    iconSlug: "archive",
+    image: 4,
     label: "بایگانی وظایف",
     description: "وظایف بسته‌شده و آرشیو شده",
-    group: "کار",
     href: "/admin/archive",
   },
   {
     icon: ClipboardList,
-    iconSlug: "taskroutine",
+    image: 5,
     label: "وظایف تکرارشونده",
     description: "کارهای دوره‌ای و زمان‌بندی‌شده",
-    group: "کار",
     href: "/admin/taskroutine",
   },
   {
     icon: MessageSquareText,
-    iconSlug: "staffconversation",
+    image: 6,
     label: "تیکت به کاربران",
     description: "گفتگو و تیکت داخلی با کارکنان",
-    group: "ارتباطات",
     href: "/admin/staffConversation",
   },
   {
     icon: Archive,
-    iconSlug: "ticketarchive",
+    image: 7,
     label: "بایگانی تیکت‌ها",
     description: "تیکت‌های بسته‌شده",
-    group: "ارتباطات",
     href: "/admin/Ticketarchive",
   },
   {
     icon: UserRound,
-    iconSlug: "customer",
+    image: 8,
     label: "مشتری",
     description: "بانک اطلاعاتی مشتریان و سرنخ‌ها",
-    group: "فروش",
     href: "/admin/customer",
   },
   {
     icon: Trophy,
-    iconSlug: "customer-ranking",
+    image: 9,
     label: "رتبه‌بندی مشتریان",
     description: "دسته‌بندی و اولویت‌بندی مشتریان",
-    group: "فروش",
     href: "/admin/customer-ranking",
   },
   {
     icon: ShoppingBag,
-    iconSlug: "sales",
+    image: 10,
     label: "فروش",
     description: "گزارش فروش، محصولات و بهترین‌ها",
-    group: "فروش",
     href: "/admin/sales",
   },
   {
     icon: Sprout,
-    iconSlug: "seasonal",
+    image: 11,
     label: "مشتریان فصلی",
     description: "پیگیری مشتریان در فصل‌های مختلف",
-    group: "فروش",
     href: "/admin/seasonal",
   },
   {
     icon: Users,
-    iconSlug: "human-resources",
+    image: 12,
     label: "منابع انسانی",
     description: "پرونده پرسنلی و مسیر رشد کارکنان",
-    group: "سازمان",
     href: "/admin/human-resources",
   },
   {
     icon: Users,
-    iconSlug: "minutes",
+    image: 13,
     label: "صورت جلسه",
     description: "ثبت جلسات، مصوبات و امضای صورت‌جلسه",
-    group: "ارتباطات",
     href: "/admin/minutes/",
   },
   {
     icon: Building2,
-    iconSlug: "departments",
+    image: 14,
     label: "دپارتمان‌ها",
     description: "ساختار سازمانی، مراحل و کارکنان",
-    group: "سازمان",
     href: "/admin/departments",
   },
   {
     icon: Users,
-    iconSlug: "users",
+    image: 15,
     label: "کاربران",
     description: "مدیریت کاربران، نقش‌ها و دسترسی‌ها",
-    group: "سازمان",
     href: "/admin/users",
   },
   {
     icon: BarChart3,
-    iconSlug: "performance",
+    image: 16,
     label: "آمار و عملکرد",
     description: "تحلیل عملکرد تیم و دپارتمان‌ها",
-    group: "تحلیل",
     href: "/admin/performance",
   },
   {
     icon: CalendarCheck2,
-    iconSlug: "calendar",
+    image: 17,
     label: "تقویم",
     description: "رویدادها، ددلاین‌ها و جلسات",
-    group: "عمومی",
     href: "/admin/calendar",
   },
 ];
@@ -188,126 +158,112 @@ export const adminMenuItems: MenuItem[] = [
 export const userMenuItems: MenuItem[] = [
   {
     icon: Home,
-    iconSlug: "dashboard",
+    image: 1,
     label: "داشبورد",
     description: "امتیاز، عملکرد و رویدادهای امروز شما",
-    group: "عمومی",
     href: "/user/dashboard",
   },
   {
     icon: FolderKanban,
-    iconSlug: "cases",
+    image: 2,
     label: "پرونده‌ها",
     description: "پرونده‌های در دسترس شما",
-    group: "فروش",
     href: "/user/cases",
     permission: { section: "cases", action: "view" },
   },
   {
     icon: ListTodo,
-    iconSlug: "processes",
+    image: 3,
     label: "وظایف",
     description: "وظایف جاری و در جریان",
-    group: "کار",
     href: "/user/processes",
     permission: { section: "tasks", action: "view" },
   },
   {
     icon: Archive,
-    iconSlug: "archive",
+    image: 4,
     label: "بایگانی وظایف",
     description: "وظایف تمام‌شده",
-    group: "کار",
     href: "/user/archive",
     permission: { section: "tasks", action: "view" },
   },
   {
     icon: ClipboardList,
-    iconSlug: "tasks",
+    image: 3,
     label: "ایجاد وظایف",
     description: "ثبت وظیفه جدید برای خود یا همکاران",
-    group: "کار",
     href: "/user/tasks",
     permission: { section: "tasks", action: "create" },
   },
   {
     icon: ClipboardList,
-    iconSlug: "taskroutine",
+    image: 5,
     label: "وظایف تکرارشونده",
     description: "کارهای دوره‌ای شما",
-    group: "کار",
     href: "/user/taskroutine",
     permission: { section: "task_routines", action: "view" },
   },
   {
     icon: Ticket,
-    iconSlug: "ticketsent",
+    image: 6,
     label: "تیکت ارسال شده",
     description: "تیکت‌هایی که فرستاده‌اید",
-    group: "ارتباطات",
     href: "/user/Ticketsent",
     permission: { section: "internal_tasks", action: "view" },
   },
   {
     icon: Ticket,
-    iconSlug: "ticketreceipt",
+    image: 7,
     label: "تیکت دریافت شده",
     description: "تیکت‌های دریافتی شما",
-    group: "ارتباطات",
     href: "/user/Ticketreceipt",
     permission: { section: "internal_tasks", action: "view" },
   },
   {
     icon: Archive,
-    iconSlug: "minutes",
+    image: 13,
     label: "صورت جلسه",
     description: "جلسات و امضاهای شما",
-    group: "ارتباطات",
     href: "/user/minutes/",
     permission: { section: "minutes", action: "view" },
   },
   {
     icon: UserRound,
-    iconSlug: "customer",
+    image: 8,
     label: "مشتری",
     description: "مشتریان و سرنخ‌های شما",
-    group: "فروش",
     href: "/user/customer",
     permission: { section: "customers", action: "view" },
   },
   {
     icon: Trophy,
-    iconSlug: "customer-ranking",
+    image: 9,
     label: "رتبه‌بندی مشتریان",
     description: "اولویت‌بندی مشتریان",
-    group: "فروش",
     href: "/user/customer-ranking",
     permission: { section: "customer_ranking", action: "view" },
   },
   {
     icon: ShoppingBag,
-    iconSlug: "sales",
+    image: 10,
     label: "فروش",
     description: "عملکرد فروش شما",
-    group: "فروش",
     href: "/user/sales",
     permission: { section: "sales", action: "view" },
   },
   {
     icon: Sprout,
-    iconSlug: "seasonal",
+    image: 11,
     label: "مشتریان فصلی",
     description: "پیگیری فصلی مشتریان",
-    group: "فروش",
     href: "/user/seasonal",
     permission: { section: "seasonal", action: "view" },
   },
   {
     icon: CalendarCheck2,
-    iconSlug: "calendar",
+    image: 17,
     label: "تقویم",
     description: "رویدادها و ددلاین‌های شما",
-    group: "عمومی",
     href: "/user/calendar",
   },
 ];
