@@ -86,6 +86,7 @@ function SweepButton({
     onClick,
     spring,
     href,
+    noAnimation = false,
 }: {
     actionKey: string;
     icon: React.ReactNode;
@@ -102,13 +103,14 @@ function SweepButton({
     onClick: (e: React.MouseEvent) => void;
     spring: object;
     href?: string;
+    noAnimation?: boolean;
 }) {
     const spanRef = useRef<HTMLSpanElement>(null);
     const iconWrapRef = useRef<HTMLSpanElement>(null);
     const animatingRef = useRef(false);
 
     const runSweep = useCallback(() => {
-        if (disabled || animatingRef.current) return;
+        if (disabled || noAnimation || animatingRef.current) return;
 
         const bg = spanRef.current;
         const iconEl = iconWrapRef.current;
@@ -205,10 +207,10 @@ function SweepButton({
         initial: { x: 0, y: 0, scale: 0, opacity: 0 },
         animate: { x: offset.x, y: offset.y, scale: 1, opacity: 1 },
         exit: { x: 0, y: 0, scale: 0, opacity: 0 },
-        transition: { ...spring, delay },
-        whileTap: disabled ? {} : { scale: 0.96 },
+        transition: noAnimation ? { duration: 0 } : { ...spring, delay },
+        whileTap: disabled || noAnimation ? {} : { scale: 0.96 },
         onMouseEnter: () => {
-            runSweep();
+            if (!noAnimation) runSweep();
             onEnter();
         },
         onMouseLeave: onLeave,
@@ -405,7 +407,7 @@ export default function CustomerCard({
         {
             key: "delete",
             icon: <Trash2 size={16} />,
-            offset: { x: 36, y: -22 },
+            offset: { x: 54, y: -27 },
             delay: 0,
             disabled: hasActiveCase,
             onClick: (e: React.MouseEvent) => {
@@ -420,7 +422,7 @@ export default function CustomerCard({
         {
             key: "edit",
             icon: <SquarePen size={16} />,
-            offset: { x: -36, y: -22 },
+            offset: { x: -54, y: -27 },
             delay: 0.08,
             disabled: false,
             onClick: (e: React.MouseEvent) => {
@@ -432,7 +434,7 @@ export default function CustomerCard({
         {
             key: "scores",
             icon: <MessageCircle size={16} />,
-            offset: { x: 36, y: 30 },
+            offset: { x: 0, y: -27 },
             delay: 0.16,
             disabled: false,
             onClick: (e: React.MouseEvent) => {
@@ -444,7 +446,7 @@ export default function CustomerCard({
         {
             key: "call",
             icon: <Phone size={16} />,
-            offset: { x: -36, y: 30 },
+            offset: { x: -27, y: 27 },
             delay: 0.24,
             disabled: false,
             href: phoneHref,
@@ -456,7 +458,7 @@ export default function CustomerCard({
         ...(userType === 1 ? [{
             key: "portal",
             icon: <KeyRound size={16} />,
-            offset: { x: 0, y: 54 },
+            offset: { x: 27, y: 27 },
             delay: 0.32,
             disabled: false,
             onClick: (e: React.MouseEvent) => {
@@ -464,6 +466,7 @@ export default function CustomerCard({
                 setShowPortalAccess(true);
             },
             title: "ساخت دسترسی پرتال",
+            noAnimation: true,
         }] : []),
     ];
 
@@ -693,6 +696,7 @@ export default function CustomerCard({
                                                 }}
                                                 onClick={action.onClick}
                                                 spring={spring}
+                                                noAnimation={!!action.noAnimation}
                                             />
 
                                             {action.key === "scores" && (

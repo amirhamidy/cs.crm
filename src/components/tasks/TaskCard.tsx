@@ -323,9 +323,11 @@ export default function TaskCard({
                             <MessageSquareText size={14} />
                         </button>
 
-                        <button type="button" onClick={() => setDeadlineModalOpen(true)} className="flex h-7 w-7 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-400" title="مشاهده ددلاین">
-                            <CalendarClock size={11} />
-                        </button>
+                        {!readOnly && (
+                            <button type="button" onClick={() => setDeadlineModalOpen(true)} className="flex h-7 w-7 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-400" title="مشاهده ددلاین">
+                                <CalendarClock size={11} />
+                            </button>
+                        )}
 
                         {!readOnly && (
                             <>
@@ -443,14 +445,16 @@ export default function TaskCard({
                 />
             )}
 
-            <TaskDeadlineModal
-                open={deadlineModalOpen}
-                onClose={() => setDeadlineModalOpen(false)}
-                taskId={task.id}
-                taskTitle={task.title}
-                stepId={stepId}
-                onLoaded={setStepDeadline}
-            />
+            {!readOnly && (
+                <TaskDeadlineModal
+                    open={deadlineModalOpen}
+                    onClose={() => setDeadlineModalOpen(false)}
+                    taskId={task.id}
+                    taskTitle={task.title}
+                    stepId={stepId}
+                    onLoaded={setStepDeadline}
+                />
+            )}
 
             <AdminTaskNotesModal
                 isOpen={notesModalOpen}
