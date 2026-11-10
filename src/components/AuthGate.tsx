@@ -32,7 +32,7 @@ export default function AuthGate({
     role,
     children,
 }: {
-    role: 1 | 2;
+    role?: 1 | 2;
     children: ReactNode;
 }) {
     const router = useRouter();
@@ -48,12 +48,12 @@ export default function AuthGate({
             return;
         }
 
-        if (userType !== role) {
+        if (role && userType !== role) {
             router.replace(userType === 1 ? "/admin/dashboard/" : "/user/dashboard/");
         }
     }, [hasHydrated, isAuthenticated, userType, role, router]);
 
-    if (!hasHydrated || !isAuthenticated || userType !== role) {
+    if (!hasHydrated || !isAuthenticated || (role && userType !== role)) {
         return <FullPageLoader />;
     }
 

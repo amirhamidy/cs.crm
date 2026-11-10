@@ -10,15 +10,12 @@ export default function LoginPage() {
     const router = useRouter();
     const hasHydrated = useAuthStore((s) => s.hasHydrated);
     const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
-    const userType = useAuthStore((s) => s.userType);
 
     useEffect(() => {
         if (!hasHydrated || !isAuthenticated) return;
 
-        router.replace(
-            userType === 1 ? "/admin/dashboard/" : "/user/dashboard/",
-        );
-    }, [hasHydrated, isAuthenticated, userType, router]);
+        router.replace("/hub/");
+    }, [hasHydrated, isAuthenticated, router]);
 
     if (!hasHydrated || isAuthenticated) return <FullPageLoader />;
 

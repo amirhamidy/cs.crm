@@ -39,7 +39,7 @@ export const useLogin = () => {
       });
 
       router.replace(
-        data.user.type === 1 ? "/admin/dashboard/" : "/user/dashboard/",
+        "/hub/",
       );
     } catch (err) {
       const noResponse = axios.isAxiosError(err) && !err.response;
