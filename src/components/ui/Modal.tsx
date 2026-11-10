@@ -6,6 +6,7 @@ import { ArrowRight, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { panelMotion } from "@/lib/motion";
 import { Backdrop } from "./Backdrop";
+import { ModalLayer } from "./ModalLayer";
 import { Portal, useIsMobile, useModalBehavior } from "./Portal";
 import { IconButton } from "./Button";
 
@@ -54,7 +55,7 @@ export function Modal({
         <AnimatePresence>
             {open && (
                 <Portal>
-                    <div
+                    <ModalLayer
                         className={cn(
                             "fixed inset-0 z-[100] flex justify-center",
                             center ? "items-center p-4" : "items-end md:items-center md:p-4",
@@ -124,7 +125,7 @@ export function Modal({
                                 </footer>
                             )}
                         </m.div>
-                    </div>
+                    </ModalLayer>
                 </Portal>
             )}
         </AnimatePresence>

@@ -38,3 +38,8 @@ export { fetchStatusPage, fetchStatusCount, listAllByStatus, isStatusFilterServe
 
 export { customerPortalApi } from "./customerPortal";
 export type { PortalAccountParams, CustomerOrderParams } from "./customerPortal";
+
+export { rankingApi, commentsApi, scoresApi, casePathApi, productsApi, salesApi, attachmentsApi, issuesApi, seasonalApi, marketplaceApi } from "./crm";
+export type { RankingParams } from "./crm";
+
+export { accessApi } from "./access";

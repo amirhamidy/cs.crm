@@ -1,13 +1,15 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, m, useReducedMotion } from "framer-motion";
 import { Backdrop } from "@/components/ui/Backdrop";
 import { panelMotion } from "@/lib/motion";
 import { AlertCircle, Check, ChevronDown, PackagePlus, Search, X } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
-import { listAll } from "@/lib/api";
+import { fetchPage } from "@/lib/api";
+import AsyncSelect, { type AsyncOption } from "@/components/ui/AsyncSelect";
+import type { InfiniteFetcher } from "@/hooks/useInfiniteOptions";
 import type { ApiPurchasingStep, ApiPurchasingTask } from "@/types/purchasing";
 
 import { BusyContent } from "@/components/ui/Button";
@@ -29,10 +31,10 @@ interface Product {
     };
 }
 
-interface Warehouse {
-    id: number;
-    name: string;
-    code?: string;
+interface WarehouseStockRow {
+    warehouse?: number;
+    warehouse_name?: string;
+    warehouse_code?: string;
 }
 
 interface Props {
@@ -97,22 +99,6 @@ function errorText(error: unknown) {
     }
 
     return "ایجاد درخواست خرید انجام نشد.";
-}
-
-function getWarehouseId(task: ApiPurchasingTask) {
-    const value = (task as ApiPurchasingTask & {
-        warehouse?: number | null;
-    }).warehouse;
-
-    return value == null ? null : Number(value);
-}
-
-function getWarehouseName(task: ApiPurchasingTask) {
-    return (
-        (task as ApiPurchasingTask & {
-            warehouse_name?: string | null;
-        }).warehouse_name || `انبار #${getWarehouseId(task)}`
-    );
 }
 
 function FloatingInput({
@@ -404,16 +390,33 @@ function NiceSelect({
 export default function PurchasingCreateTaskModal({
     open,
     steps,
-    tasks,
     onClose,
     onSaved,
 }: Props) {
     const reduced = useReducedMotion() ?? false;
-    const [products, setProducts] = useState<Product[]>([]);
-    const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
+    const [product, setProduct] = useState<AsyncOption | null>(null);
+    const [warehouse, setWarehouse] = useState<AsyncOption | null>(null);
+    const productId = product ? String(product.id) : "";
+    const warehouseId = warehouse ? String(warehouse.id) : "";
 
-    const [productId, setProductId] = useState("");
-    const [warehouseId, setWarehouseId] = useState("");
+    const productFetcher = useCallback<InfiniteFetcher<Product>>(
+        (params, signal) => fetchPage<Product>("/warehouse/api/v1/products/", params, signal),
+        [],
+    );
+    const warehouseFetcher = useCallback<InfiniteFetcher<WarehouseStockRow & { id: number }>>(
+        async (params, signal) => {
+            const res = await fetchPage<WarehouseStockRow>("/warehouse/api/v1/process/stock/", params, signal);
+            const seen = new Set<number>();
+            const results: (WarehouseStockRow & { id: number })[] = [];
+            res.results.forEach((r) => {
+                if (r.warehouse == null || seen.has(Number(r.warehouse))) return;
+                seen.add(Number(r.warehouse));
+                results.push({ ...r, id: Number(r.warehouse) });
+            });
+            return { ...res, results };
+        },
+        [],
+    );
     const [stepId, setStepId] = useState("");
     const [quantity, setQuantity] = useState("");
 
@@ -424,8 +427,8 @@ export default function PurchasingCreateTaskModal({
     useEffect(() => {
         if (!open) return;
 
-        setProductId("");
-        setWarehouseId("");
+        setProduct(null);
+        setWarehouse(null);
         setStepId(
             steps.length > 0
                 ? String(
@@ -437,88 +440,14 @@ export default function PurchasingCreateTaskModal({
         );
         setQuantity("");
         setError("");
-        setProducts([]);
-        setWarehouses([]);
-        setLoading(true);
-
-        let cancelled = false;
-
-        
-        Promise.all([
-            listAll<Product>("/warehouse/api/v1/products/"),
-            listAll<{
-                warehouse?: number;
-                warehouse_name?: string;
-                warehouse_code?: string;
-            }>("/warehouse/api/v1/process/stock/"),
-        ])
-            .then(([productList, stockList]) => {
-                if (cancelled) return;
-
-                setProducts(productList);
-
-                const map = new Map<number, Warehouse>();
-
-                stockList.forEach((item) => {
-                    if (item.warehouse == null) return;
-
-                    map.set(Number(item.warehouse), {
-                        id: Number(item.warehouse),
-                        name:
-                            item.warehouse_name ||
-                            `انبار #${item.warehouse}`,
-                        code: item.warehouse_code,
-                    });
-                });
-
-                if (map.size > 0) {
-                    setWarehouses([...map.values()]);
-                } else {
-                    const taskWarehouses =
-                        new Map<number, Warehouse>();
-
-                    tasks.forEach((task) => {
-                        const id = getWarehouseId(task);
-
-                        if (id == null) return;
-
-                        taskWarehouses.set(id, {
-                            id,
-                            name: getWarehouseName(task),
-                        });
-                    });
-
-                    setWarehouses([...taskWarehouses.values()]);
-                }
-            })
-            .catch((err) => {
-                if (!cancelled) {
-                    setError(errorText(err));
-                }
-            })
-            .finally(() => {
-                if (!cancelled) {
-                    setLoading(false);
-                }
-            });
-
-        return () => {
-            cancelled = true;
-        };
-    }, [open, steps, tasks]);
+    }, [open, steps]);
 
     const orderedSteps = useMemo(
         () => [...steps].sort((a, b) => a.order - b.order),
         [steps]
     );
 
-    const selectedProduct = useMemo(
-        () =>
-            products.find(
-                (item) => item.id === Number(productId)
-            ),
-        [products, productId]
-    );
+    const selectedProduct = product ? { name: product.label } : null;
 
     const selectedStep = useMemo(
         () =>
@@ -656,70 +585,34 @@ export default function PurchasingCreateTaskModal({
                                     <FormSkeleton fields={6} />
                                 ) : (
                                     <>
-                                        <NiceSelect
+                                        <AsyncSelect<WarehouseStockRow & { id: number }>
                                             label="انبار"
-                                            placeholder={
-                                                warehouses.length
-                                                    ? "انتخاب انبار"
-                                                    : "انباری برای انتخاب پیدا نشد"
-                                            }
+                                            placeholder="انتخاب انبار"
                                             emptyText="انباری برای انتخاب پیدا نشد"
-                                            options={warehouses.map(
-                                                (warehouse) => ({
-                                                    id: warehouse.id,
-                                                    label: warehouse.name,
-                                                    sub: warehouse.code
-                                                        ? `کد انبار: ${warehouse.code}`
-                                                        : undefined,
-                                                })
-                                            )}
-                                            value={
-                                                warehouseId
-                                                    ? Number(
-                                                        warehouseId
-                                                    )
-                                                    : null
-                                            }
-                                            disabled={
-                                                warehouses.length === 0
-                                            }
-                                            onChange={(id) => {
-                                                setWarehouseId(
-                                                    String(id)
-                                                );
+                                            value={warehouse?.id ?? null}
+                                            selected={warehouse}
+                                            fetcher={warehouseFetcher}
+                                            toOption={(w) => ({
+                                                id: w.id,
+                                                label: w.warehouse_name || `انبار #${w.id}`,
+                                                sub: w.warehouse_code ? `کد انبار: ${w.warehouse_code}` : undefined,
+                                            })}
+                                            onChange={(o) => {
+                                                setWarehouse(o);
                                                 setError("");
                                             }}
                                         />
 
-                                        <NiceSelect
+                                        <AsyncSelect<Product>
                                             label="محصول"
-                                            placeholder={
-                                                products.length
-                                                    ? "انتخاب محصول"
-                                                    : "محصولی وجود ندارد"
-                                            }
+                                            placeholder="انتخاب محصول"
                                             emptyText="محصولی برای انتخاب پیدا نشد"
-                                            options={products.map(
-                                                (product) => ({
-                                                    id: product.id,
-                                                    label: product.name,
-                                                    sub:
-                                                        product.unit_type ||
-                                                        undefined,
-                                                })
-                                            )}
-                                            value={
-                                                productId
-                                                    ? Number(productId)
-                                                    : null
-                                            }
-                                            disabled={
-                                                products.length === 0
-                                            }
-                                            onChange={(id) => {
-                                                setProductId(
-                                                    String(id)
-                                                );
+                                            value={product?.id ?? null}
+                                            selected={product}
+                                            fetcher={productFetcher}
+                                            toOption={(p) => ({ id: p.id, label: p.name, sub: p.unit_type || undefined })}
+                                            onChange={(o) => {
+                                                setProduct(o);
                                                 setError("");
                                             }}
                                         />

@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { Search, Inbox, AlertCircle } from "lucide-react";
+import { Search, X, Inbox, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "./Button";
 
@@ -11,6 +11,7 @@ interface SearchInputProps {
     placeholder?: string;
     className?: string;
     "aria-label"?: string;
+    hideIcon?: boolean;
 }
 
 export function SearchInput({
@@ -19,22 +20,33 @@ export function SearchInput({
     placeholder = "جستجو...",
     className,
     "aria-label": ariaLabel = "جستجو",
+    hideIcon = false,
 }: SearchInputProps) {
     return (
         <div className={cn("relative", className)}>
-            <Search
+            {!hideIcon && <Search
                 size={16}
                 aria-hidden="true"
                 className="pointer-events-none absolute inset-y-0 start-3.5 my-auto text-gray-400"
-            />
+            />}
             <input
                 type="search"
                 value={value}
                 onChange={(e) => onChange(e.target.value)}
                 placeholder={placeholder}
                 aria-label={ariaLabel}
-                className="h-11 w-full rounded-2xl border border-gray-200 bg-white ps-10 pe-10 text-[13px] text-gray-900 outline-none transition-colors placeholder:text-gray-400 focus:border-brand dark:border-white/10 dark:bg-white/5 dark:text-white [&::-webkit-search-cancel-button]:hidden"
+                className={`h-11 w-full rounded-2xl border border-gray-200 bg-white ${hideIcon ? "ps-4" : "ps-10"} pe-10 text-[13px] text-gray-900 outline-none transition-colors placeholder:text-gray-400 focus:border-brand dark:border-white/10 dark:bg-white/5 dark:text-white [&::-webkit-search-cancel-button]:hidden`}
             />
+            {value && (
+                <button
+                    type="button"
+                    aria-label="پاک کردن"
+                    onClick={() => onChange("")}
+                    className="absolute inset-y-0 end-1 my-auto flex h-9 w-9 items-center justify-center rounded-xl text-gray-400 hover:text-gray-600"
+                >
+                    <X size={15} />
+                </button>
+            )}
         </div>
     );
 }
