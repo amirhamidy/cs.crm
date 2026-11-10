@@ -2,12 +2,13 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { CalendarDays, FileSignature, MapPin, PenLine, Plus, RefreshCw, Search, UserRound } from "lucide-react";
+import { CalendarDays, FileSignature, MapPin, PenLine, Plus, UserRound } from "lucide-react";
+import PageHeader, { HEADER_BTN_PRIMARY, HEADER_BTN_SECONDARY } from "@/components/ui/PageHeader";
 import { ListSkeleton } from "@/components/ui/skeletons";
 import { minutesApi } from "@/lib/minutesApi";
 import { STATUS_FILTERS, formatDateTime, parseApiError } from "@/lib/minutesUtils";
 import MeetingStatusBadge from "./MeetingStatusBadge";
-import { BTN_GHOST, BTN_PRIMARY, CARD, INPUT } from "./ui";
+import { CARD } from "./ui";
 import type { MeetingListItem, MeetingStatus } from "@/types/minutes";
 
 export default function MinutesListPage({ basePath }: { basePath: string }) {
@@ -46,45 +47,25 @@ export default function MinutesListPage({ basePath }: { basePath: string }) {
   return (
     <div className="flex flex-col gap-5 p-3 sm:p-4 md:p-6" dir="rtl">
       
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-start gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-indigo-500/10">
-            <FileSignature size={18} className="text-indigo-500" />
-          </div>
-          <div>
-            <h1 className="text-[15px] font-extrabold text-gray-900 dark:text-white">صورت‌جلسه‌ها</h1>
-            <p className="mt-0.5 text-[11.5px] text-gray-500 dark:text-gray-400">
-              {loading ? "در حال بارگذاری..." : `${items.length} صورت‌جلسه`}
-            </p>
-          </div>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2">
-          <button type="button" onClick={load} disabled={loading} title="بارگذاری مجدد" aria-label="بارگذاری مجدد" className={`flex h-10 w-10 items-center justify-center rounded-2xl bg-black/5 text-gray-600 transition-colors hover:bg-black/10 disabled:opacity-50 dark:bg-white/5 dark:text-gray-300 ${loading ? "is-busy" : ""}`}>
-            <RefreshCw size={15} />
-          </button>
-          <Link href={`${basePath}/my-signatures`} className={BTN_GHOST}>
+      <PageHeader
+        icon={FileSignature}
+        title="صورت‌جلسه‌ها"
+        subtitle={loading ? "در حال بارگذاری..." : `${items.length} صورت‌جلسه`}
+        search={{ value: searchInput, onChange: setSearchInput, placeholder: "جست‌وجو در عنوان یا متن..." }}
+        onRefresh={load}
+        refreshing={loading}
+        leading={
+          <Link href={`${basePath}/my-signatures`} className={HEADER_BTN_SECONDARY}>
             <PenLine size={15} /> امضاهای من
           </Link>
-          <Link href={`${basePath}/create`} className={BTN_PRIMARY}>
-            <Plus size={15} /> صورت‌جلسه جدید
-          </Link>
-        </div>
-      </div>
+        }
+      >
+        <Link href={`${basePath}/create`} className={HEADER_BTN_PRIMARY}>
+          <Plus size={15} /> صورت‌جلسه جدید
+        </Link>
+      </PageHeader>
 
-      
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <div className="relative w-full lg:max-w-sm">
-          <Search size={14} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
-          <input
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-            placeholder="جست‌وجو در عنوان یا متن..."
-            aria-label="جست‌وجو"
-            className={`${INPUT} pr-9`}
-          />
-        </div>
-
         <div className="flex flex-wrap gap-1.5" role="group" aria-label="فیلتر وضعیت">
           {STATUS_FILTERS.map((f) => (
             <button

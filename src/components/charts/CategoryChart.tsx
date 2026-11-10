@@ -2,7 +2,7 @@
 
 import { AnimatePresence, m } from "framer-motion";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Cell, Pie, PieChart, ResponsiveContainer } from "recharts";
+import { Pie, PieChart, ResponsiveContainer, Sector } from "recharts";
 
 type TimeRange = "weekly" | "monthly" | "yearly";
 
@@ -16,11 +16,11 @@ interface SourceCount {
 
 type CategoryChartData = Record<TimeRange, SourceCount[]>;
 
-const ranges: { key: TimeRange; label: string; sub: string }[] = [
-  { key: "weekly", label: "هفتگی", sub: "۷ روز اخیر" },
-  { key: "monthly", label: "ماهانه", sub: "۳۰ روز اخیر" },
-  { key: "yearly", label: "سالانه", sub: "۳۶۵ روز اخیر" },
-];
+type PieItem = SourceCount & {
+  renderValue: number;
+  ratio: number;
+  offset: number;
+};
 
 type ActiveSlice = {
   id: number;
@@ -31,20 +31,85 @@ type ActiveSlice = {
   pct: string;
 };
 
+const ranges: { key: TimeRange; label: string; sub: string }[] = [
+  { key: "weekly", label: "هفتگی", sub: "۷ روز اخیر" },
+  { key: "monthly", label: "ماهانه", sub: "۳۰ روز اخیر" },
+  { key: "yearly", label: "سالانه", sub: "۳۶۵ روز اخیر" },
+];
+
+const CATEGORY_PALETTE: string[] = [
+  "#A78BFA",
+  "#F472B6",
+  "#F5A623",
+  "#34D399",
+  "#60A5FA",
+  "#FBBF24",
+  "#2DD4BF",
+  "#FB7185",
+  "#818CF8",
+  "#A3E635",
+  "#38BDF8",
+  "#E879F9",
+  "#22D3EE",
+  "#8B5CF6",
+  "#10B981",
+  "#F97316",
+  "#EAB308",
+  "#EC4899",
+  "#14B8A6",
+  "#6366F1",
+];
+
+function hexToRgba(hex: string, alpha: number): string {
+  const clean = hex.replace("#", "");
+  const r = parseInt(clean.substring(0, 2), 16);
+  const g = parseInt(clean.substring(2, 4), 16);
+  const b = parseInt(clean.substring(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+function getCategoryColor(index: number): string {
+  return CATEGORY_PALETTE[index % CATEGORY_PALETTE.length];
+}
+
+const LEGEND_LIMIT = 6;
+const CROWDED_THRESHOLD = 12;
+const SMALL_RATIO = 0.04;
+const MIN_RENDER_RATIO = 0.015;
+const BASE_OFFSET = 10;
+const STAGGER_OFFSET = 8;
+const RADIAN = Math.PI / 180;
+
 export default function CategoryChart({
   data: rangeData,
 }: {
   data: CategoryChartData;
 }) {
   const [activeRange, setActiveRange] = useState<TimeRange>("weekly");
+  const [activeSlice, setActiveSlice] = useState<ActiveSlice | null>(null);
+  const [showAll, setShowAll] = useState(false);
 
-  const [activeSlice, setActiveSlice] =
-    useState<ActiveSlice | null>(null);
-
-  const data = useMemo(
-    () => rangeData[activeRange] ?? [],
+  const data = useMemo<SourceCount[]>(
+    () =>
+      (rangeData[activeRange] ?? []).map((item, index) => {
+        const color = getCategoryColor(index);
+        return {
+          ...item,
+          color,
+          glow: hexToRgba(color, 0.35),
+        };
+      }),
     [rangeData, activeRange],
   );
+
+  const visibleItems = useMemo(
+    () => (showAll ? data : data.slice(0, LEGEND_LIMIT)),
+    [data, showAll],
+  );
+
+  const hiddenCount = Math.max(data.length - LEGEND_LIMIT, 0);
+
+  const isCrowded = data.length > CROWDED_THRESHOLD;
 
   const total = useMemo(
     () => data.reduce((sum, item) => sum + item.value, 0),
@@ -61,10 +126,29 @@ export default function CategoryChart({
     [activeRange],
   );
 
+  const pieData = useMemo<PieItem[]>(() => {
+    let smallCounter = 0;
+
+    return data.map((item) => {
+      const ratio = total ? item.value / total : 0;
+      const isSmall = ratio < SMALL_RATIO;
+
+      const offset = isSmall
+        ? BASE_OFFSET + (smallCounter++ % 2) * STAGGER_OFFSET
+        : 0;
+
+      return {
+        ...item,
+        ratio,
+        offset: isCrowded ? offset : 0,
+        renderValue: Math.max(item.value, total * MIN_RENDER_RATIO),
+      };
+    });
+  }, [data, total, isCrowded]);
+
   const handleMouseEnter = useCallback(
     (_: unknown, index: number) => {
       const item = data[index];
-
       if (!item) return;
 
       setActiveSlice({
@@ -73,9 +157,7 @@ export default function CategoryChart({
         value: item.value,
         color: item.color,
         glow: item.glow,
-        pct: total
-          ? ((item.value / total) * 100).toFixed(1)
-          : "0.0",
+        pct: total ? ((item.value / total) * 100).toFixed(1) : "0.0",
       });
     },
     [data, total],
@@ -87,7 +169,48 @@ export default function CategoryChart({
 
   useEffect(() => {
     setActiveSlice(null);
+    setShowAll(false);
   }, [activeRange]);
+
+  const renderSlice = useCallback(
+    (props: any) => {
+      const {
+        cx,
+        cy,
+        innerRadius,
+        outerRadius,
+        startAngle,
+        endAngle,
+        midAngle,
+        payload,
+      } = props;
+      const item = payload as PieItem;
+
+      const offset = item.offset ?? 0;
+      const dx = offset * Math.cos(-RADIAN * midAngle);
+      const dy = offset * Math.sin(-RADIAN * midAngle);
+
+      const isActive = activeSlice?.id === item.resourceId;
+
+      return (
+        <g
+          filter={isActive ? `url(#glow-${item.resourceId})` : undefined}
+        >
+          <Sector
+            cx={cx + dx}
+            cy={cy + dy}
+            innerRadius={innerRadius}
+            outerRadius={outerRadius}
+            startAngle={startAngle}
+            endAngle={endAngle}
+            fill={`url(#pieGrad-${item.resourceId})`}
+            stroke="none"
+          />
+        </g>
+      );
+    },
+    [activeSlice],
+  );
 
   const pieDefs = (
     <defs>
@@ -100,11 +223,7 @@ export default function CategoryChart({
           r="50%"
         >
           <stop offset="0%" stopColor={item.color} stopOpacity={1} />
-          <stop
-            offset="100%"
-            stopColor={item.color}
-            stopOpacity={0.65}
-          />
+          <stop offset="100%" stopColor={item.color} stopOpacity={0.65} />
         </radialGradient>
       ))}
 
@@ -154,11 +273,7 @@ export default function CategoryChart({
                 <m.span
                   layoutId="categoryChartRangeIndicator"
                   className="absolute inset-0 rounded-lg bg-white shadow-sm dark:bg-gray-800"
-                  transition={{
-                    type: "spring",
-                    stiffness: 400,
-                    damping: 30,
-                  }}
+                  transition={{ type: "spring", stiffness: 400, damping: 30 }}
                 />
               )}
 
@@ -181,33 +296,17 @@ export default function CategoryChart({
             {activeSlice && (
               <m.div
                 key={`${activeRange}-${activeSlice.id}`}
-                initial={{
-                  opacity: 0,
-                  y: 4,
-                  scale: 0.96,
-                }}
-                animate={{
-                  opacity: 1,
-                  y: 0,
-                  scale: 1,
-                }}
-                exit={{
-                  opacity: 0,
-                  y: 4,
-                  scale: 0.96,
-                }}
+                initial={{ opacity: 0, y: 4, scale: 0.96 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 4, scale: 0.96 }}
                 transition={{ duration: 0.15 }}
                 className="pointer-events-none rounded-xl border border-gray-200/60 bg-white/95 px-3 py-2 shadow-lg dark:border-white/10 dark:bg-gray-900/95"
-                style={{
-                  boxShadow: `0 4px 20px ${activeSlice.glow}`,
-                }}
+                style={{ boxShadow: `0 4px 20px ${activeSlice.glow}` }}
               >
                 <div className="mb-1 flex items-center gap-1.5">
                   <span
                     className="h-2 w-2 rounded-full"
-                    style={{
-                      backgroundColor: activeSlice.color,
-                    }}
+                    style={{ backgroundColor: activeSlice.color }}
                   />
 
                   <span className="text-[12px] font-semibold text-gray-800 dark:text-gray-100">
@@ -219,9 +318,7 @@ export default function CategoryChart({
                   سهم منبع:{" "}
                   <span
                     className="font-bold tabular-nums"
-                    style={{
-                      color: activeSlice.color,
-                    }}
+                    style={{ color: activeSlice.color }}
                   >
                     {activeSlice.pct}%
                   </span>
@@ -236,37 +333,21 @@ export default function CategoryChart({
             {pieDefs}
 
             <Pie
-              data={data}
-              dataKey="value"
+              key={`${activeRange}-${isCrowded}`}
+              data={pieData}
+              dataKey="renderValue"
               nameKey="name"
               cx="50%"
               cy="50%"
-              innerRadius={48}
-              outerRadius={74}
-              paddingAngle={data.length > 1 ? 4 : 0}
+              innerRadius={isCrowded ? 44 : 48}
+              outerRadius={isCrowded ? 70 : 74}
+              paddingAngle={data.length > 1 ? (isCrowded ? 1 : 4) : 0}
               strokeWidth={0}
               onMouseEnter={handleMouseEnter}
               onMouseLeave={handleMouseLeave}
               isAnimationActive={false}
-            >
-              {data.map((entry) => {
-                const isActive =
-                  activeSlice?.id === entry.resourceId;
-
-                return (
-                  <Cell
-                    key={`${activeRange}-${entry.resourceId}`}
-                    fill={`url(#pieGrad-${entry.resourceId})`}
-                    stroke="none"
-                    filter={
-                      isActive
-                        ? `url(#glow-${entry.resourceId})`
-                        : undefined
-                    }
-                  />
-                );
-              })}
-            </Pie>
+              shape={renderSlice}
+            />
           </PieChart>
         </ResponsiveContainer>
 
@@ -283,9 +364,7 @@ export default function CategoryChart({
               >
                 <p
                   className="text-[20px] font-bold tabular-nums"
-                  style={{
-                    color: activeSlice.color,
-                  }}
+                  style={{ color: activeSlice.color }}
                 >
                   {activeSlice.pct}%
                 </p>
@@ -313,29 +392,24 @@ export default function CategoryChart({
       </div>
 
       <div className="mt-2 grid grid-cols-2 gap-1" dir="rtl">
-        {data.map((entry: SourceCount) => {
+        {visibleItems.map((entry: SourceCount) => {
           const pct = total
             ? ((entry.value / total) * 100).toFixed(1)
             : "0.0";
 
-          const isActive =
-            activeSlice?.id === entry.resourceId;
+          const isActive = activeSlice?.id === entry.resourceId;
 
           return (
             <div
               key={`${activeRange}-${entry.resourceId}`}
               className="flex cursor-default items-center gap-1.5 rounded-lg px-2 py-1 transition-colors duration-150"
               style={{
-                backgroundColor: isActive
-                  ? entry.glow
-                  : "transparent",
+                backgroundColor: isActive ? entry.glow : "transparent",
               }}
             >
               <span
                 className="h-2 w-2 flex-shrink-0 rounded-full"
-                style={{
-                  backgroundColor: entry.color,
-                }}
+                style={{ backgroundColor: entry.color }}
               />
 
               <span className="flex-1 truncate text-[12px] text-gray-600 dark:text-gray-300">
@@ -344,9 +418,7 @@ export default function CategoryChart({
 
               <span
                 className="tabular-nums text-[12px] font-bold"
-                style={{
-                  color: entry.color,
-                }}
+                style={{ color: entry.color }}
               >
                 {pct}%
               </span>
@@ -354,6 +426,39 @@ export default function CategoryChart({
           );
         })}
       </div>
+
+      {hiddenCount > 0 && (
+        <div className="mt-2" dir="rtl">
+          <button
+            type="button"
+            onClick={() => setShowAll((prev) => !prev)}
+            aria-expanded={showAll}
+            className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-gray-100 bg-gray-50/80 py-1.5 text-[11px] font-medium text-gray-500 transition-colors hover:bg-white hover:text-gray-900 dark:border-white/5 dark:bg-gray-900/50 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white"
+          >
+            <span>
+              {showAll
+                ? "نمایش کمتر"
+                : `دیدن بقیه (${hiddenCount.toLocaleString("fa-IR")}+)`}
+            </span>
+
+            <svg
+              width="12"
+              height="12"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className={`transition-transform duration-200 ${showAll ? "rotate-180" : ""
+                }`}
+              aria-hidden="true"
+            >
+              <path d="m6 9 6 6 6-6" />
+            </svg>
+          </button>
+        </div>
+      )}
     </div>
   );
 }

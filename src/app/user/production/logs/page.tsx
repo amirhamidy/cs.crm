@@ -1,6 +1,5 @@
 "use client";
 
-import { Skeleton } from "@/components/ui/Skeleton";
 
 import { NiceSelect } from "@/components/ui/NiceSelect";
 import ProductionLogsSkeleton from "./ProductionLogsSkeleton";
@@ -9,7 +8,8 @@ import { useCallback, useRef, useState } from "react";
 import { m, AnimatePresence, useReducedMotion } from "framer-motion";
 import { Backdrop } from "@/components/ui/Backdrop";
 import { panelMotion } from "@/lib/motion";
-import { ClipboardList, Plus, Trash2, X, AlertCircle, Filter } from "lucide-react";
+import { ClipboardList, Plus, Trash2, X, AlertCircle } from "lucide-react";
+import PageHeader, { HEADER_BTN_PRIMARY } from "@/components/ui/PageHeader";
 import { useTheme } from "next-themes";
 import axiosInstance from "@/lib/axiosInstance";
 import { fetchPage, listAll } from "@/lib/api";
@@ -154,30 +154,14 @@ export default function UserProductionLogsPage() {
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6" dir="rtl">
       
-      {loading ? (
-        <div aria-hidden="true" className="flex animate-pulse items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Skeleton className="h-12 w-12 rounded-2xl" />
-            <div className="space-y-2">
-              <Skeleton className="h-5 w-56 rounded-md" />
-              <Skeleton className="h-3 w-72 max-w-full rounded-md" />
-            </div>
-          </div>
-          <Skeleton className="h-11 w-44 rounded-2xl" />
-        </div>
-      ) : null}
-
-      <div className={`flex items-center justify-between ${loading ? "hidden" : ""}`}>
-        <div className="flex items-center gap-3">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-500/10 text-indigo-500 shadow-inner">
-            <ClipboardList size={24} />
-          </div>
-          <div>
-            <h1 className="text-xl font-extrabold text-gray-900 dark:text-white">ثبت و سوابق تولید روزانه</h1>
-            <p className="text-xs text-gray-400 mt-0.5">ثبت ساعت کارکرد، مقدار تولید واقعی و ضایعات</p>
-          </div>
-        </div>
-
+      <PageHeader
+        icon={ClipboardList}
+        title="ثبت و سوابق تولید روزانه"
+        subtitle={`ثبت ساعت کارکرد، مقدار تولید واقعی و ضایعات · مجموع: ${toPersianDigits(count)}`}
+        search={{ value: search, onChange: setSearch, placeholder: "جستجو در سوابق تولید..." }}
+        onRefresh={() => refetch()}
+        refreshing={loading}
+      >
         <button
           type="button"
           onClick={() => {
@@ -185,30 +169,17 @@ export default function UserProductionLogsPage() {
             loadMachines();
             setShowModal(true);
           }}
-          className="flex items-center gap-2 rounded-2xl bg-indigo-600 px-5 py-3 text-xs font-bold text-white shadow-lg shadow-indigo-600/20 transition-all hover:bg-indigo-500"
+          className={HEADER_BTN_PRIMARY}
         >
           <Plus size={15} />
           ثبت رکورد تولید جدید
         </button>
-      </div>
+      </PageHeader>
 
-      
       {loading ? (
         <ProductionLogsSkeleton rows={6} />
       ) : (
         <div className="bg-white dark:bg-[#111827] rounded-3xl border border-gray-100 dark:border-white/[0.07] overflow-hidden shadow-sm">
-          <div className="flex items-center gap-2 border-b border-gray-100 dark:border-white/[0.06] px-4 py-3.5">
-            <div className="flex items-center gap-2 rounded-2xl border border-gray-100 bg-gray-50 px-3.5 py-2.5 transition-colors focus-within:border-indigo-500 dark:border-white/[0.06] dark:bg-white/[0.03]">
-              <Filter size={13} className="shrink-0 text-gray-400" />
-              <input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="جستجو در پرسنل، ماشین یا توضیحات..."
-                className="w-full min-w-[220px] bg-transparent text-[12px] font-semibold text-gray-900 outline-none placeholder:text-gray-400 dark:text-white"
-              />
-            </div>
-            <span className="text-[11px] text-gray-400">مجموع: {toPersianDigits(count)}</span>
-          </div>
           <div className="overflow-x-auto">
             <table className="w-full text-right border-collapse text-xs">
               <thead className="bg-gray-50 dark:bg-white/[0.02] text-gray-400 border-b border-gray-100 dark:border-white/[0.06]">

@@ -3,8 +3,8 @@
 import { useMemo, useState } from "react";
 import { CountSkeleton, TaskCardSkeleton } from "@/components/ui/skeletons";
 import { AnimatePresence, m } from "framer-motion";
-import { Search, X, Archive, ArrowRight, Ban, CheckCircle2, ClipboardList, Layers3, RefreshCw, ShoppingBag } from "lucide-react";
-import { Spinner as Loader2 } from "@/components/ui/Spinner";
+import { Archive, ArrowRight, Ban, CheckCircle2, ClipboardList, Layers3, ShoppingBag } from "lucide-react";
+import PageHeader, { HEADER_BTN_SECONDARY } from "@/components/ui/PageHeader";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import { tasksApi } from "@/lib/api";
@@ -39,56 +39,20 @@ export default function AdminArchivedTasksPage() {
 
     return (
         <div className="flex flex-col gap-5 p-3 sm:p-4 md:p-6" dir="rtl">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex items-start gap-3">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl" style={{ background: isDark ? "rgba(99,102,241,0.14)" : "rgba(99,102,241,0.08)" }}>
-                        <Archive size={18} className="text-indigo-500" />
-                    </div>
-
-                    <div className="min-w-0">
-                        <h1 className="text-[15px] font-extrabold text-gray-900 dark:text-white">بایگانی تسک‌ها</h1>
-                        <p className="mt-0.5 text-[11.5px] text-gray-500 dark:text-gray-400">{loading ? <CountSkeleton /> : `${list.count} تسک`}</p>
-                    </div>
-                </div>
-
-                <div className="flex items-center gap-2">
-                    <button
-                        type="button"
-                        onClick={() => router.push("/admin/tasks")}
-                        className="flex h-10 items-center gap-2 rounded-2xl px-3.5 text-[12px] font-bold transition-colors"
-                        style={{ background: isDark ? "rgba(255,255,255,0.05)" : "rgba(15,23,42,0.05)", color: isDark ? "#d1d5db" : "#4b5563" }}
-                    >
+            <PageHeader
+                icon={Archive}
+                title="بایگانی تسک‌ها"
+                subtitle={loading ? <CountSkeleton /> : `${list.count} تسک`}
+                search={{ value: list.search, onChange: list.setSearch, placeholder: "جستجو در بایگانی وظایف..." }}
+                leading={
+                    <button type="button" onClick={() => router.push("/admin/tasks")} className={HEADER_BTN_SECONDARY}>
                         <ArrowRight size={15} />
                         بازگشت به وظایف
                     </button>
-
-                    <button
-                        type="button"
-                        onClick={fetchAll}
-                        disabled={loading}
-                        className={`flex h-10 w-10 items-center justify-center rounded-2xl transition-colors disabled:opacity-50 `}
-                        style={{ background: isDark ? "rgba(255,255,255,0.05)" : "rgba(15,23,42,0.05)", color: isDark ? "#d1d5db" : "#4b5563" }}
-                        title="بارگذاری مجدد"
-                    >
-                        {loading ? <Loader2 size={15} /> : <RefreshCw size={15} />}
-                    </button>
-                </div>
-            </div>
-
-            <div className="relative">
-                <Search size={14} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                <input
-                    value={list.search}
-                    onChange={(e) => list.setSearch(e.target.value)}
-                    placeholder="جستجو در بایگانی وظایف..."
-                    className="h-10 w-full rounded-xl border border-gray-200 bg-white pl-9 pr-9 text-[12px] font-semibold text-gray-700 outline-none transition-colors focus:border-indigo-400 dark:border-white/10 dark:bg-white/[0.03] dark:text-gray-200"
-                />
-                {list.search && (
-                    <button type="button" onClick={() => list.setSearch("")} className="absolute left-2.5 top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded-full text-gray-400 hover:text-gray-600">
-                        <X size={12} />
-                    </button>
-                )}
-            </div>
+                }
+                onRefresh={fetchAll}
+                refreshing={loading}
+            />
 
             <div className="flex flex-wrap items-center gap-2">
                 {archiveFilters.map(({ id, label, icon: Icon, color }) => {

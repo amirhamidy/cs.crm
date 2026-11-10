@@ -2,9 +2,10 @@
 
 import { useMemo, useState } from "react";
 import Pagination from "@/components/ui/Pagination";
+import PageHeader from "@/components/ui/PageHeader";
 import ArchivedTaskCardSkeleton from "./ArchivedTaskCardSkeleton";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
-import { Archive, CheckCircle2, Filter, PackageCheck, Search, X, XCircle } from "lucide-react";
+import { Archive, CheckCircle2, Filter, PackageCheck, XCircle } from "lucide-react";
 import { tasksApi } from "@/lib/api/tasks";
 import { useCurrentEmployee } from "@/hooks/usecurrentemployee";
 import ArchivedTaskCard from "./ArchivedTaskCard";
@@ -161,53 +162,17 @@ export default function ArchivedTasksBoard() {
     return (
         <div className="space-y-5" dir="rtl">
             <div className="flex flex-col gap-4">
-                <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                    <div className="flex items-center gap-2">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-indigo-500/10">
-                            <Archive size={18} className="text-indigo-500" />
-                        </div>
-                        <div>
-                            <h2 className="text-[15px] font-black text-gray-900 dark:text-white">
-                                آرشیو تسک‌ها
-                            </h2>
-                            <p className="mt-1 text-[10px] font-medium text-gray-400">
-                                آرشیو دپارتمان‌هایی که شما عضو آن‌ها هستید
-                            </p>
-                        </div>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                        <div className="flex h-9 items-center gap-1.5 rounded-xl bg-indigo-500/10 px-3 text-[10px] font-black text-indigo-500">
-                            <Archive size={12} />
-                            {list.count} تسک
-                        </div>
-                        {departments.length > 1 && (
-                            <div className="rounded-xl bg-gray-100 px-3 py-2 text-[10px] font-bold text-gray-500 dark:bg-white/[.04] dark:text-gray-400">
-                                {departments.length} دپارتمان
-                            </div>
-                        )}
-                    </div>
-                </div>
+                <PageHeader
+                    icon={Archive}
+                    title="آرشیو تسک‌ها"
+                    subtitle={`آرشیو دپارتمان‌هایی که شما عضو آن‌ها هستید · ${list.count} تسک`}
+                    search={{ value: list.search, onChange: list.setSearch, placeholder: "جستجو در عنوان، مشتری، دپارتمان، مرحله..." }}
+                />
 
                 <div className="rounded-[1.4rem] border border-gray-200/70 bg-white/80 p-3 shadow-sm dark:border-white/[.06] dark:bg-white/[.02]">
                     <div className="mb-3 flex items-center gap-2 text-[10px] font-black text-gray-500 dark:text-gray-400">
                         <Filter size={13} />
                         فیلتر آرشیو
-                    </div>
-
-                    <div className="relative mb-3">
-                        <Search size={14} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                        <input
-                            value={list.search}
-                            onChange={(e) => list.setSearch(e.target.value)}
-                            placeholder="جستجو در عنوان، مشتری، دپارتمان، مرحله..."
-                            className="h-10 w-full rounded-xl border border-gray-200 bg-white pl-9 pr-9 text-[11.5px] font-semibold text-gray-700 outline-none transition-colors focus:border-indigo-400 dark:border-white/10 dark:bg-white/[0.03] dark:text-gray-200"
-                        />
-                        {list.search && (
-                            <button type="button" onClick={() => list.setSearch("")} className="absolute left-2.5 top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded-full text-gray-400 hover:text-gray-600">
-                                <X size={12} />
-                            </button>
-                        )}
                     </div>
 
                     <div className="flex flex-wrap gap-2">

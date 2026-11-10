@@ -2,7 +2,8 @@
 import { ListSkeleton } from "@/components/ui/skeletons";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Archive, CheckCircle2, Search, X, XCircle } from "lucide-react";
+import PageHeader from "@/components/ui/PageHeader";
+import { Archive, CheckCircle2, XCircle } from "lucide-react";
 import { purchasingApi, type PurchasingArchiveStatus } from "@/lib/api";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import Pagination from "@/components/ui/Pagination";
@@ -68,53 +69,27 @@ export default function PurchasingArchive({ steps, attachments, refreshKey = 0 }
 
     return (
         <section className="flex flex-col gap-3" dir="rtl">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex items-center gap-2.5">
-                    <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-gray-100 dark:bg-white/[0.05]">
-                        <Archive size={15} className="text-gray-500 dark:text-gray-400" />
-                    </span>
-                    <div>
-                        <div className="flex items-center gap-2">
-                            <h2 className="text-[13px] font-extrabold text-gray-900 dark:text-white">بایگانی تسک‌ها</h2>
-                            <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-gray-100 px-1.5 text-[9.5px] font-extrabold text-gray-500 dark:bg-white/[0.06] dark:text-gray-400">
-                                {toPersianDigits(list.count)}
-                            </span>
-                        </div>
-                        <p className="mt-0.5 text-[10.5px] font-semibold text-gray-400">تسک‌های تکمیل یا لغو شده</p>
-                    </div>
-                </div>
-
-                <div className="flex items-center gap-2">
-                    <div className="flex rounded-full bg-gray-100 p-0.5 dark:bg-white/[0.05]">
+            <PageHeader
+                icon={Archive}
+                title="بایگانی تسک‌ها"
+                subtitle={`تسک‌های تکمیل یا لغو شده · ${toPersianDigits(list.count)} مورد`}
+                search={{ value: list.search, onChange: list.setSearch, placeholder: "جستجو در بایگانی..." }}
+                leading={
+                    <div className="flex h-10 shrink-0 rounded-2xl bg-gray-100 p-0.5 dark:bg-white/[0.05]">
                         {TABS.map(({ key, label, icon: Icon, tone }) => (
                             <button
                                 key={key}
                                 type="button"
                                 onClick={() => setTab(key)}
-                                className={`flex h-8 items-center gap-1.5 rounded-full px-3 text-[10.5px] font-extrabold transition ${tab === key ? `bg-white shadow-sm dark:bg-white/10 ${tone}` : "text-gray-400"}`}
+                                className={`flex items-center gap-1.5 rounded-[14px] px-3 text-[11px] font-extrabold transition ${tab === key ? `bg-white shadow-sm dark:bg-white/10 ${tone}` : "text-gray-400"}`}
                             >
                                 <Icon size={12} />
                                 {label}
                             </button>
                         ))}
                     </div>
-
-                    <div className="relative min-w-0 flex-1 sm:w-56 sm:flex-none">
-                        <Search size={13} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                        <input
-                            value={list.search}
-                            onChange={(e) => list.setSearch(e.target.value)}
-                            placeholder="جستجو در بایگانی..."
-                            className="h-9 w-full rounded-full border border-gray-100 bg-gray-50 pl-8 pr-8 text-[11px] font-semibold text-gray-800 outline-none transition focus:border-indigo-400 dark:border-white/[0.06] dark:bg-white/[0.03] dark:text-white"
-                        />
-                        {list.search && (
-                            <button type="button" onClick={() => list.setSearch("")} className="absolute left-2.5 top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded-full text-gray-400 hover:text-gray-600">
-                                <X size={11} />
-                            </button>
-                        )}
-                    </div>
-                </div>
-            </div>
+                }
+            />
 
             {list.loading && list.data.length === 0 ? (
                 <ListSkeleton rows={3} />

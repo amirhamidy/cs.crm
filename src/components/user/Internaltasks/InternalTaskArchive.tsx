@@ -1,9 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import PageHeader from "@/components/ui/PageHeader";
 import Pagination from "@/components/ui/Pagination";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
-import { Archive, CalendarDays, CheckCircle2, Layers, LayoutGrid, RotateCcw, Search, Ticket, XCircle } from "lucide-react";
+import { Archive, CalendarDays, CheckCircle2, Layers, LayoutGrid, RotateCcw, Ticket, XCircle } from "lucide-react";
 import { fetchInternalTaskRoutines } from "./Api";
 import { internalTasksApi } from "@/lib/api";
 import type { InternalTaskArchive as InternalTaskArchiveType, InternalTaskRoutine } from "./types";
@@ -317,24 +318,12 @@ export default function InternalTaskArchive() {
 
     return (
         <div dir="rtl" className="flex flex-col gap-5">
-            <div className="flex items-center gap-2.5">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-indigo-500/10">
-                    <Archive
-                        size={18}
-                        className="text-indigo-500"
-                    />
-                </div>
-
-                <div>
-                    <h3 className="text-[15px] font-extrabold text-gray-900 dark:text-white">
-                        بایگانی تیکت‌ها
-                    </h3>
-
-                    <p className="text-[11.5px] text-gray-500 dark:text-gray-400">
-                        تیکت‌ها و روتین‌هایی که انجام یا لغو شده‌اند. مجموع: {toPersianDigits(list.count)} مورد
-                    </p>
-                </div>
-            </div>
+            <PageHeader
+                icon={Archive}
+                title="بایگانی تیکت‌ها"
+                subtitle={`تیکت‌ها و روتین‌هایی که انجام یا لغو شده‌اند. مجموع: ${toPersianDigits(list.count)} مورد`}
+                search={{ value: search, onChange: setSearch, placeholder: "جستجو بر اساس عنوان، شماره یا نام فرد" }}
+            />
 
             {error && (
                 <div className="flex items-center justify-between gap-3 rounded-2xl border border-red-500/20 bg-red-500/5 px-4 py-3">
@@ -383,33 +372,6 @@ export default function InternalTaskArchive() {
             
             <div className="rounded-3xl border border-gray-200 bg-white p-3.5 shadow-sm dark:border-white/[0.06] dark:bg-white/[0.025]">
                 <div className="flex flex-col gap-4">
-                    <div className="relative">
-                        <Search
-                            size={16}
-                            className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400"
-                        />
-
-                        <input
-                            type="text"
-                            value={search}
-                            onChange={(event) =>
-                                setSearch(event.target.value)
-                            }
-                            placeholder="جستجو بر اساس عنوان، شماره یا نام فرد"
-                            className="h-12 w-full rounded-2xl border border-gray-200 bg-gray-50 pr-10 pl-4 text-[12.5px] font-medium text-gray-900 outline-none transition-all placeholder:text-gray-400 focus:border-indigo-500/40 focus:bg-white dark:border-white/[0.06] dark:bg-white/[0.03] dark:text-white dark:placeholder:text-gray-600 dark:focus:bg-white/[0.04]"
-                        />
-
-                        {search && (
-                            <button
-                                type="button"
-                                onClick={() => setSearch("")}
-                                className="absolute left-3 top-1/2 flex -translate-y-1/2 items-center justify-center rounded-lg p-1 text-gray-400 transition-colors hover:bg-gray-200 hover:text-gray-700 dark:hover:bg-white/[0.08] dark:hover:text-white"
-                            >
-                                <XCircle size={15} />
-                            </button>
-                        )}
-                    </div>
-
                     <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                         <Segmented<ArchiveTypeFilter>
                             icon={<Ticket size={13} className="text-indigo-500" />}

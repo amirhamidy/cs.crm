@@ -3,8 +3,8 @@
 import { ComponentType, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { AnimatePresence, m } from "framer-motion";
-import { BusyContent } from "@/components/ui/Button";
-import { BellRing, Boxes, ClipboardList, Archive, FileText, Package, RefreshCw, PackagePlus, PackageSearch, Plus, ReceiptText, ShieldCheck, Power, PowerOff, ShieldAlert, ShoppingBag, UploadCloud, UsersRound, UserPlus, Search, X } from "lucide-react";
+import PageHeader, { HEADER_BTN_BASE, HEADER_BTN_SECONDARY } from "@/components/ui/PageHeader";
+import { BellRing, Boxes, ClipboardList, Archive, FileText, Package, RefreshCw, PackagePlus, PackageSearch, Plus, ReceiptText, ShieldCheck, Power, PowerOff, ShieldAlert, ShoppingBag, UploadCloud, UsersRound, UserPlus } from "lucide-react";
 import { useTheme } from "next-themes";
 
 import AddCategoryModal from "@/components/admin/warehouse/AddCategoryModal";
@@ -435,63 +435,34 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
 
     return (
         <div dir="rtl" className="flex min-h-screen flex-col gap-6 p-6">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-                <div className="flex items-start gap-3">
-                    <div
-                        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl"
-                        style={{ background: iconBg }}
-                    >
-                        <Boxes size={18} className="text-indigo-500" />
-                    </div>
-                    <div>
-                        <h1 className="text-[15px] font-extrabold text-gray-900 dark:text-white">
-                            {warehouse ? `انبار ${warehouse.name}` : "انبار"}
-                        </h1>
-                        <p className="mt-0.5 text-[11.5px] text-gray-500 dark:text-gray-400">
-                            مدیریت وظایف، محصولات، موجودی و فرآیندهای ورود و خروج کالا
-                        </p>
-                    </div>
-                </div>
-
-                <div className="flex items-center gap-2">
-                    <m.button
-                        type="button"
-                        whileTap={{ scale: 0.96 }}
-                        onClick={() => router.push(basePath)}
-                        className="flex h-10 items-center justify-center gap-2 rounded-2xl px-4 text-[12.5px] font-bold text-indigo-500 transition-colors hover:bg-indigo-500/10"
-                    >
-                        تغییر انبار
-                    </m.button>
-
-                    {isAdmin && warehouse && (
-                        <m.button
-                            type="button"
-                            whileTap={{ scale: 0.96 }}
-                            onClick={() => setStatusOpen(true)}
-                            className={`flex h-10 items-center justify-center gap-2 rounded-2xl px-4 text-[12.5px] font-bold transition-colors ${warehouse.is_active
-                                ? "text-amber-500 hover:bg-amber-500/10"
-                                : "text-emerald-500 hover:bg-emerald-500/10"
-                                }`}
-                        >
-                            {warehouse.is_active ? <PowerOff size={14} /> : <Power size={14} />}
-                            {warehouse.is_active ? "غیرفعال‌سازی انبار" : "فعال‌سازی انبار"}
-                        </m.button>
-                    )}
-
-                    <m.button
-                        type="button"
-                        whileTap={{ scale: 0.96 }}
-                        onClick={refresh}
-                        disabled={refreshing}
-                        className="relative flex h-10 items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-4 text-[12.5px] font-bold text-white transition-colors hover:bg-indigo-700 disabled:opacity-50"
-                    >
-                        <BusyContent busy={refreshing}>
-<RefreshCw size={15} />
-بروزرسانی
-</BusyContent>
-                    </m.button>
-                </div>
-            </div>
+            <PageHeader
+                icon={Boxes}
+                title={warehouse ? `انبار ${warehouse.name}` : "انبار"}
+                subtitle="مدیریت وظایف، محصولات، موجودی و فرآیندهای ورود و خروج کالا"
+                search={searchable ? { value: searchInput, onChange: setSearchInput, placeholder: "جستجو..." } : undefined}
+                onRefresh={refresh}
+                refreshing={refreshing}
+                leading={
+                    <>
+                        <button type="button" onClick={() => router.push(basePath)} className={HEADER_BTN_SECONDARY}>
+                            تغییر انبار
+                        </button>
+                        {isAdmin && warehouse && (
+                            <button
+                                type="button"
+                                onClick={() => setStatusOpen(true)}
+                                className={`${HEADER_BTN_BASE} px-3.5 ${warehouse.is_active
+                                    ? "text-amber-500 hover:bg-amber-500/10"
+                                    : "text-emerald-500 hover:bg-emerald-500/10"
+                                    }`}
+                            >
+                                {warehouse.is_active ? <PowerOff size={14} /> : <Power size={14} />}
+                                {warehouse.is_active ? "غیرفعال‌سازی انبار" : "فعال‌سازی انبار"}
+                            </button>
+                        )}
+                    </>
+                }
+            />
 
             {isAdmin && warehouseInactive && (
                 <div className="flex items-center gap-2.5 rounded-2xl border border-amber-500/20 bg-amber-500/10 px-4 py-3 text-[11.5px] font-bold text-amber-600 dark:text-amber-400">
@@ -538,28 +509,6 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
                     );
                 })}
             </div>
-
-            {searchable && (
-                <div className="relative">
-                    <Search size={16} className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
-                    <input
-                        type="text"
-                        value={searchInput}
-                        onChange={(e) => setSearchInput(e.target.value)}
-                        placeholder="جستجو..."
-                        className="h-12 w-full rounded-2xl border border-gray-200 bg-gray-50 pr-10 pl-4 text-[12.5px] font-medium text-gray-900 outline-none transition-all placeholder:text-gray-400 focus:border-indigo-500/40 focus:bg-white dark:border-white/[0.06] dark:bg-white/[0.03] dark:text-white dark:placeholder:text-gray-600 dark:focus:bg-white/[0.04]"
-                    />
-                    {searchInput && (
-                        <button
-                            type="button"
-                            onClick={() => setSearchInput("")}
-                            className="absolute left-3 top-1/2 flex -translate-y-1/2 items-center justify-center rounded-lg p-1 text-gray-400 transition-colors hover:bg-gray-200 hover:text-gray-700 dark:hover:bg-white/[0.08] dark:hover:text-white"
-                        >
-                            <X size={15} />
-                        </button>
-                    )}
-                </div>
-            )}
 
             {error && (
                 <div

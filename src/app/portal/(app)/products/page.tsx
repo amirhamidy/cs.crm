@@ -7,7 +7,7 @@ import { usePaginatedList } from "@/hooks/usePaginatedList";
 import Pagination from "@/components/ui/Pagination";
 import PortalProductsSkeleton from "../PortalProductsSkeleton";
 import QuantityModal from "@/components/portal/QuantityModal";
-import { FloatingInput } from "@/components/ui/FloatingField";
+import PageHeader from "@/components/ui/PageHeader";
 import { toast } from "@/components/notifications/toast";
 import { usePortalCartStore } from "@/store/portalCartStore";
 import { toEnglishDigits } from "@/lib/digits";
@@ -113,26 +113,12 @@ export default function PortalProductsPage() {
 
     return (
         <section dir="rtl" className="flex flex-col gap-5">
-            <div className="flex flex-wrap items-end justify-between gap-3">
-                <div>
-                    <h1 className="text-[15px] font-extrabold text-gray-900 dark:text-white">
-                        کالاهای قابل سفارش
-                    </h1>
-                    <p className="mt-1 text-[11.5px] text-gray-500">
-                        کالاهای دارای موجودی انبار
-                    </p>
-                </div>
-                <div className="w-full sm:max-w-xs">
-                    <FloatingInput
-                        id="portal-product-search"
-                        label="جستجوی نام کالا"
-                        value={list.search}
-                        onChange={(e) => list.setSearch(e.target.value)}
-                        autoComplete="off"
-                        name="radco-portal-product-search"
-                    />
-                </div>
-            </div>
+            <PageHeader
+                icon={Package}
+                title="کالاهای قابل سفارش"
+                subtitle="کالاهای دارای موجودی انبار"
+                search={{ value: list.search, onChange: list.setSearch, placeholder: "جستجوی نام کالا" }}
+            />
 
             <div className="flex flex-wrap gap-2">
                 <button

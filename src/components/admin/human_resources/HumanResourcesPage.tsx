@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence, m } from "framer-motion";
-import { AlertCircle, FileText, Plus, Search, Users, X } from "lucide-react";
+import { AlertCircle, FileText, Plus, Search, Users } from "lucide-react";
+import PageHeader, { HEADER_BTN_PRIMARY } from "@/components/ui/PageHeader";
 import HumanResourceCard from "./HumanResourceCard";
 import HumanResourceForm from "./HumanResourceForm";
 import HumanResourceStepsModal from "./HumanResourceStepsModal";
@@ -114,79 +115,47 @@ export default function HumanResourcesPage({ canManage = false }: { canManage?: 
 
     return (
         <div className="space-y-4 p-3 sm:p-5" dir="rtl">
-            <m.div
-                initial={{ opacity: 0, y: -8 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="rounded-[1.45rem] border border-gray-100 bg-white p-3 shadow-sm dark:border-white/[0.06] dark:bg-[#111827]"
+            <PageHeader
+                icon={Users}
+                title="منابع انسانی"
+                subtitle="اطلاعات و فرآیندهای منابع انسانی"
+                search={{ value: search, onChange: setSearch, placeholder: "جستجوی منابع انسانی..." }}
+                onRefresh={refresh}
+                refreshing={loading}
             >
-                <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                    <div className="flex items-center gap-3">
-                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-500 text-white shadow-sm">
-                            <Users size={18} />
-                        </div>
-                        <div className="min-w-0">
-                            <div className="flex items-center gap-2">
-                                <h1 className="text-[15px] font-extrabold text-gray-900 dark:text-white">منابع انسانی</h1>
-                                <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-indigo-50 px-1.5 text-[9.5px] font-extrabold text-indigo-500 dark:bg-indigo-500/10 dark:text-indigo-400">
-                                    {loading ? <CountSkeleton className="w-5" /> : count}
-                                </span>
-                            </div>
-                            <p className="mt-0.5 text-[10.5px] font-semibold text-gray-400">اطلاعات و فرآیندهای منابع انسانی</p>
-                        </div>
-                    </div>
+                {canManage && (
+                    <button
+                        type="button"
+                        onClick={() => {
+                            setEditing(null);
+                            setFormOpen(true);
+                        }}
+                        className={HEADER_BTN_PRIMARY}
+                    >
+                        <Plus size={15} />
+                        ایجاد منبع
+                    </button>
+                )}
+            </PageHeader>
 
-                    <div className="flex flex-col gap-2 sm:flex-row">
-                        <div className="relative min-w-0 sm:w-64">
-                            <Search size={14} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                            <input
-                                value={search}
-                                onChange={(e) => setSearch(e.target.value)}
-                                placeholder="جستجوی منابع انسانی..."
-                                className="h-9 w-full rounded-full border border-gray-100 bg-gray-50 pr-9 pl-9 text-[11px] font-semibold text-gray-800 outline-none transition focus:border-indigo-400 dark:border-white/[0.06] dark:bg-white/[0.03] dark:text-white"
-                            />
-                            {search && (
-                                <button type="button" onClick={() => setSearch("")} className="absolute left-2.5 top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded-full text-gray-400 hover:text-gray-600">
-                                    <X size={11} />
-                                </button>
-                            )}
-                        </div>
-
-                        {canManage && (
-                            <m.button
-                                type="button"
-                                whileTap={{ scale: 0.97 }}
-                                onClick={() => {
-                                    setEditing(null);
-                                    setFormOpen(true);
-                                }}
-                                className="flex h-9 items-center justify-center gap-1.5 rounded-full bg-indigo-600 px-4 text-[11px] font-extrabold text-white transition hover:bg-indigo-500"
-                            >
-                                <Plus size={13} />
-                                ایجاد منبع
-                            </m.button>
-                        )}
-                    </div>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                <div className="rounded-xl bg-gray-50 px-3 py-2 dark:bg-white/[0.03]">
+                    <p className="text-[9.5px] font-semibold text-gray-400">کل منابع</p>
+                    <p className="mt-0.5 text-[13px] font-extrabold text-gray-800 dark:text-white">{loading ? <CountSkeleton className="w-5" /> : count}</p>
                 </div>
-
-                <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
-                    <div className="rounded-xl bg-gray-50 px-3 py-2 dark:bg-white/[0.03]">
-                        <p className="text-[9.5px] font-semibold text-gray-400">کل منابع</p>
-                        <p className="mt-0.5 text-[13px] font-extrabold text-gray-800 dark:text-white">{loading ? <CountSkeleton className="w-5" /> : count}</p>
-                    </div>
-                    <div className="rounded-xl bg-indigo-50/70 px-3 py-2 dark:bg-indigo-500/[0.07]">
-                        <p className="text-[9.5px] font-semibold text-indigo-400">قابل مشاهده</p>
-                        <p className="mt-0.5 text-[13px] font-extrabold text-indigo-600 dark:text-indigo-400">{visibleDocuments.length}</p>
-                    </div>
-                    <div className="rounded-xl bg-emerald-50/70 px-3 py-2 dark:bg-emerald-500/[0.07]">
-                        <p className="text-[9.5px] font-semibold text-emerald-500">دپارتمان‌ها</p>
-                        <p className="mt-0.5 text-[13px] font-extrabold text-emerald-600 dark:text-emerald-400">{departments.length}</p>
-                    </div>
-                    <div className="rounded-xl bg-amber-50/70 px-3 py-2 dark:bg-amber-500/[0.07]">
-                        <p className="text-[9.5px] font-semibold text-amber-500">فایل‌دار</p>
-                        <p className="mt-0.5 text-[13px] font-extrabold text-amber-600 dark:text-amber-400">{filesCount}</p>
-                    </div>
+                <div className="rounded-xl bg-indigo-50/70 px-3 py-2 dark:bg-indigo-500/[0.07]">
+                    <p className="text-[9.5px] font-semibold text-indigo-400">قابل مشاهده</p>
+                    <p className="mt-0.5 text-[13px] font-extrabold text-indigo-600 dark:text-indigo-400">{visibleDocuments.length}</p>
                 </div>
-            </m.div>
+                <div className="rounded-xl bg-emerald-50/70 px-3 py-2 dark:bg-emerald-500/[0.07]">
+                    <p className="text-[9.5px] font-semibold text-emerald-500">دپارتمان‌ها</p>
+                    <p className="mt-0.5 text-[13px] font-extrabold text-emerald-600 dark:text-emerald-400">{departments.length}</p>
+                </div>
+                <div className="rounded-xl bg-amber-50/70 px-3 py-2 dark:bg-amber-500/[0.07]">
+                    <p className="text-[9.5px] font-semibold text-amber-500">فایل‌دار</p>
+                    <p className="mt-0.5 text-[13px] font-extrabold text-amber-600 dark:text-amber-400">{filesCount}</p>
+                </div>
+            </div>
 
             {loading ? (
                 <HumanResourceCardSkeleton count={PAGE_SIZE} className={GRID_CLASS} />

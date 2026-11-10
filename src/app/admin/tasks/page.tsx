@@ -2,10 +2,9 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence, m } from "framer-motion";
-import { Archive, Check, ClipboardList, Eye, Plus, RefreshCw } from "lucide-react";
-import { Spinner as Loader2 } from "@/components/ui/Spinner";
+import { Archive, Check, ClipboardList, Eye, Plus } from "lucide-react";
+import PageHeader, { HEADER_BTN_PRIMARY, HEADER_BTN_SECONDARY, HEADER_BTN_SUCCESS } from "@/components/ui/PageHeader";
 import { useSearchParams, useRouter } from "next/navigation";
-import { useTheme } from "next-themes";
 import axiosInstance from "@/lib/axiosInstance";
 import { apiRoutes } from "@/lib/apiRoutes";
 import { metaApi, tasksApi } from "@/lib/api";
@@ -37,8 +36,6 @@ const ACTIVE_STATUS = "in_progress" as TaskStatus;
 function AdminTasksPageContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
-    const { resolvedTheme } = useTheme();
-    const isDark = resolvedTheme === "dark";
 
     const list = usePaginatedList<Task>((params, signal) => tasksApi.page({ ...params, status: ACTIVE_STATUS } as never, signal), { pageSize: 12, scrollTop: true });
     const [removed, setRemoved] = useState<Set<number>>(new Set());
@@ -133,66 +130,29 @@ function AdminTasksPageContent() {
 
     return (
         <div className="flex flex-col gap-5 p-3 sm:p-4 md:p-6" dir="rtl">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex items-start gap-3">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl" style={{ background: isDark ? "rgba(99,102,241,0.14)" : "rgba(99,102,241,0.08)" }}>
-                        <ClipboardList size={18} className="text-indigo-500" />
-                    </div>
-
-                    <div className="min-w-0">
-                        <h1 className="text-[15px] font-extrabold text-gray-900 dark:text-white">وظایف در حال انجام</h1>
-                        <p className="mt-0.5 text-[11.5px] text-gray-500 dark:text-gray-400">{loading ? <CountSkeleton /> : `${list.count} وظیفه`}</p>
-                    </div>
-                </div>
-
-                <div className="flex flex-wrap items-center gap-2">
-                    <button
-                        type="button"
-                        onClick={() => router.push("/admin/archive")}
-                        className="flex h-10 items-center gap-2 rounded-2xl px-3.5 text-[12px] font-bold transition-colors"
-                        style={{ background: isDark ? "rgba(255,255,255,0.05)" : "rgba(15,23,42,0.05)", color: isDark ? "#d1d5db" : "#4b5563" }}
-                    >
+            <PageHeader
+                icon={ClipboardList}
+                title="وظایف در حال انجام"
+                subtitle={loading ? <CountSkeleton /> : `${list.count} وظیفه`}
+                search={{ value: list.search, onChange: list.setSearch, placeholder: "جستجو در وظایف..." }}
+                leading={
+                    <button type="button" onClick={() => router.push("/admin/archive")} className={HEADER_BTN_SECONDARY}>
                         <Archive size={15} />
                         بایگانی
                     </button>
-
-                    <button
-                        type="button"
-                        onClick={fetchAll}
-                        disabled={loading}
-                        className={`flex h-10 w-10 items-center justify-center rounded-2xl transition-colors disabled:opacity-50 `}
-                        style={{ background: isDark ? "rgba(255,255,255,0.05)" : "rgba(15,23,42,0.05)", color: isDark ? "#d1d5db" : "#4b5563" }}
-                        title="بارگذاری مجدد"
-                    >
-                        {loading ? <Loader2 size={15} /> : <RefreshCw size={15} />}
-                    </button>
-
-                    <button
-                        type="button"
-                        onClick={() => setShowCreate(true)}
-                        className="flex h-10 items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-4 text-[12.5px] font-bold text-white transition-colors hover:bg-indigo-700"
-                    >
-                        <Plus size={15} />
-                        افزودن وظیفه
-                    </button>
-
-                    <button
-                        type="button"
-                        onClick={() => setShowCreateNoCase(true)}
-                        className="flex h-10 items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-4 text-[12.5px] font-bold text-white transition-colors hover:bg-emerald-700"
-                    >
-                        <Plus size={15} />
-                        ایجاد وظیفه بدون پرونده
-                    </button>
-                </div>
-            </div>
-
-            <input
-                value={list.search}
-                onChange={(e) => list.setSearch(e.target.value)}
-                placeholder="جستجو در عنوان، توضیحات، پرونده، مشتری یا دپارتمان..."
-                className="w-full rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 text-[12.5px] text-gray-700 outline-none transition-colors focus:border-indigo-400 dark:border-white/10 dark:bg-white/[0.03] dark:text-gray-200"
-            />
+                }
+                onRefresh={fetchAll}
+                refreshing={loading}
+            >
+                <button type="button" onClick={() => setShowCreate(true)} className={HEADER_BTN_PRIMARY}>
+                    <Plus size={15} />
+                    افزودن وظیفه
+                </button>
+                <button type="button" onClick={() => setShowCreateNoCase(true)} className={HEADER_BTN_SUCCESS}>
+                    <Plus size={15} />
+                    ایجاد وظیفه بدون پرونده
+                </button>
+            </PageHeader>
 
             {loading && <TaskCardSkeleton count={6} />}
 

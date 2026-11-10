@@ -3,9 +3,8 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CaseCardSkeleton, CountSkeleton } from "@/components/ui/skeletons";
 import { AnimatePresence, m } from "framer-motion";
-import { Search, X, ClipboardList, Plus, RefreshCw } from "lucide-react";
-import { Spinner as Loader2 } from "@/components/ui/Spinner";
-import { useTheme } from "next-themes";
+import { ClipboardList, FolderOpen, Plus } from "lucide-react";
+import PageHeader, { HEADER_BTN_PRIMARY } from "@/components/ui/PageHeader";
 import { casesApi, customersApi, metaApi, tasksApi, fetchAllTasks, fetchTasksForCases, extractCaseId } from "@/lib/api";
 import type { Department } from "@/types/department";
 import type { Employee } from "@/types/employee";
@@ -28,8 +27,6 @@ import { usePaginatedList } from "@/hooks/usePaginatedList";
 const PAGE_SIZE = 12;
 
 export default function UserCasesPage() {
-    const { resolvedTheme } = useTheme();
-    const isDark = resolvedTheme === "dark";
 
     const [customers, setCustomers] = useState<Customer[]>([]);
     const [departments, setDepartments] = useState<Department[]>([]);
@@ -207,56 +204,20 @@ export default function UserCasesPage() {
 
     return (
         <div className="flex flex-col gap-5 p-3 sm:p-4 md:p-6" dir="rtl">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex items-start gap-3">
-                    <div className="min-w-0">
-                        <h1 className="text-[15px] font-extrabold text-gray-900 dark:text-white">پرونده‌ها</h1>
-                        <p className="mt-0.5 text-[11.5px] text-gray-500 dark:text-gray-400">
-                            {loading ? <CountSkeleton /> : `${totalCount} پرونده و ${taskTotal} وظیفه`}
-                        </p>
-                    </div>
-                </div>
-
-                <div className="flex items-center gap-2">
-                    <button
-                        onClick={() => refetchCases()}
-                        disabled={loading}
-                        type="button"
-                        title="بارگذاری مجدد"
-                        className={`flex h-10 w-10 items-center justify-center rounded-2xl transition-colors disabled:opacity-50 `}
-                        style={{
-                            background: isDark ? "rgba(255,255,255,0.05)" : "rgba(15,23,42,0.05)",
-                            color: isDark ? "#d1d5db" : "#4b5563",
-                        }}
-                    >
-                        {loading || isFetching ? <Loader2 size={15} /> : <RefreshCw size={15} />}
-                    </button>
-
-                    <button
-                        onClick={() => setCaseModalOpen(true)}
-                        type="button"
-                        className="flex h-10 items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-4 text-[12.5px] font-bold text-white transition-colors hover:bg-indigo-700"
-                    >
-                        <Plus size={15} />
-                        <span>پرونده جدید</span>
-                    </button>
-                </div>
-            </div>
-
-            <div className="relative">
-                <Search size={14} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                <input
-                    value={list.search}
-                    onChange={(e) => list.setSearch(e.target.value)}
-                    placeholder="جستجو در پرونده‌ها (عنوان، مشتری...)"
-                    className="h-10 w-full rounded-xl border border-gray-200 bg-white pl-9 pr-9 text-[12px] font-semibold text-gray-700 outline-none transition-colors focus:border-indigo-400 dark:border-white/10 dark:bg-white/[0.03] dark:text-gray-200"
-                />
-                {list.search && (
-                    <button type="button" onClick={() => list.setSearch("")} className="absolute left-2.5 top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded-full text-gray-400 hover:text-gray-600">
-                        <X size={12} />
-                    </button>
-                )}
-            </div>
+            <PageHeader
+                icon={FolderOpen}
+                title="پرونده‌ها"
+                subtitle={loading ? <CountSkeleton /> : `${totalCount} پرونده و ${taskTotal} وظیفه`}
+                search={{ value: list.search, onChange: list.setSearch, placeholder: "جستجو در پرونده‌ها..." }}
+                onRefresh={() => refetchCases()}
+                refreshing={loading || isFetching}
+                refreshDisabled={loading}
+            >
+                <button onClick={() => setCaseModalOpen(true)} type="button" className={HEADER_BTN_PRIMARY}>
+                    <Plus size={15} />
+                    <span>پرونده جدید</span>
+                </button>
+            </PageHeader>
 
             {error && !loading && (
                 <div className="flex flex-col items-start gap-3 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-[12.5px] text-rose-600 dark:border-rose-500/20 dark:bg-rose-500/10 dark:text-rose-300 sm:flex-row sm:items-center sm:justify-between">

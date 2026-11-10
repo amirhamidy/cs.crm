@@ -69,6 +69,22 @@ function describeRemaining(deadline?: string | null) {
     return { text: `${text} مانده`, color: "#10b981", label: "در مهلت" };
 }
 
+const NO_DEADLINE_COLOR = "#ef4444";
+
+function NoDeadlineState() {
+    return (
+        <div className="flex flex-col items-center gap-2 py-8" style={{ color: NO_DEADLINE_COLOR }}>
+            <span className="relative inline-flex">
+                <Clock size={26} />
+                <span className="absolute -bottom-1 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-white dark:bg-[#0b1220]">
+                    <X size={11} strokeWidth={3} />
+                </span>
+            </span>
+            <p className="text-[13px] font-bold">موجود نیست</p>
+        </div>
+    );
+}
+
 interface InternalTaskDeadlineModalProps {
     open: boolean;
     onClose: () => void;
@@ -209,10 +225,7 @@ export default function InternalTaskDeadlineModal({
                                     </button>
                                 </div>
                             ) : !hasAny ? (
-                                <div className="flex flex-col items-center gap-2 py-8" style={{ color: muted }}>
-                                    <Clock size={22} />
-                                    <p className="text-[12.5px] font-semibold">ددلاین ندارد</p>
-                                </div>
+                                <NoDeadlineState />
                             ) : (
                                 <>
                                     {started && (

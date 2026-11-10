@@ -4,8 +4,8 @@ import { useState, useEffect, useCallback } from "react";
 import { CountSkeleton } from "@/components/ui/skeletons";
 import CustomerCardSkeleton from "@/components/user/customer/CustomerCardSkeleton";
 import { m, AnimatePresence } from "framer-motion";
-import { Users, Plus, RefreshCw, Filter, FileSpreadsheet, Search, X } from "lucide-react";
-import { Spinner as Loader2 } from "@/components/ui/Spinner";
+import { Users, Plus, Filter, FileSpreadsheet } from "lucide-react";
+import PageHeader, { HEADER_BTN_PRIMARY, HEADER_BTN_SUCCESS } from "@/components/ui/PageHeader";
 import { useTheme } from "next-themes";
 import dynamic from "next/dynamic";
 import CustomerCard from "@/components/user/customer/CustomerCard";
@@ -362,75 +362,23 @@ export default function CustomersPage() {
             className="flex flex-col gap-5 p-3 sm:p-4 md:p-6"
             dir="rtl"
         >
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex items-start gap-3">
-                    <div
-                        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl"
-                        style={{
-                            background: isDark
-                                ? "rgba(99,102,241,0.12)"
-                                : "rgba(99,102,241,0.08)",
-                        }}
-                    >
-                        <Users
-                            size={16}
-                            className="text-indigo-500"
-                        />
-                    </div>
-
-                    <div className="min-w-0">
-                        <h1 className="text-[14px] font-extrabold text-gray-900 dark:text-white">
-                            مدیریت مشتریان
-                        </h1>
-
-                        <p className="mt-0.5 text-[11.5px] text-gray-400 dark:text-gray-500">
-                            {loading
-                                ? <CountSkeleton />
-                                : `${totalCount} مشتری ثبت شده`}
-                        </p>
-                    </div>
-                </div>
-
-                <div className="flex items-center gap-2 sm:justify-end">
-                    <button
-                        onClick={refresh}
-                        disabled={loading}
-                        className={`flex h-9 w-9 items-center justify-center rounded-xl text-gray-400 transition-colors hover:text-gray-600 disabled:opacity-40 dark:hover:text-gray-300 `}
-                        style={{
-                            background: isDark
-                                ? "rgba(255,255,255,0.05)"
-                                : "rgba(0,0,0,0.04)",
-                        }}
-                        title="بارگذاری مجدد"
-                        type="button"
-                    >
-                        {loading ? <Loader2 size={13} className="animate-spin" /> : <RefreshCw size={13} />}
-                    </button>
-
-                    <button
-                        onClick={() => setShowImport(true)}
-                        className="flex h-9 items-center justify-center gap-1.5 rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-3 py-2 text-[12px] font-bold text-emerald-600 transition-all duration-200 hover:bg-emerald-500 hover:text-white dark:text-emerald-400 dark:hover:bg-emerald-600 dark:hover:text-white"
-                        type="button"
-                    >
-                        <FileSpreadsheet size={13} />
-                        <span className="whitespace-nowrap">
-                            افزودن با اکسل
-                        </span>
-                    </button>
-
-                    <button
-                        onClick={() => setShowAdd(true)}
-                        className="flex h-9 flex-1 items-center justify-center gap-2 rounded-xl bg-indigo-600 px-3.5 py-2 text-[12.5px] font-bold text-white transition-all duration-200 hover:bg-indigo-700 sm:flex-none"
-                        type="button"
-                    >
-                        <Plus size={13} />
-
-                        <span className="whitespace-nowrap">
-                            افزودن مشتری
-                        </span>
-                    </button>
-                </div>
-            </div>
+            <PageHeader
+                icon={Users}
+                title="مدیریت مشتریان"
+                subtitle={loading ? <CountSkeleton /> : `${totalCount} مشتری ثبت شده`}
+                search={{ value: search, onChange: list.setSearch, placeholder: "جستجوی نام، شماره یا شرکت..." }}
+                onRefresh={refresh}
+                refreshing={loading}
+            >
+                <button onClick={() => setShowImport(true)} className={HEADER_BTN_SUCCESS} type="button">
+                    <FileSpreadsheet size={15} />
+                    افزودن با اکسل
+                </button>
+                <button onClick={() => setShowAdd(true)} className={HEADER_BTN_PRIMARY} type="button">
+                    <Plus size={15} />
+                    افزودن مشتری
+                </button>
+            </PageHeader>
 
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-center gap-2">
@@ -488,38 +436,6 @@ export default function CustomersPage() {
                             </button>
                         ))}
                     </div>
-                </div>
-
-                <div
-                    className="relative flex h-9 items-center gap-2 rounded-xl px-3 sm:w-64"
-                    style={{
-                        background: isDark
-                            ? "rgba(255,255,255,0.04)"
-                            : "rgba(0,0,0,0.03)",
-                    }}
-                >
-                    <Search
-                        size={13}
-                        className="shrink-0 text-gray-400"
-                    />
-
-                    <input
-                        value={search}
-                        onChange={(e) => list.setSearch(e.target.value)}
-                        placeholder="جستجوی نام، شماره یا شرکت..."
-                        className="min-w-0 flex-1 bg-transparent text-[11.5px] font-medium text-gray-700 outline-none placeholder:text-gray-400 dark:text-gray-200"
-                    />
-
-                    {search && (
-                        <button
-                            type="button"
-                            onClick={() => list.setSearch("")}
-                            className="shrink-0 text-gray-400 transition-colors hover:text-gray-600 dark:hover:text-gray-200"
-                            aria-label="پاک کردن جستجو"
-                        >
-                            <X size={13} />
-                        </button>
-                    )}
                 </div>
             </div>
 

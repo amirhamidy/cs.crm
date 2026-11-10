@@ -373,13 +373,6 @@ export function JalaliDatePicker({
         setOpen(false);
     }
 
-    function clearValue(e: React.MouseEvent) {
-        e.preventDefault();
-        e.stopPropagation();
-        onChange("");
-        setOpen(false);
-    }
-
     function handleSelectDay(day: number) {
         const iso = jalaliToIso(viewJy, viewJm, day);
         onChange(iso);
@@ -414,16 +407,6 @@ export function JalaliDatePicker({
                 >
                     {displayValue || placeholder}
                 </span>
-                {displayValue && (
-                    <span
-                        role="button"
-                        tabIndex={0}
-                        onClick={clearValue}
-                        className="flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded-full text-gray-400 transition-colors hover:bg-red-500/10 hover:text-red-500"
-                    >
-                        <X size={12} />
-                    </span>
-                )}
                 <m.span animate={{ rotate: open ? 180 : 0 }} transition={{ duration: 0.2 }}>
                     <ChevronDown size={14} className="shrink-0 text-gray-400" />
                 </m.span>
@@ -520,16 +503,6 @@ export function JalaliDatePicker({
                                 <Sparkles size={11} />
                                 امروز
                             </button>
-                            {value && (
-                                <button
-                                    type="button"
-                                    onClick={clearValue}
-                                    className="flex items-center gap-1 rounded-lg px-2 py-1 text-[11px] font-bold text-red-500 transition-colors hover:bg-red-50 dark:hover:bg-red-500/10"
-                                >
-                                    <X size={11} />
-                                    پاک کردن
-                                </button>
-                            )}
                         </div>
                     </m.div>
                 )}

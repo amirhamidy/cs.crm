@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
-import { RefreshCw, Search, UserPlus, Users } from "lucide-react";
-import { Spinner as Loader2 } from "@/components/ui/Spinner";
+import { UserPlus, Users } from "lucide-react";
+import PageHeader, { HEADER_BTN_PRIMARY } from "@/components/ui/PageHeader";
 import UserCardSkeleton from "@/components/admin/users/UserCardSkeleton";
 import { CountSkeleton } from "@/components/ui/skeletons";
 
@@ -253,51 +253,20 @@ export default function UsersPage() {
 
     return (
         <div className="flex flex-col gap-5 p-3 sm:p-4 md:p-6" dir="rtl">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex items-start gap-3">
-                    <div
-                        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-indigo-500/[0.08] dark:bg-indigo-500/[0.14]"
-                    >
-                        <Users size={18} className="text-indigo-500" />
-                    </div>
-                    <div className="min-w-0">
-                        <h1 className="text-[15px] font-extrabold text-gray-900 dark:text-white">مدیریت کاربران</h1>
-                        <p className="mt-0.5 text-[11.5px] text-gray-500 dark:text-gray-400">
-                            {loading ? <CountSkeleton /> : `${totalUsers} کاربر ثبت شده`}
-                        </p>
-                    </div>
-                </div>
-
-                <div className="flex items-center gap-2">
-                    <div className="relative">
-                        <Search size={14} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                        <input
-                            type="text"
-                            value={list.search}
-                            onChange={(event) => list.setSearch(event.target.value)}
-                            placeholder="جستجوی کاربر..."
-                            className="h-10 w-40 rounded-2xl border-0 bg-slate-900/5 pl-3 pr-9 text-[12.5px] text-gray-900 outline-none dark:bg-white/5 dark:text-gray-200 sm:w-52"
-                        />
-                    </div>
-                    <button
-                        type="button"
-                        onClick={handleRefresh}
-                        disabled={loading}
-                        className="flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-900/5 text-gray-600 transition-colors disabled:opacity-50 dark:bg-white/5 dark:text-gray-300"
-                        title="بارگذاری مجدد"
-                    >
-                        {loading || list.loading ? <Loader2 size={15} className="animate-spin" /> : <RefreshCw size={15} />}
-                    </button>
-                    <button
-                        type="button"
-                        onClick={() => setShowAddModal(true)}
-                        className="flex h-10 items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-4 text-[12.5px] font-bold text-white transition-colors hover:bg-indigo-700"
-                    >
-                        <UserPlus size={15} />
-                        افزودن کاربر
-                    </button>
-                </div>
-            </div>
+            <PageHeader
+                icon={Users}
+                title="مدیریت کاربران"
+                subtitle={loading ? <CountSkeleton /> : `${totalUsers} کاربر ثبت شده`}
+                search={{ value: list.search, onChange: list.setSearch, placeholder: "جستجوی کاربر..." }}
+                onRefresh={handleRefresh}
+                refreshing={loading || list.loading}
+                refreshDisabled={loading}
+            >
+                <button type="button" onClick={() => setShowAddModal(true)} className={HEADER_BTN_PRIMARY}>
+                    <UserPlus size={15} />
+                    افزودن کاربر
+                </button>
+            </PageHeader>
 
             {loading && <UserCardSkeleton count={8} />}
 

@@ -4,15 +4,16 @@
 import { useState } from "react";
 import CustomerOrdersSkeleton from "./CustomerOrdersSkeleton";
 import { AnimatePresence, m, useReducedMotion } from "framer-motion";
-import { CheckCircle2, XCircle, X } from "lucide-react";
+import { CheckCircle2, ShoppingCart, XCircle, X } from "lucide-react";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import { customerPortalApi, customersApi } from "@/lib/api";
 import type { PortalOrder, OrderStatus } from "@/types/portal";
 import type { Customer } from "@/types/customer";
 import AsyncSelect, { type AsyncOption } from "@/components/ui/AsyncSelect";
+import PageHeader from "@/components/ui/PageHeader";
 import Pagination from "@/components/ui/Pagination";
 import { NiceSelect, type SelectOption } from "@/components/ui/NiceSelect";
-import { FloatingInput, FloatingTextarea } from "@/components/ui/FloatingField";
+import { FloatingTextarea } from "@/components/ui/FloatingField";
 import { apiMessage } from "@/lib/apiMessage";
 import { toast } from "@/components/notifications/toast";
 import { Backdrop } from "@/components/ui/Backdrop";
@@ -314,22 +315,18 @@ export default function CustomerOrdersPage() {
 
   return (
     <section dir="rtl">
-      <div className="mb-6">
-        <h1 className="text-[15px] font-black">سفارش‌های مشتریان</h1>
-        <p className="mt-1 text-xs text-gray-500">
-          بررسی و تعیین وضعیت سفارش‌های ثبت‌شده
-        </p>
+      <div className="mb-5">
+        <PageHeader
+          icon={ShoppingCart}
+          title="سفارش‌های مشتریان"
+          subtitle="بررسی و تعیین وضعیت سفارش‌های ثبت‌شده"
+          search={{ value: list.search, onChange: list.setSearch, placeholder: "جستجوی مشتری، شرکت یا موبایل" }}
+          onRefresh={list.refetch}
+          refreshing={list.loading}
+        />
       </div>
 
-      <div className="mb-4 grid gap-2 md:grid-cols-[1fr_220px_220px]">
-        <FloatingInput
-          id="orders-search"
-          label="جستجوی مشتری، شرکت، موبایل یا نام کاربری"
-          value={list.search}
-          onChange={(e) => list.setSearch(e.target.value)}
-          autoComplete="off"
-        />
-
+      <div className="mb-4 grid gap-2 md:grid-cols-[220px_220px]">
         <NiceSelect
           label="وضعیت"
           options={STATUS_OPTIONS}

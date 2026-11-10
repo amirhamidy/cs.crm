@@ -1,6 +1,6 @@
 "use client";
 
-import TicketSearchInput from "./TicketSearchInput";
+import PageHeader, { HEADER_BTN_PRIMARY } from "@/components/ui/PageHeader";
 import { JSX, memo, useEffect, useMemo, useState } from "react";
 import Pagination from "@/components/ui/Pagination";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
@@ -8,8 +8,7 @@ import { internalTasksApi } from "@/lib/api";
 import { AnimatePresence, m, useReducedMotion } from "framer-motion";
 import { Backdrop } from "@/components/ui/Backdrop";
 import { panelMotion } from "@/lib/motion";
-import { Ban, CalendarClock, CheckCircle2, ClipboardX, Clock3, Inbox, LayoutGrid, MessageSquareText, Plus, RefreshCw, RotateCcw, Ticket, Trash2, Users, X } from "lucide-react";
-import { Spinner as Loader2 } from "@/components/ui/Spinner";
+import { Ban, CalendarClock, CheckCircle2, ClipboardX, Clock3, Inbox, LayoutGrid, MessageSquareText, Plus, RotateCcw, Ticket, Trash2, Users, X } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useAuthStore } from "@/store/authStore";
 import { deleteInternalTask, fetchEmployeeList, reopenInternalTask, patchInternalTaskDeadline } from "./Api";
@@ -398,15 +397,16 @@ export default function AdminInternalTasksBoard(): JSX.Element {
 
     return (
         <div dir="rtl" className="flex flex-col gap-5">
-            <div className="flex items-center justify-between gap-4">
-                <div className="flex items-center gap-2.5"><div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-indigo-500/10"><Ticket size={17} className="text-indigo-500" /></div><div><h3 className="text-[14px] font-extrabold text-gray-900 dark:text-white">گفتگوهای کارکنان</h3><p className="text-[11px] text-gray-400 dark:text-gray-600">مشاهده گفتگوهای داخلی و فایل‌های رد و بدل شده</p></div></div>
-                <div className="flex shrink-0 items-center gap-2">
-                    <button type="button" onClick={() => setCreateOpen(true)} className="flex items-center gap-1.5 rounded-2xl bg-indigo-600 px-3.5 py-2 text-[11.5px] font-bold text-white transition-colors hover:bg-indigo-500"><Plus size={13} />تیکت جدید</button>
-                    <button type="button" onClick={() => loadData()} disabled={refreshing} className={`flex h-9 w-9 items-center justify-center rounded-2xl bg-gray-100 text-gray-500 transition-colors hover:bg-gray-200 disabled:opacity-40 dark:bg-white/[0.05] dark:text-gray-400 dark:hover:bg-white/[0.08] `} title="به‌روزرسانی">{refreshing ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}</button>
-                </div>
-            </div>
-
-            <TicketSearchInput value={list.search} onChange={list.setSearch} />
+            <PageHeader
+                icon={Ticket}
+                title="گفتگوهای کارکنان"
+                subtitle="مشاهده گفتگوهای داخلی و فایل‌های رد و بدل شده"
+                search={{ value: list.search, onChange: list.setSearch, placeholder: "جستجو بر اساس عنوان، شماره یا نام فرد" }}
+                onRefresh={() => loadData()}
+                refreshing={refreshing}
+            >
+                <button type="button" onClick={() => setCreateOpen(true)} className={HEADER_BTN_PRIMARY}><Plus size={14} />تیکت جدید</button>
+            </PageHeader>
 
             {error && <div className="flex items-center justify-between gap-3 rounded-2xl border border-red-500/20 bg-red-500/5 px-4 py-3"><p className="text-[12px] font-semibold text-red-500">{error}</p><button type="button" onClick={() => loadData()} className="rounded-xl bg-red-500/10 px-3 py-1.5 text-[11px] font-bold text-red-500">تلاش مجدد</button></div>}
 

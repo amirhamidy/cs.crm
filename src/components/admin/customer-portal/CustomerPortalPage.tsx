@@ -8,7 +8,7 @@ import { customerPortalApi } from "@/lib/api";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import Pagination from "@/components/ui/Pagination";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
-import { FloatingInput } from "@/components/ui/FloatingField";
+import PageHeader, { HEADER_BTN_PRIMARY } from "@/components/ui/PageHeader";
 import CreatePortalAccountModal from "./CreatePortalAccountModal";
 import OneTimePasswordModal from "./OneTimePasswordModal";
 import SetPortalPasswordModal from "./SetPortalPasswordModal";
@@ -81,31 +81,18 @@ export default function CustomerPortalPage() {
 
     return (
         <section dir="rtl">
-            <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-                <div>
-                    <h1 className="text-[15px] font-black text-gray-900 dark:text-white">حساب‌های پرتال مشتریان</h1>
-                    <p className="mt-1 text-[11.5px] text-gray-500 dark:text-gray-400">
-                        مدیریت دسترسی مشتریان به ثبت سفارش
-                    </p>
-                </div>
-                <button
-                    onClick={() => setCreate(true)}
-                    className="flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-3 text-[11.5px] font-bold text-white"
-                >
-                    <Plus size={16} /> ساخت دسترسی
+            <PageHeader
+                icon={KeyRound}
+                title="حساب‌های پرتال مشتریان"
+                subtitle="مدیریت دسترسی مشتریان به ثبت سفارش"
+                search={{ value: list.search, onChange: list.setSearch, placeholder: "جستجوی نام، شرکت، موبایل..." }}
+            >
+                <button onClick={() => setCreate(true)} className={HEADER_BTN_PRIMARY}>
+                    <Plus size={15} /> ساخت دسترسی
                 </button>
-            </div>
+            </PageHeader>
 
             <div className="mb-4 flex flex-wrap gap-2">
-                <div className="min-w-[220px] flex-1">
-                    <FloatingInput
-                        id="portal-search"
-                        label="جستجوی نام، شرکت، موبایل یا نام کاربری"
-                        value={list.search}
-                        onChange={(e) => list.setSearch(e.target.value)}
-                        autoComplete="off"
-                    />
-                </div>
                 {FILTERS.map((f) => (
                     <button
                         key={f.id}
