@@ -124,6 +124,7 @@ export default function AdminInternalTaskChatModal({
     const scrollRef = useRef<HTMLDivElement | null>(null);
     const bottomAnchorRef = useRef<HTMLDivElement | null>(null);
     const taskRef = useRef(task);
+    const onUpdatedRef = useRef(onUpdated);
     const shouldAutoScrollRef = useRef(true);
     const sendingRef = useRef(false);
     const textareaRef = useRef<HTMLTextAreaElement | null>(null);
@@ -147,6 +148,10 @@ export default function AdminInternalTaskChatModal({
     useEffect(() => {
         taskRef.current = task;
     }, [task]);
+
+    useEffect(() => {
+        onUpdatedRef.current = onUpdated;
+    }, [onUpdated]);
 
     const attachments = useMemo(
         () =>
@@ -298,7 +303,7 @@ export default function AdminInternalTaskChatModal({
                 ) {
                     return;
                 }
-                onUpdated({
+                onUpdatedRef.current({
                     ...currentTask,
                     attachments: [
                         ...stillExists,
@@ -331,7 +336,7 @@ export default function AdminInternalTaskChatModal({
             cancelled = true;
             window.clearInterval(intervalId);
         };
-    }, [open, task.id, onUpdated]);
+    }, [open, task.id]);
 
     useEffect(() => {
         if (!open) return;

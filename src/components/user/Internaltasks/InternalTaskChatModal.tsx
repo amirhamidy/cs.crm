@@ -137,10 +137,15 @@ export default function InternalTaskChatModal({ open, task, onClose, onUpdated }
     const shouldAutoScrollRef = useRef(true);
     const taskRef = useRef(task);
     const sendingRef = useRef(false);
+    const onUpdatedRef = useRef(onUpdated);
 
     useEffect(() => {
         taskRef.current = task;
     }, [task]);
+
+    useEffect(() => {
+        onUpdatedRef.current = onUpdated;
+    }, [onUpdated]);
 
     useEffect(() => {
         sendingRef.current = sending;
@@ -323,7 +328,7 @@ export default function InternalTaskChatModal({ open, task, onClose, onUpdated }
                     return;
                 }
 
-                onUpdated({
+                onUpdatedRef.current({
                     ...currentTask,
                     attachments: [...stillExists, ...newOnes],
                     status:
@@ -345,7 +350,7 @@ export default function InternalTaskChatModal({ open, task, onClose, onUpdated }
             cancelled = true;
             window.clearInterval(intervalId);
         };
-    }, [open, task.id, onUpdated]);
+    }, [open, task.id]);
 
     useEffect(() => {
         if (!open) return;
