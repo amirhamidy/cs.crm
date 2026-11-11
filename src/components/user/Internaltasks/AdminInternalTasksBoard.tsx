@@ -1,7 +1,7 @@
 "use client";
 
 import PageHeader, { HEADER_BTN_PRIMARY } from "@/components/ui/PageHeader";
-import { JSX, memo, useEffect, useMemo, useState } from "react";
+import { JSX, memo, useCallback, useEffect, useMemo, useState } from "react";
 import Pagination from "@/components/ui/Pagination";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import { internalTasksApi } from "@/lib/api";
@@ -370,10 +370,10 @@ export default function AdminInternalTasksBoard(): JSX.Element {
 
     const sortedTasks = useMemo(() => [...tasks].sort((a, b) => new Date(b.updated_at || b.created_at || 0).getTime() - new Date(a.updated_at || a.created_at || 0).getTime()), [tasks]);
 
-    function handleUpdated(updatedTask: InternalTask) {
+    const handleUpdated = useCallback((updatedTask: InternalTask) => {
         setSelectedTask(previous => previous && Number(previous.id) === Number(updatedTask.id) ? updatedTask : previous);
         list.refetch();
-    }
+    }, [list.refetch]);
 
     function handleCreated() {
         setCreateOpen(false);

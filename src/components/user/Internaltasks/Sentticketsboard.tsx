@@ -1,7 +1,7 @@
 "use client";
 
 import PageHeader, { HEADER_BTN_PRIMARY } from "@/components/ui/PageHeader";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import Pagination from "@/components/ui/Pagination";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import { internalTasksApi } from "@/lib/api";
@@ -92,7 +92,7 @@ export default function SentTicketsBoard() {
         [tasks, currentUsername]
     );
 
-    const handleUpdated = () => { list.refetch(); };
+    const handleUpdated = useCallback(() => { list.refetch(); }, [list.refetch]);
 
     const handleCreated = () => {
         setCreateOpen(false);

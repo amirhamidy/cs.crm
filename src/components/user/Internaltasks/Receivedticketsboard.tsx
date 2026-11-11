@@ -1,7 +1,7 @@
 "use client";
 
 import PageHeader, { HEADER_BTN_PRIMARY } from "@/components/ui/PageHeader";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Pagination from "@/components/ui/Pagination";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import { internalTasksApi } from "@/lib/api";
@@ -115,10 +115,10 @@ export default function ReceivedTicketsBoard() {
             }));
     }, [tasks, local, userId, employees, employeeNames]);
 
-    const handleUpdated = (updatedTask: InternalTask) => {
+    const handleUpdated = useCallback((updatedTask: InternalTask) => {
         setLocal(previous => new Map(previous).set(updatedTask.id, updatedTask));
         list.refetch();
-    };
+    }, [list.refetch]);
 
     if (loading) {
         return <TicketBoardSkeleton count={4} />;
