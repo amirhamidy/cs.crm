@@ -1,5 +1,5 @@
 export * from "./_core";
-export { tasksApi, fetchAllTasks, fetchTasksForCases, extractCaseId, parseTransferError } from "./tasks";
+export { tasksApi, fetchAllTasks, extractCaseId, parseTransferError } from "./tasks";
 export type { TaskListParams, FetchAllTasksOptions } from "./tasks";
 export { metaApi } from "./meta";
 export { customersApi } from "./customers";
@@ -35,11 +35,3 @@ export type { PurchasingArchiveStatus, PurchasingCounts } from "./purchasing";
 export { qualityControlApi } from "./qualityControl";
 export type { QCListStatus, QCReviewedStatus, QCCounts } from "./qualityControl";
 export { fetchStatusPage, fetchStatusCount, listAllByStatus, isStatusFilterServerSide } from "./statusPage";
-
-export { customerPortalApi } from "./customerPortal";
-export type { PortalAccountParams, CustomerOrderParams } from "./customerPortal";
-
-export { rankingApi, commentsApi, scoresApi, casePathApi, productsApi, salesApi, attachmentsApi, issuesApi, seasonalApi, marketplaceApi } from "./crm";
-export type { RankingParams } from "./crm";
-
-export { accessApi } from "./access";

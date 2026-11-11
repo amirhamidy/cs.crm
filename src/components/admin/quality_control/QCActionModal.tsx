@@ -1,15 +1,12 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { AnimatePresence, m, useReducedMotion } from "framer-motion";
-import { Backdrop } from "@/components/ui/Backdrop";
-import { panelMotion } from "@/lib/motion";
-import { AlertCircle, CheckCircle2, Upload, X, XCircle } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
+import { AlertCircle, CheckCircle2, Loader2, Upload, X, XCircle } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
 import type { AxiosError } from "axios";
 import type { ApiQualityControlEmployee, ApiQualityControlItem, QualityControlActionResponse } from "@/types/quality_control";
 
-import { BusyContent } from "@/components/ui/Button";
 interface Props {
     isOpen: boolean;
     mode: "approve" | "reject";
@@ -32,7 +29,6 @@ function getErrorMessage(err: unknown, fallback: string) {
 }
 
 export default function QCActionModal({ isOpen, mode, item, reviewer, reviewerName, onClose, onCompleted }: Props) {
-    const reduced = useReducedMotion() ?? false;
     const [note, setNote] = useState("");
     const [file, setFile] = useState<File | null>(null);
     const [loading, setLoading] = useState(false);
@@ -82,16 +78,30 @@ export default function QCActionModal({ isOpen, mode, item, reviewer, reviewerNa
     return (
         <AnimatePresence>
             {isOpen && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center px-4">
-                    <Backdrop onClick={closeModal} />
-                    <m.div {...panelMotion(false, reduced)} className="relative flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-xl shadow-black/10 dark:border-white/[0.06] dark:bg-[#111827]" dir="rtl">
+                <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="fixed inset-0 z-[100] flex items-center justify-center px-4"
+                    style={{ background: "rgba(0,0,0,0.45)", backdropFilter: "blur(3px)" }}
+                    onMouseDown={closeModal}
+                >
+                    <motion.div
+                        initial={{ opacity: 0, y: 16, scale: 0.98 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: 16, scale: 0.98 }}
+                        transition={{ duration: 0.28, ease: "easeOut" }}
+                        onMouseDown={(e) => e.stopPropagation()}
+                        className="flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-2xl shadow-black/10 dark:border-white/[0.06] dark:bg-[#0f172a]"
+                        dir="rtl"
+                    >
                         <div className="flex shrink-0 items-center justify-between px-8 pb-6 pt-8">
                             <div className="flex min-w-0 items-center gap-2.5">
                                 <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl ${tone.box}`}>
                                     <Icon size={15} className={tone.icon} />
                                 </div>
                                 <div className="min-w-0">
-                                    <h3 className="text-[14px] font-bold text-gray-900 dark:text-white">{isApprove ? "تایید کنترل کیفی" : "رد کنترل کیفی"}</h3>
+                                    <h3 className="text-[14px] font-extrabold text-gray-900 dark:text-white">{isApprove ? "تایید کنترل کیفی" : "رد کنترل کیفی"}</h3>
                                     <p className="mt-0.5 truncate text-[11px] text-gray-400">{item.product_name}</p>
                                 </div>
                             </div>
@@ -104,17 +114,17 @@ export default function QCActionModal({ isOpen, mode, item, reviewer, reviewerNa
                             <div className="flex flex-1 flex-col gap-4 overflow-y-auto px-8 pb-2">
                                 <AnimatePresence>
                                     {error && (
-                                        <m.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 4 }} className="flex items-start gap-2.5 rounded-2xl bg-red-50 px-3.5 py-3 dark:bg-red-500/10">
+                                        <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 4 }} className="flex items-start gap-2.5 rounded-2xl bg-red-50 px-3.5 py-3 dark:bg-red-500/10">
                                             <AlertCircle size={14} className="mt-0.5 shrink-0 text-red-500" />
-                                            <p className="flex-1 text-[11.5px] font-medium leading-5 text-red-500 dark:text-red-400">{error}</p>
-                                        </m.div>
+                                            <p className="flex-1 text-[11.5px] font-semibold leading-5 text-red-500 dark:text-red-400">{error}</p>
+                                        </motion.div>
                                     )}
                                 </AnimatePresence>
 
                                 <div>
                                     <label className="mb-2 block text-[11.5px] font-bold text-gray-400">بررسی‌کننده</label>
                                     <div className="flex h-[52px] items-center gap-2.5 rounded-2xl border border-gray-100 bg-gray-50 px-3 dark:border-white/[0.06] dark:bg-white/[0.03]">
-                                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-indigo-500 text-[12px] font-bold text-white">
+                                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-indigo-500 text-[12px] font-extrabold text-white">
                                             {(shownName || "؟").charAt(0)}
                                         </span>
                                         <span className="truncate text-[12.5px] font-bold text-gray-900 dark:text-white">
@@ -150,21 +160,19 @@ export default function QCActionModal({ isOpen, mode, item, reviewer, reviewerNa
                                 <button type="button" onClick={closeModal} disabled={loading} className="h-11 flex-1 rounded-full bg-gray-100 text-[13px] font-bold text-gray-600 transition hover:bg-gray-200 disabled:opacity-40 dark:bg-white/[0.05] dark:text-gray-300 dark:hover:bg-white/[0.08]">
                                     انصراف
                                 </button>
-                                <m.button
+                                <motion.button
                                     type="submit"
                                     whileTap={{ scale: 0.97 }}
                                     disabled={loading || !reviewer}
-                                    className={`relative flex h-11 flex-1 items-center justify-center gap-2 rounded-full text-[13px] font-bold text-white transition disabled:cursor-not-allowed disabled:opacity-40 ${tone.btn}`}
+                                    className={`flex h-11 flex-1 items-center justify-center gap-2 rounded-full text-[13px] font-bold text-white transition disabled:cursor-not-allowed disabled:opacity-40 ${tone.btn}`}
                                 >
-                                    <BusyContent busy={loading}>
-                                        <Icon size={14} />
-                                        {isApprove ? "تایید نهایی" : "رد نهایی"}
-                                    </BusyContent>
-                                </m.button>
+                                    {loading ? <Loader2 size={15} className="animate-spin" /> : <Icon size={14} />}
+                                    {isApprove ? "تایید نهایی" : "رد نهایی"}
+                                </motion.button>
                             </div>
                         </form>
-                    </m.div>
-                </div>
+                    </motion.div>
+                </motion.div>
             )}
         </AnimatePresence>
     );

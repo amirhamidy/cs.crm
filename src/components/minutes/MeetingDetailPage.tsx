@@ -4,7 +4,20 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { AnimatePresence } from "framer-motion";
-import { ArrowRight, CalendarDays, Hash, Loader2, MapPin, Pencil, PenLine, Plus, Send, Trash2, UserRound, XCircle } from "lucide-react";
+import {
+  ArrowRight,
+  CalendarDays,
+  Hash,
+  Loader2,
+  MapPin,
+  Pencil,
+  PenLine,
+  Plus,
+  Send,
+  Trash2,
+  UserRound,
+  XCircle,
+} from "lucide-react";
 import { minutesApi } from "@/lib/minutesApi";
 import { formatDateTime, parseApiError } from "@/lib/minutesUtils";
 import MeetingStatusBadge from "./MeetingStatusBadge";
@@ -111,7 +124,7 @@ export default function MeetingDetailPage({ basePath }: { basePath: string }) {
     }
   };
 
-  
+  /* ---------- render guards ---------- */
   if (loading) {
     return (
       <div className="flex items-center justify-center py-24">
@@ -180,13 +193,13 @@ export default function MeetingDetailPage({ basePath }: { basePath: string }) {
 
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-5 p-3 sm:p-4 md:p-6" dir="rtl">
-      
+      {/* Header */}
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div className="flex items-start gap-3">
           <Link
             href={basePath}
             aria-label="بازگشت به فهرست"
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-black/5 text-gray-600 transition-colors hover:bg-black/10 dark:bg-white/5 dark:text-gray-300"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-black/5 text-slate-600 transition-colors hover:bg-black/10 dark:bg-white/5 dark:text-slate-300"
           >
             <ArrowRight size={16} />
           </Link>
@@ -249,7 +262,7 @@ export default function MeetingDetailPage({ basePath }: { basePath: string }) {
         </p>
       )}
 
-      
+      {/* Sign call-to-action */}
       {mySigner && meeting.status === "pending" && (
         <div className="flex flex-col gap-3 rounded-2xl border border-indigo-500/30 bg-indigo-500/[0.06] p-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
@@ -264,7 +277,7 @@ export default function MeetingDetailPage({ basePath }: { basePath: string }) {
         </div>
       )}
 
-      
+      {/* Body */}
       <section className={`${CARD} p-4 sm:p-5`}>
         <h2 className="mb-3 text-[13px] font-extrabold text-gray-800 dark:text-gray-100">متن صورت‌جلسه</h2>
         {meeting.body?.trim() ? (
@@ -282,7 +295,7 @@ export default function MeetingDetailPage({ basePath }: { basePath: string }) {
         )}
       </section>
 
-      
+      {/* Signers */}
       <section className={`${CARD} p-4 sm:p-5`}>
         <div className="mb-3 flex items-center justify-between gap-3">
           <div>

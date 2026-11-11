@@ -1,17 +1,15 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { CountSkeleton, TaskCardSkeleton } from "@/components/ui/skeletons";
-import { AnimatePresence, m } from "framer-motion";
-import { Archive, ArrowRight, Ban, CheckCircle2, ClipboardList, Layers3, ShoppingBag } from "lucide-react";
-import PageHeader, { HEADER_BTN_SECONDARY } from "@/components/ui/PageHeader";
+import { AnimatePresence, motion } from "framer-motion";
+import { Archive, ArrowRight, Ban, CheckCircle2, ClipboardList, Layers3, Loader, RefreshCw, ShoppingBag } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import { tasksApi } from "@/lib/api";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import Pagination from "@/components/ui/Pagination";
 import { Task } from "@/types/task";
-import TaskCard from "@/components/tasks/TaskCard";
+import TaskCard from "@/components/customcomponents/tasks/TaskCard";
 
 type ArchiveFilter = "all" | "completed" | "sold" | "cancelled";
 
@@ -39,20 +37,41 @@ export default function AdminArchivedTasksPage() {
 
     return (
         <div className="flex flex-col gap-5 p-3 sm:p-4 md:p-6" dir="rtl">
-            <PageHeader
-                icon={Archive}
-                title="بایگانی تسک‌ها"
-                subtitle={loading ? <CountSkeleton /> : `${list.count} تسک`}
-                search={{ value: list.search, onChange: list.setSearch, placeholder: "جستجو در بایگانی وظایف..." }}
-                leading={
-                    <button type="button" onClick={() => router.push("/admin/tasks")} className={HEADER_BTN_SECONDARY}>
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-start gap-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl" style={{ background: isDark ? "rgba(99,102,241,0.14)" : "rgba(99,102,241,0.08)" }}>
+                        <Archive size={18} className="text-indigo-500" />
+                    </div>
+
+                    <div className="min-w-0">
+                        <h1 className="text-[15px] font-extrabold text-gray-900 dark:text-white">بایگانی تسک‌ها</h1>
+                        <p className="mt-0.5 text-[11.5px] text-gray-500 dark:text-gray-400">{loading ? "در حال بارگذاری..." : `${list.count} تسک`}</p>
+                    </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                    <button
+                        type="button"
+                        onClick={() => router.push("/admin/tasks")}
+                        className="flex h-10 items-center gap-2 rounded-2xl px-3.5 text-[12px] font-bold transition-colors"
+                        style={{ background: isDark ? "rgba(255,255,255,0.05)" : "rgba(15,23,42,0.05)", color: isDark ? "#cbd5e1" : "#475569" }}
+                    >
                         <ArrowRight size={15} />
                         بازگشت به وظایف
                     </button>
-                }
-                onRefresh={fetchAll}
-                refreshing={loading}
-            />
+
+                    <button
+                        type="button"
+                        onClick={fetchAll}
+                        disabled={loading}
+                        className="flex h-10 w-10 items-center justify-center rounded-2xl transition-colors disabled:opacity-50"
+                        style={{ background: isDark ? "rgba(255,255,255,0.05)" : "rgba(15,23,42,0.05)", color: isDark ? "#cbd5e1" : "#475569" }}
+                        title="بارگذاری مجدد"
+                    >
+                        <RefreshCw size={15} className={loading ? "animate-spin" : ""} />
+                    </button>
+                </div>
+            </div>
 
             <div className="flex flex-wrap items-center gap-2">
                 {archiveFilters.map(({ id, label, icon: Icon, color }) => {
@@ -81,7 +100,12 @@ export default function AdminArchivedTasksPage() {
                 })}
             </div>
 
-            {loading && <TaskCardSkeleton />}
+            {loading && (
+                <div className="flex flex-col items-center justify-center gap-3 py-16">
+                    <Loader size={24} className="animate-spin text-indigo-500" />
+                    <p className="text-[12.5px] text-gray-500 dark:text-gray-400">در حال دریافت بایگانی...</p>
+                </div>
+            )}
 
             {!loading && !list.error && filteredTasks.length === 0 && (
                 <div className="flex flex-col items-center justify-center gap-2 py-16">
@@ -91,15 +115,15 @@ export default function AdminArchivedTasksPage() {
             )}
 
             {!loading && filteredTasks.length > 0 && (
-                <m.div layout className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                <motion.div layout className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
                     <AnimatePresence mode="popLayout">
                         {filteredTasks.map((task, index) => (
-                            <m.div key={task.id} layout initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}>
+                            <motion.div key={task.id} layout initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}>
                                 <TaskCard task={task} index={index} readOnly />
-                            </m.div>
+                            </motion.div>
                         ))}
                     </AnimatePresence>
-                </m.div>
+                </motion.div>
             )}
 
             {list.totalPages > 1 && <Pagination page={list.page} totalPages={list.totalPages} onChange={list.setPage} />}

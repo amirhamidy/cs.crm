@@ -1,9 +1,18 @@
 "use client";
 
 import { useState } from "react";
-import { AnimatePresence, m } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { useTheme } from "next-themes";
-import { AlertCircle, ChevronLeft, ChevronRight, Crown, HelpCircle, TrendingDown, User, Workflow } from "lucide-react";
+import {
+    AlertCircle,
+    ChevronLeft,
+    ChevronRight,
+    Crown,
+    HelpCircle,
+    TrendingDown,
+    User,
+    Workflow,
+} from "lucide-react";
 import type { DepartmentStat, EmployeeStat, StageStat } from "@/hooks/useAnalytics";
 
 interface Props {
@@ -27,14 +36,14 @@ function SegmentTooltip({ stage, isDark }: { stage: StageStat; isDark: boolean }
     ];
 
     return (
-        <m.div
+        <motion.div
             initial={{ opacity: 0, y: 6, scale: 0.96 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 6, scale: 0.96 }}
             transition={{ duration: 0.15 }}
             className="absolute bottom-full left-1/2 z-30 mb-2.5 w-44 -translate-x-1/2 rounded-2xl border p-3 shadow-xl"
             style={{
-                background: isDark ? "#111827" : "#ffffff",
+                background: isDark ? "#0f172a" : "#ffffff",
                 borderColor: isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.07)",
             }}
         >
@@ -62,11 +71,11 @@ function SegmentTooltip({ stage, isDark }: { stage: StageStat; isDark: boolean }
             <div
                 className="absolute left-1/2 top-full h-2 w-2 -translate-x-1/2 -translate-y-1/2 rotate-45 border-b border-r"
                 style={{
-                    background: isDark ? "#111827" : "#ffffff",
+                    background: isDark ? "#0f172a" : "#ffffff",
                     borderColor: isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.07)",
                 }}
             />
-        </m.div>
+        </motion.div>
     );
 }
 
@@ -96,7 +105,7 @@ function SegmentedBar({ stages, isDark }: { stages: StageStat[]; isDark: boolean
                             </p>
                         </div>
 
-                        <m.div
+                        <motion.div
                             whileHover={{ y: -3 }}
                             transition={{ duration: 0.15 }}
                             className="flex h-14 w-full cursor-pointer overflow-hidden rounded-xl"
@@ -120,7 +129,7 @@ function SegmentedBar({ stages, isDark }: { stages: StageStat[]; isDark: boolean
                                     />
                                 );
                             })}
-                        </m.div>
+                        </motion.div>
 
                         <AnimatePresence>
                             {hoverKey === stage.key && (
@@ -296,15 +305,15 @@ function SoloEmployeePanel({ person, isDark }: { person: EmployeeStat; isDark: b
 
 function DepartmentChurnSkeleton() {
     return (
-        <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-white/8 dark:bg-gray-950">
+        <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-white/8 dark:bg-slate-950">
             <div className="mb-4 flex items-center gap-2.5" dir="rtl">
-                <div className="h-8 w-8 animate-pulse rounded-xl bg-gray-100 dark:bg-gray-900" />
+                <div className="h-8 w-8 animate-pulse rounded-xl bg-gray-100 dark:bg-slate-900" />
                 <div className="space-y-2">
-                    <div className="h-4 w-44 animate-pulse rounded-full bg-gray-100 dark:bg-gray-900" />
-                    <div className="h-3 w-60 animate-pulse rounded-full bg-gray-100/80 dark:bg-gray-900/60" />
+                    <div className="h-4 w-44 animate-pulse rounded-full bg-gray-100 dark:bg-slate-900" />
+                    <div className="h-3 w-60 animate-pulse rounded-full bg-gray-100/80 dark:bg-slate-900/60" />
                 </div>
             </div>
-            <div className="h-14 animate-pulse rounded-xl bg-gray-100 dark:bg-gray-900" />
+            <div className="h-14 animate-pulse rounded-xl bg-gray-100 dark:bg-slate-900" />
         </div>
     );
 }
@@ -348,7 +357,7 @@ export default function DepartmentChurn({ departments, loading }: Props) {
     const showWorst = Boolean(dept.worst && dept.worst.key !== dept.best?.key);
 
     return (
-        <m.div
+        <motion.div
             initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, ease: [0.25, 0.46, 0.45, 0.94] }}
@@ -380,17 +389,17 @@ export default function DepartmentChurn({ departments, loading }: Props) {
                                 <HelpCircle size={13} />
                                 <AnimatePresence>
                                     {showInfo && (
-                                        <m.div
+                                        <motion.div
                                             initial={{ opacity: 0, y: 4 }}
                                             animate={{ opacity: 1, y: 0 }}
                                             exit={{ opacity: 0, y: 4 }}
-                                            className="absolute right-0 top-6 z-20 w-56 rounded-xl border bg-white p-2.5 text-right shadow-lg dark:border-white/10 dark:bg-gray-900"
+                                            className="absolute right-0 top-6 z-20 w-56 rounded-xl border bg-white p-2.5 text-right shadow-lg dark:border-white/10 dark:bg-slate-900"
                                             style={{ borderColor: border }}
                                         >
                                             <p className="text-[10.5px] leading-5 text-gray-500 dark:text-gray-400">
                                                 هر بخش از نوار یک مرحله از دپارتمان است. با هاور کردن روی هر مرحله جزئیات تعداد تسک‌های فروش‌رفته، تکمیل‌شده، در جریان و لغوشده نمایش داده می‌شود.
                                             </p>
-                                        </m.div>
+                                        </motion.div>
                                     )}
                                 </AnimatePresence>
                             </button>
@@ -434,8 +443,8 @@ export default function DepartmentChurn({ departments, loading }: Props) {
                                                 ? "#93c5fd"
                                                 : "#60a5fa"
                                             : isDark
-                                                ? "#6b7280"
-                                                : "#9ca3af",
+                                                ? "#64748b"
+                                                : "#94a3b8",
                                     }}
                                 >
                                     {d.department_name}
@@ -445,7 +454,7 @@ export default function DepartmentChurn({ departments, loading }: Props) {
                                 </span>
 
                                 {active && (
-                                    <m.span
+                                    <motion.span
                                         layoutId="dept-tab-indicator"
                                         className="absolute -bottom-[1px] h-[2px] w-full rounded-full"
                                         style={{
@@ -470,7 +479,7 @@ export default function DepartmentChurn({ departments, loading }: Props) {
             </div>
 
             <AnimatePresence mode="wait">
-                <m.div
+                <motion.div
                     key={dept.key}
                     initial={{ opacity: 0, x: -8 }}
                     animate={{ opacity: 1, x: 0 }}
@@ -598,8 +607,8 @@ export default function DepartmentChurn({ departments, loading }: Props) {
                             )}
                         </div>
                     </div>
-                </m.div>
+                </motion.div>
             </AnimatePresence>
-        </m.div>
+        </motion.div>
     );
 }

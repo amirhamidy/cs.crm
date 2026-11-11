@@ -9,9 +9,9 @@ import { ICON_BTN } from "./ui";
 interface SignerListProps {
   signers: SignerItem[];
   meetingStatus: MeetingStatus;
-  
+  /** فقط در پیش‌نویس: ویرایش/حذف امضاکننده */
   canManage: boolean;
-  
+  /** شناسه‌ی Signer ی که کاربر فعلی می‌تواند امضا کند */
   mySignerId?: number | null;
   onEdit?: (signer: SignerItem) => void;
   onDelete?: (signer: SignerItem) => void;
@@ -27,7 +27,7 @@ function CopyLinkButton({ token, disabled }: { token: string; disabled: boolean 
       setCopied(true);
       setTimeout(() => setCopied(false), 1800);
     } catch {
-      
+      /* clipboard در بعضی مرورگرها/HTTP در دسترس نیست */
     }
   };
 
@@ -84,7 +84,7 @@ export default function SignerList({
                 className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${
                   signer.is_signed
                     ? "bg-emerald-500/10 text-emerald-500"
-                    : "bg-black/5 text-gray-400 dark:bg-white/5"
+                    : "bg-black/5 text-slate-400 dark:bg-white/5"
                 }`}
               >
                 {signer.is_signed ? <Check size={16} /> : <UserRound size={16} />}
@@ -130,14 +130,10 @@ export default function SignerList({
 
             <div className="flex shrink-0 items-center gap-2 self-end sm:self-auto">
               {signer.is_signed && signer.signature_image?.startsWith("data:image/png;base64,") && (
-                
+                // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={signer.signature_image}
                   alt={`امضای ${signer.display_name}`}
-                  width={80}
-                  height={36}
-                  loading="lazy"
-                  decoding="async"
                   className="h-9 w-20 rounded-lg bg-white object-contain p-0.5"
                 />
               )}

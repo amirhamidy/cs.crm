@@ -1,13 +1,34 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
-import { AnimatePresence, m } from "framer-motion";
-import { AlertCircle, ChevronDown, Download, FileText, GitBranch, Paperclip, Plus, Trash2, Upload, X } from "lucide-react";
-import { ListSkeleton } from "@/components/ui/skeletons";
+import { AnimatePresence, motion } from "framer-motion";
+import {
+    AlertCircle,
+    ChevronDown,
+    Download,
+    FileText,
+    GitBranch,
+    Loader2,
+    Paperclip,
+    Plus,
+    Trash2,
+    Upload,
+    X,
+} from "lucide-react";
 import HumanResourceStepRoadmap from "./HumanResourceStepRoadmap";
-import { HumanResource, HumanResourceFile, HumanResourceStep, createStep, deleteStep, deleteStepFile, getDocumentSteps, getStepFiles, updateStep, uploadStepFile } from "./humanResourceApi";
+import {
+    HumanResource,
+    HumanResourceFile,
+    HumanResourceStep,
+    createStep,
+    deleteStep,
+    deleteStepFile,
+    getDocumentSteps,
+    getStepFiles,
+    updateStep,
+    uploadStepFile,
+} from "./humanResourceApi";
 
-import { BusyContent } from "@/components/ui/Button";
 interface Props {
     open: boolean;
     document: HumanResource | null;
@@ -25,7 +46,7 @@ export default function HumanResourceStepsModal({ open, document, canManage, onC
     const [editingInlineId, setEditingInlineId] = useState<number | null>(null);
     const [title, setTitle] = useState("");
 
-    
+    // --- فایل‌های هر مرحله ---
     const [filesByStep, setFilesByStep] = useState<Record<number, HumanResourceFile[]>>({});
     const [filesLoadingId, setFilesLoadingId] = useState<number | null>(null);
     const [expandedStepId, setExpandedStepId] = useState<number | null>(null);
@@ -33,9 +54,6 @@ export default function HumanResourceStepsModal({ open, document, canManage, onC
     const [filesError, setFilesError] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement | null>(null);
     const pendingStepId = useRef<number | null>(null);
-    const [pendingFile, setPendingFile] = useState<File | null>(null);
-    const [pendingName, setPendingName] = useState("");
-    const [pendingForStep, setPendingForStep] = useState<number | null>(null);
 
     const loadSteps = async () => {
         if (!document) return;
@@ -112,7 +130,7 @@ export default function HumanResourceStepsModal({ open, document, canManage, onC
         await refresh();
     };
 
-    
+    // --- فایل‌های مرحله ---
 
     const toggleStep = async (stepId: number) => {
         if (expandedStepId === stepId) {
@@ -128,29 +146,16 @@ export default function HumanResourceStepsModal({ open, document, canManage, onC
         fileInputRef.current?.click();
     };
 
-    const handleFileSelected = (e: ChangeEvent<HTMLInputElement>) => {
+    const handleFileSelected = async (e: ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         e.target.value = "";
         const stepId = pendingStepId.current;
         pendingStepId.current = null;
         if (!document || !file || stepId == null) return;
-        setPendingFile(file);
-        setPendingName(file.name);
-        setPendingForStep(stepId);
-        setFilesError(null);
-    };
-
-    const confirmStepFile = async () => {
-        const stepId = pendingForStep;
-        if (!document || !pendingFile || stepId == null) return;
-        const name = pendingName.trim() || pendingFile.name;
         try {
             setUploadingStepId(stepId);
             setFilesError(null);
-            await uploadStepFile(document.id, stepId, pendingFile, name);
-            setPendingFile(null);
-            setPendingName("");
-            setPendingForStep(null);
+            await uploadStepFile(document.id, stepId, file, file.name);
             setExpandedStepId(stepId);
             await loadStepFiles(stepId);
             onChange();
@@ -159,12 +164,6 @@ export default function HumanResourceStepsModal({ open, document, canManage, onC
         } finally {
             setUploadingStepId(null);
         }
-    };
-
-    const cancelStepFile = () => {
-        setPendingFile(null);
-        setPendingName("");
-        setPendingForStep(null);
     };
 
     const removeStepFile = async (stepId: number, fileId: number) => {
@@ -183,26 +182,26 @@ export default function HumanResourceStepsModal({ open, document, canManage, onC
 
     const orderedSteps = useMemo(() => steps.slice().sort(byOrder), [steps]);
 
+    if (!open || !document) return null;
 
     return (
         <AnimatePresence>
-{open && document && (
-            <m.div
+            <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.2 }}
-                className="backdrop-blur-layer fixed inset-0 z-50 flex items-center justify-center px-4"
-                style={{ background: "rgba(0,0,0,0.45)" }}
+                className="fixed inset-0 z-50 flex items-center justify-center px-4"
+                style={{ background: "rgba(0,0,0,0.45)", backdropFilter: "blur(3px)" }}
                 onMouseDown={onClose}
             >
-                <m.div
+                <motion.div
                     initial={{ opacity: 0, y: 18, scale: 0.98 }}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: 18, scale: 0.98 }}
                     transition={{ duration: 0.25, ease: "easeOut" }}
                     onMouseDown={(e) => e.stopPropagation()}
-                    className="flex max-h-[90vh] w-full max-w-5xl flex-col overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-2xl shadow-black/10 dark:border-white/[0.06] dark:bg-[#111827]"
+                    className="flex max-h-[90vh] w-full max-w-5xl flex-col overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-2xl shadow-black/10 dark:border-white/[0.06] dark:bg-[#0f172a]"
                     dir="rtl"
                 >
                     <div className="flex shrink-0 items-center justify-between px-7 pb-5 pt-7 sm:px-8">
@@ -241,7 +240,9 @@ export default function HumanResourceStepsModal({ open, document, canManage, onC
                                 </div>
 
                                 {loading ? (
-                                    <ListSkeleton rows={4} />
+                                    <div className="flex h-44 items-center justify-center rounded-[1.5rem] border border-dashed border-gray-200 dark:border-white/[0.07]">
+                                        <Loader2 size={19} className="animate-spin text-indigo-500" />
+                                    </div>
                                 ) : (
                                     <HumanResourceStepRoadmap steps={steps} canManage={canManage} onEdit={handleInlineEdit} onDelete={removeStep} savingId={editingInlineId} />
                                 )}
@@ -272,64 +273,16 @@ export default function HumanResourceStepsModal({ open, document, canManage, onC
                                                 type="button"
                                                 onClick={saveStep}
                                                 disabled={saving || !title.trim()}
-                                                className="relative flex h-10 items-center justify-center gap-1.5 rounded-xl bg-indigo-600 px-4 text-[11px] font-extrabold text-white transition hover:bg-indigo-500 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40"
+                                                className="flex h-10 items-center justify-center gap-1.5 rounded-xl bg-indigo-600 px-4 text-[11px] font-extrabold text-white transition hover:bg-indigo-500 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40"
                                             >
-                                                <BusyContent busy={saving}>
-                                                    <Plus size={13} />
-                                                    افزودن مرحله
-                                                </BusyContent>
+                                                {saving ? <Loader2 size={13} className="animate-spin" /> : <Plus size={13} />}
+                                                افزودن مرحله
                                             </button>
                                         </div>
                                     </div>
                                 )}
 
                                 <input ref={fileInputRef} type="file" className="hidden" onChange={handleFileSelected} />
-
-                                {pendingFile && (
-                                    <div className="mt-3 rounded-[1.4rem] border border-indigo-100 bg-indigo-50/60 p-3 dark:border-indigo-500/15 dark:bg-indigo-500/[0.06]">
-                                        <div className="mb-2 flex items-center gap-2 px-0.5">
-                                            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-white shadow-sm dark:bg-white/[0.06]">
-                                                <FileText size={12} className="text-indigo-500" />
-                                            </span>
-                                            <div className="min-w-0 flex-1">
-                                                <p className="truncate text-[11px] font-extrabold text-gray-800 dark:text-white">{pendingFile.name}</p>
-                                                <p className="text-[9.5px] font-semibold text-gray-400">نام نمایشی فایل را وارد کنید</p>
-                                            </div>
-                                        </div>
-                                        <div className="flex flex-col gap-2 sm:flex-row">
-                                            <input
-                                                autoFocus
-                                                value={pendingName}
-                                                onChange={(e) => setPendingName(e.target.value)}
-                                                onKeyDown={(e) => {
-                                                    if (e.key === "Enter") confirmStepFile();
-                                                    if (e.key === "Escape") cancelStepFile();
-                                                }}
-                                                placeholder="نام فایل..."
-                                                className="h-9 min-w-0 flex-1 rounded-xl border border-gray-100 bg-white px-3 text-[11px] font-bold text-gray-800 outline-none transition focus:border-indigo-400 dark:border-white/[0.06] dark:bg-white/[0.04] dark:text-white"
-                                            />
-                                            <button
-                                                type="button"
-                                                onClick={confirmStepFile}
-                                                disabled={uploadingStepId !== null}
-                                                className="relative flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-xl bg-indigo-600 px-4 text-[10.5px] font-extrabold text-white transition hover:bg-indigo-500 active:scale-[0.97] disabled:opacity-40"
-                                            >
-                                                <BusyContent busy={uploadingStepId !== null}>
-                                                    <Upload size={12} />
-                                                    بارگذاری
-                                                </BusyContent>
-                                            </button>
-                                            <button
-                                                type="button"
-                                                onClick={cancelStepFile}
-                                                disabled={uploadingStepId !== null}
-                                                className="flex h-9 shrink-0 items-center justify-center rounded-xl bg-white px-4 text-[10.5px] font-extrabold text-gray-500 transition hover:text-gray-700 disabled:opacity-40 dark:bg-white/[0.05] dark:text-gray-300"
-                                            >
-                                                انصراف
-                                            </button>
-                                        </div>
-                                    </div>
-                                )}
 
                                 {filesError && (
                                     <div className="mt-3 flex items-center gap-2 rounded-xl bg-red-50 px-3 py-2 text-[10.5px] font-bold text-red-500 dark:bg-red-500/10 dark:text-red-400">
@@ -379,18 +332,16 @@ export default function HumanResourceStepsModal({ open, document, canManage, onC
                                                                     onClick={() => pickStepFile(step.id)}
                                                                     disabled={isUploading}
                                                                     title="افزودن فایل به این مرحله"
-                                                                    className="relative flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-indigo-50 text-indigo-500 transition hover:bg-indigo-100 disabled:opacity-50 dark:bg-indigo-500/10 dark:text-indigo-400 dark:hover:bg-indigo-500/20"
+                                                                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-indigo-50 text-indigo-500 transition hover:bg-indigo-100 disabled:opacity-50 dark:bg-indigo-500/10 dark:text-indigo-400 dark:hover:bg-indigo-500/20"
                                                                 >
-                                                                    <BusyContent busy={isUploading}>
-                                                                        <Upload size={11} />
-                                                                    </BusyContent>
+                                                                    {isUploading ? <Loader2 size={11} className="animate-spin" /> : <Upload size={11} />}
                                                                 </button>
                                                             )}
                                                         </div>
 
                                                         <AnimatePresence initial={false}>
                                                             {isOpen && (
-                                                                <m.div
+                                                                <motion.div
                                                                     initial={{ height: 0, opacity: 0 }}
                                                                     animate={{ height: "auto", opacity: 1 }}
                                                                     exit={{ height: 0, opacity: 0 }}
@@ -399,10 +350,12 @@ export default function HumanResourceStepsModal({ open, document, canManage, onC
                                                                 >
                                                                     <div className="space-y-1.5 px-3 pb-3 pt-0.5">
                                                                         {isLoadingFiles ? (
-                                                                            <ListSkeleton rows={1} />
+                                                                            <div className="flex h-12 items-center justify-center rounded-xl border border-dashed border-gray-200 dark:border-white/[0.07]">
+                                                                                <Loader2 size={14} className="animate-spin text-indigo-400" />
+                                                                            </div>
                                                                         ) : fileCount > 0 ? (
                                                                             stepFiles.map((f) => (
-                                                                                <m.div
+                                                                                <motion.div
                                                                                     key={f.id}
                                                                                     initial={{ opacity: 0, y: 4 }}
                                                                                     animate={{ opacity: 1, y: 0 }}
@@ -438,7 +391,7 @@ export default function HumanResourceStepsModal({ open, document, canManage, onC
                                                                                             <Trash2 size={11} />
                                                                                         </button>
                                                                                     )}
-                                                                                </m.div>
+                                                                                </motion.div>
                                                                             ))
                                                                         ) : (
                                                                             <div className="flex items-center gap-2 rounded-xl border border-dashed border-gray-200 px-2.5 py-2 dark:border-white/[0.07]">
@@ -451,7 +404,7 @@ export default function HumanResourceStepsModal({ open, document, canManage, onC
                                                                             </div>
                                                                         )}
                                                                     </div>
-                                                                </m.div>
+                                                                </motion.div>
                                                             )}
                                                         </AnimatePresence>
                                                     </div>
@@ -469,9 +422,8 @@ export default function HumanResourceStepsModal({ open, document, canManage, onC
                             </div>
                         </div>
                     </div>
-                </m.div>
-            </m.div>
-        )}
-</AnimatePresence>
+                </motion.div>
+            </motion.div>
+        </AnimatePresence>
     );
 }

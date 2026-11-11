@@ -2,9 +2,29 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { m } from "framer-motion";
+import { motion } from "framer-motion";
 
-import { AlarmClock, ArrowLeftCircle, ArrowLeftRight, ArrowRightCircle, Building2, CalendarDays, CheckCircle2, Clock3, History, Layers3, MessageSquareText, RotateCcw, ShoppingBag, XCircle, FileText, Users } from "lucide-react";
+import {
+    AlarmClock,
+    ArrowLeftCircle,
+    ArrowLeftRight,
+    ArrowRightCircle,
+    Ban,
+    Building2,
+    CalendarDays,
+    CheckCircle2,
+    Clock3,
+    History,
+    Layers3,
+    Loader2,
+    MessageSquareText,
+    RotateCcw,
+    ShoppingBag,
+    XCircle,
+    ClipboardList,
+    FileText,
+    Users,
+} from "lucide-react";
 
 import axiosInstance from "@/lib/axiosInstance";
 import { tasksApi, casesApi, customersApi } from "@/lib/api";
@@ -17,7 +37,12 @@ import TaskLogsModal from "./TaskLogsModal";
 import TaskTransferModal from "./TaskTransferModal";
 import ActionBtn from "./ActionBtn";
 
-import { toJalali, toPersianDigits, JALALI_MONTHS, pad2 } from "@/lib/jalali";
+import {
+    toJalali,
+    toPersianDigits,
+    JALALI_MONTHS,
+    pad2,
+} from "@/lib/jalali";
 
 import type { UserTask } from "./types";
 import type { TransferTaskResponse } from "@/types/task";
@@ -52,7 +77,7 @@ interface Props {
     accent?: string;
     isLastStage: boolean;
     onUpdated: (task: UserTask) => void;
-    
+    /** بعد از انتقال موفق تسک به دپارتمان دیگر */
     onTransferred?: (task: UserTask) => void;
     employeesMap?: Record<number, string>;
     staffId: number;
@@ -251,7 +276,7 @@ export default function UserTaskCard({
     const isCancelled = status === "cancelled";
     const isCompleted = (status as string) === "completed";
 
-    
+    // فقط کارمندِ مسئولِ فعلیِ تسک در حال انجام می‌تواند آن را منتقل کند
     const canTransfer =
         isActive && staffId > 0 && assigneeIds.includes(Number(staffId));
 
@@ -457,7 +482,7 @@ export default function UserTaskCard({
             attachments: response.attachments ?? task.attachments,
         } as unknown as UserTask;
 
-        
+        // اگر والد هندلر مخصوص انتقال نداده باشد، همان به‌روزرسانی عادی انجام می‌شود
         (onTransferred ?? onUpdated)(merged);
     }
 
@@ -534,7 +559,7 @@ export default function UserTaskCard({
 
     return (
         <>
-            <m.div
+            <motion.div
                 layout
                 className="group relative flex flex-col overflow-hidden rounded-[1.6rem] border bg-white p-3.5 shadow-[0_6px_22px_rgba(15,23,42,.03)] dark:bg-[#111a2d]"
                 style={{ borderColor: `${accent}28` }}
@@ -831,7 +856,7 @@ export default function UserTaskCard({
                         </>
                     ) : null}
                 </div>
-            </m.div>
+            </motion.div>
 
             {(Object.keys(modalMeta) as ModalType[])
                 .filter((direction) => direction !== "sold")

@@ -1,7 +1,16 @@
 import axiosInstance from "@/lib/axiosInstance";
 import type { ApiEmployee, ApiUser } from "@/types/users";
 import type { Paginated, SearchParams } from "@/types/pagination";
-import { cached, createSearch, dedupe, fetchPage, getOne, invalidate, listAll, uniqueIds } from "./_core";
+import {
+  cached,
+  createSearch,
+  dedupe,
+  fetchPage,
+  getOne,
+  invalidate,
+  listAll,
+  uniqueIds,
+} from "./_core";
 
 const KEY = "accounts:";
 const BASE = "/accounts/api/v1";
@@ -26,7 +35,6 @@ export interface AuthMe {
   username: string;
   phone_number: string;
   type: 1 | 2;
-  avatar?: string | null;
 }
 
 export type EmployeeListParams = SearchParams;
@@ -148,22 +156,7 @@ const userSearch = createSearch<ApiUser>({
 });
 
 export const accountsApi = {
-  me: Object.assign(
-    () => dedupe(`${KEY}me`, () => getOne<AuthMe>(URLS.me)),
-    {
-      uploadAvatar: async (file: File) => {
-        const form = new FormData();
-        form.append("avatar", file);
-        const { data } = await axiosInstance.post<{ avatar: string }>(`${BASE}/auth/me/avatar/`, form);
-        invalidate(KEY);
-        return data.avatar;
-      },
-      removeAvatar: async () => {
-        await axiosInstance.delete(`${BASE}/auth/me/avatar/`);
-        invalidate(KEY);
-      },
-    },
-  ),
+  me: () => dedupe(`${KEY}me`, () => getOne<AuthMe>(URLS.me)),
 
   employees: {
     list: listEmployees,
@@ -225,22 +218,6 @@ export const accountsApi = {
     remove: async (id: number) => {
       await axiosInstance.delete(URLS.userDelete(id));
       invalidate(KEY);
-    },
-    uploadAvatar: async (userId: number, file: File) => {
-      const form = new FormData();
-      form.append("avatar", file);
-      const { data } = await axiosInstance.post<{ avatar: string }>(`${BASE}/user/${userId}/avatar/`, form);
-      invalidate(KEY);
-      return data.avatar;
-    },
-    removeAvatar: async (userId: number) => {
-      await axiosInstance.delete(`${BASE}/user/${userId}/avatar/`);
-      invalidate(KEY);
-    },
-    setPassword: async (userId: number, newPassword: string) => {
-      const { data } = await axiosInstance.post<{ detail: string }>(`${BASE}/user/${userId}/set-password/`, { new_password: newPassword });
-      invalidate(KEY);
-      return data;
     },
   },
 

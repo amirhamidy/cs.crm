@@ -1,11 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
-import { Archive, CheckCircle2, ClipboardCheck, Clock3, ShieldCheck, UserCheck, Users, XCircle, type LucideIcon } from "lucide-react";
-import PageHeader from "@/components/ui/PageHeader";
-import QCItemCardSkeleton from "./QCItemCardSkeleton";
-import QCPageSkeleton from "./QCPageSkeleton";
-import QCHeaderSkeleton from "./QCHeaderSkeleton";
+import { motion } from "framer-motion";
+import { Archive, CheckCircle2, ClipboardCheck, Clock3, Loader2, RefreshCw, Search, ShieldCheck, UserCheck, Users, X, XCircle, type LucideIcon } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
 import { qualityControlApi, type QCCounts, type QCReviewedStatus } from "@/lib/api";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
@@ -55,7 +52,9 @@ function Section({ icon: Icon, title, sub, count, children, empty, loading = fal
                 </div>
             </div>
             {loading ? (
-                <QCItemCardSkeleton count={3} />
+                <div className="flex min-h-[130px] items-center justify-center">
+                    <Loader2 size={18} className="animate-spin text-blue-500" />
+                </div>
             ) : count ? (
                 <>
                     {children}
@@ -118,7 +117,7 @@ export default function QualityControlPage() {
 
     const stats = useMemo(() => ({ ...counts, active: employees.filter((e) => e.is_active).length }), [counts, employees]);
 
-    
+    // صفحه‌بندی و جستجو سمت سرور؛ هر بخش (در انتظار / بایگانی) لیست مستقل خودش را دارد.
     const listsEnabled = !loading && hasAccess;
     const pendingList = usePaginatedList<ApiQualityControlItem>(
         (params, signal) => qualityControlApi.page("pending", params, signal),
@@ -129,14 +128,14 @@ export default function QualityControlPage() {
         { pageSize: PAGE, enabled: listsEnabled, filters: { tab: archiveTab } },
     );
 
-    
+    // یک کادر جستجو برای هر دو بخش
     const search = pendingList.search;
     const setSearch = useCallback(
         (value: string) => {
             pendingList.setSearch(value);
             archiveList.setSearch(value);
         },
-        
+        // eslint-disable-next-line react-hooks/exhaustive-deps
         [pendingList.setSearch, archiveList.setSearch],
     );
     const changeArchiveTab = (tab: QCReviewedStatus) => {
@@ -148,7 +147,7 @@ export default function QualityControlPage() {
         void load(true);
         pendingList.refetch();
         archiveList.refetch();
-        
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [load, pendingList.refetch, archiveList.refetch]);
 
     async function confirmDelete() {
@@ -185,32 +184,53 @@ export default function QualityControlPage() {
 
     return (
         <div dir="rtl" className="space-y-4 p-3 sm:p-5">
-            {loading ? <QCHeaderSkeleton search /> : (
-<>
-            <PageHeader
-                icon={ShieldCheck}
-                title="کنترل کیفی"
-                subtitle="بررسی و تایید محصولات ارسال‌شده از فرآیند خرید"
-                search={{ value: search, onChange: setSearch, placeholder: "جستجوی محصول، شناسه یا بررسی‌کننده..." }}
-                onRefresh={reloadAll}
-                refreshing={refreshing}
-                refreshDisabled={loading || refreshing}
-                leading={
-                    <span className={`hidden h-10 shrink-0 items-center gap-1.5 rounded-2xl px-3 text-[11px] font-extrabold md:flex ${isAdmin ? "bg-amber-500/10 text-amber-500" : "bg-blue-500/10 text-blue-600 dark:text-blue-300"}`}>
-                        {isAdmin ? <ShieldCheck size={12} /> : <UserCheck size={12} />}
-                        {isAdmin ? "ادمین" : "کارمند"}
-                        {myName ? ` · ${myName}` : ""}
-                    </span>
-                }
-            />
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                <Stat label="در انتظار بررسی" value={toPersianDigits(stats.pending)} icon={Clock3} tone="bg-amber-50/70 text-amber-600 dark:bg-amber-500/[0.07] dark:text-amber-400" />
-                <Stat label="تایید شده" value={toPersianDigits(stats.approved)} icon={CheckCircle2} tone="bg-emerald-50/70 text-emerald-600 dark:bg-emerald-500/[0.07] dark:text-emerald-400" />
-                <Stat label="رد شده" value={toPersianDigits(stats.rejected)} icon={XCircle} tone="bg-red-50/70 text-red-500 dark:bg-red-500/[0.07] dark:text-red-400" />
-                <Stat label="اعضای فعال" value={`${toPersianDigits(stats.active)}/${toPersianDigits(employees.length)}`} icon={Users} tone="bg-blue-50/70 text-blue-600 dark:bg-blue-500/[0.07] dark:text-blue-400" />
-            </div>
-            </>
-)}
+            <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className={`${box} p-3`}>
+                <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                    <div className="flex min-w-0 items-center gap-3">
+                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-500 text-white shadow-sm">
+                            <ShieldCheck size={18} />
+                        </div>
+                        <div className="min-w-0">
+                            <h1 className="text-[15px] font-extrabold text-gray-900 dark:text-white">کنترل کیفی</h1>
+                            <p className="mt-0.5 truncate text-[10.5px] font-semibold text-gray-400">بررسی و تایید محصولات ارسال‌شده از فرآیند خرید</p>
+                        </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                        <div className="relative min-w-0 flex-1 sm:w-64 sm:flex-none">
+                            <Search size={14} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                            <input
+                                value={search}
+                                onChange={(e) => setSearch(e.target.value)}
+                                placeholder="جستجوی محصول، شناسه یا بررسی‌کننده..."
+                                className="h-9 w-full rounded-full border border-gray-100 bg-gray-50 pl-9 pr-9 text-[11px] font-semibold text-gray-800 outline-none transition focus:border-blue-400 dark:border-white/[0.06] dark:bg-white/[0.03] dark:text-white"
+                            />
+                            {search && (
+                                <button type="button" onClick={() => setSearch("")} className="absolute left-2.5 top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded-full text-gray-400 hover:text-gray-600">
+                                    <X size={11} />
+                                </button>
+                            )}
+                        </div>
+
+                        <span className={`hidden h-9 shrink-0 items-center gap-1.5 rounded-full px-3 text-[10.5px] font-extrabold md:flex ${isAdmin ? "bg-amber-500/10 text-amber-500" : "bg-blue-500/10 text-blue-600 dark:text-blue-300"}`}>
+                            {isAdmin ? <ShieldCheck size={12} /> : <UserCheck size={12} />}
+                            {isAdmin ? "ادمین" : "کارمند"}
+                            {myName ? ` · ${myName}` : ""}
+                        </span>
+
+                        <button type="button" onClick={reloadAll} disabled={loading || refreshing} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gray-100 text-gray-400 transition-colors hover:text-gray-600 disabled:opacity-40 dark:bg-white/[0.05] dark:hover:text-gray-300">
+                            <RefreshCw size={13} className={refreshing ? "animate-spin" : ""} />
+                        </button>
+                    </div>
+                </div>
+
+                <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                    <Stat label="در انتظار بررسی" value={toPersianDigits(stats.pending)} icon={Clock3} tone="bg-amber-50/70 text-amber-600 dark:bg-amber-500/[0.07] dark:text-amber-400" />
+                    <Stat label="تایید شده" value={toPersianDigits(stats.approved)} icon={CheckCircle2} tone="bg-emerald-50/70 text-emerald-600 dark:bg-emerald-500/[0.07] dark:text-emerald-400" />
+                    <Stat label="رد شده" value={toPersianDigits(stats.rejected)} icon={XCircle} tone="bg-red-50/70 text-red-500 dark:bg-red-500/[0.07] dark:text-red-400" />
+                    <Stat label="اعضای فعال" value={`${toPersianDigits(stats.active)}/${toPersianDigits(employees.length)}`} icon={Users} tone="bg-blue-50/70 text-blue-600 dark:bg-blue-500/[0.07] dark:text-blue-400" />
+                </div>
+            </motion.div>
 
             {error && (
                 <div className="flex items-center gap-2.5 rounded-2xl bg-red-50 px-3.5 py-3 dark:bg-red-500/10">
@@ -221,7 +241,9 @@ export default function QualityControlPage() {
             )}
 
             {loading ? (
-                <QCPageSkeleton />
+                <div className={`${box} flex h-32 items-center justify-center`}>
+                    <Loader2 size={20} className="animate-spin text-blue-500" />
+                </div>
             ) : (
                 <>
                     <QCTeamBar employees={employees} names={names} canManage={Boolean(isAdmin)} onAdd={() => setEmployeeModal(true)} onDelete={setDeleteTarget} />

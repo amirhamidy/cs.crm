@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { m } from "framer-motion";
+import { motion } from "framer-motion";
 import { Award, Star, TrendingDown } from "lucide-react";
 import { useTheme } from "next-themes";
 import axiosInstance from "@/lib/axiosInstance";
@@ -120,6 +120,11 @@ export default function ScoreCard({ employeeName }: ScoreCardProps) {
         const scorePath = `/score/api/v1/employees/${employeeId}/`;
         const historyPath = `/score/api/v1/employees/${employeeId}/history/`;
 
+        console.log("SCORE REQUEST:", {
+            employeeId,
+            scorePath,
+            historyPath,
+        });
 
         setLoading(true);
         setHistoryLoading(true);
@@ -130,6 +135,7 @@ export default function ScoreCard({ employeeName }: ScoreCardProps) {
             .then((response) => {
                 if (!alive) return;
 
+                console.log("SCORE SUCCESS:", response.data);
 
                 setData(response.data);
                 setError(false);
@@ -161,6 +167,7 @@ export default function ScoreCard({ employeeName }: ScoreCardProps) {
             .then((response) => {
                 if (!alive) return;
 
+                console.log("SCORE HISTORY SUCCESS:", response.data);
 
                 setHistory(
                     Array.isArray(response.data)
@@ -209,7 +216,7 @@ export default function ScoreCard({ employeeName }: ScoreCardProps) {
         "";
 
     return (
-        <m.div
+        <motion.div
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.25 }}
@@ -252,7 +259,7 @@ export default function ScoreCard({ employeeName }: ScoreCardProps) {
 
             {employeeLoading || loading ? (
                 <div className="flex h-20 items-center justify-center">
-                    <m.div
+                    <motion.div
                         animate={{ rotate: 360 }}
                         transition={{
                             repeat: Infinity,
@@ -284,7 +291,7 @@ export default function ScoreCard({ employeeName }: ScoreCardProps) {
                     isDark={isDark}
                 />
             )}
-        </m.div>
+        </motion.div>
     );
 }
 
@@ -305,7 +312,7 @@ function ScoreBody({
     return (
         <div className="flex flex-col gap-4">
             <div className="flex items-end gap-3">
-                <m.span
+                <motion.span
                     initial={{
                         opacity: 0,
                         scale: 0.8,
@@ -324,7 +331,7 @@ function ScoreBody({
                     }}
                 >
                     {data.score}
-                </m.span>
+                </motion.span>
 
                 <div className="flex flex-col gap-1 pb-1">
                     <span
@@ -352,7 +359,7 @@ function ScoreBody({
                             : "rgba(0,0,0,0.06)",
                     }}
                 >
-                    <m.div
+                    <motion.div
                         initial={{ width: 0 }}
                         animate={{
                             width: `${pct}%`,
@@ -446,7 +453,7 @@ function ScoreHistory({
 
             {loading ? (
                 <div className="flex items-center justify-center py-2">
-                    <m.div
+                    <motion.div
                         animate={{ rotate: 360 }}
                         transition={{
                             repeat: Infinity,
@@ -491,7 +498,7 @@ function ScoreHistory({
                                 : "rgba(239,68,68,0.07)";
 
                         return (
-                        <m.div
+                        <motion.div
                             key={item.id}
                             initial={{
                                 opacity: 0,
@@ -539,7 +546,7 @@ function ScoreHistory({
                                     </span>
                                 )}
                             </div>
-                        </m.div>
+                        </motion.div>
                         );
                     })}
                 </div>

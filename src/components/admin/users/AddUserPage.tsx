@@ -1,12 +1,26 @@
 "use client";
 
-import { forwardRef, type FormEvent, type InputHTMLAttributes, useState } from "react";
-import { AnimatePresence, m } from "framer-motion";
-import { Check, ChevronLeft, ChevronRight, Eye, EyeOff, Shield, UserPlus, X } from "lucide-react";
+import {
+    forwardRef,
+    type FormEvent,
+    type InputHTMLAttributes,
+    useState,
+} from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import {
+    Check,
+    ChevronLeft,
+    ChevronRight,
+    Eye,
+    EyeOff,
+    Loader,
+    Shield,
+    UserPlus,
+    X,
+} from "lucide-react";
 import { accountsApi } from "@/lib/api";
 import { parseApiErrors, type FieldErrors } from "@/lib/parseApiErrors";
 
-import { BusyContent } from "@/components/ui/Button";
 type Step1Form = {
     username: string;
     phone_number: string;
@@ -54,7 +68,7 @@ const INITIAL_STEP2: Step2Form = {
 
 function Notification({ message, type, onClose }: NotificationProps) {
     return (
-        <m.div
+        <motion.div
             initial={{ opacity: 0, scale: 0.9, y: -20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.9, y: -20 }}
@@ -79,7 +93,7 @@ function Notification({ message, type, onClose }: NotificationProps) {
             >
                 <X size={14} />
             </button>
-        </m.div>
+        </motion.div>
     );
 }
 
@@ -97,7 +111,7 @@ const FloatingInput = forwardRef<HTMLInputElement, FloatingInputProps>(
                 />
                 <label
                     htmlFor={id}
-                    className="pointer-events-none absolute right-5 top-1/2 -translate-y-1/2 rounded bg-white px-1.5 text-sm text-gray-400 transition-all duration-200 peer-focus:top-0 peer-focus:text-xs peer-[:not(:placeholder-shown)]:top-0 peer-[:not(:placeholder-shown)]:text-xs peer-[:not(:placeholder-shown)]:text-gray-500 dark:bg-[#111827]"
+                    className="pointer-events-none absolute right-5 top-1/2 -translate-y-1/2 rounded bg-white px-1.5 text-sm text-gray-400 transition-all duration-200 peer-focus:top-0 peer-focus:text-xs peer-[:not(:placeholder-shown)]:top-0 peer-[:not(:placeholder-shown)]:text-xs peer-[:not(:placeholder-shown)]:text-gray-500 dark:bg-[#0f172a]"
                 >
                     {label}
                 </label>
@@ -548,22 +562,23 @@ export default function AddUserModal({ onClose, onSuccess, onNotify }: Props) {
             </AnimatePresence>
 
             <AnimatePresence>
-                <m.div
+                <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className="backdrop-blur-layer fixed inset-0 z-50 flex items-center justify-center px-4"
+                    className="fixed inset-0 z-50 flex items-center justify-center px-4"
                     style={{
                         background: "rgba(0,0,0,0.45)",
+                        backdropFilter: "blur(3px)",
                     }}
                     onClick={handleClose}
                 >
-                    <m.div
+                    <motion.div
                         initial={{ opacity: 0, y: 16 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: 16 }}
                         transition={{ duration: 0.35, ease: "easeOut" }}
-                        className="w-full max-w-sm overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-sm dark:border-white/[0.06] dark:bg-[#111827]"
+                        className="w-full max-w-sm overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-sm dark:border-white/[0.06] dark:bg-[#0f172a]"
                         onClick={(event) => event.stopPropagation()}
                         dir="rtl"
                     >
@@ -613,7 +628,7 @@ export default function AddUserModal({ onClose, onSuccess, onNotify }: Props) {
 
                         <AnimatePresence mode="wait">
                             {step === 1 ? (
-                                <m.form
+                                <motion.form
                                     key="step-1"
                                     initial={{ opacity: 0, x: 12 }}
                                     animate={{ opacity: 1, x: 0 }}
@@ -712,7 +727,7 @@ export default function AddUserModal({ onClose, onSuccess, onNotify }: Props) {
                                                 onClick={() =>
                                                     setShowPassword((prev) => !prev)
                                                 }
-                                                className="absolute inset-y-0 left-4 my-auto flex h-8 w-8 items-center justify-center text-gray-400 transition-colors hover:text-gray-600 dark:hover:text-gray-200"
+                                                className="absolute left-4 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center text-gray-400 transition-colors hover:text-gray-600 dark:hover:text-gray-200"
                                             >
                                                 {showPassword ? (
                                                     <EyeOff size={16} />
@@ -762,7 +777,7 @@ export default function AddUserModal({ onClose, onSuccess, onNotify }: Props) {
                                                         color:
                                                             step1.type === value
                                                                 ? "#3b82f6"
-                                                                : "#9ca3af",
+                                                                : "#94a3b8",
                                                     }}
                                                 >
                                                     <Shield size={12} />
@@ -772,29 +787,29 @@ export default function AddUserModal({ onClose, onSuccess, onNotify }: Props) {
                                         </div>
                                     </div>
 
-                                    <m.button
+                                    <motion.button
                                         type="submit"
                                         disabled={loading}
                                         whileTap={{ scale: 0.97 }}
-                                        className="relative flex items-center justify-center gap-2 rounded-full bg-blue-600 py-3 text-sm font-bold text-white transition-colors hover:bg-blue-500 disabled:opacity-50"
+                                        className="flex items-center justify-center gap-2 rounded-full bg-blue-600 py-3 text-sm font-bold text-white transition-colors hover:bg-blue-500 disabled:opacity-50"
                                     >
-                                        <BusyContent busy={loading}>
-                                            {step1.type === 1 ? (
-                                                <>
-                                                    <Check size={14} />
-                                                    ثبت ادمین
-                                                </>
-                                            ) : (
-                                                <>
-                                                    ادامه
-                                                    <ChevronLeft size={14} />
-                                                </>
-                                            )}
-                                        </BusyContent>
-                                    </m.button>
-                                </m.form>
+                                        {loading ? (
+                                            <Loader size={15} className="animate-spin" />
+                                        ) : step1.type === 1 ? (
+                                            <>
+                                                <Check size={14} />
+                                                ثبت ادمین
+                                            </>
+                                        ) : (
+                                            <>
+                                                ادامه
+                                                <ChevronLeft size={14} />
+                                            </>
+                                        )}
+                                    </motion.button>
+                                </motion.form>
                             ) : (
-                                <m.form
+                                <motion.form
                                     key="step-2"
                                     initial={{ opacity: 0, x: 12 }}
                                     animate={{ opacity: 1, x: 0 }}
@@ -848,25 +863,27 @@ export default function AddUserModal({ onClose, onSuccess, onNotify }: Props) {
                                             برگشت
                                         </button>
 
-                                        <m.button
+                                        <motion.button
                                             type="submit"
                                             disabled={loading}
                                             whileTap={{ scale: 0.97 }}
-                                            className="relative flex flex-1 items-center justify-center gap-2 rounded-full bg-blue-600 py-3 text-sm font-bold text-white transition-colors hover:bg-blue-500 disabled:opacity-50"
+                                            className="flex flex-1 items-center justify-center gap-2 rounded-full bg-blue-600 py-3 text-sm font-bold text-white transition-colors hover:bg-blue-500 disabled:opacity-50"
                                         >
-                                            <BusyContent busy={loading}>
+                                            {loading ? (
+                                                <Loader size={18} className="animate-spin" />
+                                            ) : (
                                                 <>
-                                                        <Check size={14} />
-                                                        ثبت کارمند
-                                                    </>
-                                            </BusyContent>
-                                        </m.button>
+                                                    <Check size={14} />
+                                                    ثبت کارمند
+                                                </>
+                                            )}
+                                        </motion.button>
                                     </div>
-                                </m.form>
+                                </motion.form>
                             )}
                         </AnimatePresence>
-                    </m.div>
-                </m.div>
+                    </motion.div>
+                </motion.div>
             </AnimatePresence>
         </>
     );

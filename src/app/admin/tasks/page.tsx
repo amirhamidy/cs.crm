@@ -1,41 +1,31 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { AnimatePresence, m } from "framer-motion";
-import { Archive, Check, ClipboardList, Eye, Plus } from "lucide-react";
-import PageHeader, { HEADER_BTN_PRIMARY, HEADER_BTN_SECONDARY, HEADER_BTN_SUCCESS } from "@/components/ui/PageHeader";
+import { AnimatePresence, motion } from "framer-motion";
+import { Archive, Check, ClipboardList, Eye, Plus, RefreshCw } from "lucide-react";
 import { useSearchParams, useRouter } from "next/navigation";
+import { useTheme } from "next-themes";
 import axiosInstance from "@/lib/axiosInstance";
 import { apiRoutes } from "@/lib/apiRoutes";
 import { metaApi, tasksApi } from "@/lib/api";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import Pagination from "@/components/ui/Pagination";
-import { CountSkeleton, TaskCardSkeleton } from "@/components/ui/skeletons";
+import CardSkeletonGrid from "@/components/ui/CardSkeletonGrid";
 import { Task, TaskStatus } from "@/types/task";
 import { Department } from "@/types/department";
-import dynamic from "next/dynamic";
 import SuspenseWrapper from "@/components/SuspenseWrapper";
-import TaskCard from "@/components/tasks/TaskCard";
-
-
-const CreateTaskModal = dynamic(() => import("@/components/tasks/CreateTaskModal"), {
-    ssr: false,
-    loading: () => null,
-});
-const CreateNoCaseTaskModal = dynamic(() => import("@/components/tasks/CreateNoCaseTaskModal"), {
-    ssr: false,
-    loading: () => null,
-});
-const EditTaskModal = dynamic(() => import("@/components/tasks/EditTaskModal"), {
-    ssr: false,
-    loading: () => null,
-});
+import TaskCard from "@/components/customcomponents/tasks/TaskCard";
+import CreateTaskModal from "@/components/customcomponents/tasks/CreateTaskModal";
+import CreateNoCaseTaskModal from "@/components/customcomponents/tasks/CreateNoCaseTaskModal";
+import EditTaskModal from "@/components/customcomponents/tasks/EditTaskModal";
 
 const ACTIVE_STATUS = "in_progress" as TaskStatus;
 
 function AdminTasksPageContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
+    const { resolvedTheme } = useTheme();
+    const isDark = resolvedTheme === "dark";
 
     const list = usePaginatedList<Task>((params, signal) => tasksApi.page({ ...params, status: ACTIVE_STATUS } as never, signal), { pageSize: 12, scrollTop: true });
     const [removed, setRemoved] = useState<Set<number>>(new Set());
@@ -52,7 +42,7 @@ function AdminTasksPageContent() {
     const [highlightedTaskId, setHighlightedTaskId] = useState<number | null>(null);
     const [viewedTaskId, setViewedTaskId] = useState<number | null>(null);
 
-    
+    // فقط لیست وظایفِ همین صفحه دوباره خوانده می‌شود؛ مشتری/کارمند/دپارتمان‌ها دیگر با هر رفرش گرفته نمی‌شوند.
     const fetchAll = useCallback(() => {
         setRemoved(new Set());
         setPatched(new Map());
@@ -60,7 +50,7 @@ function AdminTasksPageContent() {
         list.refetch();
     }, [list.refetch]);
 
-    
+    // دپارتمان‌ها (کش‌شده) فقط برای مودال ویرایش؛ یک‌بار و بدون مسدود کردن لیست
     useEffect(() => {
         metaApi.departments().then(setDepartments).catch(() => setDepartments([]));
     }, []);
@@ -130,31 +120,68 @@ function AdminTasksPageContent() {
 
     return (
         <div className="flex flex-col gap-5 p-3 sm:p-4 md:p-6" dir="rtl">
-            <PageHeader
-                icon={ClipboardList}
-                title="وظایف در حال انجام"
-                subtitle={loading ? <CountSkeleton /> : `${list.count} وظیفه`}
-                search={{ value: list.search, onChange: list.setSearch, placeholder: "جستجو در وظایف..." }}
-                leading={
-                    <button type="button" onClick={() => router.push("/admin/archive")} className={HEADER_BTN_SECONDARY}>
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-start gap-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl" style={{ background: isDark ? "rgba(99,102,241,0.14)" : "rgba(99,102,241,0.08)" }}>
+                        <ClipboardList size={18} className="text-indigo-500" />
+                    </div>
+
+                    <div className="min-w-0">
+                        <h1 className="text-[15px] font-extrabold text-gray-900 dark:text-white">وظایف در حال انجام</h1>
+                        <p className="mt-0.5 text-[11.5px] text-gray-500 dark:text-gray-400">{loading ? "در حال بارگذاری..." : `${list.count} وظیفه`}</p>
+                    </div>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                    <button
+                        type="button"
+                        onClick={() => router.push("/admin/archive")}
+                        className="flex h-10 items-center gap-2 rounded-2xl px-3.5 text-[12px] font-bold transition-colors"
+                        style={{ background: isDark ? "rgba(255,255,255,0.05)" : "rgba(15,23,42,0.05)", color: isDark ? "#cbd5e1" : "#475569" }}
+                    >
                         <Archive size={15} />
                         بایگانی
                     </button>
-                }
-                onRefresh={fetchAll}
-                refreshing={loading}
-            >
-                <button type="button" onClick={() => setShowCreate(true)} className={HEADER_BTN_PRIMARY}>
-                    <Plus size={15} />
-                    افزودن وظیفه
-                </button>
-                <button type="button" onClick={() => setShowCreateNoCase(true)} className={HEADER_BTN_SUCCESS}>
-                    <Plus size={15} />
-                    ایجاد وظیفه بدون پرونده
-                </button>
-            </PageHeader>
 
-            {loading && <TaskCardSkeleton count={6} />}
+                    <button
+                        type="button"
+                        onClick={fetchAll}
+                        disabled={loading}
+                        className="flex h-10 w-10 items-center justify-center rounded-2xl transition-colors disabled:opacity-50"
+                        style={{ background: isDark ? "rgba(255,255,255,0.05)" : "rgba(15,23,42,0.05)", color: isDark ? "#cbd5e1" : "#475569" }}
+                        title="بارگذاری مجدد"
+                    >
+                        <RefreshCw size={15} className={loading ? "animate-spin" : ""} />
+                    </button>
+
+                    <button
+                        type="button"
+                        onClick={() => setShowCreate(true)}
+                        className="flex h-10 items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-4 text-[12.5px] font-bold text-white transition-colors hover:bg-indigo-700"
+                    >
+                        <Plus size={15} />
+                        افزودن وظیفه
+                    </button>
+
+                    <button
+                        type="button"
+                        onClick={() => setShowCreateNoCase(true)}
+                        className="flex h-10 items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-4 text-[12.5px] font-bold text-white transition-colors hover:bg-emerald-700"
+                    >
+                        <Plus size={15} />
+                        ایجاد وظیفه بدون پرونده
+                    </button>
+                </div>
+            </div>
+
+            <input
+                value={list.search}
+                onChange={(e) => list.setSearch(e.target.value)}
+                placeholder="جستجو در عنوان، توضیحات، پرونده، مشتری یا دپارتمان..."
+                className="w-full rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 text-[12.5px] text-gray-700 outline-none transition-colors focus:border-indigo-400 dark:border-white/10 dark:bg-white/[0.03] dark:text-gray-200"
+            />
+
+            {loading && <CardSkeletonGrid count={6} />}
 
             {!loading && tasks.length === 0 && (
                 <div className="flex flex-col items-center justify-center gap-2 py-16">
@@ -171,7 +198,7 @@ function AdminTasksPageContent() {
                             const isViewed = viewedTaskId === task.id;
 
                             return (
-                                <m.div
+                                <motion.div
                                     key={task.id}
                                     className="relative"
                                     animate={{ scale: isHighlighted ? [1, 1.012, 1] : 1 }}
@@ -179,12 +206,12 @@ function AdminTasksPageContent() {
                                 >
                                     {isHighlighted && (
                                         <>
-                                            <m.div
+                                            <motion.div
                                                 className="pointer-events-none absolute -inset-1 z-0 rounded-[26px] bg-red-500/20 blur-xl"
                                                 animate={{ opacity: [0.35, 0.7, 0.35], scale: [0.98, 1.03, 0.98] }}
                                                 transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
                                             />
-                                            <m.div
+                                            <motion.div
                                                 className="pointer-events-none absolute inset-0 z-10 rounded-[24px]"
                                                 animate={{
                                                     boxShadow: [
@@ -204,7 +231,7 @@ function AdminTasksPageContent() {
 
                                     <AnimatePresence>
                                         {isHighlighted && (
-                                            <m.button
+                                            <motion.button
                                                 type="button"
                                                 onClick={() => handleTaskViewed(task.id)}
                                                 className="absolute bottom-3 left-3 z-40 flex items-center gap-2 overflow-hidden rounded-xl px-3 py-2 text-[11px] font-extrabold text-white"
@@ -214,23 +241,23 @@ function AdminTasksPageContent() {
                                                 exit={{ opacity: 0, scale: 0.7, y: 8 }}
                                                 whileTap={{ scale: 0.94 }}
                                             >
-                                                <m.span className="h-1.5 w-1.5 rounded-full bg-white" animate={{ opacity: [0.4, 1, 0.4], scale: [0.8, 1.2, 0.8] }} transition={{ duration: 0.8, repeat: Infinity }} />
+                                                <motion.span className="h-1.5 w-1.5 rounded-full bg-white" animate={{ opacity: [0.4, 1, 0.4], scale: [0.8, 1.2, 0.8] }} transition={{ duration: 0.8, repeat: Infinity }} />
                                                 <Eye size={13} />
                                                 مشاهده شد
-                                            </m.button>
+                                            </motion.button>
                                         )}
                                     </AnimatePresence>
 
                                     <AnimatePresence>
                                         {isViewed && (
-                                            <m.div className="pointer-events-none absolute inset-0 z-50 flex items-center justify-center" initial={{ opacity: 0, scale: 0.5 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.05 }} transition={{ duration: 0.35 }}>
-                                                <m.div className="flex h-11 w-11 items-center justify-center rounded-full bg-emerald-500 text-white shadow-lg shadow-emerald-500/30" initial={{ scale: 0.7 }} animate={{ scale: 1 }} exit={{ scale: 0.05 }} transition={{ duration: 0.45, ease: "easeInOut" }}>
+                                            <motion.div className="pointer-events-none absolute inset-0 z-50 flex items-center justify-center" initial={{ opacity: 0, scale: 0.5 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.05 }} transition={{ duration: 0.35 }}>
+                                                <motion.div className="flex h-11 w-11 items-center justify-center rounded-full bg-emerald-500 text-white shadow-lg shadow-emerald-500/30" initial={{ scale: 0.7 }} animate={{ scale: 1 }} exit={{ scale: 0.05 }} transition={{ duration: 0.45, ease: "easeInOut" }}>
                                                     <Check size={21} strokeWidth={3} />
-                                                </m.div>
-                                            </m.div>
+                                                </motion.div>
+                                            </motion.div>
                                         )}
                                     </AnimatePresence>
-                                </m.div>
+                                </motion.div>
                             );
                         })}
                     </>
@@ -258,7 +285,7 @@ function AdminTasksPageContent() {
 
 export default function AdminTasksPage() {
     return (
-        <SuspenseWrapper fallback={<TaskCardSkeleton />}>
+        <SuspenseWrapper>
             <AdminTasksPageContent />
         </SuspenseWrapper>
     );

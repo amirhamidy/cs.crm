@@ -1,11 +1,10 @@
 import { fetchAllPages, fetchPage } from "@/lib/api/_core";
 
-
-
-
+// لیست‌ها صفحه‌بندی شده‌اند؛ برای تشخیص تغییرات (نوتیفیکیشن) همهٔ صفحات لازم است
+// وگرنه تغییر در آیتم‌های بعد از صفحهٔ اول هیچ‌وقت دیده نمی‌شود.
 async function getList(url: string, signal: AbortSignal): Promise<unknown[]> {
   return fetchAllPages<unknown>((p) =>
-    fetchPage<unknown>(url, { ...p, page_size: 100 }, signal, "low"),
+    fetchPage<unknown>(url, { ...p, page_size: 100 }, signal),
   );
 }
 

@@ -1,16 +1,29 @@
 "use client";
 
-import { useEffect } from "react";
-import { AnimatePresence, m, useReducedMotion } from "framer-motion";
-import { Backdrop } from "@/components/ui/Backdrop";
-import { panelMotion } from "@/lib/motion";
-import { X, History, AlertCircle, ClipboardList, ArrowLeftCircle, ArrowRightCircle, ArrowLeftRight, ShoppingBag, XCircle, Ban, RotateCcw, CheckCircle2, Paperclip, UserRound, MessageSquareText, RefreshCw } from "lucide-react";
-import { Spinner as Loader2 } from "@/components/ui/Spinner";
-import { ListSkeleton } from "@/components/ui/skeletons";
+import { useCallback, useEffect, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import {
+    X,
+    History,
+    Loader2,
+    AlertCircle,
+    ClipboardList,
+    ArrowLeftCircle,
+    ArrowRightCircle,
+    ArrowLeftRight,
+    ShoppingBag,
+    XCircle,
+    Ban,
+    RotateCcw,
+    CheckCircle2,
+    Paperclip,
+    UserRound,
+    MessageSquareText,
+    RefreshCw,
+} from "lucide-react";
 import { useTheme } from "next-themes";
 import { createPortal } from "react-dom";
 import { tasksApi } from "@/lib/api";
-import { usePaginatedList } from "@/hooks/usePaginatedList";
 import Pagination from "@/components/ui/Pagination";
 import { toJalali, toPersianDigits, JALALI_MONTHS, pad2 } from "@/lib/jalali";
 import { useEmployeeInfo } from "@/hooks/useEmployeeInfo";
@@ -63,7 +76,7 @@ const ACTION_META: Record<string, { label: string; color: string; bg: string; ic
     reverted: { label: "بازگشت به مرحله قبل", color: "#ec4899", bg: "rgba(236,72,153,0.12)", icon: ArrowRightCircle },
     transferred: { label: "انتقال به دپارتمان دیگر", color: "#0ea5e9", bg: "rgba(14,165,233,0.12)", icon: ArrowLeftRight },
     sold: { label: "فروش ثبت شد", color: "#f59e0b", bg: "rgba(245,158,11,0.12)", icon: ShoppingBag },
-    unsold: { label: "فروش لغو شد", color: "#6b7280", bg: "rgba(100,116,139,0.12)", icon: XCircle },
+    unsold: { label: "فروش لغو شد", color: "#64748b", bg: "rgba(100,116,139,0.12)", icon: XCircle },
     cancelled: { label: "تسک لغو شد", color: "#ef4444", bg: "rgba(239,68,68,0.12)", icon: Ban },
     uncancelled: { label: "بازگشت از لغو", color: "#f87171", bg: "rgba(248,113,113,0.12)", icon: RotateCcw },
     completed: { label: "تسک تکمیل شد", color: "#10b981", bg: "rgba(16,185,129,0.12)", icon: CheckCircle2 },
@@ -75,7 +88,7 @@ function metaOf(action: string) {
     return (
         ACTION_META[action] ?? {
             label: action,
-            color: "#9ca3af",
+            color: "#94a3b8",
             bg: "rgba(148,163,184,0.12)",
             icon: History,
         }
@@ -99,7 +112,7 @@ function EmployeeTag({ id, isDark }: { id: number; isDark: boolean }) {
             >
                 <UserRound size={9} />
             </span>
-            <span className="text-[10.5px] font-bold" style={{ color: isDark ? "#d1d5db" : "#4b5563" }}>
+            <span className="text-[10.5px] font-bold" style={{ color: isDark ? "#cbd5e1" : "#475569" }}>
                 {name}
             </span>
         </span>
@@ -139,20 +152,20 @@ function LogItem({ log, isLast, isDark }: { log: TaskLog; isLast: boolean; isDar
                     >
                         {meta.label}
                     </span>
-                    <span className="text-[10.5px] font-semibold" style={{ color: isDark ? "#6b7280" : "#9ca3af" }}>
+                    <span className="text-[10.5px] font-semibold" style={{ color: isDark ? "#64748b" : "#94a3b8" }}>
                         {formatJalaliDate(log.created_at)}
                     </span>
                 </div>
 
                 <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
-                    <span className="text-[10.5px] font-bold" style={{ color: isDark ? "#6b7280" : "#9ca3af" }}>
+                    <span className="text-[10.5px] font-bold" style={{ color: isDark ? "#64748b" : "#94a3b8" }}>
                         {log.action === "transferred" ? "مرحله‌ی دپارتمان قبلی:" : "مرحله:"}
                     </span>
                     <span
                         className="rounded-lg px-2 py-0.5 text-[10.5px] font-bold"
                         style={{
                             background: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.04)",
-                            color: isDark ? "#d1d5db" : "#4b5563",
+                            color: isDark ? "#cbd5e1" : "#475569",
                         }}
                     >
                         {log.step_name}
@@ -161,7 +174,7 @@ function LogItem({ log, isLast, isDark }: { log: TaskLog; isLast: boolean; isDar
 
                 {log.employee?.length > 0 && (
                     <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
-                        <span className="text-[10.5px] font-bold" style={{ color: isDark ? "#6b7280" : "#9ca3af" }}>
+                        <span className="text-[10.5px] font-bold" style={{ color: isDark ? "#64748b" : "#94a3b8" }}>
                             توسط:
                         </span>
                         {log.employee.map((id) => (
@@ -178,7 +191,7 @@ function LogItem({ log, isLast, isDark }: { log: TaskLog; isLast: boolean; isDar
                         <MessageSquareText size={13} className="mt-0.5 shrink-0" style={{ color: meta.color }} />
                         <p
                             className="text-[11.5px] font-semibold leading-6"
-                            style={{ color: isDark ? "#e5e7eb" : "#374151" }}
+                            style={{ color: isDark ? "#e2e8f0" : "#334155" }}
                         >
                             {log.note}
                         </p>
@@ -213,29 +226,39 @@ function LogItem({ log, isLast, isDark }: { log: TaskLog; isLast: boolean; isDar
 const LOGS_PAGE_SIZE = 10;
 
 export default function TaskLogsModal({ isOpen, onClose, taskId, taskTitle }: Props) {
-    const reduced = useReducedMotion() ?? false;
     const { resolvedTheme } = useTheme();
     const isDark = resolvedTheme === "dark";
 
-    
-    const list = usePaginatedList<TaskLog>(
-        (params, signal) => tasksApi.logsPage<TaskLog>(taskId, params, signal),
-        { pageSize: LOGS_PAGE_SIZE, enabled: isOpen },
-    );
+    const [logs, setLogs] = useState<TaskLog[]>([]);
+    const [page, setPage] = useState(1);
+    const [total, setTotal] = useState(0);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const totalPages = Math.max(1, Math.ceil(total / LOGS_PAGE_SIZE));
 
-    const logs = list.data;
-    const loading = list.loading && list.data.length === 0;
-    const error = list.error ? "خطا در دریافت تاریخچه" : null;
-    const fetchLogs = list.refetch;
-    const setListPage = list.setPage;
+    const fetchLogs = useCallback(() => {
+        setLoading(true);
+        setError(null);
+        tasksApi
+            .logsPage<TaskLog>(taskId, { page, page_size: LOGS_PAGE_SIZE })
+            .then((res) => {
+                setLogs(res.results);
+                setTotal(res.count);
+            })
+            .catch(() => setError("خطا در دریافت تاریخچه"))
+            .finally(() => setLoading(false));
+    }, [taskId, page]);
 
-    
-    
+    // هر بار که مودال برای تسک دیگری باز شد از صفحهٔ اول شروع کن
     useEffect(() => {
-        if (!isOpen) return;
-        setListPage(1);
-    }, [isOpen, taskId, setListPage]);
+        if (isOpen) setPage(1);
+    }, [isOpen, taskId]);
 
+    useEffect(() => {
+        if (isOpen) fetchLogs();
+    }, [isOpen, fetchLogs]);
+
+    if (!isOpen) return null;
 
     if (typeof document === "undefined") {
         return null;
@@ -243,19 +266,26 @@ export default function TaskLogsModal({ isOpen, onClose, taskId, taskTitle }: Pr
 
     return createPortal(
         <AnimatePresence>
-{isOpen && (
-            <div
+            <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
                 className="fixed inset-0 z-50 flex items-center justify-center px-4"
+                style={{ background: "rgba(0,0,0,0.5)", backdropFilter: "blur(3px)" }}
+                onClick={onClose}
             >
-                <Backdrop onClick={onClose} />
-                <m.div
-                    {...panelMotion(false, reduced)}
-                    className="relative flex max-h-[85vh] w-full max-w-[460px] flex-col overflow-hidden rounded-3xl border"
+                <motion.div
+                    initial={{ scale: 0.94, y: 18 }}
+                    animate={{ scale: 1, y: 0 }}
+                    exit={{ scale: 0.94, y: 18 }}
+                    transition={{ duration: 0.22, ease: "easeOut" }}
+                    className="flex max-h-[85vh] w-full max-w-[460px] flex-col overflow-hidden rounded-3xl border"
                     style={{
-                        background: isDark ? "#111827" : "#ffffff",
+                        background: isDark ? "#0f172a" : "#ffffff",
                         borderColor: isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.06)",
                         boxShadow: "0 24px 64px rgba(0,0,0,0.28)",
                     }}
+                    onClick={(e) => e.stopPropagation()}
                     dir="rtl"
                 >
                     <div
@@ -283,11 +313,11 @@ export default function TaskLogsModal({ isOpen, onClose, taskId, taskTitle }: Pr
                                 type="button"
                                 onClick={fetchLogs}
                                 disabled={loading}
-                                className={`flex h-8 w-8 items-center justify-center rounded-xl text-gray-400 transition-colors hover:text-gray-600 disabled:opacity-40 dark:hover:text-gray-300 `}
+                                className="flex h-8 w-8 items-center justify-center rounded-xl text-gray-400 transition-colors hover:text-gray-600 disabled:opacity-40 dark:hover:text-gray-300"
                                 style={{ background: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.04)" }}
                                 title="بروزرسانی"
                             >
-                                {loading ? <Loader2 size={13} className="animate-spin" /> : <RefreshCw size={13} />}
+                                <RefreshCw size={13} className={loading ? "animate-spin" : ""} />
                             </button>
                             <button
                                 type="button"
@@ -302,7 +332,12 @@ export default function TaskLogsModal({ isOpen, onClose, taskId, taskTitle }: Pr
 
                     <div className="flex-1 overflow-y-auto px-5 py-5">
                         {loading ? (
-                            <ListSkeleton rows={4} />
+                            <div className="flex flex-col items-center justify-center gap-3 py-16">
+                                <Loader2 size={22} className="animate-spin text-indigo-500" />
+                                <p className="text-[12px] font-semibold text-gray-400 dark:text-gray-500">
+                                    در حال دریافت تاریخچه...
+                                </p>
+                            </div>
                         ) : error ? (
                             <div className="flex flex-col items-center justify-center gap-3 py-16">
                                 <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-red-50 dark:bg-red-500/10">
@@ -329,16 +364,15 @@ export default function TaskLogsModal({ isOpen, onClose, taskId, taskTitle }: Pr
                                 {logs.map((log, i) => (
                                     <LogItem key={log.id} log={log} isLast={i === logs.length - 1} isDark={isDark} />
                                 ))}
-                                {list.totalPages > 1 && (
-                                    <Pagination compact page={list.page} totalPages={list.totalPages} onChange={list.setPage} />
+                                {totalPages > 1 && (
+                                    <Pagination compact page={page} totalPages={totalPages} onChange={setPage} />
                                 )}
                             </div>
                         )}
                     </div>
-                </m.div>
-            </div>
-        )}
-</AnimatePresence>,
+                </motion.div>
+            </motion.div>
+        </AnimatePresence>,
         document.body
     );
 }

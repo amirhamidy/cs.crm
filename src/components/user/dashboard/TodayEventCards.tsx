@@ -1,7 +1,11 @@
 "use client";
 
 import { useMemo } from "react";
-import { CheckSquare, StickyNote, Users } from "lucide-react";
+import {
+    CheckSquare,
+    StickyNote,
+    Users,
+} from "lucide-react";
 
 interface CalendarEvent {
     id: number;

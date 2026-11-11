@@ -1,11 +1,10 @@
 "use client";
 
-import { memo, useEffect, useMemo, useState } from "react";
-import { m } from "framer-motion";
-import { ExternalLink, FilePlus, FileText, GitBranch, Pencil, Trash2, Users, X } from "lucide-react";
-import { SkeletonText } from "@/components/ui/Skeleton";
-import { Department, HumanResource, HumanResourceFile, deleteDocumentFile, getDocumentFiles } from "./humanResourceApi";
-import { extractError, gradientOf, initialOf } from "./hrUtils";
+import { memo } from "react";
+import { motion } from "framer-motion";
+import { ExternalLink, FileText, GitBranch, Pencil, Trash2, Users, X } from "lucide-react";
+import { Department, HumanResource, deleteDocumentFile } from "./humanResourceApi";
+import { gradientOf, initialOf } from "./hrUtils";
 
 interface Props {
     document: HumanResource;
@@ -14,68 +13,22 @@ interface Props {
     onEdit: () => void;
     onDelete: () => void;
     onSteps: () => void;
-    onAddFile: () => void;
     onChange: () => void;
 }
 
 const iconBtn = "flex h-7 w-7 items-center justify-center rounded-lg text-gray-400 transition";
 
-function HumanResourceCard({ document, departments, canManage, onEdit, onDelete, onSteps, onAddFile, onChange }: Props) {
+function HumanResourceCard({ document, departments, canManage, onEdit, onDelete, onSteps, onChange }: Props) {
     const dep = departments.find((d) => d.name === document.title);
-
-    
-    
-    const embedded = document.filesEmbedded !== false;
-    const [fetched, setFetched] = useState<HumanResourceFile[] | null>(null);
-    const [fetching, setFetching] = useState(false);
-    const [removedIds, setRemovedIds] = useState<number[]>([]);
-    const [error, setError] = useState<string | null>(null);
-
-    useEffect(() => {
-        if (embedded) {
-            setFetched(null);
-            return;
-        }
-        let alive = true;
-        setFetching(true);
-        getDocumentFiles(document.id)
-            .then(({ data }) => {
-                if (alive) setFetched(data);
-            })
-            .catch(() => {
-                if (alive) setFetched([]);
-            })
-            .finally(() => {
-                if (alive) setFetching(false);
-            });
-        return () => {
-            alive = false;
-        };
-    }, [embedded, document]);
-
-    
-    const files = useMemo(
-        () =>
-            (embedded ? document.files : fetched ?? [])
-                .filter((f) => f.step == null)
-                .filter((f) => !removedIds.includes(f.id)),
-        [embedded, document.files, fetched, removedIds],
-    );
 
     const removeFile = async (id: number) => {
         if (!confirm("آیا از حذف فایل مطمئن هستید؟")) return;
-        try {
-            setError(null);
-            await deleteDocumentFile(id);
-            setRemovedIds((prev) => [...prev, id]);
-            onChange();
-        } catch (e) {
-            setError(extractError(e, "حذف فایل انجام نشد."));
-        }
+        await deleteDocumentFile(id);
+        onChange();
     };
 
     return (
-        <m.div
+        <motion.div
             layout
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
@@ -107,9 +60,6 @@ function HumanResourceCard({ document, departments, canManage, onEdit, onDelete,
 
                             {canManage && (
                                 <div className="flex shrink-0 items-center gap-1">
-                                    <button type="button" onClick={onAddFile} title="افزودن فایل" aria-label="افزودن فایل" className={`${iconBtn} hover:bg-indigo-50 hover:text-indigo-500 dark:hover:bg-indigo-500/10`}>
-                                        <FilePlus size={13} />
-                                    </button>
                                     <button type="button" onClick={onEdit} className={`${iconBtn} hover:bg-blue-50 hover:text-blue-500 dark:hover:bg-blue-500/10`}>
                                         <Pencil size={13} />
                                     </button>
@@ -125,12 +75,10 @@ function HumanResourceCard({ document, departments, canManage, onEdit, onDelete,
                 <div className="mt-3 h-px bg-gray-100 dark:bg-white/[0.06]" />
 
                 <div className="mt-3">
-                    {fetching && files.length === 0 ? (
-                        <SkeletonText lines={2} />
-                    ) : files.length > 0 ? (
+                    {document.files.length > 0 ? (
                         <div className="space-y-1.5">
-                            {files.map((f) => (
-                                <m.div
+                            {document.files.map((f) => (
+                                <motion.div
                                     key={f.id}
                                     initial={{ opacity: 0, y: 4 }}
                                     animate={{ opacity: 1, y: 0 }}
@@ -139,35 +87,16 @@ function HumanResourceCard({ document, departments, canManage, onEdit, onDelete,
                                     <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-white shadow-sm dark:bg-white/[0.06]">
                                         <FileText size={12} className="text-indigo-500" />
                                     </span>
-
-                                    {f.file ? (
-                                        <a href={f.file} target="_blank" rel="noreferrer" className="min-w-0 flex-1 truncate text-[11px] font-bold text-gray-600 transition hover:text-indigo-500 dark:text-gray-300">
-                                            {f.title?.trim() || "مشاهده فایل"}
-                                        </a>
-                                    ) : (
-                                        <span className="min-w-0 flex-1 truncate text-[11px] font-bold text-gray-400">
-                                            {f.title?.trim() || "فایل بدون لینک"}
-                                        </span>
-                                    )}
-
-                                    {f.file && (
-                                        <a
-                                            href={f.file}
-                                            target="_blank"
-                                            rel="noreferrer"
-                                            aria-label="بازکردن فایل"
-                                            className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-gray-300 transition hover:bg-indigo-50 hover:text-indigo-500 dark:hover:bg-indigo-500/10"
-                                        >
-                                            <ExternalLink size={11} />
-                                        </a>
-                                    )}
-
+                                    <a href={f.file} target="_blank" rel="noreferrer" className="min-w-0 flex-1 truncate text-[11px] font-bold text-gray-600 transition hover:text-indigo-500 dark:text-gray-300">
+                                        مشاهده فایل
+                                    </a>
+                                    <ExternalLink size={11} className="shrink-0 text-gray-300" />
                                     {canManage && (
                                         <button type="button" onClick={() => removeFile(f.id)} className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-gray-400 transition hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-500/10">
                                             <X size={11} />
                                         </button>
                                     )}
-                                </m.div>
+                                </motion.div>
                             ))}
                         </div>
                     ) : (
@@ -178,11 +107,9 @@ function HumanResourceCard({ document, departments, canManage, onEdit, onDelete,
                             <span className="text-[10.5px] font-semibold text-gray-400">فایلی برای این منبع ثبت نشده</span>
                         </div>
                     )}
-
-                    {error && <p className="mt-1.5 text-[10.5px] font-semibold text-rose-500">{error}</p>}
                 </div>
 
-                <m.button
+                <motion.button
                     type="button"
                     whileTap={{ scale: 0.98 }}
                     onClick={onSteps}
@@ -190,9 +117,9 @@ function HumanResourceCard({ document, departments, canManage, onEdit, onDelete,
                 >
                     <GitBranch size={13} />
                     مشاهده مراحل
-                </m.button>
+                </motion.button>
             </div>
-        </m.div>
+        </motion.div>
     );
 }
 

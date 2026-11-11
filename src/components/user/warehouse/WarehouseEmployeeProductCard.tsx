@@ -1,20 +1,37 @@
 "use client";
 
 import { useState } from "react";
-import { AnimatePresence, m, useReducedMotion } from "framer-motion";
-import { Backdrop } from "@/components/ui/Backdrop";
-import { panelMotion } from "@/lib/motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { useTheme } from "next-themes";
-import { AlertTriangle, ArrowDownUp, Boxes, CalendarDays, MapPin, Package, Pencil, Scale, Tag, Trash2, Wallet, X } from "lucide-react";
+import {
+    AlertTriangle,
+    ArrowDownUp,
+    Boxes,
+    CalendarDays,
+    Loader2,
+    MapPin,
+    Package,
+    Pencil,
+    Scale,
+    Tag,
+    Trash2,
+    Wallet,
+    X,
+} from "lucide-react";
 import type { AxiosError } from "axios";
 import axiosInstance from "@/lib/axiosInstance";
-import { ApiCategory, ApiProduct, ApiStockInfo, ApiWarehouseStaff, UNIT_TYPE_LABELS } from "@/types/warehouse";
+import {
+    ApiCategory,
+    ApiProduct,
+    ApiStockInfo,
+    ApiWarehouseStaff,
+    UNIT_TYPE_LABELS,
+} from "@/types/warehouse";
 import type { WithShelf } from "@/types/warehouseShelf";
 import WarehouseEmployeeProductEditModal from "./WarehouseEmployeeProductEditModal";
 import WarehouseEmployeeStockModal from "./WarehouseEmployeeStockModal";
 import WarehouseEmployeeInitialStockModal from "./WarehouseEmployeeInitialStockModal";
 
-import { BusyContent } from "@/components/ui/Button";
 interface ProductCardProps {
     product: ApiProduct;
     stockInfo: ApiStockInfo | null;
@@ -166,7 +183,6 @@ export default function WarehouseEmployeeProductCard({
     onStockChanged,
     onDeleted,
 }: ProductCardProps) {
-    const reduced = useReducedMotion() ?? false;
     const { resolvedTheme } = useTheme();
     const isDark = resolvedTheme === "dark";
     const [hovered, setHovered] = useState(false);
@@ -236,7 +252,7 @@ export default function WarehouseEmployeeProductCard({
 
     return (
         <>
-            <m.div
+            <motion.div
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.96 }}
@@ -268,7 +284,7 @@ export default function WarehouseEmployeeProductCard({
                         </linearGradient>
                     </defs>
 
-                    <m.rect
+                    <motion.rect
                         x="1"
                         y="1"
                         width="calc(100% - 2px)"
@@ -539,7 +555,7 @@ export default function WarehouseEmployeeProductCard({
                                                 ? "#ef4444"
                                                 : isDark
                                                     ? "#fff"
-                                                    : "#111827",
+                                                    : "#0f172a",
                                         }}
                                     >
                                         {formatStockValue(
@@ -584,7 +600,7 @@ export default function WarehouseEmployeeProductCard({
                                             : "rgba(15,23,42,.06)",
                                     }}
                                 >
-                                    <m.div
+                                    <motion.div
                                         initial={{ width: 0 }}
                                         animate={{
                                             width: `${stockPercentage}%`,
@@ -648,7 +664,7 @@ export default function WarehouseEmployeeProductCard({
                                 background: isDark
                                     ? "rgba(255,255,255,.04)"
                                     : "rgba(15,23,42,.04)",
-                                color: isDark ? "#9ca3af" : "#6b7280",
+                                color: isDark ? "#94a3b8" : "#64748b",
                             }}
                         >
                             <CalendarDays size={9} />
@@ -664,7 +680,7 @@ export default function WarehouseEmployeeProductCard({
                         {deleteError}
                     </p>
                 )}
-            </m.div>
+            </motion.div>
 
             <WarehouseEmployeeProductEditModal
                 isOpen={showEdit}
@@ -701,13 +717,23 @@ export default function WarehouseEmployeeProductCard({
 
             <AnimatePresence>
                 {showConfirm && (
-                    <div
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        onClick={() => !deleting && setShowConfirm(false)}
                         className="fixed inset-0 z-50 flex items-center justify-center px-4"
+                        style={{
+                            background: "rgba(0,0,0,.5)",
+                            backdropFilter: "blur(4px)",
+                        }}
                     >
-                        <Backdrop onClick={() => !deleting && setShowConfirm(false)} />
-                        <m.div
-                            {...panelMotion(false, reduced)}
-                            className="relative w-full max-w-[360px] rounded-[2rem] bg-white p-5 dark:bg-[#111827]"
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.96, y: 16 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.96, y: 16 }}
+                            onClick={(e) => e.stopPropagation()}
+                            className="w-full max-w-[360px] rounded-[2rem] bg-white p-5 dark:bg-[#0f172a]"
                             dir="rtl"
                         >
                             <div className="mb-4 flex items-center justify-between">
@@ -762,15 +788,20 @@ export default function WarehouseEmployeeProductCard({
                                     type="button"
                                     onClick={handleDelete}
                                     disabled={deleting}
-                                    className="relative flex flex-1 items-center justify-center gap-1.5 rounded-2xl bg-red-600 py-2.5 text-[12.5px] font-bold text-white disabled:opacity-60"
+                                    className="flex flex-1 items-center justify-center gap-1.5 rounded-2xl bg-red-600 py-2.5 text-[12.5px] font-bold text-white disabled:opacity-60"
                                 >
-                                    <BusyContent busy={deleting}>
-                                        حذف کن
-                                    </BusyContent>
+                                    {deleting ? (
+                                        <Loader2
+                                            size={14}
+                                            className="animate-spin"
+                                        />
+                                    ) : (
+                                        "حذف کن"
+                                    )}
                                 </button>
                             </div>
-                        </m.div>
-                    </div>
+                        </motion.div>
+                    </motion.div>
                 )}
             </AnimatePresence>
         </>

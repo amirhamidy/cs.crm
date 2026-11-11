@@ -1,17 +1,14 @@
 "use client";
 
 import { useEffect, useState, forwardRef, InputHTMLAttributes, TextareaHTMLAttributes } from "react";
-import { m, AnimatePresence, useReducedMotion } from "framer-motion";
-import { Backdrop } from "@/components/ui/Backdrop";
-import { panelMotion } from "@/lib/motion";
-import { X, FolderOpen, CheckCircle2, AlertCircle } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { X, FolderOpen, CheckCircle2, Loader, AlertCircle } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
 import type { CaseItem } from "@/types/case";
 import type { Customer } from "@/types/customer";
 import type { Department } from "@/types/department";
 import type { Employee } from "@/types/employee";
 
-import { BusyContent } from "@/components/ui/Button";
 interface EditCaseModalProps {
     isOpen: boolean;
     onClose: () => void;
@@ -44,7 +41,7 @@ const FloatingInput = forwardRef<HTMLInputElement, FloatingInputProps>(
             />
             <label
                 htmlFor={id}
-                className="pointer-events-none absolute right-5 top-1/2 -translate-y-1/2 rounded bg-white px-1.5 text-sm text-gray-400 transition-all duration-200 peer-focus:top-0 peer-focus:text-xs peer-focus:text-gray-500 peer-[:not(:placeholder-shown)]:top-0 peer-[:not(:placeholder-shown)]:text-xs peer-[:not(:placeholder-shown)]:text-gray-500 dark:bg-[#111827]"
+                className="pointer-events-none absolute right-5 top-1/2 -translate-y-1/2 rounded bg-white px-1.5 text-sm text-gray-400 transition-all duration-200 peer-focus:top-0 peer-focus:text-xs peer-focus:text-gray-500 peer-[:not(:placeholder-shown)]:top-0 peer-[:not(:placeholder-shown)]:text-xs peer-[:not(:placeholder-shown)]:text-gray-500 dark:bg-[#0f172a]"
             >
                 {label}
             </label>
@@ -66,7 +63,7 @@ const FloatingTextarea = forwardRef<HTMLTextAreaElement, FloatingTextareaProps>(
             />
             <label
                 htmlFor={id}
-                className="pointer-events-none absolute right-5 top-4 rounded bg-white px-1.5 text-sm text-gray-400 transition-all duration-200 peer-focus:-top-2.5 peer-focus:text-xs peer-focus:text-gray-500 peer-[:not(:placeholder-shown)]:-top-2.5 peer-[:not(:placeholder-shown)]:text-xs peer-[:not(:placeholder-shown)]:text-gray-500 dark:bg-[#111827]"
+                className="pointer-events-none absolute right-5 top-4 rounded bg-white px-1.5 text-sm text-gray-400 transition-all duration-200 peer-focus:-top-2.5 peer-focus:text-xs peer-focus:text-gray-500 peer-[:not(:placeholder-shown)]:-top-2.5 peer-[:not(:placeholder-shown)]:text-xs peer-[:not(:placeholder-shown)]:text-gray-500 dark:bg-[#0f172a]"
             >
                 {label}
             </label>
@@ -84,7 +81,6 @@ export default function EditCaseModal({
     users,
     onSuccess,
 }: EditCaseModalProps) {
-    const reduced = useReducedMotion() ?? false;
     const [title, setTitle] = useState("");
     const [description, setDescription] = useState("");
     const [submitting, setSubmitting] = useState(false);
@@ -164,13 +160,21 @@ export default function EditCaseModal({
     return (
         <AnimatePresence>
             {isOpen && caseItem && (
-                <div
+                <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
                     className="fixed inset-0 z-50 flex items-center justify-center px-4"
+                    style={{ background: "rgba(0,0,0,0.45)", backdropFilter: "blur(3px)" }}
+                    onClick={handleClose}
                 >
-                    <Backdrop onClick={handleClose} />
-                    <m.div
-                        {...panelMotion(false, reduced)}
-                        className="relative w-full max-w-sm overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-sm dark:border-white/[0.06] dark:bg-[#111827]"
+                    <motion.div
+                        initial={{ opacity: 0, y: 16 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 16 }}
+                        transition={{ duration: 0.35, ease: "easeOut" }}
+                        className="w-full max-w-sm overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-sm dark:border-white/[0.06] dark:bg-[#0f172a]"
+                        onClick={(e) => e.stopPropagation()}
                         dir="rtl"
                     >
                         <div className="flex items-center justify-between px-8 pb-6 pt-8">
@@ -224,7 +228,7 @@ export default function EditCaseModal({
 
                             <AnimatePresence>
                                 {error && (
-                                    <m.div
+                                    <motion.div
                                         initial={{ opacity: 0, y: 6 }}
                                         animate={{ opacity: 1, y: 0 }}
                                         exit={{ opacity: 0, y: 4 }}
@@ -232,13 +236,13 @@ export default function EditCaseModal({
                                     >
                                         <AlertCircle size={14} className="shrink-0" />
                                         <span className="flex-1 font-medium">{error}</span>
-                                    </m.div>
+                                    </motion.div>
                                 )}
                             </AnimatePresence>
 
                             <AnimatePresence mode="wait">
                                 {success ? (
-                                    <m.div
+                                    <motion.div
                                         key="success"
                                         initial={{ opacity: 0, scale: 0.9 }}
                                         animate={{ opacity: 1, scale: 1 }}
@@ -247,24 +251,26 @@ export default function EditCaseModal({
                                     >
                                         <CheckCircle2 size={16} />
                                         تغییرات با موفقیت ذخیره شد
-                                    </m.div>
+                                    </motion.div>
                                 ) : (
-                                    <m.button
+                                    <motion.button
                                         key="submit"
                                         type="submit"
                                         disabled={!canSubmit}
                                         whileTap={{ scale: 0.97 }}
-                                        className="relative flex items-center justify-center rounded-full bg-blue-600 py-3 text-sm font-bold text-white transition-colors hover:bg-blue-500 disabled:opacity-50"
+                                        className="flex items-center justify-center rounded-full bg-blue-600 py-3 text-sm font-bold text-white transition-colors hover:bg-blue-500 disabled:opacity-50"
                                     >
-                                        <BusyContent busy={submitting}>
-                                            ذخیره تغییرات
-                                        </BusyContent>
-                                    </m.button>
+                                        {submitting ? (
+                                            <Loader size={18} className="animate-spin" />
+                                        ) : (
+                                            "ذخیره تغییرات"
+                                        )}
+                                    </motion.button>
                                 )}
                             </AnimatePresence>
                         </form>
-                    </m.div>
-                </div>
+                    </motion.div>
+                </motion.div>
             )}
         </AnimatePresence>
     );

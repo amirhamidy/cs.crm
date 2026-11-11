@@ -1,7 +1,7 @@
 "use client";
 import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { AnimatePresence, MotionConfig, m } from "framer-motion";
+import { AnimatePresence, MotionConfig, motion } from "framer-motion";
 import {
     CalendarCheck,
     CalendarClock,
@@ -68,7 +68,7 @@ const UPCOMING_DAYS = 60;
 const UPCOMING_LIMIT = 6;
 const weekDays = ["شنبه", "یکشنبه", "دوشنبه", "سه‌شنبه", "چهارشنبه", "پنجشنبه", "جمعه"];
 const PANEL =
-    "rounded-2xl border border-slate-300/55 bg-white/70 dark:border-white/[0.08] dark:bg-slate-900/55";
+    "rounded-2xl border border-slate-300/55 bg-white/70 backdrop-blur-md dark:border-white/[0.08] dark:bg-slate-900/55";
 const CELL_GLOW =
     "hover:z-10 hover:-translate-y-0.5 hover:border-indigo-400/50 hover:bg-indigo-500/[0.06] dark:hover:bg-indigo-400/[0.08]";
 const FOCUS = "focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/60";
@@ -673,7 +673,7 @@ export default function PersianCalendar() {
                                     {upcoming.map((item, i) => {
                                         const style = getTypeStyle(item.event.type);
                                         return (
-                                            <m.li
+                                            <motion.li
                                                 key={item.key}
                                                 initial={{ opacity: 0, x: 14 }}
                                                 animate={{ opacity: 1, x: 0 }}
@@ -713,7 +713,7 @@ export default function PersianCalendar() {
                                                         {item.rel}
                                                     </span>
                                                 </button>
-                                            </m.li>
+                                            </motion.li>
                                         );
                                     })}
                                 </ul>
@@ -815,7 +815,7 @@ export default function PersianCalendar() {
                                         {pickerOpen && pickerYear !== null && (
                                             <>
                                                 <div className="fixed inset-0 z-20" onClick={() => setPickerOpen(false)} />
-                                                <m.div
+                                                <motion.div
                                                     key="picker"
                                                     initial={{ opacity: 0, y: -8, scale: 0.96 }}
                                                     animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -847,14 +847,14 @@ export default function PersianCalendar() {
                                                     </div>
                                                     <div className="grid grid-cols-3 gap-1.5">
                                                         {JALALI_MONTHS.map((label, index) => {
-                                                            const monthNum = index + 1;
-                                                            const active = pickerYear === currentJy && monthNum === currentJm;
+                                                            const m = index + 1;
+                                                            const active = pickerYear === currentJy && m === currentJm;
                                                             return (
                                                                 <button
                                                                     key={label}
                                                                     type="button"
                                                                     onClick={() => {
-                                                                        goToMonth(pickerYear, monthNum);
+                                                                        goToMonth(pickerYear, m);
                                                                         setPickerOpen(false);
                                                                     }}
                                                                     className={`rounded-xl px-2 py-2.5 text-[11px] font-bold transition-[background-color,transform] active:scale-95 ${active
@@ -867,7 +867,7 @@ export default function PersianCalendar() {
                                                             );
                                                         })}
                                                     </div>
-                                                </m.div>
+                                                </motion.div>
                                             </>
                                         )}
                                     </AnimatePresence>
@@ -895,7 +895,7 @@ export default function PersianCalendar() {
                                                     }`}
                                             >
                                                 {view === value && (
-                                                    <m.span
+                                                    <motion.span
                                                         layoutId="view-pill"
                                                         transition={{ type: "spring", stiffness: 500, damping: 36 }}
                                                         className={`absolute inset-0 rounded-full ${GRADIENT}`}
@@ -935,7 +935,7 @@ export default function PersianCalendar() {
                                             }`}
                                     >
                                         {selected && (
-                                            <m.span
+                                            <motion.span
                                                 layoutId="qm-pill"
                                                 transition={{ type: "spring", stiffness: 500, damping: 38 }}
                                                 className={`absolute inset-0 rounded-full ${GRADIENT}`}

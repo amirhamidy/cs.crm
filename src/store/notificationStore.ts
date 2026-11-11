@@ -1,5 +1,10 @@
 import { create } from "zustand";
-import type { AppNotification, NotificationInput, Toast, ToastType } from "@/components/notifications/types";
+import type {
+  AppNotification,
+  NotificationInput,
+  Toast,
+  ToastType,
+} from "@/components/notifications/types";
 
 const MAX_ITEMS = 100;
 const MAX_TOASTS = 3;

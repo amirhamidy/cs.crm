@@ -2,20 +2,23 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { AnimatePresence, m } from "framer-motion";
-import { Boxes, Lock, Pencil, Plus, Power, PowerOff, X } from "lucide-react";
-import WarehouseSelectorSkeleton from "./WarehouseSelectorSkeleton";
+import { AnimatePresence, motion } from "framer-motion";
+import { Boxes, Loader2, Lock, Pencil, Plus, Power, PowerOff, X } from "lucide-react";
 import { useTheme } from "next-themes";
 
 import useWarehouses from "@/hooks/useWarehouses";
 import useWarehouseAccess from "@/hooks/useWarehouseAccess";
 import { useCurrentEmployee } from "@/hooks/usecurrentemployee";
-import { WAREHOUSE_ENDPOINTS, apiErrorMessage, createWarehouse, fetchAll } from "@/lib/warehouseApi";
+import {
+    WAREHOUSE_ENDPOINTS,
+    apiErrorMessage,
+    createWarehouse,
+    fetchAll,
+} from "@/lib/warehouseApi";
 import { cardBg, cardBorder, cardShadow, muted } from "@/components/admin/warehouse/WarehouseCards";
 import { EditWarehouseModal, WarehouseStatusModal } from "@/components/admin/warehouse/WarehouseFormModals";
 import type { ApiWarehouse } from "@/types/warehouse";
 
-import { BusyContent } from "@/components/ui/Button";
 interface StaffItem {
     id: number;
     employee: number;
@@ -73,21 +76,21 @@ function CreateWarehouseModal({
     return (
         <AnimatePresence>
             {isOpen && (
-                <m.div
+                <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 backdrop-blur-layer"
+                    className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
                     onClick={() => !loading && onClose()}
                     dir="rtl"
                 >
-                    <m.form
+                    <motion.form
                         initial={{ opacity: 0, scale: 0.95, y: 10 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.95, y: 10 }}
                         onClick={(e) => e.stopPropagation()}
                         onSubmit={handleSubmit}
-                        className="w-full max-w-sm rounded-3xl bg-white p-5 shadow-2xl dark:bg-gray-900"
+                        className="w-full max-w-sm rounded-3xl bg-white p-5 shadow-2xl dark:bg-slate-900"
                     >
                         <div className="flex items-center justify-between">
                             <h3 className="text-[14px] font-extrabold text-gray-900 dark:text-white">
@@ -150,14 +153,13 @@ function CreateWarehouseModal({
                         <button
                             type="submit"
                             disabled={loading}
-                            className="relative mt-5 flex h-11 w-full items-center justify-center gap-2 rounded-2xl bg-indigo-600 text-[13px] font-bold text-white transition-colors hover:bg-indigo-500 disabled:opacity-50"
+                            className="mt-5 flex h-11 w-full items-center justify-center gap-2 rounded-2xl bg-indigo-600 text-[13px] font-bold text-white transition-colors hover:bg-indigo-500 disabled:opacity-50"
                         >
-                            <BusyContent busy={loading}>
-                                ایجاد انبار
-                            </BusyContent>
+                            {loading && <Loader2 size={15} className="animate-spin" />}
+                            ایجاد انبار
                         </button>
-                    </m.form>
-                </m.div>
+                    </motion.form>
+                </motion.div>
             )}
         </AnimatePresence>
     );
@@ -232,7 +234,7 @@ export default function WarehouseSelector() {
             setBlockedId(warehouse.id);
             return;
         }
-        router.push(`${basePath}/stock?warehouse=${warehouse.id}`);
+        router.push(`${basePath}/overview?warehouse=${warehouse.id}`);
     };
 
     const isPageLoading = warehousesLoading || (!isAdmin && (empLoading || staffLoading));
@@ -263,7 +265,7 @@ export default function WarehouseSelector() {
                 </div>
 
                 {isAdmin && (
-                    <m.button
+                    <motion.button
                         type="button"
                         whileTap={{ scale: 0.97 }}
                         onClick={() => setShowCreate(true)}
@@ -271,7 +273,7 @@ export default function WarehouseSelector() {
                     >
                         <Plus size={15} />
                         ایجاد انبار
-                    </m.button>
+                    </motion.button>
                 )}
             </div>
 
@@ -282,12 +284,14 @@ export default function WarehouseSelector() {
             )}
 
             {isPageLoading ? (
-                <WarehouseSelectorSkeleton count={8} />
+                <div className="flex items-center justify-center py-20">
+                    <Loader2 size={22} className="animate-spin text-indigo-500" />
+                </div>
             ) : (
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                     {visibleWarehouses.length ? (
                         visibleWarehouses.map((warehouse, index) => (
-                            <m.div
+                            <motion.div
                                 key={warehouse.id}
                                 role="button"
                                 tabIndex={0}
@@ -375,7 +379,7 @@ export default function WarehouseSelector() {
 
                                 <AnimatePresence>
                                     {blockedId === warehouse.id && !warehouse.is_active && !isAdmin && (
-                                        <m.div
+                                        <motion.div
                                             initial={{ opacity: 0, height: 0 }}
                                             animate={{ opacity: 1, height: "auto" }}
                                             exit={{ opacity: 0, height: 0 }}
@@ -385,10 +389,10 @@ export default function WarehouseSelector() {
                                                 <Lock size={13} className="shrink-0" />
                                                 این انبار از دسترس خارج است
                                             </div>
-                                        </m.div>
+                                        </motion.div>
                                     )}
                                 </AnimatePresence>
-                            </m.div>
+                            </motion.div>
                         ))
                     ) : (
                         <p

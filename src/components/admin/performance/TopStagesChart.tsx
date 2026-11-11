@@ -1,10 +1,21 @@
 "use client";
 
-import { AnimatePresence, m } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { useTheme } from "next-themes";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, XAxis, YAxis } from "recharts";
-import type { StageRankItem, TimeRange } from "@/hooks/useTopStagesRanking";
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  ResponsiveContainer,
+  XAxis,
+  YAxis,
+} from "recharts";
+import type {
+  StageRankItem,
+  TimeRange,
+} from "@/hooks/useTopStagesRanking";
 
 type TabKey = "sold" | "completed" | "in_progress" | "cancelled";
 
@@ -262,7 +273,7 @@ function CustomXAxisTick({
       textAnchor="middle"
       fontSize={11}
       fontWeight={500}
-      fill={isDark ? "#6b7280" : "#6b7280"}
+      fill={isDark ? "#64748b" : "#64748b"}
     >
       {label}
     </text>
@@ -271,24 +282,24 @@ function CustomXAxisTick({
 
 function TopStagesChartSkeleton() {
   return (
-    <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-white/5 dark:bg-gray-950">
+    <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-white/5 dark:bg-slate-950">
       <div
         className="mb-3 flex items-start justify-between gap-3"
         dir="rtl"
       >
         <div className="space-y-2">
-          <div className="h-4 w-36 animate-pulse rounded-full bg-gray-100 dark:bg-gray-900" />
-          <div className="h-3 w-20 animate-pulse rounded-full bg-gray-100/80 dark:bg-gray-900/60" />
+          <div className="h-4 w-36 animate-pulse rounded-full bg-gray-100 dark:bg-slate-900" />
+          <div className="h-3 w-20 animate-pulse rounded-full bg-gray-100/80 dark:bg-slate-900/60" />
         </div>
 
-        <div className="h-8 w-24 animate-pulse rounded-lg bg-gray-100 dark:bg-gray-900" />
+        <div className="h-8 w-24 animate-pulse rounded-lg bg-gray-100 dark:bg-slate-900" />
       </div>
 
       <div className="flex h-[180px] items-end gap-2 px-2">
         {[60, 80, 45, 70, 35].map((h, i) => (
           <div
             key={i}
-            className="w-6 animate-pulse rounded-t-md bg-gray-100 dark:bg-gray-900"
+            className="w-6 animate-pulse rounded-t-md bg-gray-100 dark:bg-slate-900"
             style={{ height: `${h}%` }}
           />
         ))}
@@ -465,7 +476,7 @@ export default function TopStagesChart({
 
   const gridColor = isDark
     ? "rgba(255,255,255,0.04)"
-    : "#e5e7eb";
+    : "#e2e8f0";
 
   const accentColor = palette[0].color;
 
@@ -474,7 +485,7 @@ export default function TopStagesChart({
   }
 
   return (
-    <m.div
+    <motion.div
       initial={{
         opacity: 0,
         y: 6,
@@ -492,7 +503,7 @@ export default function TopStagesChart({
           0.94,
         ],
       }}
-      className="relative rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-white/8 dark:bg-gray-950"
+      className="relative rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-white/8 dark:bg-slate-950"
     >
       <div
         className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"
@@ -516,7 +527,7 @@ export default function TopStagesChart({
         </div>
 
         <div className="flex flex-col items-end gap-2">
-          <div className="flex items-center gap-1 rounded-xl border border-gray-200 bg-gray-50 p-1 dark:border-white/5 dark:bg-gray-900/50">
+          <div className="flex items-center gap-1 rounded-xl border border-gray-200 bg-gray-50 p-1 dark:border-white/5 dark:bg-slate-900/50">
             {ranges.map((range) => (
               <button
                 key={range.key}
@@ -530,9 +541,9 @@ export default function TopStagesChart({
               >
                 {activeRange ===
                   range.key && (
-                    <m.span
+                    <motion.span
                       layoutId="topStagesRangeIndicator"
-                      className="absolute inset-0 rounded-lg bg-white shadow-sm dark:bg-gray-800"
+                      className="absolute inset-0 rounded-lg bg-white shadow-sm dark:bg-slate-800"
                       transition={{
                         type: "spring",
                         stiffness: 400,
@@ -554,7 +565,7 @@ export default function TopStagesChart({
             ))}
           </div>
 
-          <div className="flex flex-wrap items-center justify-end gap-1 rounded-xl border border-gray-200 bg-gray-50 p-1 dark:border-white/5 dark:bg-gray-900/50">
+          <div className="flex flex-wrap items-center justify-end gap-1 rounded-xl border border-gray-200 bg-gray-50 p-1 dark:border-white/5 dark:bg-slate-900/50">
             {tabs.map((t) => (
               <button
                 key={t.key}
@@ -568,7 +579,7 @@ export default function TopStagesChart({
               >
                 {activeTab ===
                   t.key && (
-                    <m.span
+                    <motion.span
                       layoutId="topStagesTabIndicator"
                       className="absolute inset-0 rounded-lg"
                       style={{
@@ -604,7 +615,7 @@ export default function TopStagesChart({
       <div className="absolute left-2 top-24 z-10 min-w-[150px]">
         <AnimatePresence mode="wait">
           {activeBar && (
-            <m.div
+            <motion.div
               key={`${activeRange}-${activeTab}-${activeBar.stage}`}
               initial={{
                 opacity: 0,
@@ -630,7 +641,7 @@ export default function TopStagesChart({
                   0.94,
                 ],
               }}
-              className="pointer-events-none rounded-xl border border-gray-200/60 bg-white/95 px-3 py-2 shadow-lg dark:border-white/10 dark:bg-gray-900/95"
+              className="pointer-events-none rounded-xl border border-gray-200/60 bg-white/95 px-3 py-2 shadow-lg backdrop-blur-sm dark:border-white/10 dark:bg-slate-900/95"
               style={{
                 boxShadow: `0 4px 20px ${activeBar.glow}`,
               }}
@@ -672,7 +683,7 @@ export default function TopStagesChart({
                   }
                 </span>
               </p>
-            </m.div>
+            </motion.div>
           )}
         </AnimatePresence>
       </div>
@@ -756,6 +767,6 @@ export default function TopStagesChart({
           </ResponsiveContainer>
         )}
       </div>
-    </m.div>
+    </motion.div>
   );
 }

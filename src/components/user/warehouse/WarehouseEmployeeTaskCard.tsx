@@ -1,15 +1,28 @@
 "use client";
 
 import { useState } from "react";
-import { AnimatePresence, m, useReducedMotion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { useTheme } from "next-themes";
-import { AlertCircle, Check, CheckCircle2, Clock3, FileText, Package, PackageCheck, Paperclip, RotateCcw, ShieldCheck, Upload, User, X, XCircle } from "lucide-react";
+import {
+    AlertCircle,
+    Check,
+    CheckCircle2,
+    Clock3,
+    FileText,
+    Loader2,
+    Package,
+    PackageCheck,
+    Paperclip,
+    RotateCcw,
+    ShieldCheck,
+    Upload,
+    User,
+    X,
+    XCircle,
+} from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
 import type { ApiWarehouseTask } from "@/types/warehouse";
 
-import { BusyContent } from "@/components/ui/Button";
-import { Backdrop } from "@/components/ui/Backdrop";
-import { panelMotion } from "@/lib/motion";
 interface WarehouseEmployeeTaskCardProps {
     task: ApiWarehouseTask;
     index?: number;
@@ -257,12 +270,15 @@ export default function WarehouseEmployeeTaskCard({
                     ? `/warehouse/api/v1/task/${task.id}/complete/`
                     : `/warehouse/api/v1/task/${task.id}/cancel/`;
 
+            console.log("submitting to:", endpoint, "employeeId:", employeeId, "task:", task);
+            console.log("formData entries:", Array.from(formData.entries()));
 
             const response = await axiosInstance.post(endpoint, formData);
             const updatedTask = response.data?.warehouse_task ?? response.data;
             if (updatedTask) onUpdated?.(updatedTask);
             setAction(null);
         } catch (err) {
+            console.log("submitAction error:", err);
             setError(getErrorMessage(err));
         } finally {
             setSubmitting(false);
@@ -272,10 +288,9 @@ export default function WarehouseEmployeeTaskCard({
     const hasQualityControl =
         task.quality_control_id !== null && task.quality_control_id !== undefined;
 
-    const reduced = useReducedMotion() ?? false;
     return (
         <>
-            <m.article
+            <motion.article
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.96 }}
@@ -307,7 +322,7 @@ export default function WarehouseEmployeeTaskCard({
                             <stop offset="100%" stopColor="#8b5cf6" />
                         </linearGradient>
                     </defs>
-                    <m.rect
+                    <motion.rect
                         x="1"
                         y="1"
                         width="calc(100% - 2px)"
@@ -449,8 +464,8 @@ export default function WarehouseEmployeeTaskCard({
                                     progress >= 100
                                         ? "#10b981"
                                         : isDark
-                                            ? "#e5e7eb"
-                                            : "#374151",
+                                            ? "#e2e8f0"
+                                            : "#334155",
                             }}
                         >
                             {formatNumber(Math.round(progress))}٪
@@ -464,7 +479,7 @@ export default function WarehouseEmployeeTaskCard({
                                 : "rgba(15,23,42,.06)",
                         }}
                     >
-                        <m.div
+                        <motion.div
                             initial={{ width: 0 }}
                             animate={{ width: `${progress}%` }}
                             transition={{ duration: 0.6, delay: index * 0.04 }}
@@ -522,7 +537,7 @@ export default function WarehouseEmployeeTaskCard({
                 <div className="relative z-[1] mt-3">
                     {isPending && (
                         <div className="grid grid-cols-2 gap-2">
-                            <m.button
+                            <motion.button
                                 type="button"
                                 whileTap={{ scale: 0.97 }}
                                 onClick={() => openAction("complete")}
@@ -536,9 +551,9 @@ export default function WarehouseEmployeeTaskCard({
                             >
                                 <PackageCheck size={14} />
                                 انجام می‌شود
-                            </m.button>
+                            </motion.button>
 
-                            <m.button
+                            <motion.button
                                 type="button"
                                 whileTap={{ scale: 0.97 }}
                                 onClick={() => openAction("cancel")}
@@ -555,12 +570,12 @@ export default function WarehouseEmployeeTaskCard({
                             >
                                 <XCircle size={14} />
                                 انجام نمی‌شود
-                            </m.button>
+                            </motion.button>
                         </div>
                     )}
 
                     {isCancelled && (
-                        <m.button
+                        <motion.button
                             type="button"
                             whileTap={{ scale: 0.97 }}
                             onClick={() => openAction("reopen")}
@@ -574,7 +589,7 @@ export default function WarehouseEmployeeTaskCard({
                         >
                             <RotateCcw size={14} />
                             بازگشایی وظیفه
-                        </m.button>
+                        </motion.button>
                     )}
 
                     {isCompleted && (
@@ -592,12 +607,21 @@ export default function WarehouseEmployeeTaskCard({
                         </div>
                     )}
                 </div>
-            </m.article>
+            </motion.article>
 
             <AnimatePresence>
                 {action && (
-                    <div className="fixed inset-0 z-[100] flex items-center justify-center px-4 py-4">
-                        <Backdrop onClick={closeAction} />
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[100] flex items-center justify-center px-4 py-4"
+                        style={{
+                            background: "rgba(2,6,23,0.55)",
+                            backdropFilter: "blur(6px)",
+                        }}
+                        onClick={closeAction}
+                    >
                         {(() => {
                             const tone = ACTION_TONES[action];
                             const isReopen = action === "reopen";
@@ -608,10 +632,14 @@ export default function WarehouseEmployeeTaskCard({
                             );
 
                             return (
-                                <m.div
-                                    {...panelMotion(false, reduced)}
+                                <motion.div
+                                    initial={{ opacity: 0, scale: 0.95, y: 18 }}
+                                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                                    exit={{ opacity: 0, scale: 0.95, y: 18 }}
+                                    transition={{ duration: 0.22, ease: "easeOut" }}
+                                    onClick={(e) => e.stopPropagation()}
                                     dir="rtl"
-                                    className="relative z-10 flex max-h-[92vh] w-full max-w-md flex-col overflow-hidden rounded-[2rem] border border-white/80 bg-white shadow-2xl shadow-black/20 dark:border-white/[0.07] dark:bg-[#111827]"
+                                    className="flex max-h-[92vh] w-full max-w-md flex-col overflow-hidden rounded-[2rem] border border-white/80 bg-white shadow-2xl shadow-black/20 dark:border-white/[0.07] dark:bg-[#0f172a]"
                                 >
                                     <div className="h-1.5 w-full shrink-0" style={{ background: tone.bar }} />
 
@@ -723,7 +751,7 @@ export default function WarehouseEmployeeTaskCard({
                                                                 style={
                                                                     isCancel
                                                                         ? { background: tone.soft, color: tone.accent }
-                                                                        : { background: "rgba(148,163,184,0.15)", color: "#9ca3af" }
+                                                                        : { background: "rgba(148,163,184,0.15)", color: "#94a3b8" }
                                                                 }
                                                             >
                                                                 {isCancel ? "الزامی" : "اختیاری"}
@@ -786,7 +814,7 @@ export default function WarehouseEmployeeTaskCard({
 
                                             <AnimatePresence>
                                                 {error && (
-                                                    <m.div
+                                                    <motion.div
                                                         initial={{ opacity: 0, y: 6 }}
                                                         animate={{ opacity: 1, y: 0 }}
                                                         exit={{ opacity: 0, y: 4 }}
@@ -803,7 +831,7 @@ export default function WarehouseEmployeeTaskCard({
                                                         >
                                                             <X size={13} />
                                                         </button>
-                                                    </m.div>
+                                                    </motion.div>
                                                 )}
                                             </AnimatePresence>
                                         </div>
@@ -819,35 +847,37 @@ export default function WarehouseEmployeeTaskCard({
                                             انصراف
                                         </button>
 
-                                        <m.button
+                                        <motion.button
                                             type="button"
                                             whileTap={{ scale: 0.97 }}
                                             onClick={submitAction}
                                             disabled={submitting}
-                                            className="relative flex h-12 flex-[1.4] items-center justify-center gap-2 rounded-full text-[13px] font-extrabold text-white transition-opacity disabled:opacity-50"
+                                            className="flex h-12 flex-[1.4] items-center justify-center gap-2 rounded-full text-[13px] font-extrabold text-white transition-opacity disabled:opacity-50"
                                             style={{
                                                 background: tone.gradient,
                                                 boxShadow: tone.shadow,
                                             }}
                                         >
-                                            <BusyContent busy={submitting}>
+                                            {submitting ? (
+                                                <Loader2 size={16} className="animate-spin" />
+                                            ) : (
                                                 <>
-                                                        {action === "complete" ? (
-                                                            <Check size={15} strokeWidth={3} />
-                                                        ) : isCancel ? (
-                                                            <XCircle size={16} />
-                                                        ) : (
-                                                            <RotateCcw size={16} />
-                                                        )}
-                                                        {tone.submit}
-                                                    </>
-                                            </BusyContent>
-                                        </m.button>
+                                                    {action === "complete" ? (
+                                                        <Check size={15} strokeWidth={3} />
+                                                    ) : isCancel ? (
+                                                        <XCircle size={16} />
+                                                    ) : (
+                                                        <RotateCcw size={16} />
+                                                    )}
+                                                    {tone.submit}
+                                                </>
+                                            )}
+                                        </motion.button>
                                     </div>
-                                </m.div>
+                                </motion.div>
                             );
                         })()}
-                    </div>
+                    </motion.div>
                 )}
             </AnimatePresence>
         </>

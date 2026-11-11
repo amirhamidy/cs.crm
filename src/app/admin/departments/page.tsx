@@ -1,13 +1,26 @@
 "use client";
 
-import { useEffect, useRef, useState, forwardRef, InputHTMLAttributes, useMemo } from "react";
-import { m, AnimatePresence, useReducedMotion } from "framer-motion";
-import { Backdrop } from "@/components/ui/Backdrop";
-import { panelMotion } from "@/lib/motion";
+import {
+    useEffect,
+    useRef,
+    useState,
+    forwardRef,
+    InputHTMLAttributes,
+    useMemo,
+} from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "next-themes";
-import { Plus, Building2, AlertCircle, Check, X, Pencil, CheckCircle2, RefreshCw } from "lucide-react";
-import { Spinner as Loader2 } from "@/components/ui/Spinner";
-import { CountSkeleton, DepartmentCardSkeleton } from "@/components/ui/skeletons";
+import {
+    Plus,
+    Building2,
+    Loader,
+    AlertCircle,
+    Check,
+    X,
+    Pencil,
+    CheckCircle2,
+    RefreshCw,
+} from "lucide-react";
 import { useDepartmentStore } from "@/components/admin/departments/departmentStore";
 import { Department } from "@/components/admin/departments/types";
 import DepartmentCard from "@/components/admin/departments/DepartmentCard";
@@ -15,7 +28,6 @@ import DeleteModal from "@/components/admin/departments/DeleteModal";
 import AddDepartmentModal from "@/components/admin/departments/AddDepartmentDrawer";
 import { listAll } from "@/lib/api";
 
-import { BusyContent } from "@/components/ui/Button";
 interface FloatingInputProps
     extends InputHTMLAttributes<HTMLInputElement> {
     label: string;
@@ -41,7 +53,7 @@ const FloatingInput = forwardRef<HTMLInputElement, FloatingInputProps>(
 
             <label
                 htmlFor={id}
-                className="absolute right-5 top-1/2 -translate-y-1/2 text-sm text-gray-400 pointer-events-none transition-all duration-200 bg-white dark:bg-[#111827] px-1.5 rounded peer-focus:top-0 peer-focus:text-xs peer-focus:text-gray-500 peer-[:not(:placeholder-shown)]:top-0 peer-[:not(:placeholder-shown)]:text-xs peer-[:not(:placeholder-shown)]:text-gray-500"
+                className="absolute right-5 top-1/2 -translate-y-1/2 text-sm text-gray-400 pointer-events-none transition-all duration-200 bg-white dark:bg-[#0f172a] px-1.5 rounded peer-focus:top-0 peer-focus:text-xs peer-focus:text-gray-500 peer-[:not(:placeholder-shown)]:top-0 peer-[:not(:placeholder-shown)]:text-xs peer-[:not(:placeholder-shown)]:text-gray-500"
             >
                 {label}
             </label>
@@ -107,7 +119,6 @@ function extractTasks(data: unknown): TaskDependency[] {
 }
 
 export default function DepartmentsPage() {
-    const reduced = useReducedMotion() ?? false;
     const { resolvedTheme } = useTheme();
     const [mounted, setMounted] = useState(false);
     const isDark = mounted && resolvedTheme === "dark";
@@ -172,7 +183,8 @@ export default function DepartmentsPage() {
 
     const handleAddDepartment = async (data: { name: string }) => {
         await addDepartment(data.name);
-        await Promise.all([fetchAll(), fetchTasks()]);
+        await fetchAll();
+        await fetchTasks();
     };
 
     const handleEditDepartment = async () => {
@@ -207,7 +219,8 @@ export default function DepartmentsPage() {
 
         try {
             await deleteDepartment(deleteTarget.id);
-            await Promise.all([fetchAll(), fetchTasks()]);
+            await fetchAll();
+            await fetchTasks();
         } finally {
             setDeleteLoading(false);
             setDeleteTarget(null);
@@ -234,6 +247,20 @@ export default function DepartmentsPage() {
         return departments;
     }, [departments]);
 
+    if (loading && departments.length === 0) {
+        return (
+            <div className="flex flex-col items-center justify-center gap-3 py-16">
+                <Loader
+                    size={22}
+                    className="text-indigo-500 animate-spin"
+                />
+
+                <p className="text-[12.5px] text-gray-400 dark:text-gray-500">
+                    در حال دریافت لیست دپارتمان‌ها...
+                </p>
+            </div>
+        );
+    }
 
     if (error && departments.length === 0) {
         return (
@@ -284,13 +311,42 @@ export default function DepartmentsPage() {
 
                 <AnimatePresence>
                     {editDept && (
-                        <div className="fixed inset-0 z-[100] flex items-center justify-center px-3 sm:px-4">
-<Backdrop onClick={() =>
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="fixed inset-0 z-50 flex items-center justify-center px-3 sm:px-4"
+                            style={{
+                                background: "rgba(0,0,0,0.45)",
+                                backdropFilter: "blur(3px)",
+                            }}
+                            onClick={() =>
                                 !editLoading &&
                                 !editSuccess &&
                                 setEditDept(null)
-                            } />
-                            <m.div {...panelMotion(false, reduced)} className="relative w-full max-w-[92vw] sm:max-w-sm overflow-hidden rounded-[1.75rem] sm:rounded-[2rem] border border-gray-100 bg-white shadow-sm dark:border-white/[0.06] dark:bg-[#111827]"
+                            }
+                        >
+                            <motion.div
+                                initial={{
+                                    opacity: 0,
+                                    y: 16,
+                                }}
+                                animate={{
+                                    opacity: 1,
+                                    y: 0,
+                                }}
+                                exit={{
+                                    opacity: 0,
+                                    y: 16,
+                                }}
+                                transition={{
+                                    duration: 0.35,
+                                    ease: "easeOut",
+                                }}
+                                onClick={(e) =>
+                                    e.stopPropagation()
+                                }
+                                className="w-full max-w-[92vw] sm:max-w-sm overflow-hidden rounded-[1.75rem] sm:rounded-[2rem] border border-gray-100 bg-white shadow-sm dark:border-white/[0.06] dark:bg-[#0f172a]"
                             >
                                 <div className="flex items-center justify-between gap-3 px-5 sm:px-8 pb-5 sm:pb-6 pt-6 sm:pt-8">
                                     <div className="flex min-w-0 items-center gap-2.5 sm:gap-3">
@@ -363,7 +419,7 @@ export default function DepartmentsPage() {
 
                                     <AnimatePresence mode="wait">
                                         {editSuccess ? (
-                                            <m.div
+                                            <motion.div
                                                 key="success"
                                                 initial={{
                                                     opacity: 0,
@@ -383,9 +439,9 @@ export default function DepartmentsPage() {
                                                     size={16}
                                                 />
                                                 تغییرات با موفقیت ذخیره شد
-                                            </m.div>
+                                            </motion.div>
                                         ) : (
-                                            <m.div
+                                            <motion.div
                                                 key="actions"
                                                 initial={{
                                                     opacity: 0,
@@ -413,7 +469,7 @@ export default function DepartmentsPage() {
                                                     انصراف
                                                 </button>
 
-                                                <m.button
+                                                <motion.button
                                                     type="button"
                                                     onClick={
                                                         handleEditDepartment
@@ -425,21 +481,26 @@ export default function DepartmentsPage() {
                                                     whileTap={{
                                                         scale: 0.97,
                                                     }}
-                                                    className="relative flex flex-1 items-center justify-center gap-2 rounded-full bg-blue-600 py-3 text-sm font-bold text-white transition-colors hover:bg-blue-500 disabled:opacity-50"
+                                                    className="flex flex-1 items-center justify-center gap-2 rounded-full bg-blue-600 py-3 text-sm font-bold text-white transition-colors hover:bg-blue-500 disabled:opacity-50"
                                                 >
-                                                    <BusyContent busy={editLoading}>
+                                                    {editLoading ? (
+                                                        <Loader
+                                                            size={18}
+                                                            className="animate-spin"
+                                                        />
+                                                    ) : (
                                                         <Check
-                                                                size={16}
-                                                            />
-                                                        ذخیره تغییرات
-                                                    </BusyContent>
-                                                </m.button>
-                                            </m.div>
+                                                            size={16}
+                                                        />
+                                                    )}
+                                                    ذخیره تغییرات
+                                                </motion.button>
+                                            </motion.div>
                                         )}
                                     </AnimatePresence>
                                 </div>
-                            </m.div>
-                        </div>
+                            </motion.div>
+                        </motion.div>
                     )}
                 </AnimatePresence>
 
@@ -470,7 +531,7 @@ export default function DepartmentsPage() {
 
                             <p className="mt-0.5 text-[11.5px] text-gray-500 dark:text-gray-400">
                                 {loading
-                                    ? <CountSkeleton />
+                                    ? "در حال بارگذاری..."
                                     : `${departments.length} دپارتمان فعال در سیستم`}
                             </p>
                         </div>
@@ -479,7 +540,8 @@ export default function DepartmentsPage() {
                     <div className="flex items-center gap-2">
                         <button
                             onClick={async () => {
-                                await Promise.all([fetchAll(), fetchTasks()]);
+                                await fetchAll();
+                                await fetchTasks();
                             }}
                             disabled={loading}
                             className="flex h-10 w-10 items-center justify-center rounded-2xl transition-colors disabled:opacity-50"
@@ -490,19 +552,22 @@ export default function DepartmentsPage() {
                                             ? "rgba(255,255,255,0.05)"
                                             : "rgba(15,23,42,0.05)",
                                         color: isDark
-                                            ? "#d1d5db"
-                                            : "#4b5563",
+                                            ? "#cbd5e1"
+                                            : "#475569",
                                     }
                                     : undefined
                             }
                             title="بارگذاری مجدد"
                             type="button"
                         >
-                            {loading ? (
-                                <Loader2 size={15} />
-                            ) : (
-                                <RefreshCw size={15} />
-                            )}
+                            <RefreshCw
+                                size={15}
+                                className={
+                                    loading
+                                        ? "animate-spin"
+                                        : ""
+                                }
+                            />
                         </button>
 
                         <button
@@ -518,7 +583,18 @@ export default function DepartmentsPage() {
                     </div>
                 </div>
 
-                {loading && departments.length === 0 && <DepartmentCardSkeleton />}
+                {loading && departments.length === 0 && (
+                    <div className="flex flex-col items-center justify-center gap-3 py-16">
+                        <Loader
+                            size={24}
+                            className="animate-spin text-indigo-500"
+                        />
+
+                        <p className="text-[12.5px] text-gray-500 dark:text-gray-400">
+                            در حال دریافت لیست دپارتمان‌ها...
+                        </p>
+                    </div>
+                )}
 
                 {!loading &&
                     filteredDepartments.length === 0 && (
@@ -536,7 +612,7 @@ export default function DepartmentsPage() {
 
                 {!loading &&
                     filteredDepartments.length > 0 && (
-                        <m.div
+                        <motion.div
                             layout
                             className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3"
                         >
@@ -591,7 +667,7 @@ export default function DepartmentsPage() {
                                     }
                                 )}
                             </AnimatePresence>
-                        </m.div>
+                        </motion.div>
                     )}
             </div>
         </>

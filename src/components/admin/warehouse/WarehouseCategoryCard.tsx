@@ -2,13 +2,12 @@
 
 import { ReactNode, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { AnimatePresence, m } from "framer-motion";
-import { AlertCircle, Hash, Pencil, Tag, Trash2, X } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
+import { AlertCircle, Hash, Loader2, Pencil, Tag, Trash2, X } from "lucide-react";
 import { useTheme } from "next-themes";
 import axiosInstance from "@/lib/axiosInstance";
 import { toPersianDigits } from "@/lib/jalali";
 
-import { BusyContent } from "@/components/ui/Button";
 interface Category {
     id: number;
     name: string;
@@ -37,7 +36,7 @@ function ModalShell({
     children: ReactNode;
 }) {
     return (
-        <m.div
+        <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -45,19 +44,19 @@ function ModalShell({
             onMouseDown={(e) => {
                 if (e.target === e.currentTarget) onClose();
             }}
-            className="fixed inset-0 z-[9999] flex items-center justify-center bg-gray-950/50 px-4 backdrop-blur-layer"
+            className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/50 px-4 backdrop-blur-sm"
             dir="rtl"
         >
-            <m.div
+            <motion.div
                 initial={{ opacity: 0, scale: 0.96, y: 16 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.96, y: 16 }}
                 transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
-                className="w-full max-w-[380px] rounded-[2rem] border border-gray-100 bg-white p-5 shadow-[0_24px_64px_rgba(0,0,0,0.3)] dark:border-white/[0.07] dark:bg-[#111827]"
+                className="w-full max-w-[380px] rounded-[2rem] border border-gray-100 bg-white p-5 shadow-[0_24px_64px_rgba(0,0,0,0.3)] dark:border-white/[0.07] dark:bg-[#0f172a]"
             >
                 {children}
-            </m.div>
-        </m.div>
+            </motion.div>
+        </motion.div>
     );
 }
 
@@ -198,7 +197,7 @@ export default function WarehouseCategoryCard({
 
     return (
         <>
-            <m.div
+            <motion.div
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.96 }}
@@ -230,7 +229,7 @@ export default function WarehouseCategoryCard({
                         </linearGradient>
                     </defs>
 
-                    <m.rect
+                    <motion.rect
                         x="1"
                         y="1"
                         width="calc(100% - 2px)"
@@ -306,7 +305,7 @@ export default function WarehouseCategoryCard({
                     </div>
 
                     <div className="flex items-center gap-1.5">
-                        <m.button
+                        <motion.button
                             type="button"
                             whileTap={{ scale: 0.92 }}
                             onClick={openEdit}
@@ -314,9 +313,9 @@ export default function WarehouseCategoryCard({
                             className="flex h-8 w-8 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-500 transition-colors hover:bg-indigo-500/20 dark:bg-indigo-500/15 dark:text-indigo-300"
                         >
                             <Pencil size={13} />
-                        </m.button>
+                        </motion.button>
 
-                        <m.button
+                        <motion.button
                             type="button"
                             whileTap={{ scale: 0.92 }}
                             onClick={openConfirm}
@@ -324,10 +323,10 @@ export default function WarehouseCategoryCard({
                             className="flex h-8 w-8 items-center justify-center rounded-xl bg-red-500/10 text-red-500 transition-colors hover:bg-red-500/20 dark:bg-red-500/15"
                         >
                             <Trash2 size={13} />
-                        </m.button>
+                        </motion.button>
                     </div>
                 </div>
-            </m.div>
+            </motion.div>
 
             {mounted &&
                 createPortal(
@@ -353,7 +352,7 @@ export default function WarehouseCategoryCard({
 
                                     <AnimatePresence>
                                         {deleteError && (
-                                            <m.div
+                                            <motion.div
                                                 initial={{ opacity: 0, y: 4 }}
                                                 animate={{ opacity: 1, y: 0 }}
                                                 exit={{ opacity: 0, y: 4 }}
@@ -366,7 +365,7 @@ export default function WarehouseCategoryCard({
                                                 <p className="text-[11.5px] font-semibold leading-5 text-red-500 dark:text-red-400">
                                                     {deleteError}
                                                 </p>
-                                            </m.div>
+                                            </motion.div>
                                         )}
                                     </AnimatePresence>
 
@@ -375,7 +374,7 @@ export default function WarehouseCategoryCard({
                                             type="button"
                                             onClick={handleCloseConfirm}
                                             disabled={deleting}
-                                            className="flex h-11 flex-1 items-center justify-center rounded-2xl bg-gray-100 text-[12.5px] font-bold text-gray-600 transition-colors hover:text-gray-800 disabled:opacity-50 dark:bg-white/[0.05] dark:text-gray-300 dark:hover:text-white"
+                                            className="flex h-11 flex-1 items-center justify-center rounded-2xl bg-gray-100 text-[12.5px] font-bold text-gray-600 transition-colors hover:text-gray-800 disabled:opacity-50 dark:bg-white/[0.05] dark:text-slate-300 dark:hover:text-white"
                                         >
                                             انصراف
                                         </button>
@@ -384,7 +383,7 @@ export default function WarehouseCategoryCard({
                                             type="button"
                                             onClick={handleDelete}
                                             disabled={deleting}
-                                            className="relative flex h-11 flex-1 items-center justify-center gap-1.5 rounded-2xl text-[12.5px] font-bold text-white disabled:opacity-60"
+                                            className="flex h-11 flex-1 items-center justify-center gap-1.5 rounded-2xl text-[12.5px] font-bold text-white disabled:opacity-60"
                                             style={{
                                                 background:
                                                     "linear-gradient(135deg, #ef4444, #dc2626)",
@@ -392,12 +391,14 @@ export default function WarehouseCategoryCard({
                                                     "0 10px 24px rgba(239,68,68,0.22)",
                                             }}
                                         >
-                                            <BusyContent busy={deleting}>
+                                            {deleting ? (
+                                                <Loader2 size={15} className="animate-spin" />
+                                            ) : (
                                                 <>
-                                                        <Trash2 size={13} />
-                                                        حذف کن
-                                                    </>
-                                            </BusyContent>
+                                                    <Trash2 size={13} />
+                                                    حذف کن
+                                                </>
+                                            )}
                                         </button>
                                     </div>
                                 </ModalShell>
@@ -438,7 +439,7 @@ export default function WarehouseCategoryCard({
 
                                         <AnimatePresence>
                                             {error && (
-                                                <m.p
+                                                <motion.p
                                                     initial={{ opacity: 0, y: -4 }}
                                                     animate={{ opacity: 1, y: 0 }}
                                                     exit={{ opacity: 0, y: -4 }}
@@ -446,7 +447,7 @@ export default function WarehouseCategoryCard({
                                                 >
                                                     <AlertCircle size={11} />
                                                     {error}
-                                                </m.p>
+                                                </motion.p>
                                             )}
                                         </AnimatePresence>
                                     </div>
@@ -456,7 +457,7 @@ export default function WarehouseCategoryCard({
                                             type="button"
                                             onClick={handleCloseEdit}
                                             disabled={editing}
-                                            className="flex h-11 flex-1 items-center justify-center rounded-2xl bg-gray-100 text-[12.5px] font-bold text-gray-600 transition-colors hover:text-gray-800 disabled:opacity-50 dark:bg-white/[0.05] dark:text-gray-300 dark:hover:text-white"
+                                            className="flex h-11 flex-1 items-center justify-center rounded-2xl bg-gray-100 text-[12.5px] font-bold text-gray-600 transition-colors hover:text-gray-800 disabled:opacity-50 dark:bg-white/[0.05] dark:text-slate-300 dark:hover:text-white"
                                         >
                                             انصراف
                                         </button>
@@ -465,7 +466,7 @@ export default function WarehouseCategoryCard({
                                             type="button"
                                             onClick={handleEdit}
                                             disabled={editing}
-                                            className="relative flex h-11 flex-1 items-center justify-center gap-1.5 rounded-2xl text-[12.5px] font-bold text-white disabled:opacity-60"
+                                            className="flex h-11 flex-1 items-center justify-center gap-1.5 rounded-2xl text-[12.5px] font-bold text-white disabled:opacity-60"
                                             style={{
                                                 background:
                                                     "linear-gradient(135deg, #6366f1, #8b5cf6)",
@@ -473,12 +474,14 @@ export default function WarehouseCategoryCard({
                                                     "0 10px 24px rgba(99,102,241,0.22)",
                                             }}
                                         >
-                                            <BusyContent busy={editing}>
+                                            {editing ? (
+                                                <Loader2 size={15} className="animate-spin" />
+                                            ) : (
                                                 <>
-                                                        <Pencil size={13} />
-                                                        ذخیره
-                                                    </>
-                                            </BusyContent>
+                                                    <Pencil size={13} />
+                                                    ذخیره
+                                                </>
+                                            )}
                                         </button>
                                     </div>
                                 </ModalShell>

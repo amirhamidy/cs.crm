@@ -1,19 +1,21 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { AnimatePresence, m, useReducedMotion } from "framer-motion";
-import { Backdrop } from "@/components/ui/Backdrop";
-import { panelMotion } from "@/lib/motion";
-import { AlertCircle, Check, ChevronDown, PackagePlus, Search, X } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
+import {
+    AlertCircle,
+    Check,
+    ChevronDown,
+    Loader,
+    PackagePlus,
+    Search,
+    X,
+} from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
-import { fetchPage } from "@/lib/api";
-import AsyncSelect, { type AsyncOption } from "@/components/ui/AsyncSelect";
-import type { InfiniteFetcher } from "@/hooks/useInfiniteOptions";
+import { listAll } from "@/lib/api";
 import type { ApiPurchasingStep, ApiPurchasingTask } from "@/types/purchasing";
 
-import { BusyContent } from "@/components/ui/Button";
-import { FormSkeleton } from "@/components/ui/skeletons";
 interface Product {
     id: number;
     name: string;
@@ -31,10 +33,10 @@ interface Product {
     };
 }
 
-interface WarehouseStockRow {
-    warehouse?: number;
-    warehouse_name?: string;
-    warehouse_code?: string;
+interface Warehouse {
+    id: number;
+    name: string;
+    code?: string;
 }
 
 interface Props {
@@ -101,6 +103,22 @@ function errorText(error: unknown) {
     return "ایجاد درخواست خرید انجام نشد.";
 }
 
+function getWarehouseId(task: ApiPurchasingTask) {
+    const value = (task as ApiPurchasingTask & {
+        warehouse?: number | null;
+    }).warehouse;
+
+    return value == null ? null : Number(value);
+}
+
+function getWarehouseName(task: ApiPurchasingTask) {
+    return (
+        (task as ApiPurchasingTask & {
+            warehouse_name?: string | null;
+        }).warehouse_name || `انبار #${getWarehouseId(task)}`
+    );
+}
+
 function FloatingInput({
     label,
     id,
@@ -128,7 +146,7 @@ function FloatingInput({
 
             <label
                 htmlFor={id}
-                className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[12px] font-medium text-gray-400 transition-all duration-200 peer-focus:top-[15px] peer-focus:text-[10px] peer-focus:text-blue-500 peer-[:not(:placeholder-shown)]:top-[15px] peer-[:not(:placeholder-shown)]:text-[10px]"
+                className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[12px] font-semibold text-gray-400 transition-all duration-200 peer-focus:top-[15px] peer-focus:text-[10px] peer-focus:text-blue-500 peer-[:not(:placeholder-shown)]:top-[15px] peer-[:not(:placeholder-shown)]:text-[10px]"
             >
                 {label}
             </label>
@@ -216,7 +234,7 @@ function NiceSelect({
             >
                 {selected ? (
                     <span
-                        className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br text-[12px] font-bold text-white ${gradientOf(
+                        className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br text-[12px] font-extrabold text-white ${gradientOf(
                             selected.id
                         )}`}
                     >
@@ -248,7 +266,7 @@ function NiceSelect({
                     )}
                 </span>
 
-                <m.span
+                <motion.span
                     animate={{ rotate: open ? 180 : 0 }}
                     transition={{ duration: 0.2 }}
                 >
@@ -256,12 +274,12 @@ function NiceSelect({
                         size={14}
                         className="shrink-0 text-gray-400"
                     />
-                </m.span>
+                </motion.span>
             </button>
 
             <AnimatePresence>
                 {open && (
-                    <m.div
+                    <motion.div
                         initial={{
                             opacity: 0,
                             y: -6,
@@ -282,7 +300,7 @@ function NiceSelect({
                             damping: 24,
                             stiffness: 340,
                         }}
-                        className="absolute z-50 mt-2 w-full origin-top overflow-hidden rounded-[1.5rem] border border-gray-100 bg-white shadow-xl shadow-black/5 dark:border-white/[0.08] dark:bg-[#111827] dark:shadow-black/40"
+                        className="absolute z-50 mt-2 w-full origin-top overflow-hidden rounded-[1.5rem] border border-gray-100 bg-white shadow-xl shadow-black/5 dark:border-white/[0.08] dark:bg-[#0f172a] dark:shadow-black/40"
                     >
                         {options.length > 5 && (
                             <div className="border-b border-gray-100 px-3 py-2.5 dark:border-white/[0.06]">
@@ -299,7 +317,7 @@ function NiceSelect({
                                             setQuery(event.target.value)
                                         }
                                         placeholder="جستجو..."
-                                        className="w-full bg-transparent text-[12px] font-medium text-gray-900 outline-none placeholder:text-gray-400 dark:text-white"
+                                        className="w-full bg-transparent text-[12px] font-semibold text-gray-900 outline-none placeholder:text-gray-400 dark:text-white"
                                     />
                                 </div>
                             </div>
@@ -316,7 +334,7 @@ function NiceSelect({
                                         option.id === value;
 
                                     return (
-                                        <m.button
+                                        <motion.button
                                             key={option.id}
                                             type="button"
                                             initial={{
@@ -340,7 +358,7 @@ function NiceSelect({
                                                 }`}
                                         >
                                             <span
-                                                className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br text-[12px] font-bold text-white ${gradientOf(
+                                                className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br text-[12px] font-extrabold text-white ${gradientOf(
                                                     option.id
                                                 )}`}
                                             >
@@ -375,12 +393,12 @@ function NiceSelect({
                                                     />
                                                 </span>
                                             )}
-                                        </m.button>
+                                        </motion.button>
                                     );
                                 })
                             )}
                         </div>
-                    </m.div>
+                    </motion.div>
                 )}
             </AnimatePresence>
         </div>
@@ -390,33 +408,15 @@ function NiceSelect({
 export default function PurchasingCreateTaskModal({
     open,
     steps,
+    tasks,
     onClose,
     onSaved,
 }: Props) {
-    const reduced = useReducedMotion() ?? false;
-    const [product, setProduct] = useState<AsyncOption | null>(null);
-    const [warehouse, setWarehouse] = useState<AsyncOption | null>(null);
-    const productId = product ? String(product.id) : "";
-    const warehouseId = warehouse ? String(warehouse.id) : "";
+    const [products, setProducts] = useState<Product[]>([]);
+    const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
 
-    const productFetcher = useCallback<InfiniteFetcher<Product>>(
-        (params, signal) => fetchPage<Product>("/warehouse/api/v1/products/", params, signal),
-        [],
-    );
-    const warehouseFetcher = useCallback<InfiniteFetcher<WarehouseStockRow & { id: number }>>(
-        async (params, signal) => {
-            const res = await fetchPage<WarehouseStockRow>("/warehouse/api/v1/process/stock/", params, signal);
-            const seen = new Set<number>();
-            const results: (WarehouseStockRow & { id: number })[] = [];
-            res.results.forEach((r) => {
-                if (r.warehouse == null || seen.has(Number(r.warehouse))) return;
-                seen.add(Number(r.warehouse));
-                results.push({ ...r, id: Number(r.warehouse) });
-            });
-            return { ...res, results };
-        },
-        [],
-    );
+    const [productId, setProductId] = useState("");
+    const [warehouseId, setWarehouseId] = useState("");
     const [stepId, setStepId] = useState("");
     const [quantity, setQuantity] = useState("");
 
@@ -427,8 +427,8 @@ export default function PurchasingCreateTaskModal({
     useEffect(() => {
         if (!open) return;
 
-        setProduct(null);
-        setWarehouse(null);
+        setProductId("");
+        setWarehouseId("");
         setStepId(
             steps.length > 0
                 ? String(
@@ -440,14 +440,88 @@ export default function PurchasingCreateTaskModal({
         );
         setQuantity("");
         setError("");
-    }, [open, steps]);
+        setProducts([]);
+        setWarehouses([]);
+        setLoading(true);
+
+        let cancelled = false;
+
+        // لیست‌ها صفحه‌بندی شده‌اند؛ برای انتخاب کالا/انبار همهٔ صفحات لازم است.
+        Promise.all([
+            listAll<Product>("/warehouse/api/v1/products/"),
+            listAll<{
+                warehouse?: number;
+                warehouse_name?: string;
+                warehouse_code?: string;
+            }>("/warehouse/api/v1/process/stock/"),
+        ])
+            .then(([productList, stockList]) => {
+                if (cancelled) return;
+
+                setProducts(productList);
+
+                const map = new Map<number, Warehouse>();
+
+                stockList.forEach((item) => {
+                    if (item.warehouse == null) return;
+
+                    map.set(Number(item.warehouse), {
+                        id: Number(item.warehouse),
+                        name:
+                            item.warehouse_name ||
+                            `انبار #${item.warehouse}`,
+                        code: item.warehouse_code,
+                    });
+                });
+
+                if (map.size > 0) {
+                    setWarehouses([...map.values()]);
+                } else {
+                    const taskWarehouses =
+                        new Map<number, Warehouse>();
+
+                    tasks.forEach((task) => {
+                        const id = getWarehouseId(task);
+
+                        if (id == null) return;
+
+                        taskWarehouses.set(id, {
+                            id,
+                            name: getWarehouseName(task),
+                        });
+                    });
+
+                    setWarehouses([...taskWarehouses.values()]);
+                }
+            })
+            .catch((err) => {
+                if (!cancelled) {
+                    setError(errorText(err));
+                }
+            })
+            .finally(() => {
+                if (!cancelled) {
+                    setLoading(false);
+                }
+            });
+
+        return () => {
+            cancelled = true;
+        };
+    }, [open, steps, tasks]);
 
     const orderedSteps = useMemo(
         () => [...steps].sort((a, b) => a.order - b.order),
         [steps]
     );
 
-    const selectedProduct = product ? { name: product.label } : null;
+    const selectedProduct = useMemo(
+        () =>
+            products.find(
+                (item) => item.id === Number(productId)
+            ),
+        [products, productId]
+    );
 
     const selectedStep = useMemo(
         () =>
@@ -507,9 +581,40 @@ export default function PurchasingCreateTaskModal({
     return createPortal(
         <AnimatePresence>
             {open && (
-                <div className="fixed inset-0 z-[9999] flex items-center justify-center px-4">
-                    <Backdrop onClick={handleClose} />
-                    <m.div {...panelMotion(false, reduced)} dir="rtl" className="relative flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-sm dark:border-white/[0.06] dark:bg-[#111827]">
+                <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="fixed inset-0 z-[9999] flex items-center justify-center px-4"
+                    style={{
+                        background: "rgba(0,0,0,0.45)",
+                        backdropFilter: "blur(3px)",
+                    }}
+                    onMouseDown={handleClose}
+                >
+                    <motion.div
+                        initial={{
+                            opacity: 0,
+                            y: 16,
+                        }}
+                        animate={{
+                            opacity: 1,
+                            y: 0,
+                        }}
+                        exit={{
+                            opacity: 0,
+                            y: 16,
+                        }}
+                        transition={{
+                            duration: 0.35,
+                            ease: "easeOut",
+                        }}
+                        onMouseDown={(event) =>
+                            event.stopPropagation()
+                        }
+                        dir="rtl"
+                        className="flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-sm dark:border-white/[0.06] dark:bg-[#0f172a]"
+                    >
                         <div className="flex shrink-0 items-center justify-between px-8 pb-6 pt-8">
                             <div className="flex items-center gap-2.5">
                                 <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-50 dark:bg-blue-500/10">
@@ -520,7 +625,7 @@ export default function PurchasingCreateTaskModal({
                                 </div>
 
                                 <div>
-                                    <h3 className="text-[14px] font-bold text-gray-900 dark:text-white">
+                                    <h3 className="text-[14px] font-extrabold text-gray-900 dark:text-white">
                                         ایجاد درخواست خرید
                                     </h3>
 
@@ -544,7 +649,7 @@ export default function PurchasingCreateTaskModal({
                             <div className="flex flex-col gap-4">
                                 <AnimatePresence>
                                     {error && (
-                                        <m.div
+                                        <motion.div
                                             initial={{
                                                 opacity: 0,
                                                 y: 6,
@@ -564,7 +669,7 @@ export default function PurchasingCreateTaskModal({
                                                 className="mt-0.5 shrink-0 text-red-500"
                                             />
 
-                                            <p className="flex-1 text-[11.5px] font-medium leading-5 text-red-500 dark:text-red-400">
+                                            <p className="flex-1 text-[11.5px] font-semibold leading-5 text-red-500 dark:text-red-400">
                                                 {error}
                                             </p>
 
@@ -577,49 +682,90 @@ export default function PurchasingCreateTaskModal({
                                             >
                                                 <X size={13} />
                                             </button>
-                                        </m.div>
+                                        </motion.div>
                                     )}
                                 </AnimatePresence>
 
                                 {loading ? (
-                                    <FormSkeleton fields={6} />
+                                    <div className="flex h-48 items-center justify-center">
+                                        <Loader
+                                            size={22}
+                                            className="animate-spin text-blue-500"
+                                        />
+                                    </div>
                                 ) : (
                                     <>
-                                        <AsyncSelect<WarehouseStockRow & { id: number }>
+                                        <NiceSelect
                                             label="انبار"
-                                            placeholder="انتخاب انبار"
+                                            placeholder={
+                                                warehouses.length
+                                                    ? "انتخاب انبار"
+                                                    : "انباری برای انتخاب پیدا نشد"
+                                            }
                                             emptyText="انباری برای انتخاب پیدا نشد"
-                                            value={warehouse?.id ?? null}
-                                            selected={warehouse}
-                                            fetcher={warehouseFetcher}
-                                            toOption={(w) => ({
-                                                id: w.id,
-                                                label: w.warehouse_name || `انبار #${w.id}`,
-                                                sub: w.warehouse_code ? `کد انبار: ${w.warehouse_code}` : undefined,
-                                            })}
-                                            onChange={(o) => {
-                                                setWarehouse(o);
+                                            options={warehouses.map(
+                                                (warehouse) => ({
+                                                    id: warehouse.id,
+                                                    label: warehouse.name,
+                                                    sub: warehouse.code
+                                                        ? `کد انبار: ${warehouse.code}`
+                                                        : undefined,
+                                                })
+                                            )}
+                                            value={
+                                                warehouseId
+                                                    ? Number(
+                                                        warehouseId
+                                                    )
+                                                    : null
+                                            }
+                                            disabled={
+                                                warehouses.length === 0
+                                            }
+                                            onChange={(id) => {
+                                                setWarehouseId(
+                                                    String(id)
+                                                );
                                                 setError("");
                                             }}
                                         />
 
-                                        <AsyncSelect<Product>
+                                        <NiceSelect
                                             label="محصول"
-                                            placeholder="انتخاب محصول"
+                                            placeholder={
+                                                products.length
+                                                    ? "انتخاب محصول"
+                                                    : "محصولی وجود ندارد"
+                                            }
                                             emptyText="محصولی برای انتخاب پیدا نشد"
-                                            value={product?.id ?? null}
-                                            selected={product}
-                                            fetcher={productFetcher}
-                                            toOption={(p) => ({ id: p.id, label: p.name, sub: p.unit_type || undefined })}
-                                            onChange={(o) => {
-                                                setProduct(o);
+                                            options={products.map(
+                                                (product) => ({
+                                                    id: product.id,
+                                                    label: product.name,
+                                                    sub:
+                                                        product.unit_type ||
+                                                        undefined,
+                                                })
+                                            )}
+                                            value={
+                                                productId
+                                                    ? Number(productId)
+                                                    : null
+                                            }
+                                            disabled={
+                                                products.length === 0
+                                            }
+                                            onChange={(id) => {
+                                                setProductId(
+                                                    String(id)
+                                                );
                                                 setError("");
                                             }}
                                         />
 
                                         <AnimatePresence>
                                             {selectedProduct && (
-                                                <m.div
+                                                <motion.div
                                                     initial={{
                                                         opacity: 0,
                                                         height: 0,
@@ -640,14 +786,14 @@ export default function PurchasingCreateTaskModal({
                                                                 محصول انتخاب‌شده
                                                             </span>
 
-                                                            <span className="truncate text-[11px] font-bold text-blue-500">
+                                                            <span className="truncate text-[11px] font-extrabold text-blue-500">
                                                                 {
                                                                     selectedProduct.name
                                                                 }
                                                             </span>
                                                         </div>
                                                     </div>
-                                                </m.div>
+                                                </motion.div>
                                             )}
                                         </AnimatePresence>
 
@@ -680,7 +826,7 @@ export default function PurchasingCreateTaskModal({
 
                                         <AnimatePresence>
                                             {selectedStep && (
-                                                <m.div
+                                                <motion.div
                                                     initial={{
                                                         opacity: 0,
                                                         height: 0,
@@ -700,7 +846,7 @@ export default function PurchasingCreateTaskModal({
                                                             فرآیند از این مرحله شروع می‌شود
                                                         </p>
 
-                                                        <p className="mt-1 text-[11px] font-bold text-gray-700 dark:text-gray-200">
+                                                        <p className="mt-1 text-[11px] font-extrabold text-gray-700 dark:text-gray-200">
                                                             مرحله{" "}
                                                             {
                                                                 selectedStep.order
@@ -711,7 +857,7 @@ export default function PurchasingCreateTaskModal({
                                                             }
                                                         </p>
                                                     </div>
-                                                </m.div>
+                                                </motion.div>
                                             )}
                                         </AnimatePresence>
 
@@ -731,24 +877,30 @@ export default function PurchasingCreateTaskModal({
                         </div>
 
                         <div className="flex shrink-0 items-center gap-2 px-8 pb-8 pt-5">
-                            <m.button
+                            <motion.button
                                 type="button"
                                 whileTap={{ scale: 0.97 }}
                                 onClick={submit}
                                 disabled={!canSubmit}
-                                className="relative flex h-11 flex-1 items-center justify-center gap-2 rounded-full bg-blue-600 text-[13px] font-bold text-white transition-colors hover:bg-blue-500 disabled:opacity-40"
+                                className="flex h-11 flex-1 items-center justify-center gap-2 rounded-full bg-blue-600 text-[13px] font-bold text-white transition-colors hover:bg-blue-500 disabled:opacity-40"
                             >
-                                <BusyContent busy={submitting}>
+                                {submitting ? (
+                                    <Loader
+                                        size={15}
+                                        className="animate-spin"
+                                    />
+                                ) : (
                                     <Check
-                                            size={14}
-                                            strokeWidth={3}
-                                        />
-                                    ایجاد درخواست
-                                </BusyContent>
-                            </m.button>
+                                        size={14}
+                                        strokeWidth={3}
+                                    />
+                                )}
+
+                                ایجاد درخواست
+                            </motion.button>
                         </div>
-                    </m.div>
-                </div>
+                    </motion.div>
+                </motion.div>
             )}
         </AnimatePresence>,
         document.body

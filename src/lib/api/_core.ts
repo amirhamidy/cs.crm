@@ -97,33 +97,6 @@ export function uniqueIds<T>(
   return [...out];
 }
 
-const MAX_CONCURRENT_PAGES = 6;
-
-async function runPool<T>(
-  jobs: (() => Promise<T>)[],
-  limit: number,
-): Promise<T[]> {
-  const out = new Array<T>(jobs.length);
-  let next = 0;
-  let failed = false;
-  const worker = async () => {
-    while (!failed) {
-      const i = next++;
-      if (i >= jobs.length) return;
-      try {
-        out[i] = await jobs[i]();
-      } catch (e) {
-        failed = true;
-        throw e;
-      }
-    }
-  };
-  await Promise.all(
-    Array.from({ length: Math.min(limit, jobs.length) }, worker),
-  );
-  return out;
-}
-
 export async function fetchAllPages<T>(
   fetchPage: (params: { page: number }) => Promise<Paginated<T>>,
   maxPages = 50,
@@ -133,9 +106,8 @@ export async function fetchAllPages<T>(
 
   const perPage = first.results.length;
   const total = Math.min(Math.ceil(first.count / perPage), maxPages);
-  const rest = await runPool(
-    Array.from({ length: total - 1 }, (_, i) => () => fetchPage({ page: i + 2 })),
-    MAX_CONCURRENT_PAGES,
+  const rest = await Promise.all(
+    Array.from({ length: total - 1 }, (_, i) => fetchPage({ page: i + 2 })),
   );
 
   return [first, ...rest].flatMap((p) => p.results);
@@ -159,12 +131,10 @@ export async function fetchPage<T>(
   url: string,
   params: Params = {},
   signal?: AbortSignal,
-  priority?: "low",
 ): Promise<Paginated<T>> {
   const r = await axiosInstance.get<RawList<T>>(url, {
     params: cleanParams(params),
     signal,
-    priority,
   });
   return toPaginated<T>(r.data);
 }

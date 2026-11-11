@@ -2,28 +2,42 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
-import { AnimatePresence, m, useReducedMotion } from "framer-motion";
-import { Backdrop } from "@/components/ui/Backdrop";
-import { panelMotion } from "@/lib/motion";
-import type { LucideIcon } from "lucide-react";
-import { AlertTriangle, ArrowLeft, ArrowLeftRight, Building2, Check, FileText, Layers3, Paperclip, Search, Trash2, UserRound, X } from "lucide-react";
-import { ListSkeleton } from "@/components/ui/skeletons";
+import { AnimatePresence, motion } from "framer-motion";
+import {
+    AlertTriangle,
+    ArrowLeft,
+    ArrowLeftRight,
+    Building2,
+    Check,
+    FileText,
+    Layers3,
+    Loader2,
+    Paperclip,
+    Search,
+    Trash2,
+    UserRound,
+    X,
+    type LucideIcon,
+} from "lucide-react";
 import { departmentsApi, tasksApi, parseTransferError } from "@/lib/api";
 import { toast } from "@/components/notifications/toast";
 import { toPersianDigits } from "@/lib/jalali";
-import type { Department, DepartmentEmployee, DepartmentStep } from "@/types/department";
+import type {
+    Department,
+    DepartmentEmployee,
+    DepartmentStep,
+} from "@/types/department";
 import type { TransferTaskResponse } from "@/types/task";
 
-import { BusyContent } from "@/components/ui/Button";
 interface Props {
     isOpen: boolean;
     onClose: () => void;
     taskId: number;
     taskTitle: string;
-    
+    /** دپارتمان فعلی تسک؛ از فهرست مقصدها حذف می‌شود */
     currentDepartmentId?: number;
     currentDepartmentName?: string;
-    
+    /** بعد از انتقال موفق صدا زده می‌شود */
     onTransferred: (task: TransferTaskResponse) => void;
 }
 
@@ -69,7 +83,6 @@ export default function TaskTransferModal({
     currentDepartmentName,
     onTransferred,
 }: Props) {
-    const reduced = useReducedMotion() ?? false;
     const [departments, setDepartments] = useState<Department[]>([]);
     const [steps, setSteps] = useState<DepartmentStep[]>([]);
     const [members, setMembers] = useState<DepartmentEmployee[]>([]);
@@ -84,7 +97,7 @@ export default function TaskTransferModal({
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState("");
 
-    
+    /* ───────── ریست هنگام بسته شدن ───────── */
     useEffect(() => {
         if (isOpen) return;
         setQuery("");
@@ -96,7 +109,7 @@ export default function TaskTransferModal({
         setError("");
     }, [isOpen]);
 
-    
+    /* ───────── دریافت دپارتمان‌ها، مرحله‌ها و مدیرها ───────── */
     useEffect(() => {
         if (!isOpen) return;
 
@@ -128,7 +141,7 @@ export default function TaskTransferModal({
         };
     }, [isOpen]);
 
-    
+    /* ───────── گزینه‌های مقصد (به‌جز دپارتمان فعلی) ───────── */
     const options = useMemo<DepartmentOption[]>(() => {
         return departments
             .filter((department) => Number(department.id) !== Number(currentDepartmentId))
@@ -163,7 +176,7 @@ export default function TaskTransferModal({
         [options, selectedId]
     );
 
-    
+    // اگر دپارتمان انتخاب‌شده دیگر در فهرست نبود، انتخاب پاک شود
     useEffect(() => {
         if (selectedId !== null && !options.some((o) => o.id === selectedId)) {
             setSelectedId(null);
@@ -229,16 +242,24 @@ export default function TaskTransferModal({
     return createPortal(
         <AnimatePresence>
             {isOpen && (
-                <div
-                    className="fixed inset-0 z-[99999] flex items-center justify-center p-4"
+                <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="fixed inset-0 z-[99999] flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-md"
                     dir="rtl"
+                    onMouseDown={(e) => {
+                        if (e.target === e.currentTarget) close();
+                    }}
                 >
-                    <Backdrop onClick={() => { close(); }} />
-                    <m.div
-                        {...panelMotion(false, reduced)}
-                        className="relative w-full max-w-lg overflow-hidden rounded-[1.7rem] border border-white/10 bg-white dark:bg-[#101827]"
+                    <motion.div
+                        initial={{ opacity: 0, y: 18, scale: 0.97 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: 12, scale: 0.98 }}
+                        transition={{ duration: 0.2 }}
+                        className="w-full max-w-lg overflow-hidden rounded-[1.7rem] border border-white/10 bg-white shadow-2xl dark:bg-[#101827]"
                     >
-                        
+                        {/* ───── سرتیتر ───── */}
                         <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4 dark:border-white/[.06]">
                             <div className="flex min-w-0 items-center gap-3">
                                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-indigo-500/10">
@@ -265,9 +286,9 @@ export default function TaskTransferModal({
                             </button>
                         </div>
 
-                        
+                        {/* ───── بدنه ───── */}
                         <div className="max-h-[72vh] overflow-y-auto px-5 py-5">
-                            
+                            {/* کارت اطلاعات تسک */}
                             <div className="mb-4 rounded-2xl bg-gray-50 px-3.5 py-3 dark:bg-white/[.035]">
                                 <p className="line-clamp-2 text-[12px] font-extrabold leading-snug text-gray-800 dark:text-white">
                                     {taskTitle}
@@ -282,7 +303,7 @@ export default function TaskTransferModal({
                                         className="flex items-center gap-1 rounded-full px-2 py-1"
                                         style={{
                                             background: selected ? `${selected.accent}18` : undefined,
-                                            color: selected ? selected.accent : "#9ca3af",
+                                            color: selected ? selected.accent : "#94a3b8",
                                         }}
                                     >
                                         <Building2 size={10} />
@@ -292,7 +313,7 @@ export default function TaskTransferModal({
                             </div>
 
                             {confirming && selected ? (
-                                
+                                /* ═════════ مرحله‌ی تأیید ═════════ */
                                 <div className="flex flex-col gap-3">
                                     <div className="flex items-start gap-2.5 rounded-2xl border border-amber-500/20 bg-amber-500/[.07] p-3.5">
                                         <AlertTriangle
@@ -345,7 +366,7 @@ export default function TaskTransferModal({
                                     </div>
                                 </div>
                             ) : (
-                                
+                                /* ═════════ مرحله‌ی فرم ═════════ */
                                 <>
                                     <div className="mb-2 flex items-center justify-between">
                                         <div className="flex items-center gap-1.5 text-[11px] font-extrabold text-gray-600 dark:text-gray-300">
@@ -375,7 +396,10 @@ export default function TaskTransferModal({
                                     )}
 
                                     {loading ? (
-                                        <ListSkeleton rows={3} />
+                                        <div className="flex items-center gap-2 rounded-2xl border border-gray-200 px-3 py-4 text-[11px] text-gray-400 dark:border-white/[.08]">
+                                            <Loader2 size={15} className="animate-spin" />
+                                            در حال دریافت دپارتمان‌ها...
+                                        </div>
                                     ) : loadError ? (
                                         <p className="rounded-xl bg-red-500/10 px-3 py-2.5 text-center text-[10.5px] font-bold text-red-500">
                                             {loadError}
@@ -448,7 +472,7 @@ export default function TaskTransferModal({
                                         </div>
                                     )}
 
-                                    
+                                    {/* پیش‌نمایش مقصد انتخاب‌شده */}
                                     {selected && (
                                         <div className="mt-3 flex flex-col gap-1.5 rounded-2xl bg-indigo-500/[.045] px-3.5 py-3">
                                             <SummaryRow
@@ -477,7 +501,7 @@ export default function TaskTransferModal({
                                         </div>
                                     )}
 
-                                    
+                                    {/* توضیح */}
                                     <div className="mt-4">
                                         <div className="mb-2 flex items-center gap-1.5 text-[11px] font-extrabold text-gray-600 dark:text-gray-300">
                                             <FileText size={13} />
@@ -493,7 +517,7 @@ export default function TaskTransferModal({
                                         />
                                     </div>
 
-                                    
+                                    {/* فایل‌ها */}
                                     <label className="mt-3 flex cursor-pointer items-center justify-center gap-2 rounded-2xl border border-dashed border-gray-200 bg-gray-50 py-3 text-[10.5px] font-bold text-gray-500 dark:border-white/[.08] dark:bg-white/[.025] dark:text-gray-400">
                                         <Paperclip size={13} />
                                         {files.length
@@ -506,7 +530,7 @@ export default function TaskTransferModal({
                                             disabled={submitting}
                                             onChange={(e) => {
                                                 handleFiles(e.target.files);
-                                                
+                                                // اجازه‌ی انتخاب دوباره‌ی همان فایل
                                                 e.target.value = "";
                                             }}
                                         />
@@ -550,7 +574,7 @@ export default function TaskTransferModal({
                             )}
                         </div>
 
-                        
+                        {/* ───── دکمه‌ها ───── */}
                         <div className="flex gap-2 border-t border-gray-100 px-5 py-4 dark:border-white/[.06]">
                             {confirming ? (
                                 <>
@@ -569,12 +593,14 @@ export default function TaskTransferModal({
                                         type="button"
                                         disabled={submitting}
                                         onClick={submit}
-                                        className="relative flex h-11 flex-[1.5] items-center justify-center gap-2 rounded-xl bg-indigo-600 text-[11px] font-extrabold text-white shadow-lg shadow-indigo-500/20 disabled:opacity-60"
+                                        className="flex h-11 flex-[1.5] items-center justify-center gap-2 rounded-xl bg-indigo-600 text-[11px] font-extrabold text-white shadow-lg shadow-indigo-500/20 disabled:opacity-60"
                                     >
-                                        <BusyContent busy={submitting}>
+                                        {submitting ? (
+                                            <Loader2 size={15} className="animate-spin" />
+                                        ) : (
                                             <Check size={15} />
-                                            تأیید و انتقال تسک
-                                        </BusyContent>
+                                        )}
+                                        تأیید و انتقال تسک
                                     </button>
                                 </>
                             ) : (
@@ -598,8 +624,8 @@ export default function TaskTransferModal({
                                 </>
                             )}
                         </div>
-                    </m.div>
-                </div>
+                    </motion.div>
+                </motion.div>
             )}
         </AnimatePresence>,
         document.body

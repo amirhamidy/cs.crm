@@ -24,14 +24,12 @@ export default function Pagination({
     totalPages,
     onChange,
     compact = false,
-    summary,
 }: {
     page: number;
     totalPages: number;
     onChange: (p: number) => void;
-    
+    /** نسخهٔ کوچک برای ستون‌های باریک (فقط قبلی / شماره صفحه / بعدی) */
     compact?: boolean;
-    summary?: string;
 }) {
     if (compact) {
         return (
@@ -62,9 +60,7 @@ export default function Pagination({
     }
 
     return (
-        <div className="flex flex-col items-center gap-2 pt-2">
-        {summary && <p className="text-[11px] font-medium text-gray-500 dark:text-gray-400">{summary}</p>}
-        <div className="flex items-center justify-center gap-1.5">
+        <div className="flex items-center justify-center gap-1.5 pt-2">
             <button
                 type="button"
                 onClick={() => onChange(page - 1)}
@@ -104,7 +100,6 @@ export default function Pagination({
             >
                 <ChevronLeft size={15} />
             </button>
-        </div>
         </div>
     );
 }

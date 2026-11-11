@@ -1,25 +1,15 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { CountSkeleton } from "@/components/ui/skeletons";
-import CustomerCardSkeleton from "./CustomerCardSkeleton";
-import { m, AnimatePresence } from "framer-motion";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "next-themes";
-import { Users, Plus, RefreshCw, Filter, FileSpreadsheet } from "lucide-react";
-import { Spinner as Loader2 } from "@/components/ui/Spinner";
-import dynamic from "next/dynamic";
+import { Users, Plus, Loader, RefreshCw, Filter, FileSpreadsheet } from "lucide-react";
 import CustomerCard from "./CustomerCard";
+import AddCustomerModal from "./AddCustomerModal";
 import ImportExcelModal from "./ImportExcelModal";
 import Pagination from "@/components/ui/Pagination";
-
-
-const AddCustomerModal = dynamic(() => import("./AddCustomerModal"), {
-    ssr: false,
-    loading: () => null,
-});
-import { usePaginatedList } from "@/hooks/usePaginatedList";
 import type { Customer, CustomerStatus } from "@/types/customer";
-import { cached, customersApi, casesApi, type CustomerCounts } from "@/lib/api";
+import { customersApi, casesApi, type CustomerCounts } from "@/lib/api";
 
 type FilterType = "all" | "potential" | "active";
 
@@ -42,72 +32,110 @@ export default function CustomersPage() {
     }, []);
     const isDark = mounted && resolvedTheme === "dark";
 
+    const [customers, setCustomers] = useState<Customer[]>([]);
+    const [totalCount, setTotalCount] = useState(0);
     const [counts, setCounts] = useState<CustomerCounts>(EMPTY_COUNTS);
     const [customersWithCase, setCustomersWithCase] = useState<Set<number>>(new Set());
+    const [loading, setLoading] = useState(true);
     const [showAdd, setShowAdd] = useState(false);
     const [showImport, setShowImport] = useState(false);
+    const [filter, setFilter] = useState<FilterType>("all");
+    const [page, setPage] = useState(1);
 
-    
-    const list = usePaginatedList<Customer, { status?: CustomerStatus }>(
-        (params, signal) => customersApi.page(params, signal),
-        { pageSize: PAGE_SIZE, filters: { status: STATUS_BY_FILTER.all } },
-    );
-    const customers = list.data;
-    const page = list.page;
-    const totalCount = list.count;
-    const totalPages = list.totalPages;
-    const loading = list.loading;
+    const requestId = useRef(0);
 
-    const filter: FilterType = list.filters.status === 1 ? "potential" : list.filters.status === 2 ? "active" : "all";
+    const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
 
     const fetchCounts = useCallback(async () => {
         try {
             setCounts(await customersApi.counts());
         } catch {
-            
+            /* شمارنده‌ها اختیاری‌اند */
         }
     }, []);
 
     const fetchCases = useCallback(async () => {
         try {
-            const cases = await cached("cases:list:for-customers", () => casesApi.listAll(), 60_000);
+            const cases = await casesApi.listAll();
             setCustomersWithCase(new Set(cases.map((c) => Number(c.customer))));
         } catch {
             setCustomersWithCase(new Set());
         }
     }, []);
 
-    const refreshAll = useCallback(() => {
-        customersApi.invalidate();
-        casesApi.invalidate();
-        list.refetch();
+    const fetchCustomers = useCallback(async () => {
+        const id = ++requestId.current;
+        setLoading(true);
+
+        try {
+            const data = await customersApi.list({
+                page,
+                page_size: PAGE_SIZE,
+                status: STATUS_BY_FILTER[filter],
+            });
+
+            if (id !== requestId.current) return;
+
+            setCustomers(data.results);
+            setTotalCount(data.count);
+        } catch {
+            if (id !== requestId.current) return;
+            setCustomers([]);
+            setTotalCount(0);
+        } finally {
+            if (id === requestId.current) setLoading(false);
+        }
+    }, [page, filter]);
+
+    useEffect(() => {
+        fetchCustomers();
+    }, [fetchCustomers]);
+
+    useEffect(() => {
         fetchCases();
         fetchCounts();
-    }, [list.refetch, fetchCases, fetchCounts]);
+    }, [fetchCases, fetchCounts]);
+
+    const refreshAll = useCallback(() => {
+        customersApi.invalidate();
+        fetchCustomers();
+        fetchCases();
+        fetchCounts();
+    }, [fetchCustomers, fetchCases, fetchCounts]);
 
     const handleDeleted = useCallback(() => {
         customersApi.invalidate();
         if (customers.length === 1 && page > 1) {
-            list.setPage(page - 1);
+            setPage((p) => p - 1);
         } else {
-            list.refetch();
+            fetchCustomers();
         }
         fetchCounts();
-    }, [customers.length, page, list.setPage, list.refetch, fetchCounts]);
+    }, [customers.length, page, fetchCustomers, fetchCounts]);
 
     const handleAdded = useCallback(() => {
         refreshAll();
     }, [refreshAll]);
 
-    const handleEdited = useCallback(() => {
-        customersApi.invalidate();
-        list.refetch();
-        fetchCounts();
-    }, [list.refetch, fetchCounts]);
+    const handleEdited = useCallback(
+        (updated: Customer) => {
+            customersApi.invalidate();
+            setCustomers((prev) => prev.map((c) => (c.id === updated.id ? { ...c, ...updated } : c)));
+            fetchCounts();
+        },
+        [fetchCounts],
+    );
 
     const handleFilterChange = (newFilter: FilterType) => {
         if (newFilter === filter) return;
-        list.setFilters({ status: STATUS_BY_FILTER[newFilter] });
+        setFilter(newFilter);
+        setPage(1);
+    };
+
+    const goToPage = (p: number) => {
+        if (p < 1 || p > totalPages || p === page) return;
+        setPage(p);
+        window.scrollTo({ top: 0, behavior: "smooth" });
     };
 
     const filterOptions: { value: FilterType; label: string; count: number }[] = [
@@ -130,7 +158,7 @@ export default function CustomersPage() {
                     <div className="min-w-0">
                         <h1 className="text-[15px] font-extrabold text-gray-900 dark:text-white">مدیریت مشتریان</h1>
                         <p className="mt-0.5 text-[11.5px] text-gray-500 dark:text-gray-400">
-                            {loading ? <CountSkeleton /> : `${totalCount} مشتری ثبت شده`}
+                            {loading ? "در حال بارگذاری..." : `${totalCount} مشتری ثبت شده`}
                         </p>
                     </div>
                 </div>
@@ -139,15 +167,15 @@ export default function CustomersPage() {
                     <button
                         onClick={refreshAll}
                         disabled={loading}
-                        className={`flex h-10 w-10 items-center justify-center rounded-2xl transition-colors disabled:opacity-50 `}
+                        className="flex h-10 w-10 items-center justify-center rounded-2xl transition-colors disabled:opacity-50"
                         style={{
                             background: isDark ? "rgba(255,255,255,0.05)" : "rgba(15,23,42,0.05)",
-                            color: isDark ? "#d1d5db" : "#4b5563",
+                            color: isDark ? "#cbd5e1" : "#475569",
                         }}
                         title="بارگذاری مجدد"
                         type="button"
                     >
-                        {loading ? <Loader2 size={15} className="animate-spin" /> : <RefreshCw size={15} />}
+                        <RefreshCw size={15} className={loading ? "animate-spin" : ""} />
                     </button>
 
                     <button
@@ -213,11 +241,14 @@ export default function CustomersPage() {
             </div>
 
             {loading ? (
-                <CustomerCardSkeleton count={6} />
+                <div className="flex flex-col items-center justify-center gap-3 py-16">
+                    <Loader size={24} className="animate-spin text-indigo-500" />
+                    <p className="text-[12.5px] text-gray-500 dark:text-gray-400">در حال دریافت لیست مشتریان...</p>
+                </div>
             ) : (
                 <AnimatePresence mode="wait">
                     {customers.length === 0 ? (
-                        <m.div
+                        <motion.div
                             key="empty"
                             initial={{ opacity: 0, y: 8 }}
                             animate={{ opacity: 1, y: 0 }}
@@ -232,9 +263,9 @@ export default function CustomersPage() {
                                         ? "مشتری بالقوه‌ای یافت نشد"
                                         : "مشتری فعالی یافت نشد"}
                             </p>
-                        </m.div>
+                        </motion.div>
                     ) : (
-                        <m.div
+                        <motion.div
                             layout
                             key={`grid-${filter}-${page}`}
                             className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4"
@@ -251,14 +282,14 @@ export default function CustomersPage() {
                                     />
                                 ))}
                             </AnimatePresence>
-                        </m.div>
+                        </motion.div>
                     )}
                 </AnimatePresence>
             )}
 
-            {!loading && totalPages > 1 && <Pagination page={page} totalPages={totalPages} onChange={list.setPage} />}
+            {!loading && totalPages > 1 && <Pagination page={page} totalPages={totalPages} onChange={goToPage} />}
 
-            {showAdd && <AddCustomerModal isOpen={showAdd} onClose={() => setShowAdd(false)} onAdded={handleAdded} />}
+            <AddCustomerModal isOpen={showAdd} onClose={() => setShowAdd(false)} onAdded={handleAdded} />
             <ImportExcelModal isOpen={showImport} onClose={() => setShowImport(false)} onSuccess={handleAdded} />
         </div>
     );

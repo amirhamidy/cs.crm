@@ -10,10 +10,10 @@ interface SignerDraftFormProps {
   mode: "add" | "edit";
   users: UserOption[];
   usersLoading?: boolean;
-  
+  /** شناسه‌ی کاربران داخلی که قبلاً در این جلسه هستند */
   takenUserIds: number[];
   defaultOrder: number;
-  
+  /** در حالت ویرایش: مقادیر فعلی (نوع داخلی/بیرونی قابل تغییر نیست) */
   initial?: Partial<SignerInput> & { displayName?: string; isExternal?: boolean };
   submitLabel: string;
   submitting?: boolean;
@@ -104,8 +104,8 @@ export default function SignerDraftForm({
               onClick={() => setKind(value)}
               className={`h-9 rounded-xl text-[12px] font-bold transition-colors ${
                 kind === value
-                  ? "bg-white text-indigo-600 shadow-sm dark:bg-gray-800 dark:text-indigo-300"
-                  : "text-gray-500 dark:text-gray-400"
+                  ? "bg-white text-indigo-600 shadow-sm dark:bg-slate-800 dark:text-indigo-300"
+                  : "text-slate-500 dark:text-slate-400"
               }`}
             >
               {label}

@@ -1,17 +1,11 @@
 "use client";
 
 import { memo, useEffect, useState } from "react";
-import { m } from "framer-motion";
+import { motion } from "framer-motion";
 import { CalendarClock, History, MessageSquareText, UserRound } from "lucide-react";
 import { JALALI_MONTHS, pad2, toJalali, toPersianDigits } from "@/lib/jalali";
 import type { EmployeeListItem, InternalTask } from "./types";
-import dynamic from "next/dynamic";
-
-
-const InternalTaskChatModal = dynamic(() => import("./InternalTaskChatModal"), {
-    ssr: false,
-    loading: () => null,
-});
+import InternalTaskChatModal from "./InternalTaskChatModal";
 import InternalTaskDeadlineModal from "./InternalTaskDeadlineModal";
 
 interface ReceivedTaskCardProps {
@@ -67,7 +61,7 @@ function ReceivedTaskCard({ task, employees, isRoutine = false, onUpdated }: Rec
 
     return (
         <>
-            <m.div
+            <motion.div
                 layout
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -135,7 +129,7 @@ function ReceivedTaskCard({ task, employees, isRoutine = false, onUpdated }: Rec
                         گفتگو و فایل‌ها
                     </button>
                 </div>
-            </m.div>
+            </motion.div>
 
             <InternalTaskDeadlineModal
                 open={deadlineModalOpen}
@@ -145,17 +139,15 @@ function ReceivedTaskCard({ task, employees, isRoutine = false, onUpdated }: Rec
                 onLoaded={(d) => setDeadlineData({ started_at: d.started_at, deadline: d.deadline })}
             />
 
-            {chatOpen && (
-                <InternalTaskChatModal
-                    open={chatOpen}
-                    task={currentTask}
-                    onClose={() => setChatOpen(false)}
-                    onUpdated={(updatedTask) => {
-                        setCurrentTask(updatedTask);
-                        onUpdated(updatedTask);
-                    }}
-                />
-            )}
+            <InternalTaskChatModal
+                open={chatOpen}
+                task={currentTask}
+                onClose={() => setChatOpen(false)}
+                onUpdated={(updatedTask) => {
+                    setCurrentTask(updatedTask);
+                    onUpdated(updatedTask);
+                }}
+            />
         </>
     );
 }

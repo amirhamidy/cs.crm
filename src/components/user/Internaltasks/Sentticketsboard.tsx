@@ -1,12 +1,10 @@
 "use client";
 
-import PageHeader, { HEADER_BTN_PRIMARY } from "@/components/ui/PageHeader";
 import { useMemo, useState } from "react";
 import Pagination from "@/components/ui/Pagination";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import { internalTasksApi } from "@/lib/api";
-import { LayoutGrid, Plus, Ticket } from "lucide-react";
-import TicketBoardSkeleton from "./TicketBoardSkeleton";
+import { LayoutGrid, Loader, Plus, Ticket } from "lucide-react";
 import { useCurrentEmployee } from "@/hooks/usecurrentemployee";
 import { deleteInternalTask } from "./Api";
 import type { InternalTask, InternalTaskStatus } from "./types";
@@ -114,23 +112,23 @@ export default function SentTicketsBoard() {
     };
 
     if (loading || employeeLoading) {
-        return <TicketBoardSkeleton count={4} />;
+        return <div className="flex h-64 items-center justify-center"><Loader size={22} className="animate-spin text-indigo-500" /></div>;
     }
 
     return (
         <div dir="rtl" className="flex flex-col gap-5">
-            <PageHeader
-                icon={Ticket}
-                title="تیکت‌های ارسال شده"
-                subtitle={`${list.count} تیکت`}
-                search={{ value: list.search, onChange: list.setSearch, placeholder: "جستجو بر اساس عنوان، شماره یا نام فرد" }}
-                onRefresh={() => loadTasks()}
-                refreshing={list.loading}
-            >
-                <button type="button" onClick={() => setCreateOpen(true)} className={HEADER_BTN_PRIMARY}>
-                    <Plus size={14} />تیکت جدید
+            <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center gap-2.5">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-indigo-500/10"><Ticket size={17} className="text-indigo-500" /></div>
+                    <div>
+                        <h3 className="text-[14px] font-extrabold text-gray-900 dark:text-white">تیکت‌های ارسال شده</h3>
+                        <p className="text-[11px] text-gray-400 dark:text-gray-600">{list.count} تیکت</p>
+                    </div>
+                </div>
+                <button type="button" onClick={() => setCreateOpen(true)} className="flex shrink-0 items-center gap-1.5 rounded-2xl bg-indigo-600 px-3.5 py-2 text-[11.5px] font-bold text-white transition-colors hover:bg-indigo-500">
+                    <Plus size={13} />تیکت جدید
                 </button>
-            </PageHeader>
+            </div>
 
             {error && (
                 <div className="flex items-center justify-between gap-3 rounded-2xl border border-red-500/20 bg-red-500/5 px-4 py-3">

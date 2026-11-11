@@ -1,14 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { m, AnimatePresence, useReducedMotion } from "framer-motion";
-import { Backdrop } from "@/components/ui/Backdrop";
-import { panelMotion } from "@/lib/motion";
-import { AlertCircle, Check, Package, Upload, X } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { AlertCircle, Check, Loader2, Package, Upload, X } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
 import type { ApiOrderTask, ApiProduct } from "@/types/warehouse";
 
-import { BusyContent } from "@/components/ui/Button";
 interface Props {
     open: boolean;
     orderTask: ApiOrderTask;
@@ -38,7 +35,6 @@ export default function WarehouseEmployeeOrderTaskStatusModal({
     onClose,
     onSuccess,
 }: Props) {
-    const reduced = useReducedMotion() ?? false;
     const [status, setStatus] = useState<"completed" | "cancelled">(initialStatus);
     const [items, setItems] = useState<ItemState[]>([]);
     const [note, setNote] = useState("");
@@ -163,14 +159,20 @@ export default function WarehouseEmployeeOrderTaskStatusModal({
     return (
         <AnimatePresence>
             {open && (
-                <div
-                    className="fixed inset-0 z-[100] flex items-center justify-center p-4"
+                <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
+                    onClick={() => !submitting && onClose()}
                     dir="rtl"
                 >
-                    <Backdrop onClick={() => !submitting && onClose()} />
-                    <m.div
-                        {...panelMotion(false, reduced)}
-                        className="relative flex max-h-[90vh] w-full max-w-lg flex-col rounded-3xl bg-white dark:bg-gray-900"
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                        onClick={(e) => e.stopPropagation()}
+                        className="flex max-h-[90vh] w-full max-w-lg flex-col rounded-3xl bg-white shadow-2xl dark:bg-slate-900"
                     >
                         <div className="flex items-center justify-between border-b border-gray-100 p-5 dark:border-white/10">
                             <div className="flex items-center gap-2">
@@ -309,26 +311,28 @@ export default function WarehouseEmployeeOrderTaskStatusModal({
                             >
                                 انصراف
                             </button>
-                            <m.button
+                            <motion.button
                                 type="button"
                                 whileTap={{ scale: 0.97 }}
                                 onClick={handleSubmit}
                                 disabled={submitting}
-                                className={`relative flex h-11 flex-[2] items-center justify-center gap-2 rounded-2xl text-[13px] font-bold text-white transition-colors disabled:opacity-50 ${status === "completed"
+                                className={`flex h-11 flex-[2] items-center justify-center gap-2 rounded-2xl text-[13px] font-bold text-white transition-colors disabled:opacity-50 ${status === "completed"
                                         ? "bg-emerald-600 hover:bg-emerald-500"
                                         : "bg-red-600 hover:bg-red-500"
                                     }`}
                             >
-                                <BusyContent busy={submitting}>
+                                {submitting ? (
+                                    <Loader2 size={15} className="animate-spin" />
+                                ) : (
                                     <>
-                                            <Check size={14} strokeWidth={3} />
-                                            {status === "completed" ? "تایید و ثبت خروج" : "ثبت لغو"}
-                                        </>
-                                </BusyContent>
-                            </m.button>
+                                        <Check size={14} strokeWidth={3} />
+                                        {status === "completed" ? "تایید و ثبت خروج" : "ثبت لغو"}
+                                    </>
+                                )}
+                            </motion.button>
                         </div>
-                    </m.div>
-                </div>
+                    </motion.div>
+                </motion.div>
             )}
         </AnimatePresence>
     );

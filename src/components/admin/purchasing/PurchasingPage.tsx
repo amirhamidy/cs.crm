@@ -1,11 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { m } from "framer-motion";
-import { CheckCircle2, Clock3, RefreshCw, ShieldCheck, ShoppingCart, UserCheck, Users, XCircle, type LucideIcon } from "lucide-react";
-import PurchasingPageSkeleton from "./PurchasingPageSkeleton";
-import PurchasingHeaderSkeleton from "./PurchasingHeaderSkeleton";
-import { Spinner as Loader2 } from "@/components/ui/Spinner";
+import { motion } from "framer-motion";
+import { CheckCircle2, Clock3, Loader2, RefreshCw, ShieldCheck, ShoppingCart, UserCheck, Users, XCircle, type LucideIcon } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
 import { purchasingApi, type PurchasingCounts } from "@/lib/api";
 import { toPersianDigits } from "@/lib/jalali";
@@ -142,8 +139,7 @@ export default function PurchasingPage() {
         <div dir="rtl" className="space-y-4 p-3 sm:p-5">
             <PurchasingDeleteModal open={!!deleteTarget} title={deleteMeta.title} description={deleteMeta.description} loading={deleteLoading} onConfirm={confirmDelete} onCancel={() => setDeleteTarget(null)} />
 
-            {loading ? <PurchasingHeaderSkeleton /> : (
-<m.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className={`${box} p-3`}>
+            <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className={`${box} p-3`}>
                 <div className="flex items-center justify-between gap-3">
                     <div className="flex min-w-0 items-center gap-3">
                         <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-500 text-white shadow-sm">
@@ -181,10 +177,12 @@ export default function PurchasingPage() {
                             type="button"
                             onClick={() => loadAll(true)}
                             disabled={loading || refreshing}
-                            className={`flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 text-gray-400 transition-colors hover:text-gray-600 disabled:opacity-40 dark:bg-white/[0.05] dark:hover:text-gray-300 `}
+                            className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 text-gray-400 transition-colors hover:text-gray-600 disabled:opacity-40 dark:bg-white/[0.05] dark:hover:text-gray-300"
                         >
-                            {refreshing ? <Loader2 size={13} className="animate-spin" /> : <RefreshCw
-                                size={13} />}
+                            <RefreshCw
+                                size={13}
+                                className={refreshing ? "animate-spin" : ""}
+                            />
                         </button>
                     </div>
                 </div>
@@ -195,8 +193,7 @@ export default function PurchasingPage() {
                     <Stat label="لغوشده" value={toPersianDigits(stats.cancelled)} icon={XCircle} tone="bg-red-50/70 text-red-500 dark:bg-red-500/[0.07] dark:text-red-400" />
                     <Stat label="اعضای فعال" value={`${toPersianDigits(stats.members)}/${toPersianDigits(employees.length)}`} icon={Users} tone="bg-indigo-50/70 text-indigo-600 dark:bg-indigo-500/[0.07] dark:text-indigo-400" />
                 </div>
-            </m.div>
-)}
+            </motion.div>
 
             {error && (
                 <div className="flex items-center gap-2.5 rounded-2xl bg-red-50 px-3.5 py-3 dark:bg-red-500/10">
@@ -207,7 +204,9 @@ export default function PurchasingPage() {
             )}
 
             {loading ? (
-                <PurchasingPageSkeleton />
+                <div className={`${box} flex h-32 items-center justify-center`}>
+                    <Loader2 size={20} className="animate-spin text-indigo-500" />
+                </div>
             ) : (
                 <>
                     <PurchasingEmployeesBar

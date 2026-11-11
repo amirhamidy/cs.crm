@@ -1,12 +1,10 @@
 "use client";
 
 import { memo, useCallback, useEffect, useRef, useState } from "react";
-import { AnimatePresence, m } from "framer-motion";
-import { Check, ChevronDown, Search } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
+import { Check, ChevronDown, Loader2, Search } from "lucide-react";
 import { useInfiniteOptions, type InfiniteFetcher } from "@/hooks/useInfiniteOptions";
 
-import { ListSkeleton } from "@/components/ui/skeletons";
-import { Skeleton } from "@/components/ui/Skeleton";
 export interface AsyncOption {
     id: number;
     label: string;
@@ -27,17 +25,20 @@ interface AsyncSelectProps<T extends { id: number | string }> {
     emptyText: string;
     disabled?: boolean;
     value: number | null;
-    
+    /** گزینهٔ انتخاب‌شده؛ برای نمایش برچسب حتی وقتی در صفحهٔ لود‌شدهٔ فعلی نیست */
     selected?: AsyncOption | null;
     fetcher: InfiniteFetcher<T>;
     toOption: (item: T) => AsyncOption;
-    
+    /** با تغییر این کلید (مثلاً مشتری انتخاب‌شده) لیست دوباره از صفحهٔ ۱ خوانده می‌شود */
     depsKey?: string | number | null;
     pageSize?: number;
     onChange: (option: AsyncOption) => void;
 }
 
-
+/**
+ * سلکت با جستجوی سمت سرور + لود صفحهٔ بعد هنگام رسیدن اسکرول به انتهای لیست.
+ * تا وقتی دراپ‌دان باز نشده هیچ ریکوئستی زده نمی‌شود.
+ */
 function AsyncSelectInner<T extends { id: number | string }>({
     label, placeholder, emptyText, disabled, value, selected, fetcher, toOption, depsKey, pageSize = 20, onChange,
 }: AsyncSelectProps<T>) {
@@ -93,19 +94,19 @@ function AsyncSelectInner<T extends { id: number | string }>({
                         {hasSelection ? selected!.label : placeholder}
                     </span>
                 </span>
-                <m.span animate={{ rotate: open ? 180 : 0 }} transition={{ duration: 0.2 }}>
+                <motion.span animate={{ rotate: open ? 180 : 0 }} transition={{ duration: 0.2 }}>
                     <ChevronDown size={14} className="shrink-0 text-gray-400" />
-                </m.span>
+                </motion.span>
             </button>
 
             <AnimatePresence>
                 {open && (
-                    <m.div
+                    <motion.div
                         initial={{ opacity: 0, y: -6, scale: 0.97 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: -4, scale: 0.97 }}
                         transition={{ duration: 0.15 }}
-                        className="absolute z-50 mt-2 w-full origin-top overflow-hidden rounded-[1.5rem] border border-gray-100 bg-white shadow-xl shadow-black/5 dark:border-white/[0.08] dark:bg-[#111827] dark:shadow-black/40"
+                        className="absolute z-50 mt-2 w-full origin-top overflow-hidden rounded-[1.5rem] border border-gray-100 bg-white shadow-xl shadow-black/5 dark:border-white/[0.08] dark:bg-[#0f172a] dark:shadow-black/40"
                     >
                         <div className="border-b border-gray-100 px-3 py-2.5 dark:border-white/[0.06]">
                             <div className="flex items-center gap-2 rounded-xl bg-gray-50 px-3 py-2 dark:bg-white/[0.04]">
@@ -117,13 +118,15 @@ function AsyncSelectInner<T extends { id: number | string }>({
                                     placeholder="جستجو..."
                                     className="w-full bg-transparent text-[12px] font-semibold text-gray-900 outline-none placeholder:text-gray-400 dark:text-white"
                                 />
-                                {loading && <span aria-hidden="true" className="h-3 w-3 shrink-0 animate-pulse rounded-full bg-gray-300 dark:bg-white/20" />}
+                                {loading && <Loader2 size={13} className="shrink-0 animate-spin text-gray-400" />}
                             </div>
                         </div>
 
                         <div ref={listRef} onScroll={onScroll} className="max-h-56 overflow-y-auto p-1.5">
                             {loading && items.length === 0 ? (
-                                <ListSkeleton rows={3} />
+                                <div className="flex items-center justify-center gap-2 py-6 text-[12px] text-gray-400">
+                                    <Loader2 size={14} className="animate-spin" /> در حال دریافت...
+                                </div>
                             ) : error && items.length === 0 ? (
                                 <div className="flex flex-col items-center gap-2 py-5">
                                     <p className="text-[12px] text-red-500">دریافت اطلاعات با خطا مواجه شد</p>
@@ -164,7 +167,9 @@ function AsyncSelectInner<T extends { id: number | string }>({
                             )}
 
                             {loadingMore && (
-                                <Skeleton className="mx-1 my-2 h-8 rounded-lg" />
+                                <div className="flex items-center justify-center gap-2 py-3 text-[11.5px] text-gray-400">
+                                    <Loader2 size={13} className="animate-spin" /> در حال دریافت بیشتر...
+                                </div>
                             )}
                             {!loadingMore && hasMore && items.length > 0 && (
                                 <button type="button" onClick={loadMore} className="w-full py-2 text-center text-[11px] font-bold text-indigo-500">
@@ -172,7 +177,7 @@ function AsyncSelectInner<T extends { id: number | string }>({
                                 </button>
                             )}
                         </div>
-                    </m.div>
+                    </motion.div>
                 )}
             </AnimatePresence>
         </div>

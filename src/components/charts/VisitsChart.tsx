@@ -1,9 +1,23 @@
 "use client";
 
-import { AnimatePresence, m } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { useTheme } from "next-themes";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, XAxis, YAxis } from "recharts";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  ResponsiveContainer,
+  XAxis,
+  YAxis,
+} from "recharts";
 
 type TimeRange = "weekly" | "monthly" | "yearly";
 
@@ -112,7 +126,7 @@ function CustomBarShape({
   const radius = Math.min(6, width / 2);
 
   return (
-    <m.g
+    <motion.g
       key={`${index}-${hoverKey}`}
       animate={isActive ? { scale: [1, 0.96, 1] } : { scale: 1 }}
       transition={{
@@ -159,7 +173,7 @@ function CustomBarShape({
         opacity={isActive ? 0.2 : 0.1}
         style={{ transition: "opacity 0.2s ease" }}
       />
-    </m.g>
+    </motion.g>
   );
 }
 
@@ -181,7 +195,7 @@ function CustomXAxisTick({
       textAnchor="middle"
       fontSize={11}
       fontWeight={500}
-      fill="#6b7280"
+      fill="#64748b"
     >
       {payload.value}
     </text>
@@ -632,7 +646,7 @@ export default function SalesIssuesChart({
 
   const gridColor = isDark
     ? "rgba(255,255,255,0.04)"
-    : "#e5e7eb";
+    : "#e2e8f0";
 
   const chartDefs = isDark
     ? STATIC_DEFS_DARK
@@ -647,7 +661,7 @@ export default function SalesIssuesChart({
     : 0;
 
   return (
-    <m.div
+    <motion.div
       initial={{
         opacity: 0,
         y: 6,
@@ -665,7 +679,7 @@ export default function SalesIssuesChart({
           0.94,
         ],
       }}
-      className="relative rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-white/8 dark:bg-gray-950"
+      className="relative rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-white/8 dark:bg-slate-950"
     >
       <div
         className="mb-3 flex items-start justify-between gap-3"
@@ -681,7 +695,7 @@ export default function SalesIssuesChart({
           </p>
         </div>
 
-        <div className="flex items-center gap-1 rounded-xl border border-gray-200 bg-gray-50 p-1 dark:border-white/5 dark:bg-gray-900/50">
+        <div className="flex items-center gap-1 rounded-xl border border-gray-200 bg-gray-50 p-1 dark:border-white/5 dark:bg-slate-900/50">
           {ranges.map((range) => (
             <button
               key={range.key}
@@ -695,9 +709,9 @@ export default function SalesIssuesChart({
             >
               {activeRange ===
                 range.key && (
-                  <m.span
+                  <motion.span
                     layoutId="salesIssuesRangeIndicator"
-                    className="absolute inset-0 rounded-lg bg-white shadow-sm dark:bg-gray-800"
+                    className="absolute inset-0 rounded-lg bg-white shadow-sm dark:bg-slate-800"
                     transition={{
                       type: "spring",
                       stiffness: 400,
@@ -723,7 +737,7 @@ export default function SalesIssuesChart({
       <div className="absolute left-2 top-14 z-20 min-w-[150px]">
         <AnimatePresence mode="wait">
           {activeBar && (
-            <m.div
+            <motion.div
               key={`${activeRange}-${activeBar.stage}`}
               initial={{
                 opacity: 0,
@@ -749,7 +763,7 @@ export default function SalesIssuesChart({
                   0.94,
                 ],
               }}
-              className="pointer-events-none rounded-xl border border-gray-200/60 bg-white/95 px-3 py-2 shadow-lg dark:border-white/10 dark:bg-gray-900/95"
+              className="pointer-events-none rounded-xl border border-gray-200/60 bg-white/95 px-3 py-2 shadow-lg backdrop-blur-sm dark:border-white/10 dark:bg-slate-900/95"
               style={{
                 boxShadow:
                   activeBar.isEmpty
@@ -763,7 +777,7 @@ export default function SalesIssuesChart({
                   style={{
                     backgroundColor:
                       activeBar.isEmpty
-                        ? "#d1d5db"
+                        ? "#cbd5e1"
                         : activeBar.color,
                     boxShadow:
                       activeBar.isEmpty
@@ -796,7 +810,7 @@ export default function SalesIssuesChart({
                     </span>
                   </p>
 
-                  <div className="mt-1.5 h-1 w-full overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800">
+                  <div className="mt-1.5 h-1 w-full overflow-hidden rounded-full bg-gray-100 dark:bg-slate-800">
                     <div
                       className="h-full rounded-full"
                       style={{
@@ -810,7 +824,7 @@ export default function SalesIssuesChart({
                   </div>
                 </>
               )}
-            </m.div>
+            </motion.div>
           )}
         </AnimatePresence>
       </div>
@@ -909,6 +923,6 @@ export default function SalesIssuesChart({
           </>
         )}
       </div>
-    </m.div>
+    </motion.div>
   );
 }

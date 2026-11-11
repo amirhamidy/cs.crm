@@ -1,24 +1,28 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import dynamic from "next/dynamic";
-import { UserPlus, Users } from "lucide-react";
-import PageHeader, { HEADER_BTN_PRIMARY } from "@/components/ui/PageHeader";
-import UserCardSkeleton from "@/components/admin/users/UserCardSkeleton";
-import { CountSkeleton } from "@/components/ui/skeletons";
+import { AnimatePresence } from "framer-motion";
+import { Loader2, RefreshCw, Search, UserPlus, Users } from "lucide-react";
+import { useTheme } from "next-themes";
 
-import { accountsApi, departmentsApi, internalTasksApi, scoreApi, tasksApi } from "@/lib/api";
+import {
+    accountsApi,
+    departmentsApi,
+    internalTasksApi,
+    scoreApi,
+    tasksApi,
+} from "@/lib/api";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import Pagination from "@/components/ui/Pagination";
 import UserCard from "@/components/admin/users/UserCard";
 import type { UserInfo } from "@/components/admin/users/UserCard";
-const AddUserModal = dynamic(() => import("@/components/admin/users/AddUserModal"), { ssr: false });
+import AddUserModal from "@/components/admin/users/AddUserPage";
 import type { ApiEmployee, ApiUser } from "@/types/users";
 
 const PAGE_SIZE = 20;
 
 const GRID_CLASS =
-    "grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4";
+    "grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 [&:has(.user-card:hover)_.user-card:not(:hover)]:[filter:opacity(0.3)]";
 
 const EMPTY_TITLES: string[] = [];
 
@@ -41,6 +45,8 @@ const getErrorDetail = (err: unknown) =>
     (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail ?? "خطا در دریافت لیست کاربران";
 
 export default function UsersPage() {
+    const { resolvedTheme } = useTheme();
+    const isDark = resolvedTheme === "dark";
 
     const list = usePaginatedList<ApiEmployee>(
         (params, signal) => accountsApi.employees.list(params, signal),
@@ -216,13 +222,6 @@ export default function UsersPage() {
     }, []);
 
     const handleNoop = useCallback(() => undefined, []);
-    const handleAdminUpdated = useCallback((updatedEmployee: ApiEmployee) => {
-        const targetId = Number(updatedEmployee.user_id ?? updatedEmployee.user);
-        if (!targetId) return;
-        setAdminUsers((previous) => previous.map((user) =>
-            user.id === targetId ? { ...user, avatar: updatedEmployee.avatar } : user
-        ));
-    }, []);
 
     const searchTerm = list.search.trim().toLowerCase();
 
@@ -242,7 +241,6 @@ export default function UsersPage() {
                 user_id: user.id,
                 created_at: user.created_at,
                 updated_at: user.updated_at,
-                avatar: user.avatar,
             })) as ApiEmployee[],
         [visibleAdmins]
     );
@@ -253,26 +251,75 @@ export default function UsersPage() {
 
     return (
         <div className="flex flex-col gap-5 p-3 sm:p-4 md:p-6" dir="rtl">
-            <PageHeader
-                icon={Users}
-                title="مدیریت کاربران"
-                subtitle={loading ? <CountSkeleton /> : `${totalUsers} کاربر ثبت شده`}
-                search={{ value: list.search, onChange: list.setSearch, placeholder: "جستجوی کاربر..." }}
-                onRefresh={handleRefresh}
-                refreshing={loading || list.loading}
-                refreshDisabled={loading}
-            >
-                <button type="button" onClick={() => setShowAddModal(true)} className={HEADER_BTN_PRIMARY}>
-                    <UserPlus size={15} />
-                    افزودن کاربر
-                </button>
-            </PageHeader>
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-start gap-3">
+                    <div
+                        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl"
+                        style={{ background: isDark ? "rgba(99,102,241,0.14)" : "rgba(99,102,241,0.08)" }}
+                    >
+                        <Users size={18} className="text-indigo-500" />
+                    </div>
+                    <div className="min-w-0">
+                        <h1 className="text-[15px] font-extrabold text-gray-900 dark:text-white">مدیریت کاربران</h1>
+                        <p className="mt-0.5 text-[11.5px] text-gray-500 dark:text-gray-400">
+                            {loading ? "در حال بارگذاری..." : `${totalUsers} کاربر ثبت شده`}
+                        </p>
+                    </div>
+                </div>
 
-            {loading && <UserCardSkeleton count={8} />}
+                <div className="flex items-center gap-2">
+                    <div className="relative">
+                        <Search size={14} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                        <input
+                            type="text"
+                            value={list.search}
+                            onChange={(event) => list.setSearch(event.target.value)}
+                            placeholder="جستجوی کاربر..."
+                            className="h-10 w-40 rounded-2xl border-0 pl-3 pr-9 text-[12.5px] outline-none sm:w-52"
+                            style={{
+                                background: isDark ? "rgba(255,255,255,0.05)" : "rgba(15,23,42,0.05)",
+                                color: isDark ? "#e2e8f0" : "#0f172a",
+                            }}
+                        />
+                    </div>
+                    <button
+                        type="button"
+                        onClick={handleRefresh}
+                        disabled={loading}
+                        className="flex h-10 w-10 items-center justify-center rounded-2xl transition-colors disabled:opacity-50"
+                        style={{
+                            background: isDark ? "rgba(255,255,255,0.05)" : "rgba(15,23,42,0.05)",
+                            color: isDark ? "#cbd5e1" : "#475569",
+                        }}
+                        title="بارگذاری مجدد"
+                    >
+                        <RefreshCw size={15} className={loading || list.loading ? "animate-spin" : ""} />
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setShowAddModal(true)}
+                        className="flex h-10 items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-4 text-[12.5px] font-bold text-white transition-colors hover:bg-indigo-700"
+                    >
+                        <UserPlus size={15} />
+                        افزودن کاربر
+                    </button>
+                </div>
+            </div>
+
+            {loading && (
+                <div className="flex flex-col items-center justify-center gap-3 py-16">
+                    <Loader2 size={24} className="animate-spin text-indigo-500" />
+                    <p className="text-[12.5px] text-gray-500 dark:text-gray-400">در حال دریافت اطلاعات کاربران...</p>
+                </div>
+            )}
 
             {!loading && error && (
                 <div
-                    className="flex flex-col items-center gap-3 rounded-3xl border border-red-500/10 bg-red-500/[0.03] py-12 dark:border-red-500/[0.14] dark:bg-red-500/5"
+                    className="flex flex-col items-center gap-3 rounded-3xl border py-12"
+                    style={{
+                        background: isDark ? "rgba(239,68,68,0.05)" : "rgba(239,68,68,0.03)",
+                        borderColor: isDark ? "rgba(239,68,68,0.14)" : "rgba(239,68,68,0.1)",
+                    }}
                 >
                     <p className="text-[12.5px] font-semibold text-red-500">{error}</p>
                     <button type="button" onClick={handleRefresh} className="text-[12px] font-bold text-indigo-500 hover:underline">
@@ -290,6 +337,7 @@ export default function UsersPage() {
 
             {!loading && !error && (employees.length > 0 || adminEmployees.length > 0) && (
                 <div className={GRID_CLASS}>
+                    <AnimatePresence>
                         {employees.map((employee, index) => (
                             <UserCard
                                 key={employee.id}
@@ -315,9 +363,10 @@ export default function UsersPage() {
                                 userInfo={userInfoMap.get(adminEmployee.username.trim().toLowerCase()) ?? null}
                                 score={null}
                                 onDelete={handleNoop}
-                                onUpdated={handleAdminUpdated}
+                                onUpdated={handleNoop}
                             />
                         ))}
+                    </AnimatePresence>
                 </div>
             )}
 
@@ -325,19 +374,20 @@ export default function UsersPage() {
                 <Pagination page={list.page} totalPages={list.totalPages} onChange={setPage} />
             )}
 
-            {showAddModal && (
-                <AddUserModal
-                    open={showAddModal}
-                    onClose={() => setShowAddModal(false)}
-                    onSuccess={() => {
-                        setShowAddModal(false);
-                        accountsApi.invalidate();
-                        setPage(1);
-                        refetch();
-                        loadMeta();
-                    }}
-                />
-            )}
+            <AnimatePresence>
+                {showAddModal && (
+                    <AddUserModal
+                        onClose={() => setShowAddModal(false)}
+                        onSuccess={() => {
+                            setShowAddModal(false);
+                            accountsApi.invalidate();
+                            setPage(1);
+                            refetch();
+                            loadMeta();
+                        }}
+                    />
+                )}
+            </AnimatePresence>
         </div>
     );
 }

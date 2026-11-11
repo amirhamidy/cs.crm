@@ -1,8 +1,25 @@
 import { isAxiosError } from "axios";
 import axiosInstance from "@/lib/axiosInstance";
-import type { Customer, CustomerDetail, CustomerPayload, CustomerStatus } from "@/types/customer";
+import type {
+  Customer,
+  CustomerDetail,
+  CustomerPayload,
+  CustomerStatus,
+} from "@/types/customer";
 import type { PageParams } from "@/types/pagination";
-import { cached, createSearch, dedupe, fetchPage, getOne, invalidate, listAll as listAllPages, normalizeQuery, toPaginated, uniqueIds, type Paginated, type RawList } from "./_core";
+import {
+  cached,
+  createSearch,
+  dedupe,
+  getOne,
+  invalidate,
+  listAll as listAllPages,
+  normalizeQuery,
+  toPaginated,
+  uniqueIds,
+  type Paginated,
+  type RawList,
+} from "./_core";
 
 const KEY = "customers:";
 const BASE = "/customers/api/v1/customers/";
@@ -44,16 +61,6 @@ const list = async (params: CustomerListParams = {}): Promise<Paginated<Customer
     const res = await axiosInstance.get<RawList<Customer>>(BASE, { params: p });
     return toPaginated<Customer>(res.data);
   });
-  remember(data.results);
-  return data;
-};
-
-
-const page = async (
-  params: CustomerListParams = {},
-  signal?: AbortSignal,
-): Promise<Paginated<Customer>> => {
-  const data = await fetchPage<Customer>(BASE, cleanParams(params), signal);
   remember(data.results);
   return data;
 };
@@ -125,7 +132,6 @@ const allCustomers = () =>
 
 export const customersApi = {
   list,
-  page,
   listAll: allCustomers,
   get,
   counts,

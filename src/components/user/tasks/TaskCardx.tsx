@@ -1,21 +1,31 @@
 "use client";
 
-import { useState } from "react";
-import { AnimatePresence, m, useReducedMotion } from "framer-motion";
-import { Backdrop } from "@/components/ui/Backdrop";
-import { panelMotion } from "@/lib/motion";
-import { useVisibleInterval } from "@/hooks/useVisibility";
-import { Building2, CalendarClock, ClipboardX, Clock, FolderKanban, MessageSquareText, Paperclip, Pencil, Trash2, UserRound, X } from "lucide-react";
+import { useEffect, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import {
+    Building2,
+    CalendarClock,
+    ClipboardX,
+    Clock,
+    FolderKanban,
+    Loader,
+    Loader2,
+    MessageSquareText,
+    Paperclip,
+    Pencil,
+    Trash2,
+    UserRound,
+    X,
+} from "lucide-react";
 import { useTheme } from "next-themes";
 import type { Task, TaskStatus, TaskEmployeeRef } from "@/types/task";
 import type { Employee } from "@/types/employee";
 import { useEmployeeInfo } from "@/hooks/useEmployeeInfo";
 import AdminTaskNotesModal from "./TaskNotesModal";
-import TimeRangeModal from "@/components/tasks/TimeRangeModal";
-import TaskDeadlineModal, { fetchStepDeadline, type StepDeadline } from "@/components/tasks/TaskDeadlineModal";
+import TimeRangeModal from "./TimeRangeModal";
+import TaskDeadlineModal, { fetchStepDeadline, type StepDeadline } from "@/components/customcomponents/tasks/TaskDeadlineModal";
 import api from "@/lib/axiosInstance";
 
-import { BusyContent } from "@/components/ui/Button";
 const AVATAR_GRADIENTS = [
     ["#6366f1", "#8b5cf6"],
     ["#3b82f6", "#6366f1"],
@@ -119,7 +129,7 @@ function Chip({ isDark, children }: { isDark: boolean; children: React.ReactNode
             style={{
                 border: isDark ? "1px solid rgba(255,255,255,0.06)" : "1px solid rgba(0,0,0,0.06)",
                 background: isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)",
-                color: isDark ? "#9ca3af" : "#6b7280",
+                color: isDark ? "#94a3b8" : "#64748b",
             }}
         >
             {children}
@@ -148,7 +158,7 @@ function EmployeeChip({ id, isDark }: { id: number; isDark: boolean }) {
             </span>
             <span
                 className="text-[10.5px] font-bold"
-                style={{ color: isDark ? "#d1d5db" : "#4b5563" }}
+                style={{ color: isDark ? "#cbd5e1" : "#475569" }}
             >
                 {name}
             </span>
@@ -175,7 +185,6 @@ export default function TaskCard({
     onUpdated,
     canManageDeadline = true,
 }: TaskCardProps) {
-    const reduced = useReducedMotion() ?? false;
     const { resolvedTheme } = useTheme();
     const isDark = resolvedTheme === "dark";
 
@@ -202,7 +211,7 @@ export default function TaskCard({
     const status = (task.status ?? "cancelled") as TaskStatus;
     const statusConfig = STATUS_CONFIG[status] ?? {
         label: "نامشخص",
-        className: "border-gray-500/20 bg-gray-500/10 text-gray-400",
+        className: "border-slate-500/20 bg-slate-500/10 text-slate-400",
     };
 
     const isActiveTask =
@@ -211,7 +220,7 @@ export default function TaskCard({
     const accent =
         urgency && urgency !== "normal" ? URGENCY_ACCENT[urgency] : null;
 
-    
+    // ددلاین دیگر موقع رندر کارت گرفته نمی‌شود؛ فقط با کلیک روی دکمه (مودال ددلاین) یا دکمهٔ تعیین بازه زمانی ریکوئست زده می‌شود.
     const openTimeModal = () => {
         setTimeModalOpen(true);
         if (stepId && !stepDeadline) {
@@ -219,12 +228,11 @@ export default function TaskCard({
         }
     };
 
-    
-    useVisibleInterval(
-        () => forceTick((t) => t + 1),
-        60000,
-        Boolean(stepDeadline?.deadline) && isActiveTask,
-    );
+    useEffect(() => {
+        if (!stepDeadline?.deadline || !isActiveTask) return;
+        const interval = setInterval(() => forceTick((t) => t + 1), 60000);
+        return () => clearInterval(interval);
+    }, [stepDeadline?.deadline, isActiveTask]);
 
     async function handleDelete() {
         setDeleting(true);
@@ -272,7 +280,7 @@ export default function TaskCard({
 
     return (
         <>
-            <m.div
+            <motion.div
                 onHoverStart={() => setHovered(true)}
                 onHoverEnd={() => setHovered(false)}
                 className="relative flex flex-col gap-3 overflow-hidden rounded-2xl p-4"
@@ -284,7 +292,7 @@ export default function TaskCard({
                             : "1px solid rgba(0,0,0,0.06)",
                     background: accent
                         ? `color-mix(in srgb, ${accent} ${urgency === "overdue" ? 7 : urgency === "critical" ? 5 : 4
-                        }%, ${isDark ? "#111827" : "#fafafa"})`
+                        }%, ${isDark ? "#0f172a" : "#fafafa"})`
                         : isDark
                             ? "rgba(255,255,255,0.02)"
                             : "#fafafa",
@@ -301,7 +309,7 @@ export default function TaskCard({
                 }}
             >
                 {urgency === "overdue" && (
-                    <m.div
+                    <motion.div
                         className="pointer-events-none absolute inset-x-0 top-0 h-[2px]"
                         style={{
                             background: `linear-gradient(90deg, transparent, ${accent}, transparent)`,
@@ -327,7 +335,7 @@ export default function TaskCard({
                             <stop offset="100%" stopColor="#8b5cf6" />
                         </linearGradient>
                     </defs>
-                    <m.rect
+                    <motion.rect
                         x="1"
                         y="1"
                         width="calc(100% - 2px)"
@@ -368,7 +376,7 @@ export default function TaskCard({
                                     border: `1px solid color-mix(in srgb, ${accent} 30%, transparent)`,
                                 }}
                             >
-                                <m.span
+                                <motion.span
                                     className="h-1.5 w-1.5 rounded-full"
                                     style={{ background: accent }}
                                     animate={
@@ -449,7 +457,7 @@ export default function TaskCard({
                             type="button"
                             onClick={() => setShowConfirm(true)}
                             disabled={deleting}
-                            className="relative flex h-7 w-7 items-center justify-center rounded-xl transition-colors disabled:opacity-40"
+                            className="flex h-7 w-7 items-center justify-center rounded-xl transition-colors disabled:opacity-40"
                             style={{
                                 background: isDark
                                     ? "rgba(239,68,68,0.1)"
@@ -458,9 +466,11 @@ export default function TaskCard({
                             }}
                             title="حذف تسک"
                         >
-                            <BusyContent busy={deleting}>
+                            {deleting ? (
+                                <Loader2 size={11} className="animate-spin" />
+                            ) : (
                                 <Trash2 size={11} />
-                            </BusyContent>
+                            )}
                         </button>
                     </div>
                 </div>
@@ -468,14 +478,14 @@ export default function TaskCard({
                 <div className="flex flex-col gap-1">
                     <h3
                         className="text-[13.5px] font-extrabold leading-tight"
-                        style={{ color: isDark ? "#f3f4f6" : "#1f2937" }}
+                        style={{ color: isDark ? "#f1f5f9" : "#1e293b" }}
                     >
                         {task.title}
                     </h3>
                     {task.description ? (
                         <p
                             className="line-clamp-2 text-[12px] leading-6"
-                            style={{ color: isDark ? "#9ca3af" : "#6b7280" }}
+                            style={{ color: isDark ? "#94a3b8" : "#64748b" }}
                         >
                             {task.description}
                         </p>
@@ -516,7 +526,7 @@ export default function TaskCard({
                             </span>
                             <span
                                 className="text-[10.5px] font-bold"
-                                style={{ color: isDark ? "#d1d5db" : "#4b5563" }}
+                                style={{ color: isDark ? "#cbd5e1" : "#475569" }}
                             >
                                 بدون مسئول
                             </span>
@@ -544,18 +554,26 @@ export default function TaskCard({
                         </Chip>
                     ) : null}
                 </div>
-            </m.div>
+            </motion.div>
 
             <AnimatePresence>
                 {showConfirm && (
-                    <div
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
                         className="fixed inset-0 z-50 flex items-center justify-center px-4"
+                        style={{ background: "rgba(0,0,0,0.45)", backdropFilter: "blur(3px)" }}
+                        onClick={handleCloseConfirm}
                     >
-                        <Backdrop onClick={handleCloseConfirm} />
-                        <m.div
-                            {...panelMotion(false, reduced)}
+                        <motion.div
+                            initial={{ opacity: 0, y: 16 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: 16 }}
+                            transition={{ duration: 0.35, ease: "easeOut" }}
+                            onClick={(e) => e.stopPropagation()}
                             dir="rtl"
-                            className="relative flex w-full max-w-md flex-col overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-sm dark:border-white/[0.06] dark:bg-[#111827]"
+                            className="flex w-full max-w-md flex-col overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-sm dark:border-white/[0.06] dark:bg-[#0f172a]"
                         >
                             <div className="flex shrink-0 items-center justify-between px-8 pb-6 pt-8">
                                 <div className="flex items-center gap-2.5">
@@ -586,7 +604,7 @@ export default function TaskCard({
 
                                 <AnimatePresence>
                                     {deleteError && (
-                                        <m.div
+                                        <motion.div
                                             initial={{ opacity: 0, y: 6 }}
                                             animate={{ opacity: 1, y: 0 }}
                                             exit={{ opacity: 0, y: 4 }}
@@ -596,7 +614,7 @@ export default function TaskCard({
                                             <p className="flex-1 text-[11.5px] font-semibold leading-5 text-red-500 dark:text-red-400">
                                                 {deleteError}
                                             </p>
-                                        </m.div>
+                                        </motion.div>
                                     )}
                                 </AnimatePresence>
                             </div>
@@ -614,18 +632,20 @@ export default function TaskCard({
                                     type="button"
                                     onClick={handleDelete}
                                     disabled={deleting}
-                                    className="relative flex h-11 flex-1 items-center justify-center gap-2 rounded-full bg-red-600 text-[13px] font-bold text-white transition-colors hover:bg-red-500 disabled:opacity-40"
+                                    className="flex h-11 flex-1 items-center justify-center gap-2 rounded-full bg-red-600 text-[13px] font-bold text-white transition-colors hover:bg-red-500 disabled:opacity-40"
                                 >
-                                    <BusyContent busy={deleting}>
+                                    {deleting ? (
+                                        <Loader size={14} className="animate-spin" />
+                                    ) : (
                                         <>
-                                                <Trash2 size={13} strokeWidth={2.5} />
-                                                حذف کن
-                                            </>
-                                    </BusyContent>
+                                            <Trash2 size={13} strokeWidth={2.5} />
+                                            حذف کن
+                                        </>
+                                    )}
                                 </button>
                             </div>
-                        </m.div>
-                    </div>
+                        </motion.div>
+                    </motion.div>
                 )}
             </AnimatePresence>
 

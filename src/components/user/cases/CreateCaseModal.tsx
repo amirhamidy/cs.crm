@@ -7,17 +7,20 @@ import React, {
     useState,
     forwardRef,
 } from "react";
-import { AnimatePresence, m, useReducedMotion } from "framer-motion";
-import { Backdrop } from "@/components/ui/Backdrop";
-import { panelMotion } from "@/lib/motion";
-import { ArrowRight, Check, ClipboardList, Search, User, X } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
+import {
+    ArrowRight,
+    Check,
+    ClipboardList,
+    Loader,
+    Search,
+    User,
+    X,
+} from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
 import { casesApi, customersApi } from "@/lib/api";
 import type { Customer } from "@/types/customer";
 
-import { BusyContent } from "@/components/ui/Button";
-import { ListSkeleton } from "@/components/ui/skeletons";
-import { Skeleton } from "@/components/ui/Skeleton";
 type CreateCaseModalProps = {
     open: boolean;
     onClose: () => void;
@@ -55,7 +58,7 @@ const FloatingInput = forwardRef<HTMLInputElement, FloatingInputProps>(
                 />
                 <label
                     htmlFor={id}
-                    className={`pointer-events-none absolute right-5 rounded bg-white px-1.5 text-sm text-gray-400 transition-all duration-200 peer-focus:-top-2.5 peer-focus:translate-y-0 peer-focus:text-xs peer-focus:text-gray-500 dark:bg-[#111827] ${hasValue
+                    className={`pointer-events-none absolute right-5 rounded bg-white px-1.5 text-sm text-gray-400 transition-all duration-200 peer-focus:-top-2.5 peer-focus:translate-y-0 peer-focus:text-xs peer-focus:text-gray-500 dark:bg-[#0f172a] ${hasValue
                             ? "-top-2.5 translate-y-0 text-xs text-gray-500"
                             : "top-1/2 -translate-y-1/2"
                         }`}
@@ -89,7 +92,7 @@ const FloatingTextarea = forwardRef<HTMLTextAreaElement, FloatingTextareaProps>(
                 />
                 <label
                     htmlFor={id}
-                    className={`pointer-events-none absolute right-5 rounded bg-white px-1.5 text-sm text-gray-400 transition-all duration-200 peer-focus:-top-2.5 peer-focus:translate-y-0 peer-focus:text-xs peer-focus:text-gray-500 dark:bg-[#111827] ${hasValue
+                    className={`pointer-events-none absolute right-5 rounded bg-white px-1.5 text-sm text-gray-400 transition-all duration-200 peer-focus:-top-2.5 peer-focus:translate-y-0 peer-focus:text-xs peer-focus:text-gray-500 dark:bg-[#0f172a] ${hasValue
                             ? "-top-2.5 translate-y-0 text-xs text-gray-500"
                             : "top-4"
                         }`}
@@ -107,7 +110,6 @@ export default function CreateCaseModal({
     onClose,
     onCreated,
 }: CreateCaseModalProps) {
-    const reduced = useReducedMotion() ?? false;
     const [step, setStep] = useState(0);
     const [customers, setCustomers] = useState<Customer[]>([]);
     const [customerPage, setCustomerPage] = useState(1);
@@ -126,13 +128,13 @@ export default function CreateCaseModal({
     const reqId = useRef(0);
     const fetchingRef = useRef(false);
 
-    
+    /* debounce جستجو */
     useEffect(() => {
         const t = setTimeout(() => setDebouncedQuery(customerQuery.trim()), 300);
         return () => clearTimeout(t);
     }, [customerQuery]);
 
-    
+    /* لود یک صفحه از مشتری‌ها */
     const loadPage = useCallback(async (p: number, q: string) => {
         const id = ++reqId.current;
         fetchingRef.current = true;
@@ -149,7 +151,7 @@ export default function CreateCaseModal({
 
             setCustomers((prev) => {
                 if (p === 1) return data.results;
-                
+                // جلوگیری از آیتم تکراری (مثلاً وقتی مشتری جدید ثبت شده)
                 const seen = new Set(prev.map((c) => c.id));
                 return [...prev, ...data.results.filter((c) => !seen.has(c.id))];
             });
@@ -172,13 +174,13 @@ export default function CreateCaseModal({
         }
     }, []);
 
-    
+    /* با باز شدن مودال یا تغییر جستجو، از صفحه ۱ شروع کن */
     useEffect(() => {
         if (!open) return;
         loadPage(1, debouncedQuery);
     }, [open, debouncedQuery, loadPage]);
 
-    
+    /* اسکرول بی‌نهایت */
     const handleListScroll = useCallback(
         (e: React.UIEvent<HTMLDivElement>) => {
             if (!hasMore || fetchingRef.current) return;
@@ -190,7 +192,7 @@ export default function CreateCaseModal({
         [hasMore, customerPage, debouncedQuery, loadPage]
     );
 
-    
+    /* ریست بعد از بسته شدن */
     useEffect(() => {
         if (open) return;
         const timer = setTimeout(() => {
@@ -251,16 +253,24 @@ export default function CreateCaseModal({
     return (
         <AnimatePresence>
             {open && (
-                <div
-                    className="fixed inset-0 z-[100] flex items-end justify-center p-0 sm:items-center sm:p-4 dark:"
+                <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.18 }}
+                    className="fixed inset-0 z-[100] flex items-end justify-center bg-gray-900/40 p-0 backdrop-blur-md sm:items-center sm:p-4 dark:bg-black/60"
+                    onClick={() => !submitting && onClose()}
                     dir="rtl"
                 >
-                    <Backdrop onClick={() => !submitting && onClose()} />
-                    <m.div
-                        {...panelMotion(false, reduced)}
-                        className="relative flex max-h-[92vh] w-full max-w-lg flex-col overflow-hidden rounded-t-4xl border border-gray-100 bg-white sm:rounded-4xl dark:border-white/10 dark:bg-[#111113]"
+                    <motion.div
+                        initial={{ opacity: 0, y: 24, scale: 0.98 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: 16, scale: 0.98 }}
+                        transition={{ type: "spring", stiffness: 320, damping: 30 }}
+                        onClick={(e) => e.stopPropagation()}
+                        className="flex max-h-[92vh] w-full max-w-lg flex-col overflow-hidden rounded-t-4xl border border-gray-100 bg-white shadow-2xl sm:rounded-4xl dark:border-white/10 dark:bg-[#111113]"
                     >
-                        
+                        {/* Header */}
                         <div className="flex items-center justify-between gap-3 border-b border-gray-100 px-5 py-4 dark:border-white/10">
                             <div className="flex min-w-0 items-center gap-3">
                                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-blue-50 dark:bg-blue-500/10">
@@ -287,7 +297,7 @@ export default function CreateCaseModal({
                             </button>
                         </div>
 
-                        
+                        {/* Progress */}
                         <div className="flex items-center gap-2 px-5 pt-4">
                             {[0, 1].map((s) => (
                                 <div
@@ -300,11 +310,11 @@ export default function CreateCaseModal({
                             ))}
                         </div>
 
-                        
+                        {/* Body */}
                         <div className="flex-1 overflow-y-auto px-5 py-4">
                             <AnimatePresence mode="wait" initial={false}>
                                 {step === 0 ? (
-                                    <m.div
+                                    <motion.div
                                         key="step-0"
                                         initial={{ opacity: 0, x: 20 }}
                                         animate={{ opacity: 1, x: 0 }}
@@ -314,7 +324,11 @@ export default function CreateCaseModal({
                                     >
                                         <div className="group relative">
                                             <div className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 transition-colors group-focus-within:text-blue-500">
-                                                <Search size={14} />
+                                                {loadingFirst ? (
+                                                    <Loader size={14} className="animate-spin" />
+                                                ) : (
+                                                    <Search size={14} />
+                                                )}
                                             </div>
                                             <input
                                                 autoFocus
@@ -338,7 +352,15 @@ export default function CreateCaseModal({
                                             className="custom-scrollbar max-h-[320px] space-y-1.5 overflow-y-auto pr-0.5"
                                         >
                                             {loadingFirst && customers.length === 0 ? (
-                                                <ListSkeleton rows={4} />
+                                                <div className="flex flex-col items-center justify-center gap-3 py-8">
+                                                    <Loader
+                                                        size={18}
+                                                        className="animate-spin text-blue-500"
+                                                    />
+                                                    <p className="text-[11.5px] text-gray-400">
+                                                        در حال جستجو…
+                                                    </p>
+                                                </div>
                                             ) : customers.length > 0 ? (
                                                 <>
                                                     {customers.map((c) => {
@@ -389,7 +411,12 @@ export default function CreateCaseModal({
                                                     })}
 
                                                     {loadingMore && (
-                                                        <Skeleton className="mx-auto my-3 h-8 w-full rounded-xl" />
+                                                        <div className="flex justify-center py-3">
+                                                            <Loader
+                                                                size={16}
+                                                                className="animate-spin text-blue-500"
+                                                            />
+                                                        </div>
                                                     )}
                                                 </>
                                             ) : (
@@ -400,9 +427,9 @@ export default function CreateCaseModal({
                                                 </div>
                                             )}
                                         </div>
-                                    </m.div>
+                                    </motion.div>
                                 ) : (
-                                    <m.div
+                                    <motion.div
                                         key="step-1"
                                         initial={{ opacity: 0, x: -20 }}
                                         animate={{ opacity: 1, x: 0 }}
@@ -453,12 +480,12 @@ export default function CreateCaseModal({
                                                 {submitError}
                                             </div>
                                         )}
-                                    </m.div>
+                                    </motion.div>
                                 )}
                             </AnimatePresence>
                         </div>
 
-                        
+                        {/* Footer */}
                         <div className="dark:bg-white/2 flex items-center gap-3 border-t border-gray-100 bg-gray-50/50 px-5 py-4 dark:border-white/10">
                             {step === 1 && (
                                 <button
@@ -481,13 +508,15 @@ export default function CreateCaseModal({
                                 disabled={step === 0 ? !selected : !canSubmit}
                                 className="relative flex h-11 flex-1 items-center justify-center gap-2 overflow-hidden rounded-2xl bg-blue-600 text-[13px] font-extrabold text-white transition-all hover:bg-blue-500 active:scale-[0.98] disabled:opacity-50 dark:bg-blue-500 dark:hover:bg-blue-400"
                             >
-                                <BusyContent busy={submitting}>
+                                {submitting ? (
+                                    <Loader size={16} className="animate-spin" />
+                                ) : (
                                     <>{step === 0 ? "مرحله بعد" : "ثبت نهایی پرونده"}</>
-                                </BusyContent>
+                                )}
                             </button>
                         </div>
-                    </m.div>
-                </div>
+                    </motion.div>
+                </motion.div>
             )}
         </AnimatePresence>
     );

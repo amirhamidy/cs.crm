@@ -1,17 +1,25 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { m, AnimatePresence, useReducedMotion } from "framer-motion";
-import { Backdrop } from "@/components/ui/Backdrop";
-import { panelMotion } from "@/lib/motion";
-import { X, ChevronDown, Upload, Check, ClipboardList, Search, Paperclip, AlertCircle, UserPlus } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+    X,
+    ChevronDown,
+    Upload,
+    Check,
+    Loader,
+    ClipboardList,
+    Search,
+    Paperclip,
+    AlertCircle,
+    UserPlus,
+} from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
 import { departmentsApi, fetchPage } from "@/lib/api";
 import { apiRoutes } from "@/lib/apiRoutes";
-import AsyncSelect, { type AsyncOption } from "@/components/ui/AsyncSelect";
+import AsyncSelect, { type AsyncOption } from "@/components/customcomponents/shared/AsyncSelect";
 import type { Customer } from "@/types/customer";
 
-import { BusyContent } from "@/components/ui/Button";
 interface Case {
     id: number;
     title: string;
@@ -288,22 +296,22 @@ function NiceSelect({
                     )}
                 </span>
 
-                <m.span
+                <motion.span
                     animate={{ rotate: open ? 180 : 0 }}
                     transition={{ duration: 0.2 }}
                 >
                     <ChevronDown size={14} className="shrink-0 text-gray-400" />
-                </m.span>
+                </motion.span>
             </button>
 
             <AnimatePresence>
                 {open && (
-                    <m.div
+                    <motion.div
                         initial={{ opacity: 0, y: -6, scale: 0.97 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: -4, scale: 0.97 }}
                         transition={{ type: "spring", damping: 24, stiffness: 340 }}
-                        className="absolute z-50 mt-2 w-full origin-top overflow-hidden rounded-[1.5rem] border border-gray-100 bg-white shadow-xl shadow-black/5 dark:border-white/[0.08] dark:bg-[#111827] dark:shadow-black/40"
+                        className="absolute z-50 mt-2 w-full origin-top overflow-hidden rounded-[1.5rem] border border-gray-100 bg-white shadow-xl shadow-black/5 dark:border-white/[0.08] dark:bg-[#0f172a] dark:shadow-black/40"
                     >
                         {options.length > 5 && (
                             <div className="border-b border-gray-100 px-3 py-2.5 dark:border-white/[0.06]">
@@ -330,7 +338,7 @@ function NiceSelect({
                                     const active = selectedValues.includes(option.id);
 
                                     return (
-                                        <m.button
+                                        <motion.button
                                             key={option.id}
                                             type="button"
                                             initial={{ opacity: 0, x: 6 }}
@@ -375,12 +383,12 @@ function NiceSelect({
                                                     />
                                                 </span>
                                             )}
-                                        </m.button>
+                                        </motion.button>
                                     );
                                 })
                             )}
                         </div>
-                    </m.div>
+                    </motion.div>
                 )}
             </AnimatePresence>
         </div>
@@ -394,7 +402,6 @@ export default function CreateTaskModal({
     departments: initialDepartments = EMPTY_DEPARTMENTS,
     employees: initialEmployees = EMPTY_EMPLOYEES,
 }: Props) {
-    const reduced = useReducedMotion() ?? false;
     const [submitting, setSubmitting] = useState(false);
     const [submitError, setSubmitError] = useState("");
     const [departmentList, setDepartmentList] = useState<Department[]>(initialDepartments);
@@ -457,8 +464,8 @@ export default function CreateTaskModal({
         setSelectedCaseOpt(null);
     }, [selectedCustomer]);
 
-    
-    
+    // مشتری‌ها و پرونده‌ها صفحه‌به‌صفحه و با جستجوی سمت سرور خوانده می‌شوند (فقط وقتی دراپ‌دان باز شود).
+    // دسترسی کارمند به مشتری/پرونده را خود سرور اعمال می‌کند؛ دیگر هیچ فیلتر فرانتی روی «همهٔ» داده‌ها نداریم.
     const fetchCustomers = useCallback(
         (p: { page: number; page_size: number; search?: string }, signal: AbortSignal) =>
             fetchPage<Customer>(apiRoutes.customers, p, signal),
@@ -560,14 +567,25 @@ export default function CreateTaskModal({
     return (
         <AnimatePresence>
             {open && (
-                <div
+                <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
                     className="fixed inset-0 z-50 flex items-center justify-center px-4"
+                    style={{
+                        background: "rgba(0,0,0,0.45)",
+                        backdropFilter: "blur(3px)",
+                    }}
+                    onClick={handleClose}
                 >
-                    <Backdrop onClick={handleClose} />
-                    <m.div
-                        {...panelMotion(false, reduced)}
+                    <motion.div
+                        initial={{ opacity: 0, y: 16 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 16 }}
+                        transition={{ duration: 0.35, ease: "easeOut" }}
+                        onClick={(e) => e.stopPropagation()}
                         dir="rtl"
-                        className="relative flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-sm dark:border-white/[0.06] dark:bg-[#111827]"
+                        className="flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-sm dark:border-white/[0.06] dark:bg-[#0f172a]"
                     >
                         <div className="flex shrink-0 items-center justify-between px-8 pb-6 pt-8">
                             <div className="flex items-center gap-2.5">
@@ -597,7 +615,7 @@ export default function CreateTaskModal({
                             <div className="flex flex-col gap-4">
                                 <AnimatePresence>
                                     {submitError && (
-                                        <m.div
+                                        <motion.div
                                             initial={{ opacity: 0, y: 6 }}
                                             animate={{ opacity: 1, y: 0 }}
                                             exit={{ opacity: 0, y: 4 }}
@@ -617,7 +635,7 @@ export default function CreateTaskModal({
                                             >
                                                 <X size={13} />
                                             </button>
-                                        </m.div>
+                                        </motion.div>
                                     )}
                                 </AnimatePresence>
 
@@ -732,14 +750,14 @@ export default function CreateTaskModal({
 
                                     <AnimatePresence>
                                         {files.length > 0 && (
-                                            <m.div
+                                            <motion.div
                                                 initial={{ opacity: 0, height: 0 }}
                                                 animate={{ opacity: 1, height: "auto" }}
                                                 exit={{ opacity: 0, height: 0 }}
                                                 className="mt-2 flex flex-col gap-1.5 overflow-hidden"
                                             >
                                                 {files.map((file, index) => (
-                                                    <m.div
+                                                    <motion.div
                                                         key={`${file.name}-${index}`}
                                                         initial={{ opacity: 0, x: 8 }}
                                                         animate={{ opacity: 1, x: 0 }}
@@ -768,9 +786,9 @@ export default function CreateTaskModal({
                                                         >
                                                             <X size={12} />
                                                         </button>
-                                                    </m.div>
+                                                    </motion.div>
                                                 ))}
-                                            </m.div>
+                                            </motion.div>
                                         )}
                                     </AnimatePresence>
                                 </div>
@@ -778,23 +796,25 @@ export default function CreateTaskModal({
                         </div>
 
                         <div className="flex shrink-0 items-center gap-2 px-8 pb-8 pt-5">
-                            <m.button
+                            <motion.button
                                 type="button"
                                 whileTap={{ scale: 0.97 }}
                                 onClick={handleSubmit}
                                 disabled={!canSubmit}
-                                className="relative flex h-11 flex-1 items-center justify-center gap-2 rounded-full bg-blue-600 text-[13px] font-bold text-white transition-colors hover:bg-blue-500 disabled:opacity-40"
+                                className="flex h-11 flex-1 items-center justify-center gap-2 rounded-full bg-blue-600 text-[13px] font-bold text-white transition-colors hover:bg-blue-500 disabled:opacity-40"
                             >
-                                <BusyContent busy={submitting}>
+                                {submitting ? (
+                                    <Loader size={15} className="animate-spin" />
+                                ) : (
                                     <>
-                                            <Check size={14} strokeWidth={3} />
-                                            ثبت وظیفه
-                                        </>
-                                </BusyContent>
-                            </m.button>
+                                        <Check size={14} strokeWidth={3} />
+                                        ثبت وظیفه
+                                    </>
+                                )}
+                            </motion.button>
                         </div>
-                    </m.div>
-                </div>
+                    </motion.div>
+                </motion.div>
             )}
         </AnimatePresence>
     );

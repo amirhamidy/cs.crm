@@ -2,12 +2,11 @@
 
 import { Suspense, useEffect, useState, useCallback, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { AnimatePresence, m } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { Swiper, SwiperSlide } from "swiper/react";
 import "swiper/css";
-import { Building2, Users, ArrowRight, AlertCircle, ListChecks } from "lucide-react";
+import { Building2, Users, ArrowRight, Loader, AlertCircle, ListChecks } from "lucide-react";
 import { listAll } from "@/lib/api";
-import { BoardSkeleton, DepartmentDetailSkeleton } from "@/components/ui/skeletons";
 import { useDepartmentStore } from "@/components/admin/departments/departmentStore";
 import { Stage, Employee, Task } from "@/components/admin/departments/types";
 import StagesPanel from "@/components/admin/departments/StagesPanel";
@@ -60,7 +59,8 @@ function DepartmentDetailPage() {
             if (departments.length === 0) await fetchAll();
             if (mounted) setPageLoading(false);
         };
-        void Promise.all([init(), fetchTasks()]);
+        init();
+        fetchTasks();
         return () => { mounted = false; };
     }, [fetchAll, fetchTasks, departments.length]);
 
@@ -101,7 +101,7 @@ function DepartmentDetailPage() {
     }, [deleteTarget]);
 
     if (pageLoading) {
-        return <DepartmentDetailSkeleton />;
+        return <div className="flex h-64 items-center justify-center"><Loader size={22} className="animate-spin text-indigo-500" /></div>;
     }
 
     if (!department) {
@@ -173,15 +173,15 @@ function DepartmentDetailPage() {
                 )}
             </div>
 
-            <m.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.22 }} className="flex flex-col gap-3">
+            <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.22 }} className="flex flex-col gap-3">
                 <EmployeesPanel department={department} onAddEmployee={() => setAddEmployeeOpen(true)} onDeleteEmployee={(employee) => setDeleteTarget({ type: "employee", employee })} />
 
                 <div className="relative">
                     <AnimatePresence>
                         {stageRefreshing && (
-                            <m.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 z-10 flex items-center justify-center rounded-[1.5rem] bg-white/70 dark:bg-black/50">
-                                <BoardSkeleton className="w-full" />
-                            </m.div>
+                            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 z-10 flex items-center justify-center rounded-[1.5rem] bg-white/70 backdrop-blur-sm dark:bg-black/50">
+                                <Loader size={19} className="animate-spin text-indigo-500" />
+                            </motion.div>
                         )}
                     </AnimatePresence>
 
@@ -205,7 +205,7 @@ function DepartmentDetailPage() {
                         }
                     />
                 </div>
-            </m.div>
+            </motion.div>
         </div>
     );
 }
@@ -213,7 +213,11 @@ function DepartmentDetailPage() {
 export default function DepartmentDetailRoute() {
     return (
         <Suspense
-            fallback={<DepartmentDetailSkeleton />}
+            fallback={
+                <div className="flex h-64 items-center justify-center">
+                    <Loader size={22} className="animate-spin text-indigo-500" />
+                </div>
+            }
         >
             <DepartmentDetailPage />
         </Suspense>

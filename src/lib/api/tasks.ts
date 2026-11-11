@@ -1,8 +1,23 @@
 import axiosInstance from "@/lib/axiosInstance";
 import { apiRoutes } from "@/lib/apiRoutes";
-import type { TaskItem, TransferTaskPayload, TransferTaskResponse } from "@/types/task";
+import type {
+  TaskItem,
+  TransferTaskPayload,
+  TransferTaskResponse,
+} from "@/types/task";
 import type { PageParams } from "@/types/pagination";
-import { cached, dedupe, fetchAllPages, fetchPage, invalidate, listAll as listAllPages, toPaginated, withSignal, type Paginated, type RawList } from "./_core";
+import {
+  cached,
+  dedupe,
+  fetchAllPages,
+  fetchPage,
+  invalidate,
+  listAll as listAllPages,
+  toPaginated,
+  withSignal,
+  type Paginated,
+  type RawList,
+} from "./_core";
 
 const KEY = "tasks:";
 const TTL = 30_000;
@@ -24,7 +39,13 @@ export interface FetchAllTasksOptions {
   fresh?: boolean;
 }
 
-
+/**
+ * پیام خطای قابل‌نمایش برای انتقال تسک.
+ * ساختارهای ممکن (طبق مستندات):
+ *  - 400 → { department: ["..."] }
+ *  - 400 → ["..."]  (خطای منطقی سرویس)
+ *  - 403/404 → { detail: "..." }
+ */
 export function parseTransferError(error: unknown): string {
   const fallback = "انتقال تسک انجام نشد؛ لطفاً دوباره تلاش کنید";
   const err = error as {
@@ -52,7 +73,7 @@ export function parseTransferError(error: unknown): string {
   const fromBody = (() => {
     if (!data) return null;
     if (typeof data === "string") {
-      
+      // پاسخ HTML (مثلاً خطای ۵۰۰ سرور) نباید به کاربر نشان داده شود
       return data.trim().startsWith("<") ? null : first(data);
     }
     if (Array.isArray(data)) return first(data);
@@ -124,7 +145,7 @@ const listAll = (caseId?: string | number) =>
 
 const ARCHIVE_URL = "/tasks/api/v1/task_archive/";
 
-
+/** All pages of /tasks/api/v1/task_archive/ as a plain array (optionally server-side searched). */
 const archiveAll = <T = unknown>(search?: string) => {
   const q = search?.trim().replace(/\s+/g, " ") ?? "";
   return cached(
@@ -153,11 +174,11 @@ export const tasksApi = {
       return res.data;
     }),
 
-  
+  /** همهٔ لاگ‌های یک تسک (همهٔ صفحات) — برای یادداشت‌ها و «آخرین لاگ». */
   logs: async <T = unknown>(id: number | string) =>
     (await listAllPages<unknown>(`/tasks/api/v1/tasks/${id}/logs/`)) as unknown as T,
 
-  
+  /** یک صفحه از لاگ‌ها با صفحه‌بندی و جستجوی سمت سرور. */
   logsPage: <T = unknown>(
     id: number | string,
     params: PageParams & { search?: string } = {},
@@ -176,7 +197,13 @@ export const tasksApi = {
     invalidate(KEY);
   },
 
-  
+  /**
+   * انتقال تسک به دپارتمان دیگر
+   * POST /tasks/api/v1/tasks/{id}/transfer/   (multipart/form-data)
+   *
+   * Content-Type عمداً دستی تنظیم نمی‌شود؛ axiosInstance برای FormData
+   * آن را حذف می‌کند تا مرورگر boundary را خودش بگذارد.
+   */
   transfer: async (
     id: number | string,
     { department, note, files = [] }: TransferTaskPayload,
@@ -205,49 +232,4 @@ export function fetchAllTasks({ caseId, signal, fresh }: FetchAllTasksOptions = 
   const id = caseId === "" || caseId === null ? undefined : caseId;
   if (fresh) invalidate(allKey(id));
   return withSignal(listAll(id), signal);
-}
-
-
-let caseFilterWorks: boolean | null = null;
-
-async function probeCaseFilter(caseId: string, signal?: AbortSignal): Promise<boolean> {
-  if (caseFilterWorks !== null) return caseFilterWorks;
-  const first = await withSignal(list({ page: 1, page_size: 100, case: caseId }), signal);
-  const ignored = first.results.some((t) => {
-    const cid = extractCaseId(t);
-    return cid !== null && cid !== caseId;
-  });
-  caseFilterWorks = !ignored;
-  if (ignored) {
-    console.warn("[tasks] فیلتر case در بک‌اند اعمال نمی‌شود؛ یک دریافت مشترک برای همهٔ پرونده‌ها استفاده می‌شود.");
-  }
-  return caseFilterWorks;
-}
-
-
-export async function fetchTasksForCases(
-  caseIds: Array<string | number>,
-  { signal, fresh }: { signal?: AbortSignal; fresh?: boolean } = {},
-): Promise<Map<string, TaskItem[]>> {
-  const ids = [...new Set(caseIds.map(String))];
-  if (ids.length === 0) return new Map();
-
-  if (fresh) ids.forEach((id) => invalidate(allKey(id)));
-  const filterWorks = await probeCaseFilter(ids[0], signal);
-
-  if (!filterWorks) {
-    
-    const all = await fetchAllTasks({ signal, fresh });
-    const grouped = new Map<string, TaskItem[]>(ids.map((id) => [id, []]));
-    all.forEach((t) => {
-      const cid = extractCaseId(t);
-      if (cid !== null) grouped.get(cid)?.push(t);
-    });
-    return grouped;
-  }
-
-  const lists = await Promise.all(
-    ids.map((id) => withSignal(listAll(id), signal)),
-  );
-  return new Map(ids.map((id, i) => [id, lists[i]]));
 }

@@ -1,14 +1,17 @@
 "use client";
-import { ListSkeleton } from "@/components/ui/skeletons";
 
-import { AnimatePresence, m } from "framer-motion";
-import { ChevronLeft, Pencil, Plus, Trash2 } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
+import { ChevronLeft, Loader, Pencil, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { createPortal } from "react-dom";
 import { toPersianDigits } from "@/lib/jalali";
 import Pagination from "@/components/ui/Pagination";
 import { usePagination } from "@/hooks/usePagination";
-import type { ApiPurchasingStep, ApiPurchasingTask, ApiTaskAttachment } from "@/types/purchasing";
+import type {
+    ApiPurchasingStep,
+    ApiPurchasingTask,
+    ApiTaskAttachment,
+} from "@/types/purchasing";
 import { PURCHASING_TASK_STATUS_META } from "@/types/purchasing";
 import PurchasingTaskCard from "./PurchasingTaskCard";
 
@@ -48,7 +51,7 @@ export default function PurchasingStageCard({
 
     const hasDependencies = tasks.length > 0;
 
-    
+    // هر مرحله جدا صفحه‌بندی می‌شود تا ستون‌ها با زیاد شدن تسک‌ها طولانی نشوند.
     const { page, setPage, totalPages, pageItems } = usePagination(tasks, STAGE_PAGE_SIZE, String(step.id));
 
     const statusCounts = tasks.reduce<Record<string, number>>((acc, task) => {
@@ -71,7 +74,7 @@ export default function PurchasingStageCard({
         tooltipVisible && hasDependencies && typeof document !== "undefined"
             ? createPortal(
                 <AnimatePresence>
-                    <m.div
+                    <motion.div
                         initial={{ opacity: 0, y: 5, scale: 0.95 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: 5, scale: 0.95 }}
@@ -80,15 +83,15 @@ export default function PurchasingStageCard({
                         style={{ top: tooltipPosition.top, left: tooltipPosition.left }}
                         dir="rtl"
                     >
-                        <div className="flex flex-col items-center gap-0.5 rounded-xl border border-white/[0.08] bg-gray-800 px-3 py-2 text-center shadow-2xl">
+                        <div className="flex flex-col items-center gap-0.5 rounded-xl border border-white/[0.08] bg-slate-800 px-3 py-2 text-center shadow-2xl">
                             <span className="text-[11px] font-extrabold text-white">
                                 این مرحله وظیفه دارد
                             </span>
-                            <span className="text-[10px] text-gray-400">
+                            <span className="text-[10px] text-slate-400">
                                 برای حذف، ابتدا وظایف این مرحله را حذف کنید
                             </span>
                         </div>
-                    </m.div>
+                    </motion.div>
                 </AnimatePresence>,
                 document.body
             )
@@ -96,7 +99,7 @@ export default function PurchasingStageCard({
 
     return (
         <>
-            <m.div
+            <motion.div
                 layout
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -110,7 +113,7 @@ export default function PurchasingStageCard({
             >
                 {showConnector && !isLast && (
                     <div
-                        className="pointer-events-none absolute top-[28px] z-20 flex h-5 w-5 items-center justify-center rounded-full border bg-white shadow-sm dark:bg-[#111827]"
+                        className="pointer-events-none absolute top-[28px] z-20 flex h-5 w-5 items-center justify-center rounded-full border bg-white shadow-sm dark:bg-[#0f172a]"
                         style={{ insetInlineEnd: "-10px", borderColor: `${accent}35`, color: accent }}
                     >
                         <ChevronLeft size={10} strokeWidth={2.5} />
@@ -212,7 +215,7 @@ export default function PurchasingStageCard({
                                         background: hasDependencies
                                             ? "rgba(0,0,0,0.035)"
                                             : undefined,
-                                        color: hasDependencies ? "#9ca3af" : "#9ca3af",
+                                        color: hasDependencies ? "#9ca3af" : "#94a3b8",
                                         cursor: hasDependencies ? "not-allowed" : "pointer",
                                     }}
                                 >
@@ -226,7 +229,9 @@ export default function PurchasingStageCard({
                 <div className="h-px" style={{ background: `${accent}12` }} />
 
                 {tasksLoading ? (
-                    <ListSkeleton rows={2} />
+                    <div className="flex h-28 items-center justify-center">
+                        <Loader size={17} className="animate-spin text-indigo-500" />
+                    </div>
                 ) : tasks.length === 0 ? (
                     <div className="flex h-28 flex-col items-center justify-center gap-1.5 px-4 text-center">
                         <div
@@ -242,7 +247,7 @@ export default function PurchasingStageCard({
                 ) : (
                     <div className="scrollbar-thin flex max-h-[520px] flex-col gap-2 overflow-y-auto p-2">
                         {pageItems.map((task, taskIndex) => (
-                            <m.div
+                            <motion.div
                                 key={task.id}
                                 initial={{ opacity: 0, y: 5 }}
                                 animate={{ opacity: 1, y: 0 }}
@@ -261,14 +266,14 @@ export default function PurchasingStageCard({
                                     )}
                                     onUpdated={onUpdated}
                                 />
-                            </m.div>
+                            </motion.div>
                         ))}
                         {totalPages > 1 && (
                             <Pagination compact page={page} totalPages={totalPages} onChange={setPage} />
                         )}
                     </div>
                 )}
-            </m.div>
+            </motion.div>
 
             {tooltip}
         </>

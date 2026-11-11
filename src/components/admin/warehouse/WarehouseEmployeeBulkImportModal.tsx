@@ -1,13 +1,18 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { AnimatePresence, m } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { useTheme } from "next-themes";
-import { CheckCircle2, FileSpreadsheet, UploadCloud, X } from "lucide-react";
+import {
+    CheckCircle2,
+    FileSpreadsheet,
+    Loader2,
+    UploadCloud,
+    X,
+} from "lucide-react";
 import type { AxiosError } from "axios";
 import axiosInstance from "@/lib/axiosInstance";
 
-import { BusyContent } from "@/components/ui/Button";
 interface Props {
     isOpen: boolean;
     onClose: () => void;
@@ -115,17 +120,18 @@ export default function WarehouseEmployeeBulkImportModal({
     return (
         <AnimatePresence>
             {isOpen && (
-                <m.div
+                <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                     onClick={handleClose}
-                    className="backdrop-blur-layer fixed inset-0 z-50 flex items-center justify-center px-4"
+                    className="fixed inset-0 z-50 flex items-center justify-center px-4"
                     style={{
                         background: "rgba(0,0,0,.5)",
+                        backdropFilter: "blur(4px)",
                     }}
                 >
-                    <m.div
+                    <motion.div
                         initial={{ opacity: 0, scale: 0.96, y: 14 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.96, y: 14 }}
@@ -134,7 +140,7 @@ export default function WarehouseEmployeeBulkImportModal({
                         dir="rtl"
                         className="w-full max-w-[400px] rounded-[2rem] p-5"
                         style={{
-                            background: isDark ? "#111827" : "#ffffff",
+                            background: isDark ? "#0f172a" : "#ffffff",
                             border: `1px solid ${border}`,
                             boxShadow: isDark
                                 ? "0 20px 60px rgba(0,0,0,.45)"
@@ -269,14 +275,14 @@ export default function WarehouseEmployeeBulkImportModal({
                         )}
 
                         {success && (
-                            <m.div
+                            <motion.div
                                 initial={{ opacity: 0, y: 4 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 className="mt-3 flex items-center justify-center gap-1.5 text-[12px] font-bold text-emerald-500"
                             >
                                 <CheckCircle2 size={14} />
                                 محصولات با موفقیت ثبت شدند
-                            </m.div>
+                            </motion.div>
                         )}
 
                         <div className="mt-4 flex gap-2">
@@ -293,15 +299,17 @@ export default function WarehouseEmployeeBulkImportModal({
                                 type="button"
                                 onClick={handleSubmit}
                                 disabled={loading || !file || success}
-                                className="relative flex flex-1 items-center justify-center gap-1.5 rounded-2xl bg-indigo-600 py-2.5 text-[12.5px] font-bold text-white transition-opacity hover:bg-indigo-500 disabled:opacity-55"
+                                className="flex flex-1 items-center justify-center gap-1.5 rounded-2xl bg-indigo-600 py-2.5 text-[12.5px] font-bold text-white transition-opacity hover:bg-indigo-500 disabled:opacity-55"
                             >
-                                <BusyContent busy={loading}>
-                                    آپلود و ثبت
-                                </BusyContent>
+                                {loading ? (
+                                    <Loader2 size={14} className="animate-spin" />
+                                ) : (
+                                    "آپلود و ثبت"
+                                )}
                             </button>
                         </div>
-                    </m.div>
-                </m.div>
+                    </motion.div>
+                </motion.div>
             )}
         </AnimatePresence>
     );

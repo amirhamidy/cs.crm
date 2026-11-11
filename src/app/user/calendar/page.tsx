@@ -1,19 +1,20 @@
 "use client";
 
 import { Suspense } from "react";
-import dynamic from "next/dynamic";
-import { CalendarSkeleton } from "@/components/ui/skeletons";
-
-
-const PersianCalendar = dynamic(() => import("@/components/calendar/user/PersianCalendar"), {
-  ssr: false,
-  loading: () => null,
-});
+import PersianCalendar from "./PersianCalendar";
 
 export default function CalendarPage() {
   return (
     <Suspense
-      fallback={<CalendarSkeleton />}
+      fallback={
+        <div className="flex flex-col items-center justify-center gap-3 py-24">
+          <div className="h-5 w-5 animate-spin rounded-full border-2 border-indigo-500/15 border-t-indigo-500" />
+
+          <p className="text-[11px] font-semibold text-slate-400">
+            در حال بارگذاری تقویم...
+          </p>
+        </div>
+      }
     >
       <PersianCalendar />
     </Suspense>

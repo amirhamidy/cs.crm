@@ -1,31 +1,20 @@
 "use client";
 
-import PageHeader, { HEADER_BTN_PRIMARY } from "@/components/ui/PageHeader";
 import { JSX, memo, useEffect, useMemo, useState } from "react";
 import Pagination from "@/components/ui/Pagination";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import { internalTasksApi } from "@/lib/api";
-import { AnimatePresence, m, useReducedMotion } from "framer-motion";
-import { Backdrop } from "@/components/ui/Backdrop";
-import { panelMotion } from "@/lib/motion";
-import { Ban, CalendarClock, CheckCircle2, ClipboardX, Clock3, Inbox, LayoutGrid, MessageSquareText, Plus, RotateCcw, Ticket, Trash2, Users, X } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
+import { Ban, CalendarClock, CheckCircle2, ClipboardX, Clock3, Inbox, LayoutGrid, Loader, Loader2, MessageSquareText, Plus, RefreshCw, RotateCcw, Ticket, Trash2, Users, X } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useAuthStore } from "@/store/authStore";
 import { deleteInternalTask, fetchEmployeeList, reopenInternalTask, patchInternalTaskDeadline } from "./Api";
-import dynamic from "next/dynamic";
 import InternalTaskActionModal from "./InternalTaskActionModal";
 import type { EmployeeListItem, InternalTask, InternalTaskStatus, EmployeeRef } from "./types";
+import AdminInternalTaskChatModal from "./AdminInternalTaskChatModal";
 import CreateTicketModal from "./Createticketmodal";
-import TimeRangeModal from "@/components/tasks/TimeRangeModal";
+import InternalTimeRangeModal from "./InternalTimeRangeModal";
 import InternalTaskDeadlineModal from "./InternalTaskDeadlineModal";
-import TicketBoardSkeleton from "./TicketBoardSkeleton";
-
-
-import { BusyContent } from "@/components/ui/Button";
-const AdminInternalTaskChatModal = dynamic(() => import("./AdminInternalTaskChatModal"), {
-    ssr: false,
-    loading: () => null,
-});
 
 type AdminEmployee = EmployeeListItem & { id?: number; username?: string; full_name?: string };
 
@@ -151,7 +140,6 @@ const AdminInternalTaskCard = memo(function AdminInternalTaskCard({
     onStatusChange: (task: InternalTask) => void;
     isDeleting?: boolean;
 }) {
-    const reduced = useReducedMotion() ?? false;
     const { resolvedTheme } = useTheme();
     const isDark = resolvedTheme === "dark";
     const [hovered, setHovered] = useState(false);
@@ -221,10 +209,10 @@ const AdminInternalTaskCard = memo(function AdminInternalTaskCard({
     const creatorName = resolveCreatorName(String(task.created_by ?? ""), employees);
 
     return (
-        <m.div layout initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: .95 }} transition={{ duration: .22, delay: index * .04 }} onHoverStart={() => setHovered(true)} onHoverEnd={() => setHovered(false)} onClick={() => onOpen(task)} className="group relative flex min-h-[220px] cursor-pointer flex-col gap-3 overflow-hidden rounded-[2rem] p-4" style={{ border: isDark ? "1px solid rgba(255,255,255,.06)" : "1px solid rgba(0,0,0,.06)", background: isDark ? "rgba(255,255,255,.02)" : "#fafafa", boxShadow: isDark ? "0 2px 24px rgba(0,0,0,.2)" : "0 2px 16px rgba(0,0,0,.04)", transition: "border-color .4s ease,box-shadow .4s ease" }}>
+        <motion.div layout initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: .95 }} transition={{ duration: .22, delay: index * .04 }} onHoverStart={() => setHovered(true)} onHoverEnd={() => setHovered(false)} onClick={() => onOpen(task)} className="group relative flex min-h-[220px] cursor-pointer flex-col gap-3 overflow-hidden rounded-[2rem] p-4" style={{ border: isDark ? "1px solid rgba(255,255,255,.06)" : "1px solid rgba(0,0,0,.06)", background: isDark ? "rgba(255,255,255,.02)" : "#fafafa", boxShadow: isDark ? "0 2px 24px rgba(0,0,0,.2)" : "0 2px 16px rgba(0,0,0,.04)", transition: "border-color .4s ease,box-shadow .4s ease" }}>
             <svg className="pointer-events-none absolute inset-0 h-full w-full" style={{ borderRadius: "2rem" }}>
                 <defs><linearGradient id={`admin-border-${task.id}`} x1="100%" y1="100%" x2="0%" y2="0%"><stop offset="0%" stopColor="#6366f1" /><stop offset="100%" stopColor="#8b5cf6" /></linearGradient></defs>
-                <m.rect x="1" y="1" width="calc(100% - 2px)" height="calc(100% - 2px)" rx="30" fill="none" stroke={`url(#admin-border-${task.id})`} strokeWidth="1.5" pathLength="1" initial={{ pathLength: 0, opacity: 0 }} animate={hovered ? { pathLength: 1, opacity: 1 } : { pathLength: 0, opacity: 0 }} transition={{ duration: .55, ease: "easeInOut" }} />
+                <motion.rect x="1" y="1" width="calc(100% - 2px)" height="calc(100% - 2px)" rx="30" fill="none" stroke={`url(#admin-border-${task.id})`} strokeWidth="1.5" pathLength="1" initial={{ pathLength: 0, opacity: 0 }} animate={hovered ? { pathLength: 1, opacity: 1 } : { pathLength: 0, opacity: 0 }} transition={{ duration: .55, ease: "easeInOut" }} />
             </svg>
 
             <div className="relative z-10 flex items-start justify-between gap-3">
@@ -238,17 +226,13 @@ const AdminInternalTaskCard = memo(function AdminInternalTaskCard({
                     <button type="button" onClick={event => { event.stopPropagation(); setDeadlineModalOpen(true); }} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-indigo-500/[0.08] text-indigo-500 transition-all hover:bg-indigo-500/[0.14] hover:text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-300 dark:hover:bg-indigo-500/15" title="مشاهده ددلاین"><CalendarClock size={13} /></button>
                     {isSent && <button type="button" onClick={event => { event.stopPropagation(); setTimeError(null); setTimeModalOpen(true); }} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-indigo-500/[0.08] text-indigo-500 transition-all hover:bg-indigo-500/[0.14] hover:text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-300 dark:hover:bg-indigo-500/15" title="تعیین بازه زمانی"><Clock3 size={13} /></button>}
                     <button type="button" onClick={event => { event.stopPropagation(); onOpen(task); }} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-indigo-500/[0.08] text-indigo-500 transition-all hover:bg-indigo-500/[0.14] hover:text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-300 dark:hover:bg-indigo-500/15" title="مشاهده گفتگو"><MessageSquareText size={13} /></button>
-                    {onDelete && <button type="button" onClick={event => { event.stopPropagation(); setDeleteError(null); setShowConfirm(true); }} disabled={isDeleting} className="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-red-500/[0.08] text-red-500 transition-all hover:bg-red-500/[0.14] hover:text-red-600 disabled:opacity-40 dark:bg-red-500/10 dark:text-red-400 dark:hover:bg-red-500/15" title="حذف تیکت">
-                        <BusyContent busy={isDeleting}>
-    <Trash2 size={13} />
-                        </BusyContent>
-                    </button>}
+                    {onDelete && <button type="button" onClick={event => { event.stopPropagation(); setDeleteError(null); setShowConfirm(true); }} disabled={isDeleting} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-red-500/[0.08] text-red-500 transition-all hover:bg-red-500/[0.14] hover:text-red-600 disabled:opacity-40 dark:bg-red-500/10 dark:text-red-400 dark:hover:bg-red-500/15" title="حذف تیکت">{isDeleting ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}</button>}
                 </div>
             </div>
 
             <div className="relative z-10 flex flex-col gap-1">
-                <h3 className="line-clamp-1 text-[13.5px] font-extrabold" style={{ color: isDark ? "#f3f4f6" : "#1f2937" }}>{task.title || "بدون عنوان"}</h3>
-                {task.description ? <p className="line-clamp-2 text-[11.5px] leading-6" style={{ color: isDark ? "#9ca3af" : "#6b7280" }}>{task.description}</p> : null}
+                <h3 className="line-clamp-1 text-[13.5px] font-extrabold" style={{ color: isDark ? "#f1f5f9" : "#1e293b" }}>{task.title || "بدون عنوان"}</h3>
+                {task.description ? <p className="line-clamp-2 text-[11.5px] leading-6" style={{ color: isDark ? "#94a3b8" : "#64748b" }}>{task.description}</p> : null}
             </div>
 
             <div className="relative z-10 flex flex-col gap-2 border-t pt-3" style={{ borderColor: isDark ? "rgba(255,255,255,.05)" : "rgba(0,0,0,.05)" }}>
@@ -259,7 +243,7 @@ const AdminInternalTaskCard = memo(function AdminInternalTaskCard({
                             const gradient = getGradient(Number(employee.id));
                             return <span key={`${employee.id}-${employee.full_name}`} className="flex items-center gap-1.5 rounded-full border py-0.5 pl-2 pr-0.5" style={{ borderColor: isDark ? "rgba(255,255,255,.06)" : "rgba(0,0,0,.06)", background: isDark ? "rgba(255,255,255,.035)" : "rgba(0,0,0,.025)" }}>
                                 <span className="flex h-5 w-5 items-center justify-center rounded-full text-[8px] font-extrabold text-white" style={{ background: `linear-gradient(135deg,${gradient[0]},${gradient[1]})` }}>{employee.full_name?.slice(0, 1) || "ک"}</span>
-                                <span className="max-w-[120px] truncate text-[9.5px] font-bold" style={{ color: isDark ? "#d1d5db" : "#4b5563" }}>{employee.full_name || `کارمند ${employee.id}`}</span>
+                                <span className="max-w-[120px] truncate text-[9.5px] font-bold" style={{ color: isDark ? "#cbd5e1" : "#475569" }}>{employee.full_name || `کارمند ${employee.id}`}</span>
                             </span>;
                         }) : <span className="text-[10px] text-gray-400">بدون مسئول</span>}
                     </div>
@@ -285,11 +269,7 @@ const AdminInternalTaskCard = memo(function AdminInternalTaskCard({
                     <button type="button" onClick={event => { event.stopPropagation(); setStatusError(null); setActionModal("complete"); }} className="flex h-8 flex-1 items-center justify-center gap-1.5 rounded-xl bg-emerald-500 text-[10px] font-extrabold text-white transition-opacity hover:opacity-90"><CheckCircle2 size={12} />انجام شد</button>
                     <button type="button" onClick={event => { event.stopPropagation(); setStatusError(null); setActionModal("cancel"); }} className="flex h-8 flex-1 items-center justify-center gap-1.5 rounded-xl bg-red-500 text-[10px] font-extrabold text-white transition-opacity hover:opacity-90"><Ban size={12} />لغو تیکت</button>
                 </>}
-                {(isCompleted || isCancelled) && <button type="button" onClick={handleReopen} disabled={reopening} className="relative flex h-8 flex-1 items-center justify-center gap-1.5 rounded-xl bg-amber-500 text-[10px] font-extrabold text-white transition-opacity hover:opacity-90 disabled:opacity-50">
-                    <BusyContent busy={reopening}>
-    <RotateCcw size={12} />بازگشایی تیکت
-                    </BusyContent>
-                </button>}
+                {(isCompleted || isCancelled) && <button type="button" onClick={handleReopen} disabled={reopening} className="flex h-8 flex-1 items-center justify-center gap-1.5 rounded-xl bg-amber-500 text-[10px] font-extrabold text-white transition-opacity hover:opacity-90 disabled:opacity-50">{reopening ? <Loader2 size={12} className="animate-spin" /> : <RotateCcw size={12} />}بازگشایی تیکت</button>}
             </div>}
 
             <div onClick={event => event.stopPropagation()}>
@@ -302,16 +282,13 @@ const AdminInternalTaskCard = memo(function AdminInternalTaskCard({
                 />
             </div>
 
-            {timeModalOpen && isSent && <div onClick={event => event.stopPropagation()}><TimeRangeModal open={timeModalOpen} initialStartedAt={schedule.started_at} initialDeadline={schedule.deadline} onClose={() => { if (!savingTime) setTimeModalOpen(false); }} onSubmit={handleTimeSubmit} /></div>}
+            {timeModalOpen && isSent && <div onClick={event => event.stopPropagation()}><InternalTimeRangeModal open={timeModalOpen} initialStartedAt={schedule.started_at} initialDeadline={schedule.deadline} onClose={() => { if (!savingTime) setTimeModalOpen(false); }} onSubmit={handleTimeSubmit} /></div>}
 
             {actionModal && canAct && hasResponse && <div onClick={event => event.stopPropagation()}><InternalTaskActionModal isOpen={true} action={actionModal} task={task} onClose={() => setActionModal(null)} onDone={handleActionDone} /></div>}
 
             <AnimatePresence>
-                {showConfirm && <div className="fixed inset-0 z-50 flex items-center justify-center px-4" >
-                <Backdrop onClick={() => { if (isDeleting) return; setShowConfirm(false); setDeleteError(null); }} />
-                <m.div
-                    {...panelMotion(false, reduced)}
-      dir="rtl" className="relative flex w-full max-w-md flex-col overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-sm dark:border-white/[0.06] dark:bg-[#111827]">
+                {showConfirm && <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center px-4" style={{ background: "rgba(0,0,0,.45)", backdropFilter: "blur(3px)" }} onClick={event => { event.stopPropagation(); if (isDeleting) return; setShowConfirm(false); setDeleteError(null); }}>
+                    <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 16 }} transition={{ duration: .35, ease: "easeOut" }} onClick={event => event.stopPropagation()} dir="rtl" className="flex w-full max-w-md flex-col overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-sm dark:border-white/[0.06] dark:bg-[#0f172a]">
                         <div className="flex shrink-0 items-center justify-between px-8 pb-6 pt-8">
                             <div className="flex items-center gap-2.5"><div className="flex h-8 w-8 items-center justify-center rounded-xl bg-red-50 dark:bg-red-500/10"><Trash2 size={15} className="text-red-500" /></div><div><h3 className="text-[14px] font-extrabold text-gray-900 dark:text-white">حذف تیکت</h3><p className="mt-0.5 text-[11px] text-gray-400">این عملیات قابل بازگشت نیست</p></div></div>
                             <button type="button" onClick={() => { if (isDeleting) return; setShowConfirm(false); setDeleteError(null); }} disabled={isDeleting} className="flex h-8 w-8 items-center justify-center rounded-xl bg-gray-100 text-gray-400 transition-colors hover:text-gray-600 disabled:opacity-40 dark:bg-white/[0.05] dark:hover:text-gray-300"><X size={15} /></button>
@@ -319,16 +296,12 @@ const AdminInternalTaskCard = memo(function AdminInternalTaskCard({
                         <div className="flex-1 px-8 pb-2"><p className="text-[12.5px] font-semibold leading-6 text-gray-500 dark:text-gray-400">تیکت <span className="font-extrabold text-gray-900 dark:text-white">{task.title || "بدون عنوان"}</span> برای همیشه حذف خواهد شد.</p>{deleteError && <div className="mt-4 flex items-start gap-2.5 rounded-2xl bg-red-50 px-3.5 py-3 dark:bg-red-500/10"><ClipboardX size={14} className="mt-0.5 shrink-0 text-red-500" /><p className="flex-1 text-[11.5px] font-semibold leading-5 text-red-500 dark:text-red-400">{deleteError}</p></div>}</div>
                         <div className="flex shrink-0 items-center gap-2 px-8 pb-8 pt-5">
                             <button type="button" onClick={() => { if (isDeleting) return; setShowConfirm(false); setDeleteError(null); }} disabled={isDeleting} className="flex h-11 flex-1 items-center justify-center rounded-full bg-gray-100 text-[13px] font-bold text-gray-600 transition-colors hover:bg-gray-200 disabled:opacity-40 dark:bg-white/[0.05] dark:text-gray-300 dark:hover:bg-white/[0.08]">انصراف</button>
-                            <button type="button" onClick={async () => { if (!onDelete) return; setDeleteError(null); try { await onDelete(task.id); setShowConfirm(false); } catch { setDeleteError("حذف تیکت با خطا مواجه شد."); } }} disabled={isDeleting} className="relative flex h-11 flex-1 items-center justify-center gap-2 rounded-full bg-red-600 text-[13px] font-bold text-white transition-colors hover:bg-red-500 disabled:opacity-40">
-                                <BusyContent busy={isDeleting}>
-    <><Trash2 size={13} strokeWidth={2.5} />حذف کن</>
-                                </BusyContent>
-                            </button>
+                            <button type="button" onClick={async () => { if (!onDelete) return; setDeleteError(null); try { await onDelete(task.id); setShowConfirm(false); } catch { setDeleteError("حذف تیکت با خطا مواجه شد."); } }} disabled={isDeleting} className="flex h-11 flex-1 items-center justify-center gap-2 rounded-full bg-red-600 text-[13px] font-bold text-white transition-colors hover:bg-red-500 disabled:opacity-40">{isDeleting ? <Loader size={14} className="animate-spin" /> : <><Trash2 size={13} strokeWidth={2.5} />حذف کن</>}</button>
                         </div>
-                    </m.div>
-                </div>}
+                    </motion.div>
+                </motion.div>}
             </AnimatePresence>
-        </m.div>
+        </motion.div>
     );
 }, (prev, next) => prev.task === next.task && prev.index === next.index && prev.employees === next.employees && prev.currentUsername === next.currentUsername && prev.isDeleting === next.isDeleting);
 
@@ -393,20 +366,17 @@ export default function AdminInternalTasksBoard(): JSX.Element {
         }
     }
 
-    if (loading) return <TicketBoardSkeleton count={5} />;
+    if (loading) return <div dir="rtl" className="flex h-64 items-center justify-center"><Loader size={22} className="animate-spin text-indigo-500" /></div>;
 
     return (
         <div dir="rtl" className="flex flex-col gap-5">
-            <PageHeader
-                icon={Ticket}
-                title="گفتگوهای کارکنان"
-                subtitle="مشاهده گفتگوهای داخلی و فایل‌های رد و بدل شده"
-                search={{ value: list.search, onChange: list.setSearch, placeholder: "جستجو بر اساس عنوان، شماره یا نام فرد" }}
-                onRefresh={() => loadData()}
-                refreshing={refreshing}
-            >
-                <button type="button" onClick={() => setCreateOpen(true)} className={HEADER_BTN_PRIMARY}><Plus size={14} />تیکت جدید</button>
-            </PageHeader>
+            <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center gap-2.5"><div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-indigo-500/10"><Ticket size={17} className="text-indigo-500" /></div><div><h3 className="text-[14px] font-extrabold text-gray-900 dark:text-white">گفتگوهای کارکنان</h3><p className="text-[11px] text-gray-400 dark:text-gray-600">مشاهده گفتگوهای داخلی و فایل‌های رد و بدل شده</p></div></div>
+                <div className="flex shrink-0 items-center gap-2">
+                    <button type="button" onClick={() => setCreateOpen(true)} className="flex items-center gap-1.5 rounded-2xl bg-indigo-600 px-3.5 py-2 text-[11.5px] font-bold text-white transition-colors hover:bg-indigo-500"><Plus size={13} />تیکت جدید</button>
+                    <button type="button" onClick={() => loadData()} disabled={refreshing} className="flex h-9 w-9 items-center justify-center rounded-2xl bg-gray-100 text-gray-500 transition-colors hover:bg-gray-200 disabled:opacity-40 dark:bg-white/[0.05] dark:text-gray-400 dark:hover:bg-white/[0.08]" title="به‌روزرسانی"><RefreshCw size={14} className={refreshing ? "animate-spin" : ""} /></button>
+                </div>
+            </div>
 
             {error && <div className="flex items-center justify-between gap-3 rounded-2xl border border-red-500/20 bg-red-500/5 px-4 py-3"><p className="text-[12px] font-semibold text-red-500">{error}</p><button type="button" onClick={() => loadData()} className="rounded-xl bg-red-500/10 px-3 py-1.5 text-[11px] font-bold text-red-500">تلاش مجدد</button></div>}
 

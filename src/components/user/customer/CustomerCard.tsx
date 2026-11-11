@@ -1,28 +1,27 @@
 "use client";
 
 import { useEffect, useState, useRef, useCallback } from "react";
-import { m, AnimatePresence, animate } from "framer-motion";
+import { motion, AnimatePresence, animate } from "framer-motion";
 import { useTheme } from "next-themes";
-import { Phone, Building2, Trash2, SquarePen, User, CalendarDays, Star, MessageCircle, MoreVertical, AlertCircle, KeyRound } from "lucide-react";
-import dynamic from "next/dynamic";
+import {
+    Phone,
+    Building2,
+    Trash2,
+    SquarePen,
+    User,
+    CalendarDays,
+    Star,
+    MessageCircle,
+    Loader2,
+    MoreVertical,
+    AlertCircle,
+} from "lucide-react";
 import type { Customer } from "@/types/customer";
 import { useEmployeeDirectory } from "@/hooks/useEmployeeDirectory";
 import CustomerDeleteModal from "./DeleteModal";
+import CustomerEditModal from "./CustomerEditModal";
 import CustomerScoresModal from "./CustomerScoresModal";
 import axiosInstance from "@/lib/axiosInstance";
-import { useAuthStore } from "@/store/authStore";
-import CreatePortalAccountModal from "@/components/admin/customer-portal/CreatePortalAccountModal";
-import OneTimePasswordModal from "@/components/admin/customer-portal/OneTimePasswordModal";
-import type { CreatePortalAccountResponse } from "@/types/portal";
-import { toast } from "@/components/notifications/toast";
-import { apiMessage } from "@/lib/apiMessage";
-
-
-import { Skeleton } from "@/components/ui/Skeleton";
-const CustomerEditModal = dynamic(() => import("./CustomerEditModal"), {
-    ssr: false,
-    loading: () => null,
-});
 
 interface ScoreItem {
     id: number;
@@ -86,7 +85,6 @@ function SweepButton({
     onClick,
     spring,
     href,
-    noAnimation = false,
 }: {
     actionKey: string;
     icon: React.ReactNode;
@@ -103,14 +101,13 @@ function SweepButton({
     onClick: (e: React.MouseEvent) => void;
     spring: object;
     href?: string;
-    noAnimation?: boolean;
 }) {
     const spanRef = useRef<HTMLSpanElement>(null);
     const iconWrapRef = useRef<HTMLSpanElement>(null);
     const animatingRef = useRef(false);
 
     const runSweep = useCallback(() => {
-        if (disabled || noAnimation || animatingRef.current) return;
+        if (disabled || animatingRef.current) return;
 
         const bg = spanRef.current;
         const iconEl = iconWrapRef.current;
@@ -158,7 +155,7 @@ function SweepButton({
                 {
                     color: disabled
                         ? isDark
-                            ? "#6b7280"
+                            ? "#64748b"
                             : "#9ca3af"
                         : iconColor,
                 },
@@ -193,7 +190,7 @@ function SweepButton({
                 style={{
                     color: disabled
                         ? isDark
-                            ? "#6b7280"
+                            ? "#64748b"
                             : "#9ca3af"
                         : iconColor,
                 }}
@@ -207,10 +204,10 @@ function SweepButton({
         initial: { x: 0, y: 0, scale: 0, opacity: 0 },
         animate: { x: offset.x, y: offset.y, scale: 1, opacity: 1 },
         exit: { x: 0, y: 0, scale: 0, opacity: 0 },
-        transition: noAnimation ? { duration: 0 } : { ...spring, delay },
-        whileTap: disabled || noAnimation ? {} : { scale: 0.96 },
+        transition: { ...spring, delay },
+        whileTap: disabled ? {} : { scale: 0.96 },
         onMouseEnter: () => {
-            if (!noAnimation) runSweep();
+            runSweep();
             onEnter();
         },
         onMouseLeave: onLeave,
@@ -228,20 +225,20 @@ function SweepButton({
 
     if (href) {
         return (
-            <m.a
+            <motion.a
                 {...commonProps}
                 href={disabled ? undefined : href}
                 aria-disabled={disabled}
             >
                 {content}
-            </m.a>
+            </motion.a>
         );
     }
 
     return (
-        <m.button type="button" {...commonProps}>
+        <motion.button type="button" {...commonProps}>
             {content}
-        </m.button>
+        </motion.button>
     );
 }
 
@@ -267,19 +264,10 @@ export default function CustomerCard({
     const [showEdit, setShowEdit] = useState(false);
     const [showScores, setShowScores] = useState(false);
     const [showMobileSheet, setShowMobileSheet] = useState(false);
-    const [showPortalAccess, setShowPortalAccess] = useState(false);
-    const [generatedPassword, setGeneratedPassword] = useState("");
-    const userType = useAuthStore((state) => state.userType);
     const [tooltipVisible, setTooltipVisible] = useState(false);
 
-    const [scoresPreview, setScoresPreview] = useState<{
-        count: number;
-        average: number;
-        reason: string;
-    } | null>(null);
-    const [previewLoading, setPreviewLoading] = useState(false);
-    const [showPreview, setShowPreview] = useState(false);
-    const previewLoaded = useRef(false);
+    const [scores, setScores] = useState<ScoreItem[]>([]);
+    const [scoresLoading, setScoresLoading] = useState(true);
 
     const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -299,43 +287,37 @@ export default function CustomerCard({
         let cancelled = false;
 
         const fetchScores = async () => {
-            setPreviewLoading(true);
+            setScoresLoading(true);
 
             try {
                 const { data } = await axiosInstance.get<ScoreItem[]>(
                     `/customers/api/v1/customers/${customer.id}/scores/`
                 );
 
-                if (cancelled) return;
-
-                const list = Array.isArray(data) ? data : [];
-
-                setScoresPreview({
-                    count: list.length,
-                    average: list.length
-                        ? list.reduce((sum, s) => sum + Number(s.score || 0), 0) /
-                          list.length
-                        : 0,
-                    reason: list[0]?.reason ?? "",
-                });
+                if (!cancelled) {
+                    setScores(Array.isArray(data) ? data : []);
+                }
             } catch {
                 if (!cancelled) {
-                    setScoresPreview(null);
+                    setScores([]);
                 }
             } finally {
-                if (!cancelled) setPreviewLoading(false);
+                if (!cancelled) {
+                    setScoresLoading(false);
+                }
             }
         };
 
-        if (showPreview && !previewLoaded.current) {
-            previewLoaded.current = true;
-            fetchScores();
-        }
+        fetchScores();
 
         return () => {
             cancelled = true;
         };
-    }, [showPreview, customer.id]);
+    }, [customer.id]);
+
+    const average = scores.length
+        ? scores.reduce((sum, s) => sum + s.score, 0) / scores.length
+        : 0;
 
     const handleDelete = async () => {
         setIsDeleting(true);
@@ -346,11 +328,7 @@ export default function CustomerCard({
             );
 
             onDeleted(customer.id);
-        } catch (error) {
-            const status = (error as { response?: { status?: number } })?.response?.status;
-            toast.error(status === 400 || status === 409
-                ? "این مشتری سفارش دارد و قابل حذف نیست"
-                : apiMessage(error, "حذف مشتری انجام نشد"));
+        } catch {
             setIsDeleting(false);
             setShowConfirm(false);
         }
@@ -407,7 +385,7 @@ export default function CustomerCard({
         {
             key: "delete",
             icon: <Trash2 size={16} />,
-            offset: { x: 54, y: -27 },
+            offset: { x: 36, y: -22 },
             delay: 0,
             disabled: hasActiveCase,
             onClick: (e: React.MouseEvent) => {
@@ -422,7 +400,7 @@ export default function CustomerCard({
         {
             key: "edit",
             icon: <SquarePen size={16} />,
-            offset: { x: -54, y: -27 },
+            offset: { x: -36, y: -22 },
             delay: 0.08,
             disabled: false,
             onClick: (e: React.MouseEvent) => {
@@ -434,7 +412,7 @@ export default function CustomerCard({
         {
             key: "scores",
             icon: <MessageCircle size={16} />,
-            offset: { x: 0, y: -27 },
+            offset: { x: 36, y: 30 },
             delay: 0.16,
             disabled: false,
             onClick: (e: React.MouseEvent) => {
@@ -446,7 +424,7 @@ export default function CustomerCard({
         {
             key: "call",
             icon: <Phone size={16} />,
-            offset: { x: -27, y: 27 },
+            offset: { x: -36, y: 30 },
             delay: 0.24,
             disabled: false,
             href: phoneHref,
@@ -455,24 +433,11 @@ export default function CustomerCard({
             },
             title: "تماس",
         },
-        ...(userType === 1 ? [{
-            key: "portal",
-            icon: <KeyRound size={16} />,
-            offset: { x: 27, y: 27 },
-            delay: 0.32,
-            disabled: false,
-            onClick: (e: React.MouseEvent) => {
-                e.stopPropagation();
-                setShowPortalAccess(true);
-            },
-            title: "ساخت دسترسی پرتال",
-            noAnimation: true,
-        }] : []),
     ];
 
     return (
         <>
-            <m.div
+            <motion.div
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95 }}
@@ -514,7 +479,7 @@ export default function CustomerCard({
                         </linearGradient>
                     </defs>
 
-                    <m.rect
+                    <motion.rect
                         x="1"
                         y="1"
                         width="calc(100% - 2px)"
@@ -559,6 +524,33 @@ export default function CustomerCard({
                     >
                         <MoreVertical size={15} />
                     </button>
+
+                    <div
+                        className="flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-black"
+                        style={{
+                            background: isDark
+                                ? "rgba(245,158,11,0.14)"
+                                : "rgba(245,158,11,0.1)",
+                            border: `1px solid ${isDark
+                                    ? "rgba(245,158,11,0.25)"
+                                    : "rgba(245,158,11,0.3)"
+                                }`,
+                            color: isDark ? "#fbbf24" : "#d97706",
+                        }}
+                    >
+                        {scoresLoading ? (
+                            <Loader2 size={12} className="animate-spin" />
+                        ) : (
+                            <>
+                                <Star size={12} fill="currentColor" />
+                                <span>
+                                    {scores.length && average > 0
+                                        ? average.toFixed(1)
+                                        : "—"}
+                                </span>
+                            </>
+                        )}
+                    </div>
                 </div>
 
                 <div className="flex items-center gap-3 pt-1">
@@ -615,8 +607,8 @@ export default function CustomerCard({
                                             background:
                                                 "linear-gradient(135deg, rgba(148,163,184,0.18), rgba(100,116,139,0.18))",
                                             color: isDark
-                                                ? "#d1d5db"
-                                                : "#4b5563",
+                                                ? "#cbd5e1"
+                                                : "#475569",
                                             border: "1px solid rgba(148,163,184,0.25)",
                                         }
                                         : {
@@ -637,7 +629,7 @@ export default function CustomerCard({
 
                 <AnimatePresence>
                     {showActions && (
-                        <m.div
+                        <motion.div
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
@@ -645,11 +637,13 @@ export default function CustomerCard({
                                 duration: 0.18,
                                 ease: "easeOut",
                             }}
-                            className="backdrop-blur-layer absolute inset-0 z-30 hidden items-center justify-center rounded-2xl md:flex"
+                            className="absolute inset-0 z-30 hidden items-center justify-center rounded-2xl md:flex"
                             style={{
                                 background: isDark
                                     ? "rgba(10,12,20,0.55)"
                                     : "rgba(255,255,255,0.55)",
+                                backdropFilter: "blur(6px)",
+                                WebkitBackdropFilter: "blur(6px)",
                             }}
                         >
                             <div className="relative h-24 w-40">
@@ -676,10 +670,6 @@ export default function CustomerCard({
                                                 title={action.title}
                                                 href={action.href}
                                                 onEnter={() => {
-                                                    if (action.key === "scores") {
-                                                        setShowPreview(true);
-                                                    }
-
                                                     if (
                                                         action.key === "delete" &&
                                                         hasActiveCase
@@ -687,64 +677,17 @@ export default function CustomerCard({
                                                         setTooltipVisible(true);
                                                     }
                                                 }}
-                                                onLeave={() => {
-                                                    if (action.key === "scores") {
-                                                        setShowPreview(false);
-                                                    }
-
-                                                    setTooltipVisible(false);
-                                                }}
+                                                onLeave={() =>
+                                                    setTooltipVisible(false)
+                                                }
                                                 onClick={action.onClick}
                                                 spring={spring}
-                                                noAnimation={!!action.noAnimation}
                                             />
-
-                                            {action.key === "scores" && (
-                                                <AnimatePresence>
-                                                    {showPreview && (
-                                                        <m.div
-                                                            initial={{ opacity: 0, scale: 0.95, y: 6 }}
-                                                            animate={{ opacity: 1, scale: 1, y: 0 }}
-                                                            exit={{ opacity: 0, scale: 0.95 }}
-                                                            dir="rtl"
-                                                            className="pointer-events-none absolute left-1/2 top-0 z-50 flex w-44 -translate-x-1/2 flex-col gap-1.5 rounded-2xl px-3 py-2 shadow-xl"
-                                                            style={{
-                                                                marginTop: "-64px",
-                                                                background: isDark ? "#111827" : "#1f2937",
-                                                                border: "1px solid rgba(255,255,255,0.08)",
-                                                            }}
-                                                        >
-                                                            {previewLoading ? (
-                                                                <Skeleton className="h-3 w-24 rounded" />
-                                                            ) : scoresPreview && scoresPreview.count > 0 ? (
-                                                                <>
-                                                                    <span className="flex items-center gap-1 text-[12px] font-black text-amber-400">
-                                                                        <Star size={12} fill="currentColor" />
-                                                                        {scoresPreview.average.toFixed(1)}
-                                                                        <span className="text-[10px] font-medium text-gray-400">
-                                                                            از ۵ • {scoresPreview.count} نظر
-                                                                        </span>
-                                                                    </span>
-                                                                    {scoresPreview.reason && (
-                                                                        <span className="line-clamp-2 text-[10.5px] leading-relaxed text-gray-400">
-                                                                            {scoresPreview.reason}
-                                                                        </span>
-                                                                    )}
-                                                                </>
-                                                            ) : (
-                                                                <span className="text-[11px] text-gray-400">
-                                                                    هنوز نظری ثبت نشده
-                                                                </span>
-                                                            )}
-                                                        </m.div>
-                                                    )}
-                                                </AnimatePresence>
-                                            )}
 
                                             {action.key === "delete" && (
                                                 <AnimatePresence>
                                                     {tooltipVisible && (
-                                                        <m.div
+                                                        <motion.div
                                                             initial={{
                                                                 opacity: 0,
                                                                 scale: 0.95,
@@ -767,8 +710,8 @@ export default function CustomerCard({
                                                                 className="flex flex-col items-center gap-1 rounded-2xl px-3 py-2 text-center shadow-xl"
                                                                 style={{
                                                                     background: isDark
-                                                                        ? "#111827"
-                                                                        : "#1f2937",
+                                                                        ? "#0f172a"
+                                                                        : "#1e293b",
                                                                     border: "1px solid rgba(255,255,255,0.08)",
                                                                 }}
                                                             >
@@ -777,14 +720,14 @@ export default function CustomerCard({
                                                                     پرونده دارد
                                                                 </span>
 
-                                                                <span className="text-[10px] text-gray-400">
+                                                                <span className="text-[10px] text-slate-400">
                                                                     برای حذف آن
                                                                     باید ابتدا
                                                                     پرونده‌هایش
                                                                     را حذف کنید
                                                                 </span>
                                                             </div>
-                                                        </m.div>
+                                                        </motion.div>
                                                     )}
                                                 </AnimatePresence>
                                             )}
@@ -792,10 +735,10 @@ export default function CustomerCard({
                                     </div>
                                 ))}
                             </div>
-                        </m.div>
+                        </motion.div>
                     )}
                 </AnimatePresence>
-            </m.div>
+            </motion.div>
 
             <AnimatePresence>
                 {showMobileSheet && (
@@ -803,15 +746,15 @@ export default function CustomerCard({
                         className="fixed inset-0 z-50 flex items-end justify-center md:hidden"
                         dir="rtl"
                     >
-                        <m.div
+                        <motion.div
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
                             onClick={() => setShowMobileSheet(false)}
-                            className="modal-backdrop absolute inset-0"
+                            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
                         />
 
-                        <m.div
+                        <motion.div
                             initial={{ y: "100%" }}
                             animate={{ y: 0 }}
                             exit={{ y: "100%" }}
@@ -917,24 +860,6 @@ export default function CustomerCard({
                                     <span>امتیازها و نظرات</span>
                                 </button>
 
-                                {userType === 1 && (
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            setShowMobileSheet(false);
-                                            setShowPortalAccess(true);
-                                        }}
-                                        className="flex w-full items-center gap-3 rounded-2xl p-3.5 text-[13.5px] font-bold text-indigo-600 transition-all active:scale-[0.98] dark:text-indigo-300"
-                                        style={{
-                                            background: isDark ? "rgba(99,102,241,0.14)" : "rgba(99,102,241,0.08)",
-                                            border: `1px solid ${isDark ? "rgba(99,102,241,0.22)" : "rgba(99,102,241,0.14)"}`,
-                                        }}
-                                    >
-                                        <KeyRound size={18} />
-                                        <span>ساخت دسترسی پرتال</span>
-                                    </button>
-                                )}
-
                                 <div className="flex flex-col gap-1.5 pt-1">
                                     <button
                                         type="button"
@@ -986,7 +911,7 @@ export default function CustomerCard({
                                     )}
                                 </div>
                             </div>
-                        </m.div>
+                        </motion.div>
                     </div>
                 )}
             </AnimatePresence>
@@ -999,14 +924,12 @@ export default function CustomerCard({
                 onClose={() => setShowConfirm(false)}
             />
 
-            {showEdit && (
-                <CustomerEditModal
-                    customer={customer}
-                    isOpen={showEdit}
-                    onClose={() => setShowEdit(false)}
-                    onEdited={onEdited}
-                />
-            )}
+            <CustomerEditModal
+                customer={customer}
+                isOpen={showEdit}
+                onClose={() => setShowEdit(false)}
+                onEdited={onEdited}
+            />
 
             <CustomerScoresModal
                 customerId={customer.id}
@@ -1014,20 +937,6 @@ export default function CustomerCard({
                 isOpen={showScores}
                 onClose={() => setShowScores(false)}
             />
-            {showPortalAccess && userType === 1 && (
-                <CreatePortalAccountModal
-                    initialCustomer={customer}
-                    onClose={() => setShowPortalAccess(false)}
-                    onCreated={(result: CreatePortalAccountResponse) => {
-                        setShowPortalAccess(false);
-                        if (result.generated_password) setGeneratedPassword(result.generated_password);
-                        else toast.success("دسترسی پرتال برای مشتری ساخته شد");
-                    }}
-                />
-            )}
-            {generatedPassword && (
-                <OneTimePasswordModal password={generatedPassword} onClose={() => setGeneratedPassword("")} />
-            )}
         </>
     );
 }

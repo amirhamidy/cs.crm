@@ -1,12 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { AnimatePresence, m } from "framer-motion";
-import { Power, PowerOff, X } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
+import { Loader2, Power, PowerOff, X } from "lucide-react";
 import { apiErrorMessage, patchWarehouse, setWarehouseActive } from "@/lib/warehouseApi";
 import type { ApiWarehouse } from "@/types/warehouse";
 
-import { BusyContent } from "@/components/ui/Button";
 const inputClass =
     "h-11 w-full rounded-2xl border border-gray-200 bg-white px-3 text-[13px] font-bold text-gray-900 outline-none transition-colors focus:border-indigo-500 dark:border-white/10 dark:bg-white/5 dark:text-white";
 
@@ -24,24 +23,24 @@ function Shell({
     return (
         <AnimatePresence>
             {open && (
-                <m.div
+                <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 backdrop-blur-layer"
+                    className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
                     onClick={() => !busy && onClose()}
                     dir="rtl"
                 >
-                    <m.div
+                    <motion.div
                         initial={{ opacity: 0, scale: 0.95, y: 10 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.95, y: 10 }}
                         onClick={(e) => e.stopPropagation()}
-                        className="w-full max-w-sm rounded-3xl bg-white p-5 shadow-2xl dark:bg-gray-900"
+                        className="w-full max-w-sm rounded-3xl bg-white p-5 shadow-2xl dark:bg-slate-900"
                     >
                         {children}
-                    </m.div>
-                </m.div>
+                    </motion.div>
+                </motion.div>
             )}
         </AnimatePresence>
     );
@@ -147,11 +146,10 @@ export function EditWarehouseModal({
                 <button
                     type="submit"
                     disabled={loading}
-                    className="relative mt-5 flex h-11 w-full items-center justify-center gap-2 rounded-2xl bg-indigo-600 text-[13px] font-bold text-white transition-colors hover:bg-indigo-500 disabled:opacity-50"
+                    className="mt-5 flex h-11 w-full items-center justify-center gap-2 rounded-2xl bg-indigo-600 text-[13px] font-bold text-white transition-colors hover:bg-indigo-500 disabled:opacity-50"
                 >
-                    <BusyContent busy={loading}>
-                        ذخیره تغییرات
-                    </BusyContent>
+                    {loading && <Loader2 size={15} className="animate-spin" />}
+                    ذخیره تغییرات
                 </button>
             </form>
         </Shell>
@@ -242,14 +240,13 @@ export function WarehouseStatusModal({
                     type="button"
                     onClick={confirm}
                     disabled={loading}
-                    className={`relative flex h-11 items-center justify-center gap-2 rounded-2xl text-[13px] font-bold text-white transition-colors disabled:opacity-50 ${deactivating
+                    className={`flex h-11 items-center justify-center gap-2 rounded-2xl text-[13px] font-bold text-white transition-colors disabled:opacity-50 ${deactivating
                             ? "bg-amber-500 hover:bg-amber-400"
                             : "bg-emerald-600 hover:bg-emerald-500"
                         }`}
                 >
-                    <BusyContent busy={loading}>
-                        {deactivating ? "غیرفعال کن" : "فعال کن"}
-                    </BusyContent>
+                    {loading && <Loader2 size={15} className="animate-spin" />}
+                    {deactivating ? "غیرفعال کن" : "فعال کن"}
                 </button>
             </div>
         </Shell>

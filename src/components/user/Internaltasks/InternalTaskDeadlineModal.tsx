@@ -1,12 +1,9 @@
 "use client";
-import { FormSkeleton } from "@/components/ui/skeletons";
 
 import { useCallback, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { AnimatePresence, m, useReducedMotion } from "framer-motion";
-import { Backdrop } from "@/components/ui/Backdrop";
-import { panelMotion } from "@/lib/motion";
-import { AlertTriangle, CalendarClock, CalendarDays, Clock, RefreshCw, X } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
+import { AlertTriangle, CalendarClock, CalendarDays, Clock, Loader2, RefreshCw, X } from "lucide-react";
 import { useTheme } from "next-themes";
 import api from "@/lib/axiosInstance";
 import { toJalali, toPersianDigits, JALALI_MONTHS, pad2 } from "@/lib/jalali";
@@ -16,7 +13,8 @@ export interface InternalDeadline {
     deadline: string | null;
 }
 
-
+/** درخواست ددلاین تسک اینترنال: GET /tasks/api/v1/internal_task/{id}/deadline/
+ *  اگر سرور ۴۰۴ بدهد یعنی تسک ددلاین ندارد و `null` برگردانده می‌شود. */
 export async function fetchInternalDeadline(
     taskId: number,
     signal?: AbortSignal
@@ -69,28 +67,12 @@ function describeRemaining(deadline?: string | null) {
     return { text: `${text} مانده`, color: "#10b981", label: "در مهلت" };
 }
 
-const NO_DEADLINE_COLOR = "#ef4444";
-
-function NoDeadlineState() {
-    return (
-        <div className="flex flex-col items-center gap-2 py-8" style={{ color: NO_DEADLINE_COLOR }}>
-            <span className="relative inline-flex">
-                <Clock size={26} />
-                <span className="absolute -bottom-1 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-white dark:bg-[#0b1220]">
-                    <X size={11} strokeWidth={3} />
-                </span>
-            </span>
-            <p className="text-[13px] font-bold">موجود نیست</p>
-        </div>
-    );
-}
-
 interface InternalTaskDeadlineModalProps {
     open: boolean;
     onClose: () => void;
     taskId: number;
     taskTitle?: string;
-    
+    /** بعد از هر دریافت موفق، کارت والد می‌تواند وضعیت فوریت را به‌روز کند */
     onLoaded?: (deadline: InternalDeadline) => void;
 }
 
@@ -101,7 +83,6 @@ export default function InternalTaskDeadlineModal({
     taskTitle,
     onLoaded,
 }: InternalTaskDeadlineModalProps) {
-    const reduced = useReducedMotion() ?? false;
     const { resolvedTheme } = useTheme();
     const isDark = resolvedTheme === "dark";
 
@@ -110,7 +91,7 @@ export default function InternalTaskDeadlineModal({
     const [error, setError] = useState<string | null>(null);
     const [tick, setTick] = useState(0);
 
-    
+    // هر بار که مودال باز می‌شود (یا «تلاش مجدد» زده می‌شود) ریکوئست زده می‌شود
     useEffect(() => {
         if (!open) return;
 
@@ -121,7 +102,7 @@ export default function InternalTaskDeadlineModal({
         fetchInternalDeadline(taskId, controller.signal)
             .then((res) => {
                 if (controller.signal.aborted) return;
-                setData(res); 
+                setData(res); // null یعنی ۴۰۴ => ددلاین ندارد
                 if (res) onLoaded?.(res);
             })
             .catch((err) => {
@@ -134,7 +115,7 @@ export default function InternalTaskDeadlineModal({
             });
 
         return () => controller.abort();
-        
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [open, taskId, tick]);
 
     useEffect(() => {
@@ -160,22 +141,31 @@ export default function InternalTaskDeadlineModal({
 
     if (typeof document === "undefined") return null;
 
-    const muted = isDark ? "#9ca3af" : "#6b7280";
+    const muted = isDark ? "#94a3b8" : "#64748b";
     const border = isDark ? "rgba(255,255,255,0.06)" : "rgba(15,23,42,0.06)";
 
     return createPortal(
         <AnimatePresence>
             {open && (
-                <div
+                <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.15 }}
                     className="fixed inset-0 z-[2147483647] flex items-center justify-center px-4"
+                    style={{ background: isDark ? "rgba(0,0,0,0.62)" : "rgba(15,23,42,0.38)", backdropFilter: "blur(6px)" }}
+                    onClick={onClose}
                 >
-                    <Backdrop onClick={onClose} />
-                    <m.div
-                        {...panelMotion(false, reduced)}
+                    <motion.div
+                        initial={{ opacity: 0, y: 14, scale: 0.98 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: 14, scale: 0.98 }}
+                        transition={{ duration: 0.2, ease: "easeOut" }}
+                        onClick={(e) => e.stopPropagation()}
                         dir="rtl"
                         role="dialog"
                         aria-modal="true"
-                        className="relative w-full max-w-md overflow-hidden rounded-[2rem] border"
+                        className="w-full max-w-md overflow-hidden rounded-[2rem] border shadow-2xl"
                         style={{ background: isDark ? "#0b1220" : "#ffffff", borderColor: border }}
                     >
                         <div className="flex items-center justify-between gap-3 border-b px-6 py-5" style={{ borderColor: border }}>
@@ -190,8 +180,8 @@ export default function InternalTaskDeadlineModal({
                                     <CalendarClock size={18} />
                                 </div>
                                 <div className="min-w-0">
-                                    <h3 className="text-[14.5px] font-extrabold text-gray-900 dark:text-white">زمان‌بندی تسک اینترنال</h3>
-                                    {taskTitle && <p className="mt-0.5 truncate text-[11px] text-gray-400">{taskTitle}</p>}
+                                    <h3 className="text-[14.5px] font-extrabold text-slate-900 dark:text-white">زمان‌بندی تسک اینترنال</h3>
+                                    {taskTitle && <p className="mt-0.5 truncate text-[11px] text-slate-400">{taskTitle}</p>}
                                 </div>
                             </div>
 
@@ -208,7 +198,10 @@ export default function InternalTaskDeadlineModal({
 
                         <div className="flex flex-col gap-3 p-6">
                             {loading ? (
-                                <FormSkeleton fields={3} />
+                                <div className="flex flex-col items-center justify-center gap-2 py-8" style={{ color: muted }}>
+                                    <Loader2 size={22} className="animate-spin text-indigo-500" />
+                                    <p className="text-[12px] font-semibold">در حال دریافت زمان‌بندی...</p>
+                                </div>
                             ) : error ? (
                                 <div className="flex flex-col items-center gap-3 py-6">
                                     <div className="flex items-center gap-2 text-[12.5px] font-bold text-red-500">
@@ -225,7 +218,10 @@ export default function InternalTaskDeadlineModal({
                                     </button>
                                 </div>
                             ) : !hasAny ? (
-                                <NoDeadlineState />
+                                <div className="flex flex-col items-center gap-2 py-8" style={{ color: muted }}>
+                                    <Clock size={22} />
+                                    <p className="text-[12.5px] font-semibold">ددلاین ندارد</p>
+                                </div>
                             ) : (
                                 <>
                                     {started && (
@@ -237,7 +233,7 @@ export default function InternalTaskDeadlineModal({
                                                 <CalendarDays size={14} />
                                                 شروع
                                             </span>
-                                            <span className="text-[12px] font-extrabold text-gray-800 dark:text-gray-100">
+                                            <span className="text-[12px] font-extrabold text-slate-800 dark:text-slate-100">
                                                 {started.date} · {started.time}
                                             </span>
                                         </div>
@@ -255,7 +251,7 @@ export default function InternalTaskDeadlineModal({
                                                 <Clock size={14} />
                                                 مهلت (ددلاین)
                                             </span>
-                                            <span className="text-[12px] font-extrabold text-gray-800 dark:text-gray-100">
+                                            <span className="text-[12px] font-extrabold text-slate-800 dark:text-slate-100">
                                                 {deadline.date} · {deadline.time}
                                             </span>
                                         </div>
@@ -276,8 +272,8 @@ export default function InternalTaskDeadlineModal({
                                 </>
                             )}
                         </div>
-                    </m.div>
-                </div>
+                    </motion.div>
+                </motion.div>
             )}
         </AnimatePresence>,
         document.body

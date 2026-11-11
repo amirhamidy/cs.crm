@@ -1,10 +1,24 @@
 "use client";
 
-import { m } from "framer-motion";
-import { Archive, Ban, CheckCircle2, Clock3, History, Ticket, TimerReset, UserRound } from "lucide-react";
+import { motion } from "framer-motion";
+import {
+    Archive,
+    Ban,
+    CheckCircle2,
+    Clock3,
+    History,
+    Ticket,
+    TimerReset,
+    UserRound,
+} from "lucide-react";
 import { useTheme } from "next-themes";
 
-import { JALALI_MONTHS, pad2, toJalali, toPersianDigits } from "@/lib/jalali";
+import {
+    JALALI_MONTHS,
+    pad2,
+    toJalali,
+    toPersianDigits,
+} from "@/lib/jalali";
 import type { InternalTaskArchive as InternalTaskArchiveType } from "./types";
 
 type InternalTaskArchiveCardProps = {
@@ -62,7 +76,7 @@ export default function InternalTaskArchiveCard({
     const archivedDate = formatJalali(task.archived_at);
 
     return (
-        <m.div
+        <motion.div
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.96 }}
@@ -97,7 +111,7 @@ export default function InternalTaskArchiveCard({
                     </linearGradient>
                 </defs>
 
-                <m.rect
+                <motion.rect
                     x="1"
                     y="1"
                     width="calc(100% - 2px)"
@@ -160,7 +174,7 @@ export default function InternalTaskArchiveCard({
                             background: isDark
                                 ? "rgba(255,255,255,0.05)"
                                 : "rgba(15,23,42,0.04)",
-                            color: isDark ? "#9ca3af" : "#6b7280",
+                            color: isDark ? "#94a3b8" : "#64748b",
                         }}
                     >
                         <Archive size={10} />
@@ -389,6 +403,6 @@ export default function InternalTaskArchiveCard({
                     {archivedDate}
                 </span>
             </div>
-        </m.div>
+        </motion.div>
     );
 }

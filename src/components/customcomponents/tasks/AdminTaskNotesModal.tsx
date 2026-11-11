@@ -2,16 +2,41 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { AnimatePresence, m } from "framer-motion";
-import { X, AlertCircle, ClipboardList, Paperclip, MessageSquareText, RefreshCw, FileText, ArrowLeftCircle, ArrowRightCircle, ArrowLeftRight, User, Calendar, Clock3, History, CheckCircle2, ShoppingBag, Ban, RotateCcw, Layers3, Hash } from "lucide-react";
-import { Spinner as Loader2 } from "@/components/ui/Spinner";
+import { AnimatePresence, motion } from "framer-motion";
+import {
+    X,
+    Loader2,
+    AlertCircle,
+    ClipboardList,
+    Paperclip,
+    MessageSquareText,
+    RefreshCw,
+    FileText,
+    ArrowLeftCircle,
+    ArrowRightCircle,
+    ArrowLeftRight,
+    User,
+    Calendar,
+    Clock3,
+    History,
+    CheckCircle2,
+    ShoppingBag,
+    Ban,
+    RotateCcw,
+    Layers3,
+    Hash,
+} from "lucide-react";
 import { useTheme } from "next-themes";
 import { tasksApi } from "@/lib/api";
-import { toJalali, toPersianDigits, JALALI_MONTHS, pad2 } from "@/lib/jalali";
+import {
+    toJalali,
+    toPersianDigits,
+    JALALI_MONTHS,
+    pad2,
+} from "@/lib/jalali";
 import { useEmployeeInfo } from "@/hooks/useEmployeeInfo";
 import { resolveMediaUrl } from "@/lib/media";
 
-import { ListSkeleton } from "@/components/ui/skeletons";
 interface Attachment {
     id: number;
     file: string;
@@ -76,7 +101,7 @@ const ACTION_META: Record<
     },
     unsold: {
         label: "فروش لغو شد",
-        color: "#6b7280",
+        color: "#64748b",
         bg: "rgba(100,116,139,0.14)",
         icon: RotateCcw,
     },
@@ -136,7 +161,7 @@ function getActionMeta(action?: string) {
     return (
         ACTION_META[action ?? ""] ?? {
             label: action || "ثبت رویداد",
-            color: "#9ca3af",
+            color: "#94a3b8",
             bg: "rgba(148,163,184,0.14)",
             icon: History,
         }
@@ -249,12 +274,12 @@ export default function AdminTaskNotesModal({
     const buttonBg = isDark
         ? "rgba(255,255,255,0.05)"
         : "rgba(0,0,0,0.04)";
-    const bodyText = isDark ? "#e5e7eb" : "#374151";
+    const bodyText = isDark ? "#e2e8f0" : "#334155";
 
     return createPortal(
         <AnimatePresence mode="wait">
             {isOpen && (
-                <m.div
+                <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
@@ -266,18 +291,20 @@ export default function AdminTaskNotesModal({
                     onClick={onClose}
                     dir="rtl"
                 >
-                    <m.div
+                    <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         transition={{ duration: 0.18 }}
-                        className="backdrop-blur-layer absolute inset-0 bg-black/50"
+                        className="absolute inset-0 bg-black/50"
                         style={{
+                            backdropFilter: "blur(5px)",
+                            WebkitBackdropFilter: "blur(5px)",
                             pointerEvents: "none",
                         }}
                     />
 
-                    <m.div
+                    <motion.div
                         initial={{ opacity: 0, scale: 0.96, y: 18 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.96, y: 18 }}
@@ -343,11 +370,12 @@ export default function AdminTaskNotesModal({
                                     className="flex h-8 w-8 items-center justify-center rounded-xl text-gray-400 transition-colors hover:text-gray-300 disabled:opacity-40"
                                     style={{ background: buttonBg }}
                                 >
-                                    {loading ? (
-                                        <Loader2 size={13} className="animate-spin" />
-                                    ) : (
-                                        <RefreshCw size={13} />
-                                    )}
+                                    <RefreshCw
+                                        size={13}
+                                        className={
+                                            loading ? "animate-spin" : ""
+                                        }
+                                    />
                                 </button>
 
                                 <button
@@ -363,7 +391,15 @@ export default function AdminTaskNotesModal({
 
                         <div className="flex-1 overflow-y-auto px-5 py-4">
                             {loading ? (
-                                <ListSkeleton rows={4} />
+                                <div className="flex flex-col items-center justify-center gap-3 py-16">
+                                    <Loader2
+                                        size={22}
+                                        className="animate-spin text-indigo-500"
+                                    />
+                                    <p className="text-[12px] font-semibold text-gray-500">
+                                        در حال دریافت اطلاعات تسک...
+                                    </p>
+                                </div>
                             ) : error ? (
                                 <div className="flex flex-col items-center justify-center gap-3 py-16">
                                     <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-red-500/10">
@@ -593,8 +629,8 @@ export default function AdminTaskNotesModal({
                                 </div>
                             )}
                         </div>
-                    </m.div>
-                </m.div>
+                    </motion.div>
+                </motion.div>
             )}
         </AnimatePresence>,
         document.body

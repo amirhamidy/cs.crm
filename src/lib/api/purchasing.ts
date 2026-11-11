@@ -1,5 +1,10 @@
 import type { Paginated, SearchParams } from "@/types/pagination";
-import type { ApiPurchasingEmployee, ApiPurchasingStep, ApiPurchasingTask, ApiTaskAttachment } from "@/types/purchasing";
+import type {
+  ApiPurchasingEmployee,
+  ApiPurchasingStep,
+  ApiPurchasingTask,
+  ApiTaskAttachment,
+} from "@/types/purchasing";
 import { fetchPage, listAll } from "./_core";
 import { fetchStatusCount, fetchStatusPage, listAllByStatus } from "./statusPage";
 
@@ -19,13 +24,13 @@ export interface PurchasingCounts {
 }
 
 export const purchasingApi = {
-  
+  /** لیست‌های کوچک و مرجع: همهٔ صفحات (دیگر فقط ۲۰ تای اول نیست). */
   employees: () => listAll<ApiPurchasingEmployee>(EMPLOYEES),
   steps: async () =>
     (await listAll<ApiPurchasingStep>(STEPS)).sort((a, b) => a.order - b.order),
   attachments: () => listAll<ApiTaskAttachment>(ATTACHMENTS),
 
-  
+  /** تسک‌های فعال (در انتظار + در حال انجام) برای بورد مراحل. */
   activeTasks: async (): Promise<ApiPurchasingTask[]> => {
     const lists = await Promise.all(
       PURCHASING_ACTIVE_STATUSES.map((s) =>
@@ -37,7 +42,7 @@ export const purchasingApi = {
     return [...map.values()].sort((a, b) => b.id - a.id);
   },
 
-  
+  /** بایگانی: صفحه‌بندی و جستجو کاملاً سمت سرور. */
   archivePage: (
     status: PurchasingArchiveStatus,
     params: SearchParams = {},
@@ -45,7 +50,7 @@ export const purchasingApi = {
   ): Promise<Paginated<ApiPurchasingTask>> =>
     fetchStatusPage<ApiPurchasingTask>(PURCHASING_TASKS_URL, status, params, signal),
 
-  
+  /** شمارندهٔ بایگانی برای کارت‌های آمار (بدون دریافت داده‌ها). */
   archiveCounts: async (): Promise<Pick<PurchasingCounts, "completed" | "cancelled">> => {
     const [completed, cancelled] = await Promise.all([
       fetchStatusCount(PURCHASING_TASKS_URL, "completed"),
@@ -54,7 +59,7 @@ export const purchasingApi = {
     return { completed, cancelled };
   },
 
-  
+  /** صفحه‌ای از تسک‌ها بدون فیلتر status (برای جستجوی عمومی). */
   tasksPage: (params: SearchParams = {}, signal?: AbortSignal) =>
     fetchPage<ApiPurchasingTask>(PURCHASING_TASKS_URL, params, signal),
 };

@@ -1,11 +1,10 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
-import { AnimatePresence, m } from "framer-motion";
-import { Check, Power, Trash2, Warehouse as WarehouseIcon, X } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
+import { Check, Loader2, Power, Trash2, Warehouse as WarehouseIcon, X } from "lucide-react";
 import { useTheme } from "next-themes";
 import axiosInstance from "@/lib/axiosInstance";
 
-import { BusyContent } from "@/components/ui/Button";
 export interface WarehouseStaff {
     id: number;
     employee: number;
@@ -97,7 +96,7 @@ export default function WarehouseStaffCard({ staff, index, onDelete, onUpdated }
 
     return (
         <>
-            <m.div
+            <motion.div
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.96 }}
@@ -119,7 +118,7 @@ export default function WarehouseStaffCard({ staff, index, onDelete, onUpdated }
                             <stop offset="100%" stopColor="#8b5cf6" />
                         </linearGradient>
                     </defs>
-                    <m.rect
+                    <motion.rect
                         x="1"
                         y="1"
                         width="calc(100% - 2px)"
@@ -212,17 +211,17 @@ export default function WarehouseStaffCard({ staff, index, onDelete, onUpdated }
                         }}
                         title={isActive ? "اکانت فعال است" : "اکانت غیرفعال است"}
                     >
-                        <m.span
+                        <motion.span
                             animate={{ x: isActive ? 0 : 15 }}
                             transition={{ type: "spring", stiffness: 500, damping: 30 }}
                             className="absolute left-[2px] top-[2px] flex h-[23px] w-[23px] items-center justify-center rounded-full shadow-md"
                             style={{
-                                background: isActive ? "#10b981" : isDark ? "#4b5563" : "#9ca3af",
+                                background: isActive ? "#10b981" : isDark ? "#475569" : "#94a3b8",
                                 color: "#ffffff",
                             }}
                         >
                             <AnimatePresence mode="wait" initial={false}>
-                                <m.span
+                                <motion.span
                                     key={isActive ? "check" : "power"}
                                     initial={{ opacity: 0, scale: 0.5 }}
                                     animate={{ opacity: 1, scale: 1 }}
@@ -230,24 +229,24 @@ export default function WarehouseStaffCard({ staff, index, onDelete, onUpdated }
                                     transition={{ duration: 0.15 }}
                                 >
                                     {isActive ? <Check size={12} strokeWidth={3.5} /> : <Power size={11} strokeWidth={2.5} />}
-                                </m.span>
+                                </motion.span>
                             </AnimatePresence>
-                        </m.span>
+                        </motion.span>
                     </button>
                 </div>
-            </m.div>
+            </motion.div>
 
             <AnimatePresence>
                 {showConfirm && (
-                    <m.div
+                    <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         onClick={handleCloseConfirm}
-                        className="backdrop-blur-layer fixed inset-0 z-50 flex items-center justify-center px-4"
-                        style={{ background: "rgba(0,0,0,0.5)" }}
+                        className="fixed inset-0 z-50 flex items-center justify-center px-4"
+                        style={{ background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)" }}
                     >
-                        <m.div
+                        <motion.div
                             initial={{ opacity: 0, scale: 0.96, y: 16 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.96, y: 16 }}
@@ -255,7 +254,7 @@ export default function WarehouseStaffCard({ staff, index, onDelete, onUpdated }
                             onClick={(e) => e.stopPropagation()}
                             className="w-full max-w-[360px] rounded-[2rem] p-5"
                             style={{
-                                background: isDark ? "#111827" : "#ffffff",
+                                background: isDark ? "#0f172a" : "#ffffff",
                                 border: isDark ? "1px solid rgba(255,255,255,0.07)" : "1px solid rgba(15,23,42,0.07)",
                                 boxShadow: "0 24px 64px rgba(0,0,0,0.35)",
                             }}
@@ -296,7 +295,7 @@ export default function WarehouseStaffCard({ staff, index, onDelete, onUpdated }
                                     onClick={handleCloseConfirm}
                                     disabled={deleting}
                                     className="flex-1 rounded-2xl py-2.5 text-[12.5px] font-bold disabled:opacity-50"
-                                    style={{ background: softBg, color: isDark ? "#d1d5db" : "#4b5563" }}
+                                    style={{ background: softBg, color: isDark ? "#cbd5e1" : "#475569" }}
                                 >
                                     انصراف
                                 </button>
@@ -304,20 +303,18 @@ export default function WarehouseStaffCard({ staff, index, onDelete, onUpdated }
                                     type="button"
                                     onClick={handleDelete}
                                     disabled={deleting}
-                                    className="relative flex flex-1 items-center justify-center gap-1.5 rounded-2xl py-2.5 text-[12.5px] font-bold text-white disabled:opacity-60"
+                                    className="flex flex-1 items-center justify-center gap-1.5 rounded-2xl py-2.5 text-[12.5px] font-bold text-white disabled:opacity-60"
                                     style={{
                                         background: "linear-gradient(135deg, #ef4444, #dc2626)",
                                         boxShadow: "0 10px 24px rgba(239,68,68,0.22)",
                                     }}
                                 >
-                                    <BusyContent busy={deleting}>
-                                        <Trash2 size={13} />
-                                        حذف کن
-                                    </BusyContent>
+                                    {deleting ? <Loader2 size={15} className="animate-spin" /> : <Trash2 size={13} />}
+                                    {deleting ? "" : "حذف کن"}
                                 </button>
                             </div>
-                        </m.div>
-                    </m.div>
+                        </motion.div>
+                    </motion.div>
                 )}
             </AnimatePresence>
         </>

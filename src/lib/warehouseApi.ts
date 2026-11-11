@@ -1,8 +1,14 @@
 import axiosInstance from "@/lib/axiosInstance";
 import { dedupe } from "@/lib/api/_core";
-import { listAllByStatus } from "@/lib/api";
 import { extractList } from "@/utils/warehouseEmployee";
-import type { ApiProduct, ApiStockInfo, ApiStockTransaction, ApiWarehouse, ApiWarehouseTask, CreateWarehousePayload, UpdateStockLimitsPayload } from "@/types/warehouse";
+import type {
+  ApiProduct,
+  ApiStockInfo,
+  ApiStockTransaction,
+  ApiWarehouse,
+  CreateWarehousePayload,
+  UpdateStockLimitsPayload,
+} from "@/types/warehouse";
 
 const BASE = "/warehouse/api/v1";
 
@@ -29,16 +35,16 @@ export const WAREHOUSE_ENDPOINTS = {
 export const WAREHOUSE_QUERY_KEY = "warehouse_id";
 
 export const PAGE_SIZE = 8;
+/** تعداد محصول در هر صفحه (ادمین و یوزر) */
+export const PRODUCTS_PAGE_SIZE = 40;
 
-export const PRODUCTS_PAGE_SIZE = 15;
-
-
+/** سقف page_size در بک‌اند (بیشتر از این را بک‌اند خودش ۱۰۰ می‌کند). */
 export const MAX_PAGE_SIZE = 100;
 
-
+/** سقف ایمنی برای دریافت «همهٔ صفحات» (۲۰۰ × ۱۰۰ = ۲۰٬۰۰۰ ردیف). */
 const MAX_PAGES = 200;
 
-
+/** تعداد درخواست هم‌زمان هنگام دریافت صفحات باقی‌مانده. */
 const CONCURRENCY = 6;
 
 export interface PageResult<T> {
@@ -91,7 +97,7 @@ interface RawPage<T> {
   items: T[];
   count: number;
   hasNext: boolean;
-  
+  /** پاسخ به شکل {count,next,previous,results} بود (نه آرایهٔ خام). */
   paginated: boolean;
 }
 
@@ -133,7 +139,7 @@ async function getRaw<T>(
 const statusOf = (error: unknown): number | undefined =>
   (error as { response?: { status?: number } })?.response?.status;
 
-
+/** پردازش لیست با سقف هم‌زمانی (ترتیب خروجی همان ترتیب ورودی است). */
 async function mapLimit<I, O>(
   list: I[],
   limit: number,
@@ -155,7 +161,12 @@ async function mapLimit<I, O>(
   return out;
 }
 
-
+/**
+ * یک صفحهٔ واقعی از سرور (صفحه‌بندی و جستجو سمت بک‌اند).
+ * اگر endpoint آرایهٔ خام برگرداند (صفحه‌بندی نشده)، صفحه‌بندی محلی انجام می‌شود.
+ * اگر صفحهٔ درخواستی از آخرین صفحه بیشتر باشد (۴۰۴ دی‌آر‌اف)، خالی + تعداد درست برمی‌گردد
+ * تا UI بتواند به آخرین صفحه برگردد.
+ */
 export async function fetchPage<T>(
   url: string,
   opts: {
@@ -205,7 +216,7 @@ function sliceLocal<T>(all: T[], page: number, pageSize: number): PageResult<T> 
   const totalPages = Math.max(1, Math.ceil(all.length / pageSize));
   const safePage = Math.max(1, page);
 
-  
+  // صفحهٔ بیش از حد: خالی + تعداد درست، تا UI به آخرین صفحه هدایت شود
   if (safePage > totalPages) {
     return { items: [], total: all.length, totalPages, page: safePage };
   }
@@ -218,7 +229,10 @@ function sliceLocal<T>(all: T[], page: number, pageSize: number): PageResult<T> 
   };
 }
 
-
+/**
+ * همهٔ ردیف‌ها (همهٔ صفحات، ۱۰۰ تایی). صفحات باقی‌مانده با هم‌زمانی محدود گرفته می‌شود.
+ * فقط برای لیست‌های «مرجع» و محاسبات تجمیعی استفاده شود؛ لیست‌های نمایشی باید fetchPage باشند.
+ */
 export async function fetchAll<T>(
   url: string,
   params: Params = {},
@@ -246,7 +260,7 @@ export async function fetchAll<T>(
   return dedupeById([...first.items, ...rest.flatMap((r) => r.items)]);
 }
 
-
+/** فقط تعداد کل (بدون دریافت داده‌ها). */
 export async function fetchCount(
   url: string,
   params: Params = {},
@@ -256,7 +270,11 @@ export async function fetchCount(
   return raw.paginated ? raw.count : raw.items.length;
 }
 
-
+/**
+ * جدیدترین n ردیف بدون خواندن کل لیست.
+ * فرض: ترتیب پیش‌فرض بک‌اند یکنواخت است (صعودی یا نزولی بر اساس id/تاریخ)؛ بنابراین صفحهٔ اول،
+ * آخر و یکی مانده به آخر ادغام و مرتب می‌شوند و جدیدترین‌ها در هر دو حالت در همین مجموعه‌اند.
+ */
 export async function fetchNewest<T extends { id: number; created_at?: string | null }>(
   url: string,
   params: Params = {},
@@ -280,11 +298,11 @@ export async function fetchNewest<T extends { id: number; created_at?: string | 
   return sortNewestFirst(rows).slice(0, limit);
 }
 
+/* ------------------------------------------------------------------ */
+/*  لیست‌های انبار (فیلتر انبار کاملاً با بک‌اند است)                    */
+/* ------------------------------------------------------------------ */
 
-
-
-
-
+/** یک صفحه از لیست وابسته به انبار؛ `warehouse_id` به بک‌اند می‌رود. */
 export async function fetchWarehousePage<T>(
   url: string,
   warehouseId: number,
@@ -294,7 +312,7 @@ export async function fetchWarehousePage<T>(
     search?: string;
     params?: Params;
     signal?: AbortSignal;
-    
+    /** فیلتر دسترسی کاربر (نه فیلتر انبار) */
     clientFilter?: (row: T) => boolean;
   },
 ): Promise<PageResult<T>> {
@@ -310,12 +328,6 @@ export async function fetchWarehousePage<T>(
     });
   }
 
-  
-  
-  
-  
-  
-  
   const search = normalizeSearch(opts.search);
   const all = (
     await fetchAll<T>(url, { ...params, search: search || undefined }, opts.signal)
@@ -324,7 +336,7 @@ export async function fetchWarehousePage<T>(
   return sliceLocal(sortNewestFirst(all), Math.max(1, opts.page) || 1, pageSize);
 }
 
-
+/** همهٔ موجودی‌های یک انبار (لیست مرجع؛ درخواست‌های هم‌زمان یکی می‌شوند). */
 export function fetchWarehouseStocks(
   warehouseId: number,
   signal?: AbortSignal,
@@ -334,7 +346,7 @@ export function fetchWarehouseStocks(
   );
 }
 
-
+/** یک صفحه از محصولات انبار، با جستجو و فیلتر قفسه سمت سرور. */
 export function fetchWarehouseProductsPage(
   warehouseId: number,
   opts: {
@@ -358,129 +370,27 @@ export function fetchWarehouseProductsPage(
   });
 }
 
-
+/** موجودیِ چند محصول (صفحهٔ جاری) در یک انبار؛ فیلتر `product` به بک‌اند. */
 export async function fetchStocksForProducts(
   warehouseId: number,
   productIds: number[],
   signal?: AbortSignal,
 ): Promise<ApiStockInfo[]> {
   if (!productIds.length) return [];
-
-  const wanted = new Set(productIds);
-  const collected = new Map<number, ApiStockInfo>();
-
-  const productKeyOf = (row: ApiStockInfo): number | null => {
-    const raw = (row as unknown as { product?: number | { id: number } | null })
-      .product;
-    if (raw == null) return null;
-    return typeof raw === "object" ? raw.id : raw;
-  };
-
-  try {
-    const first = await fetchPage<ApiStockInfo>(WAREHOUSE_ENDPOINTS.stock, {
-      page: 1,
-      pageSize: MAX_PAGE_SIZE,
-      params: {
-        ...warehouseParams(warehouseId),
-        product__in: Array.from(wanted).join(","),
-      },
-      signal,
-    });
-
-    
-    
-    for (const row of first.items) {
-      const key = productKeyOf(row);
-      if (key != null && wanted.has(key)) collected.set(key, row);
-    }
-
-    const maxPages = Math.min(first.totalPages, 5);
-    for (let p = 2; p <= maxPages && collected.size < wanted.size; p += 1) {
-      const next = await fetchPage<ApiStockInfo>(WAREHOUSE_ENDPOINTS.stock, {
-        page: p,
-        pageSize: MAX_PAGE_SIZE,
-        params: {
-          ...warehouseParams(warehouseId),
-          product__in: Array.from(wanted).join(","),
-        },
+  const rows = await Promise.all(
+    productIds.map((id) =>
+      fetchPage<ApiStockInfo>(WAREHOUSE_ENDPOINTS.stock, {
+        page: 1,
+        pageSize: 5,
+        params: { ...warehouseParams(warehouseId), product: id },
         signal,
-      });
-      for (const row of next.items) {
-        const key = productKeyOf(row);
-        if (key != null && wanted.has(key)) collected.set(key, row);
-      }
-    }
-  } catch {
-    
-  }
-
-  const missing = Array.from(wanted).filter((id) => !collected.has(id));
-  if (!missing.length) return Array.from(collected.values());
-
-  
-  const rows = await mapLimit(missing, CONCURRENCY, (id) =>
-    fetchPage<ApiStockInfo>(WAREHOUSE_ENDPOINTS.stock, {
-      page: 1,
-      pageSize: 5,
-      params: { ...warehouseParams(warehouseId), product: id },
-      signal,
-    }),
+      }),
+    ),
   );
-
-  for (const row of rows.flatMap((r) => r.items)) {
-    const key = productKeyOf(row);
-    if (key != null && wanted.has(key)) collected.set(key, row);
-  }
-
-  return Array.from(collected.values());
+  return rows.flatMap((r) => r.items);
 }
 
-
-export async function fetchPendingQualityCount(
-  warehouseId: number,
-  signal?: AbortSignal,
-  clientFilter?: (task: ApiWarehouseTask) => boolean,
-): Promise<number> {
-  const params: Params = {
-    ...warehouseParams(warehouseId),
-    status: "pending",
-    quality_control__isnull: false,
-  };
-
-  
-  try {
-    const probe = await fetchPage<ApiWarehouseTask>(WAREHOUSE_ENDPOINTS.tasks, {
-      page: 1,
-      pageSize: 20,
-      params,
-      signal,
-    });
-    const supported =
-      probe.items.length === 0 ||
-      probe.items.every((task) => task.quality_control_id != null);
-    if (supported) {
-      if (!clientFilter) return probe.total;
-      if (probe.totalPages <= 1) {
-        return probe.items.filter(clientFilter).length;
-      }
-    }
-  } catch {
-    
-  }
-
-  
-  const all = await listAllByStatus<ApiWarehouseTask>(
-    WAREHOUSE_ENDPOINTS.tasks,
-    "pending",
-    warehouseParams(warehouseId),
-  );
-  return all.filter(
-    (task) =>
-      task.quality_control_id != null && (clientFilter ? clientFilter(task) : true),
-  ).length;
-}
-
-
+/** تراکنش‌های یک محصول در یک انبار (برای گردش کالا). */
 export async function fetchProductTransactions(
   warehouseId: number,
   productId: number,

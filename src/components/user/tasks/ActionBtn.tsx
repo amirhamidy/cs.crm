@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { m } from "framer-motion";
+import { motion } from "framer-motion";
 
 interface ActionBtnProps {
     rippleKey: string;
@@ -40,7 +40,7 @@ export default function ActionBtn({
     const c = COLOR_MAP[color];
 
     return (
-        <m.button
+        <motion.button
             key={rippleKey}
             type="button"
             onClick={onClick}
@@ -60,6 +60,6 @@ export default function ActionBtn({
         >
             {icon}
             {label}
-        </m.button>
+        </motion.button>
     );
 }

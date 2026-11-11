@@ -1,12 +1,10 @@
 "use client";
 
-import PageHeader, { HEADER_BTN_PRIMARY } from "@/components/ui/PageHeader";
 import { useEffect, useMemo, useState } from "react";
 import Pagination from "@/components/ui/Pagination";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import { internalTasksApi } from "@/lib/api";
-import { Inbox, LayoutGrid } from "lucide-react";
-import TicketBoardSkeleton from "./TicketBoardSkeleton";
+import { Inbox, LayoutGrid, Loader } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
 import { fetchEmployeeList } from "./Api";
 import type { EmployeeListItem, InternalTask } from "./types";
@@ -121,19 +119,24 @@ export default function ReceivedTicketsBoard() {
     };
 
     if (loading) {
-        return <TicketBoardSkeleton count={4} />;
+        return (
+            <div className="flex h-64 items-center justify-center">
+                <Loader size={22} className="animate-spin text-indigo-500" />
+            </div>
+        );
     }
 
     return (
         <div dir="rtl" className="flex flex-col gap-5">
-            <PageHeader
-                icon={Inbox}
-                title="تیکت‌های دریافت شده"
-                subtitle={`${list.count} تیکت`}
-                search={{ value: list.search, onChange: list.setSearch, placeholder: "جستجو بر اساس عنوان، شماره یا نام فرد" }}
-                onRefresh={() => list.refetch()}
-                refreshing={list.loading}
-            />
+            <div className="flex items-center gap-2.5">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-indigo-500/10">
+                    <Inbox size={17} className="text-indigo-500" />
+                </div>
+                <div>
+                    <h3 className="text-[14px] font-extrabold text-gray-900 dark:text-white">تیکت‌های دریافت شده</h3>
+                    <p className="text-[11px] text-gray-400 dark:text-gray-600">{list.count} تیکت</p>
+                </div>
+            </div>
 
             {error && (
                 <div className="flex items-center justify-between gap-3 rounded-2xl border border-red-500/20 bg-red-500/5 px-4 py-3">

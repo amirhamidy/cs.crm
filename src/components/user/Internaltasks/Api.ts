@@ -1,7 +1,22 @@
-
-import type { EmployeeListItem, InternalTask, InternalTaskArchive, InternalTaskAttachment, InternalTaskDeadline, InternalTaskRoutine, InternalTaskStatus } from "./types";
+/**
+ * Compatibility shim. Real logic lives in `@/lib/api/internalTasks`.
+ * List functions fetch ALL pages and return `{ data: T[] }` so existing
+ * consumers keep working and no longer break on paginated responses.
+ */
+import type {
+  EmployeeListItem,
+  InternalTask,
+  InternalTaskArchive,
+  InternalTaskAttachment,
+  InternalTaskDeadline,
+  InternalTaskRoutine,
+  InternalTaskStatus,
+} from "./types";
 import { internalTasksApi as api } from "@/lib/api/internalTasks";
-import type { CreateInternalTaskRoutinePayload, UpdateInternalTaskRoutinePayload } from "@/types/internalTask";
+import type {
+  CreateInternalTaskRoutinePayload,
+  UpdateInternalTaskRoutinePayload,
+} from "@/types/internalTask";
 
 export type { CreateInternalTaskRoutinePayload, UpdateInternalTaskRoutinePayload };
 

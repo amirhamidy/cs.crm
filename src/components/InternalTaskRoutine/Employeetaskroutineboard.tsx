@@ -1,18 +1,40 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { AnimatePresence, m } from "framer-motion";
-import { AlertTriangle, Ban, CalendarClock, CheckCircle2, History, Inbox, Plus, RefreshCw, Repeat, RotateCcw, Timer, Trash2, Users } from "lucide-react";
-import { Spinner as Loader2 } from "@/components/ui/Spinner";
+import { useEffect, useMemo, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import {
+    AlertTriangle,
+    Ban,
+    CalendarClock,
+    CheckCircle2,
+    History,
+    Inbox,
+    Loader,
+    Loader2,
+    Plus,
+    RefreshCw,
+    Repeat,
+    RotateCcw,
+    Timer,
+    Trash2,
+    Users,
+} from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
-import { useIsVisible, useVisibleInterval } from "@/hooks/useVisibility";
-import { deleteInternalTaskRoutine, fetchEmployeeList, fetchInternalTaskRoutines, fetchInternalTasks } from "./Api";
-import InternalTaskActionModal from "@/components/user/Internaltasks/InternalTaskActionModal";
+import {
+    deleteInternalTaskRoutine,
+    fetchEmployeeList,
+    fetchInternalTaskRoutines,
+    fetchInternalTasks,
+} from "./Api";
+import InternalTaskActionModal from "./Internaltaskactionmodal";
 import EmployeeCreateTaskRoutineModal from "./EmployeeCreateTaskRoutineModal";
-import type { EmployeeListItem, EmployeeRef, InternalTask, InternalTaskRoutine } from "./Types";
+import type {
+    EmployeeListItem,
+    EmployeeRef,
+    InternalTask,
+    InternalTaskRoutine,
+} from "./Types";
 
-import { BusyContent } from "@/components/ui/Button";
-import { BoardSkeleton } from "@/components/ui/skeletons";
 const NEVER_REPEAT_VALUE = 2147483647;
 
 const AVATAR_GRADIENTS = [
@@ -134,12 +156,9 @@ function getStatusBadge(status: InternalTask["status"] | undefined) {
 function RoutineCountdown({
     nextRunAt,
     onReady,
-    active = true,
 }: {
     nextRunAt?: string | null;
     onReady: () => void;
-    
-    active?: boolean;
 }) {
     const [remaining, setRemaining] = useState(() => {
         if (!nextRunAt) return 0;
@@ -150,25 +169,30 @@ function RoutineCountdown({
         );
     });
 
-    const update = useCallback(() => {
+    useEffect(() => {
         if (!nextRunAt) {
             setRemaining(0);
             onReady();
             return;
         }
 
-        const target = new Date(nextRunAt).getTime();
-        const nextRemaining = Math.max(0, target - Date.now());
+        const update = () => {
+            const target = new Date(nextRunAt).getTime();
+            const nextRemaining = Math.max(0, target - Date.now());
 
-        setRemaining(nextRemaining);
+            setRemaining(nextRemaining);
 
-        if (nextRemaining <= 0) {
-            onReady();
-        }
+            if (nextRemaining <= 0) {
+                onReady();
+            }
+        };
+
+        update();
+
+        const timer = window.setInterval(update, 1000);
+
+        return () => window.clearInterval(timer);
     }, [nextRunAt, onReady]);
-
-    
-    useVisibleInterval(update, 1000, Boolean(nextRunAt) && active);
 
     if (remaining <= 0) return null;
 
@@ -246,29 +270,35 @@ function RoutineCard({
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [isReady, setIsReady] = useState(false);
 
-    const statusBadge = getStatusBadge(task?.status);
-
-    const isWaiting = task?.status === "waiting";
-
     useEffect(() => {
-        if (!isWaiting || !routine.next_run_at) {
+        if (task?.status !== "waiting") {
             setIsReady(true);
+            return;
         }
-    }, [isWaiting, routine.next_run_at]);
 
-    
-    const checkReady = useCallback(() => {
-        if (!routine.next_run_at) return;
-        setIsReady(new Date(routine.next_run_at).getTime() <= Date.now());
-    }, [routine.next_run_at]);
+        if (!routine.next_run_at) {
+            setIsReady(true);
+            return;
+        }
 
-    useVisibleInterval(checkReady, 1000, isWaiting && !isReady);
+        const target = new Date(routine.next_run_at).getTime();
+        const check = () => setIsReady(target <= Date.now());
+
+        check();
+
+        const timer = window.setInterval(check, 1000);
+
+        return () => window.clearInterval(timer);
+    }, [task?.status, routine.next_run_at]);
 
     const assignedEmployees = resolveAssignedTo(
         task?.assigned_to ?? [],
         employees,
     );
 
+    const statusBadge = getStatusBadge(task?.status);
+
+    const isWaiting = task?.status === "waiting";
     const isCompleted = task?.status === "completed";
     const isCancelled = task?.status === "cancelled";
 
@@ -280,7 +310,7 @@ function RoutineCard({
 
     return (
         <>
-            <m.div
+            <motion.div
                 layout
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -312,12 +342,14 @@ function RoutineCard({
                             type="button"
                             onClick={() => setShowDeleteConfirm(true)}
                             disabled={isDeleting}
-                            className="relative flex h-7 w-7 shrink-0 items-center justify-center rounded-xl bg-red-500/[0.08] text-red-500 transition-all hover:bg-red-500/[0.14] disabled:opacity-40"
+                            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-xl bg-red-500/[0.08] text-red-500 transition-all hover:bg-red-500/[0.14] disabled:opacity-40"
                             title="حذف تسک روتین"
                         >
-                            <BusyContent busy={isDeleting}>
+                            {isDeleting ? (
+                                <Loader2 size={12} className="animate-spin" />
+                            ) : (
                                 <Trash2 size={12} />
-                            </BusyContent>
+                            )}
                         </button>
                     </div>
                 </div>
@@ -402,7 +434,6 @@ function RoutineCard({
                     <div className="border-t border-black/5 pt-3 dark:border-white/[0.05]">
                         <RoutineCountdown
                             nextRunAt={routine.next_run_at}
-                            active={isWaiting && !isReady}
                             onReady={() => setIsReady(true)}
                         />
                     </div>
@@ -441,17 +472,18 @@ function RoutineCard({
 
                 <AnimatePresence>
                     {showDeleteConfirm && (
-                        <m.div
+                        <motion.div
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
                             className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 rounded-[2rem] p-5 text-center"
                             style={{
                                 background: "rgba(15,23,42,0.96)",
+                                backdropFilter: "blur(4px)",
                             }}
                         >
                             <AlertTriangle size={22} className="text-red-500" />
-                            <p className="text-[12px] font-bold text-gray-200">
+                            <p className="text-[12px] font-bold text-slate-200">
                                 این تسک روتین حذف شود؟
                             </p>
                             <div className="flex w-full items-center gap-2">
@@ -473,10 +505,10 @@ function RoutineCard({
                                     حذف شود
                                 </button>
                             </div>
-                        </m.div>
+                        </motion.div>
                     )}
                 </AnimatePresence>
-            </m.div>
+            </motion.div>
 
             {task && actionModal && canTakeAction && (
                 <InternalTaskActionModal
@@ -505,7 +537,6 @@ export default function EmployeeTaskRoutineBoard() {
     const [error, setError] = useState<string | null>(null);
     const [createOpen, setCreateOpen] = useState(false);
     const [deletingId, setDeletingId] = useState<number | null>(null);
-    const isVisible = useIsVisible();
 
     async function loadData(initial = false) {
         if (initial) setLoading(true);
@@ -586,6 +617,14 @@ export default function EmployeeTaskRoutineBoard() {
         void loadData(true);
     }, []);
 
+    useEffect(() => {
+        const interval = window.setInterval(() => {
+            void silentLoad();
+        }, 20000);
+
+        return () => window.clearInterval(interval);
+    }, []);
+
     const tasksById = useMemo(() => {
         const map = new Map<number, InternalTask>();
 
@@ -593,14 +632,6 @@ export default function EmployeeTaskRoutineBoard() {
 
         return map;
     }, [tasks]);
-
-    
-    const silentLoadRef = useCallback(() => {
-        void silentLoad();
-        
-    }, []);
-
-    useVisibleInterval(silentLoadRef, 20000, isVisible);
 
     const myTasks = useMemo(() => {
         if (!userId) return [];
@@ -722,7 +753,15 @@ export default function EmployeeTaskRoutineBoard() {
 
     if (loading) {
         return (
-            <BoardSkeleton columns={3} />
+            <div
+                dir="rtl"
+                className="flex h-64 items-center justify-center"
+            >
+                <Loader
+                    size={22}
+                    className="animate-spin text-indigo-500"
+                />
+            </div>
         );
     }
 
@@ -763,11 +802,13 @@ export default function EmployeeTaskRoutineBoard() {
                         type="button"
                         onClick={() => void loadData()}
                         disabled={refreshing}
-                        className={`flex h-9 w-9 items-center justify-center rounded-2xl bg-gray-100 text-gray-500 transition-colors hover:bg-gray-200 disabled:opacity-40 dark:bg-white/[0.05] dark:text-gray-400 dark:hover:bg-white/[0.08] `}
+                        className="flex h-9 w-9 items-center justify-center rounded-2xl bg-gray-100 text-gray-500 transition-colors hover:bg-gray-200 disabled:opacity-40 dark:bg-white/[0.05] dark:text-gray-400 dark:hover:bg-white/[0.08]"
                         title="به‌روزرسانی"
                     >
-                        {refreshing ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw
-                            size={14} />}
+                        <RefreshCw
+                            size={14}
+                            className={refreshing ? "animate-spin" : ""}
+                        />
                     </button>
                 </div>
             </div>

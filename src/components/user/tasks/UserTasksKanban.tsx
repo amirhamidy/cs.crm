@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { m, AnimatePresence } from "framer-motion";
-import { Kanban, Building2, Plus, ChevronLeft, UserRound } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Kanban, Loader, Building2, Plus, ChevronLeft, UserRound } from "lucide-react";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { FreeMode } from "swiper/modules";
 import "swiper/css";
@@ -11,7 +11,6 @@ import { tasksApi, departmentsApi, accountsApi } from "@/lib/api";
 import TaskCardSwiper from "./TaskCardSwiper";
 import type { UserTask, UserStage, EmployeeAPIItem, DepartmentAPIItem, DepartmentEmployeeAPIItem } from "./types";
 import { useCurrentEmployee } from "@/hooks/usecurrentemployee";
-import UserTasksKanbanSkeleton from "./UserTasksKanbanSkeleton";
 
 interface DepartmentGroup {
     id: number;
@@ -245,8 +244,8 @@ export default function UserTasksKanban() {
         setTasks((prev) => prev.map((t) => t.id === updated.id ? updated : t));
     }
 
-    
-    
+    // بعد از انتقال به دپارتمان دیگر: اگر کاربر هنوز مسئول تسک است (مثلاً مدیر
+    // دپارتمان مقصد هم هست) تسک در جای جدیدش می‌ماند، وگرنه از لیست حذف می‌شود.
     function handleTransferred(updated: UserTask) {
         const stillMine =
             !!employee &&
@@ -263,7 +262,7 @@ export default function UserTasksKanban() {
     }
 
     if (loading || stagesLoading || employeeLoading) {
-        return <UserTasksKanbanSkeleton columns={3} />;
+        return <div className="flex h-64 items-center justify-center"><Loader size={22} className="animate-spin text-indigo-500" /></div>;
     }
 
     if (error) {
@@ -323,7 +322,7 @@ export default function UserTasksKanban() {
                                 const active = stage.id === mobileStage?.id;
                                 const color = accentForId(stage.id);
                                 return (
-                                    <button key={stage.id} type="button" onClick={() => setActiveMobileStageId(stage.id)} className="flex shrink-0 items-center gap-2 rounded-2xl border px-3 py-2 text-[11px] font-bold" style={{ color: active ? color : "#9ca3af", background: active ? `${color}14` : undefined, borderColor: active ? `${color}45` : "rgba(148,163,184,.25)" }}>
+                                    <button key={stage.id} type="button" onClick={() => setActiveMobileStageId(stage.id)} className="flex shrink-0 items-center gap-2 rounded-2xl border px-3 py-2 text-[11px] font-bold" style={{ color: active ? color : "#94a3b8", background: active ? `${color}14` : undefined, borderColor: active ? `${color}45` : "rgba(148,163,184,.25)" }}>
                                         <span className="flex h-5 w-5 items-center justify-center rounded-lg text-[9px] text-white" style={{ background: color }}>{index + 1}</span>
                                         {stage.name}<span>{grouped[stage.id]?.length ?? 0}</span>
                                     </button>
@@ -332,9 +331,9 @@ export default function UserTasksKanban() {
                         </div>
                         {mobileStage && (
                             <AnimatePresence mode="wait">
-                                <m.div key={mobileStage.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                                <motion.div key={mobileStage.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
                                     <StageColumn stage={mobileStage} tasks={grouped[mobileStage.id] ?? []} accent={accentForId(mobileStage.id)} index={mobileStageIndex} isLast={mobileStageIndex === activeStages.length - 1} onUpdated={handleUpdated} onTransferred={handleTransferred} employeesMap={employeesMap} staffId={staffId} />
-                                </m.div>
+                                </motion.div>
                             </AnimatePresence>
                         )}
                     </div>
@@ -354,8 +353,8 @@ export default function UserTasksKanban() {
 
 function StageColumn({ stage, tasks, accent, index, isLast, onUpdated, onTransferred, employeesMap, staffId }: { stage: KanbanStage; tasks: UserTask[]; accent: string; index: number; isLast: boolean; onUpdated: (task: UserTask) => void; onTransferred: (task: UserTask) => void; employeesMap: Record<number, string>; staffId: number }) {
     return (
-        <m.div layout initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="relative flex min-w-0 flex-col rounded-[1.45rem] border bg-white shadow-[0_5px_20px_rgba(15,23,42,.03)] dark:bg-white/[.025]" style={{ borderColor: `${accent}28` }}>
-            {!isLast && <div className="pointer-events-none absolute top-7 z-20 flex h-5 w-5 items-center justify-center rounded-full border bg-white shadow-sm dark:bg-[#111827]" style={{ insetInlineEnd: -10, borderColor: `${accent}35`, color: accent }}><ChevronLeft size={10} /></div>}
+        <motion.div layout initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="relative flex min-w-0 flex-col rounded-[1.45rem] border bg-white shadow-[0_5px_20px_rgba(15,23,42,.03)] dark:bg-white/[.025]" style={{ borderColor: `${accent}28` }}>
+            {!isLast && <div className="pointer-events-none absolute top-7 z-20 flex h-5 w-5 items-center justify-center rounded-full border bg-white shadow-sm dark:bg-[#0f172a]" style={{ insetInlineEnd: -10, borderColor: `${accent}35`, color: accent }}><ChevronLeft size={10} /></div>}
             <div className="px-3 py-2.5">
                 <div className="flex items-center justify-between gap-2.5">
                     <div className="flex items-center gap-2">
@@ -371,6 +370,6 @@ function StageColumn({ stage, tasks, accent, index, isLast, onUpdated, onTransfe
             ) : (
                 <div className="flex h-28 flex-col items-center justify-center gap-1.5 text-center"><Plus size={16} className="text-gray-300" /><p className="text-[11px] text-gray-400">وظیفه‌ای در این مرحله نیست</p></div>
             )}
-        </m.div>
+        </motion.div>
     );
 }

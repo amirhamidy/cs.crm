@@ -1,14 +1,13 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { AnimatePresence, m } from "framer-motion";
-import { CalendarDays, Clock3, Send, StickyNote, Tag, Trash2, UserRound, X } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
+import { CalendarDays, Clock3, Loader2, Send, StickyNote, Tag, Trash2, UserRound, X } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
 import { useAuthStore } from "@/store/authStore";
 
+/* ───────────────────────── Types (unchanged) ───────────────────────── */
 
-
-import { BusyContent } from "@/components/ui/Button";
 export interface CalendarPerson {
     id: number;
     full_name: string;
@@ -52,7 +51,7 @@ interface Props {
     onDeleted: (id: number) => void;
 }
 
-
+/* ───────────────────────── Shared helpers (also used by PersianCalendar) ───────────────────────── */
 
 const pad = (v: number) => String(v).padStart(2, "0");
 const toDateKey = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
@@ -127,11 +126,11 @@ const EVENT_TYPE_LABEL: Record<string, string> = {
 };
 
 export interface TypeStyle {
-    bg: string;     
-    text: string;   
-    dot: string;    
-    bar: string;    
-    border: string; 
+    bg: string;     // soft tinted surface
+    text: string;   // readable text color for that surface
+    dot: string;    // solid dot
+    bar: string;    // solid stripe
+    border: string; // subtle border
 }
 
 const EVENT_TYPE_COLOR: Record<string, TypeStyle> = {
@@ -164,7 +163,7 @@ export const isEventOnDate = (event: CalendarEvent, dateISO: string) => {
 
 const initial = (name: string) => name.trim().charAt(0);
 
-
+/* ───────────────────────── Component ───────────────────────── */
 
 export default function CalendarNoteModal({ isOpen, onClose, selectedDate, notes, events, onCreated, onDeleted }: Props) {
     const { userId } = useAuthStore();
@@ -212,14 +211,14 @@ export default function CalendarNoteModal({ isOpen, onClose, selectedDate, notes
     return (
         <AnimatePresence>
             {isOpen && selectedDate && (
-                <m.div
+                <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className="fixed inset-0 z-[120] flex items-stretch justify-start bg-slate-950/40 p-2 backdrop-blur-layer sm:p-4"
+                    className="fixed inset-0 z-[120] flex items-stretch justify-start bg-slate-950/40 p-2 backdrop-blur-sm sm:p-4"
                     onClick={onClose}
                 >
-                    <m.aside
+                    <motion.aside
                         initial={{ opacity: 0, x: -48 }}
                         animate={{ opacity: 1, x: 0 }}
                         exit={{ opacity: 0, x: -48 }}
@@ -228,16 +227,16 @@ export default function CalendarNoteModal({ isOpen, onClose, selectedDate, notes
                         onClick={(e) => e.stopPropagation()}
                         className="relative flex h-full w-full max-w-[30rem] flex-col overflow-hidden rounded-[2rem] border border-white/60 bg-gradient-to-b from-sky-50/95 via-white/95 to-blue-50/95 shadow-[0_40px_100px_-30px_rgba(30,64,175,0.55)] backdrop-blur-2xl dark:border-white/[0.08] dark:from-[#0a1738]/95 dark:via-[#0b1633]/95 dark:to-[#08112b]/95"
                     >
-                        
+                        {/* Hero header */}
                         <div className="relative shrink-0 overflow-hidden bg-gradient-to-br from-blue-600 via-blue-500 to-cyan-400 px-6 pb-6 pt-5 text-white">
                             <div className="pointer-events-none absolute -left-10 -top-12 h-40 w-40 rounded-full bg-white/20 blur-2xl" />
                             <div className="pointer-events-none absolute -bottom-16 right-10 h-40 w-40 rounded-full bg-indigo-400/40 blur-3xl" />
                             <div className="relative flex items-start justify-between">
-                                <div className="flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-[10.5px] font-bold">
+                                <div className="flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-[10.5px] font-bold backdrop-blur-md">
                                     <CalendarDays size={12} />
                                     جزئیات روز
                                 </div>
-                                <button type="button" onClick={onClose} aria-label="بستن" className="flex h-9 w-9 items-center justify-center rounded-full bg-white/15 text-white transition hover:bg-white/30 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white"><X size={16} /></button>
+                                <button type="button" onClick={onClose} aria-label="بستن" className="flex h-9 w-9 items-center justify-center rounded-full bg-white/15 text-white backdrop-blur-md transition hover:bg-white/30 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white"><X size={16} /></button>
                             </div>
                             <div className="relative mt-5 flex items-end gap-4">
                                 <span className="text-[56px] font-black leading-none tracking-tight">{fa(selectedDate, { day: "numeric" })}</span>
@@ -248,12 +247,12 @@ export default function CalendarNoteModal({ isOpen, onClose, selectedDate, notes
                             </div>
                             <div className="relative mt-4 flex flex-wrap gap-2">
                                 {holiday && <span className="rounded-full bg-rose-500/90 px-2.5 py-1 text-[10px] font-bold shadow-sm">{holidayText}</span>}
-                                <span className="rounded-full bg-white/15 px-2.5 py-1 text-[10px] font-bold">{dayEvents.length.toLocaleString("fa-IR")} رویداد</span>
-                                <span className="rounded-full bg-white/15 px-2.5 py-1 text-[10px] font-bold">{dayNotes.length.toLocaleString("fa-IR")} یادداشت</span>
+                                <span className="rounded-full bg-white/15 px-2.5 py-1 text-[10px] font-bold backdrop-blur-md">{dayEvents.length.toLocaleString("fa-IR")} رویداد</span>
+                                <span className="rounded-full bg-white/15 px-2.5 py-1 text-[10px] font-bold backdrop-blur-md">{dayNotes.length.toLocaleString("fa-IR")} یادداشت</span>
                             </div>
                         </div>
 
-                        
+                        {/* Scrollable body */}
                         <div className="flex-1 space-y-6 overflow-y-auto px-5 py-5">
                             <section className="space-y-3">
                                 <h4 className="text-[12.5px] font-extrabold text-slate-700 dark:text-slate-200">برنامه این روز</h4>
@@ -264,12 +263,12 @@ export default function CalendarNoteModal({ isOpen, onClose, selectedDate, notes
                                     const assigned = event.people?.assigned_employee ?? [];
                                     const creator = event.people?.created_by;
                                     return (
-                                        <m.div
+                                        <motion.div
                                             key={`${event.type}-${event.id}`}
                                             layout
                                             initial={{ opacity: 0, y: 8 }}
                                             animate={{ opacity: 1, y: 0 }}
-                                            className="relative overflow-hidden rounded-2xl border border-white/70 bg-white/70 p-4 pr-5 shadow-[0_6px_24px_-14px_rgba(37,99,235,0.35)] dark:border-white/[0.07] dark:bg-white/[0.04] dark:shadow-none"
+                                            className="relative overflow-hidden rounded-2xl border border-white/70 bg-white/70 p-4 pr-5 shadow-[0_6px_24px_-14px_rgba(37,99,235,0.35)] backdrop-blur-md dark:border-white/[0.07] dark:bg-white/[0.04] dark:shadow-none"
                                         >
                                             <span className={`absolute inset-y-3 right-0 w-1 rounded-full ${style.bar}`} />
                                             <p className="break-words text-[13px] font-extrabold text-slate-800 dark:text-white">{event.title}</p>
@@ -306,7 +305,7 @@ export default function CalendarNoteModal({ isOpen, onClose, selectedDate, notes
                                                     )}
                                                 </div>
                                             )}
-                                        </m.div>
+                                        </motion.div>
                                     );
                                 })}
                             </section>
@@ -318,7 +317,7 @@ export default function CalendarNoteModal({ isOpen, onClose, selectedDate, notes
                                 ) : (
                                     <AnimatePresence>
                                         {dayNotes.map((note) => (
-                                            <m.div
+                                            <motion.div
                                                 key={note.id}
                                                 layout
                                                 initial={{ opacity: 0, y: 10 }}
@@ -332,21 +331,19 @@ export default function CalendarNoteModal({ isOpen, onClose, selectedDate, notes
                                                         <p className="whitespace-pre-wrap break-words text-[11.5px] font-semibold leading-7 text-slate-700 dark:text-slate-200">{note.description}</p>
                                                         {note.created_at && <p className="mt-2 text-[9px] font-medium text-slate-400">{formatEventDate(note.created_at)}</p>}
                                                     </div>
-                                                    <button type="button" aria-label="حذف یادداشت" onClick={() => handleDelete(note.id)} disabled={deletingId === note.id} className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition hover:bg-rose-500/10 disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-rose-400">
-                                                        <BusyContent busy={deletingId === note.id}>
-                                                            <Trash2 size={15} className="text-rose-500" />
-                                                        </BusyContent>
+                                                    <button type="button" aria-label="حذف یادداشت" onClick={() => handleDelete(note.id)} disabled={deletingId === note.id} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition hover:bg-rose-500/10 disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-rose-400">
+                                                        {deletingId === note.id ? <Loader2 size={15} className="animate-spin text-rose-500" /> : <Trash2 size={15} className="text-rose-500" />}
                                                     </button>
                                                 </div>
-                                            </m.div>
+                                            </motion.div>
                                         ))}
                                     </AnimatePresence>
                                 )}
                             </section>
                         </div>
 
-                        
-                        <div className="shrink-0 border-t border-blue-100/80 bg-white/70 p-4 dark:border-white/[0.06] dark:bg-white/[0.02]">
+                        {/* Composer pinned to the bottom */}
+                        <div className="shrink-0 border-t border-blue-100/80 bg-white/70 p-4 backdrop-blur-xl dark:border-white/[0.06] dark:bg-white/[0.02]">
                             <div className="relative">
                                 <textarea
                                     value={description}
@@ -364,14 +361,12 @@ export default function CalendarNoteModal({ isOpen, onClose, selectedDate, notes
                                     disabled={submitting || !description.trim() || disabled}
                                     className="absolute bottom-3 left-3 flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-br from-blue-600 to-cyan-400 text-white shadow-[0_8px_20px_-8px_rgba(37,99,235,0.9)] transition hover:scale-105 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:scale-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500"
                                 >
-                                    <BusyContent busy={submitting}>
-                                        <Send size={17} className="-scale-x-100" />
-                                    </BusyContent>
+                                    {submitting ? <Loader2 size={18} className="animate-spin" /> : <Send size={17} className="-scale-x-100" />}
                                 </button>
                             </div>
                         </div>
-                    </m.aside>
-                </m.div>
+                    </motion.aside>
+                </motion.div>
             )}
         </AnimatePresence>
     );
