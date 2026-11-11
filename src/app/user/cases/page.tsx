@@ -1,5 +1,6 @@
 "use client";
 
+import SearchField from "@/components/ui/SearchField";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence } from "framer-motion";
 import { Search, X, ClipboardList, Plus, RefreshCw } from "lucide-react";
@@ -193,6 +194,7 @@ export default function UserCasesPage() {
                 </div>
 
                 <div className="flex items-center gap-2">
+<SearchField value={list.search} onChange={list.setSearch} placeholder="جستجوی پرونده‌ها..." />
                     <button
                         onClick={refreshAll}
                         disabled={loading}
@@ -218,20 +220,6 @@ export default function UserCasesPage() {
                 </div>
             </div>
 
-            <div className="relative">
-                <Search size={14} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                <input
-                    value={list.search}
-                    onChange={(e) => list.setSearch(e.target.value)}
-                    placeholder="جستجو در پرونده‌ها (عنوان، مشتری...)"
-                    className="h-10 w-full rounded-xl border border-gray-200 bg-white pl-9 pr-9 text-[12px] font-semibold text-gray-700 outline-none transition-colors focus:border-indigo-400 dark:border-white/10 dark:bg-white/[0.03] dark:text-gray-200"
-                />
-                {list.search && (
-                    <button type="button" onClick={() => list.setSearch("")} className="absolute left-2.5 top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded-full text-gray-400 hover:text-gray-600">
-                        <X size={12} />
-                    </button>
-                )}
-            </div>
 
             {error && !loading && (
                 <div className="flex flex-col items-start gap-3 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-[12.5px] text-rose-600 dark:border-rose-500/20 dark:bg-rose-500/10 dark:text-rose-300 sm:flex-row sm:items-center sm:justify-between">

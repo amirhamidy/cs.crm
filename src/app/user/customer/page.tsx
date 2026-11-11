@@ -1,5 +1,6 @@
 "use client";
 
+import SearchField from "@/components/ui/SearchField";
 import { useState, useEffect, useCallback } from "react";
 import { CountSkeleton } from "@/components/ui/skeletons";
 import CustomerCardSkeleton from "@/components/user/customer/CustomerCardSkeleton";
@@ -393,7 +394,8 @@ export default function CustomersPage() {
                     </div>
                 </div>
 
-                <div className="flex items-center gap-2 sm:justify-end">
+                <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+                    <SearchField value={search} onChange={list.setSearch} placeholder="جستجوی نام، شماره یا شرکت..." />
                     <button
                         onClick={refresh}
                         disabled={loading}
@@ -501,38 +503,6 @@ export default function CustomersPage() {
                     <span className="ms-auto text-[10.5px] font-bold text-gray-500 dark:text-gray-400">
                         دارای پرونده: {counts.with_case.toLocaleString("fa-IR")}
                     </span>
-                </div>
-
-                <div
-                    className="relative flex h-9 items-center gap-2 rounded-xl px-3 sm:w-64"
-                    style={{
-                        background: isDark
-                            ? "rgba(255,255,255,0.04)"
-                            : "rgba(0,0,0,0.03)",
-                    }}
-                >
-                    <Search
-                        size={13}
-                        className="shrink-0 text-gray-400"
-                    />
-
-                    <input
-                        value={search}
-                        onChange={(e) => list.setSearch(e.target.value)}
-                        placeholder="جستجوی نام، شماره یا شرکت..."
-                        className="min-w-0 flex-1 bg-transparent text-[11.5px] font-medium text-gray-700 outline-none placeholder:text-gray-400 dark:text-gray-200"
-                    />
-
-                    {search && (
-                        <button
-                            type="button"
-                            onClick={() => list.setSearch("")}
-                            className="shrink-0 text-gray-400 transition-colors hover:text-gray-600 dark:hover:text-gray-200"
-                            aria-label="پاک کردن جستجو"
-                        >
-                            <X size={13} />
-                        </button>
-                    )}
                 </div>
             </div>
 

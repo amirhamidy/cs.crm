@@ -1,5 +1,6 @@
 "use client";
 
+import SearchField from "@/components/ui/SearchField";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence, m } from "framer-motion";
 import { AlertCircle, FileText, Plus, Search, Users, X } from "lucide-react";
@@ -136,20 +137,7 @@ export default function HumanResourcesPage({ canManage = false }: { canManage?: 
                     </div>
 
                     <div className="flex flex-col gap-2 sm:flex-row">
-                        <div className="relative min-w-0 sm:w-64">
-                            <Search size={14} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                            <input
-                                value={search}
-                                onChange={(e) => setSearch(e.target.value)}
-                                placeholder="جستجوی منابع انسانی..."
-                                className="h-9 w-full rounded-full border border-gray-100 bg-gray-50 pr-9 pl-9 text-[11px] font-semibold text-gray-800 outline-none transition focus:border-indigo-400 dark:border-white/[0.06] dark:bg-white/[0.03] dark:text-white"
-                            />
-                            {search && (
-                                <button type="button" onClick={() => setSearch("")} className="absolute left-2.5 top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded-full text-gray-400 hover:text-gray-600">
-                                    <X size={11} />
-                                </button>
-                            )}
-                        </div>
+                        <SearchField value={search} onChange={setSearch} placeholder="جستجوی منابع انسانی..." />
 
                         {canManage && (
                             <m.button

@@ -1,5 +1,6 @@
 "use client";
 
+import SearchField from "@/components/ui/SearchField";
 import { useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import { m } from "framer-motion";
@@ -231,6 +232,7 @@ export default function CustomerRankingPage({ basePath: _basePath }: Props) {
         icon={<Trophy size={20} />}
         title="رتبه‌بندی مشتریان"
         subtitle="بر اساس میانگین امتیازی که کارکنان به مشتریان داده‌اند"
+        actions={<SearchField value={list.search} onChange={list.setSearch} placeholder="نام، شرکت یا موبایل..." />}
       />
 
       <div
@@ -239,12 +241,6 @@ export default function CustomerRankingPage({ basePath: _basePath }: Props) {
           "flex flex-wrap items-end justify-center gap-1 p-4 [&>div]:min-w-0 [&>div]:flex-[1_1_200px] [&_label]:text-center [&_label]:text-[13px] [&_label]:font-bold [&_input]:h-12 [&_input]:text-[13px] [&>div>button]:h-12 [&>div>button]:py-0 [&>div>button]:text-center [&>div>button>span:first-child]:text-center [&>div>button>span:first-child]:text-[13px] [&>div>button>span:first-child]:font-bold [&>div>div_button>div>span:first-child]:text-[13px] [&>div>div_button>div>span:first-child]:font-bold [&>div>div_button>span]:text-[13px]",
         )}
       >
-        <SearchInput
-          value={list.search}
-          onChange={list.setSearch}
-          placeholder="نام، شرکت یا موبایل..."
-          hideIcon
-        />
         <NiceSelect
           label="مرتب‌سازی"
           options={ORDERING_OPTIONS.map((option, id) => ({ id, label: option.label }))}

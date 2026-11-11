@@ -126,6 +126,7 @@ export default function ReceivedTicketsBoard() {
 
     return (
         <div dir="rtl" className="flex min-w-0 flex-col gap-4 sm:gap-5">
+            <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex min-w-0 items-center gap-2.5">
                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-indigo-500/10">
                     <Inbox size={17} className="text-indigo-500" />
@@ -135,8 +136,9 @@ export default function ReceivedTicketsBoard() {
                     <p className="text-[11px] text-gray-400 dark:text-gray-600">{list.count} تیکت</p>
                 </div>
             </div>
-
             <TicketSearchInput value={list.search} onChange={list.setSearch} />
+            </div>
+
 
             {error && (
                 <div className="flex items-center justify-between gap-3 rounded-2xl border border-red-500/20 bg-red-500/5 px-4 py-3">

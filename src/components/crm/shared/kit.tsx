@@ -246,25 +246,14 @@ export function SearchPill({
 }) {
     return (
         <div className="relative min-w-0 sm:w-64">
-            <Search size={14} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
                 type="search"
                 value={value}
                 onChange={(e) => onChange(e.target.value)}
                 placeholder={placeholder}
                 aria-label="جستجو"
-                className="h-9 w-full rounded-full border border-gray-100 bg-gray-50 pl-9 pr-9 text-[11px] font-semibold text-gray-800 outline-none transition placeholder:text-gray-400 focus:border-indigo-400 dark:border-white/[0.06] dark:bg-white/[0.03] dark:text-white [&::-webkit-search-cancel-button]:hidden"
+                className="h-9 w-full rounded-full border border-gray-100 bg-gray-50 px-4 text-[11px] font-semibold text-gray-800 outline-none transition placeholder:text-gray-400 focus:border-indigo-400 dark:border-white/[0.06] dark:bg-white/[0.03] dark:text-white [&::-webkit-search-cancel-button]:hidden"
             />
-            {value && (
-                <button
-                    type="button"
-                    aria-label="پاک کردن"
-                    onClick={() => onChange("")}
-                    className="absolute left-2.5 top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded-full text-gray-400 hover:text-gray-600"
-                >
-                    <X size={11} />
-                </button>
-            )}
         </div>
     );
 }

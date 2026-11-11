@@ -1,8 +1,9 @@
 "use client";
 
+import SearchField from "@/components/ui/SearchField";
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { CalendarDays, FileSignature, MapPin, PenLine, Plus, RefreshCw, Search, UserRound } from "lucide-react";
+import { CalendarDays, FileSignature, MapPin, PenLine, Plus, RefreshCw, UserRound } from "lucide-react";
 import { ListSkeleton } from "@/components/ui/skeletons";
 import { minutesApi } from "@/lib/minutesApi";
 import { STATUS_FILTERS, formatDateTime, parseApiError } from "@/lib/minutesUtils";
@@ -60,6 +61,7 @@ export default function MinutesListPage({ basePath }: { basePath: string }) {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          <SearchField value={searchInput} onChange={setSearchInput} placeholder="جست‌وجو در عنوان یا متن..." />
           <button type="button" onClick={load} disabled={loading} title="بارگذاری مجدد" aria-label="بارگذاری مجدد" className={`flex h-10 w-10 items-center justify-center rounded-2xl bg-black/5 text-gray-600 transition-colors hover:bg-black/10 disabled:opacity-50 dark:bg-white/5 dark:text-gray-300 ${loading ? "is-busy" : ""}`}>
             <RefreshCw size={15} />
           </button>
@@ -74,17 +76,6 @@ export default function MinutesListPage({ basePath }: { basePath: string }) {
 
       
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <div className="relative w-full lg:max-w-sm">
-          <Search size={14} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
-          <input
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-            placeholder="جست‌وجو در عنوان یا متن..."
-            aria-label="جست‌وجو"
-            className={`${INPUT} pr-9`}
-          />
-        </div>
-
         <div className="flex flex-wrap gap-1.5" role="group" aria-label="فیلتر وضعیت">
           {STATUS_FILTERS.map((f) => (
             <button

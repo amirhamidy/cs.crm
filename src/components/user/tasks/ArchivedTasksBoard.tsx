@@ -1,5 +1,6 @@
 "use client";
 
+import SearchField from "@/components/ui/SearchField";
 import { useMemo, useState } from "react";
 import Pagination from "@/components/ui/Pagination";
 import ArchivedTaskCardSkeleton from "./ArchivedTaskCardSkeleton";
@@ -176,7 +177,8 @@ export default function ArchivedTasksBoard() {
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
+                        <SearchField value={list.search} onChange={list.setSearch} placeholder="جستجو در عنوان، مشتری، دپارتمان، مرحله..." />
                         <div className="flex h-9 items-center gap-1.5 rounded-xl bg-indigo-500/10 px-3 text-[10px] font-black text-indigo-500">
                             <Archive size={12} />
                             {list.count} تسک
@@ -193,21 +195,6 @@ export default function ArchivedTasksBoard() {
                     <div className="mb-3 flex items-center gap-2 text-[10px] font-black text-gray-500 dark:text-gray-400">
                         <Filter size={13} />
                         فیلتر آرشیو
-                    </div>
-
-                    <div className="relative mb-3">
-                        <Search size={14} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                        <input
-                            value={list.search}
-                            onChange={(e) => list.setSearch(e.target.value)}
-                            placeholder="جستجو در عنوان، مشتری، دپارتمان، مرحله..."
-                            className="h-10 w-full rounded-xl border border-gray-200 bg-white pl-9 pr-9 text-[11.5px] font-semibold text-gray-700 outline-none transition-colors focus:border-indigo-400 dark:border-white/10 dark:bg-white/[0.03] dark:text-gray-200"
-                        />
-                        {list.search && (
-                            <button type="button" onClick={() => list.setSearch("")} className="absolute left-2.5 top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded-full text-gray-400 hover:text-gray-600">
-                                <X size={12} />
-                            </button>
-                        )}
                     </div>
 
                     <div className="flex flex-wrap gap-2">

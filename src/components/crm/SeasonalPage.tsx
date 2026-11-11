@@ -1,5 +1,6 @@
 "use client";
 
+import SearchField from "@/components/ui/SearchField";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useEffect, useState } from "react";
 import Link from "next/link";
@@ -357,7 +358,9 @@ function Manage({ basePath }: { basePath: "/admin" | "/user" }) {
         icon={<ListChecks size={16} />}
         title={`فهرست مشتریان فصلی${list.count ? ` (${formatNumber(list.count)})` : ""}`}
         actions={
-          can("seasonal", "create") ? (
+          <>
+            <SearchField value={list.search} onChange={list.setSearch} placeholder="مشتری یا کالا..." />
+            {can("seasonal", "create") ? (
             <Button
               size="sm"
               icon={<Plus size={14} />}
@@ -368,12 +371,10 @@ function Manage({ basePath }: { basePath: "/admin" | "/user" }) {
             >
               افزودن
             </Button>
-          ) : undefined
+            ) : null}
+          </>
         }
       />
-      <div className="mb-3 max-w-sm">
-        <SearchInput value={list.search} onChange={list.setSearch} placeholder="مشتری یا کالا..." hideIcon />
-      </div>
 
       {list.loading ? (
         <TableSkeleton rows={6} cols={4} />

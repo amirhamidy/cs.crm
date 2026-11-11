@@ -426,12 +426,12 @@ export default function AdminInternalTasksBoard(): JSX.Element {
             <div className="flex items-center justify-between gap-4">
                 <div className="flex items-center gap-2.5"><div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-indigo-500/10"><Ticket size={17} className="text-indigo-500" /></div><div><h3 className="text-[14px] font-extrabold text-gray-900 dark:text-white">گفتگوهای کارکنان</h3><p className="text-[11px] text-gray-400 dark:text-gray-600">مشاهده گفتگوهای داخلی و فایل‌های رد و بدل شده</p></div></div>
                 <div className="flex shrink-0 items-center gap-2">
+                    <TicketSearchInput value={list.search} onChange={list.setSearch} />
                     <button type="button" onClick={() => setCreateOpen(true)} className="flex items-center gap-1.5 rounded-2xl bg-indigo-600 px-3.5 py-2 text-[11.5px] font-bold text-white transition-colors hover:bg-indigo-500"><Plus size={13} />تیکت جدید</button>
                     <button type="button" onClick={() => loadData()} disabled={refreshing} className={`flex h-9 w-9 items-center justify-center rounded-2xl bg-gray-100 text-gray-500 transition-colors hover:bg-gray-200 disabled:opacity-40 dark:bg-white/[0.05] dark:text-gray-400 dark:hover:bg-white/[0.08] `} title="به‌روزرسانی">{refreshing ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}</button>
                 </div>
             </div>
 
-            <TicketSearchInput value={list.search} onChange={list.setSearch} />
 
             {error && <div className="flex items-center justify-between gap-3 rounded-2xl border border-red-500/20 bg-red-500/5 px-4 py-3"><p className="text-[12px] font-semibold text-red-500">{error}</p><button type="button" onClick={() => loadData()} className="rounded-xl bg-red-500/10 px-3 py-1.5 text-[11px] font-bold text-red-500">تلاش مجدد</button></div>}
 

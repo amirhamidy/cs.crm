@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, type ReactNode } from "react";
-import { BarChart3, Package, ShoppingBag, TriangleAlert } from "lucide-react";
+import { BarChart3, Package, Repeat, ShoppingBag, TriangleAlert } from "lucide-react";
 import { usePermissions } from "@/hooks/usePermissions";
 import type { RouteTabItem } from "../shared/RouteTabs";
 import { TabbedPageShell } from "../shared/TabbedPageShell";
@@ -38,6 +38,11 @@ export default function SalesShell({
                           href: `${basePath}/sales/products`,
                           label: "کالاها",
                           icon: <Package size={14} />,
+                      },
+                      {
+                          href: `${basePath}/sales/trade-options`,
+                          label: "انواع معامله و بار",
+                          icon: <Repeat size={14} />,
                       },
                   ]
                 : []),

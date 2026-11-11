@@ -127,12 +127,14 @@ export default function SentTicketsBoard() {
                         <p className="text-[11px] text-gray-400 dark:text-gray-600">{list.count} تیکت</p>
                     </div>
                 </div>
+                <div className="flex flex-wrap items-center gap-2">
+                <TicketSearchInput value={list.search} onChange={list.setSearch} />
                 <button type="button" onClick={() => setCreateOpen(true)} className="flex shrink-0 items-center gap-1.5 rounded-2xl bg-indigo-600 px-4 py-2.5 text-[12px] font-bold text-white transition-colors hover:bg-indigo-500">
                     <Plus size={13} />تیکت جدید
                 </button>
+                </div>
             </div>
 
-            <TicketSearchInput value={list.search} onChange={list.setSearch} />
 
             {error && (
                 <div className="flex items-center justify-between gap-3 rounded-2xl border border-red-500/20 bg-red-500/5 px-4 py-3">

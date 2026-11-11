@@ -77,10 +77,21 @@ const counts = (params: Pick<CustomerListParams, "search" | "scope"> = {}) => {
   return cached<CustomerCounts>(
     cacheKey,
     async () => {
-      const { data } = await axiosInstance.get<CustomerCounts>(`${BASE}counts/`, {
-        params: normalized,
-      });
-      return data;
+      const num = (v: unknown) => (Number.isFinite(Number(v)) ? Number(v) : undefined);
+      try {
+        const { data } = await axiosInstance.get<Partial<CustomerCounts> & { counts?: Partial<CustomerCounts> }>(`${BASE}counts/`, {
+          params: normalized,
+        });
+        const d = { ...(data ?? {}), ...(data?.counts ?? {}) } as Partial<CustomerCounts>;
+        const all = num(d.all), potential = num(d.potential), active = num(d.active);
+        if (all !== undefined && potential !== undefined && active !== undefined) {
+          return { all, potential, active, with_case: num(d.with_case) ?? 0 };
+        }
+      } catch {}
+      const count = async (status?: number) =>
+        (await fetchPage<Customer>(BASE, { ...normalized, status, page: 1, page_size: 1 })).count;
+      const [all, potential, active] = await Promise.all([count(), count(1), count(2)]);
+      return { all, potential, active, with_case: 0 };
     },
     COUNTS_TTL,
   );

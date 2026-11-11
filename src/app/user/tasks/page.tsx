@@ -1,8 +1,9 @@
 "use client";
 
+import SearchField from "@/components/ui/SearchField";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence } from "framer-motion";
-import { Archive, ClipboardList, Plus, RefreshCw } from "lucide-react";
+import { Search, Archive, ClipboardList, Plus, RefreshCw } from "lucide-react";
 import { CountSkeleton, TaskCardSkeleton } from "@/components/ui/skeletons";
 import { Spinner as Loader2 } from "@/components/ui/Spinner";
 import { useRouter } from "next/navigation";
@@ -109,6 +110,7 @@ export default function UserTasksPage() {
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+<SearchField value={list.search} onChange={list.setSearch} placeholder="جستجوی وظایف..." />
                     <button type="button" onClick={() => router.push("/user/Ticketarchive")} className="flex h-9 items-center gap-1.5 rounded-xl bg-gray-100 px-3 text-[11.5px] font-bold text-gray-500 transition-colors hover:bg-gray-200 dark:bg-white/5 dark:text-gray-400 dark:hover:bg-white/10">
                         <Archive size={13} /> بایگانی
                     </button>
@@ -124,7 +126,6 @@ export default function UserTasksPage() {
                 </div>
             </div>
 
-            <input value={list.search} onChange={(e) => list.setSearch(e.target.value)} placeholder="جستجو در عنوان یا توضیحات..." className="w-full rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 text-[12.5px] text-gray-700 outline-none transition-colors focus:border-indigo-400 dark:border-white/10 dark:bg-white/[0.03] dark:text-gray-200" />
 
             {loading ? (
                 <TaskCardSkeleton count={6} className="grid grid-cols-1 gap-3 lg:grid-cols-2 xl:grid-cols-3" />

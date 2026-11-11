@@ -13,8 +13,8 @@ export default function AppShell({
             <Topbar />
             <Sidebar />
 
-            <main className="min-h-screen pt-16 mr-16 md:mr-[76px]">
-                <div className="mx-auto max-w-[1600px] p-6">{children}</div>
+            <main className="min-h-screen pt-16 md:mr-[76px]">
+                <div className="mx-auto max-w-[1600px] p-4 md:p-6">{children}</div>
             </main>
         </div>
     );

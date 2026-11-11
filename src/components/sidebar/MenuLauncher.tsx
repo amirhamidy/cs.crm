@@ -130,16 +130,6 @@ export default function MenuLauncher() {
                     placeholder="جست‌وجوی بخش…"
                     className="min-w-0 flex-1 bg-transparent text-[13px] text-white placeholder:text-white/35 focus:outline-none"
                   />
-                  {query && (
-                    <button
-                      type="button"
-                      onClick={() => setQuery("")}
-                      aria-label="پاک کردن جست‌وجو"
-                      className="rounded-lg p-1 text-white/40 transition-colors hover:text-white"
-                    >
-                      <X size={14} />
-                    </button>
-                  )}
                   <span className="hidden items-center gap-1 rounded-lg border border-white/10 px-1.5 py-0.5 text-[10px] text-white/35 md:flex">
                     Esc
                   </span>

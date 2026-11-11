@@ -27,11 +27,6 @@ export default function Topbar() {
             />
           </Link>
 
-          <div className="hidden md:block">
-            <h1 className="text-[14px] font-medium text-gray-900 dark:text-white">
-              داشبورد مدیریت
-            </h1>
-          </div>
         </div>
 
         <div className="flex items-center gap-2">

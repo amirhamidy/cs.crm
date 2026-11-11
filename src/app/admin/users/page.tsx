@@ -1,5 +1,6 @@
 "use client";
 
+import SearchField from "@/components/ui/SearchField";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import { RefreshCw, Search, UserPlus, Users } from "lucide-react";
@@ -269,16 +270,7 @@ export default function UsersPage() {
                 </div>
 
                 <div className="flex items-center gap-2">
-                    <div className="relative">
-                        <Search size={14} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                        <input
-                            type="text"
-                            value={list.search}
-                            onChange={(event) => list.setSearch(event.target.value)}
-                            placeholder="جستجوی کاربر..."
-                            className="h-10 w-40 rounded-2xl border-0 bg-slate-900/5 pl-3 pr-9 text-[12.5px] text-gray-900 outline-none dark:bg-white/5 dark:text-gray-200 sm:w-52"
-                        />
-                    </div>
+                    <SearchField value={list.search} onChange={list.setSearch} placeholder="جستجوی کاربران..." />
                     <button
                         type="button"
                         onClick={handleRefresh}

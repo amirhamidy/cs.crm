@@ -273,7 +273,7 @@ export default function TradeOptionsPanel() {
     }, [load]);
 
     return (
-        <div className="mt-6">
+        <div>
             <div className="mb-3">
                 <h2 className="text-[14px] font-extrabold text-gray-900 dark:text-white">انواع معامله و بار</h2>
                 <p className="mt-1 text-[11px] text-gray-400">گزینه‌هایی که هنگام ثبت معامله انتخاب می‌شوند</p>

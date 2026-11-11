@@ -1,5 +1,6 @@
 "use client";
 
+import SearchField from "@/components/ui/SearchField";
 import { useState, useEffect, useCallback } from "react";
 import { CountSkeleton } from "@/components/ui/skeletons";
 import CustomerCardSkeleton from "./CustomerCardSkeleton";
@@ -140,7 +141,8 @@ export default function CustomersPage() {
                     </div>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
+                    <SearchField value={list.search} onChange={list.setSearch} placeholder="جستجوی نام، شرکت یا شماره تماس..." />
                     <button
                         onClick={refreshAll}
                         disabled={loading}
@@ -173,18 +175,6 @@ export default function CustomersPage() {
                         <span>افزودن مشتری</span>
                     </button>
                 </div>
-            </div>
-
-            <div className="relative">
-                <Search size={15} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                <input
-                    type="search"
-                    value={list.search}
-                    onChange={(event) => list.setSearch(event.target.value)}
-                    placeholder="جستجوی نام، شرکت یا شماره تماس..."
-                    autoComplete="off"
-                    className="h-10 w-full rounded-xl border border-gray-200 bg-white pe-9 ps-3 text-[12px] text-gray-800 outline-none transition-colors placeholder:text-gray-400 focus:border-indigo-400 dark:border-white/10 dark:bg-white/[0.04] dark:text-gray-100"
-                />
             </div>
 
             <div className="flex flex-wrap items-center gap-2">

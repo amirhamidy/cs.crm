@@ -1,8 +1,9 @@
 "use client";
 
+import SearchField from "@/components/ui/SearchField";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence, m } from "framer-motion";
-import { Archive, Check, ClipboardList, Eye, Plus, RefreshCw } from "lucide-react";
+import { Search, Archive, Check, ClipboardList, Eye, Plus, RefreshCw } from "lucide-react";
 import { Spinner as Loader2 } from "@/components/ui/Spinner";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
@@ -152,6 +153,7 @@ function AdminTasksPageContent() {
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2">
+<SearchField value={list.search} onChange={list.setSearch} placeholder="جستجوی وظایف..." />
                     <button
                         type="button"
                         onClick={() => router.push("/admin/archive")}
@@ -193,12 +195,6 @@ function AdminTasksPageContent() {
                 </div>
             </div>
 
-            <input
-                value={list.search}
-                onChange={(e) => list.setSearch(e.target.value)}
-                placeholder="جستجو در عنوان، توضیحات، پرونده، مشتری یا دپارتمان..."
-                className="w-full rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 text-[12.5px] text-gray-700 outline-none transition-colors focus:border-indigo-400 dark:border-white/10 dark:bg-white/[0.03] dark:text-gray-200"
-            />
 
             {loading && <TaskCardSkeleton count={6} />}
 
