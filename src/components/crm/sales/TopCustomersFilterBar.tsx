@@ -39,7 +39,8 @@ export function TopCustomersFilterBar({ open, query, products, onChange }: Props
                 onChange={(by) => onChange({ by })}
             />
             <FilterPanel open={open}>
-                <SalesSelect
+                {products.length > 0 && (
+<SalesSelect
                     dense
                     avatar={false}
                     label="کالا"
@@ -47,6 +48,7 @@ export function TopCustomersFilterBar({ open, query, products, onChange }: Props
                     value={query.product ?? 0}
                     onChange={(id) => onChange({ product: id || undefined })}
                 />
+)}
                 <SalesSelect
                     dense
                     avatar={false}

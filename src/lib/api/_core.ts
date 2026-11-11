@@ -126,7 +126,7 @@ async function runPool<T>(
 
 export async function fetchAllPages<T>(
   fetchPage: (params: { page: number }) => Promise<Paginated<T>>,
-  maxPages = 50,
+  maxPages = 100,
 ): Promise<T[]> {
   const first = await fetchPage({ page: 1 });
   if (!first.next || first.results.length === 0) return first.results;

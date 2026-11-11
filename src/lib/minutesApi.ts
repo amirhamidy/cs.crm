@@ -30,6 +30,11 @@ export const minutesApi = {
     return res.data;
   },
 
+  async replaceMeeting(id: number, payload: MeetingCreatePayload) {
+    const res = await axiosInstance.put<MeetingDetail>(`${BASE}/meeting/${id}/update/`, payload);
+    return res.data;
+  },
+
   async updateMeeting(id: number, payload: MeetingUpdatePayload) {
     const res = await axiosInstance.patch<MeetingDetail>(`${BASE}/meeting/${id}/update/`, payload);
     return res.data;
@@ -56,6 +61,11 @@ export const minutesApi = {
 
   async createSigner(payload: SignerCreatePayload) {
     const res = await axiosInstance.post<SignerItem>(`${BASE}/signer/create/`, payload);
+    return res.data;
+  },
+
+  async replaceSigner(id: number, payload: SignerUpdatePayload) {
+    const res = await axiosInstance.put<SignerItem>(`${BASE}/signer/${id}/update/`, payload);
     return res.data;
   },
 

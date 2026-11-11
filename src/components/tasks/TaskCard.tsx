@@ -4,7 +4,7 @@ import { useState } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, m } from "framer-motion";
 import { useVisibleInterval } from "@/hooks/useVisibility";
-import { Building2, CalendarClock, ClipboardX, Clock, FolderKanban, Paperclip, Pencil, Trash2, UserRound, X, MessageSquareText } from "lucide-react";
+import { Building2, CalendarClock, ClipboardX, Clock, FolderKanban, Paperclip, Pencil, Trash2, UserRound, X, MessageSquareText, Power } from "lucide-react";
 import { useTheme } from "next-themes";
 import type { Task, TaskStatus, TaskEmployeeRef } from "@/types/task";
 import AdminTaskNotesModal from "./AdminTaskNotesModal";
@@ -15,6 +15,7 @@ import { useEmployeeInfo } from "@/hooks/useEmployeeInfo";
 import type { Employee } from "@/types/employee";
 
 import { BusyContent } from "@/components/ui/Button";
+import { toast } from "@/components/notifications/toast";
 const AVATAR_GRADIENTS = [
     ["#6366f1", "#8b5cf6"], ["#3b82f6", "#6366f1"],
     ["#8b5cf6", "#ec4899"], ["#06b6d4", "#6366f1"],
@@ -148,6 +149,7 @@ interface TaskCardProps {
     employees?: Employee[];
     onReorder?: (dragIndex: number, hoverIndex: number) => void;
     canManageDeadline?: boolean;
+    onToggleActive?: (task: Task, nextActive: boolean) => Promise<void> | void;
 }
 
 export default function TaskCard({
@@ -157,6 +159,7 @@ export default function TaskCard({
     onEdit,
     onDelete,
     onUpdated,
+    onToggleActive,
 }: TaskCardProps) {
     const { resolvedTheme } = useTheme();
     const isDark = resolvedTheme === "dark";
@@ -164,6 +167,7 @@ export default function TaskCard({
     const [timeModalOpen, setTimeModalOpen] = useState(false);
     const [showConfirm, setShowConfirm] = useState(false);
     const [deleting, setDeleting] = useState(false);
+    const [togglingActive, setTogglingActive] = useState(false);
     const [deleteError, setDeleteError] = useState<string | null>(null);
     const [savingTime, setSavingTime] = useState(false);
     const [notesModalOpen, setNotesModalOpen] = useState(false);
@@ -187,6 +191,7 @@ export default function TaskCard({
     };
 
     const isActiveTask = !["completed", "cancelled", "sold"].includes(status);
+    const isEnabled = task.active ?? task.is_active ?? true;
     const urgency = isActiveTask ? getDeadlineUrgency(stepDeadline?.deadline) : null;
     const activeUrgency = isActiveUrgency(urgency) ? urgency : null;
     const accent = activeUrgency ? URGENCY_ACCENT[activeUrgency] : null;
@@ -205,6 +210,18 @@ export default function TaskCard({
         60000,
         Boolean(stepDeadline?.deadline) && isActiveTask,
     );
+
+    async function handleToggleActive() {
+        if (!onToggleActive || togglingActive) return;
+        setTogglingActive(true);
+        try {
+            await onToggleActive(task, !isEnabled);
+        } catch {
+            toast.error("تغییر وضعیت فعال‌بودن تسک انجام نشد.");
+        } finally {
+            setTogglingActive(false);
+        }
+    }
 
     async function handleDelete() {
         if (!onDelete) return;
@@ -329,6 +346,11 @@ export default function TaskCard({
 
                         {!readOnly && (
                             <>
+                                {onToggleActive && (
+                                    <button type="button" onClick={handleToggleActive} disabled={togglingActive} className={`flex h-7 w-7 items-center justify-center rounded-xl disabled:opacity-40 ${isEnabled ? "bg-amber-500/10 text-amber-500" : "bg-emerald-500/10 text-emerald-500"}`} title={isEnabled ? "غیرفعال‌سازی تسک" : "فعال‌سازی تسک"}>
+                                        <BusyContent busy={togglingActive}><Power size={11} /></BusyContent>
+                                    </button>
+                                )}
                                 <button onClick={openTimeModal} className="flex h-7 w-7 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-400" title="تعیین بازه زمانی">
                                     <Clock size={11} />
                                 </button>

@@ -1,7 +1,7 @@
 import { toJalali, toPersianDigits, JALALI_MONTHS, pad2 } from "@/lib/jalali";
 
-/** واحد پول در کل پنل؛ اگر شرکت با «تومان» کار می‌کند فقط همین را عوض کنید. */
-export const CURRENCY_LABEL = "ریال";
+/** واحد پول در کل پنل؛ طبق API.md قیمت‌ها «تومان» هستند. */
+export const CURRENCY_LABEL = "تومان";
 
 const nf = new Intl.NumberFormat("fa-IR", { maximumFractionDigits: 0 });
 const nf2 = new Intl.NumberFormat("fa-IR", { maximumFractionDigits: 2 });
@@ -73,4 +73,35 @@ export const isPositiveNumber = (raw: string) => {
 export const todayIso = () => {
   const d = new Date();
   return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+};
+
+/** کیلوگرم → تن (عدد) */
+export const kgToTon = (kg: string | number | null | undefined) => toNumber(kg) / 1000;
+
+/** تن → کیلوگرم، رشتهٔ حداکثر ۳ رقم اعشار برای ارسال به API */
+export const tonToKg = (ton: string | number): string => {
+  const n = typeof ton === "number" ? ton : Number(cleanDecimal(ton));
+  if (!Number.isFinite(n)) return "";
+  return String(Math.round(n * 1000 * 1000) / 1000);
+};
+
+/** نمایش وزن به تن با حداکثر ۳ رقم اعشار */
+export const formatTon = (kg: string | number | null | undefined) =>
+  `${nf3.format(kgToTon(kg))} تن`;
+
+/** «HH:mm» یا «HH:mm:ss» → «HH:mm» با ارقام فارسی */
+export const formatTime = (value: string | null | undefined) =>
+  value ? toPersianDigits(value.slice(0, 5)) : "—";
+
+/** ساعت محلی فعلی به شکل HH:mm */
+export const nowTime = () => {
+  const d = new Date();
+  return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+};
+
+/** آیا عدد خام حداکثر n رقم اعشار دارد؟ */
+export const hasAtMostDecimals = (raw: string, n: number) => {
+  const c = cleanDecimal(raw);
+  const i = c.indexOf(".");
+  return i < 0 || c.length - i - 1 <= n;
 };

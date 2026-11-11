@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, m, MotionConfig } from "framer-motion";
 import { CalendarDays, Clock3, Send, StickyNote, Tag, Trash2, UserRound, X } from "lucide-react";
-import axiosInstance from "@/lib/axiosInstance";
+import { notesApi } from "@/lib/api/notes";
 import { useAuthStore } from "@/store/authStore";
 
 import { BusyContent } from "@/components/ui/Button";
@@ -141,7 +141,7 @@ function DayPanel({ onClose, selectedDate, notes, events, onCreated, onDeleted }
         setSubmitting(true);
         setError("");
         try {
-            const { data } = await axiosInstance.post<CalendarNote>("/note/api/v1/create/", { user: Number(userId), description: description.trim() });
+            const data = await notesApi.create({ user: Number(userId), description: description.trim() });
             onCreated(data);
             setDescription("");
         } catch (err) {
@@ -153,7 +153,7 @@ function DayPanel({ onClose, selectedDate, notes, events, onCreated, onDeleted }
         setDeletingId(id);
         setError("");
         try {
-            await axiosInstance.delete(`/note/api/v1/${id}/delete/`);
+            await notesApi.remove(id);
             onDeleted(id);
         } catch (err) {
             console.error(err);

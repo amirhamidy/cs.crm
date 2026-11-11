@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { BusyContent } from "@/components/ui/Button";
 import { Send } from "lucide-react";
-import axiosInstance from "@/lib/axiosInstance";
+import { notesApi } from "@/lib/api/notes";
 import { useAuthStore } from "@/store/authStore";
 
 interface CompanyNewsProps {
@@ -28,7 +28,7 @@ export default function CompanyNews({
         setSubmitting(true);
 
         try {
-            await axiosInstance.post("/note/api/v1/create/", {
+            await notesApi.create({
                 user: Number(userId),
                 description: cleanDescription,
             });

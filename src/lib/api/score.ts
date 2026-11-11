@@ -25,6 +25,9 @@ export const scoreApi = {
       TTL,
     ),
 
+  history: async <T = unknown>(employeeId: number, params: Record<string, string | number | boolean | undefined> = {}) =>
+    (await axiosInstance.get<T>(`${BASE}/employees/${employeeId}/history/`, { params })).data,
+
   adjust: async (employeeId: number, payload: AdjustScorePayload) => {
     const { data } = await axiosInstance.post(
       `${BASE}/admin/employees/${employeeId}/adjust/`,

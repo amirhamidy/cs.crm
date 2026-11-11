@@ -147,8 +147,12 @@ export default function CustomerProfilePage({ basePath }: { basePath: "/admin" |
                 onChange={setTab}
                 items={[
                     { key: "overview", label: "خلاصه", icon: <LayoutDashboard size={14} /> },
-                    { key: "comments", label: "نظرات", icon: <MessageCircle size={14} /> },
-                    { key: "sales", label: "خرید و فروش", icon: <ShoppingBag size={14} /> },
+                    ...(can("customer_comments", "view")
+                        ? [{ key: "comments" as const, label: "نظرات", icon: <MessageCircle size={14} /> }]
+                        : []),
+                    ...(can("sales", "view")
+                        ? [{ key: "sales" as const, label: "خرید و فروش", icon: <ShoppingBag size={14} /> }]
+                        : []),
                     { key: "path", label: "مسیر پرونده‌ها", icon: <FolderKanban size={14} /> },
                     ...(can("customer_credentials", "view")
                         ? [
@@ -169,7 +173,7 @@ export default function CustomerProfilePage({ basePath }: { basePath: "/admin" |
                     refreshKey={refreshKey}
                 />
             )}
-            {tab === "comments" && <CommentsTab customerId={customerId} />}
+            {tab === "comments" && can("customer_comments", "view") && <CommentsTab customerId={customerId} />}
             {tab === "sales" && (
                 <SalesTab
                     customerId={customerId}

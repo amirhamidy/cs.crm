@@ -22,7 +22,7 @@ import type { FeedProduct } from "@/types/crm";
 export interface SoldSaleData {
     product: number;
     quantity_kg: string;
-    unit_price: string;
+    sell_price: string;
     sale_date: string;
     description: string;
     score: number;
@@ -99,7 +99,7 @@ export default function SoldSaleModal({
             await onSubmit({
                 product: productId,
                 quantity_kg: cleanDecimal(quantity),
-                unit_price: cleanDecimal(price),
+                sell_price: cleanDecimal(price),
                 sale_date: saleDate,
                 description: description.trim(),
                 score,

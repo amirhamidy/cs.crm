@@ -29,6 +29,7 @@ import {
     initialOf,
 } from "../shared/kit";
 import { cn } from "@/lib/utils";
+import TradeOptionsPanel from "./TradeOptionsPanel";
 
 function ProductCard({
     product,
@@ -278,6 +279,8 @@ function ProductsPanel() {
             <p className="px-1 text-[10.5px] font-semibold leading-5 text-gray-400">
                 کالایی که در فروش‌ها استفاده شده قابل حذف نیست؛ آن را غیرفعال کنید تا در فروش‌های جدید نمایش داده نشود.
             </p>
+
+            <TradeOptionsPanel />
 
             <ConfirmDialog
                 open={toDelete != null}

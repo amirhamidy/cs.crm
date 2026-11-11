@@ -90,6 +90,11 @@ export const departmentsApi = {
   list,
   listPage: page<Department>(URLS.list, "list"),
 
+  choices: async () => {
+    const { data } = await axiosInstance.get<Department[] | { results: Department[] }>(`${BASE}/department/choices/`);
+    return Array.isArray(data) ? data : data.results;
+  },
+
   search: createSearch<Department>({
     key: KEY,
     url: URLS.list,
@@ -114,6 +119,12 @@ export const departmentsApi = {
 
   update: async <R = Department>(id: number, payload: DepartmentPayload) => {
     const { data } = await axiosInstance.put<R>(URLS.update(id), payload);
+    invalidate(KEY);
+    return data;
+  },
+
+  patch: async <R = Department>(id: number, payload: Partial<DepartmentPayload>) => {
+    const { data } = await axiosInstance.patch<R>(URLS.update(id), payload);
     invalidate(KEY);
     return data;
   },
@@ -154,6 +165,12 @@ export const departmentsApi = {
     return data;
   },
 
+  patchStep: async <R = DepartmentStep>(id: number, payload: Partial<DepartmentStepUpdatePayload>) => {
+    const { data } = await axiosInstance.patch<R>(URLS.stepUpdate(id), payload);
+    invalidate(KEY);
+    return data;
+  },
+
   removeStep: async (id: number) => {
     const { data } = await axiosInstance.delete(URLS.stepRemove(id));
     invalidate(KEY);
@@ -184,6 +201,12 @@ export const departmentsApi = {
     payload: DepartmentEmployeeCreatePayload,
   ) => {
     const { data } = await axiosInstance.post<R>(URLS.employeeCreate, payload);
+    invalidate(KEY);
+    return data;
+  },
+
+  replaceAssignment: async (id: number, payload: DepartmentEmployeeUpdatePayload) => {
+    const { data } = await axiosInstance.put<DepartmentEmployee>(URLS.employeeUpdate(id), payload);
     invalidate(KEY);
     return data;
   },

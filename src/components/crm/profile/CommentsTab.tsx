@@ -9,6 +9,7 @@ import Pagination from "@/components/ui/Pagination";
 import { ListSkeleton } from "@/components/ui/skeletons";
 import { toast } from "@/components/notifications/toast";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
+import { usePermissions } from "@/hooks/usePermissions";
 import { commentsApi } from "@/lib/api";
 import { apiMessage } from "@/lib/apiMessage";
 import { formatJalaliDateTime } from "@/lib/crm/format";
@@ -21,10 +22,14 @@ function CommentItem({
     comment,
     onEdit,
     onDelete,
+    canEdit,
+    canDelete,
 }: {
     comment: CustomerComment;
     onEdit: (c: CustomerComment, text: string) => Promise<void>;
     onDelete: (c: CustomerComment) => void;
+    canEdit: boolean;
+    canDelete: boolean;
 }) {
     const [editing, setEditing] = useState(false);
     const [text, setText] = useState(comment.text);
@@ -68,9 +73,9 @@ function CommentItem({
                     </div>
                 </div>
 
-                {comment.can_edit && !editing && (
+                {comment.can_edit && (canEdit || canDelete) && !editing && (
                     <div className="flex shrink-0 items-center gap-1">
-                        <button
+                        {canEdit && <button
                             type="button"
                             aria-label="ویرایش نظر"
                             onClick={() => {
@@ -80,15 +85,15 @@ function CommentItem({
                             className="flex h-8 w-8 items-center justify-center rounded-xl text-gray-400 transition-colors hover:bg-transparent hover:text-gray-700 dark:hover:bg-white/10"
                         >
                             <Pencil size={14} />
-                        </button>
-                        <button
+                        </button>}
+                        {canDelete && <button
                             type="button"
                             aria-label="حذف نظر"
                             onClick={() => onDelete(comment)}
                             className="flex h-8 w-8 items-center justify-center rounded-xl text-gray-400 transition-colors hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-500/10"
                         >
                             <Trash2 size={14} />
-                        </button>
+                        </button>}
                     </div>
                 )}
             </div>
@@ -143,6 +148,12 @@ export default function CommentsTab({
     customerId: number;
     onChanged?: () => void;
 }) {
+    const { can } = usePermissions();
+    const canView = can("customer_comments", "view");
+    const canCreate = can("customer_comments", "create");
+    const canEdit = can("customer_comments", "edit");
+    const canDelete = can("customer_comments", "delete");
+
     const list = usePaginatedList<CustomerComment>(
         (params, signal) => commentsApi.page(customerId, params, signal),
         { pageSize: 10 },
@@ -202,7 +213,7 @@ export default function CommentsTab({
 
     return (
         <div className="flex flex-col gap-4">
-            <Card>
+            {canCreate && <Card>
                 <SectionTitle
                     icon={<MessageSquarePlus size={16} />}
                     title="نظر جدید درباره این مشتری"
@@ -229,7 +240,7 @@ export default function CommentsTab({
                         ثبت نظر
                     </Button>
                 </div>
-            </Card>
+            </Card>}
 
             <Card>
                 <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
@@ -268,6 +279,8 @@ export default function CommentsTab({
                                     key={c.id}
                                     comment={c}
                                     onEdit={edit}
+                                    canEdit={canEdit}
+                                    canDelete={canDelete}
                                     onDelete={(item) => {
                                         setDeleteError(null);
                                         setToDelete(item);

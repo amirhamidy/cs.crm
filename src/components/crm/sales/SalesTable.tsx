@@ -13,10 +13,12 @@ interface Props {
     onEdit: (sale: Sale) => void;
     onDelete: (sale: Sale) => void;
     onDetails?: (sale: Sale) => void;
+    onReturn?: (sale: Sale) => void;
+    onUndoReturn?: (sale: Sale) => void;
     compact?: boolean;
 }
 
-function SalesTable({ sales, canModify, onEdit, onDelete, onDetails, compact = false }: Props) {
+function SalesTable({ sales, canModify, onEdit, onDelete, onDetails, onReturn, onUndoReturn, compact = false }: Props) {
     const { can } = usePermissions();
     const allowEdit = can("sales", "edit");
     const allowDelete = can("sales", "delete");
@@ -34,6 +36,8 @@ function SalesTable({ sales, canModify, onEdit, onDelete, onDetails, compact = f
                             onEdit={onEdit}
                             onDelete={onDelete}
                             onDetails={onDetails}
+                            onReturn={onReturn}
+                            onUndoReturn={onUndoReturn}
                         />
                     </Stagger>
                 );

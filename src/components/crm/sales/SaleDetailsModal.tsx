@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { FloatingInput, FloatingTextarea } from "@/components/ui/FloatingField";
 import { Spinner } from "@/components/ui/Spinner";
 import { toast } from "@/components/notifications/toast";
-import { attachmentsApi, issuesApi } from "@/lib/api";
+import { attachmentsApi, issuesApi, salesApi } from "@/lib/api";
 import { apiMessage } from "@/lib/apiMessage";
 import {
     cleanDecimal,
@@ -16,9 +16,10 @@ import {
     formatMoney,
     formatWeight,
     isPositiveNumber,
+    toNumber,
     todayIso,
 } from "@/lib/crm/format";
-import type { IssueStatus, IssueType, LoadIssue, SaleAttachment } from "@/types/crm";
+import type { IssueStatus, IssueType, LoadIssue, Sale, SaleAttachment } from "@/types/crm";
 import JalaliDateField from "../shared/JalaliDateField";
 import { Segmented } from "../shared/Segmented";
 
@@ -54,6 +55,7 @@ export default function SaleDetailsModal({ open, saleId, title, onClose, onChang
     const { can } = usePermissions();
     const [files, setFiles] = useState<SaleAttachment[]>([]);
     const [issues, setIssues] = useState<LoadIssue[]>([]);
+    const [sale, setSale] = useState<Sale | null>(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
     const [uploading, setUploading] = useState(false);
@@ -70,12 +72,14 @@ export default function SaleDetailsModal({ open, saleId, title, onClose, onChang
             setLoading(true);
             setError("");
             try {
-                const [f, i] = await Promise.all([
+                const [f, i, saleDetail] = await Promise.all([
                     attachmentsApi.list(saleId, signal),
                     issuesApi.forSale(saleId, signal),
+                    salesApi.get(saleId, signal),
                 ]);
                 setFiles(f);
                 setIssues(i);
+                setSale(saleDetail);
             } catch (e) {
                 if (!signal?.aborted) setError(apiMessage(e, "دریافت اطلاعات ناموفق بود"));
             } finally {
@@ -127,6 +131,12 @@ export default function SaleDetailsModal({ open, saleId, title, onClose, onChang
 
     async function addIssue() {
         if (saleId == null || !isPositiveNumber(qty)) return;
+        const existingKg = issues.reduce((sum, issue) => sum + toNumber(issue.quantity_kg), 0);
+        const effectiveKg = toNumber(sale?.effective_quantity_kg);
+        if (toNumber(qty) + existingKg > effectiveKg + 0.000001) {
+            setError(`مجموع کسری، سرک و بار برگشتی نمی‌تواند از وزن مؤثر معامله (${formatWeight(effectiveKg)}) بیشتر شود.`);
+            return;
+        }
         setSaving(true);
         setError("");
         try {

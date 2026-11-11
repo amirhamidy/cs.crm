@@ -27,6 +27,8 @@ export interface CaseItem {
   description?: string;
   customer?: number | Pick<Customer, "id" | "name"> | null;
   status?: CaseStatus;
+  active?: boolean;
+  is_active?: boolean;
   created_at?: string;
   updated_at?: string;
   customerName?: string;

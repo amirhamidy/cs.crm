@@ -12,6 +12,7 @@ import { usePaginatedList } from "@/hooks/usePaginatedList";
 import { salesApi } from "@/lib/api";
 import { apiMessage } from "@/lib/apiMessage";
 import { useAuthStore } from "@/store/authStore";
+import { usePermissions } from "@/hooks/usePermissions";
 import type { Sale } from "@/types/crm";
 import SaleFormModal from "../sales/SaleFormModal";
 import SalesTable from "../sales/SalesTable";
@@ -27,10 +28,12 @@ interface Props {
 export default function SalesTab({ customerId, customerName, onChanged }: Props) {
     const userId = useAuthStore((s) => s.userId);
     const userType = useAuthStore((s) => s.userType);
+    const { can } = usePermissions();
+    const canViewSales = can("sales", "view");
 
     const list = usePaginatedList<Sale>(
         (params, signal) => salesApi.page({ ...params, customer: customerId }, signal),
-        { pageSize: 10 },
+        { pageSize: 10, enabled: canViewSales },
     );
 
     const [formOpen, setFormOpen] = useState(false);
@@ -39,8 +42,11 @@ export default function SalesTab({ customerId, customerName, onChanged }: Props)
     const [toDelete, setToDelete] = useState<Sale | null>(null);
     const [deleting, setDeleting] = useState(false);
     const [deleteError, setDeleteError] = useState<string | null>(null);
+    const [returnTarget, setReturnTarget] = useState<{ sale: Sale; undo: boolean } | null>(null);
+    const [returning, setReturning] = useState(false);
+    const [returnError, setReturnError] = useState<string | null>(null);
 
-    const canModify = (s: Sale) => userType === 1 || s.created_by === userId;
+    const canModify = (s: Sale) => userType === 1 || (userId != null && (s.created_by === userId || s.trader === userId));
 
     async function confirmDelete() {
         if (!toDelete) return;
@@ -59,22 +65,44 @@ export default function SalesTab({ customerId, customerName, onChanged }: Props)
         }
     }
 
+    async function confirmReturn() {
+        if (!returnTarget) return;
+        setReturning(true);
+        setReturnError(null);
+        try {
+            if (returnTarget.undo) await salesApi.undoReturn(returnTarget.sale.id);
+            else await salesApi.markReturned(returnTarget.sale.id);
+            setReturnTarget(null);
+            list.refetch();
+            onChanged?.();
+            toast.success(returnTarget.undo ? "برگشت معامله لغو شد" : "معامله برگشت خورد");
+        } catch (error) {
+            setReturnError(apiMessage(error, "عملیات ناموفق بود"));
+        } finally {
+            setReturning(false);
+        }
+    }
+
+    if (!canViewSales) return null;
+
     return (
         <Card>
             <SectionTitle
                 icon={<ShoppingBag size={16} />}
                 title="خرید و فروش‌های ثبت‌شده"
                 actions={
-                    <Button
-                        size="sm"
-                        icon={<Plus size={14} />}
-                        onClick={() => {
-                            setEditing(null);
-                            setFormOpen(true);
-                        }}
-                    >
-                        ثبت معامله
-                    </Button>
+                    can("sales", "create") && can("products", "view") && can("customers", "view") ? (
+                        <Button
+                            size="sm"
+                            icon={<Plus size={14} />}
+                            onClick={() => {
+                                setEditing(null);
+                                setFormOpen(true);
+                            }}
+                        >
+                            ثبت معامله
+                        </Button>
+                    ) : null
                 }
             />
 
@@ -102,6 +130,14 @@ export default function SalesTab({ customerId, customerName, onChanged }: Props)
                         onDelete={(s) => {
                             setDeleteError(null);
                             setToDelete(s);
+                        }}
+                        onReturn={(sale) => {
+                            setReturnError(null);
+                            setReturnTarget({ sale, undo: false });
+                        }}
+                        onUndoReturn={(sale) => {
+                            setReturnError(null);
+                            setReturnTarget({ sale, undo: true });
                         }}
                     />
                     {list.totalPages > 1 && (
@@ -138,6 +174,17 @@ export default function SalesTab({ customerId, customerName, onChanged }: Props)
                     list.refetch();
                     onChanged?.();
                 }}
+            />
+
+            <ConfirmDialog
+                open={returnTarget != null}
+                title={returnTarget?.undo ? "لغو برگشت معامله" : "برگشت معامله"}
+                message={returnTarget?.undo ? "معامله دوباره در محاسبات فعال می‌شود. ادامه می‌دهید؟" : "این معامله برگشت‌خورده علامت‌گذاری می‌شود و از گزارش‌ها کنار می‌رود. ادامه می‌دهید؟"}
+                confirmLabel="تأیید"
+                loading={returning}
+                error={returnError}
+                onConfirm={confirmReturn}
+                onCancel={() => setReturnTarget(null)}
             />
 
             <ConfirmDialog

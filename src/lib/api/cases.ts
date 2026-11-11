@@ -48,6 +48,30 @@ export const casesApi = {
     return data;
   },
 
+  replace: async (id: number, payload: CreateCasePayload) => {
+    const { data } = await axiosInstance.put<CaseItem>(`${BASE}${id}/update/`, payload);
+    invalidate(KEY);
+    return data;
+  },
+
+  update: async (id: number, payload: Partial<CreateCasePayload>) => {
+    const { data } = await axiosInstance.patch<CaseItem>(`${BASE}${id}/update/`, payload);
+    invalidate(KEY);
+    return data;
+  },
+
+  activate: async (id: number) => {
+    const { data } = await axiosInstance.post<CaseItem>(`${BASE}${id}/activate/`);
+    invalidate(KEY);
+    return data;
+  },
+
+  deactivate: async (id: number) => {
+    const { data } = await axiosInstance.post<CaseItem>(`${BASE}${id}/deactivate/`);
+    invalidate(KEY);
+    return data;
+  },
+
   remove: async (id: number) => {
     await axiosInstance.delete(`${BASE}${id}/delete/`);
     invalidate(KEY);

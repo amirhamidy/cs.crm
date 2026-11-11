@@ -4,7 +4,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { AnimatePresence, MotionConfig, m } from "framer-motion";
 import { CalendarCheck, CalendarClock, CalendarDays, CalendarRange, Check, ChevronDown, ChevronLeft, ChevronRight, ListFilter, Plus, StickyNote } from "lucide-react";
 import api from "@/lib/axiosInstance";
-import { listAll } from "@/lib/api/index";
+import { listAll, notesApi } from "@/lib/api";
 import { toJalali, toGregorian, jalaliMonthLength, jalaliWeekday, toPersianDigits, JALALI_MONTHS, pad2 } from "@/lib/jalali";
 import CalendarNoteModal, {
     CalendarNote,
@@ -327,7 +327,7 @@ export default function PersianCalendar() {
     const endISO = visibleMonths[visibleMonths.length - 1]?.endISO ?? "";
     useEffect(() => {
         let cancelled = false;
-        listAll<CalendarNote>("/note/api/v1/")
+        notesApi.list()
             .then((all) => {
                 if (!cancelled) setNotes(all);
             })

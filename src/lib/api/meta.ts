@@ -4,7 +4,7 @@ import { accountsApi } from "./accounts";
 import { departmentsApi } from "./departments";
 
 export const metaApi = {
-  departments: (): Promise<Department[]> => departmentsApi.list(),
+  departments: (): Promise<Department[]> => departmentsApi.choices(),
 
   employees: async (): Promise<Employee[]> => {
     const list = await accountsApi.employees.all();

@@ -25,7 +25,7 @@ function Panel({ title, hint, children }: { title: string; hint: string; childre
 }
 
 export default function TopCustomersCharts({ rows, by }: { rows: TopCustomerRow[]; by: "amount" | "quantity" }) {
-    const unit = by === "amount" ? "ریال" : "کیلوگرم";
+    const unit = by === "amount" ? "تومان" : "کیلوگرم";
     const data = rows.map((r) => ({
         name: r.full_name || r.company_name,
         value: toNumber(by === "amount" ? r.total_amount : r.total_quantity_kg),

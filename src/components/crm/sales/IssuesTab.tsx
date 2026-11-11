@@ -1,13 +1,16 @@
 "use client";
 
-import { memo, useState } from "react";
+import { memo, useEffect, useState } from "react";
+import AsyncSelect, { type AsyncOption } from "@/components/ui/AsyncSelect";
+import { customersApi, issuesApi, salesApi } from "@/lib/api";
+import type { Customer } from "@/types/customer";
+import { usePermissions } from "@/hooks/usePermissions";
 import { CalendarDays, CheckCircle2, Clock, Eye, TriangleAlert } from "lucide-react";
 import Pagination from "@/components/ui/Pagination";
 import { HumanResourceCardSkeleton } from "@/components/ui/skeletons";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
-import { issuesApi } from "@/lib/api";
 import { formatJalaliDate, formatMoney, formatNumber, formatWeight, toNumber } from "@/lib/crm/format";
-import type { IssueStatus, LoadIssue } from "@/types/crm";
+import type { IssueStatus, IssueType, LoadIssue, Sale } from "@/types/crm";
 import type { SearchParams } from "@/types/pagination";
 import {
     CARD_HOVER,
@@ -27,10 +30,18 @@ import {
 import { cn } from "@/lib/utils";
 import SaleDetailsModal from "./SaleDetailsModal";
 
-type Filter = "active" | IssueStatus | "all";
+type Filter = IssueStatus | "all";
+type IssueTypeFilter = IssueType | "all";
+type IssueFilters = {
+    filter: Filter;
+    issueType: IssueTypeFilter;
+    customer: number | undefined;
+    sale: number | undefined;
+};
 
 const FILTERS: { value: Filter; label: string }[] = [
-    { value: "active", label: "نیازمند پیگیری" },
+    { value: "open", label: "باز" },
+    { value: "in_progress", label: "در حال پیگیری" },
     { value: "resolved", label: "حل‌شده" },
     { value: "all", label: "همه" },
 ];
@@ -47,24 +58,18 @@ const STATUS_ICON = {
     resolved: CheckCircle2,
 };
 
-async function fetchIssues(params: SearchParams & { filter: Filter }, signal: AbortSignal) {
-    const { page, page_size, filter } = params;
-
-    if (filter === "active") {
-        const [open, inProgress] = await Promise.all([
-            issuesApi.page({ page, page_size, status: "open" }, signal),
-            issuesApi.page({ page, page_size, status: "in_progress" }, signal),
-        ]);
-        return {
-            count: open.count + inProgress.count,
-            next: open.next ?? inProgress.next,
-            previous: open.previous ?? inProgress.previous,
-            results: [...open.results, ...inProgress.results],
-        };
-    }
+async function fetchIssues(params: SearchParams & IssueFilters, signal: AbortSignal) {
+    const { page, page_size, filter, issueType, customer, sale } = params;
+    const common = {
+        page,
+        page_size,
+        type: issueType === "all" ? undefined : issueType,
+        customer,
+        sale,
+    };
 
     return issuesApi.page(
-        { page, page_size, status: filter === "all" ? undefined : filter },
+        { ...common, status: filter === "all" ? undefined : filter },
         signal,
     );
 }
@@ -133,12 +138,26 @@ const IssueCard = memo(function IssueCard({
 
 export default function IssuesTab() {
     const [opened, setOpened] = useState<LoadIssue | null>(null);
+    const [selectedCustomer, setSelectedCustomer] = useState<AsyncOption | null>(null);
+    const [selectedSale, setSelectedSale] = useState<AsyncOption | null>(null);
+    const { can } = usePermissions();
+    const canViewCustomers = can("customers", "view");
 
-    const list = usePaginatedList<LoadIssue, { filter: Filter }>(fetchIssues, {
+    const list = usePaginatedList<LoadIssue, IssueFilters>(fetchIssues, {
         pageSize: 15,
-        filters: { filter: "active" },
+        filters: { filter: "open", issueType: "all", customer: undefined, sale: undefined },
     });
-    const { filter } = list.filters;
+    const { filter, issueType, customer, sale } = list.filters;
+
+    useEffect(() => {
+        if (!customer) setSelectedCustomer(null);
+        if (!sale) setSelectedSale(null);
+    }, [customer, sale]);
+
+    const customerFetcher = (params: { page: number; page_size: number; search?: string }, signal: AbortSignal) =>
+        customersApi.page(params, signal);
+    const saleFetcher = (params: { page: number; page_size: number; search?: string }, signal: AbortSignal) =>
+        salesApi.page(params, signal);
 
     const pageLoss = list.data.reduce((a, x) => a + toNumber(x.loss_amount), 0);
     const pageKg = list.data.reduce((a, x) => a + toNumber(x.quantity_kg), 0);
@@ -158,12 +177,59 @@ export default function IssuesTab() {
                     { label: "زیان این صفحه", value: formatMoney(pageLoss), tone: "rose" },
                 ]}
                 footer={
-                    <FilterChips
-                        label="وضعیت پیگیری"
-                        items={FILTERS}
-                        value={filter}
-                        onChange={(value) => list.setFilters({ filter: value })}
-                    />
+                    <div className="flex flex-col gap-3">
+                        <FilterChips
+                            label="وضعیت پیگیری"
+                            items={FILTERS}
+                            value={filter}
+                            onChange={(value) => list.setFilters({ filter: value })}
+                        />
+                        <FilterChips
+                            label="نوع مورد"
+                            items={[
+                                { value: "all", label: "همه انواع" },
+                                { value: "shortage", label: "کسری" },
+                                { value: "spillage", label: "سرک" },
+                                { value: "returned", label: "بار برگشتی" },
+                            ]}
+                            value={issueType}
+                            onChange={(value) => list.setFilters({ issueType: value as IssueTypeFilter })}
+                        />
+                        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                            {canViewCustomers && (
+                                <div className="flex min-w-0 items-end gap-1.5">
+                                    <div className="min-w-0 flex-1">
+                                        <AsyncSelect<Customer>
+                                            label="مشتری"
+                                            placeholder="همه مشتری‌ها"
+                                            emptyText="مشتری‌ای یافت نشد"
+                                            value={customer ?? null}
+                                            selected={selectedCustomer}
+                                            fetcher={customerFetcher}
+                                            toOption={(item) => ({ id: item.id, label: item.full_name, sub: item.company_name || undefined })}
+                                            onChange={(option) => { setSelectedCustomer(option); list.setFilters({ customer: option.id }); }}
+                                        />
+                                    </div>
+                                    {customer != null && <button type="button" onClick={() => { setSelectedCustomer(null); list.setFilters({ customer: undefined }); }} className="mb-0.5 h-9 shrink-0 rounded-lg px-2 text-[10px] font-bold text-gray-400 hover:bg-gray-100 dark:hover:bg-white/[0.06]">پاک کردن</button>}
+                                </div>
+                            )}
+                            <div className="flex min-w-0 items-end gap-1.5">
+                                <div className="min-w-0 flex-1">
+                                    <AsyncSelect<Sale>
+                                        label="معامله"
+                                        placeholder="همه معامله‌ها"
+                                        emptyText="معامله‌ای یافت نشد"
+                                        value={sale ?? null}
+                                        selected={selectedSale}
+                                        fetcher={saleFetcher}
+                                        toOption={(item) => ({ id: item.id, label: item.summary_label, sub: item.product_name })}
+                                        onChange={(option) => { setSelectedSale(option); list.setFilters({ sale: option.id }); }}
+                                    />
+                                </div>
+                                {sale != null && <button type="button" onClick={() => { setSelectedSale(null); list.setFilters({ sale: undefined }); }} className="mb-0.5 h-9 shrink-0 rounded-lg px-2 text-[10px] font-bold text-gray-400 hover:bg-gray-100 dark:hover:bg-white/[0.06]">پاک کردن</button>}
+                            </div>
+                        </div>
+                    </div>
                 }
             />
 
@@ -187,7 +253,7 @@ export default function IssuesTab() {
                 </div>
             )}
 
-            {list.totalPages > 1 && filter !== "active" && (
+            {list.totalPages > 1 && (
                 <Pagination page={list.page} totalPages={list.totalPages} onChange={list.setPage} />
             )}
 

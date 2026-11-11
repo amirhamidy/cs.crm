@@ -2,11 +2,13 @@
 
 import { useState, useEffect, useCallback, useRef, forwardRef, InputHTMLAttributes, TextareaHTMLAttributes } from "react";
 import { m, AnimatePresence, useReducedMotion } from "framer-motion";
+import { usePermissions } from "@/hooks/usePermissions";
 import { Backdrop } from "@/components/ui/Backdrop";
 import { panelMotion } from "@/lib/motion";
 import { X, SquarePen, CheckCircle2, ChevronDown, Check, Plus } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
-import { listAll } from "@/lib/api";
+import { isValidCustomerPhone, normalizePhoneNumber } from "@/lib/crm/phone";
+import { caseResourcesApi } from "@/lib/api";
 import type { Customer, CustomerFormData } from "@/types/customer";
 
 import { BusyContent } from "@/components/ui/Button";
@@ -290,6 +292,8 @@ interface SourceSelectProps {
     creating: boolean;
     onDelete: (e: React.MouseEvent, id: number) => void;
     deletingId: number | null;
+    canCreate: boolean;
+    canDelete: boolean;
 }
 
 function SourceSelect({
@@ -307,6 +311,8 @@ function SourceSelect({
     creating,
     onDelete,
     deletingId,
+    canCreate,
+    canDelete,
 }: SourceSelectProps) {
     const [open, setOpen] = useState(false);
     const [dropUp, setDropUp] = useState(false);
@@ -389,7 +395,7 @@ function SourceSelect({
                             <span className="text-[10.5px] font-bold text-gray-400">
                                 منابع
                             </span>
-                            {!isAdding && (
+                            {!isAdding && canCreate && (
                                 <button
                                     type="button"
                                     onClick={onStartAdd}
@@ -473,7 +479,7 @@ function SourceSelect({
                                                     </span>
                                                     <span className="flex shrink-0 items-center gap-1.5">
                                                         {active && <Check size={14} className="text-white" />}
-                                                        <span
+                                                        {canDelete && <span
                                                             role="button"
                                                             tabIndex={0}
                                                             onClick={(e) => onDelete(e, opt.id)}
@@ -483,7 +489,7 @@ function SourceSelect({
                                                                 }`}
                                                         >
                                                             <X size={11} strokeWidth={2.5} />
-                                                        </span>
+                                                        </span>}
                                                     </span>
                                                 </BusyContent>
                                             </button>
@@ -524,6 +530,10 @@ export default function CustomerEditModal({
     onEdited,
 }: Props) {
     const reduced = useReducedMotion() ?? false;
+    const { can } = usePermissions();
+    const canViewCaseResources = can("cases", "view");
+    const canCreateCaseResources = can("cases", "create");
+    const canDeleteCaseResources = can("cases", "delete");
     const [form, setForm] = useState<CustomerFormData>(EMPTY_FORM);
     const [isLoadingDetails, setIsLoadingDetails] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -538,16 +548,19 @@ export default function CustomerEditModal({
     const [deletingResourceId, setDeletingResourceId] = useState<number | null>(null);
 
     const fetchResourcesList = useCallback(async () => {
+        if (!canViewCaseResources) {
+            setResources([]);
+            return;
+        }
         try {
             setLoadingResources(true);
-            const all = await listAll<CaseResource>("/tasks/api/v1/cases/resources/");
-            setResources(all);
+            setResources(await caseResourcesApi.all());
         } catch {
             setResources([]);
         } finally {
             setLoadingResources(false);
         }
-    }, []);
+    }, [canViewCaseResources]);
 
     useEffect(() => {
         if (!isOpen) return;
@@ -635,13 +648,10 @@ export default function CustomerEditModal({
 
     const handleCreateResource = useCallback(async () => {
         const trimmed = newResourceTitle.trim();
-        if (!trimmed || creatingResource) return;
+        if (!canCreateCaseResources || !trimmed || creatingResource) return;
         try {
             setCreatingResource(true);
-            const res = await axiosInstance.post("/tasks/api/v1/cases/resources/create/", {
-                title: trimmed,
-            });
-            const created = res.data as CaseResource;
+            const created = await caseResourcesApi.create({ title: trimmed });
             if (created && created.id) {
                 setResources((prev) => [...prev, created]);
                 setForm((f) => ({ ...f, source: String(created.id) }));
@@ -655,14 +665,14 @@ export default function CustomerEditModal({
         } finally {
             setCreatingResource(false);
         }
-    }, [newResourceTitle, creatingResource, fetchResourcesList]);
+    }, [newResourceTitle, creatingResource, fetchResourcesList, canCreateCaseResources]);
 
     const handleDeleteResource = useCallback(async (e: React.MouseEvent, id: number) => {
         e.stopPropagation();
-        if (deletingResourceId !== null) return;
+        if (!canDeleteCaseResources || deletingResourceId !== null) return;
         try {
             setDeletingResourceId(id);
-            await axiosInstance.delete(`/tasks/api/v1/cases/resources/${id}/delete/`);
+            await caseResourcesApi.remove(id);
             setResources((prev) => prev.filter((r) => r.id !== id));
             setForm((f) => (Number(f.source) === id ? { ...f, source: "" } : f));
         } catch (err) {
@@ -670,13 +680,18 @@ export default function CustomerEditModal({
         } finally {
             setDeletingResourceId(null);
         }
-    }, [deletingResourceId]);
+    }, [deletingResourceId, canDeleteCaseResources]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        if (!form.full_name.trim() || !form.phone_number.trim() || isSubmitting) {
+        const normalizedPhone = normalizePhoneNumber(form.phone_number);
+        if (!form.full_name.trim() || !normalizedPhone || isSubmitting) {
             setError("نام و شماره تماس اجباری‌ست");
+            return;
+        }
+        if (!isValidCustomerPhone(normalizedPhone)) {
+            setError("شماره تماس باید بین ۱۰ تا ۱۵ رقم باشد");
             return;
         }
 
@@ -686,13 +701,21 @@ export default function CustomerEditModal({
         try {
             const { data } = await axiosInstance.patch<Customer>(
                 `/customers/api/v1/customers/${customer.id}/update/`,
-                { ...form, source: form.source ? Number(form.source) : null }
+                { ...form, phone_number: normalizedPhone, source: form.source ? Number(form.source) : null }
             );
             setSuccess(true);
             onEdited(data);
             setTimeout(onClose, 1400);
-        } catch {
-            setError("خطا در ذخیره تغییرات. دوباره امتحان کن.");
+        } catch (err) {
+            const responseData =
+                err && typeof err === "object" && "response" in err
+                    ? (err as { response?: { data?: Record<string, unknown> } }).response?.data
+                    : undefined;
+            const phoneErrors = responseData?.phone_number;
+            const serverPhoneError = Array.isArray(phoneErrors) && typeof phoneErrors[0] === "string"
+                ? phoneErrors[0]
+                : undefined;
+            setError(serverPhoneError || (typeof responseData?.detail === "string" ? responseData.detail : "خطا در ذخیره تغییرات. دوباره امتحان کن."));
         } finally {
             setIsSubmitting(false);
         }
@@ -753,6 +776,7 @@ export default function CustomerEditModal({
                                             label="شماره تماس *"
                                             id="edit_phone_number"
                                             dir="ltr"
+                                            maxLength={15}
                                             value={form.phone_number}
                                             onChange={setField("phone_number")}
                                         />
@@ -780,7 +804,7 @@ export default function CustomerEditModal({
                                             value={form.address}
                                             onChange={setField("address")}
                                         />
-                                        <SourceSelect
+                                        {canViewCaseResources && <SourceSelect
                                             label="منبع آشنایی"
                                             options={resources}
                                             value={form.source ? Number(form.source) : null}
@@ -798,7 +822,9 @@ export default function CustomerEditModal({
                                             creating={creatingResource}
                                             onDelete={handleDeleteResource}
                                             deletingId={deletingResourceId}
-                                        />
+                                            canCreate={canCreateCaseResources}
+                                            canDelete={canDeleteCaseResources}
+                                        />}
                                     </div>
 
                                     <NiceSelect

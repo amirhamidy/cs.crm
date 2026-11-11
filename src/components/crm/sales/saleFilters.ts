@@ -1,9 +1,17 @@
-import type { TradeType } from "@/types/crm";
+import type { SaleStatus, TradeType } from "@/types/crm";
 
 export type SaleFilters = {
     trade_type: TradeType | undefined;
     has_open_issues: 1 | undefined;
     product: number | undefined;
+    customer: number | undefined;
+    seller: number | undefined;
+    buyer: number | undefined;
+    case: number | undefined;
+    status: SaleStatus | undefined;
+    trader: number | undefined;
+    deal_type: number | undefined;
+    load_type: number | undefined;
     date_from: string | undefined;
     date_to: string | undefined;
 };
@@ -12,6 +20,14 @@ export const SALE_FILTER_DEFAULTS: SaleFilters = {
     trade_type: undefined,
     has_open_issues: undefined,
     product: undefined,
+    customer: undefined,
+    seller: undefined,
+    buyer: undefined,
+    case: undefined,
+    status: undefined,
+    trader: undefined,
+    deal_type: undefined,
+    load_type: undefined,
     date_from: undefined,
     date_to: undefined,
 };

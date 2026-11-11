@@ -1,5 +1,6 @@
 import axiosInstance from "@/lib/axiosInstance";
 import type { ApiEmployee, ApiUser } from "@/types/users";
+import type { PermissionMap } from "@/types/access";
 import type { Paginated, SearchParams } from "@/types/pagination";
 import { cached, createSearch, dedupe, fetchPage, getOne, invalidate, listAll, uniqueIds } from "./_core";
 
@@ -27,6 +28,7 @@ export interface AuthMe {
   phone_number: string;
   type: 1 | 2;
   avatar?: string | null;
+  permissions?: PermissionMap;
 }
 
 export type EmployeeListParams = SearchParams;
@@ -194,6 +196,13 @@ export const accountsApi = {
       return data;
     },
 
+    patch: async (id: number, payload: Partial<EmployeePayload>) => {
+      const { data } = await axiosInstance.patch<ApiEmployee>(URLS.employeeUpdate(id), payload);
+      invalidate(KEY);
+      remember([data]);
+      return data;
+    },
+
     remove: async (id: number) => {
       await axiosInstance.delete(URLS.employeeDelete(id));
       invalidate(KEY);
@@ -206,6 +215,7 @@ export const accountsApi = {
     all: allUsers,
     search: userSearch,
     lookup: lookupUsers,
+    get: (id: number) => getOne<ApiUser>(`${BASE}/user/${id}/`),
 
     create: async <R = ApiUser>(payload: UserPayload) => {
       const { data } = await axiosInstance.post<R>(URLS.userCreate, payload);
@@ -218,6 +228,12 @@ export const accountsApi = {
         URLS.userUpdate(id),
         payload,
       );
+      invalidate(KEY);
+      return data;
+    },
+
+    patch: async (id: number, payload: Partial<UserPayload>) => {
+      const { data } = await axiosInstance.patch<ApiUser>(URLS.userUpdate(id), payload);
       invalidate(KEY);
       return data;
     },

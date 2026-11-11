@@ -6,7 +6,7 @@ import { m, AnimatePresence, useReducedMotion } from "framer-motion";
 import { Backdrop } from "@/components/ui/Backdrop";
 import { panelMotion } from "@/lib/motion";
 import { useTheme } from "next-themes";
-import { Trash2, SquarePen, CalendarDays, MoreVertical, AlertCircle, User, ListTodo, FileText } from "lucide-react";
+import { Trash2, SquarePen, CalendarDays, MoreVertical, AlertCircle, User, ListTodo, FileText, Power } from "lucide-react";
 import type { CaseItem } from "@/types/case";
 import type { Customer } from "@/types/customer";
 import type { Department } from "@/types/department";
@@ -32,6 +32,8 @@ interface CaseCardProps {
     caseTasks?: TaskItem[];
     onOpen?: (item: CaseItem, view: CaseView) => void;
     onDelete?: (item: CaseItem) => void;
+    canManageActivation?: boolean;
+    onToggleActive?: (item: CaseItem, nextActive: boolean) => void | Promise<void>;
 }
 
 function formatDate(iso?: string | null) {
@@ -117,6 +119,8 @@ function CaseCard({
     caseTasks = [],
     onOpen,
     onDelete,
+    canManageActivation = false,
+    onToggleActive,
 }: CaseCardProps) {
     const reduced = useReducedMotion() ?? false;
     const { resolvedTheme } = useTheme();
@@ -144,6 +148,7 @@ function CaseCard({
     const description =
         typeof item.description === "string" ? item.description.trim() : "";
     const canDelete = !hasActiveTasks;
+    const isActive = item.active ?? item.is_active ?? true;
 
 
     const handleDelete = async () => {
@@ -165,6 +170,15 @@ function CaseCard({
     const dividerColor = isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)";
 
     const menuItems: ActionSheetItem[] = [
+        ...(canManageActivation && onToggleActive ? [{
+            key: "activation",
+            label: isActive ? "غیرفعال‌سازی پرونده" : "فعال‌سازی پرونده",
+            icon: <Power size={17} />,
+            onSelect: () => {
+                setShowMenu(false);
+                void onToggleActive(item, !isActive);
+            },
+        } satisfies ActionSheetItem] : []),
         {
             key: "tasks",
             label: caseTasks.length > 0 ? `مشاهده وظایف (${caseTasks.length})` : "مشاهده وظایف",

@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { AnimatePresence, m } from "framer-motion";
 import { CalendarDays, Clock3, Send, StickyNote, Tag, Trash2, UserRound, X } from "lucide-react";
-import axiosInstance from "@/lib/axiosInstance";
+import { notesApi } from "@/lib/api/notes";
 import { useAuthStore } from "@/store/authStore";
 
 
@@ -184,7 +184,7 @@ export default function CalendarNoteModal({ isOpen, onClose, selectedDate, notes
         if (!selectedDate || !description.trim() || !userId || submitting || disabled) return;
         setSubmitting(true);
         try {
-            const { data } = await axiosInstance.post<CalendarNote>("/note/api/v1/create/", {
+            const data = await notesApi.create({
                 user: Number(userId),
                 description: description.trim(),
             });
@@ -200,7 +200,7 @@ export default function CalendarNoteModal({ isOpen, onClose, selectedDate, notes
     const handleDelete = async (id: number) => {
         setDeletingId(id);
         try {
-            await axiosInstance.delete(`/note/api/v1/${id}/delete/`);
+            await notesApi.remove(id);
             onDeleted(id);
         } catch (error) {
             console.error(error);

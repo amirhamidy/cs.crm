@@ -9,13 +9,16 @@ import type {
   LoadIssue,
   LoadIssuePayload,
   MarketplaceAccount,
-  MarketplaceAccountPayload,
+  MarketplaceAccountCreatePayload,
+  MarketplaceAccountUpdatePayload,
   RankedCustomer,
   RankingOrdering,
   Sale,
   SaleAttachment,
   SaleListParams,
   SalePayload,
+  TradeOption,
+  Trader,
   SeasonalSuggestions,
   SeasonalSupply,
   SeasonalSupplyPayload,
@@ -23,7 +26,7 @@ import type {
   TopCustomersResponse,
 } from "@/types/crm";
 import type { CustomerStatus } from "@/types/customer";
-import { cached, fetchPage, getOne, invalidate } from "./_core";
+import { cached, fetchPage, getOne, invalidate, listAll } from "./_core";
 
 const CUSTOMERS = "/customers/api/v1/customers/";
 const SALES = "/sales/api/v1/";
@@ -54,6 +57,28 @@ const scoresUrl = (customerId: number) => `${CUSTOMERS}${customerId}/scores/`;
 export const scoresApi = {
   page: (customerId: number, signal?: AbortSignal) =>
     fetchPage<CustomerScore>(scoresUrl(customerId), {}, signal),
+  all: (customerId: number) => listAll<CustomerScore>(scoresUrl(customerId)),
+  create: async (customerId: number, payload: Pick<CustomerScore, "score" | "reason">) => {
+    const { data } = await axiosInstance.post<CustomerScore>(scoresUrl(customerId), payload);
+    invalidate("customers:");
+    return data;
+  },
+  get: async (customerId: number, scoreId: number) =>
+    getOne<CustomerScore>(`${scoresUrl(customerId)}${scoreId}/`),
+  replace: async (customerId: number, scoreId: number, payload: Pick<CustomerScore, "score" | "reason">) => {
+    const { data } = await axiosInstance.put<CustomerScore>(`${scoresUrl(customerId)}${scoreId}/`, payload);
+    invalidate("customers:");
+    return data;
+  },
+  update: async (customerId: number, scoreId: number, payload: Partial<Pick<CustomerScore, "score" | "reason">>) => {
+    const { data } = await axiosInstance.patch<CustomerScore>(`${scoresUrl(customerId)}${scoreId}/`, payload);
+    invalidate("customers:");
+    return data;
+  },
+  remove: async (customerId: number, scoreId: number) => {
+    await axiosInstance.delete(`${scoresUrl(customerId)}${scoreId}/`);
+    invalidate("customers:");
+  },
 };
 
 const commentsUrl = (customerId: number) => `${CUSTOMERS}${customerId}/comments/`;
@@ -72,11 +97,21 @@ export const commentsApi = {
     return r.data;
   },
 
+  get: (customerId: number, id: number) =>
+    getOne<CustomerComment>(`${commentsUrl(customerId)}${id}/`),
+
+  replace: async (customerId: number, id: number, text: string) => {
+    const r = await axiosInstance.put<CustomerComment>(`${commentsUrl(customerId)}${id}/`, { text });
+    invalidate("customers:");
+    return r.data;
+  },
+
   update: async (customerId: number, id: number, text: string) => {
     const r = await axiosInstance.patch<CustomerComment>(
       `${commentsUrl(customerId)}${id}/`,
       { text },
     );
+    invalidate("customers:");
     return r.data;
   },
 
@@ -96,6 +131,10 @@ export const casePathApi = {
 
 
 export const productsApi = {
+  get: (id: number) => getOne<FeedProduct>(`${SALES}products/${id}/`),
+
+  all: () => cached("crm:products:all", () => listAll<FeedProduct>(`${SALES}products/`), 60_000),
+
   page: (
     params: SearchParams & { active?: boolean } = {},
     signal?: AbortSignal,
@@ -103,16 +142,16 @@ export const productsApi = {
 
   
   active: (): Promise<FeedProduct[]> =>
-    cached("crm:products:active", async () => {
-      const r = await fetchPage<FeedProduct>(`${SALES}products/`, {
-        active: true,
-        page_size: 100,
-      });
-      return r.results;
-    }, 60_000),
+    cached("crm:products:active", () => listAll<FeedProduct>(`${SALES}products/`, { active: true }, 100), 60_000),
 
   create: async (name: string) => {
     const r = await axiosInstance.post<FeedProduct>(`${SALES}products/`, { name });
+    invalidate("crm:products:");
+    return r.data;
+  },
+
+  replace: async (id: number, payload: Pick<FeedProduct, "name" | "is_active">) => {
+    const r = await axiosInstance.put<FeedProduct>(`${SALES}products/${id}/`, payload);
     invalidate("crm:products:");
     return r.data;
   },
@@ -132,6 +171,9 @@ export const productsApi = {
 
 
 export const salesApi = {
+  get: async (id: number, signal?: AbortSignal) =>
+    (await axiosInstance.get<Sale>(`${SALES}sales/${id}/`, { signal })).data,
+
   page: (
     params: SearchParams & SaleListParams = {},
     signal?: AbortSignal,
@@ -140,6 +182,13 @@ export const salesApi = {
 
   create: async (payload: SalePayload) => {
     const r = await axiosInstance.post<Sale>(`${SALES}sales/`, payload);
+    invalidate("customers:");
+    invalidate("crm:sales:");
+    return r.data;
+  },
+
+  replace: async (id: number, payload: SalePayload) => {
+    const r = await axiosInstance.put<Sale>(`${SALES}sales/${id}/`, payload);
     invalidate("customers:");
     invalidate("crm:sales:");
     return r.data;
@@ -156,6 +205,20 @@ export const salesApi = {
     await axiosInstance.delete(`${SALES}sales/${id}/`);
     invalidate("customers:");
     invalidate("crm:sales:");
+  },
+
+  markReturned: async (id: number, note = "") => {
+    const r = await axiosInstance.post<Sale>(`${SALES}sales/${id}/mark-returned/`, { note });
+    invalidate("customers:");
+    invalidate("crm:sales:");
+    return r.data;
+  },
+
+  undoReturn: async (id: number) => {
+    const r = await axiosInstance.post<Sale>(`${SALES}sales/${id}/undo-return/`);
+    invalidate("customers:");
+    invalidate("crm:sales:");
+    return r.data;
   },
 
   topCustomers: (params: TopCustomersParams = {}) =>
@@ -180,11 +243,56 @@ export const salesApi = {
 
 
 
+export const tradeOptionsApi = {
+  get: (id: number) => getOne<TradeOption>(`${SALES}trade-options/${id}/`),
+
+  list: (kind: TradeOption["kind"], opts: { all?: boolean } = {}): Promise<TradeOption[]> =>
+    listAll<TradeOption>(`${SALES}trade-options/`, {
+      kind,
+      ...(opts.all ? { all: 1 } : {}),
+    }, 100),
+  create: async (p: Partial<TradeOption> & { kind: TradeOption["kind"]; name: string }) => {
+    const r = await axiosInstance.post<TradeOption>(`${SALES}trade-options/`, p);
+    invalidate("crm:sales:");
+    return r.data;
+  },
+  update: async (id: number, p: Partial<TradeOption>) => {
+    const r = await axiosInstance.patch<TradeOption>(`${SALES}trade-options/${id}/`, p);
+    invalidate("crm:sales:");
+    return r.data;
+  },
+  remove: async (id: number) => {
+    await axiosInstance.delete(`${SALES}trade-options/${id}/`);
+    invalidate("crm:sales:");
+  },
+};
+
+export const tradersApi = {
+  list: async (): Promise<Trader[]> => {
+    try {
+      return await listAll<Trader>(`${SALES}traders/`);
+    } catch {
+      return [];
+    }
+  },
+};
+
 export const attachmentsApi = {
   list: async (saleId: number, signal?: AbortSignal): Promise<SaleAttachment[]> =>
     (await axiosInstance.get<SaleAttachment[]>(`${SALES}sales/${saleId}/attachments/`, { signal })).data,
 
   upload: async (saleId: number, file: File, title = ""): Promise<SaleAttachment> => {
+    const allowedExtensions = new Set([
+      "pdf", "doc", "docx", "xls", "xlsx", "jpg", "jpeg", "png", "webp", "txt",
+    ]);
+    const extension = file.name.split(".").pop()?.toLowerCase() ?? "";
+    if (!allowedExtensions.has(extension)) {
+      throw new Error("فرمت فایل مجاز نیست (pdf، word، excel، تصویر یا txt).");
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      throw new Error("حجم فایل نباید بیشتر از ۱۰ مگابایت باشد.");
+    }
+
     const form = new FormData();
     form.append("file", file);
     if (title.trim()) form.append("title", title.trim());
@@ -218,6 +326,8 @@ export const attachmentsApi = {
 
 
 export const issuesApi = {
+  get: (id: number) => getOne<LoadIssue>(`${SALES}issues/${id}/`),
+
   forSale: async (saleId: number, signal?: AbortSignal): Promise<LoadIssue[]> =>
     (await axiosInstance.get<LoadIssue[]>(`${SALES}sales/${saleId}/issues/`, { signal })).data,
 
@@ -232,20 +342,29 @@ export const issuesApi = {
   ): Promise<Paginated<LoadIssue>> =>
     fetchPage<LoadIssue>(`${SALES}issues/`, { ...params }, signal),
 
-  create: async (saleId: number, payload: LoadIssuePayload) =>
-    (await axiosInstance.post<LoadIssue>(`${SALES}sales/${saleId}/issues/`, payload)).data,
+  create: async (saleId: number, payload: LoadIssuePayload) => {
+    const { data } = await axiosInstance.post<LoadIssue>(`${SALES}sales/${saleId}/issues/`, payload);
+    invalidate("crm:sales:");
+    return data;
+  },
 
-  update: async (id: number, payload: Partial<LoadIssuePayload>) =>
-    (await axiosInstance.patch<LoadIssue>(`${SALES}issues/${id}/`, payload)).data,
+  update: async (id: number, payload: Partial<LoadIssuePayload>) => {
+    const { data } = await axiosInstance.patch<LoadIssue>(`${SALES}issues/${id}/`, payload);
+    invalidate("crm:sales:");
+    return data;
+  },
 
   remove: async (id: number) => {
     await axiosInstance.delete(`${SALES}issues/${id}/`);
+    invalidate("crm:sales:");
   },
 };
 
 
 
 export const seasonalApi = {
+  get: (id: number) => getOne<SeasonalSupply>(`${SALES}seasonal/${id}/`),
+
   suggestions: async (month?: number, signal?: AbortSignal) =>
     (await axiosInstance.get<SeasonalSuggestions>(`${SALES}seasonal/suggestions/`, {
       params: month ? { month } : undefined,
@@ -279,6 +398,9 @@ export const seasonalApi = {
 
 
 export const marketplaceApi = {
+  get: async (id: number) =>
+    (await axiosInstance.get<MarketplaceAccount>(`${CUSTOMERS}marketplace-accounts/${id}/`)).data,
+
   list: async (customerId: number, signal?: AbortSignal): Promise<MarketplaceAccount[]> =>
     (
       await axiosInstance.get<MarketplaceAccount[]>(
@@ -287,31 +409,31 @@ export const marketplaceApi = {
       )
     ).data,
 
-  create: async (customerId: number, payload: MarketplaceAccountPayload) =>
+  create: async (customerId: number, payload: MarketplaceAccountCreatePayload) =>
     (
       await axiosInstance.post<MarketplaceAccount>(
-        `/customers/api/v1/customers/${customerId}/marketplace-accounts/`,
+        `${CUSTOMERS}${customerId}/marketplace-accounts/`,
         payload,
       )
     ).data,
 
-  update: async (id: number, payload: Partial<MarketplaceAccountPayload>) =>
+  update: async (id: number, payload: MarketplaceAccountUpdatePayload) =>
     (
       await axiosInstance.patch<MarketplaceAccount>(
-        `/customers/api/v1/marketplace-accounts/${id}/`,
+        `${CUSTOMERS}marketplace-accounts/${id}/`,
         payload,
       )
     ).data,
 
   remove: async (id: number) => {
-    await axiosInstance.delete(`/customers/api/v1/marketplace-accounts/${id}/`);
+    await axiosInstance.delete(`${CUSTOMERS}marketplace-accounts/${id}/`);
   },
 
   
   reveal: async (id: number): Promise<string> =>
     (
       await axiosInstance.post<{ password: string }>(
-        `/customers/api/v1/marketplace-accounts/${id}/reveal/`,
+        `${CUSTOMERS}marketplace-accounts/${id}/reveal/`,
       )
     ).data.password,
 };

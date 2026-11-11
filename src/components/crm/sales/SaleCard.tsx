@@ -1,8 +1,8 @@
 "use client";
 
 import { memo } from "react";
-import { CalendarDays, Paperclip, Pencil, Repeat, ShoppingBag, ShoppingCart, Trash2 } from "lucide-react";
-import { formatJalaliDate, formatMoney, formatWeight } from "@/lib/crm/format";
+import { CalendarDays, Paperclip, Pencil, Undo2, Ban, Repeat, ShoppingBag, ShoppingCart, Trash2 } from "lucide-react";
+import { formatJalaliDate, formatMoney, formatTime, formatWeight } from "@/lib/crm/format";
 import { cn } from "@/lib/utils";
 import type { Sale } from "@/types/crm";
 import { IssueChips, TRADE_LABEL } from "../shared/TradeBits";
@@ -15,6 +15,8 @@ interface Props {
     onEdit: (sale: Sale) => void;
     onDelete: (sale: Sale) => void;
     onDetails?: (sale: Sale) => void;
+    onReturn?: (sale: Sale) => void;
+    onUndoReturn?: (sale: Sale) => void;
 }
 
 const TRADE_TONE: Record<Sale["trade_type"], Tone> = {
@@ -44,9 +46,10 @@ function Party({ label, name, company, dot }: { label: string; name: string; com
     );
 }
 
-function SaleCardBase({ sale, canEdit, canDelete, onEdit, onDelete, onDetails }: Props) {
+function SaleCardBase({ sale, canEdit, canDelete, onEdit, onDelete, onDetails, onReturn, onUndoReturn }: Props) {
     const tone = TRADE_TONE[sale.trade_type];
     const Icon = TRADE_ICON[sale.trade_type];
+    const returned = sale.status === "returned";
     const badge = sale.attachments_count + sale.open_issues_count;
 
     return (
@@ -62,16 +65,27 @@ function SaleCardBase({ sale, canEdit, canDelete, onEdit, onDelete, onDetails }:
                             <h3 className="truncate text-[13px] font-extrabold text-gray-900 dark:text-white">{sale.product_name}</h3>
                             <div className="mt-1.5 flex items-center gap-1.5">
                                 <Chip tone={tone}>{TRADE_LABEL[sale.trade_type]}</Chip>
+                                {returned && <Chip tone="rose">برگشتی</Chip>}
                                 <span className="flex items-center gap-1 truncate text-[10.5px] font-semibold text-gray-400">
                                     <CalendarDays size={10} className="shrink-0" />
-                                    {formatJalaliDate(sale.sale_date)}
+                                    {formatJalaliDate(sale.sale_date)} · {formatTime(sale.sale_time)}
                                 </span>
                             </div>
                         </div>
 
-                        {(canEdit || canDelete) && (
+                        {(canEdit || canDelete || onReturn) && (
                             <div className="flex shrink-0 items-center gap-1">
-                                {canEdit && (
+                                {canEdit && onReturn && !returned && (
+                                    <IconAction label="برگشت معامله" tone="gray" onClick={() => onReturn(sale)}>
+                                        <Ban size={13} />
+                                    </IconAction>
+                                )}
+                                {canEdit && onUndoReturn && returned && (
+                                    <IconAction label="لغو برگشت" tone="indigo" onClick={() => onUndoReturn(sale)}>
+                                        <Undo2 size={13} />
+                                    </IconAction>
+                                )}
+                                {canEdit && !returned && (
                                     <IconAction label="ویرایش معامله" tone="sky" onClick={() => onEdit(sale)}>
                                         <Pencil size={13} />
                                     </IconAction>
@@ -95,16 +109,26 @@ function SaleCardBase({ sale, canEdit, canDelete, onEdit, onDelete, onDetails }:
                 <Party label="خریدار" name={sale.buyer_name} company={sale.buyer_company} dot="bg-indigo-500" />
             </div>
 
+            {sale.trader_name && (
+                <p className="mt-2 text-[10.5px] font-semibold text-gray-400">
+                    معامله‌گر: <span className="text-gray-600 dark:text-gray-300">{sale.trader_name}</span>
+                </p>
+            )}
+
             <div className="mt-3 grid grid-cols-2 gap-1.5">
                 <MiniStat label="مقدار" value={formatWeight(sale.quantity_kg)} />
-                <MiniStat label="قیمت واحد" value={formatMoney(sale.unit_price)} />
+                <MiniStat label="مقدار مؤثر" value={formatWeight(sale.effective_quantity_kg)} />
+                {sale.buy_price && <MiniStat label="فی خرید" value={formatMoney(sale.buy_price)} />}
+                {sale.sell_price && <MiniStat label="فی فروش" value={formatMoney(sale.sell_price)} />}
+                {sale.deal_type_name && <MiniStat label="نوع معامله" value={sale.deal_type_name} />}
+                {sale.load_type_name && <MiniStat label="نوع بار" value={sale.load_type_name} />}
             </div>
 
             <IssueChips sale={sale} />
 
             <div className="mt-1.5 flex items-center justify-between gap-2 rounded-xl bg-indigo-50/70 px-3 py-2 dark:bg-indigo-500/[0.07]">
-                <span className="text-[9.5px] font-semibold text-indigo-400">مبلغ کل</span>
-                <span className="truncate text-[13px] font-extrabold text-indigo-600 dark:text-indigo-400">{formatMoney(sale.total_amount)}</span>
+                <span className="text-[9.5px] font-semibold text-indigo-400">{sale.profit != null ? "سود" : "مبلغ کل"}</span>
+                <span className="truncate text-[13px] font-extrabold text-indigo-600 dark:text-indigo-400">{formatMoney(sale.profit ?? sale.total_sell_amount ?? sale.total_buy_amount ?? "0")}</span>
             </div>
 
             {onDetails && (

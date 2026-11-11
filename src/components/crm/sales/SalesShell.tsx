@@ -16,17 +16,22 @@ export default function SalesShell({
     children: ReactNode;
 }) {
     const { can } = usePermissions();
+    const canViewSales = can("sales", "view");
     const canViewProducts = can("products", "view");
 
     const tabs = useMemo<RouteTabItem[]>(
         () => [
-            { href: `${basePath}/sales`, label: "خرید و فروش", icon: <ShoppingBag size={14} /> },
-            { href: `${basePath}/sales/top`, label: "مشتریان برتر", icon: <BarChart3 size={14} /> },
-            {
-                href: `${basePath}/sales/issues`,
-                label: "پیگیری بار",
-                icon: <TriangleAlert size={14} />,
-            },
+            ...(canViewSales
+                ? [
+                      { href: `${basePath}/sales`, label: "خرید و فروش", icon: <ShoppingBag size={14} /> },
+                      { href: `${basePath}/sales/top`, label: "مشتریان برتر", icon: <BarChart3 size={14} /> },
+                      {
+                          href: `${basePath}/sales/issues`,
+                          label: "پیگیری بار",
+                          icon: <TriangleAlert size={14} />,
+                      },
+                  ]
+                : []),
             ...(canViewProducts
                 ? [
                       {
@@ -37,7 +42,7 @@ export default function SalesShell({
                   ]
                 : []),
         ],
-        [basePath, canViewProducts],
+        [basePath, canViewSales, canViewProducts],
     );
 
     return (

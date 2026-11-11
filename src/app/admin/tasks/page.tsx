@@ -116,6 +116,12 @@ function AdminTasksPageContent() {
         else setPatched((prev) => new Map(prev).set(updated.id, updated));
     }, []);
 
+    const handleToggleTaskActive = useCallback(async (task: Task, nextActive: boolean) => {
+        const updated = nextActive ? await tasksApi.activate(task.id) : await tasksApi.deactivate(task.id);
+        handleTaskUpdated({ ...task, ...updated, active: nextActive });
+        list.refetch();
+    }, [handleTaskUpdated, list.refetch]);
+
     const handleTaskViewed = useCallback(
         (taskId: number) => {
             setHighlightedTaskId(null);
@@ -239,7 +245,7 @@ function AdminTasksPageContent() {
                                     )}
 
                                     <div className={`relative z-20 ${isHighlighted ? "pointer-events-none [&_*:hover]:!border-transparent [&_*:hover]:!ring-0 [&_*:hover]:!shadow-none" : ""}`}>
-                                        <TaskCard task={task} index={index} onEdit={(t) => setEditingTask(t)} onDelete={handleDelete} onUpdated={handleTaskUpdated} />
+                                        <TaskCard task={task} index={index} onEdit={(t) => setEditingTask(t)} onDelete={handleDelete} onUpdated={handleTaskUpdated} onToggleActive={handleToggleTaskActive} />
                                     </div>
 
                                     <AnimatePresence>

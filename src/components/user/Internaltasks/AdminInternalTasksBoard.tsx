@@ -8,7 +8,7 @@ import { internalTasksApi } from "@/lib/api";
 import { AnimatePresence, m, useReducedMotion } from "framer-motion";
 import { Backdrop } from "@/components/ui/Backdrop";
 import { panelMotion } from "@/lib/motion";
-import { Ban, CalendarClock, CheckCircle2, ClipboardX, Clock3, Inbox, LayoutGrid, MessageSquareText, Plus, RefreshCw, RotateCcw, Ticket, Trash2, Users, X } from "lucide-react";
+import { Ban, CalendarClock, CheckCircle2, ClipboardX, Clock3, Inbox, LayoutGrid, MessageSquareText, Plus, RefreshCw, RotateCcw, Ticket, Trash2, Users, X, Power } from "lucide-react";
 import { Spinner as Loader2 } from "@/components/ui/Spinner";
 import { useTheme } from "next-themes";
 import { useAuthStore } from "@/store/authStore";
@@ -53,6 +53,7 @@ function normalizeTask(item: unknown): InternalTask | null {
         title: typeof task.title === "string" ? task.title : "",
         description: typeof task.description === "string" ? task.description : "",
         status: safeStatus,
+        active: typeof task.active === "boolean" ? task.active : typeof task.is_active === "boolean" ? task.is_active : true,
         created_by: createdBy,
         created_at: typeof task.created_at === "string" && task.created_at.trim() ? task.created_at : new Date().toISOString(),
         updated_at: typeof task.updated_at === "string" ? task.updated_at : undefined,
@@ -141,7 +142,7 @@ function isTaskAssignedToUser(task: InternalTask, username: string, employees: A
 }
 
 const AdminInternalTaskCard = memo(function AdminInternalTaskCard({
-    task, index, employees, currentUsername, onOpen, onDelete, onStatusChange, isDeleting = false,
+    task, index, employees, currentUsername, onOpen, onDelete, onStatusChange, onToggleActive, isDeleting = false,
 }: {
     task: InternalTask;
     index: number;
@@ -150,6 +151,7 @@ const AdminInternalTaskCard = memo(function AdminInternalTaskCard({
     onOpen: (task: InternalTask) => void;
     onDelete?: (taskId: number) => Promise<void> | void;
     onStatusChange: (task: InternalTask) => void;
+    onToggleActive: (task: InternalTask, nextActive: boolean) => Promise<void>;
     isDeleting?: boolean;
 }) {
     const reduced = useReducedMotion() ?? false;
@@ -160,6 +162,7 @@ const AdminInternalTaskCard = memo(function AdminInternalTaskCard({
     const [deleteError, setDeleteError] = useState<string | null>(null);
     const [actionModal, setActionModal] = useState<"complete" | "cancel" | null>(null);
     const [reopening, setReopening] = useState(false);
+    const [togglingActive, setTogglingActive] = useState(false);
     const [statusError, setStatusError] = useState<string | null>(null);
     const [timeModalOpen, setTimeModalOpen] = useState(false);
     const [deadlineModalOpen, setDeadlineModalOpen] = useState(false);
@@ -170,6 +173,7 @@ const AdminInternalTaskCard = memo(function AdminInternalTaskCard({
     const statusConfig = getStatusConfig(task.status);
     const isCompleted = task.status === "completed";
     const isCancelled = task.status === "cancelled";
+    const isEnabled = task.active !== false;
     const isCreator = currentUsername.trim().toLowerCase() === String(task.created_by ?? "").trim().toLowerCase();
     const isAssigned = isTaskAssignedToUser(task, currentUsername, employees);
     const isReceived = !isCreator && isAssigned;
@@ -194,6 +198,20 @@ const AdminInternalTaskCard = memo(function AdminInternalTaskCard({
             setTimeError("خطا در ثبت بازه زمانی");
         } finally {
             setSavingTime(false);
+        }
+    }
+
+    async function handleToggleActive(event: React.MouseEvent) {
+        event.stopPropagation();
+        if (togglingActive) return;
+        setTogglingActive(true);
+        setStatusError(null);
+        try {
+            await onToggleActive(task, !isEnabled);
+        } catch {
+            setStatusError("تغییر وضعیت فعال‌بودن تیکت انجام نشد.");
+        } finally {
+            setTogglingActive(false);
         }
     }
 
@@ -236,6 +254,7 @@ const AdminInternalTaskCard = memo(function AdminInternalTaskCard({
                 </div>
 
                 <div className="flex shrink-0 items-center gap-1.5">
+                    <button type="button" onClick={handleToggleActive} disabled={togglingActive} className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl transition-all disabled:opacity-40 ${isEnabled ? "bg-amber-500/[0.08] text-amber-500 dark:bg-amber-500/10" : "bg-emerald-500/[0.08] text-emerald-500 dark:bg-emerald-500/10"}`} title={isEnabled ? "غیرفعال‌سازی تیکت" : "فعال‌سازی تیکت"}><BusyContent busy={togglingActive}><Power size={13} /></BusyContent></button>
                     <button type="button" onClick={event => { event.stopPropagation(); setDeadlineModalOpen(true); }} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-indigo-500/[0.08] text-indigo-500 transition-all hover:bg-indigo-500/[0.14] hover:text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-300 dark:hover:bg-indigo-500/15" title="مشاهده ددلاین"><CalendarClock size={13} /></button>
                     {isSent && <button type="button" onClick={event => { event.stopPropagation(); setTimeError(null); setTimeModalOpen(true); }} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-indigo-500/[0.08] text-indigo-500 transition-all hover:bg-indigo-500/[0.14] hover:text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-300 dark:hover:bg-indigo-500/15" title="تعیین بازه زمانی"><Clock3 size={13} /></button>}
                     <button type="button" onClick={event => { event.stopPropagation(); onOpen(task); }} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-indigo-500/[0.08] text-indigo-500 transition-all hover:bg-indigo-500/[0.14] hover:text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-300 dark:hover:bg-indigo-500/15" title="مشاهده گفتگو"><MessageSquareText size={13} /></button>
@@ -381,6 +400,12 @@ export default function AdminInternalTasksBoard(): JSX.Element {
         list.refetch();
     }
 
+    async function handleToggleActive(task: InternalTask, nextActive: boolean) {
+        if (nextActive) await internalTasksApi.activate(task.id);
+        else await internalTasksApi.deactivate(task.id);
+        handleUpdated({ ...task, active: nextActive });
+    }
+
     async function handleDelete(taskId: number) {
         const id = Number(taskId);
         if (!Number.isFinite(id) || id <= 0) return;
@@ -418,7 +443,7 @@ export default function AdminInternalTasksBoard(): JSX.Element {
             {sortedTasks.length === 0 ? <div className="flex h-64 flex-col items-center justify-center gap-3 rounded-3xl border border-dashed border-gray-200 dark:border-white/[0.07]"><LayoutGrid size={28} className="text-gray-300 dark:text-gray-700" /><p className="text-[12px] text-gray-400">هنوز گفتگویی ثبت نشده است.</p></div> : (
                 <AnimatePresence mode="popLayout">
                     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                        {sortedTasks.map((task, index) => <AdminInternalTaskCard key={task.id} task={task} index={index} employees={employees} currentUsername={currentUsername ?? ""} onOpen={setSelectedTask} onDelete={handleDelete} onStatusChange={handleUpdated} isDeleting={deleteLoadingId === task.id} />)}
+                        {sortedTasks.map((task, index) => <AdminInternalTaskCard key={task.id} task={task} index={index} employees={employees} currentUsername={currentUsername ?? ""} onOpen={setSelectedTask} onDelete={handleDelete} onStatusChange={handleUpdated} onToggleActive={handleToggleActive} isDeleting={deleteLoadingId === task.id} />)}
                     </div>
                 </AnimatePresence>
             )}

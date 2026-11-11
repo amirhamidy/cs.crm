@@ -6,7 +6,7 @@ import { AnimatePresence, m, useReducedMotion } from "framer-motion";
 import { panelMotion } from "@/lib/motion";
 import { ChevronRight, ChevronLeft, CalendarDays, CalendarClock, CalendarRange, ChevronDown, ClipboardCheck, Layers3, FileText, MessageSquareText, Plus } from "lucide-react";
 import api from "@/lib/axiosInstance";
-import { listAll } from "@/lib/api/index";
+import { listAll, notesApi } from "@/lib/api";
 import { toJalali, toGregorian, jalaliMonthLength, jalaliWeekday, toPersianDigits, JALALI_MONTHS, pad2 } from "@/lib/jalali";
 import CalendarNoteModal, {
     CalendarNote,
@@ -257,7 +257,7 @@ export default function PersianCalendar() {
             try {
                 const [calendarRes, allNotes] = await Promise.all([
                     api.get<CalendarResponse>(`/appraisal/api/v1/calendar/?start=${startISO}&end=${endISO}`),
-                    listAll<CalendarNote>("/note/api/v1/"),
+                    notesApi.list(),
                 ]);
                 if (cancelled) return;
                 const data = calendarRes.data;

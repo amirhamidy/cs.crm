@@ -71,10 +71,15 @@ function AccountForm({
                 username: username.trim(),
                 url: url.trim(),
                 notes: notes.trim(),
-                ...(password ? { password } : {}),
             };
-            if (account) await marketplaceApi.update(account.id, payload);
-            else await marketplaceApi.create(customerId, payload);
+            if (account) {
+                await marketplaceApi.update(account.id, {
+                    ...payload,
+                    ...(password ? { password } : {}),
+                });
+            } else {
+                await marketplaceApi.create(customerId, { ...payload, password });
+            }
             onSaved();
             onClose();
         } catch (e) {

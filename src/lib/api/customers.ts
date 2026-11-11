@@ -12,12 +12,14 @@ const COUNTS_TTL = 30_000;
 export interface CustomerListParams extends PageParams {
   status?: CustomerStatus;
   search?: string;
+  scope?: "mine";
 }
 
 export interface CustomerCounts {
   all: number;
   potential: number;
   active: number;
+  with_case: number;
 }
 
 const summaries = new Map<number, Customer>();
@@ -69,19 +71,20 @@ const get = async (id: number): Promise<CustomerDetail> => {
   return data;
 };
 
-const counts = () =>
-  cached<CustomerCounts>(
-    `${KEY}counts`,
+const counts = (params: Pick<CustomerListParams, "search" | "scope"> = {}) => {
+  const normalized = cleanParams(params);
+  const cacheKey = `${KEY}counts:${JSON.stringify(normalized)}`;
+  return cached<CustomerCounts>(
+    cacheKey,
     async () => {
-      const [all, potential, active] = await Promise.all([
-        list({ page: 1, page_size: 1 }),
-        list({ page: 1, page_size: 1, status: 1 }),
-        list({ page: 1, page_size: 1, status: 2 }),
-      ]);
-      return { all: all.count, potential: potential.count, active: active.count };
+      const { data } = await axiosInstance.get<CustomerCounts>(`${BASE}counts/`, {
+        params: normalized,
+      });
+      return data;
     },
     COUNTS_TTL,
   );
+};
 
 const searchRaw = createSearch<Customer>({ key: KEY, url: BASE, pageSize: 20 });
 
@@ -135,21 +138,28 @@ export const customersApi = {
   peek: (id: number) => summaries.get(id),
 
   create: async (payload: CustomerPayload) => {
-    const { data } = await axiosInstance.post<CustomerDetail>(BASE, payload);
+    const { data } = await axiosInstance.post<CustomerDetail>(`${BASE}create/`, payload);
+    invalidate(KEY);
+    remember([data]);
+    return data;
+  },
+
+  replace: async (id: number, payload: CustomerPayload) => {
+    const { data } = await axiosInstance.put<CustomerDetail>(`${detailUrl(id)}update/`, payload);
     invalidate(KEY);
     remember([data]);
     return data;
   },
 
   update: async (id: number, payload: CustomerPayload) => {
-    const { data } = await axiosInstance.patch<CustomerDetail>(detailUrl(id), payload);
+    const { data } = await axiosInstance.patch<CustomerDetail>(`${detailUrl(id)}update/`, payload);
     invalidate(KEY);
     remember([data]);
     return data;
   },
 
   remove: async (id: number) => {
-    await axiosInstance.delete(detailUrl(id));
+    await axiosInstance.delete(`${detailUrl(id)}delete/`);
     invalidate(KEY);
     summaries.delete(id);
   },

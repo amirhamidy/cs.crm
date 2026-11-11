@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { usePermissions } from "@/hooks/usePermissions";
 import dynamic from "next/dynamic";
 import { AnimatePresence, m } from "framer-motion";
 import {
@@ -39,6 +40,7 @@ export default function CustomerProfileModal({
 }) {
     const containerRef = useRef<HTMLDivElement>(null);
     const titleId = useId();
+    const { can } = usePermissions();
     useModalBehavior({ open: true, onClose, containerRef });
     const [customer, setCustomer] = useState<CustomerDetail | null>(null);
     const [loading, setLoading] = useState(true);
@@ -138,16 +140,12 @@ export default function CustomerProfileModal({
                                             label: "خلاصه",
                                             icon: <LayoutDashboard size={14} />,
                                         },
-                                        {
-                                            key: "comments",
-                                            label: "نظرات",
-                                            icon: <MessageCircle size={14} />,
-                                        },
-                                        {
-                                            key: "sales",
-                                            label: "فروش‌ها",
-                                            icon: <ShoppingBag size={14} />,
-                                        },
+                                        ...(can("customer_comments", "view")
+                                            ? [{ key: "comments" as const, label: "نظرات", icon: <MessageCircle size={14} /> }]
+                                            : []),
+                                        ...(can("sales", "view")
+                                            ? [{ key: "sales" as const, label: "فروش‌ها", icon: <ShoppingBag size={14} /> }]
+                                            : []),
                                         {
                                             key: "path",
                                             label: "مسیر پرونده‌ها",
@@ -241,10 +239,10 @@ export default function CustomerProfileModal({
                                                 refreshKey={refreshKey}
                                             />
                                         )}
-                                        {tab === "comments" && (
+                                        {tab === "comments" && can("customer_comments", "view") && (
                                             <CommentsTab customerId={customerId} />
                                         )}
-                                        {tab === "sales" && (
+                                        {tab === "sales" && can("sales", "view") && (
                                             <SalesTab
                                                 customerId={customerId}
                                                 customerName={customer.full_name}

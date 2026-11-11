@@ -33,7 +33,14 @@ export type {
 export { fetchStatusPage, fetchStatusCount, listAllByStatus, isStatusFilterServerSide } from "./statusPage";
 
 
-export { rankingApi, commentsApi, scoresApi, casePathApi, productsApi, salesApi, attachmentsApi, issuesApi, seasonalApi, marketplaceApi } from "./crm";
+export { rankingApi, commentsApi, scoresApi, casePathApi, productsApi, salesApi, tradeOptionsApi, tradersApi, attachmentsApi, issuesApi, seasonalApi, marketplaceApi } from "./crm";
 export type { RankingParams } from "./crm";
 
 export { accessApi } from "./access";
+
+export { notesApi } from "./notes";
+export type { CalendarNoteRecord } from "./notes";
+export { globalSearchApi } from "./globalSearch";
+export { caseResourcesApi } from "./caseResources";
+export type { CaseResourceRecord } from "./caseResources";
+export { apiDocumentationApi } from "./documentation";

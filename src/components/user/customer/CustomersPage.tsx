@@ -5,7 +5,7 @@ import { CountSkeleton } from "@/components/ui/skeletons";
 import CustomerCardSkeleton from "./CustomerCardSkeleton";
 import { m, AnimatePresence } from "framer-motion";
 import { useTheme } from "next-themes";
-import { Users, Plus, RefreshCw, Filter, FileSpreadsheet } from "lucide-react";
+import { Users, Plus, RefreshCw, Filter, FileSpreadsheet, Search } from "lucide-react";
 import { Spinner as Loader2 } from "@/components/ui/Spinner";
 import dynamic from "next/dynamic";
 import CustomerCard from "./CustomerCard";
@@ -31,7 +31,7 @@ const STATUS_BY_FILTER: Record<FilterType, CustomerStatus | undefined> = {
     active: 2,
 };
 
-const EMPTY_COUNTS: CustomerCounts = { all: 0, potential: 0, active: 0 };
+const EMPTY_COUNTS: CustomerCounts = { all: 0, potential: 0, active: 0, with_case: 0 };
 
 export default function CustomersPage() {
     const { resolvedTheme } = useTheme();
@@ -48,7 +48,7 @@ export default function CustomersPage() {
     const [showImport, setShowImport] = useState(false);
 
     
-    const list = usePaginatedList<Customer, { status?: CustomerStatus }>(
+    const list = usePaginatedList<Customer, { status?: CustomerStatus; scope?: "mine" }>(
         (params, signal) => customersApi.page(params, signal),
         { pageSize: PAGE_SIZE, filters: { status: STATUS_BY_FILTER.all } },
     );
@@ -60,11 +60,11 @@ export default function CustomersPage() {
 
     const filter: FilterType = list.filters.status === 1 ? "potential" : list.filters.status === 2 ? "active" : "all";
 
-    const fetchCounts = useCallback(async () => {
+    const fetchCounts = useCallback(async (search = "", scope?: "mine") => {
         try {
-            setCounts(await customersApi.counts());
+            setCounts(await customersApi.counts({ search: search.trim() || undefined, scope }));
         } catch {
-            
+            setCounts(EMPTY_COUNTS);
         }
     }, []);
 
@@ -77,13 +77,18 @@ export default function CustomersPage() {
         }
     }, []);
 
+    useEffect(() => {
+        const timer = setTimeout(() => fetchCounts(list.search, list.filters.scope), 300);
+        return () => clearTimeout(timer);
+    }, [list.search, list.filters.scope, fetchCounts]);
+
     const refreshAll = useCallback(() => {
         customersApi.invalidate();
         casesApi.invalidate();
         list.refetch();
         fetchCases();
-        fetchCounts();
-    }, [list.refetch, fetchCases, fetchCounts]);
+        fetchCounts(list.search, list.filters.scope);
+    }, [list.refetch, fetchCases, fetchCounts, list.search, list.filters.scope]);
 
     const handleDeleted = useCallback(() => {
         customersApi.invalidate();
@@ -92,8 +97,8 @@ export default function CustomersPage() {
         } else {
             list.refetch();
         }
-        fetchCounts();
-    }, [customers.length, page, list.setPage, list.refetch, fetchCounts]);
+        fetchCounts(list.search, list.filters.scope);
+    }, [customers.length, page, list.setPage, list.refetch, fetchCounts, list.search, list.filters.scope]);
 
     const handleAdded = useCallback(() => {
         refreshAll();
@@ -102,8 +107,8 @@ export default function CustomersPage() {
     const handleEdited = useCallback(() => {
         customersApi.invalidate();
         list.refetch();
-        fetchCounts();
-    }, [list.refetch, fetchCounts]);
+        fetchCounts(list.search, list.filters.scope);
+    }, [list.refetch, fetchCounts, list.search, list.filters.scope]);
 
     const handleFilterChange = (newFilter: FilterType) => {
         if (newFilter === filter) return;
@@ -170,7 +175,19 @@ export default function CustomersPage() {
                 </div>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="relative">
+                <Search size={15} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <input
+                    type="search"
+                    value={list.search}
+                    onChange={(event) => list.setSearch(event.target.value)}
+                    placeholder="جستجوی نام، شرکت یا شماره تماس..."
+                    autoComplete="off"
+                    className="h-10 w-full rounded-xl border border-gray-200 bg-white pe-9 ps-3 text-[12px] text-gray-800 outline-none transition-colors placeholder:text-gray-400 focus:border-indigo-400 dark:border-white/10 dark:bg-white/[0.04] dark:text-gray-100"
+                />
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
                 <div
                     className="flex h-9 items-center gap-1.5 rounded-xl px-3"
                     style={{ background: isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)" }}
@@ -210,6 +227,17 @@ export default function CustomersPage() {
                         </button>
                     ))}
                 </div>
+                <button
+                    type="button"
+                    onClick={() => list.setFilters({ scope: list.filters.scope === "mine" ? undefined : "mine" })}
+                    className={`flex h-9 items-center rounded-xl px-3 text-[11px] font-bold transition-colors ${list.filters.scope === "mine" ? "bg-indigo-600 text-white" : "text-gray-500 dark:text-gray-400"}`}
+                    style={{ background: list.filters.scope === "mine" ? undefined : isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)" }}
+                >
+                    مشتریان من
+                </button>
+                <span className="ms-auto flex h-9 items-center rounded-xl px-3 text-[11px] font-bold text-gray-500 dark:text-gray-400">
+                    دارای پرونده: {counts.with_case.toLocaleString("fa-IR")}
+                </span>
             </div>
 
             {loading ? (

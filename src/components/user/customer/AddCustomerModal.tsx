@@ -2,11 +2,14 @@
 
 import { useState, useEffect, useRef, useCallback, forwardRef, InputHTMLAttributes, TextareaHTMLAttributes } from "react";
 import { m, AnimatePresence, useReducedMotion } from "framer-motion";
+import { usePermissions } from "@/hooks/usePermissions";
 import { Backdrop } from "@/components/ui/Backdrop";
 import { panelMotion } from "@/lib/motion";
 import { X, UserPlus, CheckCircle2, ChevronDown, Check, Plus, AlertCircle } from "lucide-react";
 import { Customer, CustomerFormData } from "@/types/customer";
 import axiosInstance from "@/lib/axiosInstance";
+import { caseResourcesApi, customersApi } from "@/lib/api";
+import { isValidCustomerPhone, normalizePhoneNumber } from "@/lib/crm/phone";
 
 import { BusyContent } from "@/components/ui/Button";
 import { ListSkeleton } from "@/components/ui/skeletons";
@@ -15,53 +18,11 @@ interface CaseResource {
     title: string;
 }
 
-interface CustomerListItem {
-    id: number;
-    phone_number?: string | null;
+async function getCustomersList(search: string) {
+    return customersApi.search(search);
 }
 
-function extractList<T>(data: unknown): T[] {
-    if (Array.isArray(data)) return data as T[];
-    if (data && typeof data === "object") {
-        const obj = data as { results?: T[]; data?: T[] };
-        if (Array.isArray(obj.results)) return obj.results;
-        if (Array.isArray(obj.data)) return obj.data;
-    }
-    return [];
-}
 
-function toEnglishDigits(value: string) {
-    return value
-        .replace(/[۰-۹]/g, (digit) => String("۰۱۲۳۴۵۶۷۸۹".indexOf(digit)))
-        .replace(/[٠-٩]/g, (digit) => String("٠١٢٣٤٥٦٧٨٩".indexOf(digit)));
-}
-
-function normalizePhoneNumber(value: string) {
-    const digits = toEnglishDigits(value).replace(/\D/g, "");
-
-    if (digits.startsWith("0098") && digits.length === 14) {
-        return `0${digits.slice(4)}`;
-    }
-
-    if (digits.startsWith("98") && digits.length === 12) {
-        return `0${digits.slice(2)}`;
-    }
-
-    if (digits.startsWith("9") && digits.length === 10) {
-        return `0${digits}`;
-    }
-
-    return digits.slice(0, 11);
-}
-
-async function getCustomersList() {
-    const { data } = await axiosInstance.get(
-        "/customers/api/v1/customers/"
-    );
-    return extractList<CustomerListItem>(data);
-}
-
-const PHONE_REGEX = /^09\d{9}$/;
 
 const EMPTY_FORM: CustomerFormData = {
     full_name: "",
@@ -324,6 +285,8 @@ interface SourceSelectProps {
     creating: boolean;
     onDelete: (e: React.MouseEvent, id: number) => void;
     deletingId: number | null;
+    canCreate: boolean;
+    canDelete: boolean;
 }
 
 function SourceSelect({
@@ -341,6 +304,8 @@ function SourceSelect({
     creating,
     onDelete,
     deletingId,
+    canCreate,
+    canDelete,
 }: SourceSelectProps) {
     const [open, setOpen] = useState(false);
     const [dropUp, setDropUp] = useState(false);
@@ -415,7 +380,7 @@ function SourceSelect({
                             <span className="text-[10.5px] font-bold text-gray-400">
                                 منابع
                             </span>
-                            {!isAdding && (
+                            {!isAdding && canCreate && (
                                 <button
                                     type="button"
                                     onClick={onStartAdd}
@@ -506,7 +471,7 @@ function SourceSelect({
                                                                 className="text-white"
                                                             />
                                                         )}
-                                                        <span
+                                                        {canDelete && <span
                                                             role="button"
                                                             tabIndex={0}
                                                             onClick={(e) =>
@@ -521,7 +486,7 @@ function SourceSelect({
                                                                     size={11}
                                                                     strokeWidth={2.5}
                                                                 />
-                                                        </span>
+                                                        </span>}
                                                     </span>
                                                 </BusyContent>
                                             </button>
@@ -541,17 +506,18 @@ interface AddCustomerModalProps {
     isOpen: boolean;
     onClose: () => void;
     onAdded: () => void;
-    
-    allowDuplicatePhone?: boolean;
 }
 
 export default function AddCustomerModal({
     isOpen,
     onClose,
     onAdded,
-    allowDuplicatePhone = false,
 }: AddCustomerModalProps) {
     const reduced = useReducedMotion() ?? false;
+    const { can } = usePermissions();
+    const canViewCaseResources = can("cases", "view");
+    const canCreateCaseResources = can("cases", "create");
+    const canDeleteCaseResources = can("cases", "delete");
     const [form, setForm] = useState<CustomerFormData>(EMPTY_FORM);
     const [loading, setLoading] = useState(false);
     const [success, setSuccess] = useState(false);
@@ -572,18 +538,19 @@ export default function AddCustomerModal({
     );
 
     const fetchResourcesList = useCallback(async () => {
+        if (!canViewCaseResources) {
+            setResources([]);
+            return;
+        }
         try {
             setLoadingResources(true);
-            const res = await axiosInstance.get(
-                "/tasks/api/v1/cases/resources/"
-            );
-            setResources(extractList<CaseResource>(res.data));
+            setResources(await caseResourcesApi.all());
         } catch {
             setResources([]);
         } finally {
             setLoadingResources(false);
         }
-    }, []);
+    }, [canViewCaseResources]);
 
     useEffect(() => {
         if (!isOpen) return;
@@ -612,7 +579,7 @@ export default function AddCustomerModal({
         lastCheckedPhone.current = normalized;
         setPhoneAvailability("checking");
         try {
-            const customersList = await getCustomersList();
+            const customersList = await getCustomersList(normalized);
             const taken = customersList.some(
                 (c) => normalizePhoneNumber(c.phone_number ?? "") === normalized
             );
@@ -628,8 +595,6 @@ export default function AddCustomerModal({
             setForm((f) => ({ ...f, phone_number: val }));
             setError(null);
 
-            if (allowDuplicatePhone) return;
-
             if (phoneDebounceRef.current)
                 clearTimeout(phoneDebounceRef.current);
 
@@ -644,7 +609,7 @@ export default function AddCustomerModal({
                 checkPhoneAvailability(val);
             }, 600);
         },
-        [allowDuplicatePhone, checkPhoneAvailability]
+        [checkPhoneAvailability]
     );
 
     const handleSourceChange = useCallback((id: number) => {
@@ -654,14 +619,10 @@ export default function AddCustomerModal({
 
     const handleCreateResource = useCallback(async () => {
         const trimmed = newResourceTitle.trim();
-        if (!trimmed || creatingResource) return;
+        if (!canCreateCaseResources || !trimmed || creatingResource) return;
         try {
             setCreatingResource(true);
-            const res = await axiosInstance.post(
-                "/tasks/api/v1/cases/resources/create/",
-                { title: trimmed }
-            );
-            const created = res.data as CaseResource;
+            const created = await caseResourcesApi.create({ title: trimmed });
             if (created && created.id) {
                 setResources((prev) => [...prev, created]);
                 setForm((f) => ({ ...f, source: String(created.id) }));
@@ -675,17 +636,15 @@ export default function AddCustomerModal({
         } finally {
             setCreatingResource(false);
         }
-    }, [newResourceTitle, creatingResource, fetchResourcesList]);
+    }, [newResourceTitle, creatingResource, fetchResourcesList, canCreateCaseResources]);
 
     const handleDeleteResource = useCallback(
         async (e: React.MouseEvent, id: number) => {
             e.stopPropagation();
-            if (deletingResourceId !== null) return;
+            if (!canDeleteCaseResources || deletingResourceId !== null) return;
             try {
                 setDeletingResourceId(id);
-                await axiosInstance.delete(
-                    `/tasks/api/v1/cases/resources/${id}/delete/`
-                );
+                await caseResourcesApi.remove(id);
                 setResources((prev) => prev.filter((r) => r.id !== id));
                 setForm((f) =>
                     Number(f.source) === id ? { ...f, source: "" } : f
@@ -696,7 +655,7 @@ export default function AddCustomerModal({
                 setDeletingResourceId(null);
             }
         },
-        [deletingResourceId]
+        [deletingResourceId, canDeleteCaseResources]
     );
 
     const handleClose = () => {
@@ -714,41 +673,35 @@ export default function AddCustomerModal({
             return;
         }
 
-        if (!PHONE_REGEX.test(normalizedPhone)) {
-            setError("شماره موبایل معتبر نیست");
+        if (!isValidCustomerPhone(normalizedPhone)) {
+            setError("شماره تماس باید بین ۱۰ تا ۱۵ رقم باشد");
             return;
         }
 
-        if (!allowDuplicatePhone) {
-            if (phoneAvailability === "taken") {
-                setError("این شماره قبلاً ثبت شده است");
-                return;
-            }
+        if (phoneAvailability === "taken") {
+            setError("این شماره قبلاً ثبت شده است");
+            return;
+        }
 
-            if (phoneAvailability === "checking") {
-                setError("لطفاً صبر کن، در حال بررسی شماره...");
-                return;
-            }
+        if (phoneAvailability === "checking") {
+            setError("لطفاً صبر کن، در حال بررسی شماره...");
+            return;
         }
 
         setLoading(true);
         setError(null);
 
         try {
-            if (!allowDuplicatePhone) {
-                const customersList = await getCustomersList();
-                const taken = customersList.some(
-                    (c) =>
-                        normalizePhoneNumber(c.phone_number ?? "") ===
-                        normalizedPhone
-                );
+            const customersList = await getCustomersList(normalizedPhone);
+            const taken = customersList.some(
+                (c) => normalizePhoneNumber(c.phone_number ?? "") === normalizedPhone
+            );
 
-                if (taken) {
-                    setPhoneAvailability("taken");
-                    setError("این شماره قبلاً ثبت شده است");
-                    setLoading(false);
-                    return;
-                }
+            if (taken) {
+                setPhoneAvailability("taken");
+                setError("این شماره قبلاً ثبت شده است");
+                setLoading(false);
+                return;
             }
 
             await axiosInstance.post<Customer>(
@@ -762,8 +715,16 @@ export default function AddCustomerModal({
             setSuccess(true);
             onAdded();
             setTimeout(onClose, 1400);
-        } catch {
-            setError("خطا در ثبت مشتری. دوباره امتحان کن.");
+        } catch (err) {
+            const responseData =
+                err && typeof err === "object" && "response" in err
+                    ? (err as { response?: { data?: Record<string, unknown> } }).response?.data
+                    : undefined;
+            const phoneErrors = responseData?.phone_number;
+            const serverPhoneError = Array.isArray(phoneErrors) && typeof phoneErrors[0] === "string"
+                ? phoneErrors[0]
+                : undefined;
+            setError(serverPhoneError || (typeof responseData?.detail === "string" ? responseData.detail : "خطا در ثبت مشتری. دوباره امتحان کن."));
         } finally {
             setLoading(false);
         }
@@ -781,13 +742,11 @@ export default function AddCustomerModal({
         setError(null);
     };
 
-    const phoneInputBorderClass = allowDuplicatePhone
-        ? ""
-        : phoneAvailability === "taken"
-            ? "!border-red-400 dark:!border-red-500"
-            : phoneAvailability === "available"
-                ? "!border-green-400 dark:!border-green-500"
-                : "";
+    const phoneInputBorderClass = phoneAvailability === "taken"
+        ? "!border-red-400 dark:!border-red-500"
+        : phoneAvailability === "available"
+            ? "!border-green-400 dark:!border-green-500"
+            : "";
 
     return (
         <AnimatePresence>
@@ -843,13 +802,12 @@ export default function AddCustomerModal({
                                         id="phone_number"
                                         dir="ltr"
                                         inputMode="numeric"
-                                        maxLength={11}
+                                        maxLength={15}
                                         value={form.phone_number}
                                         onChange={handlePhoneChange}
                                         className={`text-left ${phoneInputBorderClass}`}
                                     />
-                                    {!allowDuplicatePhone && (
-                                        <AnimatePresence mode="wait">
+                                    <AnimatePresence mode="wait">
                                             {phoneAvailability === "checking" && (
                                                 <m.span
                                                     key="checking"
@@ -886,8 +844,7 @@ export default function AddCustomerModal({
                                                     شماره در دسترس است
                                                 </m.span>
                                             )}
-                                        </AnimatePresence>
-                                    )}
+                                    </AnimatePresence>
                                 </div>
                             </div>
 
@@ -913,7 +870,7 @@ export default function AddCustomerModal({
                                     value={form.address}
                                     onChange={handleFieldChange("address")}
                                 />
-                                <SourceSelect
+                                {canViewCaseResources && <SourceSelect
                                     label="منبع آشنایی"
                                     options={resources}
                                     value={
@@ -935,7 +892,9 @@ export default function AddCustomerModal({
                                     creating={creatingResource}
                                     onDelete={handleDeleteResource}
                                     deletingId={deletingResourceId}
-                                />
+                                    canCreate={canCreateCaseResources}
+                                    canDelete={canDeleteCaseResources}
+                                />}
                             </div>
 
                             <NiceSelect
@@ -974,14 +933,7 @@ export default function AddCustomerModal({
                                             <m.button
                                                 key="submit"
                                                 type="submit"
-                                                disabled={
-                                                    loading ||
-                                                    (!allowDuplicatePhone &&
-                                                        (phoneAvailability ===
-                                                            "taken" ||
-                                                            phoneAvailability ===
-                                                                "checking"))
-                                                }
+                                                disabled={loading || phoneAvailability === "taken" || phoneAvailability === "checking"}
                                                 whileTap={{ scale: 0.97 }}
                                                 className="relative flex w-full items-center justify-center gap-2 rounded-full bg-blue-600 py-3 text-sm font-bold text-white transition-colors hover:bg-blue-500 disabled:opacity-50"
                                             >

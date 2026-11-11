@@ -1,6 +1,7 @@
 import axios from "axios";
 import axiosInstance from "@/lib/axiosInstance";
 import { getApiUrl } from "@/lib/config";
+import type { PermissionMap } from "@/types/access";
 
 export interface LoginPayload {
   username: string;
@@ -13,7 +14,10 @@ export interface LoginResponse {
   user: {
     id: number;
     username: string;
+    phone_number?: string;
     type: 1 | 2;
+    avatar?: string | null;
+    permissions?: PermissionMap;
   };
 }
 

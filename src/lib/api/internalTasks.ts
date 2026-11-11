@@ -88,6 +88,18 @@ export const internalTasksApi = {
       axiosInstance.patch<InternalTaskItem>(`${BASE}${id}/update/`, { status }),
     ),
 
+  activate: (id: number) =>
+    mutate(axiosInstance.post<InternalTaskItem>(`${BASE}${id}/activate/`)),
+
+  deactivate: (id: number) =>
+    mutate(axiosInstance.post<InternalTaskItem>(`${BASE}${id}/deactivate/`)),
+
+  replace: (id: number, payload: CreateInternalTaskPayload) =>
+    mutate(axiosInstance.put<InternalTaskItem>(`${BASE}${id}/update/`, payload)),
+
+  update: (id: number, payload: Partial<Pick<InternalTaskItem, "title" | "description" | "status" | "active">>) =>
+    mutate(axiosInstance.patch<InternalTaskItem>(`${BASE}${id}/update/`, payload)),
+
   reopen: (id: number) =>
     mutate(axiosInstance.post<InternalTaskItem>(`${BASE}${id}/reopen/`)),
 
@@ -114,6 +126,9 @@ export const internalTasksApi = {
   getDeadline: (id: number) =>
     axiosInstance.get<InternalTaskDeadline>(`${BASE}${id}/deadline/`),
 
+  updateDeadline: (id: number, payload: InternalTaskDeadlinePayload) =>
+    mutate(axiosInstance.put<InternalTaskDeadline>(`${BASE}${id}/deadline/update/`, payload)),
+
   patchDeadline: (id: number, payload: InternalTaskDeadlinePayload) =>
     mutate(
       axiosInstance.patch<InternalTaskDeadline>(`${BASE}${id}/deadline/patch/`, {
@@ -121,6 +136,12 @@ export const internalTasksApi = {
         deadline: payload.deadline,
       }),
     ),
+
+  deleteAttachment: (id: number, attachmentId: number) =>
+    mutate(axiosInstance.delete(`${BASE}${id}/attachments/${attachmentId}/`)),
+
+  deleteDeadline: (id: number) =>
+    mutate(axiosInstance.delete(`${BASE}${id}/deadline/delete/`)),
 
   uploadAttachments: (id: number, files: File[], note: string) =>
     mutate(
@@ -153,7 +174,7 @@ export const internalTasksApi = {
   updateRoutine: (id: number, payload: UpdateInternalTaskRoutinePayload) =>
     mutate(
       axiosInstance.patch<InternalTaskRoutineItem>(
-        `${ROUTINE}${id}/update/`,
+        `${ROUTINE}${id}/patch/`,
         payload,
       ),
     ),

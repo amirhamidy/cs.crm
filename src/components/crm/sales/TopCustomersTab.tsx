@@ -6,7 +6,8 @@ import { BarChart3 } from "lucide-react";
 import { HumanResourceCardSkeleton } from "@/components/ui/skeletons";
 import { formatMoney, formatNumber, formatWeight, toNumber } from "@/lib/crm/format";
 import { FilterToggle, GRID, PageToolbar, StateCard, Stagger } from "../shared/kit";
-import { useActiveProducts } from "../shared/useActiveProducts";
+import { useAllProducts } from "../shared/useAllProducts";
+import { usePermissions } from "@/hooks/usePermissions";
 import { TopCustomerRowItem } from "./TopCustomerRow";
 import { TopCustomersFilterBar } from "./TopCustomersFilterBar";
 import { useTopCustomers, type TopCustomersQuery } from "./useTopCustomers";
@@ -24,7 +25,9 @@ const DEFAULT_QUERY: TopCustomersQuery = {
 };
 
 export default function TopCustomersTab() {
-    const products = useActiveProducts();
+    const { can } = usePermissions();
+    const canViewProducts = can("products", "view");
+    const products = useAllProducts(canViewProducts);
     const [query, setQuery] = useState(DEFAULT_QUERY);
     const [panelOpen, setPanelOpen] = useState(false);
     const [customerId, setCustomerId] = useState<number | null>(null);

@@ -41,6 +41,7 @@ const EMPTY_COUNTS: CustomerCounts = {
     all: 0,
     potential: 0,
     active: 0,
+    with_case: 0,
 };
 
 function parseAssignedEmployees(raw: unknown): number[] {
@@ -107,7 +108,7 @@ export default function CustomersPage() {
     const { resolvedTheme } = useTheme();
     const isDark = resolvedTheme === "dark";
 
-    const list = usePaginatedList<Customer, { status?: CustomerStatus }>(
+    const list = usePaginatedList<Customer, { status?: CustomerStatus; scope?: "mine" }>(
         (params, signal) => customersApi.page(params, signal),
         {
             pageSize: PAGE_SIZE,
@@ -140,11 +141,11 @@ export default function CustomersPage() {
     const userId = useAuthStore((state) => state.userId);
     const username = useAuthStore((state) => state.username);
 
-    const fetchCounts = useCallback(async () => {
+    const fetchCounts = useCallback(async (query = "", scope?: "mine") => {
         try {
-            setCounts(await customersApi.counts());
+            setCounts(await customersApi.counts({ search: query.trim() || undefined, scope }));
         } catch {
-            
+            setCounts(EMPTY_COUNTS);
         }
     }, []);
 
@@ -306,16 +307,17 @@ export default function CustomersPage() {
     }, [fetchCases]);
 
     useEffect(() => {
-        fetchCounts();
-    }, [fetchCounts]);
+        const timer = setTimeout(() => fetchCounts(search, list.filters.scope), 300);
+        return () => clearTimeout(timer);
+    }, [fetchCounts, search, list.filters.scope]);
 
     const refresh = useCallback(() => {
         customersApi.invalidate();
         casesApi.invalidate();
         setCasesTick((tick) => tick + 1);
         list.refetch();
-        fetchCounts();
-    }, [list.refetch, fetchCounts]);
+        fetchCounts(search, list.filters.scope);
+    }, [list.refetch, fetchCounts, search, list.filters.scope]);
 
     const handleDeleted = useCallback(
         (_id: number) => {
@@ -327,9 +329,9 @@ export default function CustomersPage() {
                 list.refetch();
             }
 
-            fetchCounts();
+            fetchCounts(search, list.filters.scope);
         },
-        [customers.length, page, list.setPage, list.refetch, fetchCounts]
+        [customers.length, page, list.setPage, list.refetch, fetchCounts, search, list.filters.scope]
     );
 
     const handleAdded = useCallback(() => {
@@ -340,9 +342,9 @@ export default function CustomersPage() {
         (_updated: Customer) => {
             customersApi.invalidate();
             list.refetch();
-            fetchCounts();
+            fetchCounts(search, list.filters.scope);
         },
-        [list.refetch, fetchCounts]
+        [list.refetch, fetchCounts, search, list.filters.scope]
     );
 
     const handleFilterChange = (newFilter: FilterType) => {
@@ -488,6 +490,17 @@ export default function CustomersPage() {
                             </button>
                         ))}
                     </div>
+                    <button
+                        type="button"
+                        onClick={() => list.setFilters({ scope: list.filters.scope === "mine" ? undefined : "mine" })}
+                        className={`flex h-9 items-center rounded-xl px-3 text-[10.5px] font-bold transition-colors ${list.filters.scope === "mine" ? "bg-indigo-600 text-white" : "text-gray-500 dark:text-gray-400"}`}
+                        style={{ background: list.filters.scope === "mine" ? undefined : isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)" }}
+                    >
+                        مشتریان من
+                    </button>
+                    <span className="ms-auto text-[10.5px] font-bold text-gray-500 dark:text-gray-400">
+                        دارای پرونده: {counts.with_case.toLocaleString("fa-IR")}
+                    </span>
                 </div>
 
                 <div
@@ -603,7 +616,6 @@ export default function CustomersPage() {
                     isOpen={showAdd}
                     onClose={() => setShowAdd(false)}
                     onAdded={handleAdded}
-                    allowDuplicatePhone
                 />
             )}
 

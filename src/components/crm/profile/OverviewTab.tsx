@@ -5,6 +5,7 @@ import { BarChart3, CalendarDays, Package, ShoppingBag, Star, Weight } from "luc
 import { ErrorState, EmptyState } from "@/components/ui/Feedback";
 import { StatCardsSkeleton, ListSkeleton } from "@/components/ui/skeletons";
 import { accountsApi, salesApi, scoresApi } from "@/lib/api";
+import { usePermissions } from "@/hooks/usePermissions";
 import { apiMessage } from "@/lib/apiMessage";
 import {
     formatJalaliDateTime,
@@ -27,6 +28,8 @@ interface Props {
 }
 
 export default function OverviewTab({ customerId, onAverage, refreshKey = 0 }: Props) {
+    const { can } = usePermissions();
+    const canViewSales = can("sales", "view");
     const [summary, setSummary] = useState<CustomerSalesSummary | null>(null);
     const [scores, setScores] = useState<CustomerScore[]>([]);
     const [names, setNames] = useState<Map<number, string>>(new Map());
@@ -38,12 +41,12 @@ export default function OverviewTab({ customerId, onAverage, refreshKey = 0 }: P
         setError("");
         try {
             const [sum, scoreRes, employees] = await Promise.all([
-                salesApi.customerSummary(customerId),
-                scoresApi.page(customerId),
+                canViewSales ? salesApi.customerSummary(customerId) : Promise.resolve(null),
+                scoresApi.all(customerId),
                 accountsApi.employees.all().catch(() => []),
             ]);
 
-            const items = scoreRes.results;
+            const items = scoreRes;
 
             setSummary(sum);
             setScores(items);
@@ -58,12 +61,12 @@ export default function OverviewTab({ customerId, onAverage, refreshKey = 0 }: P
         } finally {
             setLoading(false);
         }
-    }, [customerId, onAverage]);
+    }, [customerId, onAverage, canViewSales]);
 
     useEffect(() => {
         void load();
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [customerId, refreshKey]);
+    }, [customerId, refreshKey, canViewSales]);
 
     const maxAmount = useMemo(
         () => Math.max(1, ...(summary?.by_product ?? []).map((p) => toNumber(p.amount))),
@@ -79,7 +82,7 @@ export default function OverviewTab({ customerId, onAverage, refreshKey = 0 }: P
         );
     }
 
-    if (error || !summary) {
+    if (error || (canViewSales && !summary)) {
         return <ErrorState message={error || "خطا در دریافت اطلاعات"} onRetry={load} />;
     }
 
@@ -87,7 +90,7 @@ export default function OverviewTab({ customerId, onAverage, refreshKey = 0 }: P
 
     return (
         <div className="flex flex-col gap-5">
-            <section>
+            {canViewSales && summary && <section>
                 <SectionTitle icon={<ShoppingBag size={16} />} title="خلاصه فروش ما به این مشتری" />
                 {summary.sales_count === 0 ? (
                     <Card>
@@ -125,9 +128,9 @@ export default function OverviewTab({ customerId, onAverage, refreshKey = 0 }: P
                         />
                     </div>
                 )}
-            </section>
+            </section>}
 
-            {summary.by_product.length > 0 && (
+            {canViewSales && summary && summary.by_product.length > 0 && (
                 <Card>
                     <SectionTitle icon={<BarChart3 size={16} />} title="سهم هر کالا از فروش" />
                     <ul className="flex flex-col gap-3">

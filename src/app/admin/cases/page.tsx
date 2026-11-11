@@ -24,6 +24,7 @@ const CaseActionsModal = dynamic(() => import("@/components/cases/CaseActionsMod
 
 import Pagination from "@/components/ui/Pagination";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
+import { toast } from "@/components/notifications/toast";
 
 const PAGE_SIZE = 12;
 
@@ -169,6 +170,17 @@ export default function UserCasesPage() {
         [cases.length, page, refetchCases, setListPage, syncCaseTasks],
     );
 
+    const handleToggleCaseActive = useCallback(async (item: CaseItem, nextActive: boolean) => {
+        try {
+            if (nextActive) await casesApi.activate(item.id);
+            else await casesApi.deactivate(item.id);
+            toast.success(nextActive ? "پرونده فعال شد" : "پرونده غیرفعال شد");
+            refetchCases();
+        } catch {
+            toast.error("تغییر وضعیت پرونده انجام نشد");
+        }
+    }, [refetchCases]);
+
     const handleOpenCase = useCallback((item: CaseItem, view: CaseView) => {
         setActionCase(item);
         setActionView(view);
@@ -303,6 +315,8 @@ export default function UserCasesPage() {
                                     caseTasks={caseTasks}
                                     onOpen={handleOpenCase}
                                     onDelete={() => handleDeleteCase(item)}
+                                    canManageActivation
+                                    onToggleActive={handleToggleCaseActive}
                                 />
                             );
                         })}

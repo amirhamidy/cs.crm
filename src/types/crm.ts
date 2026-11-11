@@ -59,6 +59,25 @@ export interface FeedProduct {
 }
 
 export type TradeType = "sale" | "purchase" | "brokerage";
+export type SaleStatus = "registered" | "returned";
+export type FreightStatus = "extra_freight" | "no_freight" | "";
+
+export interface TradeOption {
+  id: number;
+  kind: "deal_type" | "load_type";
+  name: string;
+  is_active: boolean;
+  order: number;
+  uses_declared_weight: boolean;
+  created_at: string;
+}
+
+export interface Trader {
+  id: number;
+  username?: string;
+  full_name?: string;
+  name?: string;
+}
 
 export interface Sale {
   id: number;
@@ -75,9 +94,9 @@ export interface Sale {
   buyer_company: string;
   
   summary_label: string;
-  shortage_kg: string;
-  spillage_kg: string;
-  returned_kg: string;
+  shortage_kg: number;
+  spillage_kg: number;
+  returned_kg: number;
   open_issues_count: number;
   attachments_count: number;
   case: number | null;
@@ -85,10 +104,36 @@ export interface Sale {
   product: number;
   product_name: string;
   quantity_kg: string;
-  unit_price: string;
-  total_amount: string;
-  
+  billed_quantity_kg: string | null;
+  effective_quantity_kg: string;
+  weight_difference_kg: string | null;
+  buy_price: string | null;
+  sell_price: string | null;
+  total_buy_amount: string | null;
+  total_sell_amount: string | null;
+  loading_cost: string;
+  weighbridge_cost: string;
+  freight_cost: string;
+  total_costs: string;
+  profit: string | null;
+  deal_type: number | null;
+  deal_type_name: string | null;
+  load_type: number | null;
+  load_type_name: string | null;
+  load_type_uses_declared_weight: boolean;
+  freight_status: FreightStatus;
+  freight_status_display: string;
+  status: SaleStatus;
+  status_display: string;
+  returned_at: string | null;
+  returned_by_name: string | null;
+  return_note: string;
+  trader: number | null;
+  trader_name: string | null;
+  created_by_name?: string | null;
+
   sale_date: string;
+  sale_time: string;
   description: string;
   created_by: number;
   created_by_username: string;
@@ -102,14 +147,28 @@ export interface SalePayload {
   buyer: number | null;
   product: number;
   quantity_kg: string;
-  unit_price: string;
-  sale_date?: string;
+  billed_quantity_kg?: string | null;
+  buy_price?: string | null;
+  sell_price?: string | null;
+  loading_cost?: string;
+  weighbridge_cost?: string;
+  freight_cost?: string;
+  deal_type?: number | null;
+  load_type?: number | null;
+  freight_status?: FreightStatus;
+  trader?: number | null;
+  sale_date: string;
+  sale_time: string;
   case?: number | null;
   description?: string;
 }
 
 export interface SaleListParams {
   trade_type?: TradeType;
+  status?: SaleStatus;
+  trader?: number;
+  deal_type?: number;
+  load_type?: number;
   has_open_issues?: 1;
   
   customer?: number;
@@ -332,7 +391,7 @@ export interface SuggestedCustomer {
   
   start_month?: number;
   end_month?: number;
-  expected_quantity_kg?: string | null;
+  expected_quantity_kg?: number | null;
   notes?: string;
   
   last_purchase_date?: string;
@@ -372,11 +431,20 @@ export interface MarketplaceAccount {
   last_revealed_by_username: string | null;
 }
 
-export interface MarketplaceAccountPayload {
-  marketplace_name?: string;
+export interface MarketplaceAccountCreatePayload {
+  marketplace_name: string;
   username: string;
-  
+  password: string;
+  url?: string;
+  notes?: string;
+}
+
+export interface MarketplaceAccountUpdatePayload {
+  marketplace_name?: string;
+  username?: string;
   password?: string;
   url?: string;
   notes?: string;
 }
+
+export type MarketplaceAccountPayload = MarketplaceAccountUpdatePayload;

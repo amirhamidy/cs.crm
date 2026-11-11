@@ -14,7 +14,7 @@ import { formatMoney, formatNumber, formatWeight, toNumber } from "@/lib/crm/for
 import { useAuthStore } from "@/store/authStore";
 import type { Sale } from "@/types/crm";
 import { FilterToggle, GRID, PillButton, PageToolbar, SearchPill, StateCard } from "../shared/kit";
-import { useActiveProducts } from "../shared/useActiveProducts";
+import { useAllProducts } from "../shared/useAllProducts";
 import SaleDetailsModal from "./SaleDetailsModal";
 import SaleFormModal from "./SaleFormModal";
 import { SALE_FILTER_DEFAULTS, type SaleFilters } from "./saleFilters";
@@ -25,7 +25,7 @@ export default function SalesListTab() {
     const userId = useAuthStore((s) => s.userId);
     const userType = useAuthStore((s) => s.userType);
     const { can } = usePermissions();
-    const products = useActiveProducts();
+    const products = useAllProducts(can("products", "view"));
 
     const list = usePaginatedList<Sale, SaleFilters>(
         (params, signal) =>
@@ -37,6 +37,14 @@ export default function SalesListTab() {
                     trade_type: params.trade_type,
                     has_open_issues: params.has_open_issues,
                     product: params.product,
+                    customer: params.customer,
+                    seller: params.seller,
+                    buyer: params.buyer,
+                    case: params.case,
+                    status: params.status,
+                    trader: params.trader,
+                    deal_type: params.deal_type,
+                    load_type: params.load_type,
                     date_from: params.date_from,
                     date_to: params.date_to,
                 },
@@ -53,9 +61,29 @@ export default function SalesListTab() {
     const [toDelete, setToDelete] = useState<Sale | null>(null);
     const [deleting, setDeleting] = useState(false);
     const [deleteError, setDeleteError] = useState<string | null>(null);
+    const [retTarget, setRetTarget] = useState<{ sale: Sale; undo: boolean } | null>(null);
+    const [retBusy, setRetBusy] = useState(false);
+    const [retError, setRetError] = useState<string | null>(null);
+
+    async function confirmReturn() {
+        if (!retTarget) return;
+        setRetBusy(true);
+        setRetError(null);
+        try {
+            if (retTarget.undo) await salesApi.undoReturn(retTarget.sale.id);
+            else await salesApi.markReturned(retTarget.sale.id, "");
+            setRetTarget(null);
+            refetch();
+            toast.success(retTarget.undo ? "برگشت لغو شد" : "معامله برگشت خورد");
+        } catch (e) {
+            setRetError(apiMessage(e, "عملیات ناموفق بود"));
+        } finally {
+            setRetBusy(false);
+        }
+    }
 
     const canModify = useCallback(
-        (s: Sale) => userType === 1 || s.created_by === userId,
+        (s: Sale) => userType === 1 || (userId != null && (s.created_by === userId || s.trader === userId)),
         [userType, userId],
     );
 
@@ -85,12 +113,23 @@ export default function SalesListTab() {
         }
     }
 
-    const pageTotal = list.data.reduce((a, x) => a + toNumber(x.total_amount), 0);
+    const pageTotal = list.data.reduce((a, x) => a + toNumber(x.profit ?? x.total_sell_amount ?? x.total_buy_amount), 0);
     const pageKg = list.data.reduce((a, x) => a + toNumber(x.quantity_kg), 0);
     const pageIssues = list.data.reduce((a, x) => a + x.open_issues_count, 0);
 
     const activeFilters =
-        (list.filters.product ? 1 : 0) + (list.filters.date_from || list.filters.date_to ? 1 : 0);
+        (list.filters.trade_type ? 1 : 0) +
+        (list.filters.has_open_issues ? 1 : 0) +
+        (list.filters.product ? 1 : 0) +
+        (list.filters.customer ? 1 : 0) +
+        (list.filters.seller ? 1 : 0) +
+        (list.filters.buyer ? 1 : 0) +
+        (list.filters.case ? 1 : 0) +
+        (list.filters.status ? 1 : 0) +
+        (list.filters.trader ? 1 : 0) +
+        (list.filters.deal_type ? 1 : 0) +
+        (list.filters.load_type ? 1 : 0) +
+        (list.filters.date_from || list.filters.date_to ? 1 : 0);
 
     return (
         <>
@@ -103,7 +142,7 @@ export default function SalesListTab() {
                 actions={
                     <>
                         <FilterToggle open={panelOpen} onToggle={() => setPanelOpen((v) => !v)} activeCount={activeFilters} />
-                        {can("sales", "create") && (
+                        {can("sales", "create") && can("products", "view") && can("customers", "view") && (
                             <PillButton icon={<Plus size={13} />} onClick={() => openForm(null)}>
                                 ثبت معامله
                             </PillButton>
@@ -112,7 +151,7 @@ export default function SalesListTab() {
                 }
                 stats={[
                     { label: "معامله‌ها", value: formatNumber(list.count) },
-                    { label: "جمع مبلغ این صفحه", value: formatMoney(pageTotal), tone: "emerald" },
+                    { label: "جمع سود/مبلغ این صفحه", value: formatMoney(pageTotal), tone: "emerald" },
                     { label: "جمع وزن این صفحه", value: formatWeight(pageKg), tone: "indigo" },
                     { label: "پیگیری باز", value: formatNumber(pageIssues), tone: "amber" },
                 ]}
@@ -144,6 +183,8 @@ export default function SalesListTab() {
                         onDetails={setDetails}
                         onEdit={openForm}
                         onDelete={askDelete}
+                        onReturn={(sale) => { setRetError(null); setRetTarget({ sale, undo: false }); }}
+                        onUndoReturn={(sale) => { setRetError(null); setRetTarget({ sale, undo: true }); }}
                     />
                     {list.totalPages > 1 && (
                         <Pagination
@@ -172,6 +213,17 @@ export default function SalesListTab() {
                     refetch();
                     toast.success(editing ? "فروش ویرایش شد" : "فروش ثبت شد");
                 }}
+            />
+
+            <ConfirmDialog
+                open={retTarget != null}
+                title={retTarget?.undo ? "لغو برگشت معامله" : "برگشت معامله"}
+                message={retTarget?.undo ? "معامله دوباره فعال می‌شود. ادامه می‌دهید؟" : "معامله از محاسبات حذف و برگشتی علامت‌گذاری می‌شود. ادامه می‌دهید؟"}
+                confirmLabel="تأیید"
+                loading={retBusy}
+                error={retError}
+                onConfirm={confirmReturn}
+                onCancel={() => setRetTarget(null)}
             />
 
             <ConfirmDialog

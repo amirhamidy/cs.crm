@@ -8,6 +8,7 @@ import { AlarmClock, ArrowLeftCircle, ArrowLeftRight, ArrowRightCircle, Building
 
 import axiosInstance from "@/lib/axiosInstance";
 import { tasksApi, casesApi, customersApi, salesApi } from "@/lib/api";
+import { usePermissions } from "@/hooks/usePermissions";
 
 import TaskCaseDescriptionModal from "./TaskCaseDescriptionModal";
 import TaskNotesModal from "./TaskNotesModal";
@@ -216,6 +217,8 @@ export default function UserTaskCard({
     employeesMap = {},
     staffId,
 }: Props) {
+    const { can } = usePermissions();
+    const canRegisterSale = can("sales", "create") && can("products", "view") && can("customers", "view");
     const ext = task as unknown as TaskWithSchedule;
     const hasCase = Boolean(ext.case);
     const departmentId = Number(
@@ -481,8 +484,9 @@ export default function UserTaskCard({
                 case: Number(ext.case),
                 product: data.product,
                 quantity_kg: data.quantity_kg,
-                unit_price: data.unit_price,
+                sell_price: data.sell_price,
                 sale_date: data.sale_date,
+                sale_time: new Date().toTimeString().slice(0, 5),
                 description: data.description,
             });
             createdSaleId = sale.id;
@@ -772,7 +776,7 @@ export default function UserTaskCard({
                                     full
                                 />
 
-                                {hasCase && (
+                                {hasCase && canRegisterSale && (
                                     <ActionBtn
                                         rippleKey={`sold-${task.id}`}
                                         active={false}
@@ -863,7 +867,7 @@ export default function UserTaskCard({
                     );
                 })}
 
-            {hasCase && (
+            {hasCase && canRegisterSale && (
                 <SoldSaleModal
                     isOpen={openModal === "sold"}
                     onClose={() => setOpenModal(null)}

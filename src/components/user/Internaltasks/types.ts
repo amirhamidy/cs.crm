@@ -25,6 +25,8 @@ export interface InternalTask {
   title: string;
   description: string;
   status: InternalTaskStatus;
+  active?: boolean;
+  is_active?: boolean;
   assigned_to: EmployeeRef[];
   deadline: string | null;
   started_at?: string | null;

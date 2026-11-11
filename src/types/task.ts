@@ -35,6 +35,8 @@ export interface TaskItem {
   created_at?: string;
   updated_at?: string;
   status?: TaskStatus | string;
+  active?: boolean;
+  is_active?: boolean;
 }
 
 export type Task = TaskItem;

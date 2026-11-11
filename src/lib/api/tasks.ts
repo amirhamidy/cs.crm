@@ -1,6 +1,6 @@
 import axiosInstance from "@/lib/axiosInstance";
 import { apiRoutes } from "@/lib/apiRoutes";
-import type { TaskItem, TransferTaskPayload, TransferTaskResponse } from "@/types/task";
+import type { CreateTaskPayload, TaskItem, TransferTaskPayload, TransferTaskResponse } from "@/types/task";
 import type { PageParams } from "@/types/pagination";
 import { cached, dedupe, fetchAllPages, fetchPage, invalidate, listAll as listAllPages, toPaginated, withSignal, type Paginated, type RawList } from "./_core";
 
@@ -169,6 +169,89 @@ export const tasksApi = {
       `/tasks/api/v1/tasks/${id}/steps/${step}/deadline/`,
     );
     return res.data;
+  },
+
+  updateStepDeadline: async <T = unknown>(id: number | string, step: number | string, payload: { started_at: string; deadline: string }) => {
+    const { data } = await axiosInstance.put<T>(`/tasks/api/v1/tasks/${id}/steps/${step}/deadline/update/`, payload);
+    invalidate(KEY);
+    return data;
+  },
+
+  patchStepDeadline: async <T = unknown>(id: number | string, step: number | string, payload: Partial<{ started_at: string; deadline: string }>) => {
+    const { data } = await axiosInstance.patch<T>(`/tasks/api/v1/tasks/${id}/steps/${step}/deadline/patch/`, payload);
+    invalidate(KEY);
+    return data;
+  },
+
+  deleteStepDeadline: async (id: number | string, step: number | string) => {
+    await axiosInstance.delete(`/tasks/api/v1/tasks/${id}/steps/${step}/deadline/delete/`);
+    invalidate(KEY);
+  },
+
+  uploadAttachments: async <T = unknown>(id: number | string, formData: FormData) => {
+    const { data } = await axiosInstance.post<T>(`/tasks/api/v1/tasks/${id}/attachments/`, formData);
+    invalidate(KEY);
+    return data;
+  },
+
+  replace: async <T = TaskItem>(id: number | string, payload: CreateTaskPayload) => {
+    const { data } = await axiosInstance.put<T>(`/tasks/api/v1/tasks/${id}/update/`, payload);
+    invalidate(KEY);
+    return data;
+  },
+
+  update: async <T = TaskItem>(id: number | string, payload: Partial<TaskItem>) => {
+    const { data } = await axiosInstance.patch<T>(`/tasks/api/v1/tasks/${id}/update/`, payload);
+    invalidate(KEY);
+    return data;
+  },
+
+  activate: async (id: number | string) => {
+    const { data } = await axiosInstance.post<TaskItem>(`/tasks/api/v1/tasks/${id}/activate/`);
+    invalidate(KEY);
+    return data;
+  },
+
+  deactivate: async (id: number | string) => {
+    const { data } = await axiosInstance.post<TaskItem>(`/tasks/api/v1/tasks/${id}/deactivate/`);
+    invalidate(KEY);
+    return data;
+  },
+
+  advance: async <T = TaskItem>(id: number | string, payload?: unknown) => {
+    const { data } = await axiosInstance.post<T>(`/tasks/api/v1/tasks/${id}/advance/`, payload);
+    invalidate(KEY);
+    return data;
+  },
+
+  revert: async <T = TaskItem>(id: number | string, payload?: unknown) => {
+    const { data } = await axiosInstance.post<T>(`/tasks/api/v1/tasks/${id}/revert/`, payload);
+    invalidate(KEY);
+    return data;
+  },
+
+  cancel: async <T = TaskItem>(id: number | string, payload?: unknown) => {
+    const { data } = await axiosInstance.post<T>(`/tasks/api/v1/tasks/${id}/cancel/`, payload);
+    invalidate(KEY);
+    return data;
+  },
+
+  markAsSold: async <T = TaskItem>(id: number | string, payload?: unknown) => {
+    const { data } = await axiosInstance.post<T>(`/tasks/api/v1/tasks/${id}/mark-as-sold/`, payload);
+    invalidate(KEY);
+    return data;
+  },
+
+  complete: async <T = TaskItem>(id: number | string, payload?: unknown) => {
+    const { data } = await axiosInstance.post<T>(`/tasks/api/v1/tasks/${id}/complete/`, payload);
+    invalidate(KEY);
+    return data;
+  },
+
+  reopen: async <T = TaskItem>(id: number | string, payload?: unknown) => {
+    const { data } = await axiosInstance.post<T>(`/tasks/api/v1/tasks/${id}/reopen/`, payload);
+    invalidate(KEY);
+    return data;
   },
 
   remove: async (id: number) => {
