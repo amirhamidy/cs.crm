@@ -30,7 +30,6 @@ import type {
 } from "@/types/warehouse";
 
 export type WarehouseTab =
-  | "overview"
   | "products"
   | "tasks"
   | "stock"
@@ -44,7 +43,6 @@ export type WarehouseTab =
   | "task-archive";
 
 export const WAREHOUSE_TABS: WarehouseTab[] = [
-  "overview",
   "products",
   "tasks",
   "stock",
@@ -174,23 +172,6 @@ async function loadTab(args: LoadArgs): Promise<TabData> {
   const { wp, stocks, inWarehouse } = scope;
 
   switch (tab) {
-    case "overview": {
-      const [products, transactions, tasks, orderTasks] = await Promise.all([
-        scope.products(),
-        fetchAll<ApiStockTransaction>(EP.transactions, wp),
-        fetchAll<ApiWarehouseTask>(EP.tasks, wp),
-        fetchAll<ApiOrderTask>(EP.orderTasks, wp),
-      ]);
-
-      Object.assign(data, {
-        products,
-        stockInfos: stocks,
-        transactions: inWarehouse(transactions),
-        tasks: inWarehouse(tasks, true),
-        orderTasks: inWarehouse(orderTasks),
-      });
-      break;
-    }
 
     case "products": {
       const [products, categories] = await Promise.all([

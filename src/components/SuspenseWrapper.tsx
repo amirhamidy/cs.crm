@@ -4,6 +4,7 @@ import { Suspense } from "react";
 
 interface SuspenseWrapperProps {
   children: React.ReactNode;
+  fallback?: React.ReactNode;
 }
 
 const LoadingFallback = () => (
@@ -12,6 +13,6 @@ const LoadingFallback = () => (
   </div>
 );
 
-export default function SuspenseWrapper({ children }: SuspenseWrapperProps) {
-  return <Suspense fallback={<LoadingFallback />}>{children}</Suspense>;
+export default function SuspenseWrapper({ children, fallback }: SuspenseWrapperProps) {
+  return <Suspense fallback={fallback ?? <LoadingFallback />}>{children}</Suspense>;
 }

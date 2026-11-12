@@ -9,7 +9,6 @@ import {
 } from "@/types/warehouse";
 
 export type WarehouseTab =
-  | "overview"
   | "tasks"
   | "stock"
   | "transactions"
