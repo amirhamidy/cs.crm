@@ -1,25 +1,18 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { motion } from "framer-motion";
-import {
-    Archive,
-    Ban,
-    Building2,
-    CalendarDays,
-    CheckCircle2,
-    Clock3,
-    FileText,
-    Loader2,
-    MessageSquareText,
-    RotateCcw,
-    ShoppingBag,
-    User,
-} from "lucide-react";
+import { AnimatePresence, m, useReducedMotion } from "framer-motion";
+import { Archive, Ban, Building2, CalendarDays, CheckCircle2, Clock3, FileText, MessageSquareText, RotateCcw, ShoppingBag, User } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
+import { departmentsApi } from "@/lib/api";
 import { useCurrentEmployee } from "@/hooks/usecurrentemployee";
-import AdminTaskNotesModal from "@/components/customcomponents/tasks/AdminTaskNotesModal";
+import { NiceSelect } from "@/components/ui/NiceSelect";
+import { Backdrop } from "@/components/ui/Backdrop";
+import { panelMotion } from "@/lib/motion";
+import AdminTaskNotesModal from "@/components/tasks/AdminTaskNotesModal";
 
+import { BusyContent } from "@/components/ui/Button";
+import { Skeleton } from "@/components/ui/Skeleton";
 interface ArchiveTask {
     id: number;
     task_id: number;
@@ -125,6 +118,7 @@ export default function ArchivedTaskCard({ task, onReopened }: Props) {
         error: employeeError,
     } = useCurrentEmployee();
 
+    const reduced = useReducedMotion() ?? false;
     const [confirmOpen, setConfirmOpen] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -135,7 +129,7 @@ export default function ArchivedTaskCard({ task, onReopened }: Props) {
     const [selectedStep, setSelectedStep] = useState("");
     const [optionsLoading, setOptionsLoading] = useState(false);
 
-    // Only managers of THIS task's own department can reopen it
+    
     const isManagerOfTaskDepartment = useMemo(
         () =>
             departments.some(
@@ -148,7 +142,7 @@ export default function ArchivedTaskCard({ task, onReopened }: Props) {
 
     const canReopen = isManagerOfTaskDepartment;
 
-    // Employees belong to the task's department
+    
     const availableEmployees = useMemo(
         () =>
             departmentEmployees.filter(
@@ -157,7 +151,7 @@ export default function ArchivedTaskCard({ task, onReopened }: Props) {
         [departmentEmployees, task.department_id],
     );
 
-    // Steps belong to the task's department, sorted by order
+    
     const availableSteps = useMemo(
         () =>
             steps
@@ -186,21 +180,16 @@ export default function ArchivedTaskCard({ task, onReopened }: Props) {
         setOptionsLoading(true);
 
         Promise.all([
-            axiosInstance.get("/department/api/v1/department_employee/list/"),
-            axiosInstance.get("/department/api/v1/department_step/"),
+            departmentsApi.employees(),
+            departmentsApi.steps(),
         ])
             .then(([employeeResponse, stepResponse]) => {
                 if (cancelled) return;
 
-                const employeeData = Array.isArray(employeeResponse.data)
-                    ? employeeResponse.data
-                    : (employeeResponse.data?.results ?? []);
+                const employeeData = employeeResponse as unknown as DepartmentEmployee[];
+                const stepData = stepResponse as unknown as DepartmentStep[];
 
-                const stepData = Array.isArray(stepResponse.data)
-                    ? stepResponse.data
-                    : (stepResponse.data?.results ?? []);
-
-                // Only load employees from the task's own department
+                
                 setDepartmentEmployees(
                     employeeData.filter(
                         (item: DepartmentEmployee) =>
@@ -236,7 +225,7 @@ export default function ArchivedTaskCard({ task, onReopened }: Props) {
         }
 
         const employeeId = Number(selectedEmployee);
-        // step.id is exactly what the API expects for current_step
+        
         const step = availableSteps.find((s) => Number(s.id) === Number(selectedStep));
 
         if (
@@ -252,7 +241,7 @@ export default function ArchivedTaskCard({ task, onReopened }: Props) {
 
         try {
             await axiosInstance.post(`/tasks/api/v1/tasks/${task.task_id}/reopen/`, {
-                current_step: step.id,          // ← fix: id نه order
+                current_step: step.id,          
                 assigned_employee: [employeeId],
             });
 
@@ -267,15 +256,10 @@ export default function ArchivedTaskCard({ task, onReopened }: Props) {
 
     return (
         <>
-            <motion.article
-                layout
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10, scale: 0.97 }}
-                transition={{ duration: 0.28 }}
+            <m.article
                 className="group relative overflow-hidden rounded-[1.8rem] border border-gray-100 bg-white p-4 shadow-[0_8px_28px_rgba(15,23,42,0.035)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_16px_36px_rgba(15,23,42,0.08)] dark:border-white/[0.07] dark:bg-[#111a2d] dark:shadow-none"
             >
-                <div className="absolute inset-y-0 right-0 w-1 bg-gradient-to-b from-slate-400 to-slate-400/20" />
+                <div className="absolute inset-y-0 right-0 w-1 bg-gradient-to-b from-gray-400 to-gray-400/20" />
 
                 <div className="mb-3 flex items-start justify-between gap-3 pl-1">
                     <span
@@ -389,7 +373,7 @@ export default function ArchivedTaskCard({ task, onReopened }: Props) {
                         </button>
                     )}
                 </div>
-            </motion.article>
+            </m.article>
 
             <AdminTaskNotesModal
                 isOpen={notesOpen}
@@ -398,17 +382,16 @@ export default function ArchivedTaskCard({ task, onReopened }: Props) {
                 taskTitle={task.title}
             />
 
-            {confirmOpen && (
+            <AnimatePresence>
+                {confirmOpen && (
                 <div
-                    className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/50 px-4 backdrop-blur-sm"
+                    className="fixed inset-0 z-[9999] flex items-center justify-center px-4"
                     dir="rtl"
-                    onClick={() => !submitting && setConfirmOpen(false)}
                 >
-                    <motion.div
-                        initial={{ opacity: 0, scale: 0.95 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        onClick={(e) => e.stopPropagation()}
-                        className="w-full max-w-sm rounded-[2rem] border border-gray-100 bg-white p-6 text-right shadow-2xl dark:border-white/[0.08] dark:bg-[#111a2d]"
+                    <Backdrop onClick={() => !submitting && setConfirmOpen(false)} />
+                    <m.div
+                        {...panelMotion(false, reduced)}
+                        className="relative w-full max-w-sm rounded-[2rem] border border-gray-100 bg-white p-6 text-right shadow-xl dark:border-white/[0.08] dark:bg-[#111a2d]"
                     >
                         <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-500 dark:bg-indigo-500/10 dark:text-indigo-300">
                             <RotateCcw size={19} />
@@ -421,7 +404,7 @@ export default function ArchivedTaskCard({ task, onReopened }: Props) {
                             کارمند مسئول و مرحله شروع مجدد تسک را انتخاب کنید.
                         </p>
 
-                        {/* Department is fixed — show as read-only badge */}
+                        
                         <div className="mt-3 flex items-center gap-2 rounded-xl bg-gray-50 px-3 py-2.5 dark:bg-white/[0.035]">
                             <Building2 size={13} className="shrink-0 text-gray-400" />
                             <div>
@@ -439,10 +422,7 @@ export default function ArchivedTaskCard({ task, onReopened }: Props) {
                         </div>
 
                         {optionsLoading || employeeLoading ? (
-                            <div className="mt-4 flex items-center justify-center gap-2 rounded-xl bg-gray-50 py-5 text-[11px] text-gray-400 dark:bg-white/[0.035]">
-                                <Loader2 size={15} className="animate-spin" />
-                                در حال دریافت اطلاعات...
-                            </div>
+                            <Skeleton className="mt-4 h-16 w-full rounded-xl" />
                         ) : employeeError ? (
                             <p className="mt-4 rounded-xl bg-red-500/10 px-3 py-2 text-[10.5px] font-bold text-red-500">
                                 {employeeError}
@@ -450,44 +430,25 @@ export default function ArchivedTaskCard({ task, onReopened }: Props) {
                         ) : (
                             <div className="mt-4 space-y-3">
                                 <div>
-                                    <label className="mb-1.5 block text-[10.5px] font-bold text-gray-500 dark:text-gray-400">
-                                        کارمند مسئول
-                                    </label>
-                                    <select
-                                        value={selectedEmployee}
-                                        onChange={(e) => setSelectedEmployee(e.target.value)}
+                                    <NiceSelect
+                                        label="کارمند مسئول"
+                                        placeholder="انتخاب کارمند"
                                         disabled={submitting}
-                                        className="h-10 w-full rounded-xl border border-gray-200 bg-white px-3 text-[11px] font-bold text-gray-700 outline-none focus:border-indigo-400 disabled:opacity-50 dark:border-white/[0.08] dark:bg-[#111a2d] dark:text-white"
-                                    >
-                                        <option value="">انتخاب کارمند</option>
-                                        {availableEmployees.map((emp) => (
-                                            <option
-                                                key={`${emp.department}-${emp.employee}`}
-                                                value={emp.employee}
-                                            >
-                                                {emp.employee_name}
-                                            </option>
-                                        ))}
-                                    </select>
+                                        options={availableEmployees.map((emp) => ({ id: Number(emp.employee), label: emp.employee_name }))}
+                                        value={selectedEmployee === "" ? null : Number(selectedEmployee)}
+                                        onChange={(id) => setSelectedEmployee(String(id))}
+                                    />
                                 </div>
 
                                 <div>
-                                    <label className="mb-1.5 block text-[10.5px] font-bold text-gray-500 dark:text-gray-400">
-                                        مرحله شروع
-                                    </label>
-                                    <select
-                                        value={selectedStep}
-                                        onChange={(e) => setSelectedStep(e.target.value)}
+                                    <NiceSelect
+                                        label="مرحله شروع"
+                                        placeholder="انتخاب مرحله"
                                         disabled={submitting}
-                                        className="h-10 w-full rounded-xl border border-gray-200 bg-white px-3 text-[11px] font-bold text-gray-700 outline-none focus:border-indigo-400 disabled:opacity-50 dark:border-white/[0.08] dark:bg-[#111a2d] dark:text-white"
-                                    >
-                                        <option value="">انتخاب مرحله</option>
-                                        {availableSteps.map((step) => (
-                                            <option key={step.id} value={step.id}>
-                                                {step.name}
-                                            </option>
-                                        ))}
-                                    </select>
+                                        options={availableSteps.map((step) => ({ id: Number(step.id), label: step.name }))}
+                                        value={selectedStep === "" ? null : Number(selectedStep)}
+                                        onChange={(id) => setSelectedStep(String(id))}
+                                    />
                                 </div>
                             </div>
                         )}
@@ -517,19 +478,18 @@ export default function ArchivedTaskCard({ task, onReopened }: Props) {
                                     !selectedEmployee ||
                                     !selectedStep
                                 }
-                                className="flex h-10 flex-1 items-center justify-center gap-2 rounded-full bg-indigo-500 text-[11px] font-extrabold text-white transition hover:bg-indigo-600 disabled:cursor-not-allowed disabled:opacity-60"
+                                className="relative flex h-10 flex-1 items-center justify-center gap-2 rounded-full bg-indigo-500 text-[11px] font-extrabold text-white transition hover:bg-indigo-600 disabled:cursor-not-allowed disabled:opacity-60"
                             >
-                                {submitting ? (
-                                    <Loader2 size={14} className="animate-spin" />
-                                ) : (
+                                <BusyContent busy={submitting}>
                                     <RotateCcw size={14} />
-                                )}
-                                {submitting ? "در حال بازگردانی..." : "بازگرداندن"}
+                                    بازگرداندن
+                                </BusyContent>
                             </button>
                         </div>
-                    </motion.div>
+                    </m.div>
                 </div>
-            )}
+                )}
+            </AnimatePresence>
         </>
     );
 }

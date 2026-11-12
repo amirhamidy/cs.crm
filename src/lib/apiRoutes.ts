@@ -44,6 +44,7 @@ export const apiRoutes = {
   deleteTask: (id: number) => `/tasks/api/v1/tasks/${id}/delete/`,
   advanceTask: (id: number) => `/tasks/api/v1/tasks/${id}/advance/`,
   revertTask: (id: number) => `/tasks/api/v1/tasks/${id}/revert/`,
+  transferTask: (id: number) => `/tasks/api/v1/tasks/${id}/transfer/`,
   taskAttachments: (id: number) => `/tasks/api/v1/tasks/${id}/attachments/`,
   taskLogs: (id: number) => `/tasks/api/v1/tasks/${id}/logs/`,
 };

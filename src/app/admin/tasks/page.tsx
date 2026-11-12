@@ -1,34 +1,39 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Archive, Check, ClipboardList, Eye, Loader, Plus, RefreshCw } from "lucide-react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
+import dynamic from "next/dynamic";
 import axiosInstance from "@/lib/axiosInstance";
 import { apiRoutes } from "@/lib/apiRoutes";
 import { Task, TaskStatus } from "@/types/task";
 import { Department } from "@/types/department";
 import SuspenseWrapper from "@/components/SuspenseWrapper";
 import TaskCard from "@/components/customcomponents/tasks/TaskCard";
-import CreateTaskModal from "@/components/customcomponents/tasks/CreateTaskModal";
-import CreateNoCaseTaskModal from "@/components/customcomponents/tasks/CreateNoCaseTaskModal";
-import EditTaskModal from "@/components/customcomponents/tasks/EditTaskModal";
 import type { Customer } from "@/types/customer";
 import type { Employee } from "@/types/employee";
-
-type ListResponse<T> = T[] | { results?: T[]; data?: T[] };
+import { usePaginatedList } from "@/hooks/usePaginatedList";
+import { fetchPage } from "@/lib/api/_core";
+import { cached, customersApi, listAll, metaApi, tasksApi } from "@/lib/api";
+import Pagination from "@/components/ui/Pagination";
 
 const ACTIVE_STATUS = "in_progress" as TaskStatus;
+const PAGE_SIZE = 12;
 
-function extractList<T>(data: ListResponse<T>): T[] {
-    if (Array.isArray(data)) return data;
-    if (data && typeof data === "object") {
-        if (Array.isArray((data as any).results)) return (data as any).results;
-        if (Array.isArray((data as any).data)) return (data as any).data;
-    }
-    return [];
-}
+const CreateTaskModal = dynamic(() => import("@/components/customcomponents/tasks/CreateTaskModal"), {
+    ssr: false,
+    loading: () => null,
+});
+const CreateNoCaseTaskModal = dynamic(() => import("@/components/customcomponents/tasks/CreateNoCaseTaskModal"), {
+    ssr: false,
+    loading: () => null,
+});
+const EditTaskModal = dynamic(() => import("@/components/customcomponents/tasks/EditTaskModal"), {
+    ssr: false,
+    loading: () => null,
+});
 
 function AdminTasksPageContent() {
     const router = useRouter();
@@ -36,94 +41,155 @@ function AdminTasksPageContent() {
     const { resolvedTheme } = useTheme();
     const isDark = resolvedTheme === "dark";
 
-    const [tasks, setTasks] = useState<Task[]>([]);
     const [customers, setCustomers] = useState<Customer[]>([]);
+    const [customersLoaded, setCustomersLoaded] = useState(false);
     const [departments, setDepartments] = useState<Department[]>([]);
     const [employees, setEmployees] = useState<Employee[]>([]);
-    const [loading, setLoading] = useState(true);
     const [showCreate, setShowCreate] = useState(false);
     const [showCreateNoCase, setShowCreateNoCase] = useState(false);
     const [editingTask, setEditingTask] = useState<Task | null>(null);
     const [highlightedTaskId, setHighlightedTaskId] = useState<number | null>(null);
     const [viewedTaskId, setViewedTaskId] = useState<number | null>(null);
+    const [deepLinkedTask, setDeepLinkedTask] = useState<Task | null>(null);
+    const deepLinkRequested = useRef<string | null>(null);
 
-    const fetchAll = useCallback(async () => {
-        try {
-            setLoading(true);
+    const list = usePaginatedList<Task>(
+        (params, signal) =>
+            fetchPage<Task>(
+                apiRoutes.tasks,
+                { ...params, status: ACTIVE_STATUS },
+                signal,
+            ),
+        { pageSize: PAGE_SIZE, scrollTop: true },
+    );
 
-            const [tasksRes, customersRes, departmentsRes, employeesRes] = await Promise.all([
-                axiosInstance.get<ListResponse<Task>>(apiRoutes.tasks),
-                axiosInstance.get<ListResponse<Customer>>(apiRoutes.customers),
-                axiosInstance.get<ListResponse<Department>>(apiRoutes.departments),
-                axiosInstance.get<ListResponse<Employee>>(apiRoutes.employees),
-            ]);
-
-            setTasks(extractList(tasksRes.data).filter((task) => task.status === ACTIVE_STATUS));
-            setCustomers(extractList(customersRes.data));
-            setDepartments(extractList(departmentsRes.data));
-            setEmployees(extractList(employeesRes.data));
-        } catch {
-            setTasks([]);
-            setCustomers([]);
-            setDepartments([]);
-            setEmployees([]);
-        } finally {
-            setLoading(false);
+    const tasks = useMemo(() => {
+        if (!deepLinkedTask || list.data.some((task) => task.id === deepLinkedTask.id)) {
+            return list.data;
         }
-    }, []);
+        return [deepLinkedTask, ...list.data];
+    }, [deepLinkedTask, list.data]);
+    const loading = list.loading;
 
     useEffect(() => {
-        fetchAll();
-    }, [fetchAll]);
+        let cancelled = false;
+
+        Promise.all([
+            metaApi.departments(),
+            cached(
+                "admin-tasks:employees",
+                () => listAll<Employee>(apiRoutes.employees),
+                5 * 60_000,
+            ),
+        ])
+            .then(([departmentList, employeeList]) => {
+                if (cancelled) return;
+                setDepartments(departmentList);
+                setEmployees(employeeList);
+            })
+            .catch(() => undefined);
+
+        return () => {
+            cancelled = true;
+        };
+    }, []);
+
+    const refreshTasks = useCallback(() => {
+        tasksApi.invalidate();
+        list.refetch();
+    }, [list.refetch]);
+
+    useEffect(() => {
+        if (!editingTask || customersLoaded) return;
+
+        let cancelled = false;
+        customersApi.listAll()
+            .then((customerList) => {
+                if (cancelled) return;
+                setCustomers(customerList);
+                setCustomersLoaded(true);
+            })
+            .catch(() => {
+                if (!cancelled) setCustomersLoaded(true);
+            });
+
+        return () => {
+            cancelled = true;
+        };
+    }, [editingTask, customersLoaded]);
 
     useEffect(() => {
         const taskParam = searchParams.get("task");
-        if (!taskParam || loading || !tasks.length) return;
+        if (!taskParam || loading) return;
 
         const targetId = Number(taskParam);
         if (!Number.isFinite(targetId)) return;
 
-        const targetTask = tasks.find((task) => task.id === targetId);
-        if (!targetTask) return;
+        const targetTask = list.data.find((task) => task.id === targetId);
+        if (targetTask) {
+            setDeepLinkedTask(null);
+            setViewedTaskId(null);
+            setHighlightedTaskId(targetTask.id);
+            return;
+        }
 
-        setViewedTaskId(null);
-        setHighlightedTaskId(targetTask.id);
-    }, [searchParams, loading, tasks]);
+        if (deepLinkRequested.current === taskParam) return;
+        deepLinkRequested.current = taskParam;
+        let cancelled = false;
+
+        tasksApi.get<Task>(targetId).then((targetTask) => {
+            if (cancelled || targetTask.status !== ACTIVE_STATUS) return;
+            setDeepLinkedTask(targetTask);
+            setViewedTaskId(null);
+            setHighlightedTaskId(targetTask.id);
+        }).catch(() => undefined);
+
+        return () => {
+            cancelled = true;
+        };
+    }, [searchParams, loading, list.data]);
+
+    const handleEdit = useCallback((task: Task) => {
+        setEditingTask(task);
+    }, []);
 
     const handleDelete = useCallback(
         async (taskId: number): Promise<boolean> => {
             try {
                 await axiosInstance.delete(apiRoutes.deleteTask(taskId));
-                setTasks((prev) => prev.filter((t) => t.id !== taskId));
+                setDeepLinkedTask((current) => current?.id === taskId ? null : current);
+                refreshTasks();
                 return true;
             } catch {
-                await fetchAll();
+                refreshTasks();
                 throw new Error("delete failed");
             }
         },
-        [fetchAll]
+        [refreshTasks]
     );
 
     const handleCreateSuccess = useCallback(() => {
         setShowCreate(false);
-        fetchAll();
-    }, [fetchAll]);
+        refreshTasks();
+    }, [refreshTasks]);
 
     const handleCreateNoCaseSuccess = useCallback(() => {
         setShowCreateNoCase(false);
-        fetchAll();
-    }, [fetchAll]);
+        refreshTasks();
+    }, [refreshTasks]);
 
     const handleEditSuccess = useCallback(() => {
         setEditingTask(null);
-        fetchAll();
-    }, [fetchAll]);
+        refreshTasks();
+    }, [refreshTasks]);
 
     const handleTaskUpdated = useCallback((updated: Task) => {
-        setTasks((prev) =>
-            updated.status !== ACTIVE_STATUS ? prev.filter((t) => t.id !== updated.id) : prev.map((t) => (t.id === updated.id ? updated : t))
-        );
-    }, []);
+        setDeepLinkedTask((current) => {
+            if (current?.id !== updated.id) return current;
+            return updated.status === ACTIVE_STATUS ? updated : null;
+        });
+        refreshTasks();
+    }, [refreshTasks]);
 
     const handleTaskViewed = useCallback(
         (taskId: number) => {
@@ -132,6 +198,8 @@ function AdminTasksPageContent() {
 
             setTimeout(() => {
                 setViewedTaskId(null);
+                setDeepLinkedTask(null);
+                deepLinkRequested.current = null;
                 const params = new URLSearchParams(searchParams.toString());
                 params.delete("task");
                 router.replace(params.toString() ? `?${params.toString()}` : window.location.pathname, { scroll: false });
@@ -150,7 +218,7 @@ function AdminTasksPageContent() {
 
                     <div className="min-w-0">
                         <h1 className="text-[15px] font-extrabold text-gray-900 dark:text-white">وظایف در حال انجام</h1>
-                        <p className="mt-0.5 text-[11.5px] text-gray-500 dark:text-gray-400">{loading ? "در حال بارگذاری..." : `${tasks.length} وظیفه`}</p>
+                        <p className="mt-0.5 text-[11.5px] text-gray-500 dark:text-gray-400">{loading ? "در حال بارگذاری..." : `${list.count} وظیفه`}</p>
                     </div>
                 </div>
 
@@ -167,7 +235,7 @@ function AdminTasksPageContent() {
 
                     <button
                         type="button"
-                        onClick={fetchAll}
+                        onClick={refreshTasks}
                         disabled={loading}
                         className="flex h-10 w-10 items-center justify-center rounded-2xl transition-colors disabled:opacity-50"
                         style={{ background: isDark ? "rgba(255,255,255,0.05)" : "rgba(15,23,42,0.05)", color: isDark ? "#cbd5e1" : "#475569" }}
@@ -195,6 +263,13 @@ function AdminTasksPageContent() {
                     </button>
                 </div>
             </div>
+
+            <input
+                value={list.search}
+                onChange={(event) => list.setSearch(event.target.value)}
+                placeholder="جستجو در وظایف..."
+                className="w-full rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 text-[12px] text-gray-700 outline-none transition-colors focus:border-indigo-400 dark:border-white/10 dark:bg-white/[0.03] dark:text-gray-200"
+            />
 
             {loading && (
                 <div className="flex flex-col items-center justify-center gap-3 py-16">
@@ -247,7 +322,7 @@ function AdminTasksPageContent() {
                                     )}
 
                                     <div className={`relative z-20 ${isHighlighted ? "pointer-events-none [&_*:hover]:!border-transparent [&_*:hover]:!ring-0 [&_*:hover]:!shadow-none" : ""}`}>
-                                        <TaskCard task={task} index={index} employees={employees} onEdit={(t) => setEditingTask(t)} onDelete={handleDelete} onUpdated={handleTaskUpdated} />
+                                        <TaskCard task={task} index={index} employees={employees} onEdit={handleEdit} onDelete={handleDelete} onUpdated={handleTaskUpdated} />
                                     </div>
 
                                     <AnimatePresence>
@@ -285,6 +360,14 @@ function AdminTasksPageContent() {
                 </motion.div>
             )}
 
+            {list.totalPages > 1 && (
+                <Pagination
+                    page={list.page}
+                    totalPages={list.totalPages}
+                    onChange={list.setPage}
+                />
+            )}
+
             <AnimatePresence>
                 {showCreate && <CreateTaskModal isOpen={showCreate} onClose={() => setShowCreate(false)} onSuccess={handleCreateSuccess} />}
             </AnimatePresence>
@@ -293,8 +376,15 @@ function AdminTasksPageContent() {
                 {showCreateNoCase && <CreateNoCaseTaskModal isOpen={showCreateNoCase} onClose={() => setShowCreateNoCase(false)} onSuccess={handleCreateNoCaseSuccess} />}
             </AnimatePresence>
 
+            {editingTask && !customersLoaded && (
+                <div className="flex items-center justify-center gap-2 rounded-xl border border-gray-200/70 py-5 text-[12px] font-semibold text-gray-400 dark:border-white/10">
+                    <Loader size={15} className="animate-spin" />
+                    در حال آماده‌سازی اطلاعات ویرایش...
+                </div>
+            )}
+
             <AnimatePresence>
-                {editingTask && (
+                {editingTask && customersLoaded && (
                     <EditTaskModal task={editingTask} customers={customers} departments={departments} onClose={() => setEditingTask(null)} onSuccess={handleEditSuccess} />
                 )}
             </AnimatePresence>

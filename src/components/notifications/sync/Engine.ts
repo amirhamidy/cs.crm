@@ -196,13 +196,14 @@ export function createSyncEngine({ userId, username }: EngineOptions) {
       }
     };
 
-    await attempt("tickets", async () => {
-      tickets = normalizeTickets(await fetchInternalTasks(signal));
-    });
-
-    await attempt("routines", async () => {
-      routines = normalizeRoutines(await fetchRoutines(signal));
-    });
+    await Promise.all([
+      attempt("tickets", async () => {
+        tickets = normalizeTickets(await fetchInternalTasks(signal));
+      }),
+      attempt("routines", async () => {
+        routines = normalizeRoutines(await fetchRoutines(signal));
+      }),
+    ]);
 
     if (!projectTasks || startedAt - projectTasksAt >= CFG.projectTasksMs) {
       await attempt("tasks", async () => {

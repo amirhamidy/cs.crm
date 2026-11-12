@@ -86,3 +86,47 @@ export function BusyContent({ busy, children }: { busy?: boolean; children: Reac
     </>
   )
 }
+
+export interface IconButtonProps
+  extends Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, "aria-label"> {
+  "aria-label": string
+  variant?: "ghost" | "soft" | "secondary" | "danger"
+  loading?: boolean
+}
+
+const ICON_BUTTON_VARIANTS: Record<NonNullable<IconButtonProps["variant"]>, string> = {
+  ghost: "text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-white/10",
+  soft: "bg-brand-soft text-brand hover:bg-brand/20",
+  secondary:
+    "border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 dark:border-white/10 dark:bg-white/5 dark:text-gray-200 dark:hover:bg-white/10",
+  danger: "bg-red-600 text-white hover:bg-red-700",
+}
+
+/** Square icon button; 44px on mobile, 36px on desktop. */
+export const IconButton = React.forwardRef<HTMLButtonElement, IconButtonProps>(
+  function IconButton(
+    { variant = "ghost", loading, className, children, disabled, type = "button", ...rest },
+    ref,
+  ) {
+    return (
+      <button
+        ref={ref}
+        type={type}
+        disabled={disabled || loading}
+        aria-busy={loading || undefined}
+        className={cn(
+          "relative inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl transition-colors md:h-9 md:w-9",
+          "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand",
+          "disabled:cursor-not-allowed disabled:opacity-50",
+          loading && "cursor-progress",
+          ICON_BUTTON_VARIANTS[variant],
+          className,
+        )}
+        {...rest}
+      >
+        {loading && <ButtonSpinner />}
+        <span className={cn("contents", loading && "invisible")}>{children}</span>
+      </button>
+    )
+  },
+)

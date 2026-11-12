@@ -4,9 +4,8 @@ import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Users, Plus, Loader, RefreshCw, Filter, FileSpreadsheet } from "lucide-react";
 import { useTheme } from "next-themes";
+import dynamic from "next/dynamic";
 import CustomerCard from "@/components/user/customer/CustomerCard";
-import AddCustomerModal from "@/components/user/customer/AddCustomerModal";
-import ImportExcelModal from "@/components/user/customer/ImportExcelModal";
 import { Customer } from "@/types/customer";
 import type { Employee } from "@/types/employee";
 import type { CaseItem } from "@/types/case";
@@ -14,80 +13,70 @@ import type { TaskItem } from "@/types/task";
 import axiosInstance from "@/lib/axiosInstance";
 import { apiRoutes } from "@/lib/apiRoutes";
 import { useAuthStore } from "@/store/authStore";
-
-type ListResponse<T> = T[] | { results?: T[]; data?: T[] };
+import { cached, invalidate, listAll } from "@/lib/api";
 
 type FilterType = "all" | "potential" | "active";
 
-function extractList<T>(data: ListResponse<T> | undefined | null): T[] {
-    if (Array.isArray(data)) return data;
-
-    if (data && typeof data === "object") {
-        if (Array.isArray(data.results)) return data.results;
-        if (Array.isArray(data.data)) return data.data;
-    }
-
-    return [];
-}
+const AddCustomerModal = dynamic(() => import("@/components/user/customer/AddCustomerModal"), {
+    ssr: false,
+    loading: () => null,
+});
+const ImportExcelModal = dynamic(() => import("@/components/user/customer/ImportExcelModal"), {
+    ssr: false,
+    loading: () => null,
+});
 
 function parseAssignedEmployees(raw: unknown): number[] {
-    const ids: number[] = [];
+    const values = Array.isArray(raw) ? raw : [raw];
 
-    if (Array.isArray(raw)) {
-        raw.forEach((item) => {
+    return values
+        .map((item) => {
             if (typeof item === "object" && item !== null) {
-                const id = Number(
-                    (item as any).id ??
-                    (item as any).employee ??
-                    (item as any).user
-                );
-
-                if (!isNaN(id) && id > 0) {
-                    ids.push(id);
-                }
-            } else {
-                const id = Number(item);
-
-                if (!isNaN(id) && id > 0) {
-                    ids.push(id);
-                }
+                const record = item as Record<string, unknown>;
+                return Number(record.id ?? record.employee ?? record.user);
             }
-        });
-    } else if (typeof raw === "object" && raw !== null) {
-        const id = Number(
-            (raw as any).id ??
-            (raw as any).employee ??
-            (raw as any).user
-        );
-
-        if (!isNaN(id) && id > 0) {
-            ids.push(id);
-        }
-    } else if (raw !== null && raw !== undefined) {
-        const id = Number(raw);
-
-        if (!isNaN(id) && id > 0) {
-            ids.push(id);
-        }
-    }
-
-    return ids;
+            return Number(item);
+        })
+        .filter((id) => Number.isFinite(id) && id > 0);
 }
 
-function extractCaseCustomerId(item: any): number | null {
-    const customerRaw = item?.customer;
+function extractCaseCustomerId(item: unknown): number | null {
+    if (typeof item !== "object" || item === null) return null;
 
-    if (customerRaw && typeof customerRaw === "object") {
-        const id = Number(customerRaw.id);
-        return isNaN(id) ? null : id;
+    const customerRaw = (item as Record<string, unknown>).customer;
+    if (typeof customerRaw === "object" && customerRaw !== null) {
+        const id = Number((customerRaw as Record<string, unknown>).id);
+        return Number.isFinite(id) ? id : null;
     }
 
     if (customerRaw !== null && customerRaw !== undefined) {
         const id = Number(customerRaw);
-        return isNaN(id) ? null : id;
+        return Number.isFinite(id) ? id : null;
     }
 
     return null;
+}
+
+async function mapLimit<T, R>(
+    items: T[],
+    limit: number,
+    mapper: (item: T) => Promise<R>,
+): Promise<R[]> {
+    const results = new Array<R>(items.length);
+    let cursor = 0;
+
+    const worker = async () => {
+        while (cursor < items.length) {
+            const index = cursor++;
+            results[index] = await mapper(items[index]);
+        }
+    };
+
+    await Promise.all(
+        Array.from({ length: Math.min(limit, items.length) }, worker),
+    );
+
+    return results;
 }
 
 export default function CustomersPage() {
@@ -103,6 +92,8 @@ export default function CustomersPage() {
     const [showAdd, setShowAdd] = useState(false);
     const [showImport, setShowImport] = useState(false);
     const [filter, setFilter] = useState<FilterType>("all");
+    const [searchInput, setSearchInput] = useState("");
+    const [search, setSearch] = useState("");
 
     const userId = useAuthStore((state) => state.userId);
     const username = useAuthStore((state) => state.username);
@@ -111,88 +102,79 @@ export default function CustomersPage() {
         setLoading(true);
 
         try {
-            const [
-                customersRes,
-                casesRes,
-                tasksRes,
-                employeesRes,
-            ] = await Promise.all([
-                axiosInstance.get<ListResponse<Customer>>(
-                    "/customers/api/v1/customers/"
+            const [allCustomers, allCases, allTasks, employeeList] = await Promise.all([
+                cached(
+                    "user-customers:list",
+                    () => listAll<Customer>("/customers/api/v1/customers/"),
+                    30_000,
                 ),
-                axiosInstance.get<ListResponse<CaseItem>>(
-                    "/tasks/api/v1/cases/"
+                cached(
+                    "user-customers:cases",
+                    () => listAll<CaseItem>("/tasks/api/v1/cases/"),
+                    60_000,
                 ),
-                axiosInstance.get<ListResponse<TaskItem>>(
-                    apiRoutes.tasks
+                cached(
+                    "user-customers:tasks",
+                    () => listAll<TaskItem>(apiRoutes.tasks),
+                    30_000,
                 ),
-                axiosInstance.get<ListResponse<Employee>>(
-                    "/accounts/api/v1/employee/list/"
+                cached(
+                    "user-customers:employees",
+                    () => listAll<Employee>("/accounts/api/v1/employee/list/"),
+                    5 * 60_000,
                 ),
             ]);
 
-            const allCustomers = extractList<Customer>(
-                customersRes.data
-            );
-
-            const allCases = extractList<CaseItem>(
-                casesRes.data
-            );
-
-            const allTasks = extractList<TaskItem>(
-                tasksRes.data
-            );
-
-            const employeeList = extractList<Employee>(
-                employeesRes.data
-            );
-
             let empId: number | null = null;
 
-            const matchedEmployee = employeeList.find(
-                (emp: any) =>
-                    (username && emp.username === username) ||
+            const matchedEmployee = employeeList.find((employee) => {
+                const record = employee as Employee & {
+                    user_id?: number | string;
+                    user?: number | string;
+                };
+
+                return (
+                    (username && employee.username === username) ||
                     (userId &&
-                        Number(
-                            emp.user_id ??
-                            emp.user ??
-                            emp.user_detail?.id
-                        ) === Number(userId)) ||
-                    (userId &&
-                        Number(emp.id) === Number(userId))
-            );
+                        Number(record.user_id ?? record.user ?? employee.user_detail?.id) === Number(userId)) ||
+                    (userId && Number(employee.id) === Number(userId))
+                );
+            });
 
             if (matchedEmployee) {
                 empId = Number(matchedEmployee.id);
             }
 
-            const detailedCases = await Promise.all(
-                allCases.map(async (c) => {
-                    try {
-                        const detailRes = await axiosInstance.get(
-                            `/tasks/api/v1/cases/${c.id}/`
-                        );
-
-                        return {
-                            ...c,
-                            ...detailRes.data,
-                        };
-                    } catch {
-                        return c;
-                    }
-                })
-            );
+            const detailedCases = await mapLimit(allCases, 4, async (c) => {
+                try {
+                    return await cached<CaseItem>(
+                        `user-customers:case-detail:${c.id}`,
+                        async () => {
+                            const detailRes = await axiosInstance.get<CaseItem>(
+                                `/tasks/api/v1/cases/${c.id}/`,
+                            );
+                            return { ...c, ...detailRes.data };
+                        },
+                        60_000,
+                    );
+                } catch {
+                    return c;
+                }
+            });
 
             const userTasks = empId
-                ? allTasks.filter((task: any) => {
-                    const assignedList = parseAssignedEmployees(
-                        task.assigned_employee
-                    );
+                ? allTasks.filter((task) => {
+                    const record = task as TaskItem & {
+                        created_by?: unknown;
+                        creator?: unknown;
+                        user?: unknown;
+                    };
+                    const assignedList = parseAssignedEmployees(record.assigned_employee);
 
                     const creatorId = Number(
-                        task.created_by ??
-                        task.creator ??
-                        task.user
+                        record.created_by ??
+                        record.creator ??
+                        record.user
                     );
 
                     return (
@@ -205,15 +187,18 @@ export default function CustomersPage() {
 
             const userTaskCaseIds = new Set(
                 userTasks
-                    .map((task: any) => {
-                        const raw =
-                            task.case ??
-                            task.case_id ??
-                            task.caseId;
+                    .map((task) => {
+                        const record = task as TaskItem & {
+                            case?: unknown;
+                            case_id?: unknown;
+                            caseId?: unknown;
+                        };
+                        const raw = record.case ?? record.case_id ?? record.caseId;
 
-                        return typeof raw === "object"
-                            ? Number(raw?.id)
-                            : Number(raw);
+                        if (typeof raw === "object" && raw !== null) {
+                            return Number((raw as Record<string, unknown>).id);
+                        }
+                        return Number(raw);
                     })
                     .filter(
                         (id) =>
@@ -225,9 +210,16 @@ export default function CustomersPage() {
             const allowedCaseCustomerIds = new Set<number>();
             const activeCaseCustomerIds = new Set<number>();
 
-            detailedCases.forEach((c: any) => {
-                const caseId = Number(c.id);
-                const customerId = extractCaseCustomerId(c);
+            detailedCases.forEach((c) => {
+                const caseRecord = c as CaseItem & {
+                    assigned_employee?: unknown;
+                    employees?: unknown;
+                    created_by?: unknown;
+                    creator?: unknown;
+                    user?: unknown;
+                };
+                const caseId = Number(caseRecord.id);
+                const customerId = extractCaseCustomerId(caseRecord);
 
                 if (!customerId) return;
 
@@ -235,17 +227,17 @@ export default function CustomersPage() {
                     empId &&
                     (
                         parseAssignedEmployees(
-                            c.assigned_employee
+                            caseRecord.assigned_employee
                         ).includes(empId) ||
                         parseAssignedEmployees(
-                            c.employees
+                            caseRecord.employees
                         ).includes(empId) ||
                         (
                             userId &&
                             Number(
-                                c.created_by ??
-                                c.creator ??
-                                c.user
+                                caseRecord.created_by ??
+                                caseRecord.creator ??
+                                caseRecord.user
                             ) === Number(userId)
                         )
                     );
@@ -264,7 +256,11 @@ export default function CustomersPage() {
             });
 
             const filteredCustomers = empId
-                ? allCustomers.filter((customer: any) => {
+                ? allCustomers.filter((customer) => {
+                    const customerRecord = customer as Customer & {
+                        assigned_employee?: unknown;
+                        employees?: unknown;
+                    };
                     const isCreator =
                         username &&
                         customer.created_by_username &&
@@ -274,10 +270,10 @@ export default function CustomersPage() {
                         empId &&
                         (
                             parseAssignedEmployees(
-                                customer.assigned_employee
+                                customerRecord.assigned_employee
                             ).includes(empId) ||
                             parseAssignedEmployees(
-                                customer.employees
+                                customerRecord.employees
                             ).includes(empId)
                         );
 
@@ -308,17 +304,32 @@ export default function CustomersPage() {
         fetchData();
     }, [fetchData]);
 
+    useEffect(() => {
+        const timeout = window.setTimeout(() => {
+            setSearch(searchInput.trim().replace(/\s+/g, " "));
+        }, 300);
+
+        return () => window.clearTimeout(timeout);
+    }, [searchInput]);
+
+    const refresh = useCallback(() => {
+        invalidate("user-customers:");
+        void fetchData();
+    }, [fetchData]);
+
     const handleDeleted = useCallback((id: number) => {
+        invalidate("user-customers:");
         setCustomers((prev) =>
             prev.filter((customer) => customer.id !== id)
         );
     }, []);
 
     const handleAdded = useCallback(() => {
-        fetchData();
-    }, [fetchData]);
+        refresh();
+    }, [refresh]);
 
     const handleEdited = useCallback((updated: Customer) => {
+        invalidate("user-customers:");
         setCustomers((prev) =>
             prev.map((customer) =>
                 customer.id === updated.id
@@ -340,19 +351,20 @@ export default function CustomersPage() {
     };
 
     const filteredCustomers = customers.filter((customer) => {
-        if (filter === "all") {
-            return true;
-        }
+        const matchesStatus =
+            filter === "all" ||
+            (filter === "potential" && customer.status === 1) ||
+            (filter === "active" && customer.status === 2);
 
-        if (filter === "potential") {
-            return customer.status === 1;
-        }
+        if (!matchesStatus) return false;
+        if (!search) return true;
 
-        if (filter === "active") {
-            return customer.status === 2;
-        }
-
-        return true;
+        const query = search.toLocaleLowerCase();
+        return [
+            customer.full_name,
+            customer.phone_number,
+            customer.company_name,
+        ].some((value) => String(value ?? "").toLocaleLowerCase().includes(query));
     });
 
     const potentialCount = customers.filter(
@@ -419,7 +431,7 @@ export default function CustomersPage() {
 
                 <div className="flex items-center gap-2 sm:justify-end">
                     <button
-                        onClick={fetchData}
+                        onClick={refresh}
                         disabled={isLoading}
                         className="flex h-9 w-9 items-center justify-center rounded-xl text-gray-400 transition-colors hover:text-gray-600 disabled:opacity-40 dark:hover:text-gray-300"
                         style={{
@@ -464,6 +476,13 @@ export default function CustomersPage() {
                     </button>
                 </div>
             </div>
+
+            <input
+                value={searchInput}
+                onChange={(event) => setSearchInput(event.target.value)}
+                placeholder="جستجوی نام مشتری، شماره تماس یا شرکت..."
+                className="w-full rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 text-[12px] text-gray-700 outline-none transition-colors focus:border-indigo-400 dark:border-white/10 dark:bg-white/[0.03] dark:text-gray-200"
+            />
 
             <div className="flex items-center gap-2">
                 <div

@@ -3,16 +3,11 @@
 import { useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useTheme } from "next-themes";
-import {
-    CheckCircle2,
-    FileSpreadsheet,
-    Loader2,
-    UploadCloud,
-    X,
-} from "lucide-react";
+import { CheckCircle2, FileSpreadsheet, UploadCloud, X } from "lucide-react";
 import type { AxiosError } from "axios";
 import axiosInstance from "@/lib/axiosInstance";
 
+import { BusyContent } from "@/components/ui/Button";
 interface Props {
     isOpen: boolean;
     onClose: () => void;
@@ -125,10 +120,9 @@ export default function WarehouseEmployeeBulkImportModal({
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                     onClick={handleClose}
-                    className="fixed inset-0 z-50 flex items-center justify-center px-4"
+                    className="backdrop-blur-sm fixed inset-0 z-50 flex items-center justify-center px-4"
                     style={{
                         background: "rgba(0,0,0,.5)",
-                        backdropFilter: "blur(4px)",
                     }}
                 >
                     <motion.div
@@ -140,7 +134,7 @@ export default function WarehouseEmployeeBulkImportModal({
                         dir="rtl"
                         className="w-full max-w-[400px] rounded-[2rem] p-5"
                         style={{
-                            background: isDark ? "#0f172a" : "#ffffff",
+                            background: isDark ? "#111827" : "#ffffff",
                             border: `1px solid ${border}`,
                             boxShadow: isDark
                                 ? "0 20px 60px rgba(0,0,0,.45)"
@@ -299,13 +293,11 @@ export default function WarehouseEmployeeBulkImportModal({
                                 type="button"
                                 onClick={handleSubmit}
                                 disabled={loading || !file || success}
-                                className="flex flex-1 items-center justify-center gap-1.5 rounded-2xl bg-indigo-600 py-2.5 text-[12.5px] font-bold text-white transition-opacity hover:bg-indigo-500 disabled:opacity-55"
+                                className="relative flex flex-1 items-center justify-center gap-1.5 rounded-2xl bg-indigo-600 py-2.5 text-[12.5px] font-bold text-white transition-opacity hover:bg-indigo-500 disabled:opacity-55"
                             >
-                                {loading ? (
-                                    <Loader2 size={14} className="animate-spin" />
-                                ) : (
-                                    "آپلود و ثبت"
-                                )}
+                                <BusyContent busy={loading}>
+                                    آپلود و ثبت
+                                </BusyContent>
                             </button>
                         </div>
                     </motion.div>

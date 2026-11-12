@@ -3,11 +3,12 @@
 import { ReactNode, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
-import { AlertCircle, Hash, Loader2, Pencil, Tag, Trash2, X } from "lucide-react";
+import { AlertCircle, Hash, Pencil, Tag, Trash2, X } from "lucide-react";
 import { useTheme } from "next-themes";
 import axiosInstance from "@/lib/axiosInstance";
 import { toPersianDigits } from "@/lib/jalali";
 
+import { BusyContent } from "@/components/ui/Button";
 interface Category {
     id: number;
     name: string;
@@ -44,7 +45,7 @@ function ModalShell({
             onMouseDown={(e) => {
                 if (e.target === e.currentTarget) onClose();
             }}
-            className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/50 px-4 backdrop-blur-sm"
+            className="fixed inset-0 z-[9999] flex items-center justify-center bg-gray-950/50 px-4 backdrop-blur-sm"
             dir="rtl"
         >
             <motion.div
@@ -52,7 +53,7 @@ function ModalShell({
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.96, y: 16 }}
                 transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
-                className="w-full max-w-[380px] rounded-[2rem] border border-gray-100 bg-white p-5 shadow-[0_24px_64px_rgba(0,0,0,0.3)] dark:border-white/[0.07] dark:bg-[#0f172a]"
+                className="w-full max-w-[380px] rounded-[2rem] border border-gray-100 bg-white p-5 shadow-[0_24px_64px_rgba(0,0,0,0.3)] dark:border-white/[0.07] dark:bg-[#111827]"
             >
                 {children}
             </motion.div>
@@ -374,7 +375,7 @@ export default function WarehouseCategoryCard({
                                             type="button"
                                             onClick={handleCloseConfirm}
                                             disabled={deleting}
-                                            className="flex h-11 flex-1 items-center justify-center rounded-2xl bg-gray-100 text-[12.5px] font-bold text-gray-600 transition-colors hover:text-gray-800 disabled:opacity-50 dark:bg-white/[0.05] dark:text-slate-300 dark:hover:text-white"
+                                            className="flex h-11 flex-1 items-center justify-center rounded-2xl bg-gray-100 text-[12.5px] font-bold text-gray-600 transition-colors hover:text-gray-800 disabled:opacity-50 dark:bg-white/[0.05] dark:text-gray-300 dark:hover:text-white"
                                         >
                                             انصراف
                                         </button>
@@ -383,7 +384,7 @@ export default function WarehouseCategoryCard({
                                             type="button"
                                             onClick={handleDelete}
                                             disabled={deleting}
-                                            className="flex h-11 flex-1 items-center justify-center gap-1.5 rounded-2xl text-[12.5px] font-bold text-white disabled:opacity-60"
+                                            className="relative flex h-11 flex-1 items-center justify-center gap-1.5 rounded-2xl text-[12.5px] font-bold text-white disabled:opacity-60"
                                             style={{
                                                 background:
                                                     "linear-gradient(135deg, #ef4444, #dc2626)",
@@ -391,14 +392,12 @@ export default function WarehouseCategoryCard({
                                                     "0 10px 24px rgba(239,68,68,0.22)",
                                             }}
                                         >
-                                            {deleting ? (
-                                                <Loader2 size={15} className="animate-spin" />
-                                            ) : (
+                                            <BusyContent busy={deleting}>
                                                 <>
-                                                    <Trash2 size={13} />
-                                                    حذف کن
-                                                </>
-                                            )}
+                                                        <Trash2 size={13} />
+                                                        حذف کن
+                                                    </>
+                                            </BusyContent>
                                         </button>
                                     </div>
                                 </ModalShell>
@@ -457,7 +456,7 @@ export default function WarehouseCategoryCard({
                                             type="button"
                                             onClick={handleCloseEdit}
                                             disabled={editing}
-                                            className="flex h-11 flex-1 items-center justify-center rounded-2xl bg-gray-100 text-[12.5px] font-bold text-gray-600 transition-colors hover:text-gray-800 disabled:opacity-50 dark:bg-white/[0.05] dark:text-slate-300 dark:hover:text-white"
+                                            className="flex h-11 flex-1 items-center justify-center rounded-2xl bg-gray-100 text-[12.5px] font-bold text-gray-600 transition-colors hover:text-gray-800 disabled:opacity-50 dark:bg-white/[0.05] dark:text-gray-300 dark:hover:text-white"
                                         >
                                             انصراف
                                         </button>
@@ -466,7 +465,7 @@ export default function WarehouseCategoryCard({
                                             type="button"
                                             onClick={handleEdit}
                                             disabled={editing}
-                                            className="flex h-11 flex-1 items-center justify-center gap-1.5 rounded-2xl text-[12.5px] font-bold text-white disabled:opacity-60"
+                                            className="relative flex h-11 flex-1 items-center justify-center gap-1.5 rounded-2xl text-[12.5px] font-bold text-white disabled:opacity-60"
                                             style={{
                                                 background:
                                                     "linear-gradient(135deg, #6366f1, #8b5cf6)",
@@ -474,14 +473,12 @@ export default function WarehouseCategoryCard({
                                                     "0 10px 24px rgba(99,102,241,0.22)",
                                             }}
                                         >
-                                            {editing ? (
-                                                <Loader2 size={15} className="animate-spin" />
-                                            ) : (
+                                            <BusyContent busy={editing}>
                                                 <>
-                                                    <Pencil size={13} />
-                                                    ذخیره
-                                                </>
-                                            )}
+                                                        <Pencil size={13} />
+                                                        ذخیره
+                                                    </>
+                                            </BusyContent>
                                         </button>
                                     </div>
                                 </ModalShell>

@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { CalendarClock, Clock, Loader2, UserRound } from "lucide-react";
 import { useTheme } from "next-themes";
 import api from "@/lib/axiosInstance";
+import { fetchAllPages, fetchPage } from "@/lib/api/_core";
 import { toJalali, toPersianDigits, JALALI_MONTHS, pad2 } from "@/lib/jalali";
 
 interface Task {
@@ -27,6 +28,35 @@ interface ExpiredTask extends Task {
     started_at: string | null;
 }
 
+
+async function mapLimit<T, R>(
+    items: T[],
+    limit: number,
+    mapper: (item: T) => Promise<R>,
+): Promise<R[]> {
+    const results = new Array<R>(items.length);
+    let cursor = 0;
+
+    const worker = async () => {
+        while (cursor < items.length) {
+            const index = cursor++;
+            results[index] = await mapper(items[index]);
+        }
+    };
+
+    await Promise.all(
+        Array.from({ length: Math.min(limit, items.length) }, worker),
+    );
+
+    return results;
+}
+
+async function fetchAll<T>(url: string, signal: AbortSignal): Promise<T[]> {
+    return fetchAllPages<T>((params) =>
+        fetchPage<T>(url, { ...params, page_size: 100 }, signal, "low"),
+    );
+}
+
 function formatDate(value: string) {
     const date = new Date(value);
     const [jy, jm, jd] = toJalali(date.getFullYear(), date.getMonth() + 1, date.getDate());
@@ -46,41 +76,39 @@ export default function MyTaskDeadlines() {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
+        const controller = new AbortController();
+        const { signal } = controller;
         let cancelled = false;
 
         async function load() {
             try {
-                const [{ data: taskData }, { data: employeeData }] = await Promise.all([
-                    api.get("/tasks/api/v1/tasks/"),
-                    api.get("/accounts/api/v1/employee/list/"),
+                const [source, employeeSource] = await Promise.all([
+                    fetchAll<Task>("/tasks/api/v1/tasks/", signal),
+                    fetchAll<Employee>("/accounts/api/v1/employee/list/", signal),
                 ]);
 
-                const source: Task[] = Array.isArray(taskData) ? taskData : [];
-                const employeeSource: Employee[] = Array.isArray(employeeData) ? employeeData : [];
+                const activeTasks = source.filter((task) => task.current_step);
+                const results = await mapLimit(activeTasks, 4, async (task) => {
+                    try {
+                        const { data } = await api.get(
+                            `/tasks/api/v1/tasks/${task.id}/steps/${task.current_step}/deadline/`,
+                            { signal, priority: "low" },
+                        );
 
-                const results = await Promise.all(
-                    source
-                        .filter((task) => task.current_step)
-                        .map(async (task) => {
-                            try {
-                                const { data } = await api.get(
-                                    `/tasks/api/v1/tasks/${task.id}/steps/${task.current_step}/deadline/`
-                                );
+                        if (!data?.deadline || new Date(data.deadline).getTime() >= Date.now()) {
+                            return null;
+                        }
 
-                                if (!data?.deadline || new Date(data.deadline).getTime() >= Date.now()) {
-                                    return null;
-                                }
-
-                                return {
-                                    ...task,
-                                    deadline: data.deadline,
-                                    started_at: data.started_at ?? null,
-                                };
-                            } catch {
-                                return null;
-                            }
-                        })
-                );
+                        return {
+                            ...task,
+                            deadline: data.deadline,
+                            started_at: data.started_at ?? null,
+                        };
+                    } catch (error) {
+                        if (signal.aborted) throw error;
+                        return null;
+                    }
+                });
 
                 if (!cancelled) {
                     setTasks(
@@ -90,14 +118,21 @@ export default function MyTaskDeadlines() {
                     );
                     setEmployees(employeeSource);
                 }
+            } catch {
+                if (!cancelled) {
+                    setTasks([]);
+                    setEmployees([]);
+                }
             } finally {
                 if (!cancelled) setLoading(false);
             }
         }
 
-        load();
+        void load();
+
         return () => {
             cancelled = true;
+            controller.abort();
         };
     }, []);
 

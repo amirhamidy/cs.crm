@@ -2,8 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { AnimatePresence, motion } from "framer-motion";
-import { X, FileText, Loader2, AlertCircle } from "lucide-react";
+import { AnimatePresence, m, useReducedMotion } from "framer-motion";
+import { Backdrop } from "@/components/ui/Backdrop";
+import { panelMotion } from "@/lib/motion";
+import { X, FileText, AlertCircle } from "lucide-react";
+import { ListSkeleton } from "@/components/ui/skeletons";
 import { useTheme } from "next-themes";
 import axiosInstance from "@/lib/axiosInstance";
 
@@ -30,6 +33,7 @@ export default function TaskCaseDescriptionModal({
     caseId,
     taskTitle,
 }: TaskCaseDescriptionModalProps) {
+    const reduced = useReducedMotion() ?? false;
     const { resolvedTheme } = useTheme();
     const isDark = resolvedTheme === "dark";
 
@@ -59,7 +63,6 @@ export default function TaskCaseDescriptionModal({
             });
     }, [isOpen, caseId]);
 
-    if (!isOpen) return null;
 
     if (typeof document === "undefined") {
         return null;
@@ -67,26 +70,19 @@ export default function TaskCaseDescriptionModal({
 
     return createPortal(
         <AnimatePresence>
-            <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
+{isOpen && (
+            <div
                 className="fixed inset-0 z-50 flex items-center justify-center px-4"
-                style={{ background: "rgba(0,0,0,0.5)", backdropFilter: "blur(3px)" }}
-                onClick={onClose}
             >
-                <motion.div
-                    initial={{ scale: 0.94, y: 18 }}
-                    animate={{ scale: 1, y: 0 }}
-                    exit={{ scale: 0.94, y: 18 }}
-                    transition={{ duration: 0.22, ease: "easeOut" }}
-                    className="w-full max-w-[430px] overflow-hidden rounded-3xl border"
+                <Backdrop onClick={onClose} />
+                <m.div
+                    {...panelMotion(false, reduced)}
+                    className="relative w-full max-w-[430px] overflow-hidden rounded-3xl border"
                     style={{
-                        background: isDark ? "#0f172a" : "#ffffff",
+                        background: isDark ? "#111827" : "#ffffff",
                         borderColor: isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.06)",
                         boxShadow: "0 24px 64px rgba(0,0,0,0.28)",
                     }}
-                    onClick={(e) => e.stopPropagation()}
                     dir="rtl"
                 >
                     <div
@@ -123,10 +119,7 @@ export default function TaskCaseDescriptionModal({
 
                     <div className="max-h-[420px] overflow-y-auto p-5">
                         {loading ? (
-                            <div className="flex flex-col items-center justify-center gap-2 py-10 text-gray-400">
-                                <Loader2 size={20} className="animate-spin" />
-                                <p className="text-[12px] font-semibold">در حال دریافت اطلاعات...</p>
-                            </div>
+                            <ListSkeleton rows={2} />
                         ) : error ? (
                             <div className="flex flex-col items-center justify-center gap-2 py-10 text-red-500">
                                 <AlertCircle size={20} />
@@ -166,9 +159,10 @@ export default function TaskCaseDescriptionModal({
                             </div>
                         )}
                     </div>
-                </motion.div>
-            </motion.div>
-        </AnimatePresence>,
+                </m.div>
+            </div>
+        )}
+</AnimatePresence>,
         document.body
     );
 }

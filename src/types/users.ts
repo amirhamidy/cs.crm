@@ -22,6 +22,7 @@ export interface ApiUser {
   is_active: boolean;
   created_at: string;
   updated_at: string;
+  avatar?: string | null;
 }
 
 interface UserCardProps {

@@ -1,7 +1,15 @@
 "use client";
 
+import { LazyMotion } from "framer-motion";
 import { ThemeProvider } from "next-themes";
 import { NotificationProvider } from "./notifications/NotificationProvider";
+
+
+
+
+
+const loadMotionFeatures = () =>
+  import("@/lib/motionFeatures").then((mod) => mod.default);
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
@@ -11,9 +19,11 @@ export function Providers({ children }: { children: React.ReactNode }) {
       enableSystem
       disableTransitionOnChange
     >
-      <NotificationProvider>
-        {children}
-      </NotificationProvider>
+      <LazyMotion features={loadMotionFeatures} strict={false}>
+        <NotificationProvider>
+          {children}
+        </NotificationProvider>
+      </LazyMotion>
     </ThemeProvider>
   );
 }

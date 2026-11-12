@@ -2,28 +2,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, m, useReducedMotion } from "framer-motion";
+import { Backdrop } from "@/components/ui/Backdrop";
+import { panelMotion } from "@/lib/motion";
 import { useTheme } from "next-themes";
-import {
-    AlertCircle,
-    Building2,
-    FileText,
-    Hash,
-    Loader2,
-    Package,
-    ReceiptText,
-    User,
-    Users,
-    X,
-} from "lucide-react";
+import { AlertCircle, Building2, FileText, Hash, Package, ReceiptText, User, Users, X } from "lucide-react";
+import { ListSkeleton } from "@/components/ui/skeletons";
 import axiosInstance from "@/lib/axiosInstance";
-import {
-    formatDate,
-    formatNumber,
-    getStatusLabel,
-    getStatusTone,
-    type SalesInvoice,
-} from "@/utils/warehouseEmployee";
+import { formatDate, formatNumber, getStatusLabel, getStatusTone, type SalesInvoice } from "@/utils/warehouseEmployee";
 
 interface Props {
     isOpen: boolean;
@@ -133,6 +119,7 @@ export default function OrderInvoiceModal({
     onClose,
     invoice,
 }: Props) {
+    const reduced = useReducedMotion() ?? false;
     const { resolvedTheme } = useTheme();
     const isDark = resolvedTheme === "dark";
 
@@ -196,11 +183,11 @@ export default function OrderInvoiceModal({
         },
         neutral: {
             bg: isDark ? "rgba(148,163,184,0.12)" : "rgba(148,163,184,0.08)",
-            text: isDark ? "#cbd5e1" : "#475569",
+            text: isDark ? "#d1d5db" : "#4b5563",
         },
     }[tone] || {
         bg: "rgba(148,163,184,0.08)",
-        text: "#475569",
+        text: "#4b5563",
     };
 
     const items = (task?.items ?? invoice.lines.map((line) => ({
@@ -257,23 +244,16 @@ export default function OrderInvoiceModal({
     return (
         <AnimatePresence>
             {isOpen && (
-                <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    onClick={onClose}
-                    className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-3 backdrop-blur-sm sm:p-5"
+                <div
+                    className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-5"
                     dir="rtl"
                 >
-                    <motion.div
-                        initial={{ opacity: 0, scale: 0.96, y: 12 }}
-                        animate={{ opacity: 1, scale: 1, y: 0 }}
-                        exit={{ opacity: 0, scale: 0.96, y: 12 }}
-                        transition={{ duration: 0.2 }}
-                        onClick={(event) => event.stopPropagation()}
-                        className="flex max-h-[92dvh] w-full max-w-3xl flex-col overflow-hidden rounded-3xl"
+                    <Backdrop onClick={onClose} />
+                    <m.div
+                        {...panelMotion(false, reduced)}
+                        className="relative flex max-h-[92dvh] w-full max-w-3xl flex-col overflow-hidden rounded-3xl"
                         style={{
-                            background: isDark ? "#0f172a" : "#fff",
+                            background: isDark ? "#111827" : "#fff",
                             border: isDark
                                 ? "1px solid rgba(255,255,255,0.06)"
                                 : "1px solid rgba(15,23,42,0.06)",
@@ -328,15 +308,7 @@ export default function OrderInvoiceModal({
 
                         <main className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-5">
                             {loading ? (
-                                <div className="flex min-h-64 flex-col items-center justify-center gap-3">
-                                    <Loader2
-                                        size={28}
-                                        className="animate-spin text-indigo-500"
-                                    />
-                                    <p className="text-[12px] font-semibold text-gray-500 dark:text-gray-400">
-                                        در حال دریافت جزئیات فاکتور...
-                                    </p>
-                                </div>
+                                <ListSkeleton rows={4} />
                             ) : error ? (
                                 <div className="flex min-h-52 flex-col items-center justify-center gap-3 rounded-3xl border border-red-200 bg-red-50 p-5 text-center dark:border-red-500/20 dark:bg-red-500/5">
                                     <AlertCircle
@@ -581,8 +553,8 @@ export default function OrderInvoiceModal({
                                 بستن فاکتور
                             </button>
                         </footer>
-                    </motion.div>
-                </motion.div>
+                    </m.div>
+                </div>
             )}
         </AnimatePresence>
     );
@@ -666,7 +638,7 @@ function Th({
     return (
         <th
             className="px-3 py-3 text-right text-[11px] font-extrabold"
-            style={{ color: isDark ? "#e2e8f0" : "#334155" }}
+            style={{ color: isDark ? "#e5e7eb" : "#374151" }}
         >
             {children}
         </th>
@@ -683,7 +655,7 @@ function Td({
     return (
         <td
             className="px-3 py-3 text-[11.5px]"
-            style={{ color: isDark ? "#cbd5e1" : "#475569" }}
+            style={{ color: isDark ? "#d1d5db" : "#4b5563" }}
         >
             {children}
         </td>

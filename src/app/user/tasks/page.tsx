@@ -1,168 +1,229 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Archive, ClipboardList, Loader, Plus, RefreshCw } from "lucide-react";
 import { useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
 import axiosInstance from "@/lib/axiosInstance";
 import { apiRoutes } from "@/lib/apiRoutes";
-import { useAuthStore } from "@/store/authStore";
 import type { Task, TaskStatus } from "@/types/task";
-import type { Customer } from "@/types/customer";
 import type { Department } from "@/types/department";
 import type { Employee } from "@/types/employee";
 import TaskCard from "@/components/user/tasks/TaskCardx";
-import CreateTaskModal from "@/components/user/tasks/CreateTaskModal";
-import CreateNoCaseTaskModal from "@/components/customcomponents/tasks/CreateNoCaseTaskModal";
-import EditTaskModal from "@/components/user/tasks/EditTaskModal";
+import { usePaginatedList } from "@/hooks/usePaginatedList";
+import { fetchPage } from "@/lib/api/_core";
+import { cached, listAll, metaApi } from "@/lib/api";
+import { useAuthStore } from "@/store/authStore";
+import Pagination from "@/components/ui/Pagination";
 
-type ListResponse<T> = T[] | { results?: T[]; data?: T[] };
 const ACTIVE_STATUS = "in_progress" as TaskStatus;
+const PAGE_SIZE = 12;
 
-function extractList<T>(data: ListResponse<T> | undefined | null): T[] {
-    if (Array.isArray(data)) return data;
-    if (data && typeof data === "object") {
-        if (Array.isArray(data.results)) return data.results;
-        if (Array.isArray(data.data)) return data.data;
-    }
-    return [];
-}
+const CreateTaskModal = dynamic(() => import("@/components/user/tasks/CreateTaskModal"), {
+    ssr: false,
+    loading: () => null,
+});
+const CreateNoCaseTaskModal = dynamic(() => import("@/components/customcomponents/tasks/CreateNoCaseTaskModal"), {
+    ssr: false,
+    loading: () => null,
+});
+const EditTaskModal = dynamic(() => import("@/components/user/tasks/EditTaskModal"), {
+    ssr: false,
+    loading: () => null,
+});
 
 function parseAssignedEmployees(raw: unknown): number[] {
-    const ids: number[] = [];
-    const push = (value: unknown) => {
-        const id = Number(value);
-        if (Number.isFinite(id) && id > 0) ids.push(id);
+    const values = Array.isArray(raw) ? raw : [raw];
+
+    return values
+        .map((item) => {
+            if (typeof item === "object" && item !== null) {
+                const record = item as Record<string, unknown>;
+                return Number(record.id ?? record.employee ?? record.user);
+            }
+            return Number(item);
+        })
+        .filter((id) => Number.isFinite(id) && id > 0);
+}
+
+async function mapLimit<T, R>(
+    items: T[],
+    limit: number,
+    mapper: (item: T) => Promise<R>,
+): Promise<R[]> {
+    const results = new Array<R>(items.length);
+    let cursor = 0;
+
+    const worker = async () => {
+        while (cursor < items.length) {
+            const index = cursor++;
+            results[index] = await mapper(items[index]);
+        }
     };
-    if (Array.isArray(raw)) {
-        raw.forEach((item) => push(
-            typeof item === "object" && item !== null
-                ? (item as any).id ?? (item as any).employee ?? (item as any).user
-                : item
-        ));
-    } else if (raw !== null && raw !== undefined) {
-        push(typeof raw === "object"
-            ? (raw as any).id ?? (raw as any).employee ?? (raw as any).user
-            : raw);
-    }
-    return ids;
+
+    await Promise.all(
+        Array.from({ length: Math.min(limit, items.length) }, worker),
+    );
+
+    return results;
 }
 
 export default function UserTasksPage() {
     const router = useRouter();
-    const [tasks, setTasks] = useState<Task[]>([]);
-    const [customers, setCustomers] = useState<Customer[]>([]);
     const [departments, setDepartments] = useState<Department[]>([]);
-    const [employees, setEmployees] = useState<Employee[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [search, setSearch] = useState("");
     const [showCreate, setShowCreate] = useState(false);
     const [showCreateNoCase, setShowCreateNoCase] = useState(false);
     const [editingTask, setEditingTask] = useState<Task | null>(null);
-    const userId = useAuthStore((s) => s.userId);
-    const username = useAuthStore((s) => s.username);
-    const fetchPromiseRef = useRef<Promise<void> | null>(null);
+    const [taskDetails, setTaskDetails] = useState<Map<number, Task>>(new Map());
+    const [employeeId, setEmployeeId] = useState<number | null>(null);
+    const [employeeLoading, setEmployeeLoading] = useState(true);
+    const userId = useAuthStore((state) => state.userId);
+    const username = useAuthStore((state) => state.username);
 
-    const fetchAll = useCallback(async () => {
-        if (fetchPromiseRef.current) return fetchPromiseRef.current;
+    const list = usePaginatedList<Task>(
+        (params, signal) =>
+            fetchPage<Task>(
+                apiRoutes.tasks,
+                { ...params, status: ACTIVE_STATUS },
+                signal,
+            ),
+        { pageSize: PAGE_SIZE, scrollTop: true },
+    );
 
-        const request = (async () => {
-            try {
-                setLoading(true);
-                const [tasksRes, customersRes, departmentsRes, employeesRes] = await Promise.all([
-                    axiosInstance.get<ListResponse<Task>>(apiRoutes.tasks),
-                    axiosInstance.get<ListResponse<Customer>>(apiRoutes.customers),
-                    axiosInstance.get<ListResponse<Department>>(apiRoutes.departments),
-                    axiosInstance.get<ListResponse<Employee>>("/accounts/api/v1/employee/list/"),
-                ]);
+    const visibleTasks = useMemo(() => {
+        if (!employeeId) return list.data;
 
-                const employeeList = extractList<Employee>(employeesRes.data);
-                const taskList = extractList<Task>(tasksRes.data);
-                const matchedEmployee = employeeList.find((emp: any) =>
-                    (username && emp.username === username) ||
-                    (userId && Number(emp.user_id ?? emp.user ?? emp.user_detail?.id) === Number(userId)) ||
-                    (userId && Number(emp.id) === Number(userId))
+        return list.data.filter((task) => {
+            const record = task as Task & {
+                created_by?: unknown;
+                creator?: unknown;
+                user?: unknown;
+            };
+            const assigned = parseAssignedEmployees(record.assigned_employee);
+            const creatorId = Number(record.created_by ?? record.creator ?? record.user);
+
+            return assigned.includes(employeeId) || (!!userId && creatorId === Number(userId));
+        });
+    }, [list.data, employeeId, userId]);
+
+    const tasks = useMemo(
+        () => visibleTasks.map((task) => ({ ...task, ...taskDetails.get(task.id) })),
+        [visibleTasks, taskDetails],
+    );
+    const loading = list.loading || employeeLoading;
+
+    useEffect(() => {
+        let cancelled = false;
+
+        cached(
+            "user-tasks:employees",
+            () => listAll<Employee>("/accounts/api/v1/employee/list/"),
+            5 * 60_000,
+        ).then((employeeList) => {
+            if (cancelled) return;
+            const matched = employeeList.find((employee) => {
+                const record = employee as Employee & {
+                    user_id?: number | string;
+                    user?: number | string;
+                };
+                return (
+                    (username && employee.username === username) ||
+                    (userId && Number(record.user_id ?? record.user ?? employee.user_detail?.id) === Number(userId)) ||
+                    (userId && Number(employee.id) === Number(userId))
                 );
-                const empId = matchedEmployee ? Number(matchedEmployee.id) : null;
+            });
+            setEmployeeId(matched ? Number(matched.id) : null);
+            setEmployeeLoading(false);
+        }).catch(() => {
+            if (!cancelled) setEmployeeLoading(false);
+        });
 
-                const detailedTasks = await Promise.all(
-                    taskList.map(async (task) => {
-                        try {
-                            const { data } = await axiosInstance.get<Task>(`/tasks/api/v1/tasks/${task.id}/`);
-                            return { ...task, ...data };
-                        } catch {
-                            return task;
-                        }
-                    })
-                );
-
-                const scoped = empId
-                    ? detailedTasks.filter((task: any) => {
-                        const assigned = parseAssignedEmployees(task.assigned_employee);
-                        const creatorId = Number(task.created_by ?? task.creator ?? task.user);
-                        return assigned.includes(empId) || (!!userId && creatorId === Number(userId));
-                    })
-                    : detailedTasks;
-
-                setTasks(scoped.filter((task) => task.status === ACTIVE_STATUS));
-                setCustomers(extractList<Customer>(customersRes.data));
-                setDepartments(extractList<Department>(departmentsRes.data));
-                setEmployees(employeeList);
-            } catch {
-                setTasks([]);
-                setCustomers([]);
-                setDepartments([]);
-                setEmployees([]);
-            } finally {
-                setLoading(false);
-            }
-        })();
-
-        fetchPromiseRef.current = request;
-        try {
-            await request;
-        } finally {
-            if (fetchPromiseRef.current === request) fetchPromiseRef.current = null;
-        }
+        return () => {
+            cancelled = true;
+        };
     }, [userId, username]);
 
     useEffect(() => {
-        void fetchAll();
-    }, [fetchAll]);
+        if (!employeeLoading && !visibleTasks.length && list.data.length && !list.loading && list.page < list.totalPages) {
+            list.setPage(list.page + 1);
+        }
+    }, [employeeLoading, visibleTasks.length, list.data.length, list.loading, list.page, list.totalPages, list.setPage]);
 
-    const filteredTasks = useMemo(() => {
-        const query = search.trim().toLowerCase();
-        if (!query) return tasks;
-        return tasks.filter((task) =>
-            task.title?.toLowerCase().includes(query) ||
-            task.description?.toLowerCase().includes(query)
-        );
-    }, [tasks, search]);
+    useEffect(() => {
+        if (!visibleTasks.length) {
+            setTaskDetails(new Map());
+            return;
+        }
+
+        const controller = new AbortController();
+        const { signal } = controller;
+
+        void mapLimit(visibleTasks, 4, async (task) => {
+            try {
+                const { data } = await axiosInstance.get<Task>(
+                    `/tasks/api/v1/tasks/${task.id}/`,
+                    { signal, priority: "low" },
+                );
+                return { id: task.id, data };
+            } catch {
+                return null;
+            }
+        }).then((details) => {
+            if (signal.aborted) return;
+            setTaskDetails(new Map(
+                details
+                    .filter((item): item is { id: number; data: Task } => item !== null)
+                    .map((item) => [item.id, item.data]),
+            ));
+        }).catch(() => undefined);
+
+        return () => controller.abort();
+    }, [visibleTasks]);
+
+    useEffect(() => {
+        let cancelled = false;
+
+        metaApi.departments()
+            .then((departmentList) => {
+                if (cancelled) return;
+                setDepartments(departmentList);
+            })
+            .catch(() => undefined);
+
+        return () => {
+            cancelled = true;
+        };
+    }, []);
+
+    const refreshTasks = useCallback(() => {
+        list.refetch();
+    }, [list.refetch]);
 
     const handleDelete = useCallback(async (taskId: number) => {
         try {
             await axiosInstance.delete(apiRoutes.deleteTask(taskId));
-            setTasks((prev) => prev.filter((task) => task.id !== taskId));
+            list.refetch();
         } catch {
-            await fetchAll();
+            list.refetch();
             throw new Error("delete failed");
         }
-    }, [fetchAll]);
+    }, [list.refetch]);
 
     const handleCreateSuccess = useCallback(() => {
         setShowCreate(false);
-        void fetchAll();
-    }, [fetchAll]);
+        refreshTasks();
+    }, [refreshTasks]);
 
     const handleCreateNoCaseSuccess = useCallback(() => {
         setShowCreateNoCase(false);
-        void fetchAll();
-    }, [fetchAll]);
+        refreshTasks();
+    }, [refreshTasks]);
 
     const handleEditSuccess = useCallback(() => {
         setEditingTask(null);
-        void fetchAll();
-    }, [fetchAll]);
+        refreshTasks();
+    }, [refreshTasks]);
 
     return (
         <div className="flex flex-col gap-6 p-4 md:p-6" dir="rtl">
@@ -174,7 +235,7 @@ export default function UserTasksPage() {
                     <div className="min-w-0">
                         <h1 className="text-[14px] font-extrabold text-gray-900 dark:text-white">وظایف در حال انجام</h1>
                         <p className="mt-0.5 text-[11.5px] text-gray-400 dark:text-gray-500">
-                            {loading ? "در حال بارگذاری..." : `${filteredTasks.length} وظیفه`}
+                            {loading ? "در حال بارگذاری..." : `${tasks.length} وظیفه`}
                         </p>
                     </div>
                 </div>
@@ -183,7 +244,7 @@ export default function UserTasksPage() {
                     <button type="button" onClick={() => router.push("/user/Ticketarchive")} className="flex h-9 items-center gap-1.5 rounded-xl bg-gray-100 px-3 text-[11.5px] font-bold text-gray-500 transition-colors hover:bg-gray-200 dark:bg-white/5 dark:text-gray-400 dark:hover:bg-white/10">
                         <Archive size={13} /> بایگانی
                     </button>
-                    <button type="button" onClick={() => void fetchAll()} disabled={loading} className="flex h-9 w-9 items-center justify-center rounded-xl text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 disabled:opacity-40 dark:text-gray-500 dark:hover:bg-white/5 dark:hover:text-gray-300" title="بارگذاری مجدد">
+                    <button type="button" onClick={refreshTasks} disabled={loading} className="flex h-9 w-9 items-center justify-center rounded-xl text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 disabled:opacity-40 dark:text-gray-500 dark:hover:bg-white/5 dark:hover:text-gray-300" title="بارگذاری مجدد">
                         <RefreshCw size={13} className={loading ? "animate-spin" : ""} />
                     </button>
                     <button type="button" onClick={() => setShowCreate(true)} className="flex h-9 flex-1 items-center justify-center gap-2 rounded-xl bg-blue-600 px-3.5 py-2 text-[12.5px] font-bold text-white transition-all duration-200 hover:bg-blue-100 hover:text-blue-600 dark:bg-blue-500 dark:hover:bg-blue-500/15 dark:hover:text-blue-300 sm:flex-none">
@@ -195,25 +256,33 @@ export default function UserTasksPage() {
                 </div>
             </div>
 
-            <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="جستجو در عنوان یا توضیحات..." className="w-full rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 text-[12.5px] text-gray-700 outline-none transition-colors focus:border-indigo-400 dark:border-white/10 dark:bg-white/[0.03] dark:text-gray-200" />
+            <input value={list.search} onChange={(e) => list.setSearch(e.target.value)} placeholder="جستجو در عنوان یا توضیحات..." className="w-full rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 text-[12.5px] text-gray-700 outline-none transition-colors focus:border-indigo-400 dark:border-white/10 dark:bg-white/[0.03] dark:text-gray-200" />
 
             {loading ? (
                 <div className="flex flex-col items-center justify-center gap-3 py-16">
                     <Loader size={22} className="animate-spin text-indigo-500" />
                     <p className="text-[12.5px] text-gray-400 dark:text-gray-500">در حال دریافت لیست وظایف...</p>
                 </div>
-            ) : filteredTasks.length === 0 ? (
+            ) : tasks.length === 0 ? (
                 <div className="flex flex-col items-center justify-center gap-3 py-20">
                     <p className="text-[13px] text-gray-400 dark:text-gray-500">تسک در حال انجامی برای شما یافت نشد</p>
                 </div>
             ) : (
                 <motion.div layout className="grid grid-cols-1 gap-3 lg:grid-cols-2 xl:grid-cols-3">
                     <AnimatePresence mode="popLayout">
-                        {filteredTasks.map((task) => (
-                            <TaskCard key={task.id} task={task} employees={employees} onEdit={() => setEditingTask(task)} onDelete={handleDelete} />
+                        {tasks.map((task) => (
+                            <TaskCard key={task.id} task={task} onEdit={() => setEditingTask(task)} onDelete={handleDelete} />
                         ))}
                     </AnimatePresence>
                 </motion.div>
+            )}
+
+            {list.totalPages > 1 && (
+                <Pagination
+                    page={list.page}
+                    totalPages={list.totalPages}
+                    onChange={list.setPage}
+                />
             )}
 
             <AnimatePresence>
@@ -223,7 +292,7 @@ export default function UserTasksPage() {
                 {showCreateNoCase && <CreateNoCaseTaskModal isOpen={showCreateNoCase} onClose={() => setShowCreateNoCase(false)} onSuccess={handleCreateNoCaseSuccess} />}
             </AnimatePresence>
             <AnimatePresence>
-                {editingTask && <EditTaskModal task={editingTask} customers={customers} departments={departments} employees={employees} onClose={() => setEditingTask(null)} onSuccess={handleEditSuccess} />}
+                {editingTask && <EditTaskModal task={editingTask} departments={departments} onClose={() => setEditingTask(null)} onSuccess={handleEditSuccess} />}
             </AnimatePresence>
         </div>
     );

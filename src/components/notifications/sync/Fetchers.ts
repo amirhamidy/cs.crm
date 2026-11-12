@@ -1,12 +1,9 @@
-import axiosInstance from "@/lib/axiosInstance";
-import { unwrapList } from "./Normalize";
+import { fetchAllPages, fetchPage } from "@/lib/api/_core";
 
 async function getList(url: string, signal: AbortSignal): Promise<unknown[]> {
-  const response = await axiosInstance.get<unknown>(url, {
-    signal,
-  });
-
-  return unwrapList(response.data);
+  return fetchAllPages<unknown>((params) =>
+    fetchPage<unknown>(url, { ...params, page_size: 100 }, signal, "low"),
+  );
 }
 
 export const fetchInternalTasks = (signal: AbortSignal) =>

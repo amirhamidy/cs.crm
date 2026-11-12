@@ -37,7 +37,6 @@ export default function Topbar() {
           </div>
         </div>
 
-        {/* <GlobalSearch /> */}
 
         <div className="flex items-center gap-2">
           <NotificationBell />

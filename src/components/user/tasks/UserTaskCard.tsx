@@ -2,46 +2,25 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { motion } from "framer-motion";
+import { m } from "framer-motion";
 
-import {
-    AlarmClock,
-    ArrowLeftCircle,
-    ArrowRightCircle,
-    Ban,
-    Building2,
-    CalendarDays,
-    CheckCircle2,
-    Clock3,
-    History,
-    Layers3,
-    Loader2,
-    MessageSquareText,
-    RotateCcw,
-    ShoppingBag,
-    XCircle,
-    ClipboardList,
-    FileText,
-    Users,
-} from "lucide-react";
+import { AlarmClock, ArrowLeftCircle, ArrowLeftRight, ArrowRightCircle, Building2, CalendarDays, CheckCircle2, Clock3, History, Layers3, MessageSquareText, RotateCcw, ShoppingBag, XCircle, FileText, Users } from "lucide-react";
 
 import axiosInstance from "@/lib/axiosInstance";
+import { tasksApi, casesApi, customersApi } from "@/lib/api";
 
 import TaskCaseDescriptionModal from "./TaskCaseDescriptionModal";
 import TaskNotesModal from "./TaskNotesModal";
 import TaskActionModal from "./TaskActionModal";
 import SoldOrderTaskModal from "./SoldOrderTaskModal";
 import TaskLogsModal from "./TaskLogsModal";
+import TaskTransferModal from "./TaskTransferModal";
 import ActionBtn from "./ActionBtn";
 
-import {
-    toJalali,
-    toPersianDigits,
-    JALALI_MONTHS,
-    pad2,
-} from "@/lib/jalali";
+import { toJalali, toPersianDigits, JALALI_MONTHS, pad2 } from "@/lib/jalali";
 
 import type { UserTask } from "./types";
+import type { TransferTaskResponse } from "@/types/task";
 
 const GRADIENTS = [
     ["#6366f1", "#8b5cf6"],
@@ -73,6 +52,8 @@ interface Props {
     accent?: string;
     isLastStage: boolean;
     onUpdated: (task: UserTask) => void;
+    
+    onTransferred?: (task: UserTask) => void;
     employeesMap?: Record<number, string>;
     staffId: number;
 }
@@ -231,6 +212,7 @@ export default function UserTaskCard({
     accent = "#6366f1",
     isLastStage,
     onUpdated,
+    onTransferred,
     employeesMap = {},
     staffId,
 }: Props) {
@@ -249,6 +231,7 @@ export default function UserTaskCard({
 
     const [openModal, setOpenModal] = useState<ModalType | null>(null);
     const [logsOpen, setLogsOpen] = useState(false);
+    const [transferOpen, setTransferOpen] = useState(false);
     const [notesOpen, setNotesOpen] = useState(false);
     const [caseDescOpen, setCaseDescOpen] = useState(false);
     const [submitting, setSubmitting] = useState(false);
@@ -268,15 +251,19 @@ export default function UserTaskCard({
     const isCancelled = status === "cancelled";
     const isCompleted = (status as string) === "completed";
 
+    
+    const canTransfer =
+        isActive && staffId > 0 && assigneeIds.includes(Number(staffId));
+
     const deadline = formatJalali(schedule.deadline);
     const started = formatJalali(schedule.started_at);
     const dState = deadlineState(schedule.deadline);
     const DeadlineIcon = dState.icon;
 
     const fetchLog = useCallback(() => {
-        axiosInstance
-            .get<LatestLog[]>(`/tasks/api/v1/tasks/${task.id}/logs/`)
-            .then((r) => setLatestLog(r.data?.[0] ?? null))
+        tasksApi
+            .logs<LatestLog[]>(task.id)
+            .then((r) => setLatestLog(r?.[0] ?? null))
             .catch(() => setLatestLog(null));
     }, [task.id]);
 
@@ -285,32 +272,30 @@ export default function UserTaskCard({
     }, [fetchLog]);
 
     useEffect(() => {
-        axiosInstance
-            .get<DeadlineResponse>(
-                `/tasks/api/v1/tasks/${task.id}/steps/${task.current_step}/deadline/`
-            )
-            .then((r) => setSchedule(r.data))
+        tasksApi
+            .stepDeadline<DeadlineResponse>(task.id, task.current_step)
+            .then((r) => setSchedule(r))
             .catch(() => undefined);
     }, [task.id, task.current_step]);
 
     useEffect(() => {
         if (!ext.case || customerName) return;
 
-        axiosInstance
-            .get(`/tasks/api/v1/cases/${ext.case}/`)
-            .then(async ({ data }) => {
+        casesApi
+            .get(Number(ext.case))
+            .then(async (caseData) => {
+                const data = caseData as unknown as { customer_name?: string; customer?: number };
                 if (data.customer_name) {
                     return setCustomerName(data.customer_name);
                 }
 
                 if (data.customer) {
-                    const r = await axiosInstance.get(
-                        `/customers/api/v1/customers/${data.customer}/`
-                    );
+                    const r = (await customersApi.get(data.customer)) as unknown as {
+                        full_name?: string;
+                        name?: string;
+                    };
 
-                    setCustomerName(
-                        r.data.full_name ?? r.data.name ?? null
-                    );
+                    setCustomerName(r.full_name ?? r.name ?? null);
                 }
             })
             .catch(() => undefined);
@@ -320,9 +305,9 @@ export default function UserTaskCard({
         try {
             if (!ext.case) return;
 
-            const { data } = await axiosInstance.get(
-                `/tasks/api/v1/cases/${ext.case}/`
-            );
+            const data = (await casesApi.get(Number(ext.case))) as unknown as {
+                customer?: number;
+            };
 
             if (data.customer) {
                 await axiosInstance.patch(
@@ -455,6 +440,27 @@ export default function UserTaskCard({
         }
     }
 
+    function handleTransferred(response: TransferTaskResponse) {
+        const { name_department, name_step_current, ...rest } = response;
+
+        const merged = {
+            ...task,
+            ...rest,
+            department_name:
+                response.department_name ??
+                name_department ??
+                task.department_name,
+            current_step_name:
+                name_step_current ??
+                response.current_step_name ??
+                task.current_step_name,
+            attachments: response.attachments ?? task.attachments,
+        } as unknown as UserTask;
+
+        
+        (onTransferred ?? onUpdated)(merged);
+    }
+
     async function submitSale(data: {
         task_id: number;
         warehouse_id: number;
@@ -528,7 +534,7 @@ export default function UserTaskCard({
 
     return (
         <>
-            <motion.div
+            <m.div
                 layout
                 className="group relative flex flex-col overflow-hidden rounded-[1.6rem] border bg-white p-3.5 shadow-[0_6px_22px_rgba(15,23,42,.03)] dark:bg-[#111a2d]"
                 style={{ borderColor: `${accent}28` }}
@@ -787,6 +793,18 @@ export default function UserTaskCard({
                             </div>
 
                             <div className="mt-1.5 flex flex-col gap-1.5">
+                                {canTransfer && (
+                                    <ActionBtn
+                                        rippleKey={`transfer-${task.id}`}
+                                        active={false}
+                                        onClick={() => setTransferOpen(true)}
+                                        color="indigo"
+                                        icon={<ArrowLeftRight size={13} />}
+                                        label="انتقال به دپارتمان دیگر"
+                                        full
+                                    />
+                                )}
+
                                 <ActionBtn
                                     rippleKey={`complete-${task.id}`}
                                     active={false}
@@ -813,7 +831,7 @@ export default function UserTaskCard({
                         </>
                     ) : null}
                 </div>
-            </motion.div>
+            </m.div>
 
             {(Object.keys(modalMeta) as ModalType[])
                 .filter((direction) => direction !== "sold")
@@ -860,6 +878,22 @@ export default function UserTaskCard({
                     onSubmit={submitSale}
                     staffId={staffId}
                     submitting={submitting}
+                />
+            )}
+
+            {canTransfer && (
+                <TaskTransferModal
+                    isOpen={transferOpen}
+                    onClose={() => setTransferOpen(false)}
+                    taskId={task.id}
+                    taskTitle={task.title}
+                    currentDepartmentId={
+                        Number.isFinite(departmentId) && departmentId > 0
+                            ? departmentId
+                            : undefined
+                    }
+                    currentDepartmentName={task.department_name}
+                    onTransferred={handleTransferred}
                 />
             )}
 

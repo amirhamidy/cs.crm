@@ -1,24 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { motion } from "framer-motion";
+import { m } from "framer-motion";
 import { useTheme } from "next-themes";
-import {
-    ReceiptText,
-    User,
-    CalendarDays,
-    Package,
-    ArrowLeft,
-    Hash,
-    CheckCircle2,
-} from "lucide-react";
-import {
-    formatDate,
-    formatNumber,
-    getStatusLabel,
-    getStatusTone,
-    type SalesInvoice,
-} from "@/utils/warehouseEmployee";
+import { ReceiptText, User, CalendarDays, Package, ArrowLeft, Hash, CheckCircle2 } from "lucide-react";
+import { formatDate, formatNumber, getStatusLabel, getStatusTone, type SalesInvoice } from "@/utils/warehouseEmployee";
 
 interface Props {
     invoice: SalesInvoice;
@@ -47,12 +33,12 @@ export default function OrderInvoiceCard({ invoice, index, onOpen }: Props) {
         },
         neutral: {
             bg: isDark ? "rgba(148,163,184,0.12)" : "rgba(148,163,184,0.08)",
-            text: isDark ? "#cbd5e1" : "#475569",
+            text: isDark ? "#d1d5db" : "#4b5563",
         },
     }[tone];
 
     return (
-        <motion.div
+        <m.div
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.96 }}
@@ -84,7 +70,7 @@ export default function OrderInvoiceCard({ invoice, index, onOpen }: Props) {
                         <stop offset="100%" stopColor="#8b5cf6" />
                     </linearGradient>
                 </defs>
-                <motion.rect
+                <m.rect
                     x="1"
                     y="1"
                     width="calc(100% - 2px)"
@@ -225,6 +211,6 @@ export default function OrderInvoiceCard({ invoice, index, onOpen }: Props) {
                 </span>
                 <ArrowLeft size={13} className="text-indigo-500" />
             </div>
-        </motion.div>
+        </m.div>
     );
 }

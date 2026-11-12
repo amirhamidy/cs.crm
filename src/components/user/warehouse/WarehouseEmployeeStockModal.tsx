@@ -1,38 +1,16 @@
 "use client";
 
-import {
-    useEffect,
-    useMemo,
-    useRef,
-    useState,
-    forwardRef,
-    useLayoutEffect,
-    type InputHTMLAttributes,
-} from "react";
+import { useEffect, useMemo, useRef, useState, forwardRef, useLayoutEffect, type InputHTMLAttributes } from "react";
 import { createPortal } from "react-dom";
-import { AnimatePresence, motion } from "framer-motion";
-import {
-    ArrowDownCircle,
-    ArrowUpCircle,
-    Boxes,
-    Check,
-    ChevronDown,
-    Loader,
-    Paperclip,
-    Search,
-    Upload,
-    X,
-} from "lucide-react";
+import { AnimatePresence, m, useReducedMotion } from "framer-motion";
+import { Backdrop } from "@/components/ui/Backdrop";
+import { panelMotion } from "@/lib/motion";
+import { ArrowDownCircle, ArrowUpCircle, Boxes, Check, ChevronDown, Paperclip, Search, Upload, X } from "lucide-react";
 import type { AxiosError } from "axios";
 import axiosInstance from "@/lib/axiosInstance";
-import {
-    ApiProduct,
-    ApiStockTransaction,
-    ApiWarehouseStaff,
-    STOCK_OUT_REASON_OPTIONS,
-    StockOutReason,
-} from "@/types/warehouse";
+import { ApiProduct, ApiStockTransaction, ApiWarehouseStaff, STOCK_OUT_REASON_OPTIONS, StockOutReason } from "@/types/warehouse";
 
+import { BusyContent } from "@/components/ui/Button";
 interface Props {
     isOpen: boolean;
     onClose: () => void;
@@ -130,7 +108,7 @@ const FloatingInput = forwardRef<HTMLInputElement, FloatingInputProps>(
                 />
                 <label
                     htmlFor={id}
-                    className="absolute right-5 top-1/2 -translate-y-1/2 text-sm text-gray-400 pointer-events-none transition-all duration-200 bg-white px-1.5 rounded peer-focus:top-0 peer-focus:text-xs peer-focus:text-gray-500 peer-[:not(:placeholder-shown)]:top-0 peer-[:not(:placeholder-shown)]:text-xs peer-[:not(:placeholder-shown)]:text-gray-500 dark:bg-[#0f172a]"
+                    className="absolute right-5 top-1/2 -translate-y-1/2 text-sm text-gray-400 pointer-events-none transition-all duration-200 bg-white px-1.5 rounded peer-focus:top-0 peer-focus:text-xs peer-focus:text-gray-500 peer-[:not(:placeholder-shown)]:top-0 peer-[:not(:placeholder-shown)]:text-xs peer-[:not(:placeholder-shown)]:text-gray-500 dark:bg-[#111827]"
                 >
                     {label}
                 </label>
@@ -242,12 +220,12 @@ function NiceSelect({
                 </span>
 
                 {!disabled && (
-                    <motion.span
+                    <m.span
                         animate={{ rotate: open ? 180 : 0 }}
                         transition={{ duration: 0.2 }}
                     >
                         <ChevronDown size={14} className="shrink-0 text-gray-400" />
-                    </motion.span>
+                    </m.span>
                 )}
             </button>
 
@@ -255,7 +233,7 @@ function NiceSelect({
                 createPortal(
                     <AnimatePresence>
                         {open && !disabled && (
-                            <motion.div
+                            <m.div
                                 ref={panelRef}
                                 initial={{ opacity: 0, y: -6, scale: 0.97 }}
                                 animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -269,7 +247,7 @@ function NiceSelect({
                                     zIndex: 100,
                                     transformOrigin: "top center",
                                 }}
-                                className="overflow-hidden rounded-[1.5rem] border border-gray-100 bg-white shadow-xl shadow-black/5 dark:border-white/[0.08] dark:bg-[#0f172a] dark:shadow-black/40"
+                                className="overflow-hidden rounded-[1.5rem] border border-gray-100 bg-white shadow-xl shadow-black/5 dark:border-white/[0.08] dark:bg-[#111827] dark:shadow-black/40"
                             >
                                 {options.length > 5 && (
                                     <div className="border-b border-gray-100 px-3 py-2.5 dark:border-white/[0.06]">
@@ -298,7 +276,7 @@ function NiceSelect({
                                         visible.map((o, i) => {
                                             const active = o.value === value;
                                             return (
-                                                <motion.button
+                                                <m.button
                                                     key={o.value}
                                                     type="button"
                                                     initial={{ opacity: 0, x: 6 }}
@@ -340,12 +318,12 @@ function NiceSelect({
                                                             <Check size={11} className="text-white" strokeWidth={3} />
                                                         </span>
                                                     )}
-                                                </motion.button>
+                                                </m.button>
                                             );
                                         })
                                     )}
                                 </div>
-                            </motion.div>
+                            </m.div>
                         )}
                     </AnimatePresence>,
                     document.body
@@ -363,6 +341,7 @@ export default function WarehouseEmployeeStockModal({
     warehouseId,
     onCompleted,
 }: Props) {
+    const reduced = useReducedMotion() ?? false;
     const [mode, setMode] = useState<Mode>("in");
     const [quantity, setQuantity] = useState("");
     const [reason, setReason] = useState<StockOutReason>("sale");
@@ -481,24 +460,13 @@ export default function WarehouseEmployeeStockModal({
     return (
         <AnimatePresence>
             {isOpen && (
-                <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    onClick={() => !loading && onClose()}
+                <div
                     className="fixed inset-0 z-50 flex items-center justify-center px-4"
-                    style={{
-                        background: "rgba(0,0,0,0.45)",
-                        backdropFilter: "blur(3px)",
-                    }}
                 >
-                    <motion.div
-                        initial={{ opacity: 0, y: 16 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: 16 }}
-                        transition={{ duration: 0.35, ease: "easeOut" }}
-                        onClick={(e) => e.stopPropagation()}
-                        className="w-full max-w-md rounded-[2rem] border border-gray-100 bg-white shadow-sm dark:border-white/[0.06] dark:bg-[#0f172a]"
+                    <Backdrop onClick={() => !loading && onClose()} />
+                    <m.div
+                        {...panelMotion(false, reduced)}
+                        className="relative w-full max-w-md rounded-[2rem] border border-gray-100 bg-white shadow-sm dark:border-white/[0.06] dark:bg-[#111827]"
                         dir="rtl"
                     >
                         <div className="flex items-center justify-between px-8 pb-5 pt-7">
@@ -553,7 +521,7 @@ export default function WarehouseEmployeeStockModal({
                                     }}
                                 >
                                     {mode === "in" && (
-                                        <motion.div
+                                        <m.div
                                             layoutId="employee-stock-mode"
                                             className="absolute inset-0 rounded-xl bg-white shadow-sm dark:bg-white/[0.08]"
                                         />
@@ -574,7 +542,7 @@ export default function WarehouseEmployeeStockModal({
                                     }}
                                 >
                                     {mode === "out" && (
-                                        <motion.div
+                                        <m.div
                                             layoutId="employee-stock-mode"
                                             className="absolute inset-0 rounded-xl bg-white shadow-sm dark:bg-white/[0.08]"
                                         />
@@ -631,7 +599,7 @@ export default function WarehouseEmployeeStockModal({
                                 />
                                 <label
                                     htmlFor="stock-note"
-                                    className="pointer-events-none absolute right-5 top-4 text-sm text-gray-400 transition-all duration-200 bg-white px-1.5 rounded peer-focus:top-0 peer-focus:-translate-y-1/2 peer-focus:text-xs peer-focus:text-gray-500 peer-[:not(:placeholder-shown)]:top-0 peer-[:not(:placeholder-shown)]:-translate-y-1/2 peer-[:not(:placeholder-shown)]:text-xs peer-[:not(:placeholder-shown)]:text-gray-500 dark:bg-[#0f172a]"
+                                    className="pointer-events-none absolute right-5 top-4 text-sm text-gray-400 transition-all duration-200 bg-white px-1.5 rounded peer-focus:top-0 peer-focus:-translate-y-1/2 peer-focus:text-xs peer-focus:text-gray-500 peer-[:not(:placeholder-shown)]:top-0 peer-[:not(:placeholder-shown)]:-translate-y-1/2 peer-[:not(:placeholder-shown)]:text-xs peer-[:not(:placeholder-shown)]:text-gray-500 dark:bg-[#111827]"
                                 >
                                     توضیحات <span className="text-red-500">*</span>
                                 </label>
@@ -677,7 +645,7 @@ export default function WarehouseEmployeeStockModal({
 
                             <AnimatePresence>
                                 {error && (
-                                    <motion.div
+                                    <m.div
                                         initial={{ opacity: 0, y: 6 }}
                                         animate={{ opacity: 1, y: 0 }}
                                         exit={{ opacity: 0, y: 4 }}
@@ -694,27 +662,27 @@ export default function WarehouseEmployeeStockModal({
                                         >
                                             <X size={13} />
                                         </button>
-                                    </motion.div>
+                                    </m.div>
                                 )}
                             </AnimatePresence>
 
-                            <motion.button
+                            <m.button
                                 type="submit"
                                 disabled={!canSubmit}
                                 whileTap={{ scale: 0.97 }}
-                                className={`mt-1 flex h-11 items-center justify-center gap-2 rounded-full text-[12.5px] font-bold text-white transition-all disabled:opacity-40 ${mode === "in"
+                                className={`relative mt-1 flex h-11 items-center justify-center gap-2 rounded-full text-[12.5px] font-bold text-white transition-all disabled:opacity-40 ${mode === "in"
                                     ? "bg-emerald-600 hover:bg-emerald-500"
                                     : "bg-red-600 hover:bg-red-500"
                                     }`}
                             >
-                                {loading ? (
-                                    <Loader size={15} className="animate-spin" />
-                                ) : mode === "in" ? (
-                                    "ثبت افزایش موجودی"
-                                ) : (
-                                    "ثبت کاهش موجودی"
-                                )}
-                            </motion.button>
+                                <BusyContent busy={loading}>
+                                    {mode === "in" ? (
+                                        "ثبت افزایش موجودی"
+                                    ) : (
+                                        "ثبت کاهش موجودی"
+                                    )}
+                                </BusyContent>
+                            </m.button>
 
                             {!noteValid && (
                                 <p className="text-center text-[10.5px] font-semibold text-gray-400">
@@ -722,8 +690,8 @@ export default function WarehouseEmployeeStockModal({
                                 </p>
                             )}
                         </form>
-                    </motion.div>
-                </motion.div>
+                    </m.div>
+                </div>
             )}
         </AnimatePresence>
     );

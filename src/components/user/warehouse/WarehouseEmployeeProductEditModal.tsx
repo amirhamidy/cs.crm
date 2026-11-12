@@ -1,30 +1,18 @@
 "use client";
 
-import {
-    useEffect,
-    useState,
-    useRef,
-    useMemo,
-    useLayoutEffect,
-    forwardRef,
-    type InputHTMLAttributes,
-} from "react";
+import { useEffect, useState, useRef, useMemo, useLayoutEffect, forwardRef, type InputHTMLAttributes } from "react";
 import { createPortal } from "react-dom";
-import { AnimatePresence, motion } from "framer-motion";
-import { Check, ChevronDown, Loader, Pencil, Search, X } from "lucide-react";
+import { AnimatePresence, m, useReducedMotion } from "framer-motion";
+import { Backdrop } from "@/components/ui/Backdrop";
+import { panelMotion } from "@/lib/motion";
+import { Check, ChevronDown, Pencil, Search, X } from "lucide-react";
 import type { AxiosError } from "axios";
 import axiosInstance from "@/lib/axiosInstance";
-import {
-    ApiCategory,
-    ApiProduct,
-    unitDetailKey,
-} from "@/types/warehouse";
-import {
-    SHELF_CODE_MAX_LENGTH,
-    normalizeShelfCode,
-} from "@/utils/warehouseShelf";
+import { ApiCategory, ApiProduct, unitDetailKey } from "@/types/warehouse";
+import { SHELF_CODE_MAX_LENGTH, normalizeShelfCode } from "@/utils/warehouseShelf";
 import type { WithShelf } from "@/types/warehouseShelf";
 
+import { BusyContent } from "@/components/ui/Button";
 interface Props {
     isOpen: boolean;
     onClose: () => void;
@@ -35,7 +23,7 @@ interface Props {
 
 type Option = { value: string; label: string; sub?: string };
 
-/* ------------------------------ helpers ------------------------------ */
+
 
 const GRADIENTS = [
     "from-blue-500 to-indigo-500",
@@ -62,7 +50,7 @@ function initialOf(text: string) {
     return clean ? clean.charAt(0) : "؟";
 }
 
-/** جدا کردن هر 3 رقم با کاما، حفظ نقطه اعشار */
+
 function formatNumber(raw: string): string {
     if (!raw) return "";
     let str = String(raw).replace(/,/g, "").trim();
@@ -78,20 +66,20 @@ function formatNumber(raw: string): string {
     return (neg ? "-" : "") + out;
 }
 
-/** تبدیل مقدار فرمت‌شده به عدد خام */
+
 function parseNumber(raw: string): number {
     if (!raw) return NaN;
     const cleaned = String(raw).replace(/,/g, "").trim();
     return cleaned === "" ? NaN : Number(cleaned);
 }
 
-/* ------------------------------ FloatingInput ------------------------------ */
+
 
 interface FloatingInputProps
     extends Omit<InputHTMLAttributes<HTMLInputElement>, "onChange"> {
     label: string;
     id: string;
-    /** فعال‌سازی فرمت عددی با کاما */
+    
     numeric?: boolean;
     onValueChange?: (value: string) => void;
 }
@@ -131,7 +119,7 @@ const FloatingInput = forwardRef<HTMLInputElement, FloatingInputProps>(
                 />
                 <label
                     htmlFor={id}
-                    className="absolute right-5 top-1/2 -translate-y-1/2 text-sm text-gray-400 pointer-events-none transition-all duration-200 bg-white px-1.5 rounded peer-focus:top-0 peer-focus:text-xs peer-focus:text-gray-500 peer-[:not(:placeholder-shown)]:top-0 peer-[:not(:placeholder-shown)]:text-xs peer-[:not(:placeholder-shown)]:text-gray-500 dark:bg-[#0f172a]"
+                    className="absolute right-5 top-1/2 -translate-y-1/2 text-sm text-gray-400 pointer-events-none transition-all duration-200 bg-white px-1.5 rounded peer-focus:top-0 peer-focus:text-xs peer-focus:text-gray-500 peer-[:not(:placeholder-shown)]:top-0 peer-[:not(:placeholder-shown)]:text-xs peer-[:not(:placeholder-shown)]:text-gray-500 dark:bg-[#111827]"
                 >
                     {label}
                 </label>
@@ -141,7 +129,7 @@ const FloatingInput = forwardRef<HTMLInputElement, FloatingInputProps>(
 );
 FloatingInput.displayName = "FloatingInput";
 
-/* ------------------------------ NiceSelect ------------------------------ */
+
 
 function NiceSelect({
     label,
@@ -256,12 +244,12 @@ function NiceSelect({
                 </span>
 
                 {!disabled && (
-                    <motion.span
+                    <m.span
                         animate={{ rotate: open ? 180 : 0 }}
                         transition={{ duration: 0.2 }}
                     >
                         <ChevronDown size={14} className="shrink-0 text-gray-400" />
-                    </motion.span>
+                    </m.span>
                 )}
             </button>
 
@@ -269,7 +257,7 @@ function NiceSelect({
                 createPortal(
                     <AnimatePresence>
                         {open && !disabled && (
-                            <motion.div
+                            <m.div
                                 ref={panelRef}
                                 initial={{ opacity: 0, y: -6, scale: 0.97 }}
                                 animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -287,7 +275,7 @@ function NiceSelect({
                                     zIndex: 100,
                                     transformOrigin: "top center",
                                 }}
-                                className="overflow-hidden rounded-[1.5rem] border border-gray-100 bg-white shadow-xl shadow-black/5 dark:border-white/[0.08] dark:bg-[#0f172a] dark:shadow-black/40"
+                                className="overflow-hidden rounded-[1.5rem] border border-gray-100 bg-white shadow-xl shadow-black/5 dark:border-white/[0.08] dark:bg-[#111827] dark:shadow-black/40"
                             >
                                 {options.length > 5 && (
                                     <div className="border-b border-gray-100 px-3 py-2.5 dark:border-white/[0.06]">
@@ -321,7 +309,7 @@ function NiceSelect({
                                         visible.map((o, i) => {
                                             const active = o.value === value;
                                             return (
-                                                <motion.button
+                                                <m.button
                                                     key={o.value}
                                                     type="button"
                                                     initial={{ opacity: 0, x: 6 }}
@@ -369,12 +357,12 @@ function NiceSelect({
                                                             />
                                                         </span>
                                                     )}
-                                                </motion.button>
+                                                </m.button>
                                             );
                                         })
                                     )}
                                 </div>
-                            </motion.div>
+                            </m.div>
                         )}
                     </AnimatePresence>,
                     document.body
@@ -383,7 +371,7 @@ function NiceSelect({
     );
 }
 
-/* ------------------------------ helpers ------------------------------ */
+
 
 function getErrorMessage(error: unknown) {
     const data = (error as AxiosError<Record<string, unknown>>).response?.data;
@@ -408,7 +396,7 @@ function getErrorMessage(error: unknown) {
     return "خطا در ویرایش محصول";
 }
 
-/* ============================== component ============================== */
+
 
 export default function WarehouseEmployeeProductEditModal({
     isOpen,
@@ -417,6 +405,7 @@ export default function WarehouseEmployeeProductEditModal({
     categories,
     onUpdated,
 }: Props) {
+    const reduced = useReducedMotion() ?? false;
     const [name, setName] = useState("");
     const [shelfCode, setShelfCode] = useState("");
     const [salePrice, setSalePrice] = useState("");
@@ -530,25 +519,14 @@ export default function WarehouseEmployeeProductEditModal({
     return (
         <AnimatePresence>
             {isOpen && (
-                <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
+                <div
                     className="fixed inset-0 z-50 flex items-center justify-center px-4"
-                    style={{
-                        background: "rgba(0,0,0,0.45)",
-                        backdropFilter: "blur(3px)",
-                    }}
-                    onClick={handleClose}
                 >
-                    <motion.div
-                        initial={{ opacity: 0, y: 16 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: 16 }}
-                        transition={{ duration: 0.35, ease: "easeOut" }}
-                        onClick={(e) => e.stopPropagation()}
+                    <Backdrop onClick={handleClose} />
+                    <m.div
+                        {...panelMotion(false, reduced)}
                         dir="rtl"
-                        className="w-full max-w-sm overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-sm dark:border-white/[0.06] dark:bg-[#0f172a]"
+                        className="relative w-full max-w-sm overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-sm dark:border-white/[0.06] dark:bg-[#111827]"
                     >
                         <div className="flex items-center justify-between px-8 pb-6 pt-8">
                             <div className="flex items-center gap-2.5">
@@ -646,21 +624,19 @@ export default function WarehouseEmployeeProductEditModal({
                                 </p>
                             )}
 
-                            <motion.button
+                            <m.button
                                 type="submit"
                                 disabled={loading}
                                 whileTap={{ scale: 0.97 }}
-                                className="flex items-center justify-center rounded-full bg-blue-600 py-3 text-[13px] font-bold text-white transition-colors hover:bg-blue-500 disabled:opacity-50"
+                                className="relative flex items-center justify-center rounded-full bg-blue-600 py-3 text-[13px] font-bold text-white transition-colors hover:bg-blue-500 disabled:opacity-50"
                             >
-                                {loading ? (
-                                    <Loader size={18} className="animate-spin" />
-                                ) : (
-                                    "ذخیره تغییرات"
-                                )}
-                            </motion.button>
+                                <BusyContent busy={loading}>
+                                    ذخیره تغییرات
+                                </BusyContent>
+                            </m.button>
                         </form>
-                    </motion.div>
-                </motion.div>
+                    </m.div>
+                </div>
             )}
         </AnimatePresence>
     );

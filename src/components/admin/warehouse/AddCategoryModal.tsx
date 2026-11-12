@@ -1,10 +1,11 @@
 "use client";
 import { FormEvent, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Check, Loader, Package, X } from "lucide-react";
+import { Check, Package, X } from "lucide-react";
 import { useTheme } from "next-themes";
 import axiosInstance from "@/lib/axiosInstance";
 
+import { BusyContent } from "@/components/ui/Button";
 interface AddCategoryModalProps {
     isOpen: boolean;
     onClose: () => void;
@@ -50,18 +51,17 @@ export default function AddCategoryModal({
         onClose();
     };
 
-    if (!isOpen) return null;
 
     return (
         <AnimatePresence>
+{isOpen && (
             <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="fixed inset-0 z-50 flex items-center justify-center px-4"
+                className="backdrop-blur-sm fixed inset-0 z-50 flex items-center justify-center px-4"
                 style={{
                     background: "rgba(0,0,0,0.45)",
-                    backdropFilter: "blur(3px)",
                 }}
                 onClick={handleClose}
             >
@@ -70,7 +70,7 @@ export default function AddCategoryModal({
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: 16 }}
                     transition={{ duration: 0.35, ease: "easeOut" }}
-                    className="w-full max-w-sm overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-sm dark:border-white/[0.06] dark:bg-[#0f172a]"
+                    className="w-full max-w-sm overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-sm dark:border-white/[0.06] dark:bg-[#111827]"
                     onClick={(e) => e.stopPropagation()}
                     dir="rtl"
                 >
@@ -121,20 +121,19 @@ export default function AddCategoryModal({
                             type="submit"
                             disabled={loading}
                             whileTap={{ scale: 0.97 }}
-                            className="flex items-center justify-center gap-2 rounded-full bg-blue-600 py-3 text-sm font-bold text-white transition-colors hover:bg-blue-500 disabled:opacity-50"
+                            className="relative flex items-center justify-center gap-2 rounded-full bg-blue-600 py-3 text-sm font-bold text-white transition-colors hover:bg-blue-500 disabled:opacity-50"
                         >
-                            {loading ? (
-                                <Loader size={15} className="animate-spin" />
-                            ) : (
+                            <BusyContent busy={loading}>
                                 <>
-                                    <Check size={14} />
-                                    ثبت دسته‌بندی
-                                </>
-                            )}
+                                        <Check size={14} />
+                                        ثبت دسته‌بندی
+                                    </>
+                            </BusyContent>
                         </motion.button>
                     </form>
                 </motion.div>
             </motion.div>
-        </AnimatePresence>
+        )}
+</AnimatePresence>
     );
 }

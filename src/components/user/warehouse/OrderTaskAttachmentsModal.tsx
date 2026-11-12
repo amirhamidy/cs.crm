@@ -1,17 +1,16 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
-import { ExternalLink, Loader2, Paperclip, Trash2, Upload, X } from "lucide-react";
-import {
-    apiErrorMessage,
-    createOrderTaskAttachment,
-    deleteOrderTaskAttachment,
-} from "@/lib/warehouseApi";
+import { AnimatePresence, m, useReducedMotion } from "framer-motion";
+import { Backdrop } from "@/components/ui/Backdrop";
+import { panelMotion } from "@/lib/motion";
+import { ExternalLink, Paperclip, Trash2, Upload, X } from "lucide-react";
+import { apiErrorMessage, createOrderTaskAttachment, deleteOrderTaskAttachment } from "@/lib/warehouseApi";
 import { resolveMediaUrl } from "@/lib/media";
 import { formatDate } from "@/utils/warehouseEmployee";
 import type { ApiOrderTask } from "@/types/warehouse";
 
+import { BusyContent } from "@/components/ui/Button";
 interface Props {
     isOpen: boolean;
     orderTask: ApiOrderTask;
@@ -29,6 +28,7 @@ export default function OrderTaskAttachmentsModal({
     onClose,
     onChanged,
 }: Props) {
+    const reduced = useReducedMotion() ?? false;
     const fileRef = useRef<HTMLInputElement>(null);
     const [file, setFile] = useState<File | null>(null);
     const [note, setNote] = useState("");
@@ -80,20 +80,14 @@ export default function OrderTaskAttachmentsModal({
     return (
         <AnimatePresence>
             {isOpen && (
-                <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
-                    onClick={() => !busy && onClose()}
+                <div
+                    className="fixed inset-0 z-[100] flex items-center justify-center p-4"
                     dir="rtl"
                 >
-                    <motion.div
-                        initial={{ opacity: 0, scale: 0.95, y: 10 }}
-                        animate={{ opacity: 1, scale: 1, y: 0 }}
-                        exit={{ opacity: 0, scale: 0.95, y: 10 }}
-                        onClick={(e) => e.stopPropagation()}
-                        className="flex max-h-[85vh] w-full max-w-md flex-col rounded-3xl bg-white p-5 shadow-2xl dark:bg-slate-900"
+                    <Backdrop onClick={() => !busy && onClose()} />
+                    <m.div
+                        {...panelMotion(false, reduced)}
+                        className="relative flex max-h-[85vh] w-full max-w-md flex-col rounded-3xl bg-white p-5 dark:bg-gray-900"
                     >
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
@@ -154,13 +148,11 @@ export default function OrderTaskAttachmentsModal({
                                                 aria-label="حذف فایل"
                                                 disabled={deletingId === item.id}
                                                 onClick={() => handleDelete(item.id)}
-                                                className="flex h-8 w-8 items-center justify-center rounded-xl text-red-500 hover:bg-red-500/10 disabled:opacity-50"
+                                                className="relative flex h-8 w-8 items-center justify-center rounded-xl text-red-500 hover:bg-red-500/10 disabled:opacity-50"
                                             >
-                                                {deletingId === item.id ? (
-                                                    <Loader2 size={14} className="animate-spin" />
-                                                ) : (
+                                                <BusyContent busy={deletingId === item.id}>
                                                     <Trash2 size={14} />
-                                                )}
+                                                </BusyContent>
                                             </button>
                                         )}
                                     </div>
@@ -193,14 +185,12 @@ export default function OrderTaskAttachmentsModal({
                                     type="button"
                                     onClick={handleUpload}
                                     disabled={busy || !file}
-                                    className="flex h-11 w-full items-center justify-center gap-2 rounded-2xl bg-indigo-600 text-[13px] font-bold text-white hover:bg-indigo-500 disabled:opacity-50"
+                                    className="relative flex h-11 w-full items-center justify-center gap-2 rounded-2xl bg-indigo-600 text-[13px] font-bold text-white hover:bg-indigo-500 disabled:opacity-50"
                                 >
-                                    {busy ? (
-                                        <Loader2 size={15} className="animate-spin" />
-                                    ) : (
+                                    <BusyContent busy={busy}>
                                         <Upload size={15} />
-                                    )}
-                                    آپلود فایل
+                                        آپلود فایل
+                                    </BusyContent>
                                 </button>
                             </div>
                         )}
@@ -210,8 +200,8 @@ export default function OrderTaskAttachmentsModal({
                                 {error}
                             </p>
                         )}
-                    </motion.div>
-                </motion.div>
+                    </m.div>
+                </div>
             )}
         </AnimatePresence>
     );

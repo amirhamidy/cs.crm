@@ -1,16 +1,17 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { Kanban, Loader, Building2, Plus, ChevronLeft, UserRound } from "lucide-react";
+import { m, AnimatePresence } from "framer-motion";
+import { Kanban, Building2, Plus, ChevronLeft, UserRound } from "lucide-react";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { FreeMode } from "swiper/modules";
 import "swiper/css";
 import "swiper/css/free-mode";
-import axiosInstance from "@/lib/axiosInstance";
+import { tasksApi, departmentsApi, accountsApi } from "@/lib/api";
 import TaskCardSwiper from "./TaskCardSwiper";
 import type { UserTask, UserStage, EmployeeAPIItem, DepartmentAPIItem, DepartmentEmployeeAPIItem } from "./types";
 import { useCurrentEmployee } from "@/hooks/usecurrentemployee";
+import UserTasksKanbanSkeleton from "./UserTasksKanbanSkeleton";
 
 interface DepartmentGroup {
     id: number;
@@ -90,29 +91,29 @@ export default function UserTasksKanban() {
     const isMobile = useMediaQuery("(max-width: 767px)");
 
     useEffect(() => {
-        axiosInstance.get("/department/api/v1/department/list/")
-            .then((res) => setDepartments(unwrapList(res.data)))
+        departmentsApi.list()
+            .then((res) => setDepartments(unwrapList(res as unknown as DepartmentAPIItem[])))
             .catch(() => setDepartments([]));
 
-        axiosInstance.get("/accounts/api/v1/employee/list/")
+        accountsApi.employees.all()
             .then((res) => {
                 const map: Record<number, string> = {};
-                unwrapList<EmployeeAPIItem>(res.data).forEach((emp) => {
+                unwrapList<EmployeeAPIItem>(res).forEach((emp) => {
                     map[emp.id] = emp.full_name || emp.username;
                 });
                 setEmployeesMap(map);
             })
             .catch(() => setEmployeesMap({}));
 
-        axiosInstance.get("/department/api/v1/department_employee/list/")
-            .then((res) => setDeptEmployees(unwrapList(res.data)))
+        departmentsApi.employees()
+            .then((res) => setDeptEmployees(unwrapList(res)))
             .catch(() => setDeptEmployees([]));
     }, []);
 
     useEffect(() => {
-        axiosInstance.get("/department/api/v1/department_step/")
+        departmentsApi.steps()
             .then((res) => {
-                const mapped = unwrapList<KanbanStage>(res.data)
+                const mapped = unwrapList<KanbanStage>(res as unknown as KanbanStage[])
                     .map((stage) => ({
                         ...stage,
                         name: stage.name ?? stage.title ?? `مرحله ${stage.id}`,
@@ -142,11 +143,11 @@ export default function UserTasksKanban() {
         let cancelled = false;
         setLoading(true);
 
-        axiosInstance.get("/tasks/api/v1/tasks/")
+        tasksApi.listAll()
             .then(async (res) => {
                 if (cancelled) return;
 
-                const data = unwrapList<UserTask>(res.data);
+                const data = unwrapList<UserTask>(res as unknown as UserTask[]);
 
                 const employeeTasks = data.filter(
                     (task) =>
@@ -159,13 +160,11 @@ export default function UserTasksKanban() {
                         if (task.description?.trim()) return task;
 
                         try {
-                            const detail = await axiosInstance.get<UserTask>(
-                                `/tasks/api/v1/tasks/${task.id}/`
-                            );
+                            const detail = await tasksApi.get<UserTask>(task.id);
 
                             return {
                                 ...task,
-                                description: detail.data.description ?? "",
+                                description: detail.description ?? "",
                             };
                         } catch {
                             return task;
@@ -246,8 +245,25 @@ export default function UserTasksKanban() {
         setTasks((prev) => prev.map((t) => t.id === updated.id ? updated : t));
     }
 
+    
+    
+    function handleTransferred(updated: UserTask) {
+        const stillMine =
+            !!employee &&
+            updated.status === "in_progress" &&
+            extractAssignedEmployeeIds(updated).includes(employee.id);
+
+        if (!stillMine) {
+            setTasks((prev) => prev.filter((t) => t.id !== updated.id));
+            return;
+        }
+
+        setTasks((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
+        setActiveDeptId(extractDeptId(updated));
+    }
+
     if (loading || stagesLoading || employeeLoading) {
-        return <div className="flex h-64 items-center justify-center"><Loader size={22} className="animate-spin text-indigo-500" /></div>;
+        return <UserTasksKanbanSkeleton columns={3} />;
     }
 
     if (error) {
@@ -307,7 +323,7 @@ export default function UserTasksKanban() {
                                 const active = stage.id === mobileStage?.id;
                                 const color = accentForId(stage.id);
                                 return (
-                                    <button key={stage.id} type="button" onClick={() => setActiveMobileStageId(stage.id)} className="flex shrink-0 items-center gap-2 rounded-2xl border px-3 py-2 text-[11px] font-bold" style={{ color: active ? color : "#94a3b8", background: active ? `${color}14` : undefined, borderColor: active ? `${color}45` : "rgba(148,163,184,.25)" }}>
+                                    <button key={stage.id} type="button" onClick={() => setActiveMobileStageId(stage.id)} className="flex shrink-0 items-center gap-2 rounded-2xl border px-3 py-2 text-[11px] font-bold" style={{ color: active ? color : "#9ca3af", background: active ? `${color}14` : undefined, borderColor: active ? `${color}45` : "rgba(148,163,184,.25)" }}>
                                         <span className="flex h-5 w-5 items-center justify-center rounded-lg text-[9px] text-white" style={{ background: color }}>{index + 1}</span>
                                         {stage.name}<span>{grouped[stage.id]?.length ?? 0}</span>
                                     </button>
@@ -316,9 +332,9 @@ export default function UserTasksKanban() {
                         </div>
                         {mobileStage && (
                             <AnimatePresence mode="wait">
-                                <motion.div key={mobileStage.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
-                                    <StageColumn stage={mobileStage} tasks={grouped[mobileStage.id] ?? []} accent={accentForId(mobileStage.id)} index={mobileStageIndex} isLast={mobileStageIndex === activeStages.length - 1} onUpdated={handleUpdated} employeesMap={employeesMap} staffId={staffId} />
-                                </motion.div>
+                                <m.div key={mobileStage.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                                    <StageColumn stage={mobileStage} tasks={grouped[mobileStage.id] ?? []} accent={accentForId(mobileStage.id)} index={mobileStageIndex} isLast={mobileStageIndex === activeStages.length - 1} onUpdated={handleUpdated} onTransferred={handleTransferred} employeesMap={employeesMap} staffId={staffId} />
+                                </m.div>
                             </AnimatePresence>
                         )}
                     </div>
@@ -326,7 +342,7 @@ export default function UserTasksKanban() {
                     <Swiper modules={[FreeMode]} freeMode slidesPerView="auto" spaceBetween={14} className="!w-full !overflow-hidden">
                         {activeStages.map((stage, index) => (
                             <SwiperSlide key={stage.id} className="!w-[320px] !overflow-visible">
-                                <StageColumn stage={stage} tasks={grouped[stage.id] ?? []} accent={accentForId(stage.id)} index={index} isLast={index === activeStages.length - 1} onUpdated={handleUpdated} employeesMap={employeesMap} staffId={staffId} />
+                                <StageColumn stage={stage} tasks={grouped[stage.id] ?? []} accent={accentForId(stage.id)} index={index} isLast={index === activeStages.length - 1} onUpdated={handleUpdated} onTransferred={handleTransferred} employeesMap={employeesMap} staffId={staffId} />
                             </SwiperSlide>
                         ))}
                     </Swiper>
@@ -336,10 +352,10 @@ export default function UserTasksKanban() {
     );
 }
 
-function StageColumn({ stage, tasks, accent, index, isLast, onUpdated, employeesMap, staffId }: { stage: KanbanStage; tasks: UserTask[]; accent: string; index: number; isLast: boolean; onUpdated: (task: UserTask) => void; employeesMap: Record<number, string>; staffId: number }) {
+function StageColumn({ stage, tasks, accent, index, isLast, onUpdated, onTransferred, employeesMap, staffId }: { stage: KanbanStage; tasks: UserTask[]; accent: string; index: number; isLast: boolean; onUpdated: (task: UserTask) => void; onTransferred: (task: UserTask) => void; employeesMap: Record<number, string>; staffId: number }) {
     return (
-        <motion.div layout initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="relative flex min-w-0 flex-col rounded-[1.45rem] border bg-white shadow-[0_5px_20px_rgba(15,23,42,.03)] dark:bg-white/[.025]" style={{ borderColor: `${accent}28` }}>
-            {!isLast && <div className="pointer-events-none absolute top-7 z-20 flex h-5 w-5 items-center justify-center rounded-full border bg-white shadow-sm dark:bg-[#0f172a]" style={{ insetInlineEnd: -10, borderColor: `${accent}35`, color: accent }}><ChevronLeft size={10} /></div>}
+        <m.div layout initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="relative flex min-w-0 flex-col rounded-[1.45rem] border bg-white shadow-[0_5px_20px_rgba(15,23,42,.03)] dark:bg-white/[.025]" style={{ borderColor: `${accent}28` }}>
+            {!isLast && <div className="pointer-events-none absolute top-7 z-20 flex h-5 w-5 items-center justify-center rounded-full border bg-white shadow-sm dark:bg-[#111827]" style={{ insetInlineEnd: -10, borderColor: `${accent}35`, color: accent }}><ChevronLeft size={10} /></div>}
             <div className="px-3 py-2.5">
                 <div className="flex items-center justify-between gap-2.5">
                     <div className="flex items-center gap-2">
@@ -351,10 +367,10 @@ function StageColumn({ stage, tasks, accent, index, isLast, onUpdated, employees
             </div>
             <div className="h-px" style={{ background: `${accent}18` }} />
             {tasks.length ? (
-                <TaskCardSwiper tasks={tasks} accent={accent} isLastStage={isLast} onUpdated={onUpdated} employeesMap={employeesMap} staffId={staffId} />
+                <TaskCardSwiper tasks={tasks} accent={accent} isLastStage={isLast} onUpdated={onUpdated} onTransferred={onTransferred} employeesMap={employeesMap} staffId={staffId} />
             ) : (
                 <div className="flex h-28 flex-col items-center justify-center gap-1.5 text-center"><Plus size={16} className="text-gray-300" /><p className="text-[11px] text-gray-400">وظیفه‌ای در این مرحله نیست</p></div>
             )}
-        </motion.div>
+        </m.div>
     );
 }

@@ -280,3 +280,63 @@ body {
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.556 0 0);
 }
+
+
+/* ── Shared modal backdrop: static blur, only opacity is animated ── */
+/* Single source for overlay blur. Change here only. */
+:root {
+    --backdrop-blur: 6px;
+}
+@media (max-width: 767px) {
+    :root {
+        --backdrop-blur: 4px;
+    }
+}
+.modal-backdrop {
+    background: rgb(0 0 0 / 0.42);
+}
+/* Blur layer for any full-screen overlay (inline background stays on the element). */
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    .modal-backdrop,
+    .backdrop-blur-layer {
+        -webkit-backdrop-filter: blur(var(--backdrop-blur));
+        backdrop-filter: blur(var(--backdrop-blur));
+    }
+    /* Nested modals: darken only, so a single blur layer is processed */
+    .modal-backdrop[data-depth="2"],
+    .modal-backdrop[data-depth="3"] {
+        -webkit-backdrop-filter: none;
+        backdrop-filter: none;
+    }
+}
+@media (prefers-reduced-transparency: reduce) {
+    .modal-backdrop,
+    .backdrop-blur-layer,
+    .modal-backdrop[data-depth="2"],
+    .modal-backdrop[data-depth="3"] {
+        -webkit-backdrop-filter: none;
+        backdrop-filter: none;
+    }
+    .modal-backdrop {
+        background: rgb(0 0 0 / 0.65);
+    }
+}
+
+/* Busy state for buttons: opacity-only pulse, no icon. */
+@keyframes busy-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
+}
+
+.is-busy {
+  animation: busy-pulse 1.1s ease-in-out infinite;
+  pointer-events: none;
+  cursor: progress;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .is-busy {
+    animation: none;
+    opacity: 0.6;
+  }
+}

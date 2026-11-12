@@ -2,10 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Loader2, ShieldCheck, X } from "lucide-react";
+import { ShieldCheck, X } from "lucide-react";
 import { apiErrorMessage, updateStockLimits } from "@/lib/warehouseApi";
 import type { ApiStockInfo } from "@/types/warehouse";
 
+import { BusyContent } from "@/components/ui/Button";
 interface StockLimitsModalProps {
     isOpen: boolean;
     stock: ApiStockInfo | null;
@@ -89,7 +90,7 @@ export default function StockLimitsModal({
                         exit={{ opacity: 0, scale: 0.95, y: 10 }}
                         onClick={(e) => e.stopPropagation()}
                         onSubmit={handleSubmit}
-                        className="w-full max-w-sm rounded-3xl bg-white p-5 shadow-2xl dark:bg-slate-900"
+                        className="w-full max-w-sm rounded-3xl bg-white p-5 shadow-2xl dark:bg-gray-900"
                     >
                         <div className="flex items-start justify-between gap-3">
                             <div className="flex items-center gap-3">
@@ -155,10 +156,11 @@ export default function StockLimitsModal({
                         <button
                             type="submit"
                             disabled={loading}
-                            className="mt-5 flex h-11 w-full items-center justify-center gap-2 rounded-2xl bg-indigo-600 text-[13px] font-bold text-white transition-colors hover:bg-indigo-500 disabled:opacity-50"
+                            className="relative mt-5 flex h-11 w-full items-center justify-center gap-2 rounded-2xl bg-indigo-600 text-[13px] font-bold text-white transition-colors hover:bg-indigo-500 disabled:opacity-50"
                         >
-                            {loading && <Loader2 size={15} className="animate-spin" />}
-                            ذخیره تغییرات
+                            <BusyContent busy={loading}>
+                                ذخیره تغییرات
+                            </BusyContent>
                         </button>
                     </motion.form>
                 </motion.div>

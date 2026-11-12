@@ -1,31 +1,24 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
-import {
-    Building2,
-    CalendarDays,
-    ClipboardX,
-    Clock,
-    FolderKanban,
-    Loader,
-    Loader2,
-    MessageSquareText,
-    Paperclip,
-    Pencil,
-    Trash2,
-    UserRound,
-    X,
-} from "lucide-react";
+import { useState } from "react";
+import { AnimatePresence, m, useReducedMotion } from "framer-motion";
+import { Backdrop } from "@/components/ui/Backdrop";
+import { panelMotion } from "@/lib/motion";
+import { useVisibleInterval } from "@/hooks/useVisibility";
+import { Building2, CalendarClock, ClipboardX, Clock, FolderKanban, MessageSquareText, Paperclip, Pencil, Trash2, UserRound, X } from "lucide-react";
 import { useTheme } from "next-themes";
 import type { Task, TaskStatus, TaskEmployeeRef } from "@/types/task";
 import type { Employee } from "@/types/employee";
-import { toJalali, toPersianDigits, JALALI_MONTHS, pad2 } from "@/lib/jalali";
 import { useEmployeeInfo } from "@/hooks/useEmployeeInfo";
 import AdminTaskNotesModal from "./TaskNotesModal";
-import TimeRangeModal from "./TimeRangeModal";
+import TimeRangeModal from "@/components/tasks/TimeRangeModal";
+import TaskDeadlineModal, {
+    invalidateStepDeadline,
+    type StepDeadline,
+} from "@/components/tasks/TaskDeadlineModal";
 import api from "@/lib/axiosInstance";
 
+import { BusyContent } from "@/components/ui/Button";
 const AVATAR_GRADIENTS = [
     ["#6366f1", "#8b5cf6"],
     ["#3b82f6", "#6366f1"],
@@ -73,20 +66,6 @@ const URGENCY_LABEL: Record<Exclude<DeadlineUrgency, null | "normal">, string> =
 interface TaskWithStep extends Omit<Task, "assigned_employee"> {
     current_step?: number | { id: number } | string | null;
     assigned_employee?: TaskEmployeeRef | TaskEmployeeRef[] | number | number[] | null;
-}
-
-interface StepDeadline {
-    started_at: string | null;
-    deadline: string | null;
-}
-
-function formatJalaliDate(iso?: string | null) {
-    if (!iso) return null;
-    const d = new Date(iso);
-    const [jy, jm, jd] = toJalali(d.getFullYear(), d.getMonth() + 1, d.getDate());
-    return `${toPersianDigits(jd)} ${JALALI_MONTHS[jm - 1]} ${toPersianDigits(jy)} ساعت ${toPersianDigits(
-        pad2(d.getHours())
-    )}:${toPersianDigits(pad2(d.getMinutes()))}`;
 }
 
 function getGradient(id: number) {
@@ -143,7 +122,7 @@ function Chip({ isDark, children }: { isDark: boolean; children: React.ReactNode
             style={{
                 border: isDark ? "1px solid rgba(255,255,255,0.06)" : "1px solid rgba(0,0,0,0.06)",
                 background: isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)",
-                color: isDark ? "#94a3b8" : "#64748b",
+                color: isDark ? "#9ca3af" : "#6b7280",
             }}
         >
             {children}
@@ -172,7 +151,7 @@ function EmployeeChip({ id, isDark }: { id: number; isDark: boolean }) {
             </span>
             <span
                 className="text-[10.5px] font-bold"
-                style={{ color: isDark ? "#cbd5e1" : "#475569" }}
+                style={{ color: isDark ? "#d1d5db" : "#4b5563" }}
             >
                 {name}
             </span>
@@ -199,6 +178,7 @@ export default function TaskCard({
     onUpdated,
     canManageDeadline = true,
 }: TaskCardProps) {
+    const reduced = useReducedMotion() ?? false;
     const { resolvedTheme } = useTheme();
     const isDark = resolvedTheme === "dark";
 
@@ -211,7 +191,7 @@ export default function TaskCard({
     const [notesModalOpen, setNotesModalOpen] = useState(false);
     const [timeError, setTimeError] = useState<string | null>(null);
     const [stepDeadline, setStepDeadline] = useState<StepDeadline | null>(null);
-    const [loadingDeadline, setLoadingDeadline] = useState(false);
+    const [deadlineModalOpen, setDeadlineModalOpen] = useState(false);
     const [, forceTick] = useState(0);
 
     const employeeIds = extractEmployeeIds(task.assigned_employee);
@@ -225,7 +205,7 @@ export default function TaskCard({
     const status = (task.status ?? "cancelled") as TaskStatus;
     const statusConfig = STATUS_CONFIG[status] ?? {
         label: "نامشخص",
-        className: "border-slate-500/20 bg-slate-500/10 text-slate-400",
+        className: "border-gray-500/20 bg-gray-500/10 text-gray-400",
     };
 
     const isActiveTask =
@@ -234,38 +214,17 @@ export default function TaskCard({
     const accent =
         urgency && urgency !== "normal" ? URGENCY_ACCENT[urgency] : null;
 
-    useEffect(() => {
-        if (!stepId) return;
-        let cancelled = false;
-        setLoadingDeadline(true);
-        api
-            .get(`/tasks/api/v1/tasks/${task.id}/steps/${stepId}/deadline/`)
-            .then((res) => {
-                if (cancelled) return;
-                setStepDeadline({
-                    started_at: res.data?.started_at ?? null,
-                    deadline: res.data?.deadline ?? null,
-                });
-            })
-            .catch(() => {
-                if (!cancelled) setStepDeadline(null);
-            })
-            .finally(() => {
-                if (!cancelled) setLoadingDeadline(false);
-            });
-        return () => {
-            cancelled = true;
-        };
-    }, [task.id, stepId]);
+    
+    const openTimeModal = () => {
+        setTimeModalOpen(true);
+    };
 
-    useEffect(() => {
-        if (!stepDeadline?.deadline || !isActiveTask) return;
-        const interval = setInterval(() => forceTick((t) => t + 1), 60000);
-        return () => clearInterval(interval);
-    }, [stepDeadline?.deadline, isActiveTask]);
-
-    const startedAtLabel = formatJalaliDate(stepDeadline?.started_at);
-    const deadlineLabel = formatJalaliDate(stepDeadline?.deadline);
+    
+    useVisibleInterval(
+        () => forceTick((t) => t + 1),
+        60000,
+        Boolean(stepDeadline?.deadline) && isActiveTask,
+    );
 
     async function handleDelete() {
         setDeleting(true);
@@ -292,6 +251,7 @@ export default function TaskCard({
                 `/tasks/api/v1/tasks/${task.id}/steps/${stepId}/deadline/patch/`,
                 { started_at: startedAt, deadline }
             );
+            invalidateStepDeadline(task.id, stepId);
             setStepDeadline({
                 started_at: data?.started_at ?? startedAt,
                 deadline: data?.deadline ?? deadline,
@@ -313,12 +273,7 @@ export default function TaskCard({
 
     return (
         <>
-            <motion.div
-                layout
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                transition={{ duration: 0.2, delay: index * 0.05 }}
+            <m.div
                 onHoverStart={() => setHovered(true)}
                 onHoverEnd={() => setHovered(false)}
                 className="relative flex flex-col gap-3 overflow-hidden rounded-2xl p-4"
@@ -330,7 +285,7 @@ export default function TaskCard({
                             : "1px solid rgba(0,0,0,0.06)",
                     background: accent
                         ? `color-mix(in srgb, ${accent} ${urgency === "overdue" ? 7 : urgency === "critical" ? 5 : 4
-                        }%, ${isDark ? "#0f172a" : "#fafafa"})`
+                        }%, ${isDark ? "#111827" : "#fafafa"})`
                         : isDark
                             ? "rgba(255,255,255,0.02)"
                             : "#fafafa",
@@ -347,7 +302,7 @@ export default function TaskCard({
                 }}
             >
                 {urgency === "overdue" && (
-                    <motion.div
+                    <m.div
                         className="pointer-events-none absolute inset-x-0 top-0 h-[2px]"
                         style={{
                             background: `linear-gradient(90deg, transparent, ${accent}, transparent)`,
@@ -373,7 +328,7 @@ export default function TaskCard({
                             <stop offset="100%" stopColor="#8b5cf6" />
                         </linearGradient>
                     </defs>
-                    <motion.rect
+                    <m.rect
                         x="1"
                         y="1"
                         width="calc(100% - 2px)"
@@ -414,7 +369,7 @@ export default function TaskCard({
                                     border: `1px solid color-mix(in srgb, ${accent} 30%, transparent)`,
                                 }}
                             >
-                                <motion.span
+                                <m.span
                                     className="h-1.5 w-1.5 rounded-full"
                                     style={{ background: accent }}
                                     animate={
@@ -447,10 +402,24 @@ export default function TaskCard({
                         >
                             <MessageSquareText size={14} className="text-indigo-400" />
                         </button>
+                        <button
+                            type="button"
+                            onClick={() => setDeadlineModalOpen(true)}
+                            className="flex h-7 w-7 items-center justify-center rounded-xl transition-colors"
+                            style={{
+                                background: isDark
+                                    ? "rgba(99,102,241,0.1)"
+                                    : "rgba(99,102,241,0.07)",
+                                color: isDark ? "#a5b4fc" : "#6366f1",
+                            }}
+                            title="مشاهده ددلاین"
+                        >
+                            <CalendarClock size={11} />
+                        </button>
                         {canManageDeadline && (
                             <button
                                 type="button"
-                                onClick={() => setTimeModalOpen(true)}
+                                onClick={openTimeModal}
                                 className="flex h-7 w-7 items-center justify-center rounded-xl transition-colors"
                                 style={{
                                     background: isDark
@@ -481,7 +450,7 @@ export default function TaskCard({
                             type="button"
                             onClick={() => setShowConfirm(true)}
                             disabled={deleting}
-                            className="flex h-7 w-7 items-center justify-center rounded-xl transition-colors disabled:opacity-40"
+                            className="relative flex h-7 w-7 items-center justify-center rounded-xl transition-colors disabled:opacity-40"
                             style={{
                                 background: isDark
                                     ? "rgba(239,68,68,0.1)"
@@ -490,11 +459,9 @@ export default function TaskCard({
                             }}
                             title="حذف تسک"
                         >
-                            {deleting ? (
-                                <Loader2 size={11} className="animate-spin" />
-                            ) : (
+                            <BusyContent busy={deleting}>
                                 <Trash2 size={11} />
-                            )}
+                            </BusyContent>
                         </button>
                     </div>
                 </div>
@@ -502,14 +469,14 @@ export default function TaskCard({
                 <div className="flex flex-col gap-1">
                     <h3
                         className="text-[13.5px] font-extrabold leading-tight"
-                        style={{ color: isDark ? "#f1f5f9" : "#1e293b" }}
+                        style={{ color: isDark ? "#f3f4f6" : "#1f2937" }}
                     >
                         {task.title}
                     </h3>
                     {task.description ? (
                         <p
                             className="line-clamp-2 text-[12px] leading-6"
-                            style={{ color: isDark ? "#94a3b8" : "#64748b" }}
+                            style={{ color: isDark ? "#9ca3af" : "#6b7280" }}
                         >
                             {task.description}
                         </p>
@@ -550,7 +517,7 @@ export default function TaskCard({
                             </span>
                             <span
                                 className="text-[10.5px] font-bold"
-                                style={{ color: isDark ? "#cbd5e1" : "#475569" }}
+                                style={{ color: isDark ? "#d1d5db" : "#4b5563" }}
                             >
                                 بدون مسئول
                             </span>
@@ -578,78 +545,18 @@ export default function TaskCard({
                         </Chip>
                     ) : null}
                 </div>
-
-                <div
-                    className="flex flex-col gap-1.5 rounded-2xl px-3 py-2.5"
-                    style={{
-                        background: accent
-                            ? `color-mix(in srgb, ${accent} 8%, transparent)`
-                            : isDark ? "rgba(99,102,241,0.06)" : "rgba(99,102,241,0.05)",
-                        border: accent
-                            ? `1px solid color-mix(in srgb, ${accent} 25%, transparent)`
-                            : isDark ? "1px solid rgba(99,102,241,0.12)" : "1px solid rgba(99,102,241,0.1)",
-                        transition: "background 0.4s ease, border-color 0.4s ease",
-                    }}
-                >
-                    {loadingDeadline ? (
-                        <div
-                            className="flex items-center gap-2 text-[10.5px] font-semibold"
-                            style={{ color: isDark ? "#94a3b8" : "#64748b" }}
-                        >
-                            <Loader2 size={12} className="animate-spin" />
-                            در حال دریافت زمان‌بندی...
-                        </div>
-                    ) : startedAtLabel || deadlineLabel ? (
-                        <>
-                            {startedAtLabel && (
-                                <div
-                                    className="flex items-center gap-2 text-[11px] font-bold"
-                                    style={{ color: accent ?? (isDark ? "#a5b4fc" : "#6366f1") }}
-                                >
-                                    <CalendarDays size={13} />
-                                    <span>شروع: {startedAtLabel}</span>
-                                </div>
-                            )}
-                            {deadlineLabel && (
-                                <div
-                                    className="flex items-center gap-2 text-[11px] font-bold"
-                                    style={{ color: accent ?? "#ef4444" }}
-                                >
-                                    <Clock size={13} />
-                                    <span>مهلت: {deadlineLabel}</span>
-                                </div>
-                            )}
-                        </>
-                    ) : (
-                        <div
-                            className="flex items-center gap-2 text-[10.5px] font-semibold"
-                            style={{ color: isDark ? "#64748b" : "#94a3b8" }}
-                        >
-                            <Clock size={12} />
-                            زمان‌بندی تعیین نشده
-                        </div>
-                    )}
-                </div>
-            </motion.div>
+            </m.div>
 
             <AnimatePresence>
                 {showConfirm && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
+                    <div
                         className="fixed inset-0 z-50 flex items-center justify-center px-4"
-                        style={{ background: "rgba(0,0,0,0.45)", backdropFilter: "blur(3px)" }}
-                        onClick={handleCloseConfirm}
                     >
-                        <motion.div
-                            initial={{ opacity: 0, y: 16 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: 16 }}
-                            transition={{ duration: 0.35, ease: "easeOut" }}
-                            onClick={(e) => e.stopPropagation()}
+                        <Backdrop onClick={handleCloseConfirm} />
+                        <m.div
+                            {...panelMotion(false, reduced)}
                             dir="rtl"
-                            className="flex w-full max-w-md flex-col overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-sm dark:border-white/[0.06] dark:bg-[#0f172a]"
+                            className="relative flex w-full max-w-md flex-col overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-sm dark:border-white/[0.06] dark:bg-[#111827]"
                         >
                             <div className="flex shrink-0 items-center justify-between px-8 pb-6 pt-8">
                                 <div className="flex items-center gap-2.5">
@@ -680,7 +587,7 @@ export default function TaskCard({
 
                                 <AnimatePresence>
                                     {deleteError && (
-                                        <motion.div
+                                        <m.div
                                             initial={{ opacity: 0, y: 6 }}
                                             animate={{ opacity: 1, y: 0 }}
                                             exit={{ opacity: 0, y: 4 }}
@@ -690,7 +597,7 @@ export default function TaskCard({
                                             <p className="flex-1 text-[11.5px] font-semibold leading-5 text-red-500 dark:text-red-400">
                                                 {deleteError}
                                             </p>
-                                        </motion.div>
+                                        </m.div>
                                     )}
                                 </AnimatePresence>
                             </div>
@@ -708,22 +615,29 @@ export default function TaskCard({
                                     type="button"
                                     onClick={handleDelete}
                                     disabled={deleting}
-                                    className="flex h-11 flex-1 items-center justify-center gap-2 rounded-full bg-red-600 text-[13px] font-bold text-white transition-colors hover:bg-red-500 disabled:opacity-40"
+                                    className="relative flex h-11 flex-1 items-center justify-center gap-2 rounded-full bg-red-600 text-[13px] font-bold text-white transition-colors hover:bg-red-500 disabled:opacity-40"
                                 >
-                                    {deleting ? (
-                                        <Loader size={14} className="animate-spin" />
-                                    ) : (
+                                    <BusyContent busy={deleting}>
                                         <>
-                                            <Trash2 size={13} strokeWidth={2.5} />
-                                            حذف کن
-                                        </>
-                                    )}
+                                                <Trash2 size={13} strokeWidth={2.5} />
+                                                حذف کن
+                                            </>
+                                    </BusyContent>
                                 </button>
                             </div>
-                        </motion.div>
-                    </motion.div>
+                        </m.div>
+                    </div>
                 )}
             </AnimatePresence>
+
+            <TaskDeadlineModal
+                open={deadlineModalOpen}
+                onClose={() => setDeadlineModalOpen(false)}
+                taskId={task.id}
+                taskTitle={task.title}
+                stepId={stepId}
+                onLoaded={setStepDeadline}
+            />
 
             <AnimatePresence>
                 {notesModalOpen && (
