@@ -4,11 +4,30 @@ import type { NotificationInput } from "@/components/notifications/types";
 import { isTicketActive } from "./activeTickets";
 import { SYNC_CONFIG as CFG } from "./config";
 import { detectRoutines, detectTasks, detectTickets } from "./detectors";
-import { fetchEmployees, fetchUsers, fetchInternalTasks, fetchProjectTasks, fetchRoutines } from "./Fetchers";
-import { buildNames, normalizeProjectTasks, normalizeRoutines, normalizeTickets, resolveEmployeeId } from "./Normalize";
+import {
+  fetchEmployees,
+  fetchUsers,
+  fetchInternalTasks,
+  fetchProjectTasks,
+  fetchRoutines,
+} from "./Fetchers";
+import {
+  buildNames,
+  normalizeProjectTasks,
+  normalizeRoutines,
+  normalizeTickets,
+  resolveEmployeeId,
+} from "./Normalize";
 import { consumeTouched, readTouched } from "./selfchanges";
 import { loadSnapshot, saveSnapshot } from "./snapshot";
-import type { DetectContext, Names, ProjectTask, Routine, Snapshot, Ticket } from "./types";
+import type {
+  DetectContext,
+  Names,
+  ProjectTask,
+  Routine,
+  Snapshot,
+  Ticket,
+} from "./types";
 
 interface EngineOptions {
   userId: number;
@@ -36,7 +55,6 @@ export function createSyncEngine({ userId, username }: EngineOptions) {
   let namesAt = 0;
   let employeeId: number | null = null;
   let employeesTriedAt = 0;
-  let onWindowLoad: (() => void) | null = null;
 
   const lastPollKey = `crm-notif-lastpoll:${userId}`;
   const store = () => useNotificationStore.getState();
@@ -135,7 +153,7 @@ export function createSyncEngine({ userId, username }: EngineOptions) {
     }
   }
 
-  
+  /** لیست کارمندها باید قبل از detect آماده باشد (برای پیدا کردن employeeId) */
   async function ensureEmployees(signal: AbortSignal) {
     const needsFirstLoad = employeesTriedAt === 0;
 
@@ -178,15 +196,13 @@ export function createSyncEngine({ userId, username }: EngineOptions) {
       }
     };
 
-    await Promise.all([
-      attempt("tickets", async () => {
-        tickets = normalizeTickets(await fetchInternalTasks(signal));
-      }),
+    await attempt("tickets", async () => {
+      tickets = normalizeTickets(await fetchInternalTasks(signal));
+    });
 
-      attempt("routines", async () => {
-        routines = normalizeRoutines(await fetchRoutines(signal));
-      }),
-    ]);
+    await attempt("routines", async () => {
+      routines = normalizeRoutines(await fetchRoutines(signal));
+    });
 
     if (!projectTasks || startedAt - projectTasksAt >= CFG.projectTasksMs) {
       await attempt("tasks", async () => {
@@ -386,21 +402,10 @@ export function createSyncEngine({ userId, username }: EngineOptions) {
 
       window.clearTimeout(pollTimer);
 
-      
-      const firstPoll = () => {
-        if (stopped) return;
-        pollTimer = window.setTimeout(
-          () => void tick(3_000),
-          CFG.firstPollDelayMs,
-        );
-      };
-
-      if (document.readyState === "complete") {
-        firstPoll();
-      } else {
-        onWindowLoad = firstPoll;
-        window.addEventListener("load", onWindowLoad, { once: true });
-      }
+      pollTimer = window.setTimeout(
+        () => void tick(3_000),
+        CFG.firstPollDelayMs,
+      );
     },
 
     stop() {
@@ -411,11 +416,6 @@ export function createSyncEngine({ userId, username }: EngineOptions) {
 
       window.clearTimeout(pollTimer);
       window.clearTimeout(routineTimer);
-
-      if (onWindowLoad) {
-        window.removeEventListener("load", onWindowLoad);
-        onWindowLoad = null;
-      }
 
       controller?.abort();
       controller = null;

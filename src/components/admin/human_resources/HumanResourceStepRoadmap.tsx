@@ -1,10 +1,11 @@
 "use client";
 
-import { Check, Flag, MapPin, Sparkles, Compass, Milestone, Pencil, Trash2, X } from "lucide-react";
+import {
+    Check, Flag, MapPin, Sparkles, Compass, Milestone, Pencil, Trash2, X, Loader2,
+} from "lucide-react";
 import { useState } from "react";
 import { HumanResourceStep } from "./humanResourceApi";
 
-import { BusyContent } from "@/components/ui/Button";
 interface Props {
     steps: HumanResourceStep[];
     canManage?: boolean;
@@ -73,7 +74,7 @@ export default function HumanResourceStepRoadmap({
 
     return (
         <div
-            className="relative overflow-hidden rounded-[1.6rem] border border-gray-100 bg-gradient-to-b from-gray-50 via-white to-indigo-50/40 px-4 py-8 dark:border-white/[0.06] dark:from-[#0b1220] dark:via-[#111827] dark:to-indigo-950/20"
+            className="relative overflow-hidden rounded-[1.6rem] border border-gray-100 bg-gradient-to-b from-slate-50 via-white to-indigo-50/40 px-4 py-8 dark:border-white/[0.06] dark:from-[#0b1220] dark:via-[#0f172a] dark:to-indigo-950/20"
             dir="rtl"
         >
             <div className="pointer-events-none absolute -right-20 top-10 h-56 w-56 rounded-full bg-indigo-400/10 blur-3xl dark:bg-indigo-500/10" />
@@ -153,7 +154,7 @@ export default function HumanResourceStepRoadmap({
                                 >
                                     <div className="relative rounded-[1.2rem] border border-gray-100 bg-white/95 px-3.5 py-2.5 shadow-[0_4px_18px_-6px_rgba(99,102,241,0.25)] backdrop-blur transition-all duration-300 group-hover:-translate-y-0.5 group-hover:border-indigo-200 group-hover:shadow-[0_8px_26px_-8px_rgba(99,102,241,0.45)] dark:border-white/[0.08] dark:bg-white/[0.04] dark:group-hover:border-indigo-500/30">
                                         <div
-                                            className={`absolute top-1/2 h-2 w-2 -translate-y-1/2 rotate-45 border bg-white dark:bg-[#111827] ${isRight
+                                            className={`absolute top-1/2 h-2 w-2 -translate-y-1/2 rotate-45 border bg-white dark:bg-[#0f172a] ${isRight
                                                     ? "-left-1 border-b border-l border-gray-100 dark:border-white/[0.08]"
                                                     : "-right-1 border-r border-t border-gray-100 dark:border-white/[0.08]"
                                                 }`}
@@ -209,11 +210,13 @@ export default function HumanResourceStepRoadmap({
                                                     type="button"
                                                     onClick={() => commitEdit(step)}
                                                     disabled={isSaving}
-                                                    className="relative flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-indigo-600 text-white transition hover:bg-indigo-500 disabled:opacity-50"
+                                                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-indigo-600 text-white transition hover:bg-indigo-500 disabled:opacity-50"
                                                 >
-                                                    <BusyContent busy={isSaving}>
+                                                    {isSaving ? (
+                                                        <Loader2 size={11} className="animate-spin" />
+                                                    ) : (
                                                         <Check size={11} strokeWidth={3} />
-                                                    </BusyContent>
+                                                    )}
                                                 </button>
                                                 <button
                                                     type="button"
@@ -239,7 +242,7 @@ export default function HumanResourceStepRoadmap({
                                         }`}
                                 >
                                     <div
-                                        className={`relative flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br ${gradient} text-[11px] font-extrabold text-white shadow-lg ring-4 ring-white dark:ring-[#111827]`}
+                                        className={`relative flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br ${gradient} text-[11px] font-extrabold text-white shadow-lg ring-4 ring-white dark:ring-[#0f172a]`}
                                     >
                                         {isLast ? (
                                             <Flag size={14} strokeWidth={2.8} />
@@ -259,7 +262,7 @@ export default function HumanResourceStepRoadmap({
                 data-aos-delay={total * 80 + 200}
                 className="relative z-10 mt-6 flex flex-col items-center gap-2"
             >
-                <div className="flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-br from-emerald-500 to-teal-500 text-white shadow-lg shadow-emerald-500/30 ring-4 ring-white dark:ring-[#111827]">
+                <div className="flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-br from-emerald-500 to-teal-500 text-white shadow-lg shadow-emerald-500/30 ring-4 ring-white dark:ring-[#0f172a]">
                     <Check size={18} strokeWidth={3} />
                 </div>
                 <p className="text-[10.5px] font-extrabold text-emerald-500 dark:text-emerald-400">

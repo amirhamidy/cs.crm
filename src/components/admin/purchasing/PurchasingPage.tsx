@@ -1,13 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { m } from "framer-motion";
-import { CheckCircle2, Clock3, RefreshCw, ShieldCheck, ShoppingCart, UserCheck, Users, XCircle, type LucideIcon } from "lucide-react";
-import PurchasingPageSkeleton from "./PurchasingPageSkeleton";
-import PurchasingHeaderSkeleton from "./PurchasingHeaderSkeleton";
-import { Spinner as Loader2 } from "@/components/ui/Spinner";
+import { motion } from "framer-motion";
+import { CheckCircle2, Clock3, Loader2, RefreshCw, ShieldCheck, ShoppingCart, UserCheck, Users, XCircle, type LucideIcon } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
-import { purchasingApi, type PurchasingCounts } from "@/lib/api";
 import { toPersianDigits } from "@/lib/jalali";
 import type { ApiPurchasingEmployee, ApiPurchasingStep, ApiPurchasingTask, ApiTaskAttachment } from "@/types/purchasing";
 import PurchasingEmployeesBar from "./Purchasingemployeesbar";
@@ -18,6 +14,9 @@ import StepFormModal from "./StepFormModal";
 import PurchasingCreateTaskModal from "./PurchasingCreateTaskModal";
 import PurchasingDeleteModal from "./PurchasingDeleteModal";
 import { usePurchasingAccess } from "@/hooks/usePurchasingAccess";
+
+const normalizeList = <T,>(value: unknown): T[] =>
+    Array.isArray(value) ? (value as T[]) : ((value as { results?: T[] } | null)?.results ?? []);
 
 function errorText(error: unknown, fallback: string) {
     const data = (error as { response?: { data?: { detail?: string; message?: string } } }).response?.data;
@@ -45,9 +44,7 @@ export default function PurchasingPage() {
 
     const [employees, setEmployees] = useState<ApiPurchasingEmployee[]>([]);
     const [steps, setSteps] = useState<ApiPurchasingStep[]>([]);
-    const [activeTasks, setActiveTasks] = useState<ApiPurchasingTask[]>([]);
-    const [archiveCounts, setArchiveCounts] = useState<Pick<PurchasingCounts, "completed" | "cancelled">>({ completed: 0, cancelled: 0 });
-    const [archiveVersion, setArchiveVersion] = useState(0);
+    const [tasks, setTasks] = useState<ApiPurchasingTask[]>([]);
     const [attachments, setAttachments] = useState<ApiTaskAttachment[]>([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
@@ -64,19 +61,16 @@ export default function PurchasingPage() {
         else setLoading(true);
         setError("");
         try {
-            const [e, st, active, counts, a] = await Promise.all([
-                purchasingApi.employees(),
-                purchasingApi.steps(),
-                purchasingApi.activeTasks(),
-                purchasingApi.archiveCounts(),
-                purchasingApi.attachments(),
+            const [e, s, t, a] = await Promise.all([
+                axiosInstance.get("/purchasing/api/v1/employees/"),
+                axiosInstance.get("/purchasing/api/v1/steps/"),
+                axiosInstance.get("/purchasing/api/v1/tasks/"),
+                axiosInstance.get("/purchasing/api/v1/task-attachments/"),
             ]);
-            setEmployees(e);
-            setSteps(st);
-            setActiveTasks(active);
-            setArchiveCounts(counts);
-            setAttachments(a);
-            setArchiveVersion((v) => v + 1);
+            setEmployees(normalizeList<ApiPurchasingEmployee>(e.data));
+            setSteps(normalizeList<ApiPurchasingStep>(s.data).sort((x, y) => x.order - y.order));
+            setTasks(normalizeList<ApiPurchasingTask>(t.data));
+            setAttachments(normalizeList<ApiTaskAttachment>(a.data));
         } catch (err) {
             setError(errorText(err, "دریافت اطلاعات خرید انجام نشد"));
         } finally {
@@ -89,14 +83,16 @@ export default function PurchasingPage() {
         loadAll();
     }, [loadAll]);
 
+    const activeTasks = useMemo(() => tasks.filter((t) => t.status !== "completed" && t.status !== "cancelled"), [tasks]);
+
     const stats = useMemo(
         () => ({
             active: activeTasks.length,
-            completed: archiveCounts.completed,
-            cancelled: archiveCounts.cancelled,
+            completed: tasks.filter((t) => t.status === "completed").length,
+            cancelled: tasks.filter((t) => t.status === "cancelled").length,
             members: employees.filter((e) => e.is_active !== false).length,
         }),
-        [activeTasks, archiveCounts, employees]
+        [tasks, activeTasks, employees]
     );
 
     const closeStepModal = () => {
@@ -142,8 +138,7 @@ export default function PurchasingPage() {
         <div dir="rtl" className="space-y-4 p-3 sm:p-5">
             <PurchasingDeleteModal open={!!deleteTarget} title={deleteMeta.title} description={deleteMeta.description} loading={deleteLoading} onConfirm={confirmDelete} onCancel={() => setDeleteTarget(null)} />
 
-            {loading ? <PurchasingHeaderSkeleton /> : (
-<m.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className={`${box} p-3`}>
+            <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className={`${box} p-3`}>
                 <div className="flex items-center justify-between gap-3">
                     <div className="flex min-w-0 items-center gap-3">
                         <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-500 text-white shadow-sm">
@@ -181,10 +176,12 @@ export default function PurchasingPage() {
                             type="button"
                             onClick={() => loadAll(true)}
                             disabled={loading || refreshing}
-                            className={`flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 text-gray-400 transition-colors hover:text-gray-600 disabled:opacity-40 dark:bg-white/[0.05] dark:hover:text-gray-300 `}
+                            className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 text-gray-400 transition-colors hover:text-gray-600 disabled:opacity-40 dark:bg-white/[0.05] dark:hover:text-gray-300"
                         >
-                            {refreshing ? <Loader2 size={13} className="animate-spin" /> : <RefreshCw
-                                size={13} />}
+                            <RefreshCw
+                                size={13}
+                                className={refreshing ? "animate-spin" : ""}
+                            />
                         </button>
                     </div>
                 </div>
@@ -195,8 +192,7 @@ export default function PurchasingPage() {
                     <Stat label="لغوشده" value={toPersianDigits(stats.cancelled)} icon={XCircle} tone="bg-red-50/70 text-red-500 dark:bg-red-500/[0.07] dark:text-red-400" />
                     <Stat label="اعضای فعال" value={`${toPersianDigits(stats.members)}/${toPersianDigits(employees.length)}`} icon={Users} tone="bg-indigo-50/70 text-indigo-600 dark:bg-indigo-500/[0.07] dark:text-indigo-400" />
                 </div>
-            </m.div>
-)}
+            </motion.div>
 
             {error && (
                 <div className="flex items-center gap-2.5 rounded-2xl bg-red-50 px-3.5 py-3 dark:bg-red-500/10">
@@ -207,7 +203,9 @@ export default function PurchasingPage() {
             )}
 
             {loading ? (
-                <PurchasingPageSkeleton />
+                <div className={`${box} flex h-32 items-center justify-center`}>
+                    <Loader2 size={20} className="animate-spin text-indigo-500" />
+                </div>
             ) : (
                 <>
                     <PurchasingEmployeesBar
@@ -234,7 +232,7 @@ export default function PurchasingPage() {
                         }}
                     />
 
-                    <PurchasingArchivePanel steps={steps} attachments={attachments} refreshKey={archiveVersion} />
+                    <PurchasingArchivePanel tasks={tasks} steps={steps} attachments={attachments} />
                 </>
             )}
 
@@ -264,7 +262,7 @@ export default function PurchasingPage() {
             <PurchasingCreateTaskModal
                 open={createTaskModalOpen}
                 steps={steps}
-                tasks={activeTasks}
+                tasks={tasks}
                 onClose={() => setCreateTaskModalOpen(false)}
                 onSaved={() => {
                     setCreateTaskModalOpen(false);

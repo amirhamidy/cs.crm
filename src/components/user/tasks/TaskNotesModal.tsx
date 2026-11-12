@@ -2,14 +2,31 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { AnimatePresence, m, useReducedMotion } from "framer-motion";
-import { Backdrop } from "@/components/ui/Backdrop";
-import { panelMotion } from "@/lib/motion";
-import { X, AlertCircle, ClipboardList, Paperclip, MessageSquareText, RefreshCw, FileText, ArrowLeftCircle, ArrowRightCircle, ArrowLeftRight, User, Calendar, Clock3, History, CheckCircle2, ShoppingBag, Ban, RotateCcw, Layers3, Hash } from "lucide-react";
-import { Spinner as Loader2 } from "@/components/ui/Spinner";
-import { ListSkeleton } from "@/components/ui/skeletons";
+import { AnimatePresence, motion } from "framer-motion";
+import {
+    X,
+    Loader2,
+    AlertCircle,
+    ClipboardList,
+    Paperclip,
+    MessageSquareText,
+    RefreshCw,
+    FileText,
+    ArrowLeftCircle,
+    ArrowRightCircle,
+    User,
+    Calendar,
+    Clock3,
+    History,
+    CheckCircle2,
+    ShoppingBag,
+    Ban,
+    RotateCcw,
+    Layers3,
+    Hash,
+} from "lucide-react";
 import { useTheme } from "next-themes";
-import { tasksApi } from "@/lib/api";
+import axiosInstance from "@/lib/axiosInstance";
 import { toJalali, toPersianDigits, JALALI_MONTHS, pad2 } from "@/lib/jalali";
 import { useEmployeeInfo } from "@/hooks/useEmployeeInfo";
 import { resolveMediaUrl } from "@/lib/media";
@@ -64,12 +81,6 @@ const ACTION_META: Record<
         bg: "rgba(236,72,153,0.14)",
         icon: ArrowRightCircle,
     },
-    transferred: {
-        label: "انتقال به دپارتمان دیگر",
-        color: "#0ea5e9",
-        bg: "rgba(14,165,233,0.14)",
-        icon: ArrowLeftRight,
-    },
     sold: {
         label: "فروش ثبت شد",
         color: "#f59e0b",
@@ -78,7 +89,7 @@ const ACTION_META: Record<
     },
     unsold: {
         label: "فروش لغو شد",
-        color: "#6b7280",
+        color: "#64748b",
         bg: "rgba(100,116,139,0.14)",
         icon: RotateCcw,
     },
@@ -132,7 +143,7 @@ function getActionMeta(action?: string) {
     return (
         ACTION_META[action ?? ""] ?? {
             label: action || "ثبت رویداد",
-            color: "#9ca3af",
+            color: "#94a3b8",
             bg: "rgba(148,163,184,0.14)",
             icon: History,
         }
@@ -177,7 +188,6 @@ function AttachmentUploader({ employeeId, username }: { employeeId?: number; use
 }
 
 export default function TaskNotesModal({ isOpen, onClose, taskId, taskTitle }: Props) {
-    const reduced = useReducedMotion() ?? false;
     const { resolvedTheme } = useTheme();
     const isDark = resolvedTheme === "dark";
 
@@ -189,9 +199,9 @@ export default function TaskNotesModal({ isOpen, onClose, taskId, taskTitle }: P
         setLoading(true);
         setError(null);
 
-        tasksApi
-            .logs<TaskLog[]>(taskId)
-            .then((res) => setLogs(Array.isArray(res) ? res : []))
+        axiosInstance
+            .get<TaskLog[]>(`/tasks/api/v1/tasks/${taskId}/logs/`)
+            .then((res) => setLogs(res.data ?? []))
             .catch(() => setError("خطا در دریافت یادداشت‌ها"))
             .finally(() => setLoading(false));
     }, [taskId]);
@@ -202,6 +212,7 @@ export default function TaskNotesModal({ isOpen, onClose, taskId, taskTitle }: P
         }
     }, [isOpen, fetchLogs]);
 
+    if (!isOpen) return null;
 
     if (typeof document === "undefined") {
         return null;
@@ -217,23 +228,33 @@ export default function TaskNotesModal({ isOpen, onClose, taskId, taskTitle }: P
     const card = isDark ? "rgba(255,255,255,0.025)" : "rgba(0,0,0,0.02)";
     const cardBorder = isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)";
     const buttonBg = isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.04)";
-    const bodyText = isDark ? "#e5e7eb" : "#374151";
+    const bodyText = isDark ? "#e2e8f0" : "#334155";
 
     return createPortal(
         <AnimatePresence>
-{isOpen && (
-            <div
+            <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
                 className="fixed inset-0 z-50 flex items-center justify-center px-4"
+                style={{
+                    background: "rgba(0,0,0,0.55)",
+                    backdropFilter: "blur(4px)",
+                }}
+                onClick={onClose}
             >
-                <Backdrop onClick={onClose} />
-                <m.div
-                    {...panelMotion(false, reduced)}
-                    className="relative flex max-h-[85vh] w-full max-w-[560px] flex-col overflow-hidden rounded-3xl border"
+                <motion.div
+                    initial={{ scale: 0.94, y: 20 }}
+                    animate={{ scale: 1, y: 0 }}
+                    exit={{ scale: 0.94, y: 20 }}
+                    transition={{ duration: 0.22, ease: "easeOut" }}
+                    className="flex max-h-[85vh] w-full max-w-[560px] flex-col overflow-hidden rounded-3xl border"
                     style={{
                         background: surface,
                         borderColor: border,
                         boxShadow: "0 28px 72px rgba(0,0,0,0.32)",
                     }}
+                    onClick={(event) => event.stopPropagation()}
                     dir="rtl"
                 >
                     <div className="flex shrink-0 items-center justify-between border-b px-5 py-4" style={{ borderColor: divider }}>
@@ -274,10 +295,10 @@ export default function TaskNotesModal({ isOpen, onClose, taskId, taskTitle }: P
                                 type="button"
                                 onClick={fetchLogs}
                                 disabled={loading}
-                                className={`flex h-8 w-8 items-center justify-center rounded-xl text-gray-400 hover:text-gray-300 disabled:opacity-40 transition-colors `}
+                                className="flex h-8 w-8 items-center justify-center rounded-xl text-gray-400 hover:text-gray-300 disabled:opacity-40 transition-colors"
                                 style={{ background: buttonBg }}
                             >
-                                {loading ? <Loader2 size={13} className="animate-spin" /> : <RefreshCw size={13} />}
+                                <RefreshCw size={13} className={loading ? "animate-spin" : ""} />
                             </button>
 
                             <button
@@ -293,7 +314,10 @@ export default function TaskNotesModal({ isOpen, onClose, taskId, taskTitle }: P
 
                     <div className="flex-1 overflow-y-auto px-5 py-4">
                         {loading ? (
-                            <ListSkeleton rows={3} />
+                            <div className="flex flex-col items-center justify-center gap-3 py-16">
+                                <Loader2 size={22} className="animate-spin text-emerald-500" />
+                                <p className="text-[12px] font-semibold text-gray-500">در حال دریافت اطلاعات تسک...</p>
+                            </div>
                         ) : error ? (
                             <div className="flex flex-col items-center justify-center gap-3 py-16">
                                 <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-red-500/10">
@@ -352,7 +376,7 @@ export default function TaskNotesModal({ isOpen, onClose, taskId, taskTitle }: P
                                                         {log.step_name && (
                                                             <div className="flex items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-[10px] font-bold bg-white/[0.04] text-gray-500 dark:text-gray-400">
                                                                 <Layers3 size={10} />
-                                                                <span>{log.action === "transferred" ? "مرحله‌ی دپارتمان قبلی:" : "مرحله:"}</span>
+                                                                <span>مرحله:</span>
                                                                 <span className="text-gray-200 dark:text-white">{log.step_name}</span>
                                                             </div>
                                                         )}
@@ -428,10 +452,9 @@ export default function TaskNotesModal({ isOpen, onClose, taskId, taskTitle }: P
                             </div>
                         )}
                     </div>
-                </m.div>
-            </div>
-        )}
-</AnimatePresence>,
+                </motion.div>
+            </motion.div>
+        </AnimatePresence>,
         document.body
     );
 }

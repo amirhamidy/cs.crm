@@ -1,10 +1,23 @@
 "use client";
 
 import { useState } from "react";
-import { m } from "framer-motion";
-import { BellRing, Boxes, ChevronLeft, ChevronRight, Package, ShieldCheck } from "lucide-react";
+import { motion } from "framer-motion";
+import {
+    BellRing,
+    Boxes,
+    ChevronLeft,
+    ChevronRight,
+    Package,
+    ShieldCheck,
+} from "lucide-react";
 
-import { formatDate, formatNumber, getDeadlineDate, getQuantityFromStock, getStockProductName } from "@/utils/warehouseEmployee";
+import {
+    formatDate,
+    formatNumber,
+    getDeadlineDate,
+    getQuantityFromStock,
+    getStockProductName,
+} from "@/utils/warehouseEmployee";
 import type { ApiOrderTaskDeadline, ApiStockInfo } from "@/types/warehouse";
 
 export const AVATAR_GRADIENTS = [
@@ -29,7 +42,7 @@ export const cardShadow = (dark: boolean) =>
         : "0 8px 24px rgba(15,23,42,0.05)";
 
 export const muted = (dark: boolean) =>
-    dark ? "#9ca3af" : "#6b7280";
+    dark ? "#94a3b8" : "#64748b";
 
 type StockLevel = "critical" | "low" | "medium" | "good";
 
@@ -116,7 +129,7 @@ export function Pagination({
         background: isDark
             ? "rgba(255,255,255,.04)"
             : "rgba(15,23,42,.04)",
-        color: isDark ? "#9ca3af" : "#4b5563",
+        color: isDark ? "#94a3b8" : "#475569",
     };
 
     return (
@@ -217,7 +230,7 @@ export function StockCard({
     const gradientId = `stock-ring-${stock.id}`;
 
     return (
-        <m.div
+        <motion.div
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.96 }}
@@ -245,7 +258,7 @@ export function StockCard({
                     </linearGradient>
                 </defs>
 
-                <m.rect
+                <motion.rect
                     x="1"
                     y="1"
                     width="calc(100% - 2px)"
@@ -354,7 +367,7 @@ export function StockCard({
                             strokeWidth="8"
                         />
 
-                        <m.circle
+                        <motion.circle
                             cx="55"
                             cy="55"
                             r={radius}
@@ -467,7 +480,7 @@ export function StockCard({
                     مشاهده گردش کالا
                 </button>
             )}
-        </m.div>
+        </motion.div>
     );
 }
 
@@ -487,7 +500,7 @@ export function DeadlineCard({
         AVATAR_GRADIENTS[deadline.id % AVATAR_GRADIENTS.length];
 
     return (
-        <m.div
+        <motion.div
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.96 }}
@@ -515,7 +528,7 @@ export function DeadlineCard({
                     </linearGradient>
                 </defs>
 
-                <m.rect
+                <motion.rect
                     x="1"
                     y="1"
                     width="calc(100% - 2px)"
@@ -612,6 +625,6 @@ export function DeadlineCard({
                     </p>
                 </div>
             </div>
-        </m.div>
+        </motion.div>
     );
 }

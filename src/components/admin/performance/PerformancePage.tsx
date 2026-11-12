@@ -2,12 +2,16 @@
 
 import { useState } from "react";
 import { useTheme } from "next-themes";
-import { m } from "framer-motion";
+import { motion } from "framer-motion";
 import { Activity, ListTodo, TrendingUp, Ban } from "lucide-react";
 import { useAnalytics, type TimeRange } from "@/hooks/useAnalytics";
 import TimeRangeSelector from "./TimeRangeSelector";
-import PerformanceDashboard from "./dashboard/PerformanceDashboard";
-
+import BestEmployeesChart from "./BestEmployeesChart";
+import WeakestEmployeesChart from "./WeakestEmployeesChart";
+import TopBringersChart from "./TopBringersChart";
+import DepartmentChurn from "./DepartmentChurn";
+import TopStagesChart from "./TopStagesChart";
+import MyTaskDeadlines from "./MyTaskDeadlines";
 
 export default function PerformancePage() {
     const { resolvedTheme } = useTheme();
@@ -32,7 +36,7 @@ export default function PerformancePage() {
             label: "تسک",
             value: departments.reduce((sum, d) => sum + d.total, 0),
             icon: ListTodo,
-            gradient: ["#9ca3af", "#6b7280"],
+            gradient: ["#94a3b8", "#64748b"],
         },
         {
             label: "فروش",
@@ -120,7 +124,7 @@ export default function PerformancePage() {
             </div>
 
             {error && (
-                <m.div
+                <motion.div
                     initial={{ opacity: 0, y: -6 }}
                     animate={{ opacity: 1, y: 0 }}
                     className="rounded-2xl border px-4 py-3 text-[12px] font-semibold"
@@ -135,20 +139,41 @@ export default function PerformancePage() {
                     }}
                 >
                     {error}
-                </m.div>
+                </motion.div>
             )}
 
-            <PerformanceDashboard
-                loading={loading}
-                departments={departments}
-                bestEmployees={bestEmployees}
-                weakestEmployees={weakestEmployees}
-                topBringers={topBringers}
-                topSoldStages={topSoldStages}
-                topCompletedStages={topCompletedStages}
-                topInProgressStages={topInProgressStages}
-                topCancelledStages={topCancelledStages}
-            />
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+
+                <DepartmentChurn
+                    departments={departments}
+                    loading={loading}
+                />
+
+                <WeakestEmployeesChart
+                    items={weakestEmployees}
+                    loading={loading}
+                />
+
+                <TopBringersChart
+                    items={topBringers}
+                    loading={loading}
+                />
+                <BestEmployeesChart
+                    items={bestEmployees}
+                    loading={loading}
+                />
+
+                <TopStagesChart
+                    topSoldStages={topSoldStages}
+                    topCompletedStages={topCompletedStages}
+                    topInProgressStages={topInProgressStages}
+                    topCancelledStages={topCancelledStages}
+                    loading={loading}
+                    activeRange={range}
+                />
+                <MyTaskDeadlines />
+
+            </div>
         </div>
     );
 }

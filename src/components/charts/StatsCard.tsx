@@ -1,7 +1,13 @@
 "use client";
 
-import { m } from "framer-motion";
-import { Package, ShoppingCart, TrendingDown, TrendingUp, Users } from "lucide-react";
+import { motion } from "framer-motion";
+import {
+  Package,
+  ShoppingCart,
+  TrendingDown,
+  TrendingUp,
+  Users,
+} from "lucide-react";
 
 type StatsIcon = "users" | "shoppingCart" | "package";
 
@@ -61,7 +67,7 @@ export default function StatsCard({
     gradientMap["from-blue-500 to-blue-600"];
 
   return (
-    <m.div
+    <motion.div
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{
@@ -130,6 +136,6 @@ export default function StatsCard({
           />
         </div>
       </div>
-    </m.div>
+    </motion.div>
   );
 }

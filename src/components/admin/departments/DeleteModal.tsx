@@ -1,12 +1,9 @@
 "use client";
 
-import { m, AnimatePresence, useReducedMotion } from "framer-motion";
-import { Backdrop } from "@/components/ui/Backdrop";
-import { panelMotion } from "@/lib/motion";
-import { X, Trash2 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { X, AlertTriangle, Loader, Trash2 } from "lucide-react";
 import { useTheme } from "next-themes";
 
-import { BusyContent } from "@/components/ui/Button";
 interface Props {
     open: boolean;
     title: string;
@@ -17,21 +14,32 @@ interface Props {
 }
 
 export default function DeleteModal({ open, title, description, loading = false, onConfirm, onCancel }: Props) {
-    const reduced = useReducedMotion() ?? false;
     const { resolvedTheme } = useTheme();
     const isDark = resolvedTheme === "dark";
 
     return (
         <AnimatePresence>
             {open && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center px-4">
-<Backdrop onClick={loading ? undefined : onCancel} />
-                    <m.div {...panelMotion(false, reduced)} className="relative w-full max-w-[360px] rounded-[2rem] overflow-hidden border p-5"
+                <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="fixed inset-0 z-50 flex items-center justify-center px-4"
+                    style={{ background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)" }}
+                    onClick={loading ? undefined : onCancel}
+                >
+                    <motion.div
+                        initial={{ scale: 0.95, y: 16, opacity: 0 }}
+                        animate={{ scale: 1, y: 0, opacity: 1 }}
+                        exit={{ scale: 0.95, y: 16, opacity: 0 }}
+                        transition={{ duration: 0.2, ease: "easeOut" }}
+                        className="w-full max-w-[360px] rounded-[2rem] overflow-hidden border p-5"
                         style={{
-                            background: isDark ? "#111827" : "#ffffff",
+                            background: isDark ? "#0f172a" : "#ffffff",
                             borderColor: isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.07)",
                             boxShadow: "0 24px 64px rgba(0,0,0,0.35)",
                         }}
+                        onClick={(e) => e.stopPropagation()}
                         dir="rtl"
                     >
                         <div
@@ -70,7 +78,7 @@ export default function DeleteModal({ open, title, description, loading = false,
                                     className="flex-1 py-2.5 rounded-2xl text-[12.5px] font-bold transition-colors disabled:opacity-40"
                                     style={{
                                         background: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.04)",
-                                        color: isDark ? "#9ca3af" : "#6b7280",
+                                        color: isDark ? "#94a3b8" : "#64748b",
                                     }}
                                     type="button"
                                 >
@@ -79,21 +87,19 @@ export default function DeleteModal({ open, title, description, loading = false,
                                 <button
                                     onClick={onConfirm}
                                     disabled={loading}
-                                    className="relative flex-1 py-2.5 rounded-2xl text-[12.5px] font-bold text-white flex items-center justify-center transition-opacity disabled:opacity-60 disabled:cursor-not-allowed"
+                                    className="flex-1 py-2.5 rounded-2xl text-[12.5px] font-bold text-white flex items-center justify-center transition-opacity disabled:opacity-60 disabled:cursor-not-allowed"
                                     style={{
                                         background: "linear-gradient(135deg, #ef4444, #dc2626)",
                                         boxShadow: "0 4px 14px rgba(239,68,68,0.3)",
                                     }}
                                     type="button"
                                 >
-                                    <BusyContent busy={loading}>
-                                        حذف
-                                    </BusyContent>
+                                    {loading ? <Loader size={15} className="animate-spin" /> : "حذف"}
                                 </button>
                             </div>
                         </div>
-                    </m.div>
-                </div>
+                    </motion.div>
+                </motion.div>
             )}
         </AnimatePresence>
     );

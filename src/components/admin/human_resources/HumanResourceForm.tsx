@@ -1,12 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { AnimatePresence, m } from "framer-motion";
-import { Check, ChevronDown, FileText, Search, X } from "lucide-react";
-import { Department, HumanResource, createDocument, updateDocument } from "./humanResourceApi";
-import { extractError, gradientOf, initialOf } from "./hrUtils";
+import { AnimatePresence, motion } from "framer-motion";
+import { Check, ChevronDown, FileText, Loader2, Search, Upload, X } from "lucide-react";
+import { Department, HumanResource, createDocument, updateDocument, uploadDocumentFile } from "./humanResourceApi";
+import { gradientOf, initialOf } from "./hrUtils";
 
-import { BusyContent } from "@/components/ui/Button";
 interface Props {
     open: boolean;
     document: HumanResource | null;
@@ -93,19 +92,19 @@ function NiceSelect({ value, departments, onChange }: { value: string; departmen
                     </span>
                 </span>
 
-                <m.span animate={{ rotate: open ? 180 : 0 }} transition={{ duration: 0.2 }}>
+                <motion.span animate={{ rotate: open ? 180 : 0 }} transition={{ duration: 0.2 }}>
                     <ChevronDown size={14} className="text-gray-400" />
-                </m.span>
+                </motion.span>
             </button>
 
             <AnimatePresence>
                 {open && (
-                    <m.div
+                    <motion.div
                         initial={{ opacity: 0, y: -6, scale: 0.97 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: -4, scale: 0.97 }}
                         transition={{ type: "spring", damping: 24, stiffness: 340 }}
-                        className="absolute z-50 mt-2 w-full origin-top overflow-hidden rounded-[1.5rem] border border-gray-100 bg-white shadow-xl shadow-black/5 dark:border-white/[0.08] dark:bg-[#111827] dark:shadow-black/40"
+                        className="absolute z-50 mt-2 w-full origin-top overflow-hidden rounded-[1.5rem] border border-gray-100 bg-white shadow-xl shadow-black/5 dark:border-white/[0.08] dark:bg-[#0f172a] dark:shadow-black/40"
                     >
                         <div className="border-b border-gray-100 p-2.5 dark:border-white/[0.06]">
                             <button
@@ -146,7 +145,7 @@ function NiceSelect({ value, departments, onChange }: { value: string; departmen
                                 visible.map((d, i) => {
                                     const active = String(d.id) === value;
                                     return (
-                                        <m.button
+                                        <motion.button
                                             key={d.id}
                                             type="button"
                                             initial={{ opacity: 0, x: 6 }}
@@ -165,12 +164,12 @@ function NiceSelect({ value, departments, onChange }: { value: string; departmen
                                                 <span className="mt-0.5 block text-[10px] text-gray-400">دسترسی اختصاصی</span>
                                             </span>
                                             {active && <Tick />}
-                                        </m.button>
+                                        </motion.button>
                                     );
                                 })
                             )}
                         </div>
-                    </m.div>
+                    </motion.div>
                 )}
             </AnimatePresence>
         </div>
@@ -180,21 +179,15 @@ function NiceSelect({ value, departments, onChange }: { value: string; departmen
 export default function HumanResourceForm({ open, document, departments, onClose, onSaved }: Props) {
     const [title, setTitle] = useState("");
     const [departmentId, setDepartmentId] = useState("");
+    const [file, setFile] = useState<File | null>(null);
     const [saving, setSaving] = useState(false);
-    const [error, setError] = useState<string | null>(null);
 
-    
     useEffect(() => {
         if (!open) return;
+        const dep = document && departments.find((d) => d.name === document.title);
         setTitle(document?.title ?? "");
-        setDepartmentId("");
-        setError(null);
-    }, [open, document]);
-
-    useEffect(() => {
-        if (!open || !document) return;
-        const dep = departments.find((d) => d.name === document.title);
         setDepartmentId(dep ? String(dep.id) : "");
+        setFile(null);
     }, [open, document, departments]);
 
     const handleDepartmentChange = (value: string) => {
@@ -202,50 +195,52 @@ export default function HumanResourceForm({ open, document, departments, onClose
         setTitle(departments.find((d) => String(d.id) === value)?.name ?? "");
     };
 
-    
-    
     const save = async () => {
         const t = title.trim();
-        if (!t || saving) return;
+        if (!t) return;
 
         try {
             setSaving(true);
-            setError(null);
+            let id = document?.id;
 
             if (document) {
                 if (t !== document.title) await updateDocument(document.id, { title: t });
             } else {
-                await createDocument({ title: t });
+                id = (await createDocument({ title: t })).data.id;
             }
+
+            if (file && id) await uploadDocumentFile(id, file);
 
             onSaved();
             onClose();
         } catch (e) {
-            setError(extractError(e, "ذخیره‌ی منبع انسانی انجام نشد، دوباره تلاش کنید."));
+            const d = (e as any)?.response?.data;
+            const msg = typeof d === "object" && d ? d.detail || d.title?.[0] : "";
+            alert(msg || "ذخیره‌سازی انجام نشد، دوباره تلاش کنید.");
         } finally {
             setSaving(false);
         }
     };
 
+    if (!open) return null;
 
     return (
         <AnimatePresence>
-{open && (
-            <m.div
+            <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="backdrop-blur-layer fixed inset-0 z-50 flex items-center justify-center px-4"
-                style={{ background: "rgba(0,0,0,0.5)" }}
+                className="fixed inset-0 z-50 flex items-center justify-center px-4"
+                style={{ background: "rgba(0,0,0,0.45)", backdropFilter: "blur(3px)" }}
                 onMouseDown={onClose}
             >
-                <m.div
+                <motion.div
                     initial={{ opacity: 0, y: 16, scale: 0.98 }}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: 16, scale: 0.98 }}
                     transition={{ duration: 0.28, ease: "easeOut" }}
                     onMouseDown={(e) => e.stopPropagation()}
-                    className="flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-2xl shadow-black/10 dark:border-white/[0.06] dark:bg-[#111827]"
+                    className="flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-2xl shadow-black/10 dark:border-white/[0.06] dark:bg-[#0f172a]"
                     dir="rtl"
                 >
                     <div className="flex shrink-0 items-center justify-between px-8 pb-6 pt-8">
@@ -257,7 +252,7 @@ export default function HumanResourceForm({ open, document, departments, onClose
                                 <h2 className="text-[14px] font-extrabold text-gray-900 dark:text-white">
                                     {document ? "ویرایش منبع انسانی" : "ایجاد منبع انسانی"}
                                 </h2>
-                                <p className="mt-0.5 text-[11px] text-gray-400">تعیین دسترسی و نام منبع</p>
+                                <p className="mt-0.5 text-[11px] text-gray-400">تعیین دسترسی و اطلاعات منبع</p>
                             </div>
                         </div>
                         <button type="button" onClick={onClose} className="flex h-8 w-8 items-center justify-center rounded-xl bg-gray-100 text-gray-400 transition hover:text-gray-600 dark:bg-white/[0.05] dark:hover:text-gray-300">
@@ -289,32 +284,39 @@ export default function HumanResourceForm({ open, document, departments, onClose
                                     </p>
                                 )}
                             </div>
+
+                            <div>
+                                <label className="mb-2 block text-[11.5px] font-bold text-gray-400">فایل</label>
+                                <label className="flex cursor-pointer items-center gap-2.5 rounded-2xl border border-dashed border-gray-200 bg-gray-50/60 px-3.5 py-3 transition-colors hover:border-indigo-400 hover:bg-indigo-50/40 dark:border-white/[0.1] dark:bg-white/[0.02] dark:hover:border-indigo-500/40 dark:hover:bg-indigo-500/[0.05]">
+                                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-white text-gray-400 shadow-sm dark:bg-white/[0.06]">
+                                        <Upload size={14} />
+                                    </span>
+                                    <span className="min-w-0 flex-1">
+                                        <span className="block truncate text-[12px] font-bold text-gray-600 dark:text-gray-300">
+                                            {file ? file.name : "افزودن فایل"}
+                                        </span>
+                                        <span className="mt-0.5 block text-[10px] text-gray-400">فایل موردنظر را انتخاب کنید</span>
+                                    </span>
+                                    <input type="file" className="hidden" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
+                                </label>
+                            </div>
                         </div>
                     </div>
 
-                    {error && (
-                        <div className="mx-8 mb-1 mt-3 rounded-2xl bg-rose-50 px-3.5 py-2.5 text-[11px] font-bold leading-5 text-rose-600 dark:bg-rose-500/10 dark:text-rose-400">
-                            {error}
-                        </div>
-                    )}
-
                     <div className="flex shrink-0 px-8 pb-8 pt-5">
-                        <m.button
+                        <motion.button
                             type="button"
                             whileTap={{ scale: 0.97 }}
                             onClick={save}
                             disabled={saving || !title.trim()}
-                            className="relative flex h-11 w-full items-center justify-center gap-2 rounded-full bg-indigo-600 text-[13px] font-bold text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-40"
+                            className="flex h-11 w-full items-center justify-center gap-2 rounded-full bg-indigo-600 text-[13px] font-bold text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-40"
                         >
-                            <BusyContent busy={saving}>
-                                <Check size={14} strokeWidth={3} />
-                                {document ? "ذخیره تغییرات" : "ایجاد منبع انسانی"}
-                            </BusyContent>
-                        </m.button>
+                            {saving ? <Loader2 size={15} className="animate-spin" /> : <Check size={14} strokeWidth={3} />}
+                            {document ? "ذخیره تغییرات" : "ایجاد منبع انسانی"}
+                        </motion.button>
                     </div>
-                </m.div>
-            </m.div>
-        )}
-</AnimatePresence>
+                </motion.div>
+            </motion.div>
+        </AnimatePresence>
     );
 }

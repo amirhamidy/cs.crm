@@ -5,14 +5,19 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowRight, Loader2, Plus, Save, Trash2, UserRound } from "lucide-react";
 import { minutesApi } from "@/lib/minutesApi";
-import { formatDateTime, fromInputValue, parseApiError, toInputValue } from "@/lib/minutesUtils";
+import {
+  formatDateTime,
+  fromInputValue,
+  parseApiError,
+  toInputValue,
+} from "@/lib/minutesUtils";
 import { useUserOptions } from "@/hooks/useUserOptions";
 import SignerDraftForm from "./SignerDraftForm";
 import { BTN_GHOST, BTN_PRIMARY, CARD, INPUT, INPUT_ERROR, LABEL } from "./ui";
 import type { MeetingDetail, SignerInput } from "@/types/minutes";
 
 interface Props {
-  basePath: string; 
+  basePath: string; // "/admin/minutes" | "/user/minutes"
   mode: "create" | "edit";
 }
 
@@ -38,7 +43,7 @@ export default function MeetingFormPage({ basePath, mode }: Props) {
   const [formError, setFormError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  
+  /* ---------- load (edit) ---------- */
   useEffect(() => {
     if (mode !== "edit" || !meetingId) return;
     let alive = true;
@@ -66,7 +71,7 @@ export default function MeetingFormPage({ basePath, mode }: Props) {
   const takenUserIds = signers.map((s) => s.user).filter((id): id is number => id !== null);
   const nextOrder = signers.reduce((max, s) => Math.max(max, s.order), 0) + 1;
 
-  
+  /* ---------- submit ---------- */
   const validate = () => {
     const next: Record<string, string> = {};
     if (!title.trim()) next.title = "عنوان الزامی است.";
@@ -110,7 +115,7 @@ export default function MeetingFormPage({ basePath, mode }: Props) {
     }
   };
 
-  
+  /* ---------- guards (edit) ---------- */
   if (mode === "edit" && loadingMeeting) {
     return (
       <div className="flex items-center justify-center py-24">
@@ -153,7 +158,7 @@ export default function MeetingFormPage({ basePath, mode }: Props) {
         <Link
           href={mode === "edit" && meetingId ? `${basePath}/${meetingId}` : basePath}
           aria-label="بازگشت"
-          className="flex h-10 w-10 items-center justify-center rounded-2xl bg-black/5 text-gray-600 transition-colors hover:bg-black/10 dark:bg-white/5 dark:text-gray-300"
+          className="flex h-10 w-10 items-center justify-center rounded-2xl bg-black/5 text-slate-600 transition-colors hover:bg-black/10 dark:bg-white/5 dark:text-slate-300"
         >
           <ArrowRight size={16} />
         </Link>
@@ -227,7 +232,7 @@ export default function MeetingFormPage({ basePath, mode }: Props) {
           </div>
         </section>
 
-        
+        {/* ---------- signers (only on create; edit → detail page) ---------- */}
         {mode === "create" ? (
           <section className={`${CARD} flex flex-col gap-3 p-4 sm:p-5`}>
             <div className="flex items-center justify-between">
@@ -254,7 +259,7 @@ export default function MeetingFormPage({ basePath, mode }: Props) {
                       className="flex items-center justify-between gap-3 rounded-xl border border-black/[0.06] bg-white px-3 py-2.5 dark:border-white/[0.06] dark:bg-white/[0.02]"
                     >
                       <div className="flex min-w-0 items-center gap-2.5">
-                        <UserRound size={15} className="shrink-0 text-gray-400" />
+                        <UserRound size={15} className="shrink-0 text-slate-400" />
                         <div className="min-w-0">
                           <p className="truncate text-[12.5px] font-bold text-gray-800 dark:text-gray-100">
                             {s.user !== null ? userLabel.get(s.user) ?? `کاربر ${s.user}` : s.full_name}
@@ -273,7 +278,7 @@ export default function MeetingFormPage({ basePath, mode }: Props) {
                         type="button"
                         onClick={() => setSigners((prev) => prev.filter((x) => x !== s))}
                         aria-label="حذف امضاکننده"
-                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-gray-400 transition-colors hover:bg-rose-500/10 hover:text-rose-500"
+                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-slate-400 transition-colors hover:bg-rose-500/10 hover:text-rose-500"
                       >
                         <Trash2 size={14} />
                       </button>

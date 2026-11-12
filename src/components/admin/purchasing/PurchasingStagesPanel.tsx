@@ -1,14 +1,18 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { AnimatePresence, m } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { Plus } from "lucide-react";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { FreeMode } from "swiper/modules";
 import "swiper/css";
 import "swiper/css/free-mode";
 import { toPersianDigits } from "@/lib/jalali";
-import type { ApiPurchasingStep, ApiPurchasingTask, ApiTaskAttachment } from "@/types/purchasing";
+import type {
+    ApiPurchasingStep,
+    ApiPurchasingTask,
+    ApiTaskAttachment,
+} from "@/types/purchasing";
 import PurchasingStageCard from "./PurchasingStageCard";
 
 const STAGE_COLORS = [
@@ -158,7 +162,7 @@ export default function PurchasingStagesPanel({
                         <div className="mt-2">
                             <AnimatePresence mode="wait" initial={false}>
                                 {activeStep && (
-                                    <m.div
+                                    <motion.div
                                         key={activeStep.id}
                                         initial={{ opacity: 0, y: 5 }}
                                         animate={{ opacity: 1, y: 0 }}
@@ -179,7 +183,7 @@ export default function PurchasingStagesPanel({
                                             onDeleteStep={onDeleteStep}
                                             onUpdated={onUpdated}
                                         />
-                                    </m.div>
+                                    </motion.div>
                                 )}
                             </AnimatePresence>
                         </div>

@@ -1,28 +1,21 @@
 "use client";
 
 import { memo, useEffect, useState } from "react";
-import { AnimatePresence, m, useReducedMotion } from "framer-motion";
-import { Backdrop } from "@/components/ui/Backdrop";
-import { panelMotion } from "@/lib/motion";
-import { useVisibleInterval } from "@/hooks/useVisibility";
-import { Ban, CalendarClock, CheckCircle2, ClipboardX, Clock, MessageSquareText, RotateCcw, Trash2, UserRound, X } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
+import {
+    Ban, CalendarDays, CheckCircle2, ClipboardX, Clock, Loader, Loader2,
+    MessageSquareText, RotateCcw, Trash2, UserRound, X,
+} from "lucide-react";
 import { useTheme } from "next-themes";
 import { useAuthStore } from "@/store/authStore";
 import type { InternalTask, InternalTaskStatus, EmployeeRef } from "./types";
+import { toJalali, toPersianDigits, JALALI_MONTHS, pad2 } from "@/lib/jalali";
 import api from "@/lib/axiosInstance";
-import TimeRangeModal from "@/components/tasks/TimeRangeModal";
-import InternalTaskDeadlineModal from "./InternalTaskDeadlineModal";
-import dynamic from "next/dynamic";
-
-
-const InternalTaskChatModal = dynamic(() => import("./InternalTaskChatModal"), {
-    ssr: false,
-    loading: () => null,
-});
+import InternalTimeRangeModal from "./InternalTimeRangeModal";
+import InternalTaskChatModal from "./InternalTaskChatModal";
 import InternalTaskActionModal from "./InternalTaskActionModal";
 import { reopenInternalTask } from "./Api";
 
-import { BusyContent } from "@/components/ui/Button";
 const AVATAR_GRADIENTS = [
     ["#6366f1", "#8b5cf6"], ["#3b82f6", "#6366f1"], ["#8b5cf6", "#ec4899"],
     ["#06b6d4", "#6366f1"], ["#f59e0b", "#ef4444"], ["#10b981", "#3b82f6"],
@@ -56,6 +49,14 @@ interface StepDeadline {
     deadline: string | null;
 }
 
+function formatJalaliDate(iso?: string | null) {
+    if (!iso) return null;
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return null;
+    const [jy, jm, jd] = toJalali(d.getFullYear(), d.getMonth() + 1, d.getDate());
+    return `${toPersianDigits(jd)} ${JALALI_MONTHS[jm - 1]} ${toPersianDigits(jy)} ساعت ${toPersianDigits(pad2(d.getHours()))}:${toPersianDigits(pad2(d.getMinutes()))}`;
+}
+
 function getGradient(id: number) {
     return AVATAR_GRADIENTS[Math.abs(id) % AVATAR_GRADIENTS.length];
 }
@@ -73,7 +74,7 @@ function EmployeeChip({ employee, isDark }: { employee: EmployeeRef; isDark: boo
                 style={{ background: `linear-gradient(135deg, ${gradient[0]}, ${gradient[1]})` }}>
                 <UserRound size={11} />
             </span>
-            <span className="text-[10.5px] font-bold" style={{ color: isDark ? "#d1d5db" : "#4b5563" }}>{name}</span>
+            <span className="text-[10.5px] font-bold" style={{ color: isDark ? "#cbd5e1" : "#475569" }}>{name}</span>
         </div>
     );
 }
@@ -87,13 +88,11 @@ interface SentTaskCardProps {
 }
 
 function SentTaskCard({ task, index = 0, onDelete, onUpdated, isDeleting = false }: SentTaskCardProps) {
-    const reduced = useReducedMotion() ?? false;
     const { resolvedTheme } = useTheme();
     const isDark = resolvedTheme === "dark";
     const userId = useAuthStore((state) => state.userId);
     const [hovered, setHovered] = useState(false);
     const [timeModalOpen, setTimeModalOpen] = useState(false);
-    const [deadlineModalOpen, setDeadlineModalOpen] = useState(false);
     const [showConfirm, setShowConfirm] = useState(false);
     const [deleting, setDeleting] = useState(false);
     const [deleteError, setDeleteError] = useState<string | null>(null);
@@ -127,15 +126,36 @@ function SentTaskCard({ task, index = 0, onDelete, onUpdated, isDeleting = false
     const accent = urgency && urgency !== "normal" ? URGENCY_ACCENT[urgency] : null;
 
     useEffect(() => {
-        setStepDeadline({ started_at: task.started_at ?? null, deadline: task.deadline ?? null });
-    }, [task.started_at, task.deadline]);
+        let cancelled = false;
+        async function loadDeadline() {
+            try {
+                const { data } = await api.get(`/tasks/api/v1/internal_task/${task.id}/deadline/`);
+                const value = data?.data ?? data;
+                if (!cancelled && value) {
+                    setStepDeadline({
+                        started_at: value.started_at ?? task.started_at ?? null,
+                        deadline: value.deadline ?? task.deadline ?? null,
+                    });
+                }
+            } catch {
+                if (!cancelled) setStepDeadline({
+                    started_at: task.started_at ?? null,
+                    deadline: task.deadline ?? null,
+                });
+            }
+        }
+        void loadDeadline();
+        return () => { cancelled = true; };
+    }, [task.id, task.started_at, task.deadline]);
 
-    
-    useVisibleInterval(
-        () => forceTick((t) => t + 1),
-        60000,
-        Boolean(stepDeadline.deadline) && isActiveTask,
-    );
+    useEffect(() => {
+        if (!stepDeadline.deadline || !isActiveTask) return;
+        const interval = setInterval(() => forceTick(t => t + 1), 60000);
+        return () => clearInterval(interval);
+    }, [stepDeadline.deadline, isActiveTask]);
+
+    const startedAtLabel = formatJalaliDate(stepDeadline.started_at);
+    const deadlineLabel = formatJalaliDate(stepDeadline.deadline);
 
     async function handleDelete() {
         if (!onDelete) return;
@@ -193,21 +213,21 @@ function SentTaskCard({ task, index = 0, onDelete, onUpdated, isDeleting = false
 
     return (
         <>
-            <m.div
+            <motion.div
                 layout initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95 }} transition={{ duration: 0.2, delay: index * 0.05 }}
                 onHoverStart={() => setHovered(true)} onHoverEnd={() => setHovered(false)}
                 className="relative flex min-h-[130px] flex-col gap-3 overflow-hidden rounded-[2rem] p-4"
                 style={{
                     border: accent ? `1px solid color-mix(in srgb, ${accent} 40%, transparent)` : isDark ? "1px solid rgba(255,255,255,0.06)" : "1px solid rgba(0,0,0,0.06)",
-                    background: accent ? `color-mix(in srgb, ${accent} ${urgency === "overdue" ? 7 : urgency === "critical" ? 5 : 4}%, ${isDark ? "#111827" : "#fafafa"})` : isDark ? "rgba(255,255,255,0.02)" : "#fafafa",
+                    background: accent ? `color-mix(in srgb, ${accent} ${urgency === "overdue" ? 7 : urgency === "critical" ? 5 : 4}%, ${isDark ? "#0f172a" : "#fafafa"})` : isDark ? "rgba(255,255,255,0.02)" : "#fafafa",
                     opacity: effectiveDeleting ? 0.45 : 1, pointerEvents: effectiveDeleting ? "none" : undefined,
                     boxShadow: accent ? `0 0 0 1px color-mix(in srgb, ${accent} 15%, transparent), 0 4px 24px color-mix(in srgb, ${accent} 12%, transparent)` : isDark ? "0 2px 24px rgba(0,0,0,0.2)" : "0 2px 16px rgba(0,0,0,0.04)",
                     transition: "border-color .4s ease,background .4s ease,box-shadow .4s ease",
                 }}
             >
                 {urgency === "overdue" && (
-                    <m.div className="pointer-events-none absolute inset-x-0 top-0 h-[2px]"
+                    <motion.div className="pointer-events-none absolute inset-x-0 top-0 h-[2px]"
                         style={{ background: `linear-gradient(90deg,transparent,${accent},transparent)` }}
                         animate={{ opacity: [0.4, 1, 0.4] }} transition={{ duration: 2.2, repeat: Infinity }} />
                 )}
@@ -216,7 +236,7 @@ function SentTaskCard({ task, index = 0, onDelete, onUpdated, isDeleting = false
                     <defs><linearGradient id={`borderGrad-internal-${task.id}`} x1="100%" y1="100%" x2="0%" y2="0%">
                         <stop offset="0%" stopColor="#6366f1" /><stop offset="100%" stopColor="#8b5cf6" />
                     </linearGradient></defs>
-                    <m.rect x="1" y="1" width="calc(100% - 2px)" height="calc(100% - 2px)" rx="30" ry="30"
+                    <motion.rect x="1" y="1" width="calc(100% - 2px)" height="calc(100% - 2px)" rx="30" ry="30"
                         fill="none" stroke={`url(#borderGrad-internal-${task.id})`} strokeWidth="1.5" pathLength="1"
                         initial={{ pathLength: 0, opacity: 0 }}
                         animate={hovered ? { pathLength: 1, opacity: 1 } : { pathLength: 0, opacity: 0 }}
@@ -232,7 +252,7 @@ function SentTaskCard({ task, index = 0, onDelete, onUpdated, isDeleting = false
                         {accent && (
                             <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold"
                                 style={{ color: accent, background: `color-mix(in srgb, ${accent} 12%, transparent)`, border: `1px solid color-mix(in srgb, ${accent} 30%, transparent)` }}>
-                                <m.span className="h-1.5 w-1.5 rounded-full" style={{ background: accent }}
+                                <motion.span className="h-1.5 w-1.5 rounded-full" style={{ background: accent }}
                                     animate={urgency !== "soon" ? { opacity: [1, .3, 1] } : undefined}
                                     transition={{ duration: 1.6, repeat: Infinity }} />
                                 {URGENCY_LABEL[urgency as keyof typeof URGENCY_LABEL]}
@@ -245,37 +265,29 @@ function SentTaskCard({ task, index = 0, onDelete, onUpdated, isDeleting = false
                             className="flex h-7 w-7 items-center justify-center rounded-xl transition-colors"
                             style={{ background: isDark ? "rgba(99,102,241,.1)" : "rgba(99,102,241,.07)", color: isDark ? "#a5b4fc" : "#6366f1" }}
                             title="مشاهده گفتگو و فایل‌ها"><MessageSquareText size={11} /></button>
-                        <button type="button" onClick={() => setDeadlineModalOpen(true)}
-                            className="flex h-7 w-7 items-center justify-center rounded-xl transition-colors"
-                            style={{ background: isDark ? "rgba(99,102,241,.1)" : "rgba(99,102,241,.07)", color: isDark ? "#a5b4fc" : "#6366f1" }}
-                            title="مشاهده ددلاین"><CalendarClock size={11} /></button>
-<button type="button" onClick={() => setTimeModalOpen(true)}
+                        <button type="button" onClick={() => setTimeModalOpen(true)}
                             className="flex h-7 w-7 items-center justify-center rounded-xl transition-colors"
                             style={{ background: isDark ? "rgba(99,102,241,.1)" : "rgba(99,102,241,.07)", color: isDark ? "#a5b4fc" : "#6366f1" }}
                             title="تعیین بازه زمانی"><Clock size={11} /></button>
                         {onDelete && (
                             <button type="button" onClick={() => setShowConfirm(true)} disabled={effectiveDeleting}
-                                className="relative flex h-7 w-7 items-center justify-center rounded-xl transition-colors disabled:opacity-40"
+                                className="flex h-7 w-7 items-center justify-center rounded-xl transition-colors disabled:opacity-40"
                                 style={{ background: isDark ? "rgba(239,68,68,.1)" : "rgba(239,68,68,.07)", color: "#ef4444" }}
-                                title="حذف تسک">
-                                <BusyContent busy={effectiveDeleting}>
-    <Trash2 size={11} />
-                                </BusyContent>
-                            </button>
+                                title="حذف تسک">{effectiveDeleting ? <Loader2 size={11} className="animate-spin" /> : <Trash2 size={11} />}</button>
                         )}
                     </div>
                 </div>
 
                 <div className="flex flex-col gap-1">
-                    <h3 className="text-[13.5px] font-extrabold leading-tight" style={{ color: isDark ? "#f3f4f6" : "#1f2937" }}>{task.title}</h3>
-                    {task.description && <p className="line-clamp-2 text-[12px] leading-6" style={{ color: isDark ? "#9ca3af" : "#6b7280" }}>{task.description}</p>}
+                    <h3 className="text-[13.5px] font-extrabold leading-tight" style={{ color: isDark ? "#f1f5f9" : "#1e293b" }}>{task.title}</h3>
+                    {task.description && <p className="line-clamp-2 text-[12px] leading-6" style={{ color: isDark ? "#94a3b8" : "#64748b" }}>{task.description}</p>}
                 </div>
 
                 <div className="mt-auto flex flex-wrap items-center gap-2 border-t pt-2.5" style={{ borderColor: isDark ? "rgba(255,255,255,.05)" : "rgba(0,0,0,.05)" }}>
                     {assignedEmployees.length ? assignedEmployees.map(emp => <EmployeeChip key={`${emp.id}-${(emp as any).username ?? ""}`} employee={emp} isDark={isDark} />) : (
                         <div className="flex items-center gap-1.5 rounded-full py-0.5 pl-2 pr-0.5" style={{ border: isDark ? "1px solid rgba(255,255,255,.06)" : "1px solid rgba(0,0,0,.06)", background: isDark ? "rgba(255,255,255,.04)" : "rgba(0,0,0,.03)" }}>
                             <span className="flex h-5 w-5 items-center justify-center rounded-full text-white" style={{ background: "linear-gradient(135deg,#6366f1,#8b5cf6)" }}><UserRound size={11} /></span>
-                            <span className="text-[10.5px] font-bold" style={{ color: isDark ? "#d1d5db" : "#4b5563" }}>بدون مسئول</span>
+                            <span className="text-[10.5px] font-bold" style={{ color: isDark ? "#cbd5e1" : "#475569" }}>بدون مسئول</span>
                         </div>
                     )}
                 </div>
@@ -289,24 +301,30 @@ function SentTaskCard({ task, index = 0, onDelete, onUpdated, isDeleting = false
 
                 {!isActiveTask && (
                     <button type="button" onClick={() => void handleReopen()} disabled={reopening}
-                        className="relative flex h-9 w-full items-center justify-center gap-1.5 rounded-xl bg-amber-500 text-[10.5px] font-extrabold text-white transition-opacity hover:opacity-90 disabled:opacity-50">
-                        <BusyContent busy={reopening}>
-                            <RotateCcw size={13} />بازگشایی تیکت
-                        </BusyContent>
+                        className="flex h-9 w-full items-center justify-center gap-1.5 rounded-xl bg-amber-500 text-[10.5px] font-extrabold text-white transition-opacity hover:opacity-90 disabled:opacity-50">
+                        {reopening ? <Loader2 size={13} className="animate-spin" /> : <RotateCcw size={13} />}بازگشایی تیکت
                     </button>
                 )}
-            </m.div>
+
+                <div className="flex flex-col gap-1.5 rounded-[1.25rem] px-3 py-2.5" style={{
+                    background: accent ? `color-mix(in srgb, ${accent} 8%, transparent)` : isDark ? "rgba(99,102,241,.06)" : "rgba(99,102,241,.05)",
+                    border: accent ? `1px solid color-mix(in srgb, ${accent} 25%, transparent)` : isDark ? "1px solid rgba(99,102,241,.12)" : "1px solid rgba(99,102,241,.1)",
+                }}>
+                    {startedAtLabel || deadlineLabel ? <>
+                        {startedAtLabel && <div className="flex items-center gap-2 text-[11px] font-bold" style={{ color: accent ?? (isDark ? "#a5b4fc" : "#6366f1") }}><CalendarDays size={13} /><span>شروع: {startedAtLabel}</span></div>}
+                        {deadlineLabel && <div className="flex items-center gap-2 text-[11px] font-bold" style={{ color: accent ?? "#ef4444" }}><Clock size={13} /><span>مهلت: {deadlineLabel}</span></div>}
+                    </> : <div className="flex items-center gap-2 text-[10.5px] font-semibold" style={{ color: isDark ? "#64748b" : "#94a3b8" }}><Clock size={12} />زمان‌بندی تعیین نشده</div>}
+                </div>
+            </motion.div>
 
             <AnimatePresence>
                 {showConfirm && (
-                    <div
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                         className="fixed inset-0 z-50 flex items-center justify-center px-4"
-                         >
-                        <Backdrop onClick={closeConfirm} />
-                        <m.div
-                            {...panelMotion(false, reduced)}
-                             dir="rtl"
-                            className="relative flex w-full max-w-md flex-col overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-sm dark:border-white/[.06] dark:bg-[#111827]">
+                        style={{ background: "rgba(0,0,0,.45)", backdropFilter: "blur(3px)" }} onClick={closeConfirm}>
+                        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 16 }}
+                            onClick={e => e.stopPropagation()} dir="rtl"
+                            className="flex w-full max-w-md flex-col overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-sm dark:border-white/[.06] dark:bg-[#0f172a]">
                             <div className="flex items-center justify-between px-8 pb-6 pt-8">
                                 <div className="flex items-center gap-2.5">
                                     <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-red-50 dark:bg-red-500/10"><Trash2 size={15} className="text-red-500" /></div>
@@ -320,27 +338,16 @@ function SentTaskCard({ task, index = 0, onDelete, onUpdated, isDeleting = false
                             </div>
                             <div className="flex items-center gap-2 px-8 pb-8 pt-5">
                                 <button type="button" onClick={closeConfirm} disabled={deleting} className="h-11 flex-1 rounded-full bg-gray-100 text-[13px] font-bold text-gray-600 dark:bg-white/[.05] dark:text-gray-300">انصراف</button>
-                                <button type="button" onClick={handleDelete} disabled={deleting} className="relative flex h-11 flex-1 items-center justify-center gap-2 rounded-full bg-red-600 text-[13px] font-bold text-white">
-                                    <BusyContent busy={deleting}>
-    <><Trash2 size={13} />حذف کن</>
-                                    </BusyContent>
-                                </button>
+                                <button type="button" onClick={handleDelete} disabled={deleting} className="flex h-11 flex-1 items-center justify-center gap-2 rounded-full bg-red-600 text-[13px] font-bold text-white">{deleting ? <Loader size={14} className="animate-spin" /> : <><Trash2 size={13} />حذف کن</>}</button>
                             </div>
-                        </m.div>
-                    </div>
+                        </motion.div>
+                    </motion.div>
                 )}
             </AnimatePresence>
 
             {actionModal && <InternalTaskActionModal isOpen action={actionModal} task={task} onClose={() => setActionModal(null)} onDone={updatedTask => { onUpdated?.(updatedTask); setActionModal(null); }} />}
-            <TimeRangeModal open={timeModalOpen} initialStartedAt={stepDeadline.started_at} initialDeadline={stepDeadline.deadline} loading={savingTime} error={timeError} onClose={() => setTimeModalOpen(false)} onSubmit={handleTimeSubmit} />
-            <InternalTaskDeadlineModal
-                open={deadlineModalOpen}
-                onClose={() => setDeadlineModalOpen(false)}
-                taskId={task.id}
-                taskTitle={task.title}
-                onLoaded={(d) => setStepDeadline({ started_at: d.started_at, deadline: d.deadline })}
-            />
-            {chatOpen && <InternalTaskChatModal open={chatOpen} task={task} onClose={() => setChatOpen(false)} onUpdated={onUpdated || (() => { })} />}
+            <InternalTimeRangeModal open={timeModalOpen} initialStartedAt={stepDeadline.started_at} initialDeadline={stepDeadline.deadline} loading={savingTime} error={timeError} onClose={() => setTimeModalOpen(false)} onSubmit={handleTimeSubmit} />
+            <InternalTaskChatModal open={chatOpen} task={task} onClose={() => setChatOpen(false)} onUpdated={onUpdated || (() => { })} />
         </>
     );
 }

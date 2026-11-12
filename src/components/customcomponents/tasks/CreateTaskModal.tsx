@@ -1,15 +1,23 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { m, AnimatePresence } from "framer-motion";
-import { X, ChevronDown, Upload, Check, ClipboardList, Search, Paperclip, AlertCircle, UserPlus } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+    X,
+    ChevronDown,
+    Upload,
+    Check,
+    Loader,
+    ClipboardList,
+    Search,
+    Paperclip,
+    AlertCircle,
+    UserPlus,
+} from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
-import { listAll, fetchPage } from "@/lib/api";
-import AsyncSelect, { type AsyncOption } from "@/components/customcomponents/shared/AsyncSelect";
 import { apiRoutes } from "@/lib/apiRoutes";
 import type { Customer } from "@/types/customer";
 
-import { BusyContent } from "@/components/ui/Button";
 interface Case { id: number; title: string; customer: number }
 interface Department { id: number; name: string }
 interface DepartmentStep { id: number; department: number; name: string; order: number }
@@ -42,8 +50,15 @@ function customerDisplayName(c: Customer) {
     return c.full_name?.trim() || [c.first_name, c.last_name].filter(Boolean).join(" ").trim() || c.company_name?.trim() || `مشتری #${c.id}`;
 }
 
-const customerToOption = (c: Customer): AsyncOption => ({ id: c.id, label: customerDisplayName(c), sub: c.phone_number || undefined });
-const caseToOption = (c: Case): AsyncOption => ({ id: c.id, label: c.title });
+function extractList<T>(data: unknown): T[] {
+    if (Array.isArray(data)) return data as T[];
+    if (data && typeof data === "object") {
+        const obj = data as { results?: T[]; data?: T[] };
+        if (Array.isArray(obj.results)) return obj.results;
+        if (Array.isArray(obj.data)) return obj.data;
+    }
+    return [];
+}
 
 function FloatingInput({ label, id, value, onChange }: {
     label: string; id: string; value: string; onChange: (v: string) => void;
@@ -149,19 +164,19 @@ function NiceSelect({ label, options, value, onChange, placeholder, disabled, em
                         </span>
                     )}
                 </span>
-                <m.span animate={{ rotate: open ? 180 : 0 }} transition={{ duration: 0.2 }}>
+                <motion.span animate={{ rotate: open ? 180 : 0 }} transition={{ duration: 0.2 }}>
                     <ChevronDown size={14} className="shrink-0 text-gray-400" />
-                </m.span>
+                </motion.span>
             </button>
 
             <AnimatePresence>
                 {open && (
-                    <m.div
+                    <motion.div
                         initial={{ opacity: 0, y: -6, scale: 0.97 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: -4, scale: 0.97 }}
                         transition={{ type: "spring", damping: 24, stiffness: 340 }}
-                        className="absolute z-50 mt-2 w-full origin-top overflow-hidden rounded-[1.5rem] border border-gray-100 bg-white shadow-xl shadow-black/5 dark:border-white/[0.08] dark:bg-[#111827] dark:shadow-black/40"
+                        className="absolute z-50 mt-2 w-full origin-top overflow-hidden rounded-[1.5rem] border border-gray-100 bg-white shadow-xl shadow-black/5 dark:border-white/[0.08] dark:bg-[#0f172a] dark:shadow-black/40"
                     >
                         {options.length > 5 && (
                             <div className="border-b border-gray-100 px-3 py-2.5 dark:border-white/[0.06]">
@@ -180,7 +195,7 @@ function NiceSelect({ label, options, value, onChange, placeholder, disabled, em
                             ) : visible.map((o, i) => {
                                 const active = selectedValues.includes(o.id);
                                 return (
-                                    <m.button key={o.id} type="button"
+                                    <motion.button key={o.id} type="button"
                                         initial={{ opacity: 0, x: 6 }} animate={{ opacity: 1, x: 0 }}
                                         transition={{ delay: i * 0.02 }}
                                         onClick={() => handleSelect(o.id)}
@@ -200,11 +215,11 @@ function NiceSelect({ label, options, value, onChange, placeholder, disabled, em
                                                 <Check size={11} className="text-white" strokeWidth={3} />
                                             </span>
                                         )}
-                                    </m.button>
+                                    </motion.button>
                                 );
                             })}
                         </div>
-                    </m.div>
+                    </motion.div>
                 )}
             </AnimatePresence>
         </div>
@@ -215,13 +230,13 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess }: Props) {
     const [submitting, setSubmitting] = useState(false);
     const [submitError, setSubmitError] = useState("");
 
+    const [cases, setCases] = useState<Case[]>([]);
     const [departments, setDepartments] = useState<Department[]>([]);
     const [departmentSteps, setDepartmentSteps] = useState<DepartmentStep[]>([]);
     const [employees, setEmployees] = useState<DepartmentEmployee[]>([]);
+    const [customers, setCustomers] = useState<Customer[]>([]);
 
     const [selectedCustomer, setSelectedCustomer] = useState<number | null>(null);
-    const [selectedCustomerOpt, setSelectedCustomerOpt] = useState<AsyncOption | null>(null);
-    const [selectedCaseOpt, setSelectedCaseOpt] = useState<AsyncOption | null>(null);
     const [selectedCase, setSelectedCase] = useState<number | null>(null);
     const [selectedDepartment, setSelectedDepartment] = useState<number | null>(null);
     const [selectedStep, setSelectedStep] = useState<number | null>(null);
@@ -232,25 +247,15 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess }: Props) {
 
     useEffect(() => {
         if (!isOpen) return;
-        listAll<Department>("/department/api/v1/department/list/").then((all) => setDepartments(all)).catch(() => setDepartments([]));
-        listAll<DepartmentStep>("/department/api/v1/department_step/").then((all) => setDepartmentSteps(all)).catch(() => setDepartmentSteps([]));
-        listAll<DepartmentEmployee>("/department/api/v1/department_employee/list/").then((all) => setEmployees(all)).catch(() => setEmployees([]));
+        axiosInstance.get("/tasks/api/v1/cases/").then((r) => setCases(r.data.results ?? r.data)).catch(() => setCases([]));
+        axiosInstance.get("/department/api/v1/department/list/").then((r) => setDepartments(extractList<Department>(r.data))).catch(() => setDepartments([]));
+        axiosInstance.get("/department/api/v1/department_step/").then((r) => setDepartmentSteps(extractList<DepartmentStep>(r.data))).catch(() => setDepartmentSteps([]));
+        axiosInstance.get("/department/api/v1/department_employee/list/").then((r) => setEmployees(r.data.results ?? r.data)).catch(() => setEmployees([]));
+        axiosInstance.get(apiRoutes.customers).then((r) => setCustomers(extractList<Customer>(r.data))).catch(() => setCustomers([]));
     }, [isOpen]);
 
     useEffect(() => { setSelectedEmployees([]); setSelectedStep(null); }, [selectedDepartment]);
-    useEffect(() => { setSelectedCase(null); setSelectedCaseOpt(null); }, [selectedCustomer]);
-
-    
-    const fetchCustomers = useCallback(
-        (p: { page: number; page_size: number; search?: string }, signal: AbortSignal) =>
-            fetchPage<Customer>(apiRoutes.customers, p, signal),
-        []
-    );
-    const fetchCases = useCallback(
-        (p: { page: number; page_size: number; search?: string }, signal: AbortSignal) =>
-            fetchPage<Case>(apiRoutes.cases, { ...p, customer: selectedCustomer }, signal),
-        [selectedCustomer]
-    );
+    useEffect(() => { setSelectedCase(null); }, [selectedCustomer]);
 
     const filteredEmployees = useMemo(
         () => selectedDepartment ? employees.filter((e) => e.department === selectedDepartment) : employees,
@@ -262,10 +267,15 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess }: Props) {
         [departmentSteps, selectedDepartment]
     );
 
+    const filteredCases = useMemo(
+        () => selectedCustomer ? cases.filter((c) => c.customer === selectedCustomer) : cases,
+        [cases, selectedCustomer]
+    );
+
     const canSubmit = title.trim().length > 0 && selectedCase !== null && selectedDepartment !== null && selectedEmployees.length > 0 && !submitting;
 
     function resetAll() {
-        setSelectedCustomer(null); setSelectedCustomerOpt(null); setSelectedCaseOpt(null); setSelectedCase(null); setSelectedDepartment(null); setSelectedStep(null); setSelectedEmployees([]);
+        setSelectedCustomer(null); setSelectedCase(null); setSelectedDepartment(null); setSelectedStep(null); setSelectedEmployees([]);
         setTitle(""); setDescription(""); setFiles([]); setSubmitError("");
     }
 
@@ -309,17 +319,17 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess }: Props) {
 
     return (
         <AnimatePresence>
-            <m.div
+            <motion.div
                 initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                className="backdrop-blur-layer fixed inset-0 z-50 flex items-center justify-center px-4"
-                style={{ background: "rgba(0,0,0,0.45)" }}
+                className="fixed inset-0 z-50 flex items-center justify-center px-4"
+                style={{ background: "rgba(0,0,0,0.45)", backdropFilter: "blur(3px)" }}
                 onClick={handleClose}
             >
-                <m.div
+                <motion.div
                     initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 16 }}
                     transition={{ duration: 0.35, ease: "easeOut" }}
                     onClick={(e) => e.stopPropagation()} dir="rtl"
-                    className="flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-sm dark:border-white/[0.06] dark:bg-[#111827]"
+                    className="flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-sm dark:border-white/[0.06] dark:bg-[#0f172a]"
                 >
                     <div className="flex shrink-0 items-center justify-between px-8 pb-6 pt-8">
                         <div className="flex items-center gap-2.5">
@@ -342,7 +352,7 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess }: Props) {
                         <div className="flex flex-col gap-4">
                             <AnimatePresence>
                                 {submitError && (
-                                    <m.div
+                                    <motion.div
                                         initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 4 }}
                                         className="flex items-start gap-2.5 rounded-2xl bg-red-50 px-3.5 py-3 dark:bg-red-500/10"
                                     >
@@ -351,30 +361,25 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess }: Props) {
                                         <button type="button" onClick={() => setSubmitError("")} className="shrink-0 text-red-400 transition-colors hover:text-red-600">
                                             <X size={13} />
                                         </button>
-                                    </m.div>
+                                    </motion.div>
                                 )}
                             </AnimatePresence>
 
-                            <AsyncSelect
+                            <NiceSelect
                                 label="مشتری" placeholder="انتخاب مشتری" emptyText="مشتری‌ای یافت نشد"
-                                fetcher={fetchCustomers}
-                                toOption={customerToOption}
+                                options={customers.map((c) => ({ id: c.id, label: customerDisplayName(c), sub: c.phone_number || undefined }))}
                                 value={selectedCustomer}
-                                selected={selectedCustomerOpt}
-                                onChange={(o) => { setSelectedCustomer(o.id); setSelectedCustomerOpt(o); setSubmitError(""); }}
+                                onChange={(id) => { setSelectedCustomer(id as number); setSubmitError(""); }}
                             />
 
-                            <AsyncSelect
+                            <NiceSelect
                                 label="پرونده"
                                 placeholder={selectedCustomer ? "انتخاب پرونده" : "ابتدا مشتری را انتخاب کنید"}
                                 emptyText="پرونده‌ای برای این مشتری یافت نشد"
                                 disabled={!selectedCustomer}
-                                fetcher={fetchCases}
-                                toOption={caseToOption}
-                                depsKey={selectedCustomer}
+                                options={filteredCases.map((c) => ({ id: c.id, label: c.title }))}
                                 value={selectedCase}
-                                selected={selectedCaseOpt}
-                                onChange={(o) => { setSelectedCase(o.id); setSelectedCaseOpt(o); setSubmitError(""); }}
+                                onChange={(id) => { setSelectedCase(id as number); setSubmitError(""); }}
                             />
 
                             <FloatingInput id="task_title" label="عنوان وظیفه" value={title}
@@ -428,11 +433,11 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess }: Props) {
 
                                 <AnimatePresence>
                                     {files.length > 0 && (
-                                        <m.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}
+                                        <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}
                                             className="mt-2 flex flex-col gap-1.5 overflow-hidden"
                                         >
                                             {files.map((f, i) => (
-                                                <m.div key={`${f.name}-${i}`}
+                                                <motion.div key={`${f.name}-${i}`}
                                                     initial={{ opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 8 }}
                                                     transition={{ delay: i * 0.03 }}
                                                     className="flex items-center gap-2 rounded-xl bg-gray-50 px-3 py-2 dark:bg-white/[0.03]"
@@ -444,9 +449,9 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess }: Props) {
                                                     >
                                                         <X size={12} />
                                                     </button>
-                                                </m.div>
+                                                </motion.div>
                                             ))}
-                                        </m.div>
+                                        </motion.div>
                                     )}
                                 </AnimatePresence>
                             </div>
@@ -454,16 +459,14 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess }: Props) {
                     </div>
 
                     <div className="flex shrink-0 items-center gap-2 px-8 pb-8 pt-5">
-                        <m.button type="button" whileTap={{ scale: 0.97 }} onClick={handleSubmit} disabled={!canSubmit}
-                            className="relative flex h-11 flex-1 items-center justify-center gap-2 rounded-full bg-blue-600 text-[13px] font-bold text-white transition-colors hover:bg-blue-500 disabled:opacity-40"
+                        <motion.button type="button" whileTap={{ scale: 0.97 }} onClick={handleSubmit} disabled={!canSubmit}
+                            className="flex h-11 flex-1 items-center justify-center gap-2 rounded-full bg-blue-600 text-[13px] font-bold text-white transition-colors hover:bg-blue-500 disabled:opacity-40"
                         >
-                            <BusyContent busy={submitting}>
-                                <><Check size={14} strokeWidth={3} />ثبت وظیفه</>
-                            </BusyContent>
-                        </m.button>
+                            {submitting ? <Loader size={15} className="animate-spin" /> : <><Check size={14} strokeWidth={3} />ثبت وظیفه</>}
+                        </motion.button>
                     </div>
-                </m.div>
-            </m.div>
+                </motion.div>
+            </motion.div>
         </AnimatePresence>
     );
 }

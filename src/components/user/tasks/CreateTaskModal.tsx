@@ -1,17 +1,24 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { m, AnimatePresence, useReducedMotion } from "framer-motion";
-import { Backdrop } from "@/components/ui/Backdrop";
-import { panelMotion } from "@/lib/motion";
-import { X, ChevronDown, Upload, Check, ClipboardList, Search, Paperclip, AlertCircle, UserPlus } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+    X,
+    ChevronDown,
+    Upload,
+    Check,
+    Loader,
+    ClipboardList,
+    Search,
+    Paperclip,
+    AlertCircle,
+    UserPlus,
+} from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
-import { departmentsApi, fetchPage } from "@/lib/api";
 import { apiRoutes } from "@/lib/apiRoutes";
-import AsyncSelect, { type AsyncOption } from "@/components/ui/AsyncSelect";
 import type { Customer } from "@/types/customer";
+import { useAuthStore } from "@/store/authStore";
 
-import { BusyContent } from "@/components/ui/Button";
 interface Case {
     id: number;
     title: string;
@@ -96,14 +103,6 @@ function customerDisplayName(c: Customer) {
     );
 }
 
-const customerToOption = (customer: Customer): AsyncOption => ({
-    id: customer.id,
-    label: customerDisplayName(customer),
-    sub: customer.phone_number || undefined,
-});
-
-const caseToOption = (item: Case): AsyncOption => ({ id: item.id, label: item.title });
-
 function extractList<T>(data: unknown): T[] {
     if (Array.isArray(data)) return data;
 
@@ -120,9 +119,90 @@ function extractList<T>(data: unknown): T[] {
     return [];
 }
 
+function parseAssignedEmployees(raw: unknown): number[] {
+    const ids: number[] = [];
 
+    if (Array.isArray(raw)) {
+        raw.forEach((item) => {
+            if (typeof item === "object" && item !== null) {
+                const value = item as Record<string, unknown>;
+                const id = Number(
+                    value.id ??
+                    value.employee ??
+                    value.user ??
+                    (typeof value.employee_detail === "object" &&
+                        value.employee_detail !== null
+                        ? (value.employee_detail as Record<string, unknown>).id
+                        : undefined)
+                );
 
+                if (!Number.isNaN(id) && id > 0) ids.push(id);
+            } else {
+                const id = Number(item);
+                if (!Number.isNaN(id) && id > 0) ids.push(id);
+            }
+        });
 
+        return ids;
+    }
+
+    if (raw && typeof raw === "object") {
+        const value = raw as Record<string, unknown>;
+        const id = Number(
+            value.id ??
+            value.employee ??
+            value.user ??
+            (typeof value.employee_detail === "object" &&
+                value.employee_detail !== null
+                ? (value.employee_detail as Record<string, unknown>).id
+                : undefined)
+        );
+
+        if (!Number.isNaN(id) && id > 0) ids.push(id);
+        return ids;
+    }
+
+    if (raw !== null && raw !== undefined) {
+        const id = Number(raw);
+        if (!Number.isNaN(id) && id > 0) ids.push(id);
+    }
+
+    return ids;
+}
+
+function extractCaseCustomerId(item: Case): number | null {
+    const raw = item?.customer;
+
+    if (raw !== null && raw !== undefined) {
+        const id =
+            typeof raw === "object"
+                ? Number((raw as { id?: number }).id)
+                : Number(raw);
+
+        return Number.isNaN(id) ? null : id;
+    }
+
+    return null;
+}
+
+function extractTaskCaseId(task: TaskItem): number | null {
+    const raw = task.case ?? task.case_id ?? task.caseId;
+
+    if (raw === null || raw === undefined) return null;
+
+    const id = typeof raw === "object" ? Number(raw?.id) : Number(raw);
+
+    return Number.isNaN(id) || id <= 0 ? null : id;
+}
+
+function getCreatorId(item: {
+    created_by?: number;
+    creator?: number;
+    user?: number;
+}) {
+    const id = Number(item.created_by ?? item.creator ?? item.user);
+    return Number.isNaN(id) ? null : id;
+}
 
 function FloatingInput({
     label,
@@ -288,22 +368,22 @@ function NiceSelect({
                     )}
                 </span>
 
-                <m.span
+                <motion.span
                     animate={{ rotate: open ? 180 : 0 }}
                     transition={{ duration: 0.2 }}
                 >
                     <ChevronDown size={14} className="shrink-0 text-gray-400" />
-                </m.span>
+                </motion.span>
             </button>
 
             <AnimatePresence>
                 {open && (
-                    <m.div
+                    <motion.div
                         initial={{ opacity: 0, y: -6, scale: 0.97 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: -4, scale: 0.97 }}
                         transition={{ type: "spring", damping: 24, stiffness: 340 }}
-                        className="absolute z-50 mt-2 w-full origin-top overflow-hidden rounded-[1.5rem] border border-gray-100 bg-white shadow-xl shadow-black/5 dark:border-white/[0.08] dark:bg-[#111827] dark:shadow-black/40"
+                        className="absolute z-50 mt-2 w-full origin-top overflow-hidden rounded-[1.5rem] border border-gray-100 bg-white shadow-xl shadow-black/5 dark:border-white/[0.08] dark:bg-[#0f172a] dark:shadow-black/40"
                     >
                         {options.length > 5 && (
                             <div className="border-b border-gray-100 px-3 py-2.5 dark:border-white/[0.06]">
@@ -330,7 +410,7 @@ function NiceSelect({
                                     const active = selectedValues.includes(option.id);
 
                                     return (
-                                        <m.button
+                                        <motion.button
                                             key={option.id}
                                             type="button"
                                             initial={{ opacity: 0, x: 6 }}
@@ -375,12 +455,12 @@ function NiceSelect({
                                                     />
                                                 </span>
                                             )}
-                                        </m.button>
+                                        </motion.button>
                                     );
                                 })
                             )}
                         </div>
-                    </m.div>
+                    </motion.div>
                 )}
             </AnimatePresence>
         </div>
@@ -394,20 +474,21 @@ export default function CreateTaskModal({
     departments: initialDepartments = EMPTY_DEPARTMENTS,
     employees: initialEmployees = EMPTY_EMPLOYEES,
 }: Props) {
-    const reduced = useReducedMotion() ?? false;
     const [submitting, setSubmitting] = useState(false);
     const [submitError, setSubmitError] = useState("");
+    const [cases, setCases] = useState<Case[]>([]);
+    const [customers, setCustomers] = useState<Customer[]>([]);
     const [departmentList, setDepartmentList] = useState<Department[]>(initialDepartments);
     const [employeeList, setEmployeeList] = useState<DepartmentEmployee[]>(initialEmployees);
     const [selectedCustomer, setSelectedCustomer] = useState<number | null>(null);
-    const [selectedCustomerOpt, setSelectedCustomerOpt] = useState<AsyncOption | null>(null);
-    const [selectedCaseOpt, setSelectedCaseOpt] = useState<AsyncOption | null>(null);
     const [selectedCase, setSelectedCase] = useState<number | null>(null);
     const [selectedDepartment, setSelectedDepartment] = useState<number | null>(null);
     const [selectedEmployees, setSelectedEmployees] = useState<number[]>([]);
     const [title, setTitle] = useState("");
     const [files, setFiles] = useState<File[]>([]);
 
+    const userId = useAuthStore((state) => state.userId);
+    const username = useAuthStore((state) => state.username);
     const requestIdRef = useRef(0);
 
     useEffect(() => {
@@ -419,12 +500,123 @@ export default function CreateTaskModal({
         const isCurrentRequest = () =>
             !cancelled && requestId === requestIdRef.current;
 
+        async function loadData() {
+            try {
+                const [customersRes, casesRes, tasksRes, employeesRes] =
+                    await Promise.all([
+                        axiosInstance.get(apiRoutes.customers),
+                        axiosInstance.get("/tasks/api/v1/cases/"),
+                        axiosInstance.get(apiRoutes.tasks),
+                        axiosInstance.get("/accounts/api/v1/employee/list/"),
+                    ]);
+
+                if (!isCurrentRequest()) return;
+
+                const allCustomers = extractList<Customer>(customersRes.data);
+                const allCases = extractList<Case>(casesRes.data);
+                const allTasks = extractList<TaskItem>(tasksRes.data);
+                const employees = extractList<Employee>(employeesRes.data);
+
+                let empId: number | null = null;
+
+                const matchedEmployee = employees.find(
+                    (employee) =>
+                        (username && employee.username === username) ||
+                        (userId &&
+                            Number(
+                                employee.user_id ??
+                                employee.user ??
+                                employee.user_detail?.id
+                            ) === Number(userId)) ||
+                        (userId && Number(employee.id) === Number(userId))
+                );
+
+                if (matchedEmployee) empId = Number(matchedEmployee.id);
+
+                const userTasks = empId
+                    ? allTasks.filter((task) => {
+                        const assignedList = parseAssignedEmployees(
+                            task.assigned_employee
+                        );
+                        const creatorId = getCreatorId(task);
+
+                        return (
+                            assignedList.includes(empId as number) ||
+                            (userId && creatorId === Number(userId))
+                        );
+                    })
+                    : allTasks;
+
+                const userTaskCaseIds = new Set<number>(
+                    userTasks
+                        .map((task) => extractTaskCaseId(task))
+                        .filter((id): id is number => id !== null)
+                );
+
+                const allowedCaseCustomerIds = new Set<number>();
+
+                allCases.forEach((item) => {
+                    const caseId = Number(item.id);
+                    const customerId = extractCaseCustomerId(item);
+
+                    if (!customerId) return;
+
+                    const assignedDirectly =
+                        empId !== null &&
+                        (parseAssignedEmployees(item.assigned_employee).includes(empId) ||
+                            parseAssignedEmployees(item.employees).includes(empId) ||
+                            (userId && getCreatorId(item) === Number(userId)));
+
+                    const hasTaskInCase = userTaskCaseIds.has(caseId);
+
+                    if (empId === null || assignedDirectly || hasTaskInCase) {
+                        allowedCaseCustomerIds.add(customerId);
+                    }
+                });
+
+                const filteredCustomers =
+                    empId !== null
+                        ? allCustomers.filter((customer: any) => {
+                            const isCreator =
+                                username &&
+                                customer.created_by_username &&
+                                customer.created_by_username === username;
+
+                            const isAssigned =
+                                parseAssignedEmployees(
+                                    customer.assigned_employee
+                                ).includes(empId as number) ||
+                                parseAssignedEmployees(
+                                    customer.employees
+                                ).includes(empId as number);
+
+                            const hasPermittedCase =
+                                allowedCaseCustomerIds.has(Number(customer.id));
+
+                            return isCreator || isAssigned || hasPermittedCase;
+                        })
+                        : allCustomers;
+
+                if (!isCurrentRequest()) return;
+
+                setCustomers(filteredCustomers);
+                setCases(allCases);
+            } catch {
+                if (isCurrentRequest()) {
+                    setCustomers([]);
+                    setCases([]);
+                }
+            }
+        }
+
+        loadData();
+
         if (initialDepartments.length === 0) {
-            departmentsApi
-                .list()
+            axiosInstance
+                .get("/department/api/v1/department/list/")
                 .then((response) => {
                     if (!isCurrentRequest()) return;
-                    setDepartmentList(extractList<Department>(response));
+                    setDepartmentList(extractList<Department>(response.data));
                 })
                 .catch(() => {
                     if (isCurrentRequest()) setDepartmentList([]);
@@ -433,11 +625,11 @@ export default function CreateTaskModal({
             setDepartmentList(initialDepartments);
         }
 
-        departmentsApi
-            .employees()
+        axiosInstance
+            .get("/department/api/v1/department_employee/list/")
             .then((response) => {
                 if (!isCurrentRequest()) return;
-                setEmployeeList(extractList<DepartmentEmployee>(response));
+                setEmployeeList(extractList<DepartmentEmployee>(response.data));
             })
             .catch(() => {
                 if (isCurrentRequest()) setEmployeeList(initialEmployees);
@@ -446,7 +638,7 @@ export default function CreateTaskModal({
         return () => {
             cancelled = true;
         };
-    }, [open, initialDepartments, initialEmployees]);
+    }, [open, userId, username, initialDepartments, initialEmployees]);
 
     useEffect(() => {
         setSelectedEmployees([]);
@@ -454,21 +646,15 @@ export default function CreateTaskModal({
 
     useEffect(() => {
         setSelectedCase(null);
-        setSelectedCaseOpt(null);
     }, [selectedCustomer]);
 
-    
-    
-    const fetchCustomers = useCallback(
-        (p: { page: number; page_size: number; search?: string }, signal: AbortSignal) =>
-            fetchPage<Customer>(apiRoutes.customers, p, signal),
-        []
-    );
-    const fetchCases = useCallback(
-        (p: { page: number; page_size: number; search?: string }, signal: AbortSignal) =>
-            fetchPage<Case>(apiRoutes.cases, { ...p, customer: selectedCustomer }, signal),
-        [selectedCustomer]
-    );
+    const filteredCases = useMemo(() => {
+        if (!selectedCustomer) return [];
+
+        return cases.filter(
+            (item) => Number(item.customer) === Number(selectedCustomer)
+        );
+    }, [cases, selectedCustomer]);
 
     const filteredEmployees = useMemo(() => {
         if (!selectedDepartment) return [];
@@ -487,8 +673,6 @@ export default function CreateTaskModal({
 
     function resetAll() {
         setSelectedCustomer(null);
-        setSelectedCustomerOpt(null);
-        setSelectedCaseOpt(null);
         setSelectedCase(null);
         setSelectedDepartment(null);
         setSelectedEmployees([]);
@@ -560,14 +744,25 @@ export default function CreateTaskModal({
     return (
         <AnimatePresence>
             {open && (
-                <div
+                <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
                     className="fixed inset-0 z-50 flex items-center justify-center px-4"
+                    style={{
+                        background: "rgba(0,0,0,0.45)",
+                        backdropFilter: "blur(3px)",
+                    }}
+                    onClick={handleClose}
                 >
-                    <Backdrop onClick={handleClose} />
-                    <m.div
-                        {...panelMotion(false, reduced)}
+                    <motion.div
+                        initial={{ opacity: 0, y: 16 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 16 }}
+                        transition={{ duration: 0.35, ease: "easeOut" }}
+                        onClick={(e) => e.stopPropagation()}
                         dir="rtl"
-                        className="relative flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-sm dark:border-white/[0.06] dark:bg-[#111827]"
+                        className="flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-sm dark:border-white/[0.06] dark:bg-[#0f172a]"
                     >
                         <div className="flex shrink-0 items-center justify-between px-8 pb-6 pt-8">
                             <div className="flex items-center gap-2.5">
@@ -597,7 +792,7 @@ export default function CreateTaskModal({
                             <div className="flex flex-col gap-4">
                                 <AnimatePresence>
                                     {submitError && (
-                                        <m.div
+                                        <motion.div
                                             initial={{ opacity: 0, y: 6 }}
                                             animate={{ opacity: 1, y: 0 }}
                                             exit={{ opacity: 0, y: 4 }}
@@ -617,26 +812,27 @@ export default function CreateTaskModal({
                                             >
                                                 <X size={13} />
                                             </button>
-                                        </m.div>
+                                        </motion.div>
                                     )}
                                 </AnimatePresence>
 
-                                <AsyncSelect
+                                <NiceSelect
                                     label="مشتری"
                                     placeholder="انتخاب مشتری"
                                     emptyText="مشتری‌ای برای شما یافت نشد"
-                                    fetcher={fetchCustomers}
-                                    toOption={customerToOption}
+                                    options={customers.map((customer) => ({
+                                        id: customer.id,
+                                        label: customerDisplayName(customer),
+                                        sub: customer.phone_number || undefined,
+                                    }))}
                                     value={selectedCustomer}
-                                    selected={selectedCustomerOpt}
-                                    onChange={(option) => {
-                                        setSelectedCustomer(option.id);
-                                        setSelectedCustomerOpt(option);
+                                    onChange={(id) => {
+                                        setSelectedCustomer(id as number);
                                         setSubmitError("");
                                     }}
                                 />
 
-                                <AsyncSelect
+                                <NiceSelect
                                     label="پرونده"
                                     placeholder={
                                         selectedCustomer
@@ -645,14 +841,13 @@ export default function CreateTaskModal({
                                     }
                                     emptyText="پرونده‌ای برای این مشتری یافت نشد"
                                     disabled={!selectedCustomer}
-                                    fetcher={fetchCases}
-                                    toOption={caseToOption}
-                                    depsKey={selectedCustomer}
+                                    options={filteredCases.map((item) => ({
+                                        id: item.id,
+                                        label: item.title,
+                                    }))}
                                     value={selectedCase}
-                                    selected={selectedCaseOpt}
-                                    onChange={(option) => {
-                                        setSelectedCase(option.id);
-                                        setSelectedCaseOpt(option);
+                                    onChange={(id) => {
+                                        setSelectedCase(id as number);
                                         setSubmitError("");
                                     }}
                                 />
@@ -732,14 +927,14 @@ export default function CreateTaskModal({
 
                                     <AnimatePresence>
                                         {files.length > 0 && (
-                                            <m.div
+                                            <motion.div
                                                 initial={{ opacity: 0, height: 0 }}
                                                 animate={{ opacity: 1, height: "auto" }}
                                                 exit={{ opacity: 0, height: 0 }}
                                                 className="mt-2 flex flex-col gap-1.5 overflow-hidden"
                                             >
                                                 {files.map((file, index) => (
-                                                    <m.div
+                                                    <motion.div
                                                         key={`${file.name}-${index}`}
                                                         initial={{ opacity: 0, x: 8 }}
                                                         animate={{ opacity: 1, x: 0 }}
@@ -768,9 +963,9 @@ export default function CreateTaskModal({
                                                         >
                                                             <X size={12} />
                                                         </button>
-                                                    </m.div>
+                                                    </motion.div>
                                                 ))}
-                                            </m.div>
+                                            </motion.div>
                                         )}
                                     </AnimatePresence>
                                 </div>
@@ -778,23 +973,25 @@ export default function CreateTaskModal({
                         </div>
 
                         <div className="flex shrink-0 items-center gap-2 px-8 pb-8 pt-5">
-                            <m.button
+                            <motion.button
                                 type="button"
                                 whileTap={{ scale: 0.97 }}
                                 onClick={handleSubmit}
                                 disabled={!canSubmit}
-                                className="relative flex h-11 flex-1 items-center justify-center gap-2 rounded-full bg-blue-600 text-[13px] font-bold text-white transition-colors hover:bg-blue-500 disabled:opacity-40"
+                                className="flex h-11 flex-1 items-center justify-center gap-2 rounded-full bg-blue-600 text-[13px] font-bold text-white transition-colors hover:bg-blue-500 disabled:opacity-40"
                             >
-                                <BusyContent busy={submitting}>
+                                {submitting ? (
+                                    <Loader size={15} className="animate-spin" />
+                                ) : (
                                     <>
-                                            <Check size={14} strokeWidth={3} />
-                                            ثبت وظیفه
-                                        </>
-                                </BusyContent>
-                            </m.button>
+                                        <Check size={14} strokeWidth={3} />
+                                        ثبت وظیفه
+                                    </>
+                                )}
+                            </motion.button>
                         </div>
-                    </m.div>
-                </div>
+                    </motion.div>
+                </motion.div>
             )}
         </AnimatePresence>
     );

@@ -73,3 +73,9 @@ export interface CaseFormData {
   description: string;
 }
 
+export interface EditCaseModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  caseItem: CaseItem | null;
+  onSuccess: (updatedCase: CaseItem) => void;
+}

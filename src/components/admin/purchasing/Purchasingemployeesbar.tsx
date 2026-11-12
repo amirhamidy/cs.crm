@@ -1,6 +1,6 @@
 "use client";
 
-import { m } from "framer-motion";
+import { motion } from "framer-motion";
 import { Plus, Power, Trash2, Users } from "lucide-react";
 import { toPersianDigits } from "@/lib/jalali";
 import type { ApiPurchasingEmployee } from "@/types/purchasing";
@@ -45,10 +45,10 @@ export default function PurchasingEmployeesBar({ employees, canManage, onAdd, on
                 </div>
 
                 {canManage && (
-                    <m.button type="button" whileTap={{ scale: 0.97 }} onClick={onAdd} className="flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-indigo-600 px-4 text-[11px] font-extrabold text-white transition hover:bg-indigo-500">
+                    <motion.button type="button" whileTap={{ scale: 0.97 }} onClick={onAdd} className="flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-indigo-600 px-4 text-[11px] font-extrabold text-white transition hover:bg-indigo-500">
                         <Plus size={13} />
                         افزودن عضو
-                    </m.button>
+                    </motion.button>
                 )}
             </div>
 

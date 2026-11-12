@@ -1,17 +1,12 @@
 "use client";
-import { ListSkeleton } from "@/components/ui/skeletons";
 
 import { useEffect, useMemo, useState } from "react";
-import { AnimatePresence, m, useReducedMotion } from "framer-motion";
-import { Backdrop } from "@/components/ui/Backdrop";
-import { panelMotion } from "@/lib/motion";
-import { AlertCircle, Check, Search, UserPlus, X } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
+import { AlertCircle, Check, Loader2, Search, UserPlus, X } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
-import { listAll } from "@/lib/api";
 import type { ApiQualityControlEmployee, ApiUser } from "@/types/quality_control";
 import { gradientOf, initialOf } from "./qcUtils";
 
-import { BusyContent } from "@/components/ui/Button";
 interface Props {
     isOpen: boolean;
     existingEmployees: ApiQualityControlEmployee[];
@@ -20,8 +15,10 @@ interface Props {
     onCreated: () => void;
 }
 
+const getList = (data: unknown): ApiUser[] =>
+    Array.isArray(data) ? data : ((data as { results?: ApiUser[]; data?: ApiUser[] } | null)?.results ?? (data as { data?: ApiUser[] } | null)?.data ?? []);
+
 export default function QCEmployeeModal({ isOpen, existingEmployees, names, onClose, onCreated }: Props) {
-    const reduced = useReducedMotion() ?? false;
     const [users, setUsers] = useState<ApiUser[]>([]);
     const [search, setSearch] = useState("");
     const [selected, setSelected] = useState<number | null>(null);
@@ -36,8 +33,9 @@ export default function QCEmployeeModal({ isOpen, existingEmployees, names, onCl
         setSelected(null);
         setError("");
         setFetching(true);
-        listAll<ApiUser>("/accounts/api/v1/user/list/")
-            .then((list) => mounted && setUsers(list))
+        axiosInstance
+            .get("/accounts/api/v1/user/list/")
+            .then((r) => mounted && setUsers(getList(r.data)))
             .catch(() => mounted && setError("دریافت لیست کاربران انجام نشد"))
             .finally(() => mounted && setFetching(false));
         return () => {
@@ -76,16 +74,30 @@ export default function QCEmployeeModal({ isOpen, existingEmployees, names, onCl
     return (
         <AnimatePresence>
             {isOpen && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center px-4">
-                    <Backdrop onClick={close} />
-                    <m.div {...panelMotion(false, reduced)} className="relative flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-xl shadow-black/10 dark:border-white/[0.06] dark:bg-[#111827]" dir="rtl">
+                <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="fixed inset-0 z-[100] flex items-center justify-center px-4"
+                    style={{ background: "rgba(0,0,0,0.45)", backdropFilter: "blur(3px)" }}
+                    onMouseDown={close}
+                >
+                    <motion.div
+                        initial={{ opacity: 0, y: 16, scale: 0.98 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: 16, scale: 0.98 }}
+                        transition={{ duration: 0.28, ease: "easeOut" }}
+                        onMouseDown={(e) => e.stopPropagation()}
+                        className="flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-2xl shadow-black/10 dark:border-white/[0.06] dark:bg-[#0f172a]"
+                        dir="rtl"
+                    >
                         <div className="flex shrink-0 items-center justify-between px-8 pb-6 pt-8">
                             <div className="flex items-center gap-2.5">
                                 <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-50 dark:bg-blue-500/10">
                                     <UserPlus size={15} className="text-blue-500" />
                                 </div>
                                 <div>
-                                    <h2 className="text-[14px] font-bold text-gray-900 dark:text-white">افزودن عضو کنترل کیفی</h2>
+                                    <h2 className="text-[14px] font-extrabold text-gray-900 dark:text-white">افزودن عضو کنترل کیفی</h2>
                                     <p className="mt-0.5 text-[11px] text-gray-400">کاربر موردنظر را به تیم اضافه کنید</p>
                                 </div>
                             </div>
@@ -101,13 +113,15 @@ export default function QCEmployeeModal({ isOpen, existingEmployees, names, onCl
                                     value={search}
                                     onChange={(e) => setSearch(e.target.value)}
                                     placeholder="جستجوی نام یا نام کاربری..."
-                                    className="w-full bg-transparent text-[12px] font-medium text-gray-900 outline-none placeholder:text-gray-400 dark:text-white"
+                                    className="w-full bg-transparent text-[12px] font-semibold text-gray-900 outline-none placeholder:text-gray-400 dark:text-white"
                                 />
                             </div>
 
                             <div className="max-h-[280px] space-y-1.5 overflow-y-auto">
                                 {fetching ? (
-                                    <ListSkeleton rows={4} />
+                                    <div className="flex justify-center py-8">
+                                        <Loader2 size={18} className="animate-spin text-blue-500" />
+                                    </div>
                                 ) : available.length === 0 ? (
                                     <p className="py-8 text-center text-[11px] text-gray-400">کاربری برای افزودن یافت نشد</p>
                                 ) : (
@@ -115,7 +129,7 @@ export default function QCEmployeeModal({ isOpen, existingEmployees, names, onCl
                                         const active = selected === u.id;
                                         const name = names[u.username] || u.username;
                                         return (
-                                            <m.button
+                                            <motion.button
                                                 key={u.id}
                                                 type="button"
                                                 initial={{ opacity: 0, x: 6 }}
@@ -127,7 +141,7 @@ export default function QCEmployeeModal({ isOpen, existingEmployees, names, onCl
                                                 }}
                                                 className={`flex w-full items-center gap-2.5 rounded-2xl px-2.5 py-2 text-right transition-colors ${active ? "bg-blue-50 dark:bg-blue-500/10" : "hover:bg-gray-50 dark:hover:bg-white/[0.04]"}`}
                                             >
-                                                <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${gradientOf(u.id)} text-[12px] font-bold text-white`}>
+                                                <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${gradientOf(u.id)} text-[12px] font-extrabold text-white`}>
                                                     {initialOf(name)}
                                                 </span>
                                                 <span className="min-w-0 flex-1">
@@ -139,7 +153,7 @@ export default function QCEmployeeModal({ isOpen, existingEmployees, names, onCl
                                                         <Check size={11} className="text-white" strokeWidth={3} />
                                                     </span>
                                                 )}
-                                            </m.button>
+                                            </motion.button>
                                         );
                                     })
                                 )}
@@ -148,27 +162,25 @@ export default function QCEmployeeModal({ isOpen, existingEmployees, names, onCl
                             {error && (
                                 <div className="flex items-start gap-2.5 rounded-2xl bg-red-50 px-3.5 py-3 dark:bg-red-500/10">
                                     <AlertCircle size={14} className="mt-0.5 shrink-0 text-red-500" />
-                                    <p className="text-[11.5px] font-medium leading-5 text-red-500 dark:text-red-400">{error}</p>
+                                    <p className="text-[11.5px] font-semibold leading-5 text-red-500 dark:text-red-400">{error}</p>
                                 </div>
                             )}
                         </div>
 
                         <div className="flex shrink-0 px-8 pb-8 pt-5">
-                            <m.button
+                            <motion.button
                                 type="button"
                                 whileTap={{ scale: 0.97 }}
                                 onClick={create}
                                 disabled={loading || !selected}
-                                className="relative flex h-11 w-full items-center justify-center gap-2 rounded-full bg-blue-600 text-[13px] font-bold text-white transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-40"
+                                className="flex h-11 w-full items-center justify-center gap-2 rounded-full bg-blue-600 text-[13px] font-bold text-white transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-40"
                             >
-                                <BusyContent busy={loading}>
-                                    <UserPlus size={14} />
-                                    افزودن به تیم
-                                </BusyContent>
-                            </m.button>
+                                {loading ? <Loader2 size={15} className="animate-spin" /> : <UserPlus size={14} />}
+                                افزودن به تیم
+                            </motion.button>
                         </div>
-                    </m.div>
-                </div>
+                    </motion.div>
+                </motion.div>
             )}
         </AnimatePresence>
     );

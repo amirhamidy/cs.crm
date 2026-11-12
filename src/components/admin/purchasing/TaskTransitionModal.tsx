@@ -2,13 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { AnimatePresence, m } from "framer-motion";
-import { AlertCircle, ArrowLeftCircle, ArrowRightCircle, Upload, X } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
+import { AlertCircle, ArrowLeftCircle, ArrowRightCircle, Loader2, Upload, X } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
 import type { ApiPurchasingTask } from "@/types/purchasing";
 import { usePurchasingAccess } from "@/hooks/usePurchasingAccess";
 
-import { BusyContent } from "@/components/ui/Button";
 interface Props {
     isOpen: boolean;
     onClose: () => void;
@@ -92,21 +91,21 @@ export default function TaskTransitionModal({ isOpen, onClose, mode, task, onCom
     return createPortal(
         <AnimatePresence>
             {isOpen && (
-                <m.div
+                <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className="backdrop-blur-layer fixed inset-0 z-[999] flex items-center justify-center px-4"
-                    style={{ background: "rgba(0,0,0,0.45)" }}
+                    className="fixed inset-0 z-[999] flex items-center justify-center px-4"
+                    style={{ background: "rgba(0,0,0,0.45)", backdropFilter: "blur(3px)" }}
                     onMouseDown={close}
                 >
-                    <m.div
+                    <motion.div
                         initial={{ opacity: 0, y: 16, scale: 0.98 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: 16, scale: 0.98 }}
                         transition={{ duration: 0.28, ease: "easeOut" }}
                         onMouseDown={(e) => e.stopPropagation()}
-                        className="flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-2xl shadow-black/10 dark:border-white/[0.06] dark:bg-[#111827]"
+                        className="flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-2xl shadow-black/10 dark:border-white/[0.06] dark:bg-[#0f172a]"
                         dir="rtl"
                     >
                         <div className="flex shrink-0 items-center justify-between px-8 pb-6 pt-8">
@@ -127,10 +126,10 @@ export default function TaskTransitionModal({ isOpen, onClose, mode, task, onCom
                         <div className="flex flex-1 flex-col gap-4 overflow-y-auto px-8 pb-2">
                             <AnimatePresence>
                                 {error && (
-                                    <m.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 4 }} className="flex items-start gap-2.5 rounded-2xl bg-red-50 px-3.5 py-3 dark:bg-red-500/10">
+                                    <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 4 }} className="flex items-start gap-2.5 rounded-2xl bg-red-50 px-3.5 py-3 dark:bg-red-500/10">
                                         <AlertCircle size={14} className="mt-0.5 shrink-0 text-red-500" />
                                         <p className="flex-1 text-[11.5px] font-semibold leading-5 text-red-500 dark:text-red-400">{error}</p>
-                                    </m.div>
+                                    </motion.div>
                                 )}
                             </AnimatePresence>
 
@@ -183,21 +182,19 @@ export default function TaskTransitionModal({ isOpen, onClose, mode, task, onCom
                             <button type="button" onClick={close} disabled={submitting} className="h-11 flex-1 rounded-full bg-gray-100 text-[13px] font-bold text-gray-600 transition hover:bg-gray-200 disabled:opacity-40 dark:bg-white/[0.05] dark:text-gray-300 dark:hover:bg-white/[0.08]">
                                 انصراف
                             </button>
-                            <m.button
+                            <motion.button
                                 type="button"
                                 whileTap={{ scale: 0.97 }}
                                 onClick={handleSubmit}
                                 disabled={!canSubmit}
-                                className={`relative flex h-11 flex-1 items-center justify-center gap-2 rounded-full text-[13px] font-bold text-white transition disabled:cursor-not-allowed disabled:opacity-40 ${tone.btn}`}
+                                className={`flex h-11 flex-1 items-center justify-center gap-2 rounded-full text-[13px] font-bold text-white transition disabled:cursor-not-allowed disabled:opacity-40 ${tone.btn}`}
                             >
-                                <BusyContent busy={submitting}>
-                                    <Icon size={14} />
-                                    {isAdvance ? "انتقال" : "بازگشت"}
-                                </BusyContent>
-                            </m.button>
+                                {submitting ? <Loader2 size={15} className="animate-spin" /> : <Icon size={14} />}
+                                {isAdvance ? "انتقال" : "بازگشت"}
+                            </motion.button>
                         </div>
-                    </m.div>
-                </m.div>
+                    </motion.div>
+                </motion.div>
             )}
         </AnimatePresence>,
         document.body

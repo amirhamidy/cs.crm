@@ -1,25 +1,16 @@
 "use client";
 
-
-import { NiceSelect } from "@/components/ui/NiceSelect";
-import ProductionLogsSkeleton from "./ProductionLogsSkeleton";
-import TimePicker from "@/components/TimePicker";
-import { useCallback, useRef, useState } from "react";
-import { m, AnimatePresence, useReducedMotion } from "framer-motion";
-import { Backdrop } from "@/components/ui/Backdrop";
-import { panelMotion } from "@/lib/motion";
-import { ClipboardList, Plus, Trash2, X, AlertCircle } from "lucide-react";
-import PageHeader, { HEADER_BTN_PRIMARY } from "@/components/ui/PageHeader";
+import { useEffect, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { 
+  ClipboardList, Plus, Trash2, X, AlertCircle, 
+  Loader2, CheckCircle2, TrendingUp, Filter 
+} from "lucide-react";
 import { useTheme } from "next-themes";
 import axiosInstance from "@/lib/axiosInstance";
-import { fetchPage, listAll } from "@/lib/api";
-import { usePaginatedList } from "@/hooks/usePaginatedList";
-import Pagination from "@/components/ui/Pagination";
 import { useCurrentEmployee } from "@/hooks/usecurrentemployee";
 import { toPersianDigits } from "@/lib/jalali";
-import { calcHoursWorked, formatHoursWorked, toHHMM } from "@/lib/productionTime";
 
-import { BusyContent } from "@/components/ui/Button";
 interface ProductionLog {
   id: number;
   date: string;
@@ -29,8 +20,6 @@ interface ProductionLog {
   machine_name: string;
   machine_code: string;
   hours_worked: string;
-  start_time?: string | null;
-  end_time?: string | null;
   produced_qty: number;
   waste_qty: number;
   note: string;
@@ -39,73 +28,49 @@ interface ProductionLog {
   efficiency: number | null;
 }
 
-
-interface MachineOption {
-  id: number;
-  name: string;
-  code: string;
-}
-
-
-const PAGE_SIZE = 20;
-
 export default function UserProductionLogsPage() {
-    const reduced = useReducedMotion() ?? false;
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === "dark";
   const { employeeId } = useCurrentEmployee();
 
-  
-  const {
-    data: logs,
-    count,
-    page,
-    totalPages,
-    search,
-    setSearch,
-    setPage,
-    loading,
-    refetch,
-  } = usePaginatedList<ProductionLog>(
-    (params, signal) =>
-      fetchPage<ProductionLog>("/production/api/v1/log/", { ...params }, signal),
-    { pageSize: PAGE_SIZE, scrollTop: true },
-  );
+  const [logs, setLogs] = useState<ProductionLog[]>([]);
+  const [machines, setMachines] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  
-  const [machines, setMachines] = useState<MachineOption[]>([]);
-  const machinesLoaded = useRef(false);
-
-  
+  // Modal
   const [showModal, setShowModal] = useState(false);
   const [formDate, setFormDate] = useState(new Date().toISOString().split("T")[0]);
   const [formMachine, setFormMachine] = useState<number | "">("");
-  const [formStart, setFormStart] = useState("");
-  const [formEnd, setFormEnd] = useState("");
+  const [formHours, setFormHours] = useState("8");
   const [formProduced, setFormProduced] = useState("");
   const [formWaste, setFormWaste] = useState("0");
   const [formNote, setFormNote] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
-  const loadMachines = useCallback(() => {
-    if (machinesLoaded.current) return;
-    machinesLoaded.current = true;
-    listAll<MachineOption>("/production/api/v1/machine/", { is_active: true })
-      .then(setMachines)
-      .catch(() => {
-        machinesLoaded.current = false;
-      });
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      const [logsRes, machRes] = await Promise.all([
+        axiosInstance.get<ProductionLog[]>("/production/api/v1/log/"),
+        axiosInstance.get("/production/api/v1/machine/?is_active=true"),
+      ]);
+      setLogs(logsRes.data || []);
+      setMachines(machRes.data || []);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
   }, []);
 
   const handleCreate = async () => {
-    const hours = calcHoursWorked(formStart, formEnd);
     if (!employeeId || !formMachine || !formProduced) {
       setError("لطفاً ماشین و تعداد تولید را به طور صحیح وارد کنید.");
-      return;
-    }
-    if (!formStart || !formEnd || hours === null) {
-      setError("ساعت شروع و پایان کار را وارد کنید.");
       return;
     }
 
@@ -116,9 +81,7 @@ export default function UserProductionLogsPage() {
         date: formDate,
         employee: employeeId,
         machine: Number(formMachine),
-        start_time: formStart,
-        end_time: formEnd,
-        hours_worked: String(hours),
+        hours_worked: formHours,
         produced_qty: Number(formProduced),
         waste_qty: Number(formWaste),
         note: formNote.trim(),
@@ -128,9 +91,8 @@ export default function UserProductionLogsPage() {
       setFormProduced("");
       setFormWaste("0");
       setFormNote("");
-      setPage(1);
-      refetch();
-    } catch {
+      fetchData();
+    } catch (err: any) {
       setError("خطا در ثبت لاگ. احتمالاً برای این ماشین در این تاریخ قبلاً رکورد ثبت شده است.");
     } finally {
       setSaving(false);
@@ -141,7 +103,7 @@ export default function UserProductionLogsPage() {
     if (!confirm("آیا از حذف این رکورد اطمینان دارید؟")) return;
     try {
       await axiosInstance.delete(`/production/api/v1/log/${id}/delete/`);
-      refetch();
+      fetchData();
     } catch {
       alert("خطا در حذف رکورد");
     }
@@ -153,33 +115,36 @@ export default function UserProductionLogsPage() {
 
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6" dir="rtl">
-      
-      <PageHeader
-        icon={ClipboardList}
-        title="ثبت و سوابق تولید روزانه"
-        subtitle={`ثبت ساعت کارکرد، مقدار تولید واقعی و ضایعات · مجموع: ${toPersianDigits(count)}`}
-        search={{ value: search, onChange: setSearch, placeholder: "جستجو در سوابق تولید..." }}
-        onRefresh={() => refetch()}
-        refreshing={loading}
-      >
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-500/10 text-indigo-500 shadow-inner">
+            <ClipboardList size={24} />
+          </div>
+          <div>
+            <h1 className="text-xl font-extrabold text-gray-900 dark:text-white">ثبت و سوابق تولید روزانه</h1>
+            <p className="text-xs text-gray-400 mt-0.5">ثبت ساعت کارکرد، مقدار تولید واقعی و ضایعات</p>
+          </div>
+        </div>
+
         <button
           type="button"
           onClick={() => {
             setError("");
-            loadMachines();
             setShowModal(true);
           }}
-          className={HEADER_BTN_PRIMARY}
+          className="flex items-center gap-2 rounded-2xl bg-indigo-600 px-5 py-3 text-xs font-bold text-white shadow-lg shadow-indigo-600/20 transition-all hover:bg-indigo-500"
         >
           <Plus size={15} />
           ثبت رکورد تولید جدید
         </button>
-      </PageHeader>
+      </div>
 
+      {/* Logs Table / Grid */}
       {loading ? (
-        <ProductionLogsSkeleton rows={6} />
+        <div className="flex justify-center py-20 text-gray-400 text-xs">در حال بارگذاری سوابق تولید...</div>
       ) : (
-        <div className="bg-white dark:bg-[#111827] rounded-3xl border border-gray-100 dark:border-white/[0.07] overflow-hidden shadow-sm">
+        <div className="bg-white dark:bg-[#0f172a] rounded-3xl border border-gray-100 dark:border-white/[0.07] overflow-hidden shadow-sm">
           <div className="overflow-x-auto">
             <table className="w-full text-right border-collapse text-xs">
               <thead className="bg-gray-50 dark:bg-white/[0.02] text-gray-400 border-b border-gray-100 dark:border-white/[0.06]">
@@ -203,13 +168,7 @@ export default function UserProductionLogsPage() {
                     <td className="p-4 text-gray-600 dark:text-gray-300">
                       {log.machine_name} <span className="text-[10px] text-gray-400 font-mono">({log.machine_code})</span>
                     </td>
-                    <td className="p-4">{toPersianDigits(log.hours_worked)} ساعت
-                      {toHHMM(log.start_time) && (
-                        <div className="font-mono text-[10px] text-gray-400" dir="ltr">
-                          {toPersianDigits(toHHMM(log.start_time))} → {toPersianDigits(toHHMM(log.end_time))}
-                        </div>
-                      )}
-                    </td>
+                    <td className="p-4">{toPersianDigits(log.hours_worked)} ساعت</td>
                     <td className="p-4 font-black text-emerald-600">{toPersianDigits(log.produced_qty.toLocaleString())}</td>
                     <td className="p-4 text-gray-400">{toPersianDigits(Number(log.expected_production).toFixed(1))}</td>
                     <td className="p-4 font-bold text-red-500">{toPersianDigits(log.waste_qty)}</td>
@@ -243,22 +202,18 @@ export default function UserProductionLogsPage() {
               </tbody>
             </table>
           </div>
-          {totalPages > 1 && (
-            <div className="border-t border-gray-100 dark:border-white/[0.06] px-4 py-3.5">
-              <Pagination page={page} totalPages={totalPages} onChange={setPage} />
-            </div>
-          )}
         </div>
       )}
 
-      
+      {/* Modal for Creating Log */}
       <AnimatePresence>
         {showModal && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center px-4">
-            <Backdrop onClick={() => setShowModal(false)} />
-            <m.div
-              {...panelMotion(false, reduced)}
-              className="relative w-full max-w-lg rounded-[2rem] bg-white p-6 shadow-2xl dark:bg-[#111827] border border-gray-100 dark:border-white/[0.07]"
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 16 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 16 }}
+              className="w-full max-w-lg rounded-[2rem] bg-white p-6 shadow-2xl dark:bg-[#0f172a] border border-gray-100 dark:border-white/[0.07]"
             >
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-sm font-extrabold text-gray-900 dark:text-white">ثبت رکورد جدید تولید</h3>
@@ -282,29 +237,34 @@ export default function UserProductionLogsPage() {
                 </div>
 
                 <div>
-                  <NiceSelect
-                    label="انتخاب ماشین"
-                    placeholder="انتخاب دستگاه..."
-                    options={machines.map((mc) => ({ id: mc.id, label: mc.name, sub: mc.code }))}
-                    value={formMachine === "" ? null : formMachine}
-                    onChange={(id) => setFormMachine(id)}
-                  />
+                  <label className="block text-[11.5px] font-bold text-gray-400 mb-1">انتخاب ماشین</label>
+                  <select
+                    value={formMachine}
+                    onChange={(e) => setFormMachine(Number(e.target.value))}
+                    className="h-11 w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 text-xs font-bold text-gray-900 outline-none focus:border-indigo-500 dark:border-white/[0.08] dark:bg-white/[0.03] dark:text-white"
+                  >
+                    <option value="">انتخاب دستگاه...</option>
+                    {machines.map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.name} ({m.code})
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-[11.5px] font-bold text-gray-400 mb-1">ساعت شروع *</label>
-                    <TimePicker value={formStart} onChange={setFormStart} />
+                    <label className="block text-[11.5px] font-bold text-gray-400 mb-1">ساعت کار (تا 24)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      max="24"
+                      min="0.01"
+                      value={formHours}
+                      onChange={(e) => setFormHours(e.target.value)}
+                      className="h-11 w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 text-xs font-bold text-gray-900 outline-none focus:border-indigo-500 dark:border-white/[0.08] dark:bg-white/[0.03] dark:text-white"
+                    />
                   </div>
-                  <div>
-                    <label className="block text-[11.5px] font-bold text-gray-400 mb-1">ساعت پایان *</label>
-                    <TimePicker value={formEnd} onChange={setFormEnd} />
-                  </div>
-                  {formStart && formEnd && (
-                    <p className="col-span-2 text-[11.5px] font-bold text-indigo-500">
-                      مدت کار: {toPersianDigits(formatHoursWorked(formStart, formEnd))} ساعت
-                    </p>
-                  )}
                   <div>
                     <label className="block text-[11.5px] font-bold text-gray-400 mb-1">تعداد تولید شده</label>
                     <input
@@ -360,15 +320,14 @@ export default function UserProductionLogsPage() {
                     type="button"
                     onClick={handleCreate}
                     disabled={saving}
-                    className="relative flex-1 h-11 rounded-2xl bg-indigo-600 text-xs font-bold text-white shadow-lg shadow-indigo-600/20 flex items-center justify-center gap-1.5 disabled:opacity-50"
+                    className="flex-1 h-11 rounded-2xl bg-indigo-600 text-xs font-bold text-white shadow-lg shadow-indigo-600/20 flex items-center justify-center gap-1.5 disabled:opacity-50"
                   >
-                      <BusyContent busy={saving}>
-                        <span>ثبت نهایی</span>
-                      </BusyContent>
+                    {saving && <Loader2 size={15} className="animate-spin" />}
+                    <span>{saving ? "در حال ثبت..." : "ثبت نهایی"}</span>
                   </button>
                 </div>
               </div>
-            </m.div>
+            </motion.div>
           </div>
         )}
       </AnimatePresence>

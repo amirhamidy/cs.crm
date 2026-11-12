@@ -1,7 +1,10 @@
 import axios, { type InternalAxiosRequestConfig } from "axios";
 import { getApiUrl } from "@/lib/config";
-import { installRequestGovernor } from "@/lib/requestGovernor";
-import { clearSession, getAccessToken, refreshAccessToken } from "@/lib/clientAuth";
+import {
+  clearSession,
+  getAccessToken,
+  refreshAccessToken,
+} from "@/lib/clientAuth";
 
 type RetriableConfig = InternalAxiosRequestConfig & {
   _retry?: boolean;
@@ -113,8 +116,5 @@ axiosInstance.interceptors.response.use(
     return axiosInstance(original);
   },
 );
-
-
-installRequestGovernor(axiosInstance, { maxConcurrent: 6, maxBackground: 2 });
 
 export default axiosInstance;

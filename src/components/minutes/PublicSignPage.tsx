@@ -10,7 +10,10 @@ import SignaturePad from "./SignaturePad";
 import { BTN_PRIMARY, CARD } from "./ui";
 import type { PublicSigner } from "@/types/minutes";
 
-
+/**
+ * صفحه‌ی عمومی امضا برای شخص بیرونی. مسیر پیشنهادی: /minutes/sign/[token]
+ * توکن را هرگز لاگ یا نمایش نمی‌دهیم.
+ */
 export default function PublicSignPage() {
   const params = useParams<{ token: string }>();
   const token = params?.token;
@@ -66,7 +69,7 @@ export default function PublicSignPage() {
   };
 
   const shell = (children: React.ReactNode) => (
-    <main dir="rtl" className="min-h-screen bg-gray-50 px-3 py-8 dark:bg-gray-950 sm:px-4">
+    <main dir="rtl" className="min-h-screen bg-gray-50 px-3 py-8 dark:bg-slate-950 sm:px-4">
       <div className="mx-auto flex w-full max-w-2xl flex-col gap-4">{children}</div>
     </main>
   );

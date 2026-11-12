@@ -1,10 +1,18 @@
 "use client";
-import { ListSkeleton } from "@/components/ui/skeletons";
 
 import { createPortal } from "react-dom";
-import { AnimatePresence, m } from "framer-motion";
-import { ArrowLeftCircle, ArrowRightCircle, FileText, History, RefreshCw, StickyNote, UserRound, X } from "lucide-react";
-import { Spinner as Loader2 } from "@/components/ui/Spinner";
+import { AnimatePresence, motion } from "framer-motion";
+import {
+    ArrowLeftCircle,
+    ArrowRightCircle,
+    FileText,
+    History,
+    Loader2,
+    RefreshCw,
+    StickyNote,
+    UserRound,
+    X,
+} from "lucide-react";
 import { JALALI_MONTHS, pad2, toJalali, toPersianDigits } from "@/lib/jalali";
 
 export interface PurchasingTaskHistoryEntry {
@@ -85,15 +93,15 @@ export default function TaskHistoryModal({
     return createPortal(
         <AnimatePresence>
             {open && (
-                <m.div
+                <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className="fixed inset-0 z-[999] flex items-center justify-center bg-gray-950/50 px-4 backdrop-blur-layer"
+                    className="fixed inset-0 z-[999] flex items-center justify-center bg-slate-950/50 px-4 backdrop-blur-sm"
                     onClick={onClose}
                     dir="rtl"
                 >
-                    <m.div
+                    <motion.div
                         initial={{ opacity: 0, scale: 0.96, y: 14 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.96, y: 14 }}
@@ -116,9 +124,9 @@ export default function TaskHistoryModal({
                                         type="button"
                                         onClick={onRefresh}
                                         disabled={loading}
-                                        className={`flex h-9 w-9 items-center justify-center rounded-xl bg-gray-100 text-gray-400 transition hover:text-gray-600 disabled:opacity-40 dark:bg-white/[0.05] dark:hover:text-gray-300 `}
+                                        className="flex h-9 w-9 items-center justify-center rounded-xl bg-gray-100 text-gray-400 transition hover:text-gray-600 disabled:opacity-40 dark:bg-white/[0.05] dark:hover:text-gray-300"
                                     >
-                                        {loading ? <Loader2 size={13} className="animate-spin" /> : <RefreshCw size={13} />}
+                                        <RefreshCw size={13} className={loading ? "animate-spin" : ""} />
                                     </button>
                                 )}
                             </div>
@@ -138,7 +146,9 @@ export default function TaskHistoryModal({
 
                         <div className="flex-1 overflow-y-auto px-5 py-5">
                             {loading ? (
-                                <ListSkeleton rows={3} />
+                                <div className="flex h-40 items-center justify-center">
+                                    <Loader2 size={20} className="animate-spin text-indigo-500" />
+                                </div>
                             ) : entries.length === 0 ? (
                                 <div className="flex h-40 flex-col items-center justify-center gap-2 text-center">
                                     <History size={26} className="text-gray-300 dark:text-gray-700" />
@@ -215,8 +225,8 @@ export default function TaskHistoryModal({
                                 </div>
                             )}
                         </div>
-                    </m.div>
-                </m.div>
+                    </motion.div>
+                </motion.div>
             )}
         </AnimatePresence>,
         document.body

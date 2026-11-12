@@ -2,8 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, Check, Clock, PenLine, RefreshCw } from "lucide-react";
-import { ListSkeleton } from "@/components/ui/skeletons";
+import { ArrowRight, Check, Clock, Loader2, PenLine, RefreshCw } from "lucide-react";
 import { minutesApi } from "@/lib/minutesApi";
 import { formatDateTime, parseApiError } from "@/lib/minutesUtils";
 import MeetingStatusBadge from "./MeetingStatusBadge";
@@ -46,7 +45,7 @@ export default function MySignaturesPage({ basePath }: { basePath: string }) {
           <Link
             href={basePath}
             aria-label="بازگشت"
-            className="flex h-10 w-10 items-center justify-center rounded-2xl bg-black/5 text-gray-600 transition-colors hover:bg-black/10 dark:bg-white/5 dark:text-gray-300"
+            className="flex h-10 w-10 items-center justify-center rounded-2xl bg-black/5 text-slate-600 transition-colors hover:bg-black/10 dark:bg-white/5 dark:text-slate-300"
           >
             <ArrowRight size={16} />
           </Link>
@@ -63,9 +62,9 @@ export default function MySignaturesPage({ basePath }: { basePath: string }) {
           disabled={loading}
           title="بارگذاری مجدد"
           aria-label="بارگذاری مجدد"
-          className={`flex h-10 w-10 items-center justify-center rounded-2xl bg-black/5 text-gray-600 transition-colors hover:bg-black/10 disabled:opacity-50 dark:bg-white/5 dark:text-gray-300 ${loading ? "is-busy" : ""}`}
+          className="flex h-10 w-10 items-center justify-center rounded-2xl bg-black/5 text-slate-600 transition-colors hover:bg-black/10 disabled:opacity-50 dark:bg-white/5 dark:text-slate-300"
         >
-          <RefreshCw size={15} />
+          <RefreshCw size={15} className={loading ? "animate-spin" : ""} />
         </button>
       </div>
 
@@ -84,8 +83,8 @@ export default function MySignaturesPage({ basePath }: { basePath: string }) {
             onClick={() => setPendingOnly(value)}
             className={`h-9 rounded-xl text-[12px] font-bold transition-colors ${
               pendingOnly === value
-                ? "bg-white text-indigo-600 shadow-sm dark:bg-gray-800 dark:text-indigo-300"
-                : "text-gray-500 dark:text-gray-400"
+                ? "bg-white text-indigo-600 shadow-sm dark:bg-slate-800 dark:text-indigo-300"
+                : "text-slate-500 dark:text-slate-400"
             }`}
           >
             {label}
@@ -93,7 +92,11 @@ export default function MySignaturesPage({ basePath }: { basePath: string }) {
         ))}
       </div>
 
-      {loading && <ListSkeleton rows={4} />}
+      {loading && (
+        <div className="flex justify-center py-16">
+          <Loader2 size={24} className="animate-spin text-indigo-500" />
+        </div>
+      )}
 
       {!loading && error && (
         <div className="flex flex-col items-center gap-3 rounded-3xl border border-red-500/10 bg-red-500/[0.03] py-12">

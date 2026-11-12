@@ -1,14 +1,10 @@
 "use client";
 
 import { useEffect, useState, forwardRef, InputHTMLAttributes } from "react";
-import { m, AnimatePresence, useReducedMotion } from "framer-motion";
-import { Backdrop } from "@/components/ui/Backdrop";
-import { panelMotion } from "@/lib/motion";
-import { ListSkeleton } from "@/components/ui/skeletons";
-import { X, User, CheckCircle2, Search } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { X, User, CheckCircle2, Search, Loader } from "lucide-react";
 import type { Department, Employee } from "./types";
 
-import { BusyContent } from "@/components/ui/Button";
 interface Props {
     open: boolean;
     department: Department | null;
@@ -37,7 +33,7 @@ const FloatingInput = forwardRef<HTMLInputElement, FloatingInputProps>(
 
             <label
                 htmlFor={id}
-                className="pointer-events-none absolute right-5 top-1/2 -translate-y-1/2 rounded bg-white px-1.5 text-sm text-gray-400 transition-all duration-200 peer-focus:top-0 peer-focus:text-xs peer-focus:text-gray-500 peer-[:not(:placeholder-shown)]:top-0 peer-[:not(:placeholder-shown)]:text-xs peer-[:not(:placeholder-shown)]:text-gray-500 dark:bg-[#111827]"
+                className="pointer-events-none absolute right-5 top-1/2 -translate-y-1/2 rounded bg-white px-1.5 text-sm text-gray-400 transition-all duration-200 peer-focus:top-0 peer-focus:text-xs peer-focus:text-gray-500 peer-[:not(:placeholder-shown)]:top-0 peer-[:not(:placeholder-shown)]:text-xs peer-[:not(:placeholder-shown)]:text-gray-500 dark:bg-[#0f172a]"
             >
                 {label}
             </label>
@@ -56,7 +52,6 @@ export default function AddEmployeeModal({
     onClose,
     onSubmit,
 }: Props) {
-    const reduced = useReducedMotion() ?? false;
     const [selectedId, setSelectedId] = useState("");
     const [search, setSearch] = useState("");
     const [success, setSuccess] = useState(false);
@@ -136,12 +131,27 @@ export default function AddEmployeeModal({
     return (
         <AnimatePresence>
             {open && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center px-4">
-<Backdrop onClick={handleClose} />
-                    <m.div {...panelMotion(false, reduced)} className="relative w-full max-w-sm overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-sm dark:border-white/[0.06] dark:bg-[#111827]"
+                <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="fixed inset-0 z-50 flex items-center justify-center px-4"
+                    style={{
+                        background: "rgba(0,0,0,0.45)",
+                        backdropFilter: "blur(3px)",
+                    }}
+                    onClick={handleClose}
+                >
+                    <motion.div
+                        initial={{ opacity: 0, y: 16 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 16 }}
+                        transition={{ duration: 0.35, ease: "easeOut" }}
+                        className="w-full max-w-sm overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-sm dark:border-white/[0.06] dark:bg-[#0f172a]"
+                        onClick={(event) => event.stopPropagation()}
                         dir="rtl"
                     >
-                        
+                        {/* Header */}
                         <div className="flex items-center justify-between px-8 pb-6 pt-8">
                             <div className="flex items-center gap-2.5">
                                 <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-50 dark:bg-blue-500/10">
@@ -169,7 +179,7 @@ export default function AddEmployeeModal({
                             </button>
                         </div>
 
-                        
+                        {/* Body */}
                         <form
                             onSubmit={handleSubmit}
                             className="flex flex-col gap-4 px-8 pb-8"
@@ -193,7 +203,12 @@ export default function AddEmployeeModal({
 
                             <div className="max-h-56 space-y-2 overflow-y-auto pr-1">
                                 {loading ? (
-                                    <ListSkeleton rows={3} />
+                                    <div className="flex items-center justify-center py-8">
+                                        <Loader
+                                            size={18}
+                                            className="animate-spin text-blue-600"
+                                        />
+                                    </div>
                                 ) : filteredEmployees.length === 0 ? (
                                     <p className="py-6 text-center text-[12px] text-gray-400 dark:text-gray-500">
                                         {employees.length === 0
@@ -256,7 +271,7 @@ export default function AddEmployeeModal({
 
                             <AnimatePresence mode="wait">
                                 {success ? (
-                                    <m.div
+                                    <motion.div
                                         key="success"
                                         initial={{ opacity: 0, scale: 0.9 }}
                                         animate={{ opacity: 1, scale: 1 }}
@@ -265,24 +280,26 @@ export default function AddEmployeeModal({
                                     >
                                         <CheckCircle2 size={16} />
                                         عضو با موفقیت اضافه شد
-                                    </m.div>
+                                    </motion.div>
                                 ) : (
-                                    <m.button
+                                    <motion.button
                                         key="submit"
                                         type="submit"
                                         disabled={!selectedId || submitting}
                                         whileTap={{ scale: 0.97 }}
-                                        className="relative flex items-center justify-center rounded-full bg-blue-600 py-3 text-sm font-bold text-white transition-colors hover:bg-blue-500 disabled:opacity-50"
+                                        className="flex items-center justify-center rounded-full bg-blue-600 py-3 text-sm font-bold text-white transition-colors hover:bg-blue-500 disabled:opacity-50"
                                     >
-                                        <BusyContent busy={submitting}>
-                                            افزودن عضو
-                                        </BusyContent>
-                                    </m.button>
+                                        {submitting ? (
+                                            <Loader size={18} className="animate-spin" />
+                                        ) : (
+                                            "افزودن عضو"
+                                        )}
+                                    </motion.button>
                                 )}
                             </AnimatePresence>
                         </form>
-                    </m.div>
-                </div>
+                    </motion.div>
+                </motion.div>
             )}
         </AnimatePresence>
     );

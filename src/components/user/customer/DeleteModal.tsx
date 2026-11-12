@@ -1,9 +1,6 @@
 "use client";
 
-import { m, AnimatePresence, useReducedMotion } from "framer-motion";
-import { Backdrop } from "@/components/ui/Backdrop";
-import { panelMotion } from "@/lib/motion";
-import { BusyContent } from "@/components/ui/Button";
+import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "next-themes";
 import { Trash2 } from "lucide-react";
 
@@ -24,17 +21,27 @@ export default function CustomerDeleteModal({
 }: Props) {
     const { resolvedTheme } = useTheme();
     const isDark = resolvedTheme === "dark";
-    const reduced = useReducedMotion() ?? false;
 
     return (
         <AnimatePresence>
             {isOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
-                    <Backdrop onClick={() => !isDeleting && onClose()} />
-                    <m.div
-                        {...panelMotion(false, reduced)}
+                <motion.div
+                    className="fixed inset-0 z-50 flex items-center justify-center px-4"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                >
+                    <motion.div
+                        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+                        onClick={() => !isDeleting && onClose()}
+                    />
+                    <motion.div
                         className={`relative z-10 w-full max-w-sm rounded-2xl p-6 shadow-2xl ${isDark ? "bg-[#13151f]" : "bg-white"
                             }`}
+                        initial={{ scale: 0.9, opacity: 0, y: 20 }}
+                        animate={{ scale: 1, opacity: 1, y: 0 }}
+                        exit={{ scale: 0.9, opacity: 0, y: 20 }}
+                        transition={{ type: "spring", stiffness: 300, damping: 25 }}
                     >
                         <div className="flex flex-col items-center text-center gap-4">
                             <div className="w-14 h-14 rounded-2xl bg-red-500/15 flex items-center justify-center">
@@ -49,7 +56,7 @@ export default function CustomerDeleteModal({
                                 </p>
                             </div>
                             <div className="flex gap-3 w-full">
-                                <m.button
+                                <motion.button
                                     whileTap={{ scale: 0.96 }}
                                     onClick={onClose}
                                     disabled={isDeleting}
@@ -59,19 +66,19 @@ export default function CustomerDeleteModal({
                                         }`}
                                 >
                                     انصراف
-                                </m.button>
-                                <m.button
+                                </motion.button>
+                                <motion.button
                                     whileTap={{ scale: 0.96 }}
                                     onClick={onConfirm}
                                     disabled={isDeleting}
-                                    className="relative flex-1 py-2.5 rounded-xl text-sm font-semibold bg-red-500 hover:bg-red-600 text-white transition-colors disabled:opacity-60"
+                                    className="flex-1 py-2.5 rounded-xl text-sm font-semibold bg-red-500 hover:bg-red-600 text-white transition-colors disabled:opacity-60"
                                 >
-                                    <BusyContent busy={isDeleting}>بله، حذف شود</BusyContent>
-                                </m.button>
+                                    {isDeleting ? "در حال حذف..." : "بله، حذف شود"}
+                                </motion.button>
                             </div>
                         </div>
-                    </m.div>
-                </div>
+                    </motion.div>
+                </motion.div>
             )}
         </AnimatePresence>
     );

@@ -59,45 +59,6 @@ export interface CreateTaskPayload {
 
 export type UpdateTaskPayload = Partial<CreateTaskPayload>;
 
-
-export interface TransferTaskPayload {
-  
-  department: number;
-  
-  note?: string;
-  
-  files?: File[];
-}
-
-
-export interface TransferTaskResponse {
-  id: number;
-  title: string;
-  description?: string;
-  case: number | null;
-  department: number;
-  department_name?: string;
-  
-  name_department?: string;
-  current_step: number;
-  
-  name_step_current?: string;
-  current_step_name?: string;
-  assigned_employee: number[];
-  status: TaskStatus | string;
-  active?: boolean;
-  created_at?: string;
-  completed_at?: string | null;
-  updated_at?: string;
-  attachments?: unknown[];
-}
-
-
-export type TransferTaskErrorBody =
-  | { department: string[] }
-  | { detail: string }
-  | string[];
-
 export interface CreateTaskModalProps {
   isOpen: boolean;
   onClose: () => void;

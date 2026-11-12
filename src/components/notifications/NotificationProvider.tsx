@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, type ReactNode } from "react";
-import { usePathname } from "next/navigation";
 import { useAuthStore } from "@/store/authStore";
-import { notificationsStorageKey, useNotificationStore } from "@/store/notificationStore";
+import {
+    notificationsStorageKey,
+    useNotificationStore,
+} from "@/store/notificationStore";
 import { ToastStack } from "./ToastStack";
 import axiosInstance from "@/lib/axiosInstance";
 import { installSelfChangeTracker } from "./sync/selfchanges";
@@ -14,8 +16,6 @@ export function NotificationProvider({
 }: {
     children: ReactNode;
 }) {
-    const pathname = usePathname();
-    const isPortalPath = pathname.startsWith("/portal");
     const userId = useAuthStore((state) => state.userId);
     const username = useAuthStore((state) => state.username);
     const isAuthenticated = useAuthStore(
@@ -34,7 +34,9 @@ export function NotificationProvider({
     );
 
     const activeUserId =
-        !isPortalPath && hasHydrated && isAuthenticated && userId != null
+        hasHydrated &&
+            isAuthenticated &&
+            userId != null
             ? userId
             : null;
 

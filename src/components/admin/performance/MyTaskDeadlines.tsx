@@ -1,12 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { m } from "framer-motion";
-import { CalendarClock, Clock, UserRound } from "lucide-react";
-import MyTaskDeadlinesSkeleton from "./MyTaskDeadlinesSkeleton";
+import { motion } from "framer-motion";
+import { CalendarClock, Clock, Loader2, UserRound } from "lucide-react";
 import { useTheme } from "next-themes";
 import api from "@/lib/axiosInstance";
-import { listAll } from "@/lib/api";
 import { toJalali, toPersianDigits, JALALI_MONTHS, pad2 } from "@/lib/jalali";
 
 interface Task {
@@ -52,12 +50,13 @@ export default function MyTaskDeadlines() {
 
         async function load() {
             try {
-                
-                
-                const [source, employeeSource] = await Promise.all([
-                    listAll<Task>("/tasks/api/v1/tasks/"),
-                    listAll<Employee>("/accounts/api/v1/employee/list/"),
+                const [{ data: taskData }, { data: employeeData }] = await Promise.all([
+                    api.get("/tasks/api/v1/tasks/"),
+                    api.get("/accounts/api/v1/employee/list/"),
                 ]);
+
+                const source: Task[] = Array.isArray(taskData) ? taskData : [];
+                const employeeSource: Employee[] = Array.isArray(employeeData) ? employeeData : [];
 
                 const results = await Promise.all(
                     source
@@ -91,8 +90,6 @@ export default function MyTaskDeadlines() {
                     );
                     setEmployees(employeeSource);
                 }
-            } catch {
-                /* timeout / network: show empty state */
             } finally {
                 if (!cancelled) setLoading(false);
             }
@@ -105,7 +102,7 @@ export default function MyTaskDeadlines() {
     }, []);
 
     return (
-        <m.section
+        <motion.section
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             className="rounded-[1.5rem] border p-4 sm:p-5"
@@ -136,7 +133,10 @@ export default function MyTaskDeadlines() {
             </div>
 
             {loading ? (
-                <MyTaskDeadlinesSkeleton count={3} />
+                <div className="flex min-h-32 items-center justify-center gap-2 text-[11px] font-semibold text-gray-400">
+                    <Loader2 size={16} className="animate-spin" />
+                    در حال بررسی Deadlineها...
+                </div>
             ) : !tasks.length ? (
                 <div className="flex min-h-32 items-center justify-center rounded-2xl border border-dashed border-gray-200 text-[11px] font-semibold text-gray-400 dark:border-white/[0.06]">
                     هیچ تسکی با Deadline گذشته وجود ندارد.
@@ -144,7 +144,7 @@ export default function MyTaskDeadlines() {
             ) : (
                 <div className="grid gap-2.5">
                     {tasks.map((task, index) => (
-                        <m.div
+                        <motion.div
                             key={task.id}
                             initial={{ opacity: 0, y: 6 }}
                             animate={{ opacity: 1, y: 0 }}
@@ -193,10 +193,10 @@ export default function MyTaskDeadlines() {
                                     </div>
                                 </div>
                             </div>
-                        </m.div>
+                        </motion.div>
                     ))}
                 </div>
             )}
-        </m.section>
+        </motion.section>
     );
 }

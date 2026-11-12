@@ -2,11 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence } from "framer-motion";
-import DepartmentScoreSkeleton from "./DepartmentScoreSkeleton";
-import { Award, Plus, Minus, RefreshCw, Users } from "lucide-react";
-import { Spinner as Loader2 } from "@/components/ui/Spinner";
+import { Award, Loader2, Plus, Minus, RefreshCw, Users } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
-import { listAll } from "@/lib/api";
 import { useAuthStore } from "@/store/authStore";
 import AdjustScoreModal from "@/components/admin/users/AdjustScoreModal";
 
@@ -21,6 +18,10 @@ type Assignment = {
 };
 type Score = { score?: number; total_score?: number };
 type Action = "add" | "deduct";
+
+function list<T>(data: T[] | { results?: T[] } | undefined): T[] {
+  return Array.isArray(data) ? data : data?.results ?? [];
+}
 
 export default function DepartmentScoreManager() {
   const username = useAuthStore((state) => state.username);
@@ -66,13 +67,12 @@ export default function DepartmentScoreManager() {
     else setLoading(true);
     setError("");
     try {
-      
-      
-      
-      const [employeeList, assignmentList] = await Promise.all([
-        listAll<Employee>("/accounts/api/v1/employee/list/"),
-        listAll<Assignment>("/department/api/v1/department_employee/list/"),
+      const [employeeResponse, assignmentResponse] = await Promise.all([
+        axiosInstance.get("/accounts/api/v1/employee/list/"),
+        axiosInstance.get("/department/api/v1/department_employee/list/"),
       ]);
+      const employeeList = list<Employee>(employeeResponse.data);
+      const assignmentList = list<Assignment>(assignmentResponse.data);
       setEmployees(employeeList);
       setAssignments(assignmentList);
       const current = employeeList.find((employee) => employee.username === username);
@@ -112,41 +112,41 @@ export default function DepartmentScoreManager() {
   }, [load, selected]);
 
   if (!hasHydrated || loading) {
-    return <DepartmentScoreSkeleton />;
+    return <div className="flex min-h-28 items-center justify-center rounded-3xl border border-slate-200/70 bg-white p-6 dark:border-white/10 dark:bg-slate-900"><Loader2 className="animate-spin text-indigo-500" size={20} /></div>;
   }
   if (!managedAssignments.length) return null;
 
   return (
-    <section dir="rtl" className="space-y-4 rounded-3xl border border-gray-200/70 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-gray-900 sm:p-5">
+    <section dir="rtl" className="space-y-4 rounded-3xl border border-slate-200/70 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-slate-900 sm:p-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-indigo-500/10 text-indigo-500"><Award size={21} /></div>
           <div>
-            <h2 className="text-sm font-extrabold text-gray-900 dark:text-white">مدیریت امتیاز دپارتمان</h2>
-            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">امتیاز اعضای دپارتمان‌های تحت مدیریت شما</p>
+            <h2 className="text-sm font-extrabold text-slate-900 dark:text-white">مدیریت امتیاز دپارتمان</h2>
+            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">امتیاز اعضای دپارتمان‌های تحت مدیریت شما</p>
           </div>
         </div>
-        <button onClick={() => void load(true)} disabled={refreshing} className={`flex items-center gap-2 rounded-xl border border-gray-200 px-3 py-2 text-xs font-bold text-gray-600 disabled:opacity-50  dark:border-white/10 dark:text-gray-300`}>
-          {refreshing ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />} بروزرسانی
+        <button onClick={() => void load(true)} disabled={refreshing} className="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-xs font-bold text-slate-600 disabled:opacity-50 dark:border-white/10 dark:text-slate-300">
+          <RefreshCw size={14} className={refreshing ? "animate-spin" : ""} /> بروزرسانی
         </button>
       </div>
       {error && <p className="rounded-xl bg-red-500/10 px-3 py-2 text-xs text-red-500">{error}</p>}
-      {!team.length ? <div className="rounded-2xl bg-gray-500/5 px-4 py-8 text-center text-sm text-gray-500">در دپارتمان‌های تحت مدیریت شما کارمند دیگری ثبت نشده است.</div> : (
+      {!team.length ? <div className="rounded-2xl bg-slate-500/5 px-4 py-8 text-center text-sm text-slate-500">در دپارتمان‌های تحت مدیریت شما کارمند دیگری ثبت نشده است.</div> : (
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
           {team.map((employee) => {
             const employeeDepartments = assignments.filter((item) => Number(item.employee) === employee.id && departmentIds.has(Number(item.department)));
             const score = scores[employee.id];
             return (
-              <div key={employee.id} className="rounded-2xl border border-gray-200/70 p-4 dark:border-white/10">
+              <div key={employee.id} className="rounded-2xl border border-slate-200/70 p-4 dark:border-white/10">
                 <div className="flex items-start gap-3">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gray-100 text-gray-500 dark:bg-white/5"><Users size={18} /></div>
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-500 dark:bg-white/5"><Users size={18} /></div>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-extrabold text-gray-900 dark:text-white">{employee.full_name || employee.username}</p>
-                    <p className="mt-1 truncate text-[11px] text-gray-500">{employeeDepartments.map((item) => departmentNames.get(Number(item.department)) || item.department_name).filter(Boolean).join("، ")}</p>
+                    <p className="truncate text-sm font-extrabold text-slate-900 dark:text-white">{employee.full_name || employee.username}</p>
+                    <p className="mt-1 truncate text-[11px] text-slate-500">{employeeDepartments.map((item) => departmentNames.get(Number(item.department)) || item.department_name).filter(Boolean).join("، ")}</p>
                   </div>
                   <div className="text-left">
                     <p className="text-lg font-black text-indigo-500">{score === undefined ? "—" : score.toLocaleString("fa-IR")}</p>
-                    <p className="text-[10px] text-gray-500">امتیاز</p>
+                    <p className="text-[10px] text-slate-500">امتیاز</p>
                   </div>
                 </div>
                 <div className="mt-4 grid grid-cols-2 gap-2">

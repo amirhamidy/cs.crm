@@ -2,14 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { AnimatePresence, m, useReducedMotion } from "framer-motion";
-import { Backdrop } from "@/components/ui/Backdrop";
-import { panelMotion } from "@/lib/motion";
-import { Check, FileText, Paperclip, Star, User2, X } from "lucide-react";
-import { ListSkeleton } from "@/components/ui/skeletons";
+import { AnimatePresence, motion } from "framer-motion";
+import { Check, FileText, Loader2, Paperclip, Star, User2, X } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
 
-import { BusyContent } from "@/components/ui/Button";
 interface Employee {
     id: number;
     name: string;
@@ -44,7 +40,6 @@ export default function TaskActionModal({
     submitting,
     hideReview = false,
 }: Props) {
-    const reduced = useReducedMotion() ?? false;
     const [note, setNote] = useState("");
     const [reason, setReason] = useState("");
     const [score, setScore] = useState(0);
@@ -172,14 +167,22 @@ export default function TaskActionModal({
     return createPortal(
         <AnimatePresence>
             {isOpen && (
-                <div
-                    className="fixed inset-0 z-[99999] flex items-center justify-center p-4"
+                <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="fixed inset-0 z-[99999] flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-md"
                     dir="rtl"
+                    onMouseDown={(e) => {
+                        if (e.target === e.currentTarget && !submitting) onClose();
+                    }}
                 >
-                    <Backdrop onClick={() => { if (!submitting) onClose(); }} />
-                    <m.div
-                        {...panelMotion(false, reduced)}
-                        className="relative w-full max-w-lg overflow-hidden rounded-[1.7rem] border border-white/10 bg-white dark:bg-[#101827]"
+                    <motion.div
+                        initial={{ opacity: 0, y: 18, scale: .97 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: 12, scale: .98 }}
+                        transition={{ duration: .2 }}
+                        className="w-full max-w-lg overflow-hidden rounded-[1.7rem] border border-white/10 bg-white shadow-2xl dark:bg-[#101827]"
                     >
                         <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4 dark:border-white/[.06]">
                             <div>
@@ -244,7 +247,10 @@ export default function TaskActionModal({
                                     </div>
 
                                     {employeesLoading ? (
-                                        <ListSkeleton rows={3} />
+                                        <div className="flex items-center gap-2 rounded-2xl border border-gray-200 px-3 py-4 text-[11px] text-gray-400 dark:border-white/[.08]">
+                                            <Loader2 size={15} className="animate-spin" />
+                                            در حال دریافت همکاران دپارتمان...
+                                        </div>
                                     ) : employees.length === 0 ? (
                                         <p className="rounded-xl bg-amber-500/10 px-3 py-2 text-[10.5px] font-bold text-amber-600">
                                             برای دپارتمان فعلی کارمندی پیدا نشد.
@@ -304,21 +310,19 @@ export default function TaskActionModal({
                             <button type="button" disabled={submitting} onClick={onClose} className="h-11 flex-1 rounded-xl bg-gray-100 text-[11px] font-extrabold text-gray-500 dark:bg-white/[.05] dark:text-gray-400">
                                 انصراف
                             </button>
-                            <button type="button" disabled={submitting} onClick={submit} className="relative flex h-11 flex-[1.5] items-center justify-center gap-2 rounded-xl bg-indigo-600 text-[11px] font-extrabold text-white shadow-lg shadow-indigo-500/20 disabled:opacity-60">
-                                <BusyContent busy={submitting}>
-                                    <Check size={15} />
-                                    {isFinal
-                                        ? needsReview ? "ثبت نظر و تکمیل تسک" : "تکمیل تسک"
-                                        : isCancel
-                                            ? needsReview ? "ثبت نظر و لغو تسک" : "لغو تسک"
-                                            : needsReview
-                                                ? "ثبت نظر و ادامه"
-                                                : "ثبت و ادامه"}
-                                </BusyContent>
+                            <button type="button" disabled={submitting} onClick={submit} className="flex h-11 flex-[1.5] items-center justify-center gap-2 rounded-xl bg-indigo-600 text-[11px] font-extrabold text-white shadow-lg shadow-indigo-500/20 disabled:opacity-60">
+                                {submitting ? <Loader2 size={15} className="animate-spin" /> : <Check size={15} />}
+                                {isFinal
+                                    ? needsReview ? "ثبت نظر و تکمیل تسک" : "تکمیل تسک"
+                                    : isCancel
+                                        ? needsReview ? "ثبت نظر و لغو تسک" : "لغو تسک"
+                                        : needsReview
+                                            ? "ثبت نظر و ادامه"
+                                            : "ثبت و ادامه"}
                             </button>
                         </div>
-                    </m.div>
-                </div>
+                    </motion.div>
+                </motion.div>
             )}
         </AnimatePresence>,
         document.body

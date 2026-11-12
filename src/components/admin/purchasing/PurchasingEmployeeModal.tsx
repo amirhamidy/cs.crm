@@ -1,19 +1,12 @@
 "use client";
-import { Skeleton } from "@/components/ui/Skeleton";
-import { ListSkeleton } from "@/components/ui/skeletons";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
-import { AnimatePresence, m, useReducedMotion } from "framer-motion";
-import { Backdrop } from "@/components/ui/Backdrop";
-import { panelMotion } from "@/lib/motion";
-import { AlertCircle, Check, Search, UserPlus, X } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
+import { AlertCircle, Check, Loader2, Search, UserPlus, X } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
-import { fetchPage } from "@/lib/api";
-import { useInfiniteOptions, type InfiniteFetcher } from "@/hooks/useInfiniteOptions";
 import type { ApiPurchasingEmployee } from "@/types/purchasing";
 
-import { BusyContent } from "@/components/ui/Button";
 interface EmployeeItem {
     id: number;
     full_name?: string;
@@ -36,47 +29,42 @@ const G = [
     "from-rose-500 to-pink-500",
 ];
 
+const normalizeList = <T,>(value: unknown): T[] =>
+    Array.isArray(value) ? (value as T[]) : ((value as { results?: T[] } | null)?.results ?? []);
+
 export default function PurchasingEmployeeModal({ open, existingEmployees, onClose, onSaved }: Props) {
-    const reduced = useReducedMotion() ?? false;
+    const [employees, setEmployees] = useState<EmployeeItem[]>([]);
+    const [search, setSearch] = useState("");
     const [selected, setSelected] = useState<number | null>(null);
+    const [fetching, setFetching] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
 
-    
-    
-    const employeeFetcher = useCallback<InfiniteFetcher<EmployeeItem>>(
-        (params, signal) => fetchPage<EmployeeItem>("/accounts/api/v1/employee/list/", params, signal),
-        [],
-    );
-
-    const {
-        items: employees,
-        search,
-        setSearch,
-        loading: fetching,
-        loadingMore,
-        hasMore,
-        error: loadError,
-        loadMore,
-    } = useInfiniteOptions<EmployeeItem>(employeeFetcher, { enabled: open, pageSize: 25 });
-
-    const listRef = useRef<HTMLDivElement>(null);
-    const onListScroll = useCallback(() => {
-        const el = listRef.current;
-        if (!el) return;
-        if (el.scrollHeight - el.scrollTop - el.clientHeight < 80) loadMore();
-    }, [loadMore]);
-
     useEffect(() => {
         if (!open) return;
+        let mounted = true;
+        setSearch("");
         setSelected(null);
         setError("");
-        setSearch("");
-    }, [open, setSearch]);
+        setFetching(true);
+        axiosInstance
+            .get("/accounts/api/v1/employee/list/")
+            .then((res) => {
+                if (!mounted) return;
+                const existing = new Set(existingEmployees.map((x) => x.employee));
+                setEmployees(normalizeList<EmployeeItem>(res.data).filter((x) => !existing.has(x.id)));
+            })
+            .catch(() => mounted && setError("دریافت لیست کارکنان انجام نشد."))
+            .finally(() => mounted && setFetching(false));
+        return () => {
+            mounted = false;
+        };
+    }, [open, existingEmployees]);
 
-    
-    const existingSet = useMemo(() => new Set(existingEmployees.map((x) => x.employee)), [existingEmployees]);
-    const visible = useMemo(() => employees.filter((e) => !existingSet.has(e.id)), [employees, existingSet]);
+    const visible = useMemo(() => {
+        const q = search.trim().toLowerCase();
+        return q ? employees.filter((e) => (e.full_name || "").toLowerCase().includes(q) || (e.username || "").toLowerCase().includes(q)) : employees;
+    }, [employees, search]);
 
     const close = () => !loading && onClose();
 
@@ -102,16 +90,30 @@ export default function PurchasingEmployeeModal({ open, existingEmployees, onClo
     return createPortal(
         <AnimatePresence>
             {open && (
-                <div className="fixed inset-0 z-[999] flex items-center justify-center px-4">
-                    <Backdrop onClick={close} />
-                    <m.div {...panelMotion(false, reduced)} className="relative flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-xl shadow-black/10 dark:border-white/[0.06] dark:bg-[#111827]" dir="rtl">
+                <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="fixed inset-0 z-[999] flex items-center justify-center px-4"
+                    style={{ background: "rgba(0,0,0,0.45)", backdropFilter: "blur(3px)" }}
+                    onMouseDown={close}
+                >
+                    <motion.div
+                        initial={{ opacity: 0, y: 16, scale: 0.98 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: 16, scale: 0.98 }}
+                        transition={{ duration: 0.28, ease: "easeOut" }}
+                        onMouseDown={(e) => e.stopPropagation()}
+                        className="flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-2xl shadow-black/10 dark:border-white/[0.06] dark:bg-[#0f172a]"
+                        dir="rtl"
+                    >
                         <div className="flex shrink-0 items-center justify-between px-8 pb-6 pt-8">
                             <div className="flex items-center gap-2.5">
                                 <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-indigo-50 dark:bg-indigo-500/10">
                                     <UserPlus size={15} className="text-indigo-500" />
                                 </div>
                                 <div>
-                                    <h3 className="text-[14px] font-bold text-gray-900 dark:text-white">افزودن عضو خرید</h3>
+                                    <h3 className="text-[14px] font-extrabold text-gray-900 dark:text-white">افزودن عضو خرید</h3>
                                     <p className="mt-0.5 text-[11px] text-gray-400">کارمند موردنظر را به تیم اضافه کنید</p>
                                 </div>
                             </div>
@@ -123,14 +125,14 @@ export default function PurchasingEmployeeModal({ open, existingEmployees, onClo
                         <div className="flex min-h-0 flex-1 flex-col gap-3 px-8 pb-2">
                             <div className="flex items-center gap-2 rounded-2xl border border-gray-100 bg-gray-50 px-3.5 py-3 transition-colors focus-within:border-indigo-500 dark:border-white/[0.06] dark:bg-white/[0.03]">
                                 <Search size={13} className="shrink-0 text-gray-400" />
-                                <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="جستجوی نام یا نام کاربری..." className="w-full bg-transparent text-[12px] font-medium text-gray-900 outline-none placeholder:text-gray-400 dark:text-white" />
+                                <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="جستجوی نام یا نام کاربری..." className="w-full bg-transparent text-[12px] font-semibold text-gray-900 outline-none placeholder:text-gray-400 dark:text-white" />
                             </div>
 
-                            <div ref={listRef} onScroll={onListScroll} className="max-h-[280px] space-y-1.5 overflow-y-auto">
-                                {fetching && employees.length === 0 ? (
-                                    <ListSkeleton rows={4} />
-                                ) : loadError && employees.length === 0 ? (
-                                    <p className="py-8 text-center text-[11px] text-red-500">دریافت لیست کارکنان انجام نشد.</p>
+                            <div className="max-h-[280px] space-y-1.5 overflow-y-auto">
+                                {fetching ? (
+                                    <div className="flex justify-center py-8">
+                                        <Loader2 size={18} className="animate-spin text-indigo-500" />
+                                    </div>
                                 ) : visible.length === 0 ? (
                                     <p className="py-8 text-center text-[11px] text-gray-400">
                                         {employees.length === 0 ? "همه کارمندان قبلاً به تیم اضافه شده‌اند" : "کارمندی یافت نشد"}
@@ -140,7 +142,7 @@ export default function PurchasingEmployeeModal({ open, existingEmployees, onClo
                                         const active = selected === e.id;
                                         const name = e.full_name || e.username || `کارمند ${e.id}`;
                                         return (
-                                            <m.button
+                                            <motion.button
                                                 key={e.id}
                                                 type="button"
                                                 initial={{ opacity: 0, x: 6 }}
@@ -152,7 +154,7 @@ export default function PurchasingEmployeeModal({ open, existingEmployees, onClo
                                                 }}
                                                 className={`flex w-full items-center gap-2.5 rounded-2xl px-2.5 py-2 text-right transition-colors ${active ? "bg-indigo-50 dark:bg-indigo-500/10" : "hover:bg-gray-50 dark:hover:bg-white/[0.04]"}`}
                                             >
-                                                <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${G[e.id % G.length]} text-[12px] font-bold text-white`}>
+                                                <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${G[e.id % G.length]} text-[12px] font-extrabold text-white`}>
                                                     {name.trim().charAt(0)}
                                                 </span>
                                                 <span className="min-w-0 flex-1">
@@ -168,39 +170,28 @@ export default function PurchasingEmployeeModal({ open, existingEmployees, onClo
                                                         <Check size={11} className="text-white" strokeWidth={3} />
                                                     </span>
                                                 )}
-                                            </m.button>
+                                            </motion.button>
                                         );
                                     })
-                                )}
-
-                                {loadingMore && (
-                                    <Skeleton className="mx-auto h-6 w-24 rounded-lg" />
-                                )}
-                                {!loadingMore && hasMore && visible.length > 0 && (
-                                    <button type="button" onClick={loadMore} className="w-full py-2 text-center text-[11px] font-bold text-indigo-500">
-                                        نمایش بیشتر
-                                    </button>
                                 )}
                             </div>
 
                             {error && (
                                 <div className="flex items-start gap-2.5 rounded-2xl bg-red-50 px-3.5 py-3 dark:bg-red-500/10">
                                     <AlertCircle size={14} className="mt-0.5 shrink-0 text-red-500" />
-                                    <p className="text-[11.5px] font-medium leading-5 text-red-500 dark:text-red-400">{error}</p>
+                                    <p className="text-[11.5px] font-semibold leading-5 text-red-500 dark:text-red-400">{error}</p>
                                 </div>
                             )}
                         </div>
 
                         <div className="flex shrink-0 px-8 pb-8 pt-5">
-                            <m.button type="button" whileTap={{ scale: 0.97 }} onClick={submit} disabled={loading || fetching || !selected} className="relative flex h-11 w-full items-center justify-center gap-2 rounded-full bg-indigo-600 text-[13px] font-bold text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-40">
-                                <BusyContent busy={loading}>
-                                    <UserPlus size={14} />
-                                    افزودن به تیم
-                                </BusyContent>
-                            </m.button>
+                            <motion.button type="button" whileTap={{ scale: 0.97 }} onClick={submit} disabled={loading || fetching || !selected} className="flex h-11 w-full items-center justify-center gap-2 rounded-full bg-indigo-600 text-[13px] font-bold text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-40">
+                                {loading ? <Loader2 size={15} className="animate-spin" /> : <UserPlus size={14} />}
+                                افزودن به تیم
+                            </motion.button>
                         </div>
-                    </m.div>
-                </div>
+                    </motion.div>
+                </motion.div>
             )}
         </AnimatePresence>,
         document.body

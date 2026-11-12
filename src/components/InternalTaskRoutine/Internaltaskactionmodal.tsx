@@ -1,9 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { BusyContent } from "@/components/ui/Button";
-import { AnimatePresence, m } from "framer-motion";
-import { Ban, Check, CheckCircle2, FileUp, X } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
+import { Ban, Check, CheckCircle2, FileUp, Loader, X } from "lucide-react";
 import { useTheme } from "next-themes";
 import type { InternalTask } from "./Types";
 import { cancelInternalTask, completeInternalTask } from "./Api";
@@ -91,24 +90,24 @@ export default function InternalTaskActionModal({
 
     return (
         <AnimatePresence>
-            <m.div
+            <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="backdrop-blur-layer fixed inset-0 z-[130] flex items-center justify-center px-4"
-                style={{ background: "rgba(0,0,0,0.5)" }}
+                className="fixed inset-0 z-[130] flex items-center justify-center px-4"
+                style={{ background: "rgba(0,0,0,0.5)", backdropFilter: "blur(3px)" }}
                 onClick={() => {
                     if (!loading) onClose();
                 }}
             >
-                <m.div
+                <motion.div
                     initial={{ scale: 0.94, y: 18 }}
                     animate={{ scale: 1, y: 0 }}
                     exit={{ scale: 0.94, y: 18 }}
                     transition={{ duration: 0.22, ease: "easeOut" }}
                     className="w-full max-w-[420px] overflow-hidden rounded-3xl border"
                     style={{
-                        background: isDark ? "#111827" : "#ffffff",
+                        background: isDark ? "#0f172a" : "#ffffff",
                         borderColor: isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.06)",
                         boxShadow: "0 24px 64px rgba(0,0,0,0.28)",
                     }}
@@ -207,7 +206,7 @@ export default function InternalTaskActionModal({
                                 className="flex-1 rounded-xl py-2.5 text-[12.5px] font-bold transition-colors disabled:opacity-40"
                                 style={{
                                     background: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.04)",
-                                    color: isDark ? "#9ca3af" : "#6b7280",
+                                    color: isDark ? "#94a3b8" : "#64748b",
                                 }}
                             >
                                 انصراف
@@ -215,21 +214,28 @@ export default function InternalTaskActionModal({
                             <button
                                 type="submit"
                                 disabled={loading}
-                                className="relative flex flex-1 items-center justify-center gap-2 rounded-xl py-2.5 text-[12.5px] font-bold text-white transition-opacity disabled:cursor-not-allowed disabled:opacity-40"
+                                className="flex flex-1 items-center justify-center gap-2 rounded-xl py-2.5 text-[12.5px] font-bold text-white transition-opacity disabled:cursor-not-allowed disabled:opacity-40"
                                 style={{
                                     background: config.buttonGradient,
                                     boxShadow: config.buttonShadow,
                                 }}
                             >
-                                <BusyContent busy={loading}>
+                                {loading ? (
+                                    <>
+                                        <Loader className="h-3.5 w-3.5 animate-spin" />
+                                        {config.loadingLabel}
+                                    </>
+                                ) : (
+                                    <>
                                         <Check size={13} />
                                         {config.submitLabel}
-                                    </BusyContent>
+                                    </>
+                                )}
                             </button>
                         </div>
                     </form>
-                </m.div>
-            </m.div>
+                </motion.div>
+            </motion.div>
         </AnimatePresence>
     );
 }

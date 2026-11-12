@@ -1,13 +1,21 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { WAREHOUSE_ENDPOINTS, fetchAll } from "@/lib/warehouseApi";
+import axiosInstance from "@/lib/axiosInstance";
+import { WAREHOUSE_ENDPOINTS } from "@/lib/warehouseApi";
 import { useCurrentEmployee } from "@/hooks/usecurrentemployee";
 import { useAuthStore } from "@/store/authStore";
 import type { ApiWarehouseStaff } from "@/types/warehouse";
-import { findEmployeeStaff, getEmployeeId } from "@/utils/warehouseEmployee";
+import {
+  extractList,
+  findEmployeeStaff,
+  getEmployeeId,
+} from "@/utils/warehouseEmployee";
 
-
+/**
+ * فقط سطح دسترسی کاربر به انبار را مشخص می‌کند
+ * (داده‌های انبار در هوک هر تب جداگانه لود می‌شوند).
+ */
 export default function useWarehouseAccess() {
   const { employee, loading: employeeLoading } = useCurrentEmployee();
   const userType = useAuthStore((state) => state.userType);
@@ -25,11 +33,10 @@ export default function useWarehouseAccess() {
     let alive = true;
     setStaffLoading(true);
 
-    
-    
-    fetchAll<ApiWarehouseStaff>(WAREHOUSE_ENDPOINTS.staff)
-      .then((list) => {
-        if (alive) setStaff(list);
+    axiosInstance
+      .get(WAREHOUSE_ENDPOINTS.staff)
+      .then((res) => {
+        if (alive) setStaff(extractList<ApiWarehouseStaff>(res.data));
       })
       .catch(() => {
         if (alive) setStaff([]);

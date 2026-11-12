@@ -1,9 +1,8 @@
 "use client";
 
-import { UserRound } from "lucide-react";
-import { Skeleton } from "@/components/ui/Skeleton";
+import { UserRound, Loader } from "lucide-react";
 import { useEmployeeInfo } from "@/hooks/useEmployeeInfo";
-import type { TaskAssignee, TaskRelationObject } from "./types";
+import type { TaskAssignee, TaskRelation, TaskRelationObject } from "./types";
 
 interface TaskAssigneesProps {
     ids: TaskAssignee | null | undefined;
@@ -72,10 +71,14 @@ function AssigneePill({ id, size }: { id: number; size: "sm" | "md" }) {
                 className={`flex ${iconCls} shrink-0 items-center justify-center rounded-full text-white`}
                 style={{ background: `linear-gradient(135deg, ${gradient[0]}, ${gradient[1]})` }}
             >
-                <UserRound size={11} />
+                {loading || !data ? (
+                    <Loader size={9} className="animate-spin" />
+                ) : (
+                    <UserRound size={11} />
+                )}
             </span>
             <span className={`${textCls} whitespace-nowrap font-bold text-gray-600 dark:text-gray-300`}>
-                {loading || !data ? <Skeleton className="h-2.5 w-14 animate-pulse motion-reduce:animate-none" /> : data.full_name}
+                {loading || !data ? "..." : data.full_name}
             </span>
         </div>
     );

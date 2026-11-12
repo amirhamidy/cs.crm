@@ -1,8 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { BusyContent } from "@/components/ui/Button";
-import { Send } from "lucide-react";
+import { Loader2, Send } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
 import { useAuthStore } from "@/store/authStore";
 
@@ -61,7 +60,7 @@ export default function CompanyNews({
             dir="rtl"
             className="w-full"
         >
-            <div className="overflow-hidden rounded-[2rem] border border-zinc-200/70 bg-white/80 p-4 shadow-[0_20px_60px_-25px_rgba(0,0,0,0.15)] dark:border-zinc-800 dark:bg-zinc-900/80 sm:p-6">
+            <div className="overflow-hidden rounded-[2rem] border border-zinc-200/70 bg-white/80 p-4 shadow-[0_20px_60px_-25px_rgba(0,0,0,0.15)] backdrop-blur-xl dark:border-zinc-800 dark:bg-zinc-900/80 sm:p-6">
                 <div className="relative">
                     <textarea
                         value={description}
@@ -93,10 +92,16 @@ export default function CompanyNews({
                         }
                         aria-label="ثبت یادداشت"
                         title="ثبت یادداشت"
-                        aria-busy={submitting}
-                        className={`absolute bottom-4 left-4 flex h-11 w-11 items-center justify-center rounded-full bg-blue-600 text-white shadow-lg shadow-blue-600/20 transition-all hover:bg-blue-700 hover:shadow-blue-600/30 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none `}
+                        className="absolute bottom-4 left-4 flex h-11 w-11 items-center justify-center rounded-full bg-blue-600 text-white shadow-lg shadow-blue-600/20 transition-all hover:bg-blue-700 hover:shadow-blue-600/30 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none"
                     >
-                        <BusyContent busy={submitting}><Send size={18} /></BusyContent>
+                        {submitting ? (
+                            <Loader2
+                                size={18}
+                                className="animate-spin"
+                            />
+                        ) : (
+                            <Send size={18} />
+                        )}
                     </button>
                 </div>
             </div>

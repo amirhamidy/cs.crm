@@ -1,16 +1,10 @@
 "use client";
-import { Skeleton } from "@/components/ui/Skeleton";
-import { FormSkeleton, ListSkeleton } from "@/components/ui/skeletons";
-import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
-import { AnimatePresence, m } from "framer-motion";
-import { Check, CheckSquare, Square, UserPlus, X } from "lucide-react";
+import { FormEvent, useEffect, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import { Check, CheckSquare, Loader, Square, UserPlus, Warehouse as WarehouseIcon, X } from "lucide-react";
 import { useTheme } from "next-themes";
 import axiosInstance from "@/lib/axiosInstance";
-import { fetchPage } from "@/lib/api";
-import { useInfiniteOptions, type InfiniteFetcher } from "@/hooks/useInfiniteOptions";
-import { WAREHOUSE_ENDPOINTS, fetchAll } from "@/lib/warehouseApi";
 
-import { BusyContent } from "@/components/ui/Button";
 interface Employee {
     id: number;
     full_name: string;
@@ -38,62 +32,39 @@ export default function AddWarehouseStaffModal({
     const { resolvedTheme } = useTheme();
     const isDark = resolvedTheme === "dark";
 
+    const [employees, setEmployees] = useState<Employee[]>([]);
     const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
 
     const [selectedEmployee, setSelectedEmployee] = useState<number | null>(null);
     const [selectedWarehouses, setSelectedWarehouses] = useState<number[]>([]);
 
-    const [fetchingWarehouses, setFetchingWarehouses] = useState(false);
+    const [fetching, setFetching] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
 
-    const listRef = useRef<HTMLDivElement>(null);
-
-    
-    const employeeFetcher = useCallback<InfiniteFetcher<Employee>>(
-        (params, signal) =>
-            fetchPage<Employee>("/accounts/api/v1/employee/list/", params, signal),
-        []
-    );
-    const {
-        items: employees,
-        loading: fetching,
-        loadingMore,
-        hasMore,
-        loadMore,
-    } = useInfiniteOptions<Employee>(employeeFetcher, {
-        enabled: isOpen,
-        pageSize: 25,
-    });
-
-    const onListScroll = () => {
-        const element = listRef.current;
-        if (!element || !hasMore || loadingMore) return;
-        if (element.scrollTop + element.clientHeight >= element.scrollHeight - 80) {
-            loadMore();
-        }
-    };
-
     useEffect(() => {
-        if (!isOpen) return;
-        let cancelled = false;
-        setFetchingWarehouses(true);
-        fetchAll<Warehouse>(WAREHOUSE_ENDPOINTS.warehouses)
-            .then((warehouseList) => {
-                if (!cancelled) setWarehouses(warehouseList);
-            })
-            .catch(() => {
-                if (!cancelled) setWarehouses([]);
-            })
-            .finally(() => {
-                if (!cancelled) setFetchingWarehouses(false);
-            });
-        return () => {
-            cancelled = true;
-        };
+        if (isOpen) {
+            fetchInitialData();
+        }
     }, [isOpen]);
 
-    const initialLoading = fetchingWarehouses || (fetching && employees.length === 0);
+    const fetchInitialData = async () => {
+        setFetching(true);
+        try {
+            const [empRes, whRes] = await Promise.all([
+                axiosInstance.get("/accounts/api/v1/employee/list/"),
+                axiosInstance.get("/warehouse/api/v1/warehouse/"),
+            ]);
+
+            setEmployees(Array.isArray(empRes.data) ? empRes.data : []);
+            setWarehouses(Array.isArray(whRes.data) ? whRes.data : []);
+        } catch {
+            setEmployees([]);
+            setWarehouses([]);
+        } finally {
+            setFetching(false);
+        }
+    };
 
     const toggleWarehouse = (id: number) => {
         setSelectedWarehouses((prev) =>
@@ -137,30 +108,31 @@ export default function AddWarehouseStaffModal({
         onClose();
     };
 
+    if (!isOpen) return null;
 
     return (
         <AnimatePresence>
-{isOpen && (
-            <m.div
+            <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="backdrop-blur-layer fixed inset-0 z-50 flex items-center justify-center px-4"
+                className="fixed inset-0 z-50 flex items-center justify-center px-4"
                 style={{
                     background: "rgba(0,0,0,0.45)",
+                    backdropFilter: "blur(3px)",
                 }}
                 onClick={handleClose}
             >
-                <m.div
+                <motion.div
                     initial={{ opacity: 0, y: 16 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: 16 }}
                     transition={{ duration: 0.35, ease: "easeOut" }}
-                    className="w-full max-w-md overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-xl dark:border-white/[0.06] dark:bg-[#111827]"
+                    className="w-full max-w-md overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-xl dark:border-white/[0.06] dark:bg-[#0f172a]"
                     onClick={(e) => e.stopPropagation()}
                     dir="rtl"
                 >
-                    
+                    {/* Header */}
                     <div className="flex items-center justify-between px-8 pb-5 pt-7">
                         <div className="flex items-center gap-2.5">
                             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50 dark:bg-blue-500/10">
@@ -186,19 +158,20 @@ export default function AddWarehouseStaffModal({
                     </div>
 
                     <form onSubmit={handleSubmit} className="flex flex-col gap-4 px-8 pb-8">
-                        {initialLoading ? (
-                            <FormSkeleton fields={3} />
+                        {fetching ? (
+                            <div className="flex flex-col items-center justify-center py-10 text-gray-400">
+                                <Loader size={22} className="animate-spin mb-2 text-blue-500" />
+                                <span className="text-[12px]">در حال دریافت اطلاعات...</span>
+                            </div>
                         ) : (
                             <>
-                                
+                                {/* بخش ۱: انتخاب کارمند (تک‌انتخابی) */}
                                 <div>
                                     <label className="mb-2 block text-[11.5px] font-bold text-gray-500 dark:text-gray-400">
                                         انتخاب کارمند <span className="text-red-500">*</span>
                                     </label>
-                                    <div ref={listRef} onScroll={onListScroll} className="max-h-[140px] overflow-y-auto space-y-1.5 pr-0.5 scrollbar-thin">
-                                        {fetching && employees.length === 0 ? (
-                                            <ListSkeleton rows={3} />
-                                        ) : employees.length === 0 ? (
+                                    <div className="max-h-[140px] overflow-y-auto space-y-1.5 pr-0.5 scrollbar-thin">
+                                        {employees.length === 0 ? (
                                             <p className="text-[11px] text-gray-400 py-2">کارمندی یافت نشد</p>
                                         ) : (
                                             employees.map((emp) => {
@@ -225,8 +198,8 @@ export default function AddWarehouseStaffModal({
                                                                     ? "#a5b4fc"
                                                                     : "#6366f1"
                                                                 : isDark
-                                                                    ? "#9ca3af"
-                                                                    : "#4b5563",
+                                                                    ? "#94a3b8"
+                                                                    : "#475569",
                                                         }}
                                                     >
                                                         <span className="font-semibold">{emp.full_name}</span>
@@ -235,18 +208,10 @@ export default function AddWarehouseStaffModal({
                                                 );
                                             })
                                         )}
-                                        {loadingMore && (
-                                            <Skeleton className="mx-auto h-5 w-20 rounded-lg" />
-                                        )}
-                                        {!loadingMore && hasMore && employees.length > 0 && (
-                                            <button type="button" onClick={loadMore} className="w-full py-1.5 text-center text-[10.5px] font-bold text-blue-500">
-                                                نمایش بیشتر
-                                            </button>
-                                        )}
                                     </div>
                                 </div>
 
-                                
+                                {/* بخش ۲: انتخاب انبارها (چندانتخابی) */}
                                 <div>
                                     <div className="flex items-center justify-between mb-2">
                                         <label className="block text-[11.5px] font-bold text-gray-500 dark:text-gray-400">
@@ -287,8 +252,8 @@ export default function AddWarehouseStaffModal({
                                                                     ? "#93c5fd"
                                                                     : "#2563eb"
                                                                 : isDark
-                                                                    ? "#9ca3af"
-                                                                    : "#4b5563",
+                                                                    ? "#94a3b8"
+                                                                    : "#475569",
                                                         }}
                                                     >
                                                         <div className="flex items-center gap-2">
@@ -311,23 +276,24 @@ export default function AddWarehouseStaffModal({
 
                         {error && <p className="text-[11.5px] font-semibold text-red-500">{error}</p>}
 
-                        <m.button
+                        <motion.button
                             type="submit"
                             disabled={loading || fetching || !selectedEmployee || selectedWarehouses.length === 0}
                             whileTap={{ scale: 0.98 }}
-                            className="relative mt-1 flex items-center justify-center gap-2 rounded-2xl bg-blue-600 py-3 text-[13px] font-bold text-white shadow-md shadow-blue-500/20 transition-colors hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="mt-1 flex items-center justify-center gap-2 rounded-2xl bg-blue-600 py-3 text-[13px] font-bold text-white shadow-md shadow-blue-500/20 transition-colors hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            <BusyContent busy={loading}>
+                            {loading ? (
+                                <Loader size={16} className="animate-spin" />
+                            ) : (
                                 <>
-                                        <Check size={15} />
-                                        ثبت انباردار
-                                    </>
-                            </BusyContent>
-                        </m.button>
+                                    <Check size={15} />
+                                    ثبت انباردار
+                                </>
+                            )}
+                        </motion.button>
                     </form>
-                </m.div>
-            </m.div>
-        )}
-</AnimatePresence>
+                </motion.div>
+            </motion.div>
+        </AnimatePresence>
     );
 }

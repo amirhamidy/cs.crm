@@ -1,14 +1,9 @@
 "use client";
 
-import PageHeader, { HEADER_BTN_PRIMARY } from "@/components/ui/PageHeader";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import Pagination from "@/components/ui/Pagination";
-import { usePaginatedList } from "@/hooks/usePaginatedList";
-import { internalTasksApi } from "@/lib/api";
-import { Inbox, LayoutGrid } from "lucide-react";
-import TicketBoardSkeleton from "./TicketBoardSkeleton";
+import { useEffect, useMemo, useState } from "react";
+import { Inbox, LayoutGrid, Loader } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
-import { fetchEmployeeList } from "./Api";
+import { fetchEmployeeList, fetchInternalTasks } from "./Api";
 import type { EmployeeListItem, InternalTask } from "./types";
 import ReceivedTaskCard from "./Receivedtaskcard";
 
@@ -16,9 +11,6 @@ function normalizeDateValue(value: unknown): string | null {
     if (!value) return null;
     if (typeof value === "string") return value.trim() || null;
     if (value instanceof Date && !Number.isNaN(value.getTime())) return value.toISOString();
-    if (typeof value === "object" && value !== null && "deadline" in value) {
-        return normalizeDateValue((value as { deadline?: unknown }).deadline);
-    }
     return null;
 }
 
@@ -40,7 +32,7 @@ function normalizeTask(item: unknown): InternalTask | null {
         created_by: typeof task.created_by === "string" ? task.created_by.trim() : "",
         created_at: typeof task.created_at === "string" && task.created_at.trim() ? task.created_at : new Date().toISOString(),
         updated_at: typeof task.updated_at === "string" ? task.updated_at : new Date().toISOString(),
-        started_at: normalizeDateValue(task.started_at ?? (task.deadline as unknown as { started_at?: unknown } | null)?.started_at),
+        started_at: normalizeDateValue(task.started_at),
         deadline: normalizeDateValue(task.deadline),
         completed_at: typeof task.completed_at === "string" || task.completed_at === null ? task.completed_at : null,
         assigned_to: Array.isArray(task.assigned_to)
@@ -65,24 +57,29 @@ function normalizeTasks(data: unknown) {
 
 export default function ReceivedTicketsBoard() {
     const { userId } = useAuthStore();
+    const [tasks, setTasks] = useState<InternalTask[]>([]);
     const [employees, setEmployees] = useState<EmployeeListItem[]>([]);
-    const list = usePaginatedList(
-        (params, signal) => internalTasksApi.page(params, signal),
-        { pageSize: 12 },
-    );
-    const [local, setLocal] = useState<Map<number, InternalTask>>(new Map());
-    const tasks = useMemo(() => normalizeTasks(list.data), [list.data]);
-    const loading = list.loading && list.data.length === 0;
-    const error = list.error ? "دریافت تیکت‌ها با خطا مواجه شد." : null;
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
+    const loadTasks = async () => {
+        try {
+            setLoading(true);
+            setError(null);
+            const [tasksResponse, employeesResponse] = await Promise.all([fetchInternalTasks(), fetchEmployeeList()]);
+            setTasks(normalizeTasks(tasksResponse.data));
+            setEmployees(Array.isArray(employeesResponse.data) ? employeesResponse.data : []);
+        } catch {
+            setTasks([]);
+            setEmployees([]);
+            setError("دریافت تیکت‌ها با خطا مواجه شد.");
+        } finally {
+            setLoading(false);
+        }
+    };
 
     useEffect(() => {
-        setLocal(new Map());
-    }, [list.data]);
-
-    useEffect(() => {
-        fetchEmployeeList()
-            .then(res => setEmployees(Array.isArray(res.data) ? res.data : []))
-            .catch(() => setEmployees([]));
+        void loadTasks();
     }, []);
 
     const employeeNames = useMemo(() => {
@@ -96,7 +93,6 @@ export default function ReceivedTicketsBoard() {
     const receivedTasks = useMemo(() => {
         if (!userId) return [];
         return tasks
-            .map(task => local.get(task.id) ?? task)
             .filter(task =>
                 task.status === "in_progress" &&
                 task.assigned_to.some(assigned => Number(assigned.id) === Number(userId))
@@ -113,34 +109,38 @@ export default function ReceivedTicketsBoard() {
                     };
                 }),
             }));
-    }, [tasks, local, userId, employees, employeeNames]);
+    }, [tasks, userId, employees, employeeNames]);
 
-    const handleUpdated = useCallback((updatedTask: InternalTask) => {
-        setLocal(previous => new Map(previous).set(updatedTask.id, updatedTask));
-        list.refetch();
-    }, [list.refetch]);
+    const handleUpdated = (updatedTask: InternalTask) => {
+        setTasks(previous => previous.map(task => task.id === updatedTask.id ? { ...task, ...updatedTask } : task));
+    };
 
     if (loading) {
-        return <TicketBoardSkeleton count={4} />;
+        return (
+            <div className="flex h-64 items-center justify-center">
+                <Loader size={22} className="animate-spin text-indigo-500" />
+            </div>
+        );
     }
 
     return (
         <div dir="rtl" className="flex flex-col gap-5">
-            <PageHeader
-                icon={Inbox}
-                title="تیکت‌های دریافت شده"
-                subtitle={`${list.count} تیکت`}
-                search={{ value: list.search, onChange: list.setSearch, placeholder: "جستجو بر اساس عنوان، شماره یا نام فرد" }}
-                onRefresh={() => list.refetch()}
-                refreshing={list.loading}
-            />
+            <div className="flex items-center gap-2.5">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-indigo-500/10">
+                    <Inbox size={17} className="text-indigo-500" />
+                </div>
+                <div>
+                    <h3 className="text-[14px] font-extrabold text-gray-900 dark:text-white">تیکت‌های دریافت شده</h3>
+                    <p className="text-[11px] text-gray-400 dark:text-gray-600">{receivedTasks.length} تیکت</p>
+                </div>
+            </div>
 
             {error && (
                 <div className="flex items-center justify-between gap-3 rounded-2xl border border-red-500/20 bg-red-500/5 px-4 py-3">
                     <p className="text-[12px] font-semibold text-red-500">{error}</p>
                     <button
                         type="button"
-                        onClick={() => list.refetch()}
+                        onClick={() => void loadTasks()}
                         className="rounded-xl bg-red-500/10 px-3 py-1.5 text-[11px] font-bold text-red-500 transition-colors hover:bg-red-500/20"
                     >
                         تلاش مجدد
@@ -165,7 +165,6 @@ export default function ReceivedTicketsBoard() {
                     ))}
                 </div>
             )}
-            {list.totalPages > 1 && <Pagination page={list.page} totalPages={list.totalPages} onChange={list.setPage} />}
         </div>
     );
 }

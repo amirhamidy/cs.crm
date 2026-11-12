@@ -1,12 +1,33 @@
 "use client";
 
-import { ComponentType, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ComponentType, useCallback, useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { AnimatePresence, m } from "framer-motion";
-import PageHeader, { HEADER_BTN_BASE, HEADER_BTN_SECONDARY } from "@/components/ui/PageHeader";
-import { BellRing, Boxes, ClipboardList, Archive, FileText, Package, RefreshCw, PackagePlus, PackageSearch, Plus, ReceiptText, ShieldCheck, Power, PowerOff, ShieldAlert, ShoppingBag, UploadCloud, UsersRound, UserPlus } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
+import {
+    BellRing,
+    Boxes,
+    ClipboardList,
+    Archive,
+    FileText,
+    LayoutGrid,
+    Loader2,
+    Package,
+    PackagePlus,
+    PackageSearch,
+    Plus,
+    ReceiptText,
+    ShieldCheck,
+    Power,
+    PowerOff,
+    ShieldAlert,
+    ShoppingBag,
+    UploadCloud,
+    UsersRound,
+    UserPlus,
+} from "lucide-react";
 import { useTheme } from "next-themes";
 
+import WarehouseOverview from "@/components/admin/warehouse/Warehouseoverview";
 import AddCategoryModal from "@/components/admin/warehouse/AddCategoryModal";
 import WarehouseCategoryCard from "@/components/admin/warehouse/WarehouseCategoryCard";
 import WarehouseStaffCard, { type WarehouseStaff } from "@/components/admin/warehouse/WarehouseStaffCard";
@@ -14,33 +35,34 @@ import AddWarehouseStaffModal from "@/components/admin/warehouse/AddWarehouseSta
 import StockLimitsModal from "@/components/admin/warehouse/StockLimitsModal";
 import { WarehouseStatusModal } from "@/components/admin/warehouse/WarehouseFormModals";
 import WarehouseTaskArchiveCard from "@/components/admin/warehouse/WarehouseTaskArchiveCard";
-import { DeadlineCard, Pagination, StockCard, muted, cardBg, cardShadow } from "@/components/admin/warehouse/WarehouseCards";
+import {
+    DeadlineCard,
+    Pagination,
+    StockCard,
+    muted,
+    cardBg,
+    cardShadow,
+} from "@/components/admin/warehouse/WarehouseCards";
 import CreateOrderTaskModal from "@/components/user/warehouse/CreateOrderTaskModal";
 import WarehouseEmployeeTransactionCard from "@/components/user/warehouse/WarehouseEmployeeTransactionCard";
-import dynamic from "next/dynamic";
 import WarehouseEmployeeProductCard from "@/components/user/warehouse/WarehouseEmployeeProductCard";
-
-
-const WarehouseEmployeeProductWizardModal = dynamic(() => import("@/components/user/warehouse/WarehouseEmployeeProductWizardModal"), {
-    ssr: false,
-    loading: () => null,
-});
+import WarehouseEmployeeProductWizardModal from "@/components/user/warehouse/WarehouseEmployeeProductWizardModal";
 import WarehouseEmployeeBulkImportModal from "@/components/admin/warehouse/WarehouseEmployeeBulkImportModal";
 import WarehouseEmployeeTaskCard from "@/components/user/warehouse/WarehouseEmployeeTaskCard";
 import WarehouseEmployeeOrderTaskCard from "@/components/user/warehouse/WarehouseEmployeeOrderTaskCard";
 import WarehouseEmployeeStockLedger from "@/components/user/warehouse/Warehouseemployeestockledger";
 import OrderInvoiceCard from "@/components/user/warehouse/OrderInvoiceCard";
 import OrderInvoiceModal from "@/components/user/warehouse/OrderInvoiceModal";
-import { Skeleton } from "@/components/ui/Skeleton";
-import WarehouseTabSkeleton from "@/components/admin/warehouse/WarehouseTabSkeleton";
 import ShelfFilterBar from "@/components/user/warehouse/ShelfFilterBar";
 import { useWarehouseShelves } from "@/hooks/useWarehouseShelves";
-import { buildSalesInvoices, getOrderTaskTitle } from "@/utils/warehouseEmployee";
+import { useShelfProducts } from "@/hooks/useShelfProducts";
+import { buildSalesInvoices, getOrderTaskTitle, paginate } from "@/utils/warehouseEmployee";
 import type { SalesInvoice } from "@/utils/warehouseEmployee";
 import useWarehouseAccess from "@/hooks/useWarehouseAccess";
 import useWarehouses from "@/hooks/useWarehouses";
 import useWarehouseTab from "@/hooks/useWarehouseTab";
 import type { WarehouseTab as Tab } from "@/hooks/useWarehouseTab";
+import { PAGE_SIZE } from "@/lib/warehouseApi";
 import type { ApiStockInfo, ApiWarehouseTask } from "@/types/warehouse";
 
 interface AdminCategory {
@@ -49,6 +71,7 @@ interface AdminCategory {
 }
 
 const TABS: Array<[Tab, string, ComponentType<{ size?: number }>]> = [
+    ["overview", "نمای کلی", LayoutGrid],
     ["products", "محصولات", ShoppingBag],
     ["tasks", "وظایف انبار", ClipboardList],
     ["stock", "موجودی انبار", Boxes],
@@ -114,14 +137,6 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
 
     const tabAllowed = tab === "staff" ? isAdmin : hasFullWarehouseAccess || LIMITED_TABS.includes(tab);
 
-    const SEARCHABLE_TABS: Tab[] = ["products", "stock", "tasks", "task-archive", "transactions", "orders", "invoices"];
-    const searchable = SEARCHABLE_TABS.includes(tab);
-    const [searchInput, setSearchInput] = useState("");
-    const [search, setSearch] = useState("");
-    useEffect(() => {
-        const t = setTimeout(() => setSearch(searchInput.trim().replace(/\s+/g, " ")), 300);
-        return () => clearTimeout(t);
-    }, [searchInput]);
     const { data, setData, loading, refreshing, error, reload } = useWarehouseTab({
         enabled:
             ready &&
@@ -136,8 +151,6 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
         page: currentPage,
         hasFullAccess: hasFullWarehouseAccess,
         employeeId,
-        shelfCode,
-        search: searchable ? search : "",
     });
 
     const buildUrl = useCallback(
@@ -150,16 +163,6 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
         () => (shelfCode ? `&shelf=${encodeURIComponent(shelfCode)}` : ""),
         [shelfCode],
     );
-
-    const firstSearchRun = useRef(true);
-    useEffect(() => {
-        if (firstSearchRun.current) {
-            firstSearchRun.current = false;
-            return;
-        }
-        if (currentPage > 1) router.push(buildUrl(tab, 1, tab === "products" ? shelfQuery : ""));
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [search]);
 
     const goToPage = useCallback(
         (page: number) => router.push(buildUrl(tab, page, tab === "products" ? shelfQuery : "")),
@@ -192,13 +195,17 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
 
     useEffect(() => {
         if (ready && warehouseId !== null && !tabAllowed) {
-            router.replace(buildUrl("stock"));
+            router.replace(buildUrl(isAdmin ? "overview" : "stock"));
         }
     }, [ready, warehouseId, tabAllowed, isAdmin, router, buildUrl]);
 
     const salesInvoices = useMemo(() => buildSalesInvoices(data.archived), [data.archived]);
+    const paginatedInvoices = useMemo(
+        () => paginate(salesInvoices, currentPage, PAGE_SIZE),
+        [salesInvoices, currentPage],
+    );
 
-    const totalPages = data.totalPages;
+    const totalPages = tab === "invoices" ? paginatedInvoices.totalPages : data.totalPages;
 
     useEffect(() => {
         if (!loading && warehouseId !== null && currentPage > totalPages) {
@@ -226,8 +233,15 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
         [products],
     );
 
-    
-    const pendingQualityCount = data.pendingQualityCount;
+    const qualityTasks = useMemo(
+        () => taskItems.filter((task) => task.quality_control_id !== null),
+        [taskItems],
+    );
+
+    const pendingQualityTasks = useMemo(
+        () => qualityTasks.filter((task) => task.status === "pending"),
+        [qualityTasks],
+    );
 
     const shelfFilterActive = tab === "products" && shelfCode !== "";
 
@@ -236,7 +250,16 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
         shelfReloadKey,
     );
 
-    const paginatedProducts = { items: products, totalPages: data.totalPages };
+    const shelfProducts = useShelfProducts({
+        shelfCode,
+        page: currentPage,
+        enabled: shelfFilterActive && hasFullWarehouseAccess && ready,
+        reloadKey: shelfReloadKey,
+    });
+
+    const paginatedProducts = shelfFilterActive
+        ? { items: shelfProducts.items, totalPages: shelfProducts.totalPages }
+        : { items: products, totalPages: data.totalPages };
     const paginatedTasks = { items: taskItems, totalPages: data.totalPages };
     const paginatedStock = { items: stockInfos, totalPages: data.totalPages };
     const paginatedTransactions = { items: transactions, totalPages: data.totalPages };
@@ -331,27 +354,14 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
         [isDark],
     );
 
-    const pageBg = isDark ? "#111827" : "#f9fafb";
+    const pageBg = isDark ? "#0f172a" : "#f8fafc";
     const cardBorder = isDark ? "rgba(255,255,255,0.06)" : "rgba(15,23,42,0.06)";
     const iconBg = isDark ? "rgba(99,102,241,0.14)" : "rgba(99,102,241,0.08)";
 
     if (!ready) {
         return (
-            <div dir="rtl" className="min-h-screen p-4" style={{ background: pageBg }}>
-                <div aria-hidden="true" className="mb-6 flex animate-pulse flex-wrap items-center justify-between gap-3">
-                    <div className="flex items-start gap-3">
-                        <Skeleton className="h-10 w-10 shrink-0 rounded-2xl" />
-                        <div className="space-y-2">
-                            <Skeleton className="h-4 w-32 rounded-md" />
-                            <Skeleton className="h-3 w-64 max-w-full rounded-md" />
-                        </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <Skeleton className="h-10 w-24 rounded-2xl" />
-                        <Skeleton className="h-10 w-28 rounded-2xl" />
-                    </div>
-                </div>
-                <WarehouseTabSkeleton tab={tab} count={8} />
+            <div dir="rtl" className="flex min-h-screen items-center justify-center" style={{ background: pageBg }}>
+                <Loader2 size={24} className="animate-spin" style={{ color: "#6366f1" }} />
             </div>
         );
     }
@@ -398,14 +408,14 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
                     <p className="mt-2 text-[11.5px] leading-7 text-gray-500 dark:text-gray-400">
                         انبار «{warehouse?.name}» توسط مدیر غیرفعال شده است و فعلاً امکان استفاده از آن وجود ندارد.
                     </p>
-                    <m.button
+                    <motion.button
                         type="button"
                         whileTap={{ scale: 0.97 }}
                         onClick={() => router.push(basePath)}
                         className="mt-6 flex h-11 w-full items-center justify-center rounded-2xl bg-indigo-600 text-[12.5px] font-bold text-white transition-colors hover:bg-indigo-500"
                     >
                         بازگشت به انبارها
-                    </m.button>
+                    </motion.button>
                 </div>
             </div>
         );
@@ -418,7 +428,7 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
         deadlines: tab === "deadlines" ? data.total : 0,
         categories: tab === "categories" ? data.total : 0,
         staff: tab === "staff" ? data.total : 0,
-        invoices: tab === "invoices" ? data.total : 0,
+        invoices: tab === "invoices" ? salesInvoices.length : 0,
         "task-archive": 0,
     };
 
@@ -431,38 +441,69 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
     const sectionHeaderClass = "flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between";
     const titleClass = "text-[14px] font-extrabold text-gray-900 dark:text-white";
     const subtitleClass = "mt-1 text-[11.5px] text-gray-500 dark:text-gray-400";
-    const tabSkeleton = <WarehouseTabSkeleton tab={tab} count={8} />;
+    const spinner = (
+        <div className="flex items-center justify-center py-20">
+            <Loader2 size={22} className="animate-spin" style={{ color: "#6366f1" }} />
+        </div>
+    );
 
     return (
         <div dir="rtl" className="flex min-h-screen flex-col gap-6 p-6">
-            <PageHeader
-                icon={Boxes}
-                title={warehouse ? `انبار ${warehouse.name}` : "انبار"}
-                subtitle="مدیریت وظایف، محصولات، موجودی و فرآیندهای ورود و خروج کالا"
-                search={searchable ? { value: searchInput, onChange: setSearchInput, placeholder: "جستجو..." } : undefined}
-                onRefresh={refresh}
-                refreshing={refreshing}
-                leading={
-                    <>
-                        <button type="button" onClick={() => router.push(basePath)} className={HEADER_BTN_SECONDARY}>
-                            تغییر انبار
-                        </button>
-                        {isAdmin && warehouse && (
-                            <button
-                                type="button"
-                                onClick={() => setStatusOpen(true)}
-                                className={`${HEADER_BTN_BASE} px-3.5 ${warehouse.is_active
-                                    ? "text-amber-500 hover:bg-amber-500/10"
-                                    : "text-emerald-500 hover:bg-emerald-500/10"
-                                    }`}
-                            >
-                                {warehouse.is_active ? <PowerOff size={14} /> : <Power size={14} />}
-                                {warehouse.is_active ? "غیرفعال‌سازی انبار" : "فعال‌سازی انبار"}
-                            </button>
-                        )}
-                    </>
-                }
-            />
+            <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-start gap-3">
+                    <div
+                        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl"
+                        style={{ background: iconBg }}
+                    >
+                        <Boxes size={18} className="text-indigo-500" />
+                    </div>
+                    <div>
+                        <h1 className="text-[15px] font-extrabold text-gray-900 dark:text-white">
+                            {warehouse ? `انبار ${warehouse.name}` : "انبار"}
+                        </h1>
+                        <p className="mt-0.5 text-[11.5px] text-gray-500 dark:text-gray-400">
+                            مدیریت وظایف، محصولات، موجودی و فرآیندهای ورود و خروج کالا
+                        </p>
+                    </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                    <motion.button
+                        type="button"
+                        whileTap={{ scale: 0.96 }}
+                        onClick={() => router.push(basePath)}
+                        className="flex h-10 items-center justify-center gap-2 rounded-2xl px-4 text-[12.5px] font-bold text-indigo-500 transition-colors hover:bg-indigo-500/10"
+                    >
+                        تغییر انبار
+                    </motion.button>
+
+                    {isAdmin && warehouse && (
+                        <motion.button
+                            type="button"
+                            whileTap={{ scale: 0.96 }}
+                            onClick={() => setStatusOpen(true)}
+                            className={`flex h-10 items-center justify-center gap-2 rounded-2xl px-4 text-[12.5px] font-bold transition-colors ${warehouse.is_active
+                                ? "text-amber-500 hover:bg-amber-500/10"
+                                : "text-emerald-500 hover:bg-emerald-500/10"
+                                }`}
+                        >
+                            {warehouse.is_active ? <PowerOff size={14} /> : <Power size={14} />}
+                            {warehouse.is_active ? "غیرفعال‌سازی انبار" : "فعال‌سازی انبار"}
+                        </motion.button>
+                    )}
+
+                    <motion.button
+                        type="button"
+                        whileTap={{ scale: 0.96 }}
+                        onClick={refresh}
+                        disabled={refreshing}
+                        className="flex h-10 items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-4 text-[12.5px] font-bold text-white transition-colors hover:bg-indigo-700 disabled:opacity-50"
+                    >
+                        <Loader2 size={15} className={refreshing ? "animate-spin" : ""} />
+                        بروزرسانی
+                    </motion.button>
+                </div>
+            </div>
 
             {isAdmin && warehouseInactive && (
                 <div className="flex items-center gap-2.5 rounded-2xl border border-amber-500/20 bg-amber-500/10 px-4 py-3 text-[11.5px] font-bold text-amber-600 dark:text-amber-400">
@@ -479,14 +520,14 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
                     const active = tab === id;
                     const count = counts[id] ?? 0;
                     return (
-                        <button disabled={archiveLoading}
+                        <button
                             key={id}
                             type="button"
                             onClick={() => goToTab(id)}
-                            className={`relative flex items-center gap-1.5 rounded-xl px-4 py-2 text-[12px] font-extrabold `}
+                            className="relative flex items-center gap-1.5 rounded-xl px-4 py-2 text-[12px] font-extrabold"
                             style={{
                                 background: active ? "linear-gradient(135deg,#6366f1,#8b5cf6)" : "transparent",
-                                color: active ? "#fff" : isDark ? "#9ca3af" : "#4b5563",
+                                color: active ? "#fff" : isDark ? "#94a3b8" : "#475569",
                                 boxShadow: active ? "0 4px 12px rgba(99,102,241,.25)" : "none",
                             }}
                         >
@@ -497,12 +538,12 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
                                     {count}
                                 </span>
                             )}
-                            {id === "tasks" && pendingQualityCount > 0 && (
+                            {id === "tasks" && pendingQualityTasks.length > 0 && (
                                 <span
                                     className="flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[9px] text-white"
                                     style={{ background: "#8b5cf6" }}
                                 >
-                                    {pendingQualityCount}
+                                    {pendingQualityTasks.length}
                                 </span>
                             )}
                         </button>
@@ -524,16 +565,55 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
             )}
 
             {loading ? (
-                tabSkeleton
+                spinner
             ) : (
                 <AnimatePresence mode="wait">
-                    <m.div
+                    <motion.div
                         key={`${tab}-${currentPage}`}
                         initial={{ opacity: 0, y: 8 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -8 }}
                         transition={{ duration: 0.2 }}
                     >
+                        {tab === "overview" && hasFullWarehouseAccess && (
+                            <div className="space-y-6">
+                                <WarehouseOverview
+                                    products={products}
+                                    stockInfos={stockInfos}
+                                    transactions={transactions}
+                                    tasks={taskItems}
+                                    orderTasks={orderTasks}
+                                />
+
+                                {pendingQualityTasks.length > 0 && (
+                                    <div
+                                        className="rounded-3xl border p-4"
+                                        style={{
+                                            background: isDark ? "rgba(139,92,246,.06)" : "rgba(139,92,246,.04)",
+                                            borderColor: "rgba(139,92,246,.12)",
+                                        }}
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            <div
+                                                className="flex h-10 w-10 items-center justify-center rounded-xl"
+                                                style={{ background: "rgba(139,92,246,.1)", color: "#8b5cf6" }}
+                                            >
+                                                <ShieldCheck size={18} />
+                                            </div>
+                                            <div>
+                                                <p className="text-[12px] font-extrabold text-gray-900 dark:text-white">
+                                                    وظایف کنترل کیفیت
+                                                </p>
+                                                <p className="mt-1 text-[10.5px] text-gray-500 dark:text-gray-400">
+                                                    {pendingQualityTasks.length} وظیفه کنترل کیفیت در انتظار انجام است
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
                         {tab === "products" && hasFullWarehouseAccess && (
                             <div className="space-y-5">
                                 <div className={sectionHeaderClass}>
@@ -544,7 +624,7 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
 
                                     <div className="flex flex-wrap items-center gap-2">
                                         {!isAdmin && myStaff && (
-                                            <m.button
+                                            <motion.button
                                                 type="button"
                                                 whileTap={{ scale: 0.97 }}
                                                 onClick={() => setBulkImportOpen(true)}
@@ -552,10 +632,10 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
                                             >
                                                 <UploadCloud size={16} />
                                                 ثبت گروهی محصولات
-                                            </m.button>
+                                            </motion.button>
                                         )}
 
-                                        <m.button
+                                        <motion.button
                                             type="button"
                                             whileTap={{ scale: 0.97 }}
                                             onClick={() => setProductWizardOpen(true)}
@@ -563,7 +643,7 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
                                         >
                                             <PackagePlus size={16} />
                                             افزودن محصول
-                                        </m.button>
+                                        </motion.button>
                                     </div>
                                 </div>
 
@@ -573,6 +653,12 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
                                     onChange={handleShelfChange}
                                     loading={shelvesLoading}
                                 />
+
+                                {shelfFilterActive && shelfProducts.error && (
+                                    <p className="text-center text-[12px] font-semibold text-red-500">
+                                        {shelfProducts.error}
+                                    </p>
+                                )}
 
                                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                                     {paginatedProducts.items.length
@@ -593,7 +679,9 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
                                         ))
                                         : renderEmpty(
                                             shelfFilterActive
-                                                ? "محصولی در این قفسه یافت نشد"
+                                                ? shelfProducts.loading
+                                                    ? "در حال دریافت محصولات قفسه..."
+                                                    : "محصولی در این قفسه یافت نشد"
                                                 : "محصولی برای نمایش وجود ندارد",
                                         )}
                                 </div>
@@ -616,7 +704,7 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
                                     </div>
 
                                     <div className="flex flex-wrap items-center gap-2">
-                                        {hasFullWarehouseAccess && pendingQualityCount > 0 && (
+                                        {hasFullWarehouseAccess && qualityTasks.length > 0 && (
                                             <div
                                                 className="flex items-center gap-2 rounded-xl px-3 py-2"
                                                 style={{
@@ -626,12 +714,12 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
                                             >
                                                 <ShieldCheck size={15} />
                                                 <span className="text-[10.5px] font-extrabold">
-                                                    {pendingQualityCount} وظیفه کنترل کیفیت در انتظار
+                                                    {qualityTasks.length} وظیفه کنترل کیفیت
                                                 </span>
                                             </div>
                                         )}
 
-                                        <m.button
+                                        <motion.button
                                             type="button"
                                             whileTap={{ scale: 0.97 }}
                                             onClick={() => setCreateOrderTaskOpen(true)}
@@ -639,7 +727,7 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
                                         >
                                             <Plus size={15} />
                                             ثبت وظیفه برای انبار
-                                        </m.button>
+                                        </motion.button>
                                     </div>
                                 </div>
 
@@ -778,7 +866,9 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
 
                         {tab === "ledger" && hasFullWarehouseAccess && (
                             <WarehouseEmployeeStockLedger
-                                warehouseId={warehouseId}
+                                products={products}
+                                stockInfos={stockInfos}
+                                transactions={transactions}
                                 defaultProductId={ledgerProductId}
                             />
                         )}
@@ -791,7 +881,7 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
                                         <p className={subtitleClass}>دسته‌بندی‌های موجود در انبار</p>
                                     </div>
 
-                                    <m.button
+                                    <motion.button
                                         type="button"
                                         whileTap={{ scale: 0.97 }}
                                         onClick={() => setShowCategoryModal(true)}
@@ -799,7 +889,7 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
                                     >
                                         <Package size={16} />
                                         افزودن دسته‌بندی
-                                    </m.button>
+                                    </motion.button>
                                 </div>
 
                                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -834,7 +924,7 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
                                             مدیریت انبارداران و دسترسی‌های این انبار
                                         </p>
                                     </div>
-                                    <m.button
+                                    <motion.button
                                         type="button"
                                         whileTap={{ scale: 0.97 }}
                                         onClick={() => setShowAddStaffModal(true)}
@@ -842,7 +932,7 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
                                     >
                                         <UserPlus size={14} />
                                         افزودن انباردار
-                                    </m.button>
+                                    </motion.button>
                                 </div>
 
                                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -899,25 +989,25 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
                                         </div>
                                     </div>
 
-                                    <m.button
+                                    <motion.button
                                         type="button"
                                         whileTap={{ scale: 0.97 }}
                                         onClick={refresh}
                                         disabled={archiveLoading}
                                         className="flex h-10 items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-4 text-[12.5px] font-bold text-white transition-colors hover:bg-indigo-700 disabled:opacity-50"
                                     >
-                                        <RefreshCw size={14} />
+                                        <Loader2 size={14} className={archiveLoading ? "animate-spin" : ""} />
                                         بروزرسانی
-                                    </m.button>
+                                    </motion.button>
                                 </div>
 
                                 {archiveLoading ? (
-                                    <WarehouseTabSkeleton tab="invoices" count={6} />
+                                    spinner
                                 ) : (
                                     <>
                                         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                                            {salesInvoices.length
-                                                ? salesInvoices.map((invoice: SalesInvoice, index: number) => (
+                                            {paginatedInvoices.items.length
+                                                ? paginatedInvoices.items.map((invoice: SalesInvoice, index: number) => (
                                                     <OrderInvoiceCard
                                                         key={invoice.archiveId}
                                                         invoice={invoice}
@@ -930,7 +1020,7 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
 
                                         <Pagination
                                             currentPage={currentPage}
-                                            totalPages={data.totalPages}
+                                            totalPages={paginatedInvoices.totalPages}
                                             onPageChange={goToPage}
                                             isDark={isDark}
                                         />
@@ -938,7 +1028,7 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
                                 )}
                             </div>
                         )}
-                    </m.div>
+                    </motion.div>
                 </AnimatePresence>
             )}
 
@@ -967,17 +1057,15 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
 
             {hasFullWarehouseAccess && (
                 <>
-                    {productWizardOpen && (
-                        <WarehouseEmployeeProductWizardModal
-                            isOpen={productWizardOpen}
-                            onClose={() => setProductWizardOpen(false)}
-                            categories={categories}
-                            staff={myStaff ? [myStaff] : []}
-                            performedById={myStaff?.id ?? null}
-                            warehouseId={warehouseId}
-                            onCreated={handleProductCreated}
-                        />
-                    )}
+                    <WarehouseEmployeeProductWizardModal
+                        isOpen={productWizardOpen}
+                        onClose={() => setProductWizardOpen(false)}
+                        categories={categories}
+                        staff={myStaff ? [myStaff] : []}
+                        performedById={myStaff?.id ?? null}
+                        warehouseId={warehouseId}
+                        onCreated={handleProductCreated}
+                    />
 
                     {!isAdmin && myStaff && (
                         <WarehouseEmployeeBulkImportModal

@@ -1,17 +1,17 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { AnimatePresence, m, useReducedMotion } from "framer-motion";
-import { Backdrop } from "@/components/ui/Backdrop";
-import { panelMotion } from "@/lib/motion";
-import { Boxes, X } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
+import { Boxes, Loader, X } from "lucide-react";
 import { useTheme } from "next-themes";
 import type { AxiosError } from "axios";
-import { NiceSelect } from "@/components/ui/NiceSelect";
 import axiosInstance from "@/lib/axiosInstance";
-import type { ApiProduct, ApiStockInfo, ApiWarehouseStaff } from "@/types/warehouse";
+import type {
+    ApiProduct,
+    ApiStockInfo,
+    ApiWarehouseStaff,
+} from "@/types/warehouse";
 
-import { BusyContent } from "@/components/ui/Button";
 interface WarehouseEmployeeInitialStockModalProps {
     isOpen: boolean;
     onClose: () => void;
@@ -66,7 +66,6 @@ export default function WarehouseEmployeeInitialStockModal({
     warehouseId,
     onCompleted,
 }: WarehouseEmployeeInitialStockModalProps) {
-    const reduced = useReducedMotion() ?? false;
     const { resolvedTheme } = useTheme();
     const isDark = resolvedTheme === "dark";
 
@@ -182,12 +181,12 @@ export default function WarehouseEmployeeInitialStockModal({
         }
     }
 
-    const bg = isDark ? "#111827" : "#ffffff";
+    const bg = isDark ? "#0f172a" : "#ffffff";
     const border = isDark
         ? "rgba(255,255,255,.06)"
         : "rgba(15,23,42,.06)";
-    const text = isDark ? "#f3f4f6" : "#1f2937";
-    const muted = isDark ? "#9ca3af" : "#6b7280";
+    const text = isDark ? "#f1f5f9" : "#1e293b";
+    const muted = isDark ? "#94a3b8" : "#64748b";
     const inputBg = isDark
         ? "rgba(255,255,255,.035)"
         : "rgba(15,23,42,.025)";
@@ -195,14 +194,28 @@ export default function WarehouseEmployeeInitialStockModal({
     return (
         <AnimatePresence>
             {isOpen && (
-                <div
+                <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
                     className="fixed inset-0 z-50 flex items-center justify-center px-4"
+                    style={{
+                        background: "rgba(15,23,42,.5)",
+                        backdropFilter: "blur(4px)",
+                    }}
+                    onClick={handleClose}
                 >
-                    <Backdrop onClick={handleClose} />
-                    <m.div
-                        {...panelMotion(false, reduced)}
+                    <motion.div
+                        initial={{ opacity: 0, y: 16 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 16 }}
+                        transition={{
+                            duration: 0.3,
+                            ease: "easeOut",
+                        }}
+                        onClick={(e) => e.stopPropagation()}
                         dir="rtl"
-                        className="relative w-full max-w-sm overflow-hidden rounded-[2rem] border"
+                        className="w-full max-w-sm overflow-hidden rounded-[2rem] border"
                         style={{
                             background: bg,
                             borderColor: border,
@@ -262,20 +275,41 @@ export default function WarehouseEmployeeInitialStockModal({
                             autoComplete="off"
                             className="flex flex-col gap-4 px-8 pb-8"
                         >
-                            <NiceSelect
-                                label="ثبت‌کننده"
-                                placeholder="انتخاب ثبت‌کننده"
-                                disabled={loading || Boolean(performedById)}
-                                options={staff.map((item) => ({
-                                    id: Number(item.id),
-                                    label: item.full_name,
-                                }))}
-                                value={selectedStaff === "" ? null : Number(selectedStaff)}
-                                onChange={(id) => {
-                                    setSelectedStaff(String(id));
-                                    setError("");
-                                }}
-                            />
+                            <div className="relative">
+                                <select
+                                    id="employee_initial_stock_staff"
+                                    value={selectedStaff}
+                                    onChange={(e) => {
+                                        setSelectedStaff(
+                                            e.target.value,
+                                        );
+                                        setError("");
+                                    }}
+                                    disabled={
+                                        loading ||
+                                        Boolean(performedById)
+                                    }
+                                    className="h-12 w-full appearance-none rounded-2xl border px-4 text-[13px] font-medium outline-none transition disabled:opacity-60"
+                                    style={{
+                                        background: inputBg,
+                                        borderColor: border,
+                                        color: text,
+                                    }}
+                                >
+                                    <option value="" disabled>
+                                        انتخاب ثبت‌کننده
+                                    </option>
+
+                                    {staff.map((item) => (
+                                        <option
+                                            key={item.id}
+                                            value={item.id}
+                                        >
+                                            {item.full_name}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
 
                             <div className="relative">
                                 <input
@@ -293,7 +327,7 @@ export default function WarehouseEmployeeInitialStockModal({
                                     placeholder="موجودی فعلی"
                                     disabled={loading}
                                     dir="ltr"
-                                    className="h-12 w-full rounded-2xl border px-4 text-[13px] font-medium outline-none transition placeholder:text-gray-400 disabled:opacity-60"
+                                    className="h-12 w-full rounded-2xl border px-4 text-[13px] font-medium outline-none transition placeholder:text-slate-400 disabled:opacity-60"
                                     style={{
                                         background: inputBg,
                                         borderColor: border,
@@ -318,7 +352,7 @@ export default function WarehouseEmployeeInitialStockModal({
                                     placeholder="حداقل موجودی"
                                     disabled={loading}
                                     dir="ltr"
-                                    className="h-12 w-full rounded-2xl border px-4 text-[13px] font-medium outline-none placeholder:text-gray-400 disabled:opacity-60"
+                                    className="h-12 w-full rounded-2xl border px-4 text-[13px] font-medium outline-none placeholder:text-slate-400 disabled:opacity-60"
                                     style={{
                                         background: inputBg,
                                         borderColor: border,
@@ -341,7 +375,7 @@ export default function WarehouseEmployeeInitialStockModal({
                                     placeholder="حداکثر موجودی"
                                     disabled={loading}
                                     dir="ltr"
-                                    className="h-12 w-full rounded-2xl border px-4 text-[13px] font-medium outline-none placeholder:text-gray-400 disabled:opacity-60"
+                                    className="h-12 w-full rounded-2xl border px-4 text-[13px] font-medium outline-none placeholder:text-slate-400 disabled:opacity-60"
                                     style={{
                                         background: inputBg,
                                         borderColor: border,
@@ -356,23 +390,28 @@ export default function WarehouseEmployeeInitialStockModal({
                                 </p>
                             )}
 
-                            <m.button
+                            <motion.button
                                 type="submit"
                                 disabled={loading}
                                 whileTap={{ scale: 0.97 }}
-                                className="relative flex items-center justify-center rounded-full py-3 text-[13px] font-bold text-white disabled:opacity-50"
+                                className="flex items-center justify-center rounded-full py-3 text-[13px] font-bold text-white disabled:opacity-50"
                                 style={{
                                     background:
                                         "linear-gradient(135deg,#6366f1,#8b5cf6)",
                                 }}
                             >
-                                <BusyContent busy={loading}>
-                                    ثبت موجودی اولیه
-                                </BusyContent>
-                            </m.button>
+                                {loading ? (
+                                    <Loader
+                                        size={18}
+                                        className="animate-spin"
+                                    />
+                                ) : (
+                                    "ثبت موجودی اولیه"
+                                )}
+                            </motion.button>
                         </form>
-                    </m.div>
-                </div>
+                    </motion.div>
+                </motion.div>
             )}
         </AnimatePresence>
     );

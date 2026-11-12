@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { FullPageLoader } from "@/components/AuthGate";
 import { useAuthStore } from "@/store/authStore";
-import LoginClient from "../../components/login/LoginClient";
+import LoginClient from "./LoginClient";
 
 export default function LoginPage() {
     const router = useRouter();

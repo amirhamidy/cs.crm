@@ -2,15 +2,27 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
-import { BusyContent } from "@/components/ui/Button";
-import { AnimatePresence, m } from "framer-motion";
-import { AlarmClock, CalendarDays, CheckCircle2, Clock3, FileText, MessageSquareText, Pencil, Trash2, User, UsersRound } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
+import {
+    AlarmClock,
+    CalendarDays,
+    CheckCircle2,
+    Clock3,
+    FileText,
+    FolderKanban,
+    Loader2,
+    MessageSquareText,
+    Pencil,
+    Trash2,
+    User,
+    UsersRound,
+} from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
 import { JALALI_MONTHS, pad2, toJalali, toPersianDigits } from "@/lib/jalali";
 import type { Task, TaskRelationId } from "./types";
 import TaskAssignees from "./TaskAssignees";
-import TimeRangeModal from "@/components/tasks/TimeRangeModal";
-import AdminTaskNotesModal from "@/components/tasks/AdminTaskNotesModal";
+import TimeRangeModal from "@/components/customcomponents/tasks/TimeRangeModal";
+import AdminTaskNotesModal from "@/components/customcomponents/tasks/AdminTaskNotesModal";
 
 type TaskAssigneeValue =
     | number
@@ -346,7 +358,7 @@ export default function TaskCard({
 
     return (
         <>
-            <m.article
+            <motion.article
                 layout
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -497,7 +509,7 @@ export default function TaskCard({
                         )}
                     </div>
                 </div>
-            </m.article>
+            </motion.article>
 
             {mounted &&
                 createPortal(
@@ -529,14 +541,14 @@ export default function TaskCard({
                 createPortal(
                     <AnimatePresence>
                         {confirmDelete && (
-                            <m.div
+                            <motion.div
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: 1 }}
                                 exit={{ opacity: 0 }}
-                                className="fixed inset-0 z-[70] flex items-center justify-center bg-gray-950/50 px-4 backdrop-blur-layer"
+                                className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/50 px-4 backdrop-blur-sm"
                                 onClick={() => !deleteLoading && setConfirmDelete(false)}
                             >
-                                <m.div
+                                <motion.div
                                     initial={{ scale: 0.95, opacity: 0 }}
                                     animate={{ scale: 1, opacity: 1 }}
                                     exit={{ scale: 0.95, opacity: 0 }}
@@ -565,16 +577,18 @@ export default function TaskCard({
                                             type="button"
                                             disabled={deleteLoading || deleting}
                                             onClick={handleDelete}
-                                            className="relative flex h-10 flex-1 items-center justify-center gap-2 rounded-full bg-red-500 text-[11.5px] font-extrabold text-white transition-colors hover:bg-red-600 disabled:opacity-50"
+                                            className="flex h-10 flex-1 items-center justify-center gap-2 rounded-full bg-red-500 text-[11.5px] font-extrabold text-white transition-colors hover:bg-red-600 disabled:opacity-50"
                                         >
-                                            <BusyContent busy={deleteLoading || deleting}>
-<Trash2 size={14} />
-حذف
-</BusyContent>
+                                            {deleteLoading || deleting ? (
+                                                <Loader2 size={14} className="animate-spin" />
+                                            ) : (
+                                                <Trash2 size={14} />
+                                            )}
+                                            حذف
                                         </button>
                                     </div>
-                                </m.div>
-                            </m.div>
+                                </motion.div>
+                            </motion.div>
                         )}
                     </AnimatePresence>,
                     document.body

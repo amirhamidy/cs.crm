@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { accountsApi, departmentsApi } from "@/lib/api";
+import axiosInstance from "@/lib/axiosInstance";
 import { useAuthStore } from "@/store/authStore";
 
 export type EmployeeInfo = {
@@ -29,9 +29,67 @@ export type CurrentDepartment = {
   isManager: boolean;
 };
 
+let employeeListCache: EmployeeInfo[] | null = null;
+let departmentEmployeeCache: DepartmentEmployeeInfo[] | null = null;
+
+let employeeRequest: Promise<EmployeeInfo[]> | null = null;
+let departmentEmployeeRequest: Promise<DepartmentEmployeeInfo[]> | null = null;
+
+async function fetchEmployeeList(): Promise<EmployeeInfo[]> {
+  if (employeeListCache) return employeeListCache;
+  if (employeeRequest) return employeeRequest;
+
+  employeeRequest = axiosInstance
+    .get<EmployeeInfo[]>("/accounts/api/v1/employee/list/")
+    .then((response) => {
+      const data = response.data;
+
+      const list = Array.isArray(data) ? data : (data as any)?.results ?? [];
+
+      employeeListCache = list;
+      employeeRequest = null;
+
+      return list;
+    })
+    .catch((error) => {
+      employeeRequest = null;
+      throw error;
+    });
+
+  return employeeRequest;
+}
+
+async function fetchDepartmentEmployees(): Promise<DepartmentEmployeeInfo[]> {
+  if (departmentEmployeeCache) return departmentEmployeeCache;
+  if (departmentEmployeeRequest) return departmentEmployeeRequest;
+
+  departmentEmployeeRequest = axiosInstance
+    .get<DepartmentEmployeeInfo[]>(
+      "/department/api/v1/department_employee/list/",
+    )
+    .then((response) => {
+      const data = response.data;
+
+      const list = Array.isArray(data) ? data : (data as any)?.results ?? [];
+
+      departmentEmployeeCache = list;
+      departmentEmployeeRequest = null;
+
+      return list;
+    })
+    .catch((error) => {
+      departmentEmployeeRequest = null;
+      throw error;
+    });
+
+  return departmentEmployeeRequest;
+}
+
 export function clearEmployeeListCache() {
-  accountsApi.invalidate();
-  departmentsApi.invalidate();
+  employeeListCache = null;
+  employeeRequest = null;
+  departmentEmployeeCache = null;
+  departmentEmployeeRequest = null;
 }
 
 export function useCurrentEmployee() {
@@ -61,12 +119,12 @@ export function useCurrentEmployee() {
     setLoading(true);
     setError(null);
 
-    Promise.all([
-      accountsApi.employees.byUsername(username),
-      departmentsApi.employees(),
-    ])
-      .then(([currentEmployee, departmentEmployees]) => {
+    Promise.all([fetchEmployeeList(), fetchDepartmentEmployees()])
+      .then(([employees, departmentEmployees]) => {
         if (!mounted) return;
+
+        const currentEmployee =
+          employees.find((item) => item.username === username) ?? null;
 
         if (!currentEmployee) {
           setEmployee(null);
@@ -125,8 +183,7 @@ export function useEmployeeNames() {
 
   useEffect(() => {
     let mounted = true;
-    accountsApi.employees
-      .all()
+    fetchEmployeeList()
       .then(
         (list) =>
           mounted &&

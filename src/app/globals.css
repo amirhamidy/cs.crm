@@ -23,23 +23,27 @@
 @variant dark (&:where(.dark, .dark *));
 
 body {
-  @apply bg-gray-50 text-gray-900 transition-colors duration-200;
+  @apply bg-slate-50 text-slate-900 transition-colors duration-200;
 }
 
 .dark body {
-  @apply bg-gray-950 text-gray-50;
+  @apply bg-slate-950 text-slate-50;
 }
 
-/* NOTE: single source of truth for the body font is the `@layer base` rule below.
-   Tailwind v4 is loaded via `@import "tailwindcss"`, so the legacy
-   `@tailwind base/components/utilities` directives were removed. */
+body {
+  font-family: "Vazir";
+}
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 @layer base {
   :root {
     --sidebar-width: 240px;
     --sidebar-collapsed-width: 64px;
 
-    
+    /* Purple pastel palette - dark mode */
     --bg-base: #0f0e17;
     --bg-surface: #16151f;
     --bg-elevated: #1e1c2a;
@@ -56,13 +60,18 @@ body {
 
     --border-subtle: #2a2545;
     --border-default: #3d3660;
+
+    --accent: #a78bfa;
+    --accent-hover: #c4b5fd;
+    --accent-bg: rgba(167, 139, 250, 0.12);
+    --accent-bg-hover: rgba(167, 139, 250, 0.2);
   }
 
   .dark {
-    --bg-elevated: #111827;
+    --bg-elevated: #0f172a;
     --border-subtle: rgba(51, 65, 85, 0.5);
-    --text-primary: #f9fafb;
-    --text-secondary: #9ca3af;
+    --text-primary: #f8fafc;
+    --text-secondary: #94a3b8;
     --bg-hover: rgba(255, 255, 255, 0.05);
     --purple-primary: #60a5fa;
   }
@@ -75,8 +84,9 @@ body {
   }
 
   body {
+    background-color: white !important;
     font-family:
-      "Vazir",
+      "Vazirmatn",
       -apple-system,
       BlinkMacSystemFont,
       "Segoe UI",
@@ -88,9 +98,23 @@ body {
     @apply bg-background text-foreground;
   }
 
-  /* Scrollbar styling lives in a single block below (the previous 8px block was
-     fully overridden by it, including the only usage of the undefined
-     `--border-muted` variable). */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: var(--bg-base);
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: var(--border-muted);
+    border-radius: 4px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--purple-primary);
+  }
 
   @layer utilities {
     .text-balance {
@@ -98,6 +122,7 @@ body {
     }
   }
 
+  /* Scrollbar */
   ::-webkit-scrollbar {
     width: 4px;
     height: 4px;
@@ -254,97 +279,4 @@ body {
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.556 0 0);
-}
-
-/* ───────── Phase 2 / A: shared UI tokens ───────── */
-:root {
-  --brand: #6366f1;
-  --brand-hover: #4f46e5;
-  --brand-soft: rgb(99 102 241 / 0.1);
-  --surface-dark: #111827;
-}
-
-.dark {
-  --brand: #818cf8;
-  --brand-hover: #6366f1;
-  --brand-soft: rgb(129 140 248 / 0.15);
-}
-
-@theme inline {
-  --color-brand: var(--brand);
-  --color-brand-hover: var(--brand-hover);
-  --color-brand-soft: var(--brand-soft);
-  --color-surface-dark: var(--surface-dark);
-}
-
-@utility custom-scrollbar {
-  scrollbar-width: thin;
-  scrollbar-color: rgb(148 163 184 / 0.4) transparent;
-  &::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
-  }
-  &::-webkit-scrollbar-thumb {
-    background: rgb(148 163 184 / 0.4);
-    border-radius: 9999px;
-  }
-}
-
-/* ── Shared modal backdrop: static blur, only opacity is animated ── */
-/* Single source for overlay blur. Change here only. */
-:root {
-    --backdrop-blur: 6px;
-}
-@media (max-width: 767px) {
-    :root {
-        --backdrop-blur: 4px;
-    }
-}
-.modal-backdrop {
-    background: rgb(0 0 0 / 0.42);
-}
-/* Blur layer for any full-screen overlay (inline background stays on the element). */
-@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-    .modal-backdrop,
-    .backdrop-blur-layer {
-        -webkit-backdrop-filter: blur(var(--backdrop-blur));
-        backdrop-filter: blur(var(--backdrop-blur));
-    }
-    /* Nested modals: darken only, so a single blur layer is processed */
-    .modal-backdrop[data-depth="2"],
-    .modal-backdrop[data-depth="3"] {
-        -webkit-backdrop-filter: none;
-        backdrop-filter: none;
-    }
-}
-@media (prefers-reduced-transparency: reduce) {
-    .modal-backdrop,
-    .backdrop-blur-layer,
-    .modal-backdrop[data-depth="2"],
-    .modal-backdrop[data-depth="3"] {
-        -webkit-backdrop-filter: none;
-        backdrop-filter: none;
-    }
-    .modal-backdrop {
-        background: rgb(0 0 0 / 0.65);
-    }
-}
-
-/* Busy state for buttons: opacity-only pulse, no icon. */
-@keyframes busy-pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.55; }
-}
-
-.is-busy {
-  animation: busy-pulse 1.1s ease-in-out infinite;
-  pointer-events: none;
-  cursor: progress;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .is-busy {
-    animation: none;
-    opacity: 0.6;
-  }
 }

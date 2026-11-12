@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
-import { AnimatePresence, m } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { useTheme } from "next-themes";
 import { Users } from "lucide-react";
 import { Cell, Pie, PieChart, ResponsiveContainer } from "recharts";
@@ -32,13 +32,13 @@ const VIOLET_SCALE = [
 
 function TopBringersChartSkeleton() {
     return (
-        <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-white/8 dark:bg-gray-950">
+        <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-white/8 dark:bg-slate-950">
             <div className="mb-3 space-y-2" dir="rtl">
-                <div className="h-4 w-36 animate-pulse rounded-full bg-gray-100 dark:bg-gray-900" />
-                <div className="h-3 w-24 animate-pulse rounded-full bg-gray-100/80 dark:bg-gray-900/60" />
+                <div className="h-4 w-36 animate-pulse rounded-full bg-gray-100 dark:bg-slate-900" />
+                <div className="h-3 w-24 animate-pulse rounded-full bg-gray-100/80 dark:bg-slate-900/60" />
             </div>
             <div className="flex h-[200px] items-center justify-center">
-                <div className="h-32 w-32 animate-pulse rounded-full border-[14px] border-gray-100 dark:border-gray-900" />
+                <div className="h-32 w-32 animate-pulse rounded-full border-[14px] border-gray-100 dark:border-slate-900" />
             </div>
         </div>
     );
@@ -77,7 +77,7 @@ export default function TopBringersChart({ items, loading }: Props) {
     if (loading) return <TopBringersChartSkeleton />;
 
     return (
-        <m.div
+        <motion.div
             initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, ease: [0.25, 0.46, 0.45, 0.94] }}
@@ -107,13 +107,13 @@ export default function TopBringersChart({ items, loading }: Props) {
             <div className="absolute left-2 top-14 z-10 min-w-[160px]">
                 <AnimatePresence mode="wait">
                     {activeSlice && (
-                        <m.div
+                        <motion.div
                             key={activeSlice.index}
                             initial={{ opacity: 0, y: 4, scale: 0.96 }}
                             animate={{ opacity: 1, y: 0, scale: 1 }}
                             exit={{ opacity: 0, y: 4, scale: 0.96 }}
                             transition={{ duration: 0.15, ease: [0.25, 0.46, 0.45, 0.94] }}
-                            className="pointer-events-none rounded-xl border border-gray-200/60 bg-white/95 px-3 py-2 shadow-lg dark:border-white/10 dark:bg-gray-900/95"
+                            className="pointer-events-none rounded-xl border border-gray-200/60 bg-white/95 px-3 py-2 shadow-lg backdrop-blur-sm dark:border-white/10 dark:bg-slate-900/95"
                             style={{ boxShadow: `0 4px 20px ${activeSlice.glow}` }}
                         >
                             <div className="mb-1 flex items-center gap-1.5">
@@ -123,7 +123,7 @@ export default function TopBringersChart({ items, loading }: Props) {
                             <p className="text-[11px] text-gray-500 dark:text-gray-400">
                                 بالفعل: <span className="font-bold tabular-nums" style={{ color: activeSlice.color }}>{activeSlice.actual.toLocaleString("fa-IR")}</span> از {activeSlice.count.toLocaleString("fa-IR")} ورودی
                             </p>
-                        </m.div>
+                        </motion.div>
                     )}
                 </AnimatePresence>
             </div>
@@ -175,6 +175,6 @@ export default function TopBringersChart({ items, loading }: Props) {
                     ))}
                 </div>
             )}
-        </m.div>
+        </motion.div>
     );
 }

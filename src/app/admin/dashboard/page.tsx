@@ -1,6 +1,12 @@
 "use client";
 
-import { CancelledSection, SalesSection, SourcesSection, StatsSection, TopUsersSection } from "@/components/dashboard/Dashboardsections";
+import {
+    CancelledSection,
+    SalesSection,
+    SourcesSection,
+    StatsSection,
+    TopUsersSection,
+} from "@/components/dashboard/Dashboardsections";
 
 export default function AdminDashboardPage() {
     return (

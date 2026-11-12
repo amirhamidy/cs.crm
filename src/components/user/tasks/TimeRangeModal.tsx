@@ -1,13 +1,29 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { AnimatePresence, m, useReducedMotion } from "framer-motion";
-import { Backdrop } from "@/components/ui/Backdrop";
-import { panelMotion } from "@/lib/motion";
-import { X, ChevronDown, ChevronLeft, ChevronRight, Clock, Check, CalendarDays } from "lucide-react";
-import { toJalali, toGregorian, jalaliMonthLength, jalaliWeekday, JALALI_MONTHS, JALALI_WEEKDAYS, toPersianDigits, pad2, todayJalali } from "@/lib/jalali";
+import { AnimatePresence, motion } from "framer-motion";
+import {
+    X,
+    ChevronDown,
+    ChevronLeft,
+    ChevronRight,
+    Clock,
+    Check,
+    Loader,
+    CalendarDays,
+} from "lucide-react";
+import {
+    toJalali,
+    toGregorian,
+    jalaliMonthLength,
+    jalaliWeekday,
+    JALALI_MONTHS,
+    JALALI_WEEKDAYS,
+    toPersianDigits,
+    pad2,
+    todayJalali,
+} from "@/lib/jalali";
 
-import { BusyContent } from "@/components/ui/Button";
 interface FieldState {
     jy: number;
     jm: number;
@@ -104,7 +120,7 @@ function NiceSelect({
             </button>
 
             <label
-                className={`pointer-events-none absolute right-5 rounded bg-white px-1.5 text-sm text-gray-400 transition-all duration-200 dark:bg-[#111827] ${isOpen || selectedOption
+                className={`pointer-events-none absolute right-5 rounded bg-white px-1.5 text-sm text-gray-400 transition-all duration-200 dark:bg-[#0f172a] ${isOpen || selectedOption
                         ? "top-0 text-xs text-gray-500 dark:text-gray-400"
                         : "top-1/2 -translate-y-1/2"
                     }`}
@@ -114,12 +130,12 @@ function NiceSelect({
 
             <AnimatePresence>
                 {isOpen && (
-                    <m.div
+                    <motion.div
                         initial={{ opacity: 0, y: -10, scale: 0.95 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: -10, scale: 0.95 }}
                         transition={{ duration: 0.15 }}
-                        className="absolute z-50 mt-2 max-h-60 w-full overflow-y-auto rounded-2xl border border-gray-100 bg-white p-1.5 shadow-[0_8px_30px_rgb(0,0,0,0.12)] dark:border-white/[0.06] dark:bg-[#111827]"
+                        className="absolute z-50 mt-2 max-h-60 w-full overflow-y-auto rounded-2xl border border-gray-100 bg-white p-1.5 shadow-[0_8px_30px_rgb(0,0,0,0.12)] dark:border-white/[0.06] dark:bg-[#0f172a]"
                         style={{ scrollbarWidth: "thin" }}
                     >
                         {options.map((option) => (
@@ -139,7 +155,7 @@ function NiceSelect({
                                 {option.value === value && <Check size={14} />}
                             </button>
                         ))}
-                    </m.div>
+                    </motion.div>
                 )}
             </AnimatePresence>
         </div>
@@ -155,7 +171,6 @@ export default function TimeRangeModal({
     onSubmit,
     error: externalError,
 }: TimeRangeModalProps) {
-    const reduced = useReducedMotion() ?? false;
     const [start, setStart] = useState<FieldState>(() =>
         parseIsoToField(initialStartedAt)
     );
@@ -240,14 +255,25 @@ export default function TimeRangeModal({
 
     return (
         <AnimatePresence>
-            <div
+            <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
                 className="fixed inset-0 z-[10000] flex items-center justify-center px-4"
+                style={{
+                    background: "rgba(0,0,0,0.45)",
+                    backdropFilter: "blur(3px)",
+                }}
+                onClick={onClose}
             >
-                <Backdrop onClick={onClose} />
-                <m.div
-                    {...panelMotion(false, reduced)}
+                <motion.div
+                    initial={{ opacity: 0, y: 16 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 16 }}
+                    transition={{ duration: 0.35, ease: "easeOut" }}
+                    onClick={(e) => e.stopPropagation()}
                     dir="rtl"
-                    className="relative flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-sm dark:border-white/[0.06] dark:bg-[#111827]"
+                    className="flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-sm dark:border-white/[0.06] dark:bg-[#0f172a]"
                 >
                     <div className="flex shrink-0 items-center justify-between px-8 pb-6 pt-8">
                         <div className="flex items-center gap-2.5">
@@ -440,14 +466,14 @@ export default function TimeRangeModal({
 
                             <AnimatePresence>
                                 {error && (
-                                    <m.div
+                                    <motion.div
                                         initial={{ opacity: 0, y: 6 }}
                                         animate={{ opacity: 1, y: 0 }}
                                         exit={{ opacity: 0, y: 4 }}
                                         className="rounded-2xl bg-red-50 px-3.5 py-3 text-center text-[11.5px] font-semibold text-red-500 dark:bg-red-500/10 dark:text-red-400"
                                     >
                                         {error}
-                                    </m.div>
+                                    </motion.div>
                                 )}
                             </AnimatePresence>
                         </div>
@@ -462,23 +488,25 @@ export default function TimeRangeModal({
                             انصراف
                         </button>
 
-                        <m.button
+                        <motion.button
                             type="button"
                             whileTap={{ scale: 0.97 }}
                             onClick={handleSubmit}
                             disabled={loading}
-                            className="relative flex h-11 flex-1 items-center justify-center gap-2 rounded-full bg-blue-600 text-[13px] font-bold text-white transition-colors hover:bg-blue-500 disabled:opacity-40"
+                            className="flex h-11 flex-1 items-center justify-center gap-2 rounded-full bg-blue-600 text-[13px] font-bold text-white transition-colors hover:bg-blue-500 disabled:opacity-40"
                         >
-                            <BusyContent busy={loading}>
+                            {loading ? (
+                                <Loader size={15} className="animate-spin" />
+                            ) : (
                                 <>
-                                        <Check size={14} strokeWidth={3} />
-                                        تأیید
-                                    </>
-                            </BusyContent>
-                        </m.button>
+                                    <Check size={14} strokeWidth={3} />
+                                    تأیید
+                                </>
+                            )}
+                        </motion.button>
                     </div>
-                </m.div>
-            </div>
+                </motion.div>
+            </motion.div>
         </AnimatePresence>
     );
 }

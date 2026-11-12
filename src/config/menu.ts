@@ -1,5 +1,23 @@
-import { Home, Users, ClipboardList, Building2, FolderKanban, CalendarCheck2, Ticket, Archive, MessageSquareText, UserRound, ListTodo, BarChart3, Trophy, ShoppingBag, Boxes, ShoppingCart, ShieldCheck, Factory, ClipboardCheck, KeyRound } from "lucide-react";
-
+import {
+  Home,
+  Users,
+  ClipboardList,
+  Building2,
+  FolderKanban,
+  CalendarCheck2,
+  Ticket,
+  Archive,
+  MessageSquareText,
+  UserRound,
+  ListTodo,
+  BarChart3,
+  Boxes,
+  ShoppingCart,
+  ShieldCheck,
+  CreativeCommonsIcon,
+  Factory,
+} from "lucide-react";
+import { FileSignature } from "lucide-react";
 import { LucideIcon } from "lucide-react";
 
 export interface MenuItem {
@@ -50,16 +68,6 @@ export const adminMenuItems: MenuItem[] = [
     href: "/admin/customer",
   },
   {
-    icon: Trophy,
-    label: "رتبه‌بندی مشتریان",
-    href: "/admin/customer-ranking",
-  },
-  {
-    icon: ShoppingBag,
-    label: "فروش",
-    href: "/admin/sales",
-  },
-  {
     icon: Boxes,
     label: "انبار",
     href: "/admin/warehouse",
@@ -103,16 +111,6 @@ export const adminMenuItems: MenuItem[] = [
     icon: Factory,
     label: "تولید",
     href: "/admin/production/machines",
-  },
-  {
-    icon: ClipboardCheck,
-    label: "سفارش‌های مشتریان",
-    href: "/admin/customer-orders/",
-  },
-  {
-    icon: KeyRound,
-    label: "حساب‌های پرتال مشتریان",
-    href: "/admin/customer-portal/",
   },
   {
     icon: CalendarCheck2,
@@ -173,16 +171,6 @@ export const userMenuItems: MenuItem[] = [
     href: "/user/customer",
   },
   {
-    icon: Trophy,
-    label: "رتبه‌بندی مشتریان",
-    href: "/user/customer-ranking",
-  },
-  {
-    icon: ShoppingBag,
-    label: "فروش",
-    href: "/user/sales",
-  },
-  {
     icon: Boxes,
     label: "انبارداری",
     href: "/user/warehouse",
@@ -196,11 +184,6 @@ export const userMenuItems: MenuItem[] = [
     icon: ShieldCheck,
     label: "کنترل کیفی",
     href: "/user/qualityControl",
-  },
-  {
-    icon: ClipboardCheck,
-    label: "سفارش‌های مشتریان",
-    href: "/user/customer-orders/",
   },
   {
     icon: CalendarCheck2,

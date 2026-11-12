@@ -1,7 +1,6 @@
 "use client";
-import { Skeleton } from "@/components/ui/Skeleton";
 
-import { MapPin } from "lucide-react";
+import { Loader2, MapPin } from "lucide-react";
 import type { ShelfSummary } from "@/types/warehouseShelf";
 import { formatQuantity } from "@/utils/warehouseShelf";
 
@@ -63,7 +62,7 @@ export default function ShelfFilterBar({
         );
       })}
 
-      {loading && <Skeleton className="h-4 w-4 shrink-0 rounded-full" />}
+      {loading && <Loader2 size={14} className="shrink-0 animate-spin text-gray-400" />}
     </div>
   );
 }

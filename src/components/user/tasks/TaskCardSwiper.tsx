@@ -15,9 +15,8 @@ interface Props {
     accent: string;
     isLastStage: boolean;
     onUpdated: (task: UserTask) => void;
-    onTransferred?: (task: UserTask) => void;
     employeesMap: Record<number, string>;
-    staffId: number; 
+    staffId: number; // این خط اضافه شود
 }
 
 export default function TaskCardSwiper({
@@ -25,9 +24,8 @@ export default function TaskCardSwiper({
     accent,
     isLastStage,
     onUpdated,
-    onTransferred,
     employeesMap,
-    staffId, 
+    staffId, // این خط اضافه شود
 }: Props) {
     const [swiper, setSwiper] = useState<SwiperType | null>(null);
 
@@ -49,9 +47,8 @@ export default function TaskCardSwiper({
                             accent={accent}
                             isLastStage={isLastStage}
                             onUpdated={onUpdated}
-                            onTransferred={onTransferred}
                             employeesMap={employeesMap}
-                            staffId={staffId} 
+                            staffId={staffId} // این خط اضافه شود
                         />
                     </SwiperSlide>
                 ))}
@@ -59,10 +56,10 @@ export default function TaskCardSwiper({
 
             {tasks.length > 1 && swiper && (
                 <>
-                    <button type="button" onClick={() => swiper.slidePrev()} className="absolute right-2 top-1/2 z-10 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-white shadow-md ring-1 ring-black/[.05] dark:bg-[#1f2937] dark:ring-white/[.08]" style={{ color: accent }}>
+                    <button type="button" onClick={() => swiper.slidePrev()} className="absolute right-2 top-1/2 z-10 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-white shadow-md ring-1 ring-black/[.05] dark:bg-[#1e293b] dark:ring-white/[.08]" style={{ color: accent }}>
                         <ChevronRight size={17} />
                     </button>
-                    <button type="button" onClick={() => swiper.slideNext()} className="absolute left-2 top-1/2 z-10 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-white shadow-md ring-1 ring-black/[.05] dark:bg-[#1f2937] dark:ring-white/[.08]" style={{ color: accent }}>
+                    <button type="button" onClick={() => swiper.slideNext()} className="absolute left-2 top-1/2 z-10 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-white shadow-md ring-1 ring-black/[.05] dark:bg-[#1e293b] dark:ring-white/[.08]" style={{ color: accent }}>
                         <ChevronLeft size={17} />
                     </button>
                 </>

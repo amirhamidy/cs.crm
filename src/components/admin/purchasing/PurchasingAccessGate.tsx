@@ -1,7 +1,6 @@
 "use client";
-import PurchasingPageSkeleton from "./PurchasingPageSkeleton";
 
-import { ShieldAlert } from "lucide-react";
+import { Loader2, ShieldAlert } from "lucide-react";
 import { usePurchasingAccess } from "@/hooks/usePurchasingAccess";
 
 interface Props {
@@ -13,7 +12,15 @@ export default function PurchasingAccessGate({ children }: Props) {
 
     if (loading) {
         return (
-            <PurchasingPageSkeleton />
+            <div
+                dir="rtl"
+                className="flex h-64 flex-col items-center justify-center gap-3"
+            >
+                <Loader2 size={22} className="animate-spin text-indigo-500" />
+                <span className="text-[11.5px] font-bold text-gray-400">
+                    در حال بررسی دسترسی...
+                </span>
+            </div>
         );
     }
 

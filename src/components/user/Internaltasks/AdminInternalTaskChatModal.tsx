@@ -1,14 +1,34 @@
 "use client";
-import { ChangeEvent, KeyboardEvent, useEffect, useMemo, useRef, useState } from "react";
-import { BusyContent } from "@/components/ui/Button";
-import { AnimatePresence, m, useReducedMotion } from "framer-motion";
-import { Backdrop } from "@/components/ui/Backdrop";
-import { panelMotion } from "@/lib/motion";
-import { Check, Download, File, MessageSquareText, Paperclip, Send, X } from "lucide-react";
+import {
+    ChangeEvent,
+    KeyboardEvent,
+    useEffect,
+    useMemo,
+    useRef,
+    useState,
+} from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import {
+    Check,
+    Download,
+    File,
+    Loader2,
+    MessageSquareText,
+    Paperclip,
+    Send,
+    X,
+} from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
 import api from "@/lib/axiosInstance";
-import type { EmployeeListItem, InternalTask, InternalTaskAttachment } from "./types";
-import { fetchInternalTasks, uploadInternalTaskAttachments } from "./Api";
+import type {
+    EmployeeListItem,
+    InternalTask,
+    InternalTaskAttachment,
+} from "./types";
+import {
+    fetchInternalTasks,
+    uploadInternalTaskAttachments,
+} from "./Api";
 
 interface UserListItem {
     id: number;
@@ -114,7 +134,6 @@ export default function AdminInternalTaskChatModal({
     onClose,
     onUpdated,
 }: AdminInternalTaskChatModalProps) {
-    const reduced = useReducedMotion() ?? false;
     const { userId } = useAuthStore();
     const [isPolling, setIsPolling] = useState(false);
     const [users, setUsers] = useState<UserListItem[]>([]);
@@ -124,7 +143,6 @@ export default function AdminInternalTaskChatModal({
     const scrollRef = useRef<HTMLDivElement | null>(null);
     const bottomAnchorRef = useRef<HTMLDivElement | null>(null);
     const taskRef = useRef(task);
-    const onUpdatedRef = useRef(onUpdated);
     const shouldAutoScrollRef = useRef(true);
     const sendingRef = useRef(false);
     const textareaRef = useRef<HTMLTextAreaElement | null>(null);
@@ -148,10 +166,6 @@ export default function AdminInternalTaskChatModal({
     useEffect(() => {
         taskRef.current = task;
     }, [task]);
-
-    useEffect(() => {
-        onUpdatedRef.current = onUpdated;
-    }, [onUpdated]);
 
     const attachments = useMemo(
         () =>
@@ -303,7 +317,7 @@ export default function AdminInternalTaskChatModal({
                 ) {
                     return;
                 }
-                onUpdatedRef.current({
+                onUpdated({
                     ...currentTask,
                     attachments: [
                         ...stillExists,
@@ -336,7 +350,7 @@ export default function AdminInternalTaskChatModal({
             cancelled = true;
             window.clearInterval(intervalId);
         };
-    }, [open, task.id]);
+    }, [open, task.id, onUpdated]);
 
     useEffect(() => {
         if (!open) return;
@@ -505,13 +519,42 @@ export default function AdminInternalTaskChatModal({
     return (
         <AnimatePresence>
             {open && (
-                <div
-                    className="fixed inset-0 z-[120] flex items-center justify-center p-3 sm:p-5"
+                <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="fixed inset-0 z-[120] flex items-center justify-center bg-black/55 p-3 backdrop-blur-xl sm:p-5"
+                    onMouseDown={onClose}
                     dir="rtl"
                 >
-                    <Backdrop onClick={onClose} />
-                    <m.div
-                        {...panelMotion(false, reduced)}
+                    <motion.div
+                        initial={{
+                            opacity: 0,
+                            y: 24,
+                            scale: 0.97,
+                        }}
+                        animate={{
+                            opacity: 1,
+                            y: 0,
+                            scale: 1,
+                        }}
+                        exit={{
+                            opacity: 0,
+                            y: 24,
+                            scale: 0.97,
+                        }}
+                        transition={{
+                            duration: 0.28,
+                            ease: [
+                                0.22,
+                                1,
+                                0.36,
+                                1,
+                            ],
+                        }}
+                        onMouseDown={(e) =>
+                            e.stopPropagation()
+                        }
                         className="relative flex h-[min(780px,94vh)] w-full max-w-2xl flex-col overflow-hidden rounded-[32px] border border-black/[0.07] bg-[#f7f7f8] shadow-[0_40px_120px_rgba(0,0,0,0.25)] dark:border-white/[0.08] dark:bg-[#101113]"
                     >
                         <div className="relative z-10 flex shrink-0 items-center gap-3 border-b border-black/[0.06] bg-white/85 px-4 py-4 backdrop-blur-2xl dark:border-white/[0.06] dark:bg-[#151619]/90 sm:px-5">
@@ -622,7 +665,7 @@ export default function AdminInternalTaskChatModal({
                                                                         employees
                                                                     );
                                                             return (
-                                                                <m.div
+                                                                <motion.div
                                                                     key={
                                                                         attachment.id
                                                                     }
@@ -717,8 +760,6 @@ export default function AdminInternalTaskChatModal({
                                                                                                 alt={
                                                                                                     fileName
                                                                                                 }
-                                                                                                loading="lazy"
-                                                                                                decoding="async"
                                                                                                 className="max-h-64 w-full object-cover transition-transform duration-300 hover:scale-[1.02]"
                                                                                             />
                                                                                         </button>
@@ -816,7 +857,7 @@ export default function AdminInternalTaskChatModal({
                                                                             </div>
                                                                         </div>
                                                                     </div>
-                                                                </m.div>
+                                                                </motion.div>
                                                             );
                                                         }
                                                     )}
@@ -835,7 +876,7 @@ export default function AdminInternalTaskChatModal({
                         <div className="shrink-0 border-t border-black/[0.06] bg-white/90 px-3 pb-3 pt-3 backdrop-blur-2xl dark:border-white/[0.06] dark:bg-[#151619]/95 sm:px-4">
                             <AnimatePresence>
                                 {selectedFiles.length > 0 && canParticipate && (
-                                    <m.div
+                                    <motion.div
                                         initial={{
                                             opacity: 0,
                                             height: 0,
@@ -876,7 +917,7 @@ export default function AdminInternalTaskChatModal({
                                                 ),
                                             )}
                                         </div>
-                                    </m.div>
+                                    </motion.div>
                                 )}
                             </AnimatePresence>
                             {canParticipate ? (
@@ -919,10 +960,19 @@ export default function AdminInternalTaskChatModal({
                                                 (!message.trim() &&
                                                     selectedFiles.length === 0)
                                             }
-                                            aria-busy={sending}
-                                            className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-[18px] bg-indigo-500 text-white shadow-[0_8px_20px_rgba(99,102,241,0.2)] transition-all hover:bg-indigo-600 disabled:cursor-not-allowed disabled:opacity-35 `}
+                                            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[18px] bg-indigo-500 text-white shadow-[0_8px_20px_rgba(99,102,241,0.2)] transition-all hover:bg-indigo-600 disabled:cursor-not-allowed disabled:opacity-35"
                                         >
-                                            <BusyContent busy={sending}><Send size={17} className="translate-x-[-1px]" /></BusyContent>
+                                            {sending ? (
+                                                <Loader2
+                                                    size={17}
+                                                    className="animate-spin"
+                                                />
+                                            ) : (
+                                                <Send
+                                                    size={17}
+                                                    className="translate-x-[-1px]"
+                                                />
+                                            )}
                                         </button>
                                     </div>
                                     <div className="mt-2 text-center text-[8px] text-black/25 dark:text-white/20">
@@ -941,8 +991,8 @@ export default function AdminInternalTaskChatModal({
                                 </div>
                             )}
                         </div>
-                    </m.div>
-                </div>
+                    </motion.div>
+                </motion.div>
             )}
         </AnimatePresence>
     );

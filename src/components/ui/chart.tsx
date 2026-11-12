@@ -94,7 +94,7 @@ export function ChartTooltipContent({
 
   return (
     <div
-      className="bg-white/95 border border-gray-200/60 rounded-xl px-3 py-2.5 shadow-lg shadow-black/5 text-right min-w-[8rem]"
+      className="bg-white/95 backdrop-blur-xl border border-gray-200/60 rounded-xl px-3 py-2.5 shadow-lg shadow-black/5 text-right min-w-[8rem]"
       dir="rtl"
     >
       {!hideLabel && formattedLabel && (

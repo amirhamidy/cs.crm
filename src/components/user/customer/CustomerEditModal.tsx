@@ -1,19 +1,40 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef, forwardRef, InputHTMLAttributes, TextareaHTMLAttributes } from "react";
-import { m, AnimatePresence, useReducedMotion } from "framer-motion";
-import { Backdrop } from "@/components/ui/Backdrop";
-import { panelMotion } from "@/lib/motion";
-import { X, SquarePen, CheckCircle2, ChevronDown, Check, Plus } from "lucide-react";
+import {
+    useState,
+    useEffect,
+    useCallback,
+    useRef,
+    forwardRef,
+    InputHTMLAttributes,
+    TextareaHTMLAttributes,
+} from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+    X,
+    Loader,
+    SquarePen,
+    CheckCircle2,
+    ChevronDown,
+    Check,
+    Plus,
+} from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
-import { listAll } from "@/lib/api";
 import type { Customer, CustomerFormData } from "@/types/customer";
 
-import { BusyContent } from "@/components/ui/Button";
-import { FormSkeleton, ListSkeleton } from "@/components/ui/skeletons";
 interface CaseResource {
     id: number;
     title: string;
+}
+
+function extractList<T>(data: unknown): T[] {
+    if (Array.isArray(data)) return data as T[];
+    if (data && typeof data === "object") {
+        const obj = data as { results?: T[]; data?: T[] };
+        if (Array.isArray(obj.results)) return obj.results;
+        if (Array.isArray(obj.data)) return obj.data;
+    }
+    return [];
 }
 
 const STATUS_OPTIONS = [
@@ -42,7 +63,7 @@ const FloatingInput = forwardRef<HTMLInputElement, FloatingInputProps>(
                 />
                 <label
                     htmlFor={id}
-                    className={`absolute right-5 pointer-events-none transition-all duration-200 bg-white dark:bg-[#111827] px-1.5 rounded text-sm text-gray-400 peer-focus:-top-2.5 peer-focus:translate-y-0 peer-focus:text-xs peer-focus:text-gray-500 ${
+                    className={`absolute right-5 pointer-events-none transition-all duration-200 bg-white dark:bg-[#0f172a] px-1.5 rounded text-sm text-gray-400 peer-focus:-top-2.5 peer-focus:translate-y-0 peer-focus:text-xs peer-focus:text-gray-500 ${
                         hasValue
                             ? "-top-2.5 translate-y-0 text-xs text-gray-500"
                             : "top-1/2 -translate-y-1/2"
@@ -83,7 +104,7 @@ const FloatingTextarea = forwardRef<
             />
             <label
                 htmlFor={id}
-                className={`absolute right-5 pointer-events-none transition-all duration-200 bg-white dark:bg-[#111827] px-1.5 rounded text-sm text-gray-400 peer-focus:top-0 peer-focus:text-xs peer-focus:text-gray-500 ${hasValue ? "top-0 text-xs text-gray-500" : "top-4"
+                className={`absolute right-5 pointer-events-none transition-all duration-200 bg-white dark:bg-[#0f172a] px-1.5 rounded text-sm text-gray-400 peer-focus:top-0 peer-focus:text-xs peer-focus:text-gray-500 ${hasValue ? "top-0 text-xs text-gray-500" : "top-4"
                     }`}
             >
                 {label}
@@ -184,18 +205,18 @@ function NiceSelect({
                 >
                     {selected ? selected.label : placeholder}
                 </span>
-                <m.span
+                <motion.span
                     animate={{ rotate: open ? 180 : 0 }}
                     transition={{ duration: 0.2 }}
                     className="shrink-0 text-gray-400"
                 >
                     <ChevronDown size={15} />
-                </m.span>
+                </motion.span>
             </button>
 
             <AnimatePresence>
                 {open && (
-                    <m.div
+                    <motion.div
                         initial={{
                             opacity: 0,
                             scale: 0.95,
@@ -245,12 +266,12 @@ function NiceSelect({
                                                     {opt.label}
                                                 </span>
                                                 {value === opt.id && (
-                                                    <m.span
+                                                    <motion.span
                                                         layoutId="edit-check-icon"
                                                         className="text-white"
                                                     >
                                                         <Check size={14} />
-                                                    </m.span>
+                                                    </motion.span>
                                                 )}
                                             </div>
                                             {opt.sub && (
@@ -268,7 +289,7 @@ function NiceSelect({
                                 </div>
                             )}
                         </div>
-                    </m.div>
+                    </motion.div>
                 )}
             </AnimatePresence>
         </div>
@@ -366,18 +387,18 @@ function SourceSelect({
                 >
                     {selected ? selected.title : "انتخاب منبع آشنایی"}
                 </span>
-                <m.span
+                <motion.span
                     animate={{ rotate: open ? 180 : 0 }}
                     transition={{ duration: 0.2 }}
                     className="shrink-0 text-gray-400"
                 >
                     <ChevronDown size={15} />
-                </m.span>
+                </motion.span>
             </button>
 
             <AnimatePresence>
                 {open && (
-                    <m.div
+                    <motion.div
                         initial={{ opacity: 0, scale: 0.95, y: dropUp ? 8 : -8 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.95, y: dropUp ? 8 : -8 }}
@@ -421,11 +442,9 @@ function SourceSelect({
                                     type="button"
                                     onClick={onConfirmAdd}
                                     disabled={creating || !newTitle.trim()}
-                                    className="relative flex h-7 items-center justify-center rounded-xl bg-blue-600 px-3 text-[11px] font-bold text-white transition-opacity disabled:opacity-50 dark:bg-blue-500"
+                                    className="flex h-7 items-center justify-center rounded-xl bg-blue-600 px-3 text-[11px] font-bold text-white transition-opacity disabled:opacity-50 dark:bg-blue-500"
                                 >
-                                    <BusyContent busy={creating}>
-                                        ثبت
-                                    </BusyContent>
+                                    {creating ? <Loader size={12} className="animate-spin" /> : "ثبت"}
                                 </button>
                                 <button
                                     type="button"
@@ -439,7 +458,9 @@ function SourceSelect({
 
                         <div className="max-h-60 overflow-y-auto overflow-x-hidden custom-scrollbar">
                             {loading ? (
-                                <ListSkeleton rows={3} />
+                                <div className="flex items-center justify-center py-8">
+                                    <Loader size={16} className="animate-spin text-blue-500" />
+                                </div>
                             ) : options.length === 0 ? (
                                 <div className="px-4 py-8 text-center">
                                     <p className="text-[12px] font-medium text-gray-400">
@@ -464,35 +485,37 @@ function SourceSelect({
                                                         : "hover:bg-gray-100 dark:hover:bg-white/[0.05]"
                                                     }`}
                                             >
-                                                <BusyContent busy={isDeleting}>
+                                                <span
+                                                    className={`truncate text-sm font-bold ${active ? "text-white" : "text-gray-900 dark:text-white"
+                                                        }`}
+                                                >
+                                                    {opt.title}
+                                                </span>
+                                                <span className="flex shrink-0 items-center gap-1.5">
+                                                    {active && <Check size={14} className="text-white" />}
                                                     <span
-                                                        className={`truncate text-sm font-bold ${active ? "text-white" : "text-gray-900 dark:text-white"
+                                                        role="button"
+                                                        tabIndex={0}
+                                                        onClick={(e) => onDelete(e, opt.id)}
+                                                        className={`flex h-5 w-5 items-center justify-center rounded-full transition-all ${active
+                                                                ? "text-blue-100 hover:bg-white/20 hover:text-white"
+                                                                : "text-gray-400 hover:bg-gray-100 hover:text-red-500 dark:text-gray-500 dark:hover:bg-white/10 dark:hover:text-red-400"
                                                             }`}
                                                     >
-                                                        {opt.title}
-                                                    </span>
-                                                    <span className="flex shrink-0 items-center gap-1.5">
-                                                        {active && <Check size={14} className="text-white" />}
-                                                        <span
-                                                            role="button"
-                                                            tabIndex={0}
-                                                            onClick={(e) => onDelete(e, opt.id)}
-                                                            className={`flex h-5 w-5 items-center justify-center rounded-full transition-all ${active
-                                                                    ? "text-blue-100 hover:bg-white/20 hover:text-white"
-                                                                    : "text-gray-400 hover:bg-gray-100 hover:text-red-500 dark:text-gray-500 dark:hover:bg-white/10 dark:hover:text-red-400"
-                                                                }`}
-                                                        >
+                                                        {isDeleting ? (
+                                                            <Loader size={10} className="animate-spin" />
+                                                        ) : (
                                                             <X size={11} strokeWidth={2.5} />
-                                                        </span>
+                                                        )}
                                                     </span>
-                                                </BusyContent>
+                                                </span>
                                             </button>
                                         );
                                     })}
                                 </div>
                             )}
                         </div>
-                    </m.div>
+                    </motion.div>
                 )}
             </AnimatePresence>
         </div>
@@ -523,7 +546,6 @@ export default function CustomerEditModal({
     onClose,
     onEdited,
 }: Props) {
-    const reduced = useReducedMotion() ?? false;
     const [form, setForm] = useState<CustomerFormData>(EMPTY_FORM);
     const [isLoadingDetails, setIsLoadingDetails] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -540,8 +562,8 @@ export default function CustomerEditModal({
     const fetchResourcesList = useCallback(async () => {
         try {
             setLoadingResources(true);
-            const all = await listAll<CaseResource>("/tasks/api/v1/cases/resources/");
-            setResources(all);
+            const res = await axiosInstance.get("/tasks/api/v1/cases/resources/");
+            setResources(extractList<CaseResource>(res.data));
         } catch {
             setResources([]);
         } finally {
@@ -701,13 +723,24 @@ export default function CustomerEditModal({
     return (
         <AnimatePresence>
             {isOpen && (
-                <div
+                <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
                     className="fixed inset-0 z-50 flex items-center justify-center px-4 overflow-y-auto"
+                    style={{
+                        background: "rgba(0,0,0,0.45)",
+                        backdropFilter: "blur(3px)",
+                    }}
+                    onClick={handleClose}
                 >
-                    <Backdrop onClick={handleClose} />
-                    <m.div
-                        {...panelMotion(false, reduced)}
-                        className="relative bg-white dark:bg-[#111827] rounded-[2rem] shadow-sm border border-gray-100 dark:border-white/[0.06] w-full max-w-lg overflow-visible my-8"
+                    <motion.div
+                        initial={{ opacity: 0, y: 16 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 16 }}
+                        transition={{ duration: 0.35, ease: "easeOut" }}
+                        className="bg-white dark:bg-[#0f172a] rounded-[2rem] shadow-sm border border-gray-100 dark:border-white/[0.06] w-full max-w-lg overflow-visible my-8"
+                        onClick={(e) => e.stopPropagation()}
                         dir="rtl"
                     >
                         <div className="px-8 pt-8 pb-6 flex items-center justify-between">
@@ -736,7 +769,12 @@ export default function CustomerEditModal({
 
                         <div className="px-8 pb-8">
                             {isLoadingDetails ? (
-                                <FormSkeleton fields={6} />
+                                <div className="flex flex-col items-center justify-center py-20 gap-3">
+                                    <Loader className="w-8 h-8 animate-spin text-blue-600" />
+                                    <span className="text-[11px] text-gray-400 font-bold">
+                                        در حال دریافت…
+                                    </span>
+                                </div>
                             ) : (
                                 <form
                                     onSubmit={handleSubmit}
@@ -811,17 +849,17 @@ export default function CustomerEditModal({
                                     <div className="mt-2 min-h-[48px]">
                                         <AnimatePresence mode="wait">
                                             {error && (
-                                                <m.div
+                                                <motion.div
                                                     initial={{ opacity: 0, y: 6 }}
                                                     animate={{ opacity: 1, y: 0 }}
                                                     exit={{ opacity: 0, y: 4 }}
                                                     className="flex items-center justify-center py-3 rounded-2xl bg-red-50 dark:bg-red-500/10 text-red-500 dark:text-red-400 text-[12px] font-bold"
                                                 >
                                                     {error}
-                                                </m.div>
+                                                </motion.div>
                                             )}
                                             {success ? (
-                                                <m.div
+                                                <motion.div
                                                     key="success"
                                                     initial={{ opacity: 0, scale: 0.9 }}
                                                     animate={{ opacity: 1, scale: 1 }}
@@ -829,20 +867,25 @@ export default function CustomerEditModal({
                                                 >
                                                     <CheckCircle2 size={16} />
                                                     تغییرات ذخیره شد
-                                                </m.div>
+                                                </motion.div>
                                             ) : (
                                                 !error && (
-                                                    <m.button
+                                                    <motion.button
                                                         key="submit"
                                                         type="submit"
                                                         disabled={isSubmitting}
                                                         whileTap={{ scale: 0.97 }}
-                                                        className="relative w-full bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-bold rounded-full py-3 text-sm transition-colors flex items-center justify-center gap-2"
+                                                        className="w-full bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-bold rounded-full py-3 text-sm transition-colors flex items-center justify-center gap-2"
                                                     >
-                                                        <BusyContent busy={isSubmitting}>
-                                                            ذخیره تغییرات
-                                                        </BusyContent>
-                                                    </m.button>
+                                                        {isSubmitting ? (
+                                                            <Loader
+                                                                size={18}
+                                                                className="animate-spin"
+                                                            />
+                                                        ) : (
+                                                            "ذخیره تغییرات"
+                                                        )}
+                                                    </motion.button>
                                                 )
                                             )}
                                         </AnimatePresence>
@@ -850,8 +893,8 @@ export default function CustomerEditModal({
                                 </form>
                             )}
                         </div>
-                    </m.div>
-                </div>
+                    </motion.div>
+                </motion.div>
             )}
         </AnimatePresence>
     );

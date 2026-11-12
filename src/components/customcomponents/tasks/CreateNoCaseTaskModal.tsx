@@ -2,12 +2,22 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { m, AnimatePresence } from "framer-motion";
-import { X, ChevronDown, Upload, Check, Search, Paperclip, AlertCircle, UserPlus, Info, Briefcase } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+    X,
+    ChevronDown,
+    Upload,
+    Check,
+    Loader,
+    Search,
+    Paperclip,
+    AlertCircle,
+    UserPlus,
+    Info,
+    Briefcase,
+} from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
-import { listAll } from "@/lib/api";
 
-import { BusyContent } from "@/components/ui/Button";
 interface Department { id: number; name: string }
 interface DepartmentStep { id: number; department: number; name: string; order: number }
 interface DepartmentEmployee {
@@ -34,6 +44,16 @@ const GRADIENTS = [
 
 const gradientOf = (seed: number) => GRADIENTS[Math.abs(seed) % GRADIENTS.length];
 const initialOf = (text: string) => (text || "").trim().charAt(0) || "؟";
+
+function extractList<T>(data: unknown): T[] {
+    if (Array.isArray(data)) return data as T[];
+    if (data && typeof data === "object") {
+        const obj = data as { results?: T[]; data?: T[] };
+        if (Array.isArray(obj.results)) return obj.results;
+        if (Array.isArray(obj.data)) return obj.data;
+    }
+    return [];
+}
 
 function FloatingInput({ label, id, value, onChange }: {
     label: string; id: string; value: string; onChange: (v: string) => void;
@@ -159,19 +179,19 @@ function NiceSelect({ label, options, value, onChange, placeholder, disabled, em
                         </span>
                     )}
                 </span>
-                <m.span animate={{ rotate: open ? 180 : 0 }} transition={{ duration: 0.2 }}>
+                <motion.span animate={{ rotate: open ? 180 : 0 }} transition={{ duration: 0.2 }}>
                     <ChevronDown size={14} className="shrink-0 text-gray-400" />
-                </m.span>
+                </motion.span>
             </button>
 
             <AnimatePresence>
                 {open && (
-                    <m.div
+                    <motion.div
                         initial={{ opacity: 0, y: -6, scale: 0.97 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: -4, scale: 0.97 }}
                         transition={{ type: "spring", damping: 24, stiffness: 340 }}
-                        className="absolute z-50 mt-2 w-full origin-top overflow-hidden rounded-[1.5rem] border border-gray-100 bg-white shadow-xl shadow-black/5 dark:border-white/[0.08] dark:bg-[#111827] dark:shadow-black/40"
+                        className="absolute z-50 mt-2 w-full origin-top overflow-hidden rounded-[1.5rem] border border-gray-100 bg-white shadow-xl shadow-black/5 dark:border-white/[0.08] dark:bg-[#0f172a] dark:shadow-black/40"
                     >
                         {options.length > 5 && (
                             <div className="border-b border-gray-100 px-3 py-2.5 dark:border-white/[0.06]">
@@ -193,7 +213,7 @@ function NiceSelect({ label, options, value, onChange, placeholder, disabled, em
                             ) : visible.map((o, i) => {
                                 const active = selectedValues.includes(o.id);
                                 return (
-                                    <m.button
+                                    <motion.button
                                         key={o.id}
                                         type="button"
                                         initial={{ opacity: 0, x: 6 }}
@@ -216,11 +236,11 @@ function NiceSelect({ label, options, value, onChange, placeholder, disabled, em
                                                 <Check size={11} className="text-white" strokeWidth={3} />
                                             </span>
                                         )}
-                                    </m.button>
+                                    </motion.button>
                                 );
                             })}
                         </div>
-                    </m.div>
+                    </motion.div>
                 )}
             </AnimatePresence>
         </div>
@@ -245,13 +265,16 @@ export default function CreateNoCaseTaskModal({ isOpen, onClose, onSuccess }: Pr
     useEffect(() => {
         if (!isOpen) return;
 
-        listAll<Department>("/department/api/v1/department/list/").then((all) => setDepartments(all))
+        axiosInstance.get("/department/api/v1/department/list/")
+            .then((r) => setDepartments(extractList<Department>(r.data)))
             .catch(() => setDepartments([]));
 
-        listAll<DepartmentStep>("/department/api/v1/department_step/").then((all) => setDepartmentSteps(all))
+        axiosInstance.get("/department/api/v1/department_step/")
+            .then((r) => setDepartmentSteps(extractList<DepartmentStep>(r.data)))
             .catch(() => setDepartmentSteps([]));
 
-        listAll<DepartmentEmployee>("/department/api/v1/department_employee/list/").then((all) => setEmployees(all))
+        axiosInstance.get("/department/api/v1/department_employee/list/")
+            .then((r) => setEmployees(extractList<DepartmentEmployee>(r.data)))
             .catch(() => setEmployees([]));
     }, [isOpen]);
 
@@ -346,22 +369,22 @@ export default function CreateNoCaseTaskModal({ isOpen, onClose, onSuccess }: Pr
 
     return (
         <AnimatePresence>
-            <m.div
+            <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="backdrop-blur-layer fixed inset-0 z-50 flex items-center justify-center px-4"
-                style={{ background: "rgba(0,0,0,0.45)" }}
+                className="fixed inset-0 z-50 flex items-center justify-center px-4"
+                style={{ background: "rgba(0,0,0,0.45)", backdropFilter: "blur(3px)" }}
                 onClick={handleClose}
             >
-                <m.div
+                <motion.div
                     initial={{ opacity: 0, y: 16 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: 16 }}
                     transition={{ duration: 0.35, ease: "easeOut" }}
                     onClick={(e) => e.stopPropagation()}
                     dir="rtl"
-                    className="flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-sm dark:border-white/[0.06] dark:bg-[#111827]"
+                    className="flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-sm dark:border-white/[0.06] dark:bg-[#0f172a]"
                 >
                     <div className="relative shrink-0 overflow-hidden px-8 pb-6 pt-8">
                         <div className="pointer-events-none absolute -top-12 -left-12 h-36 w-36 rounded-full bg-emerald-500/10 blur-2xl" />
@@ -397,7 +420,7 @@ export default function CreateNoCaseTaskModal({ isOpen, onClose, onSuccess }: Pr
 
                             <AnimatePresence>
                                 {submitError && (
-                                    <m.div
+                                    <motion.div
                                         initial={{ opacity: 0, y: 6 }}
                                         animate={{ opacity: 1, y: 0 }}
                                         exit={{ opacity: 0, y: 4 }}
@@ -412,7 +435,7 @@ export default function CreateNoCaseTaskModal({ isOpen, onClose, onSuccess }: Pr
                                         >
                                             <X size={13} />
                                         </button>
-                                    </m.div>
+                                    </motion.div>
                                 )}
                             </AnimatePresence>
 
@@ -492,14 +515,14 @@ export default function CreateNoCaseTaskModal({ isOpen, onClose, onSuccess }: Pr
 
                                 <AnimatePresence>
                                     {files.length > 0 && (
-                                        <m.div
+                                        <motion.div
                                             initial={{ opacity: 0, height: 0 }}
                                             animate={{ opacity: 1, height: "auto" }}
                                             exit={{ opacity: 0, height: 0 }}
                                             className="mt-2 flex flex-col gap-1.5 overflow-hidden"
                                         >
                                             {files.map((f, i) => (
-                                                <m.div
+                                                <motion.div
                                                     key={`${f.name}-${i}`}
                                                     initial={{ opacity: 0, x: 8 }}
                                                     animate={{ opacity: 1, x: 0 }}
@@ -516,9 +539,9 @@ export default function CreateNoCaseTaskModal({ isOpen, onClose, onSuccess }: Pr
                                                     >
                                                         <X size={12} />
                                                     </button>
-                                                </m.div>
+                                                </motion.div>
                                             ))}
-                                        </m.div>
+                                        </motion.div>
                                     )}
                                 </AnimatePresence>
                             </div>
@@ -526,20 +549,20 @@ export default function CreateNoCaseTaskModal({ isOpen, onClose, onSuccess }: Pr
                     </div>
 
                     <div className="flex shrink-0 items-center gap-2 px-8 pb-8 pt-5">
-                        <m.button
+                        <motion.button
                             type="button"
                             whileTap={{ scale: 0.97 }}
                             onClick={handleSubmit}
                             disabled={!canSubmit}
-                            className="relative flex h-11 flex-1 items-center justify-center gap-2 rounded-full bg-emerald-600 text-[13px] font-bold text-white shadow-lg shadow-emerald-500/20 transition-colors hover:bg-emerald-500 disabled:opacity-40 disabled:shadow-none"
+                            className="flex h-11 flex-1 items-center justify-center gap-2 rounded-full bg-emerald-600 text-[13px] font-bold text-white shadow-lg shadow-emerald-500/20 transition-colors hover:bg-emerald-500 disabled:opacity-40 disabled:shadow-none"
                         >
-                            <BusyContent busy={submitting}>
-                                <><Check size={14} strokeWidth={3} />ثبت وظیفه بدون پرونده</>
-                            </BusyContent>
-                        </m.button>
+                            {submitting
+                                ? <Loader size={15} className="animate-spin" />
+                                : <><Check size={14} strokeWidth={3} />ثبت وظیفه بدون پرونده</>}
+                        </motion.button>
                     </div>
-                </m.div>
-            </m.div>
+                </motion.div>
+            </motion.div>
         </AnimatePresence>
     );
 }

@@ -1,12 +1,9 @@
 "use client";
 
 import { useEffect, useState, forwardRef, InputHTMLAttributes } from "react";
-import { m, AnimatePresence, useReducedMotion } from "framer-motion";
-import { Backdrop } from "@/components/ui/Backdrop";
-import { panelMotion } from "@/lib/motion";
-import { X, Building2, CheckCircle2 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { X, Building2, CheckCircle2, Loader } from "lucide-react";
 
-import { BusyContent } from "@/components/ui/Button";
 interface Props {
 open: boolean;
 onClose: () => void;
@@ -28,7 +25,7 @@ className={`peer w-full border border-gray-200 rounded-4xl px-5 py-3 text-sm tex
 {...props}
 /> <label
              htmlFor={id}
-             className="absolute right-5 top-1/2 -translate-y-1/2 text-sm text-gray-400 pointer-events-none transition-all duration-200 bg-white dark:bg-[#111827] px-1.5 rounded peer-focus:top-0 peer-focus:text-xs peer-focus:text-gray-500 peer-[:not(:placeholder-shown)]:top-0 peer-[:not(:placeholder-shown)]:text-xs peer-[:not(:placeholder-shown)]:text-gray-500"
+             className="absolute right-5 top-1/2 -translate-y-1/2 text-sm text-gray-400 pointer-events-none transition-all duration-200 bg-white dark:bg-[#0f172a] px-1.5 rounded peer-focus:top-0 peer-focus:text-xs peer-focus:text-gray-500 peer-[:not(:placeholder-shown)]:top-0 peer-[:not(:placeholder-shown)]:text-xs peer-[:not(:placeholder-shown)]:text-gray-500"
          >
 {label} </label> </div>
 )
@@ -41,7 +38,6 @@ open,
 onClose,
 onSubmit,
 }: Props) {
-    const reduced = useReducedMotion() ?? false;
 const [name, setName] = useState("");
 const [loading, setLoading] = useState(false);
 const [success, setSuccess] = useState(false);
@@ -97,9 +93,27 @@ const handleSubmit = async (e?: React.FormEvent) => {
 return (
     <AnimatePresence>
         {open && (
-            <div className="fixed inset-0 z-[100] flex items-center justify-center px-4">
-<Backdrop onClick={handleClose} />
-                <m.div {...panelMotion(false, reduced)} className="relative bg-white dark:bg-[#111827] rounded-[2rem] shadow-sm border border-gray-100 dark:border-white/[0.06] w-full max-w-sm overflow-hidden"
+            <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 z-50 flex items-center justify-center px-4"
+                style={{
+                    background: "rgba(0,0,0,0.45)",
+                    backdropFilter: "blur(3px)",
+                }}
+                onClick={handleClose}
+            >
+                <motion.div
+                    initial={{ opacity: 0, y: 16 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 16 }}
+                    transition={{
+                        duration: 0.35,
+                        ease: "easeOut",
+                    }}
+                    className="bg-white dark:bg-[#0f172a] rounded-[2rem] shadow-sm border border-gray-100 dark:border-white/[0.06] w-full max-w-sm overflow-hidden"
+                    onClick={(e) => e.stopPropagation()}
                     dir="rtl"
                 >
                     <div className="px-8 pt-8 pb-6 flex items-center justify-between">
@@ -147,7 +161,7 @@ return (
 
                         <AnimatePresence mode="wait">
                             {success ? (
-                                <m.div
+                                <motion.div
                                     key="success"
                                     initial={{
                                         opacity: 0,
@@ -165,24 +179,29 @@ return (
                                 >
                                     <CheckCircle2 size={16} />
                                     دپارتمان با موفقیت ایجاد شد
-                                </m.div>
+                                </motion.div>
                             ) : (
-                                <m.button
+                                <motion.button
                                     key="submit"
                                     type="submit"
                                     disabled={!name.trim() || loading}
                                     whileTap={{ scale: 0.97 }}
-                                    className="relative bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-bold rounded-full py-3 text-sm transition-colors flex items-center justify-center gap-2"
+                                    className="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-bold rounded-full py-3 text-sm transition-colors flex items-center justify-center gap-2"
                                 >
-                                    <BusyContent busy={loading}>
-                                        ایجاد دپارتمان
-                                    </BusyContent>
-                                </m.button>
+                                    {loading ? (
+                                        <Loader
+                                            size={18}
+                                            className="animate-spin"
+                                        />
+                                    ) : (
+                                        "ایجاد دپارتمان"
+                                    )}
+                                </motion.button>
                             )}
                         </AnimatePresence>
                     </form>
-                </m.div>
-            </div>
+                </motion.div>
+            </motion.div>
         )}
     </AnimatePresence>
 );

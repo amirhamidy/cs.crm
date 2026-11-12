@@ -1,16 +1,39 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, forwardRef, useLayoutEffect, type InputHTMLAttributes } from "react";
+import {
+    useEffect,
+    useMemo,
+    useRef,
+    useState,
+    forwardRef,
+    useLayoutEffect,
+    type InputHTMLAttributes,
+} from "react";
 import { createPortal } from "react-dom";
-import { AnimatePresence, m, useReducedMotion } from "framer-motion";
-import { Backdrop } from "@/components/ui/Backdrop";
-import { panelMotion } from "@/lib/motion";
-import { ArrowLeft, ArrowRight, Check, ChevronDown, PackagePlus, Search, X } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
+import {
+    ArrowLeft,
+    ArrowRight,
+    Check,
+    ChevronDown,
+    Loader,
+    PackagePlus,
+    Search,
+    X,
+} from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
-import type { ApiCategory, ApiProduct, ApiProductInitDraft, ApiStockInfo, ApiWarehouseStaff } from "@/types/warehouse";
-import { SHELF_CODE_MAX_LENGTH, normalizeShelfCode } from "@/utils/warehouseShelf";
+import type {
+    ApiCategory,
+    ApiProduct,
+    ApiProductInitDraft,
+    ApiStockInfo,
+    ApiWarehouseStaff,
+} from "@/types/warehouse";
+import {
+    SHELF_CODE_MAX_LENGTH,
+    normalizeShelfCode,
+} from "@/utils/warehouseShelf";
 
-import { BusyContent } from "@/components/ui/Button";
 interface WarehouseEmployeeProductWizardModalProps {
     isOpen: boolean;
     onClose: () => void;
@@ -192,7 +215,7 @@ const FloatingInput = forwardRef<HTMLInputElement, FloatingInputProps>(
                 />
                 <label
                     htmlFor={id}
-                    className="absolute right-5 top-1/2 -translate-y-1/2 text-sm text-gray-400 pointer-events-none transition-all duration-200 bg-white px-1.5 rounded peer-focus:top-0 peer-focus:text-xs peer-focus:text-gray-500 peer-[:not(:placeholder-shown)]:top-0 peer-[:not(:placeholder-shown)]:text-xs peer-[:not(:placeholder-shown)]:text-gray-500 dark:bg-[#111827]"
+                    className="absolute right-5 top-1/2 -translate-y-1/2 text-sm text-gray-400 pointer-events-none transition-all duration-200 bg-white px-1.5 rounded peer-focus:top-0 peer-focus:text-xs peer-focus:text-gray-500 peer-[:not(:placeholder-shown)]:top-0 peer-[:not(:placeholder-shown)]:text-xs peer-[:not(:placeholder-shown)]:text-gray-500 dark:bg-[#0f172a]"
                 >
                     {label}
                 </label>
@@ -325,7 +348,7 @@ function NiceSelect({
                 </span>
 
                 {!disabled && (
-                    <m.span
+                    <motion.span
                         animate={{ rotate: open ? 180 : 0 }}
                         transition={{ duration: 0.2 }}
                     >
@@ -333,7 +356,7 @@ function NiceSelect({
                             size={14}
                             className="shrink-0 text-gray-400"
                         />
-                    </m.span>
+                    </motion.span>
                 )}
             </button>
 
@@ -341,7 +364,7 @@ function NiceSelect({
                 createPortal(
                     <AnimatePresence>
                         {open && !disabled && (
-                            <m.div
+                            <motion.div
                                 ref={panelRef}
                                 initial={{ opacity: 0, y: -6, scale: 0.97 }}
                                 animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -359,7 +382,7 @@ function NiceSelect({
                                     zIndex: 100,
                                     transformOrigin: "top center",
                                 }}
-                                className="overflow-y-scroll scrollbar-hide rounded-[1.5rem] border border-gray-100 bg-white shadow-xl shadow-black/5 dark:border-white/[0.08] dark:bg-[#111827] dark:shadow-black/40"
+                                className="overflow-y-scroll scrollbar-hide rounded-[1.5rem] border border-gray-100 bg-white shadow-xl shadow-black/5 dark:border-white/[0.08] dark:bg-[#0f172a] dark:shadow-black/40"
                             >
                                 {options.length > 5 && (
                                     <div className="border-b border-gray-100 px-3 py-2.5 dark:border-white/[0.06]">
@@ -394,7 +417,7 @@ function NiceSelect({
                                             const active = o.value === value;
 
                                             return (
-                                                <m.button
+                                                <motion.button
                                                     key={o.value}
                                                     type="button"
                                                     initial={{
@@ -451,12 +474,12 @@ function NiceSelect({
                                                             />
                                                         </span>
                                                     )}
-                                                </m.button>
+                                                </motion.button>
                                             );
                                         })
                                     )}
                                 </div>
-                            </m.div>
+                            </motion.div>
                         )}
                     </AnimatePresence>,
                     document.body
@@ -474,7 +497,6 @@ export default function WarehouseEmployeeProductWizardModal({
     warehouseId,
     onCreated,
 }: WarehouseEmployeeProductWizardModalProps) {
-    const reduced = useReducedMotion() ?? false;
     const [step, setStep] = useState<Step>(1);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
@@ -768,14 +790,25 @@ export default function WarehouseEmployeeProductWizardModal({
     return (
         <AnimatePresence>
             {isOpen && (
-                <div
+                <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    onClick={closeModal}
                     className="fixed inset-0 z-[80] flex items-center justify-center px-4"
+                    style={{
+                        background: "rgba(0,0,0,0.45)",
+                        backdropFilter: "blur(3px)",
+                    }}
                 >
-                    <Backdrop onClick={closeModal} />
-                    <m.div
-                        {...panelMotion(false, reduced)}
+                    <motion.div
+                        initial={{ opacity: 0, y: 16 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 16 }}
+                        transition={{ duration: 0.35, ease: "easeOut" }}
+                        onClick={(e) => e.stopPropagation()}
                         dir="rtl"
-                        className="relative flex max-h-[90vh] w-full max-w-md flex-col rounded-[2rem] border border-gray-100 bg-white shadow-sm dark:border-white/[0.06] dark:bg-[#111827]"
+                        className="flex max-h-[90vh] w-full max-w-md flex-col rounded-[2rem] border border-gray-100 bg-white shadow-sm dark:border-white/[0.06] dark:bg-[#0f172a]"
                     >
                         <div className="flex shrink-0 items-center justify-between px-8 pb-5 pt-7">
                             <div className="flex items-center gap-3">
@@ -841,7 +874,7 @@ export default function WarehouseEmployeeProductWizardModal({
                             <div className="flex flex-col gap-3">
                                 <AnimatePresence>
                                     {error && (
-                                        <m.div
+                                        <motion.div
                                             initial={{
                                                 opacity: 0,
                                                 y: 6,
@@ -872,13 +905,13 @@ export default function WarehouseEmployeeProductWizardModal({
                                             >
                                                 <X size={13} />
                                             </button>
-                                        </m.div>
+                                        </motion.div>
                                     )}
                                 </AnimatePresence>
 
                                 <AnimatePresence mode="wait">
                                     {step === 1 && (
-                                        <m.div
+                                        <motion.div
                                             key="step-1"
                                             initial={{
                                                 opacity: 0,
@@ -947,11 +980,11 @@ export default function WarehouseEmployeeProductWizardModal({
                                                     }
                                                 />
                                             </div>
-                                        </m.div>
+                                        </motion.div>
                                     )}
 
                                     {step === 2 && (
-                                        <m.div
+                                        <motion.div
                                             key="step-2"
                                             initial={{
                                                 opacity: 0,
@@ -995,11 +1028,11 @@ export default function WarehouseEmployeeProductWizardModal({
                                                     )
                                                 }
                                             />
-                                        </m.div>
+                                        </motion.div>
                                     )}
 
                                     {step === 3 && (
-                                        <m.div
+                                        <motion.div
                                             key="step-3"
                                             initial={{
                                                 opacity: 0,
@@ -1079,11 +1112,11 @@ export default function WarehouseEmployeeProductWizardModal({
                                                     }
                                                 />
                                             )}
-                                        </m.div>
+                                        </motion.div>
                                     )}
 
                                     {step === 4 && (
-                                        <m.div
+                                        <motion.div
                                             key="step-4"
                                             initial={{
                                                 opacity: 0,
@@ -1126,7 +1159,7 @@ export default function WarehouseEmployeeProductWizardModal({
                                                     )}
                                                 </div>
                                             )}
-                                        </m.div>
+                                        </motion.div>
                                     )}
                                 </AnimatePresence>
                             </div>
@@ -1151,39 +1184,44 @@ export default function WarehouseEmployeeProductWizardModal({
                             )}
 
                             {step < 4 && (
-                                <m.button
+                                <motion.button
                                     type="button"
                                     onClick={handleNext}
                                     disabled={loading}
                                     whileTap={{ scale: 0.97 }}
-                                    className="relative flex h-11 flex-1 items-center justify-center gap-2 rounded-full bg-blue-600 text-[12.5px] font-bold text-white transition-colors hover:bg-blue-500 disabled:opacity-40"
+                                    className="flex h-11 flex-1 items-center justify-center gap-2 rounded-full bg-blue-600 text-[12.5px] font-bold text-white transition-colors hover:bg-blue-500 disabled:opacity-40"
                                 >
-                                    <BusyContent busy={loading}>
+                                    {loading ? (
+                                        <Loader
+                                            size={15}
+                                            className="animate-spin"
+                                        />
+                                    ) : (
                                         <>
-                                                {step === 2
-                                                    ? "ایجاد محصول"
-                                                    : step === 3
-                                                        ? "ثبت موجودی"
-                                                        : "ادامه"}
-                                                <ArrowLeft size={14} />
-                                            </>
-                                    </BusyContent>
-                                </m.button>
+                                            {step === 2
+                                                ? "ایجاد محصول"
+                                                : step === 3
+                                                    ? "ثبت موجودی"
+                                                    : "ادامه"}
+                                            <ArrowLeft size={14} />
+                                        </>
+                                    )}
+                                </motion.button>
                             )}
 
                             {step === 4 && (
-                                <m.button
+                                <motion.button
                                     type="button"
                                     onClick={onClose}
                                     whileTap={{ scale: 0.97 }}
                                     className="flex h-11 w-full items-center justify-center rounded-full bg-blue-600 text-[12.5px] font-bold text-white transition-colors hover:bg-blue-500"
                                 >
                                     بستن
-                                </m.button>
+                                </motion.button>
                             )}
                         </div>
-                    </m.div>
-                </div>
+                    </motion.div>
+                </motion.div>
             )}
         </AnimatePresence>
     );

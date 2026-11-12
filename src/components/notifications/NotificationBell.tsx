@@ -1,10 +1,20 @@
 "use client";
 
-import { useCallback, useState } from "react";
-import { m } from "framer-motion";
-import type { LucideIcon } from "lucide-react";
-import { Bell, BellOff, CheckCheck, ClipboardList, Clock, Inbox, Info, MessageSquare, Repeat, Trash2 } from "lucide-react";
-import Popover from "@/components/ui/Popover";
+import { useEffect, useRef, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import {
+    Bell,
+    BellOff,
+    CheckCheck,
+    ClipboardList,
+    Clock,
+    Inbox,
+    Info,
+    MessageSquare,
+    Repeat,
+    Trash2,
+    type LucideIcon,
+} from "lucide-react";
 import { useNotificationStore } from "@/store/notificationStore";
 import type { AppNotification, NotificationKind } from "./types";
 
@@ -54,7 +64,7 @@ function Row({
                 <span
                     className={`block text-[13px] leading-5 ${item.read
                             ? "font-medium text-gray-600 dark:text-gray-400"
-                            : "font-medium text-gray-900 dark:text-white"
+                            : "font-semibold text-gray-900 dark:text-white"
                         }`}
                 >
                     {item.title}
@@ -89,20 +99,33 @@ export function NotificationBell() {
     const clearAll = useNotificationStore((s) => s.clearAll);
 
     const [open, setOpen] = useState(false);
-    const close = useCallback(() => setOpen(false), []);
+    const rootRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        if (!open) return;
+
+        const onPointerDown = (e: PointerEvent) => {
+            if (!rootRef.current?.contains(e.target as Node)) setOpen(false);
+        };
+        const onKeyDown = (e: KeyboardEvent) => {
+            if (e.key === "Escape") setOpen(false);
+        };
+
+        document.addEventListener("pointerdown", onPointerDown);
+        document.addEventListener("keydown", onKeyDown);
+        return () => {
+            document.removeEventListener("pointerdown", onPointerDown);
+            document.removeEventListener("keydown", onKeyDown);
+        };
+    }, [open]);
 
     const handleSelect = (item: AppNotification) => {
         if (!item.read) markRead(item.id);
     };
 
     return (
-        <Popover
-            open={open}
-            onClose={close}
-            label="اعلان‌ها"
-            panelClassName="fixed inset-x-3 top-[72px] overflow-hidden rounded-2xl border border-gray-200/60 bg-white shadow-[0_12px_40px_rgb(0,0,0,0.14)] sm:absolute sm:inset-x-auto sm:left-[100%] sm:top-full sm:mt-2 sm:w-[360px] dark:border-white/10 dark:bg-gray-900 dark:shadow-[0_12px_40px_rgb(0,0,0,0.5)]"
-            trigger={
-            <m.button
+        <div ref={rootRef} className="relative">
+            <motion.button
                 type="button"
                 onClick={() => setOpen((v) => !v)}
                 whileHover={{ scale: 1.05 }}
@@ -120,7 +143,7 @@ export function NotificationBell() {
                 />
 
                 {unread > 0 && (
-                    <m.span
+                    <motion.span
                         key={unread}
                         initial={{ scale: 0.6 }}
                         animate={{ scale: 1 }}
@@ -128,14 +151,25 @@ export function NotificationBell() {
                         className="absolute -right-0.5 -top-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold leading-none text-white"
                     >
                         {unread > 99 ? "99+" : unread.toLocaleString("fa-IR")}
-                    </m.span>
+                    </motion.span>
                 )}
-            </m.button>
-            }
-        >
+            </motion.button>
+
+            <AnimatePresence>
+                {open && (
+                    <motion.div
+                        role="dialog"
+                        aria-label="اعلان‌ها"
+                        dir="rtl"
+                        initial={{ opacity: 0, y: -6, scale: 0.98 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: -6, scale: 0.98 }}
+                        transition={{ duration: 0.15 }}
+                        className="fixed inset-x-3 top-[72px] z-50 overflow-hidden rounded-2xl border border-gray-200/60 bg-white shadow-[0_12px_40px_rgb(0,0,0,0.14)] sm:absolute sm:inset-x-auto sm:left-[100%] sm:top-full sm:mt-2 sm:w-[360px] dark:border-white/10 dark:bg-slate-900 dark:shadow-[0_12px_40px_rgb(0,0,0,0.5)]"
+                    >
                         <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3 dark:border-white/5">
                             <div>
-                                <h3 className="text-[14px] font-bold text-gray-900 dark:text-white">
+                                <h3 className="text-[14px] font-extrabold text-gray-900 dark:text-white">
                                     اعلان‌ها
                                 </h3>
                                 <p className="text-[11px] text-gray-400 dark:text-gray-600">
@@ -150,7 +184,7 @@ export function NotificationBell() {
                                     type="button"
                                     onClick={markAllRead}
                                     disabled={unread === 0}
-                                    className="rounded-lg px-2.5 py-1.5 text-[12px] font-medium text-indigo-600 transition-colors hover:bg-indigo-500/10 disabled:pointer-events-none disabled:opacity-40 dark:text-indigo-400"
+                                    className="rounded-lg px-2.5 py-1.5 text-[12px] font-semibold text-indigo-600 transition-colors hover:bg-indigo-500/10 disabled:pointer-events-none disabled:opacity-40 dark:text-indigo-400"
                                 >
                                     خواندن همه
                                 </button>
@@ -159,7 +193,7 @@ export function NotificationBell() {
                                     type="button"
                                     onClick={clearAll}
                                     disabled={items.length === 0}
-                                    className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-[12px] font-medium text-red-600 transition-colors hover:bg-red-500/10 disabled:pointer-events-none disabled:opacity-40 dark:text-red-400"
+                                    className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-[12px] font-semibold text-red-600 transition-colors hover:bg-red-500/10 disabled:pointer-events-none disabled:opacity-40 dark:text-red-400"
                                 >
                                     <Trash2 size={13} strokeWidth={1.75} />
                                     پاکسازی
@@ -174,7 +208,7 @@ export function NotificationBell() {
                                         size={26}
                                         className="text-gray-300 dark:text-gray-700"
                                     />
-                                    <p className="text-[13px] font-medium text-gray-600 dark:text-gray-400">
+                                    <p className="text-[13px] font-semibold text-gray-600 dark:text-gray-400">
                                         اعلان جدیدی نداری
                                     </p>
                                     <p className="text-[12px] text-gray-400 dark:text-gray-600">
@@ -187,6 +221,9 @@ export function NotificationBell() {
                                 ))
                             )}
                         </div>
-        </Popover>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+        </div>
     );
 }
