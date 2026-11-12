@@ -1,12 +1,34 @@
+
 "use client";
 
-import { ChangeEvent, KeyboardEvent, useEffect, useMemo, useRef, useState } from "react";
+import {
+    ChangeEvent,
+    KeyboardEvent,
+    useEffect,
+    useMemo,
+    useRef,
+    useState,
+} from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Check, Download, File, Loader2, MessageSquareText, Paperclip, Send, UserRound, X } from "lucide-react";
+import {
+    Check,
+    Download,
+    File,
+    Loader2,
+    MessageSquareText,
+    Paperclip,
+    Send,
+    UserRound,
+    X,
+} from "lucide-react";
 import api from "@/lib/axiosInstance";
 import { useAuthStore } from "@/store/authStore";
-import type { EmployeeListItem, InternalTask, InternalTaskAttachment } from "./types";
-import { fetchEmployeeList, fetchInternalTasks, uploadInternalTaskAttachments } from "./Api";
+import type {
+    EmployeeListItem,
+    InternalTask,
+    InternalTaskAttachment,
+} from "./types";
+import { fetchEmployeeList, uploadInternalTaskAttachments } from "./Api";
 
 interface InternalTaskChatModalProps {
     open: boolean;
@@ -15,26 +37,34 @@ interface InternalTaskChatModalProps {
     onUpdated: (task: InternalTask) => void;
 }
 
-interface UserListItem {
-    id: number;
-    username: string;
-}
-
 type EmployeeRecord = EmployeeListItem & {
     username?: string;
     full_name?: string;
 };
 
+interface GroupedAttachment {
+    date: string;
+    items: InternalTaskAttachment[];
+}
+
 let employeesCache: EmployeeListItem[] | null = null;
 
-function normalizeUsername(value: unknown) {
+function normalizeUsername(value: unknown): string {
     return typeof value === "string" ? value.trim().toLowerCase() : "";
 }
 
 function parseEmployees(data: unknown): EmployeeListItem[] {
-    const source = data as { data?: unknown; results?: unknown } | null | undefined;
-    const raw = source?.data ?? source?.results ?? data;
+    if (!data || typeof data !== "object") return [];
+
+    const source = data as {
+        data?: unknown;
+        results?: unknown;
+    };
+
+    const raw = source.data ?? source.results ?? data;
+
     if (!Array.isArray(raw)) return [];
+
     return raw.filter(
         (item): item is EmployeeListItem =>
             Boolean(item) &&
@@ -43,8 +73,9 @@ function parseEmployees(data: unknown): EmployeeListItem[] {
     );
 }
 
-function formatTime(value: string) {
+function formatTime(value: string): string {
     const date = new Date(value);
+
     return Number.isNaN(date.getTime())
         ? ""
         : new Intl.DateTimeFormat("fa-IR", {
@@ -53,175 +84,144 @@ function formatTime(value: string) {
         }).format(date);
 }
 
-function formatDate(value: string) {
+function formatDate(value: string): string {
     const date = new Date(value);
+
     return Number.isNaN(date.getTime())
-        ? ""
+        ? "تاریخ نامشخص"
         : new Intl.DateTimeFormat("fa-IR", {
             day: "numeric",
             month: "long",
         }).format(date);
 }
 
-function isImage(fileName: string) {
+function isImage(fileName: string): boolean {
     return /\.(jpg|jpeg|png|gif|webp|svg|bmp|avif)$/i.test(fileName);
 }
 
-function isPdf(fileName: string) {
+function isPdf(fileName: string): boolean {
     return /\.pdf$/i.test(fileName);
 }
 
-function getFileName(attachment: InternalTaskAttachment) {
-    return attachment.original_file_name || attachment.file?.split("/").pop() || "فایل";
+function getFileName(attachment: InternalTaskAttachment): string {
+    return (
+        attachment.original_file_name ||
+        attachment.file?.split("/").pop() ||
+        "فایل"
+    );
 }
 
-function getAttachmentUrl(file: string) {
+function getAttachmentUrl(file: string): string {
     if (!file) return "";
-    if (file.startsWith("http://") || file.startsWith("https://")) return file;
-    if (typeof window !== "undefined") return new URL(file, window.location.origin).toString();
+
+    if (/^https?:\/\//i.test(file)) return file;
+
+    if (typeof window !== "undefined") {
+        return new URL(file, window.location.origin).toString();
+    }
+
     return file;
 }
 
-function getCreatorName(task: InternalTask, employees: EmployeeListItem[]) {
+function getEmployeeName(
+    employeeId: number,
+    employees: EmployeeListItem[]
+): string {
+    const employee = employees.find(
+        (item) =>
+            Number((item as EmployeeRecord).id) === Number(employeeId)
+    ) as EmployeeRecord | undefined;
+
+    return (
+        employee?.full_name?.trim() ||
+        employee?.username?.trim() ||
+        "کاربر"
+    );
+}
+
+function getCreatorName(
+    task: InternalTask,
+    employees: EmployeeListItem[]
+): string {
     if (!task.created_by) return "کاربر";
 
     const createdBy = String(task.created_by).trim();
 
     const employee = employees.find(
         (item) =>
-            normalizeUsername((item as EmployeeRecord).username) === normalizeUsername(createdBy) ||
+            normalizeUsername((item as EmployeeRecord).username) ===
+            normalizeUsername(createdBy) ||
             String((item as EmployeeRecord).id) === createdBy
     ) as EmployeeRecord | undefined;
 
-    return employee?.full_name?.trim() || employee?.username?.trim() || createdBy;
+    return (
+        employee?.full_name?.trim() ||
+        employee?.username?.trim() ||
+        createdBy
+    );
 }
 
-function getSenderName(uploadedById: number, users: UserListItem[], employees: EmployeeListItem[]) {
-    const user = users.find((item) => Number(item.id) === Number(uploadedById));
-
-    if (!user) {
-        const employeeById = employees.find(
-            (item) => Number((item as EmployeeRecord).id) === Number(uploadedById)
-        ) as EmployeeRecord | undefined;
-
-        return employeeById?.full_name?.trim() || employeeById?.username?.trim() || "کاربر";
-    }
-
-    const username = user.username?.trim() || "";
-
-    const employee = employees.find(
-        (item) =>
-            normalizeUsername((item as EmployeeRecord).username) === normalizeUsername(username)
-    ) as EmployeeRecord | undefined;
-
-    return employee?.full_name?.trim() || employee?.username?.trim() || username || "کاربر";
-}
-
-export default function InternalTaskChatModal({ open, task, onClose, onUpdated }: InternalTaskChatModalProps) {
+export default function InternalTaskChatModal({
+    open,
+    task,
+    onClose,
+    onUpdated,
+}: InternalTaskChatModalProps) {
     const { userId } = useAuthStore();
+
     const [message, setMessage] = useState("");
     const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
     const [sending, setSending] = useState(false);
-    const [isPolling, setIsPolling] = useState(false);
-    const [employees, setEmployees] = useState<EmployeeListItem[]>(employeesCache ?? []);
-    const [employeesLoaded, setEmployeesLoaded] = useState(employeesCache !== null);
-    const [users, setUsers] = useState<UserListItem[]>([]);
+    const [employees, setEmployees] = useState<EmployeeListItem[]>(
+        employeesCache ?? []
+    );
+
     const scrollRef = useRef<HTMLDivElement | null>(null);
     const textareaRef = useRef<HTMLTextAreaElement | null>(null);
     const fileInputRef = useRef<HTMLInputElement | null>(null);
     const bottomAnchorRef = useRef<HTMLDivElement | null>(null);
     const shouldAutoScrollRef = useRef(true);
-    const taskRef = useRef(task);
-    const sendingRef = useRef(false);
-
-    useEffect(() => {
-        taskRef.current = task;
-    }, [task]);
-
-    useEffect(() => {
-        sendingRef.current = sending;
-    }, [sending]);
-
-    useEffect(() => {
-        if (!open) return;
-
-        let cancelled = false;
-        const controller = new AbortController();
-
-        fetchEmployeeList(controller.signal)
-            .then((response) => {
-                if (cancelled) return;
-                const list = parseEmployees(response.data);
-                employeesCache = list;
-                setEmployees(list);
-                setEmployeesLoaded(true);
-            })
-            .catch(() => {
-                if (cancelled) return;
-                setEmployeesLoaded(true);
-            });
-
-        api.get<UserListItem[]>("/accounts/api/v1/user/list/", { signal: controller.signal })
-            .then((response) => {
-                if (cancelled) return;
-                setUsers(Array.isArray(response.data) ? response.data : []);
-            })
-            .catch(() => {
-                if (cancelled) return;
-                setUsers([]);
-            });
-
-        return () => {
-            cancelled = true;
-            controller.abort();
-        };
-    }, [open]);
-
-    const employeeByUsername = useMemo(() => {
-        const map = new Map<string, EmployeeListItem>();
-
-        employees.forEach((employee) => {
-            const key = normalizeUsername((employee as EmployeeRecord).username);
-            if (key) map.set(key, employee);
-        });
-
-        return map;
-    }, [employees]);
-
-    const senderName = useMemo(() => {
-        if (!task.created_by || !employeesLoaded) return "";
-
-        const createdBy = String(task.created_by).trim();
-
-        const employee = employees.find(
-            (item) =>
-                normalizeUsername((item as EmployeeRecord).username) === normalizeUsername(createdBy) ||
-                String((item as EmployeeRecord).id) === createdBy
-        ) as EmployeeRecord | undefined;
-
-        return employee?.full_name?.trim() || employee?.username?.trim() || createdBy;
-    }, [task.created_by, employees, employeesLoaded, employeeByUsername]);
 
     const attachments = useMemo(
-        () =>
-            [...(task.attachments ?? [])].sort(
-                (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
-            ),
+        () => task.attachments ?? [],
         [task.attachments]
     );
 
-    const groupedAttachments = useMemo(() => {
-        const groups: Record<string, InternalTaskAttachment[]> = {};
+    const senderName = useMemo(
+        () => getCreatorName(task, employees),
+        [task, employees]
+    );
 
-        attachments.forEach((attachment) => {
-            const key = formatDate(attachment.created_at);
-            (groups[key] ??= []).push(attachment);
-        });
+    const groupedAttachments = useMemo<GroupedAttachment[]>(() => {
+        const groups = new Map<string, InternalTaskAttachment[]>();
 
-        return Object.entries(groups);
+        const sortedAttachments = [...attachments].sort(
+            (a, b) =>
+                new Date(a.created_at).getTime() -
+                new Date(b.created_at).getTime()
+        );
+
+        for (const attachment of sortedAttachments) {
+            const date = formatDate(attachment.created_at);
+
+            const existing = groups.get(date);
+
+            if (existing) {
+                existing.push(attachment);
+            } else {
+                groups.set(date, [attachment]);
+            }
+        }
+
+        return Array.from(groups.entries()).map(([date, items]) => ({
+            date,
+            items,
+        }));
     }, [attachments]);
 
-    const scrollToBottom = (behavior: ScrollBehavior = "smooth") => {
+    const scrollToBottom = (behavior: ScrollBehavior = "auto") => {
+        if (!shouldAutoScrollRef.current) return;
+
         bottomAnchorRef.current?.scrollIntoView({
             behavior,
             block: "end",
@@ -231,133 +231,69 @@ export default function InternalTaskChatModal({ open, task, onClose, onUpdated }
     useEffect(() => {
         if (!open) return;
 
-        const timer = window.setTimeout(() => scrollToBottom("auto"), 80);
-
-        return () => window.clearTimeout(timer);
-    }, [open]);
-
-    useEffect(() => {
-        if (!open || !shouldAutoScrollRef.current) return;
-
-        const timer = window.setTimeout(() => scrollToBottom("smooth"), 50);
-
-        return () => window.clearTimeout(timer);
-    }, [open, attachments.length]);
-
-    useEffect(() => {
-        const container = scrollRef.current;
-        if (!container) return;
-
-        const handleScroll = () => {
-            shouldAutoScrollRef.current =
-                container.scrollHeight - container.scrollTop - container.clientHeight < 120;
-        };
-
-        container.addEventListener("scroll", handleScroll);
-
-        return () => container.removeEventListener("scroll", handleScroll);
-    }, [open]);
-
-    useEffect(() => {
-        if (!open) return;
-
-        const previousOverflow = document.body.style.overflow;
-        document.body.style.overflow = "hidden";
-
-        return () => {
-            document.body.style.overflow = previousOverflow;
-        };
-    }, [open]);
-
-    useEffect(() => {
-        if (!open) return;
+        if (employeesCache !== null) {
+            setEmployees(employeesCache);
+            return;
+        }
 
         let cancelled = false;
 
-        const poll = async () => {
-            if (cancelled || sendingRef.current || document.visibilityState !== "visible") return;
-
+        const loadEmployees = async () => {
             try {
-                setIsPolling(true);
+                const response = await fetchEmployeeList();
+                const result = parseEmployees(response);
 
-                const response = await fetchInternalTasks();
-
-                if (cancelled) return;
-
-                const rawList = Array.isArray(response.data) ? response.data : [];
-                const currentTask = taskRef.current;
-
-                const rawTask = rawList.find(
-                    (item: any) => Number(item?.id) === Number(currentTask.id)
-                );
-
-                if (!rawTask) return;
-
-                const rawAttachments = Array.isArray(rawTask.attachments)
-                    ? rawTask.attachments
-                    : [];
-
-                const existingIds = new Set(
-                    (currentTask.attachments ?? []).map((item) => Number(item.id))
-                );
-
-                const incomingIds = new Set(
-                    rawAttachments.map((item: InternalTaskAttachment) => Number(item.id))
-                );
-
-                const newOnes = rawAttachments.filter(
-                    (item: InternalTaskAttachment) =>
-                        !existingIds.has(Number(item.id))
-                );
-
-                const stillExists = (currentTask.attachments ?? []).filter((item) =>
-                    incomingIds.has(Number(item.id))
-                );
-
-                if (
-                    !newOnes.length &&
-                    stillExists.length === (currentTask.attachments ?? []).length
-                ) {
-                    return;
+                if (!cancelled) {
+                    employeesCache = result;
+                    setEmployees(result);
                 }
-
-                onUpdated({
-                    ...currentTask,
-                    attachments: [...stillExists, ...newOnes],
-                    status:
-                        typeof rawTask.status === "string"
-                            ? rawTask.status
-                            : currentTask.status,
-                });
             } catch {
-                return;
-            } finally {
-                if (!cancelled) setIsPolling(false);
+                if (!cancelled) {
+                    setEmployees([]);
+                }
             }
         };
 
-        const intervalId = window.setInterval(poll, 10000);
-        void poll();
+        void loadEmployees();
 
         return () => {
             cancelled = true;
-            window.clearInterval(intervalId);
         };
-    }, [open, task.id, onUpdated]);
+    }, [open]);
 
     useEffect(() => {
         if (!open) return;
+
+        shouldAutoScrollRef.current = true;
+
+        requestAnimationFrame(() => {
+            scrollToBottom();
+        });
 
         const handleVisibility = () => {
             if (document.visibilityState === "visible") {
                 shouldAutoScrollRef.current = true;
+                scrollToBottom();
             }
         };
 
         document.addEventListener("visibilitychange", handleVisibility);
 
-        return () => document.removeEventListener("visibilitychange", handleVisibility);
+        return () => {
+            document.removeEventListener(
+                "visibilitychange",
+                handleVisibility
+            );
+        };
     }, [open]);
+
+    useEffect(() => {
+        if (!open || !shouldAutoScrollRef.current) return;
+
+        requestAnimationFrame(() => {
+            scrollToBottom();
+        });
+    }, [attachments, open]);
 
     const handleFiles = (event: ChangeEvent<HTMLInputElement>) => {
         const files = Array.from(event.target.files ?? []);
@@ -377,7 +313,12 @@ export default function InternalTaskChatModal({ open, task, onClose, onUpdated }
     const sendMessage = async () => {
         const trimmedMessage = message.trim();
 
-        if ((!trimmedMessage && !selectedFiles.length) || sending) return;
+        if (
+            (!trimmedMessage && !selectedFiles.length) ||
+            sending
+        ) {
+            return;
+        }
 
         setSending(true);
         shouldAutoScrollRef.current = true;
@@ -389,22 +330,23 @@ export default function InternalTaskChatModal({ open, task, onClose, onUpdated }
                 trimmedMessage
             );
 
-            const newAttachments = Array.isArray(response.data)
-                ? response.data
-                : [];
+            const newAttachments: InternalTaskAttachment[] =
+                Array.isArray(response.data) ? response.data : [];
 
             const existingIds = new Set(
                 (task.attachments ?? []).map((item) => Number(item.id))
             );
 
             const deduped = newAttachments.filter(
-                (item: InternalTaskAttachment) =>
-                    !existingIds.has(Number(item.id))
+                (item) => !existingIds.has(Number(item.id))
             );
 
             onUpdated({
                 ...task,
-                attachments: [...(task.attachments ?? []), ...deduped],
+                attachments: [
+                    ...(task.attachments ?? []),
+                    ...deduped,
+                ],
                 updated_at: new Date().toISOString(),
             });
 
@@ -425,14 +367,18 @@ export default function InternalTaskChatModal({ open, task, onClose, onUpdated }
         }
     };
 
-    const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
+    const handleKeyDown = (
+        event: KeyboardEvent<HTMLTextAreaElement>
+    ) => {
         if (event.key === "Enter" && !event.shiftKey) {
             event.preventDefault();
             void sendMessage();
         }
     };
 
-    const openAttachment = (attachment: InternalTaskAttachment) => {
+    const openAttachment = (
+        attachment: InternalTaskAttachment
+    ) => {
         if (!attachment.file) return;
 
         const url = getAttachmentUrl(attachment.file);
@@ -442,7 +388,9 @@ export default function InternalTaskChatModal({ open, task, onClose, onUpdated }
         }
     };
 
-    const downloadAttachment = async (attachment: InternalTaskAttachment) => {
+    const downloadAttachment = async (
+        attachment: InternalTaskAttachment
+    ) => {
         if (!attachment.file) return;
 
         try {
@@ -485,7 +433,10 @@ export default function InternalTaskChatModal({ open, task, onClose, onUpdated }
                         initial={{ opacity: 0, y: 24, scale: 0.97 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: 24, scale: 0.97 }}
-                        transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+                        transition={{
+                            duration: 0.28,
+                            ease: [0.22, 1, 0.36, 1],
+                        }}
                         onMouseDown={(event) => event.stopPropagation()}
                         className="relative flex h-[min(780px,94vh)] w-full max-w-2xl flex-col overflow-hidden rounded-[32px] border border-black/[0.07] bg-[#f7f7f8] shadow-[0_40px_120px_rgba(0,0,0,0.25)] dark:border-white/[0.08] dark:bg-[#101113]"
                     >
@@ -506,6 +457,7 @@ export default function InternalTaskChatModal({ open, task, onClose, onUpdated }
                                                 <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-500 text-white">
                                                     <UserRound size={11} />
                                                 </span>
+
                                                 <span className="text-[10.5px] font-bold text-blue-600 dark:text-blue-400">
                                                     ارسال‌کننده: {senderName}
                                                 </span>
@@ -519,16 +471,6 @@ export default function InternalTaskChatModal({ open, task, onClose, onUpdated }
                                         <span className="text-[10px] text-black/40 dark:text-white/35">
                                             {attachments.length} پیام
                                         </span>
-
-                                        {isPolling && (
-                                            <>
-                                                <span className="h-1 w-1 rounded-full bg-black/20 dark:bg-white/20" />
-                                                <span className="flex items-center gap-1 text-[10px] text-emerald-500">
-                                                    <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />
-                                                    زنده
-                                                </span>
-                                            </>
-                                        )}
                                     </div>
                                 </div>
 
@@ -546,6 +488,18 @@ export default function InternalTaskChatModal({ open, task, onClose, onUpdated }
                             ref={scrollRef}
                             className="min-h-0 flex-1 overflow-y-auto px-3 py-5 sm:px-5"
                             style={{ scrollbarWidth: "thin" }}
+                            onScroll={() => {
+                                const element = scrollRef.current;
+
+                                if (!element) return;
+
+                                const distance =
+                                    element.scrollHeight -
+                                    element.scrollTop -
+                                    element.clientHeight;
+
+                                shouldAutoScrollRef.current = distance < 120;
+                            }}
                         >
                             {attachments.length === 0 ? (
                                 <div className="flex h-full min-h-[300px] items-center justify-center">
@@ -553,9 +507,11 @@ export default function InternalTaskChatModal({ open, task, onClose, onUpdated }
                                         <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-[24px] bg-blue-500/[0.08] text-blue-500 dark:bg-blue-400/[0.08]">
                                             <Send size={23} />
                                         </div>
+
                                         <h3 className="mt-4 text-[14px] font-bold text-black/75 dark:text-white/80">
                                             شروع گفتگو
                                         </h3>
+
                                         <p className="mt-2 max-w-xs text-[11px] leading-6 text-black/40 dark:text-white/35">
                                             اولین پیام یا فایل را برای اعضای این تیکت ارسال کنید.
                                         </p>
@@ -563,209 +519,229 @@ export default function InternalTaskChatModal({ open, task, onClose, onUpdated }
                                 </div>
                             ) : (
                                 <div className="space-y-6">
-                                    {groupedAttachments.map(([date, items]) => (
-                                        <div key={date}>
-                                            <div className="mb-5 flex items-center justify-center">
-                                                <span className="rounded-full bg-black/[0.045] px-3 py-1 text-[9px] font-medium text-black/35 dark:bg-white/[0.055] dark:text-white/30">
-                                                    {date}
-                                                </span>
-                                            </div>
+                                    {groupedAttachments.map(
+                                        ({ date, items }) => (
+                                            <div key={date}>
+                                                <div className="mb-5 flex items-center justify-center">
+                                                    <span className="rounded-full bg-black/[0.045] px-3 py-1 text-[9px] font-medium text-black/35 dark:bg-white/[0.055] dark:text-white/30">
+                                                        {date}
+                                                    </span>
+                                                </div>
 
-                                            <div className="space-y-3">
-                                                {items.map((attachment) => {
-                                                    const isMine =
-                                                        userId !== null &&
-                                                        Number(attachment.uploaded_by) === Number(userId);
+                                                <div className="space-y-3">
+                                                    {items.map(
+                                                        (attachment) => {
+                                                            const isMine =
+                                                                userId !== null &&
+                                                                Number(
+                                                                    attachment.uploaded_by
+                                                                ) ===
+                                                                Number(userId);
 
-                                                    const fileName = getFileName(attachment);
-                                                    const image = isImage(fileName);
-                                                    const pdf = isPdf(fileName);
+                                                            const fileName =
+                                                                getFileName(
+                                                                    attachment
+                                                                );
 
-                                                    const messageSenderName = isMine
-                                                        ? "شما"
-                                                        : getSenderName(
-                                                            Number(attachment.uploaded_by),
-                                                            users,
-                                                            employees
-                                                        );
+                                                            const image =
+                                                                isImage(fileName);
 
-                                                    return (
-                                                        <motion.div
-                                                            key={attachment.id}
-                                                            initial={{
-                                                                opacity: 0,
-                                                                y: 8,
-                                                                scale: 0.98,
-                                                            }}
-                                                            animate={{
-                                                                opacity: 1,
-                                                                y: 0,
-                                                                scale: 1,
-                                                            }}
-                                                            className={`flex ${isMine
-                                                                    ? "justify-start"
-                                                                    : "justify-end"
-                                                                }`}
-                                                        >
-                                                            <div
-                                                                className={`flex max-w-[88%] items-end gap-2 ${isMine
-                                                                        ? "flex-row"
-                                                                        : "flex-row-reverse"
-                                                                    }`}
-                                                            >
-                                                                {isMine && (
-                                                                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-blue-500 text-[9px] font-bold text-white">
-                                                                        ش
-                                                                    </div>
-                                                                )}
+                                                            const pdf =
+                                                                isPdf(fileName);
 
-                                                                <div
-                                                                    className={`rounded-[22px] px-3.5 py-3 ${isMine
-                                                                            ? "rounded-br-[7px] bg-blue-500 text-white shadow-[0_8px_25px_rgba(59,130,246,0.16)]"
-                                                                            : "rounded-bl-[7px] border border-black/[0.05] bg-white text-black/75 shadow-[0_5px_20px_rgba(0,0,0,0.035)] dark:border-white/[0.06] dark:bg-[#18191c] dark:text-white/75"
+                                                            const messageSenderName =
+                                                                isMine
+                                                                    ? "شما"
+                                                                    : getEmployeeName(
+                                                                        Number(
+                                                                            attachment.uploaded_by
+                                                                        ),
+                                                                        employees
+                                                                    );
+
+                                                            return (
+                                                                <motion.div
+                                                                    key={attachment.id}
+                                                                    initial={{
+                                                                        opacity: 0,
+                                                                        y: 8,
+                                                                        scale: 0.98,
+                                                                    }}
+                                                                    animate={{
+                                                                        opacity: 1,
+                                                                        y: 0,
+                                                                        scale: 1,
+                                                                    }}
+                                                                    className={`flex ${isMine
+                                                                            ? "justify-start"
+                                                                            : "justify-end"
                                                                         }`}
                                                                 >
-                                                                    <div className="mb-1.5 flex items-center gap-2">
-                                                                        <span
-                                                                            className={`text-[9px] font-semibold ${isMine
-                                                                                    ? "text-white/75"
-                                                                                    : "text-black/40 dark:text-white/35"
-                                                                                }`}
-                                                                        >
-                                                                            {messageSenderName}
-                                                                        </span>
+                                                                    <div
+                                                                        className={`flex max-w-[88%] items-end gap-2 ${isMine
+                                                                                ? "flex-row"
+                                                                                : "flex-row-reverse"
+                                                                            }`}
+                                                                    >
+                                                                        {isMine && (
+                                                                            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-blue-500 text-[9px] font-bold text-white">
+                                                                                ش
+                                                                            </div>
+                                                                        )}
 
-                                                                        <span
-                                                                            className={`text-[8px] ${isMine
-                                                                                    ? "text-white/50"
-                                                                                    : "text-black/25 dark:text-white/25"
-                                                                                }`}
-                                                                        >
-                                                                            {formatTime(
-                                                                                attachment.created_at
-                                                                            )}
-                                                                        </span>
-                                                                    </div>
-
-                                                                    {attachment.note && (
-                                                                        <p className="whitespace-pre-wrap break-words text-[11px] leading-6">
-                                                                            {attachment.note}
-                                                                        </p>
-                                                                    )}
-
-                                                                    {attachment.file && (
                                                                         <div
-                                                                            className={`mt-2.5 overflow-hidden rounded-2xl ${isMine
-                                                                                    ? "bg-white/10"
-                                                                                    : "bg-black/[0.035] dark:bg-white/[0.045]"
+                                                                            className={`rounded-[22px] px-3.5 py-3 ${isMine
+                                                                                    ? "rounded-br-[7px] bg-blue-500 text-white shadow-[0_8px_25px_rgba(59,130,246,0.16)]"
+                                                                                    : "rounded-bl-[7px] border border-black/[0.05] bg-white text-black/75 shadow-[0_5px_20px_rgba(0,0,0,0.035)] dark:border-white/[0.06] dark:bg-[#18191c] dark:text-white/75"
                                                                                 }`}
                                                                         >
-                                                                            {image ? (
-                                                                                <button
-                                                                                    type="button"
-                                                                                    onClick={() =>
-                                                                                        openAttachment(
-                                                                                            attachment
-                                                                                        )
-                                                                                    }
-                                                                                    className="block w-full overflow-hidden"
+                                                                            <div className="mb-1.5 flex items-center gap-2">
+                                                                                <span
+                                                                                    className={`text-[9px] font-semibold ${isMine
+                                                                                            ? "text-white/75"
+                                                                                            : "text-black/40 dark:text-white/35"
+                                                                                        }`}
                                                                                 >
-                                                                                    <img
-                                                                                        src={getAttachmentUrl(
-                                                                                            attachment.file
-                                                                                        )}
-                                                                                        alt={fileName}
-                                                                                        className="max-h-64 w-full object-cover transition-transform duration-300 hover:scale-[1.02]"
-                                                                                    />
-                                                                                </button>
-                                                                            ) : (
-                                                                                <div className="flex min-w-[220px] items-center gap-3 p-3">
-                                                                                    <div
-                                                                                        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${isMine
-                                                                                                ? "bg-white/15"
-                                                                                                : "bg-blue-500/[0.08] text-blue-500"
-                                                                                            }`}
-                                                                                    >
-                                                                                        {pdf ? (
-                                                                                            <File size={19} />
-                                                                                        ) : (
-                                                                                            <Paperclip size={19} />
-                                                                                        )}
-                                                                                    </div>
+                                                                                    {messageSenderName}
+                                                                                </span>
 
-                                                                                    <button
-                                                                                        type="button"
-                                                                                        onClick={() =>
-                                                                                            openAttachment(
-                                                                                                attachment
-                                                                                            )
-                                                                                        }
-                                                                                        className="min-w-0 flex-1 text-right"
-                                                                                    >
-                                                                                        <span className="block truncate text-[10px] font-semibold">
-                                                                                            {fileName}
-                                                                                        </span>
-                                                                                        <span
-                                                                                            className={`mt-1 block text-[8px] ${isMine
-                                                                                                    ? "text-white/55"
-                                                                                                    : "text-black/30 dark:text-white/30"
-                                                                                                }`}
+                                                                                <span
+                                                                                    className={`text-[8px] ${isMine
+                                                                                            ? "text-white/50"
+                                                                                            : "text-black/25 dark:text-white/25"
+                                                                                        }`}
+                                                                                >
+                                                                                    {formatTime(
+                                                                                        attachment.created_at
+                                                                                    )}
+                                                                                </span>
+                                                                            </div>
+
+                                                                            {attachment.note && (
+                                                                                <p className="whitespace-pre-wrap break-words text-[11px] leading-6">
+                                                                                    {attachment.note}
+                                                                                </p>
+                                                                            )}
+
+                                                                            {attachment.file && (
+                                                                                <div
+                                                                                    className={`mt-2.5 overflow-hidden rounded-2xl ${isMine
+                                                                                            ? "bg-white/10"
+                                                                                            : "bg-black/[0.035] dark:bg-white/[0.045]"
+                                                                                        }`}
+                                                                                >
+                                                                                    {image ? (
+                                                                                        <button
+                                                                                            type="button"
+                                                                                            onClick={() =>
+                                                                                                openAttachment(
+                                                                                                    attachment
+                                                                                                )
+                                                                                            }
+                                                                                            className="block w-full overflow-hidden"
                                                                                         >
-                                                                                            مشاهده فایل
-                                                                                        </span>
-                                                                                    </button>
+                                                                                            <img
+                                                                                                src={getAttachmentUrl(
+                                                                                                    attachment.file
+                                                                                                )}
+                                                                                                alt={fileName}
+                                                                                                className="max-h-64 w-full object-cover transition-transform duration-300 hover:scale-[1.02]"
+                                                                                            />
+                                                                                        </button>
+                                                                                    ) : (
+                                                                                        <div className="flex min-w-[220px] items-center gap-3 p-3">
+                                                                                            <div
+                                                                                                className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${isMine
+                                                                                                        ? "bg-white/15"
+                                                                                                        : "bg-blue-500/[0.08] text-blue-500"
+                                                                                                    }`}
+                                                                                            >
+                                                                                                {pdf ? (
+                                                                                                    <File size={19} />
+                                                                                                ) : (
+                                                                                                    <Paperclip size={19} />
+                                                                                                )}
+                                                                                            </div>
 
-                                                                                    <button
-                                                                                        type="button"
-                                                                                        onClick={() =>
-                                                                                            downloadAttachment(
-                                                                                                attachment
-                                                                                            )
-                                                                                        }
-                                                                                        className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl ${isMine
-                                                                                                ? "bg-white/10 text-white"
-                                                                                                : "bg-black/[0.05] text-black/45 dark:bg-white/[0.06] dark:text-white/45"
-                                                                                            }`}
-                                                                                    >
-                                                                                        <Download size={14} />
-                                                                                    </button>
+                                                                                            <button
+                                                                                                type="button"
+                                                                                                onClick={() =>
+                                                                                                    openAttachment(
+                                                                                                        attachment
+                                                                                                    )
+                                                                                                }
+                                                                                                className="min-w-0 flex-1 text-right"
+                                                                                            >
+                                                                                                <span className="block truncate text-[10px] font-semibold">
+                                                                                                    {fileName}
+                                                                                                </span>
+
+                                                                                                <span
+                                                                                                    className={`mt-1 block text-[8px] ${isMine
+                                                                                                            ? "text-white/55"
+                                                                                                            : "text-black/30 dark:text-white/30"
+                                                                                                        }`}
+                                                                                                >
+                                                                                                    مشاهده فایل
+                                                                                                </span>
+                                                                                            </button>
+
+                                                                                            <button
+                                                                                                type="button"
+                                                                                                onClick={() =>
+                                                                                                    void downloadAttachment(
+                                                                                                        attachment
+                                                                                                    )
+                                                                                                }
+                                                                                                className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl ${isMine
+                                                                                                        ? "bg-white/10 text-white"
+                                                                                                        : "bg-black/[0.05] text-black/45 dark:bg-white/[0.06] dark:text-white/45"
+                                                                                                    }`}
+                                                                                            >
+                                                                                                <Download size={14} />
+                                                                                            </button>
+                                                                                        </div>
+                                                                                    )}
                                                                                 </div>
                                                                             )}
-                                                                        </div>
-                                                                    )}
 
-                                                                    {attachment.note && (
-                                                                        <div
-                                                                            className={`mt-1.5 flex items-center justify-end gap-1 ${isMine
-                                                                                    ? "text-white/45"
-                                                                                    : "text-black/25 dark:text-white/25"
-                                                                                }`}
-                                                                        >
-                                                                            {isMine && <Check size={10} />}
-                                                                            <span className="text-[8px]">
-                                                                                {formatTime(
-                                                                                    attachment.created_at
-                                                                                )}
-                                                                            </span>
-                                                                        </div>
-                                                                    )}
+                                                                            {attachment.note && (
+                                                                                <div
+                                                                                    className={`mt-1.5 flex items-center justify-end gap-1 ${isMine
+                                                                                            ? "text-white/45"
+                                                                                            : "text-black/25 dark:text-white/25"
+                                                                                        }`}
+                                                                                >
+                                                                                    {isMine && (
+                                                                                        <Check size={10} />
+                                                                                    )}
 
-                                                                    {!attachment.note &&
-                                                                        !attachment.file && (
-                                                                            <span className="text-[8px] text-black/25 dark:text-white/25">
-                                                                                {formatTime(
-                                                                                    attachment.created_at
+                                                                                    <span className="text-[8px]">
+                                                                                        {formatTime(
+                                                                                            attachment.created_at
+                                                                                        )}
+                                                                                    </span>
+                                                                                </div>
+                                                                            )}
+
+                                                                            {!attachment.note &&
+                                                                                !attachment.file && (
+                                                                                    <span className="text-[8px] text-black/25 dark:text-white/25">
+                                                                                        {formatTime(
+                                                                                            attachment.created_at
+                                                                                        )}
+                                                                                    </span>
                                                                                 )}
-                                                                            </span>
-                                                                        )}
-                                                                </div>
-                                                            </div>
-                                                        </motion.div>
-                                                    );
-                                                })}
+                                                                        </div>
+                                                                    </div>
+                                                                </motion.div>
+                                                            );
+                                                        }
+                                                    )}
+                                                </div>
                                             </div>
-                                        </div>
-                                    ))}
+                                        )
+                                    )}
 
                                     <div ref={bottomAnchorRef} />
                                 </div>
@@ -776,34 +752,47 @@ export default function InternalTaskChatModal({ open, task, onClose, onUpdated }
                             <AnimatePresence>
                                 {selectedFiles.length > 0 && (
                                     <motion.div
-                                        initial={{ opacity: 0, height: 0 }}
-                                        animate={{ opacity: 1, height: "auto" }}
-                                        exit={{ opacity: 0, height: 0 }}
+                                        initial={{
+                                            opacity: 0,
+                                            height: 0,
+                                        }}
+                                        animate={{
+                                            opacity: 1,
+                                            height: "auto",
+                                        }}
+                                        exit={{
+                                            opacity: 0,
+                                            height: 0,
+                                        }}
                                         className="mb-2 overflow-hidden"
                                     >
                                         <div className="flex gap-2 overflow-x-auto pb-1">
-                                            {selectedFiles.map((file, index) => (
-                                                <div
-                                                    key={`${file.name}-${index}`}
-                                                    className="flex min-w-[150px] max-w-[190px] items-center gap-2 rounded-2xl border border-black/[0.06] bg-black/[0.025] px-2.5 py-2 dark:border-white/[0.06] dark:bg-white/[0.035]"
-                                                >
-                                                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-blue-500/[0.08] text-blue-500">
-                                                        <Paperclip size={14} />
-                                                    </div>
-
-                                                    <span className="min-w-0 flex-1 truncate text-[9px] text-black/55 dark:text-white/55">
-                                                        {file.name}
-                                                    </span>
-
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => removeFile(index)}
-                                                        className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-black/35 hover:bg-red-500/10 hover:text-red-500 dark:text-white/35"
+                                            {selectedFiles.map(
+                                                (file, index) => (
+                                                    <div
+                                                        key={`${file.name}-${index}`}
+                                                        className="flex min-w-[150px] max-w-[190px] items-center gap-2 rounded-2xl border border-black/[0.06] bg-black/[0.025] px-2.5 py-2 dark:border-white/[0.06] dark:bg-white/[0.035]"
                                                     >
-                                                        <X size={12} />
-                                                    </button>
-                                                </div>
-                                            ))}
+                                                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-blue-500/[0.08] text-blue-500">
+                                                            <Paperclip size={14} />
+                                                        </div>
+
+                                                        <span className="min-w-0 flex-1 truncate text-[9px] text-black/55 dark:text-white/55">
+                                                            {file.name}
+                                                        </span>
+
+                                                        <button
+                                                            type="button"
+                                                            onClick={() =>
+                                                                removeFile(index)
+                                                            }
+                                                            className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-black/35 hover:bg-red-500/10 hover:text-red-500 dark:text-white/35"
+                                                        >
+                                                            <X size={12} />
+                                                        </button>
+                                                    </div>
+                                                )
+                                            )}
                                         </div>
                                     </motion.div>
                                 )}
@@ -820,7 +809,9 @@ export default function InternalTaskChatModal({ open, task, onClose, onUpdated }
 
                                 <button
                                     type="button"
-                                    onClick={() => fileInputRef.current?.click()}
+                                    onClick={() =>
+                                        fileInputRef.current?.click()
+                                    }
                                     disabled={sending}
                                     className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[18px] text-black/40 transition-colors hover:bg-black/[0.06] hover:text-blue-500 disabled:opacity-40 dark:text-white/40 dark:hover:bg-white/[0.07]"
                                 >
@@ -830,7 +821,9 @@ export default function InternalTaskChatModal({ open, task, onClose, onUpdated }
                                 <textarea
                                     ref={textareaRef}
                                     value={message}
-                                    onChange={(event) => setMessage(event.target.value)}
+                                    onChange={(event) =>
+                                        setMessage(event.target.value)
+                                    }
                                     onKeyDown={handleKeyDown}
                                     disabled={sending}
                                     rows={1}
@@ -843,14 +836,21 @@ export default function InternalTaskChatModal({ open, task, onClose, onUpdated }
                                     onClick={() => void sendMessage()}
                                     disabled={
                                         sending ||
-                                        (!message.trim() && !selectedFiles.length)
+                                        (!message.trim() &&
+                                            !selectedFiles.length)
                                     }
                                     className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[18px] bg-blue-500 text-white shadow-[0_8px_20px_rgba(59,130,246,0.2)] transition-all hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-35"
                                 >
                                     {sending ? (
-                                        <Loader2 size={17} className="animate-spin" />
+                                        <Loader2
+                                            size={17}
+                                            className="animate-spin"
+                                        />
                                     ) : (
-                                        <Send size={17} className="translate-x-[-1px]" />
+                                        <Send
+                                            size={17}
+                                            className="translate-x-[-1px]"
+                                        />
                                     )}
                                 </button>
                             </div>

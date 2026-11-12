@@ -20,13 +20,13 @@ import {
 } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
 import api from "@/lib/axiosInstance";
+import { accountsApi } from "@/lib/api/accounts";
 import type {
     EmployeeListItem,
     InternalTask,
     InternalTaskAttachment,
 } from "./types";
 import {
-    fetchInternalTasks,
     uploadInternalTaskAttachments,
 } from "./Api";
 
@@ -135,7 +135,6 @@ export default function AdminInternalTaskChatModal({
     onUpdated,
 }: AdminInternalTaskChatModalProps) {
     const { userId } = useAuthStore();
-    const [isPolling, setIsPolling] = useState(false);
     const [users, setUsers] = useState<UserListItem[]>([]);
     const [message, setMessage] = useState("");
     const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
@@ -153,10 +152,9 @@ export default function AdminInternalTaskChatModal({
     }, [sending]);
 
     useEffect(() => {
-        api
-            .get<UserListItem[]>("/accounts/api/v1/user/list/")
-            .then((res) => {
-                setUsers(Array.isArray(res.data) ? res.data : []);
+        (accountsApi.users.all() as Promise<UserListItem[]>)
+            .then((list) => {
+                setUsers(Array.isArray(list) ? list : []);
             })
             .catch(() => {
                 setUsers([]);
@@ -266,91 +264,6 @@ export default function AdminInternalTaskChatModal({
                 previousOverflow;
         };
     }, [open]);
-
-    useEffect(() => {
-        if (!open) return;
-        let cancelled = false;
-        const poll = async () => {
-            if (cancelled || sendingRef.current || document.visibilityState !== "visible") return;
-            try {
-                setIsPolling(true);
-                const response = await fetchInternalTasks();
-                if (cancelled) return;
-                const rawList = Array.isArray(response.data)
-                    ? response.data
-                    : [];
-                const currentTask = taskRef.current;
-                const rawTask = rawList.find(
-                    (item: any) =>
-                        Number(item?.id) ===
-                        Number(currentTask.id)
-                );
-                if (!rawTask) return;
-                const rawAttachments: InternalTaskAttachment[] =
-                    Array.isArray(rawTask.attachments)
-                        ? rawTask.attachments
-                        : [];
-                const currentAttachments =
-                    currentTask.attachments ?? [];
-                const existingIds = new Set(
-                    currentAttachments.map((item) =>
-                        Number(item.id)
-                    )
-                );
-                const incomingIds = new Set(
-                    rawAttachments.map((item) =>
-                        Number(item.id)
-                    )
-                );
-                const newOnes = rawAttachments.filter(
-                    (item) =>
-                        !existingIds.has(Number(item.id))
-                );
-                const stillExists =
-                    currentAttachments.filter((item) =>
-                        incomingIds.has(Number(item.id))
-                    );
-                if (
-                    newOnes.length === 0 &&
-                    stillExists.length ===
-                    currentAttachments.length
-                ) {
-                    return;
-                }
-                onUpdated({
-                    ...currentTask,
-                    attachments: [
-                        ...stillExists,
-                        ...newOnes,
-                    ],
-                    status:
-                        typeof rawTask.status === "string"
-                            ? rawTask.status
-                            : currentTask.status,
-                    updated_at:
-                        typeof rawTask.updated_at ===
-                            "string"
-                            ? rawTask.updated_at
-                            : currentTask.updated_at,
-                });
-            } catch {
-                return;
-            } finally {
-                if (!cancelled) {
-                    setIsPolling(false);
-                }
-            }
-        };
-        const intervalId = window.setInterval(
-            poll,
-            10000
-        );
-        void poll();
-        return () => {
-            cancelled = true;
-            window.clearInterval(intervalId);
-        };
-    }, [open, task.id, onUpdated]);
 
     useEffect(() => {
         if (!open) return;
@@ -574,15 +487,6 @@ export default function AdminInternalTaskChatModal({
                                     <span className="shrink-0">
                                         {attachments.length} پیام
                                     </span>
-                                    {isPolling && (
-                                        <>
-                                            <span className="h-1 w-1 shrink-0 rounded-full bg-current opacity-40" />
-                                            <span className="flex shrink-0 items-center gap-1 text-emerald-500">
-                                                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />
-                                                زنده
-                                            </span>
-                                        </>
-                                    )}
                                 </div>
                                 <div className="mt-1 truncate text-[9px] text-black/25 dark:text-white/20">
                                     ایجادکننده: {creatorName}

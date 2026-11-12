@@ -6,7 +6,6 @@ import { Clock3, History, MessageSquareText, UserRound } from "lucide-react";
 import { JALALI_MONTHS, pad2, toJalali, toPersianDigits } from "@/lib/jalali";
 import type { EmployeeListItem, InternalTask } from "./types";
 import dynamic from "next/dynamic";
-import api from "@/lib/axiosInstance";
 
 const InternalTaskChatModal = dynamic(() => import("./InternalTaskChatModal"), {
     ssr: false,
@@ -48,22 +47,6 @@ function ReceivedTaskCard({ task, employees, isRoutine = false, onUpdated }: Rec
         setDeadlineData({ started_at: task.started_at ?? null, deadline: task.deadline ?? null });
     }, [task]);
 
-    useEffect(() => {
-        let active = true;
-        (async () => {
-            try {
-                const { data } = await api.get(`/tasks/api/v1/internal_task/${task.id}/deadline/`);
-                const value = data?.data ?? data;
-                if (!active) return;
-                const started_at = value?.started_at ?? task.started_at ?? null;
-                const deadline = value?.deadline ?? task.deadline ?? null;
-                setDeadlineData({ started_at, deadline });
-                onUpdated({ ...task, started_at, deadline });
-            } catch { }
-        })();
-        return () => { active = false; };
-    }, [task.id]);
-
     const creator = employees.find(employee => employee.username.trim().toLowerCase() === currentTask.created_by.trim().toLowerCase());
     const creatorName = creator?.full_name || currentTask.created_by || "نامشخص";
     const isCompleted = currentTask.status === "completed";
@@ -82,10 +65,6 @@ function ReceivedTaskCard({ task, employees, isRoutine = false, onUpdated }: Rec
     return (
         <>
             <motion.div
-                layout
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95 }}
                 className="flex flex-col gap-3 rounded-[1.8rem] border border-gray-100 bg-white p-4 shadow-[0_8px_28px_rgba(15,23,42,0.035)] dark:border-white/[0.07] dark:bg-[#111a2d]"
             >
                 <div className="flex items-center justify-between gap-2">

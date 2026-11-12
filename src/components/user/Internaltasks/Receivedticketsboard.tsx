@@ -3,7 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { Inbox, LayoutGrid, Loader } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
-import { fetchEmployeeList, fetchInternalTasks } from "./Api";
+import { fetchEmployeeList, fetchInternalTasksPage } from "./Api";
+import TicketPager from "./Ticketpager";
 import type { EmployeeListItem, InternalTask } from "./types";
 import ReceivedTaskCard from "./Receivedtaskcard";
 
@@ -61,13 +62,16 @@ export default function ReceivedTicketsBoard() {
     const [employees, setEmployees] = useState<EmployeeListItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [page, setPage] = useState(1);
+    const [count, setCount] = useState(0);
 
-    const loadTasks = async () => {
+    const loadTasks = async (target = page) => {
         try {
             setLoading(true);
             setError(null);
-            const [tasksResponse, employeesResponse] = await Promise.all([fetchInternalTasks(), fetchEmployeeList()]);
-            setTasks(normalizeTasks(tasksResponse.data));
+            const [tasksResponse, employeesResponse] = await Promise.all([fetchInternalTasksPage(target), fetchEmployeeList()]);
+            setTasks(normalizeTasks(tasksResponse.results));
+            setCount(tasksResponse.count);
             setEmployees(Array.isArray(employeesResponse.data) ? employeesResponse.data : []);
         } catch {
             setTasks([]);
@@ -79,8 +83,8 @@ export default function ReceivedTicketsBoard() {
     };
 
     useEffect(() => {
-        void loadTasks();
-    }, []);
+        void loadTasks(page);
+    }, [page]);
 
     const employeeNames = useMemo(() => {
         const map = new Map<string, string>();
@@ -140,7 +144,7 @@ export default function ReceivedTicketsBoard() {
                     <p className="text-[12px] font-semibold text-red-500">{error}</p>
                     <button
                         type="button"
-                        onClick={() => void loadTasks()}
+                        onClick={() => void loadTasks(page)}
                         className="rounded-xl bg-red-500/10 px-3 py-1.5 text-[11px] font-bold text-red-500 transition-colors hover:bg-red-500/20"
                     >
                         تلاش مجدد
@@ -165,6 +169,8 @@ export default function ReceivedTicketsBoard() {
                     ))}
                 </div>
             )}
+
+            <TicketPager page={page} count={count} onChange={setPage} />
         </div>
     );
 }

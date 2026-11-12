@@ -96,7 +96,6 @@ function SentTaskCard({ task, index = 0, onDelete, onUpdated, isDeleting = false
     const { resolvedTheme } = useTheme();
     const isDark = resolvedTheme === "dark";
     const userId = useAuthStore((state) => state.userId);
-    const [hovered, setHovered] = useState(false);
     const [timeModalOpen, setTimeModalOpen] = useState(false);
     const [showConfirm, setShowConfirm] = useState(false);
     const [deleting, setDeleting] = useState(false);
@@ -131,27 +130,8 @@ function SentTaskCard({ task, index = 0, onDelete, onUpdated, isDeleting = false
     const accent = urgency && urgency !== "normal" ? URGENCY_ACCENT[urgency] : null;
 
     useEffect(() => {
-        let cancelled = false;
-        async function loadDeadline() {
-            try {
-                const { data } = await api.get(`/tasks/api/v1/internal_task/${task.id}/deadline/`);
-                const value = data?.data ?? data;
-                if (!cancelled && value) {
-                    setStepDeadline({
-                        started_at: value.started_at ?? task.started_at ?? null,
-                        deadline: value.deadline ?? task.deadline ?? null,
-                    });
-                }
-            } catch {
-                if (!cancelled) setStepDeadline({
-                    started_at: task.started_at ?? null,
-                    deadline: task.deadline ?? null,
-                });
-            }
-        }
-        void loadDeadline();
-        return () => { cancelled = true; };
-    }, [task.id, task.started_at, task.deadline]);
+        setStepDeadline({ started_at: task.started_at ?? null, deadline: task.deadline ?? null });
+    }, [task.started_at, task.deadline]);
 
     useEffect(() => {
         if (!stepDeadline.deadline || !isActiveTask) return;
@@ -219,9 +199,6 @@ function SentTaskCard({ task, index = 0, onDelete, onUpdated, isDeleting = false
     return (
         <>
             <motion.div
-                layout initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95 }} transition={{ duration: 0.2, delay: index * 0.05 }}
-                onHoverStart={() => setHovered(true)} onHoverEnd={() => setHovered(false)}
                 className="relative flex min-h-[130px] flex-col gap-3 overflow-hidden rounded-[2rem] p-4"
                 style={{
                     border: accent ? `1px solid color-mix(in srgb, ${accent} 40%, transparent)` : isDark ? "1px solid rgba(255,255,255,0.06)" : "1px solid rgba(0,0,0,0.06)",
@@ -231,23 +208,6 @@ function SentTaskCard({ task, index = 0, onDelete, onUpdated, isDeleting = false
                     transition: "border-color .4s ease,background .4s ease,box-shadow .4s ease",
                 }}
             >
-                {urgency === "overdue" && (
-                    <motion.div className="pointer-events-none absolute inset-x-0 top-0 h-[2px]"
-                        style={{ background: `linear-gradient(90deg,transparent,${accent},transparent)` }}
-                        animate={{ opacity: [0.4, 1, 0.4] }} transition={{ duration: 2.2, repeat: Infinity }} />
-                )}
-
-                <svg className="pointer-events-none absolute inset-0 h-full w-full">
-                    <defs><linearGradient id={`borderGrad-internal-${task.id}`} x1="100%" y1="100%" x2="0%" y2="0%">
-                        <stop offset="0%" stopColor="#6366f1" /><stop offset="100%" stopColor="#8b5cf6" />
-                    </linearGradient></defs>
-                    <motion.rect x="1" y="1" width="calc(100% - 2px)" height="calc(100% - 2px)" rx="30" ry="30"
-                        fill="none" stroke={`url(#borderGrad-internal-${task.id})`} strokeWidth="1.5" pathLength="1"
-                        initial={{ pathLength: 0, opacity: 0 }}
-                        animate={hovered ? { pathLength: 1, opacity: 1 } : { pathLength: 0, opacity: 0 }}
-                        transition={{ duration: 0.55 }} />
-                </svg>
-
                 <div className="flex items-start justify-between gap-3">
                     <div className="flex items-center gap-2">
                         <span className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[10.5px] font-bold ${statusConfig.className}`}>
@@ -257,9 +217,7 @@ function SentTaskCard({ task, index = 0, onDelete, onUpdated, isDeleting = false
                         {accent && (
                             <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold"
                                 style={{ color: accent, background: `color-mix(in srgb, ${accent} 12%, transparent)`, border: `1px solid color-mix(in srgb, ${accent} 30%, transparent)` }}>
-                                <motion.span className="h-1.5 w-1.5 rounded-full" style={{ background: accent }}
-                                    animate={urgency !== "soon" ? { opacity: [1, .3, 1] } : undefined}
-                                    transition={{ duration: 1.6, repeat: Infinity }} />
+                                <span className="h-1.5 w-1.5 rounded-full" style={{ background: accent }} />
                                 {URGENCY_LABEL[urgency as keyof typeof URGENCY_LABEL]}
                             </span>
                         )}

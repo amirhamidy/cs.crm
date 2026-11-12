@@ -3,7 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { LayoutGrid, Loader, Plus, Ticket } from "lucide-react";
 import { useCurrentEmployee } from "@/hooks/usecurrentemployee";
-import { fetchInternalTasks, deleteInternalTask } from "./Api";
+import { fetchInternalTasksPage, deleteInternalTask } from "./Api";
+import TicketPager from "./Ticketpager";
 import type { InternalTask, InternalTaskStatus } from "./types";
 import SentTaskCard from "./Senttaskcard";
 import CreateTicketModal from "./Createticketmodal";
@@ -64,15 +65,18 @@ export default function SentTicketsBoard() {
     const [error, setError] = useState<string | null>(null);
     const [createOpen, setCreateOpen] = useState(false);
     const [deleteLoadingId, setDeleteLoadingId] = useState<number | null>(null);
+    const [page, setPage] = useState(1);
+    const [count, setCount] = useState(0);
 
     const currentUsername = getUsername(employee);
 
-    const loadTasks = async () => {
+    const loadTasks = async (target = page) => {
         try {
             setLoading(true);
             setError(null);
-            const response = await fetchInternalTasks();
-            setTasks(normalizeTasks(response.data));
+            const response = await fetchInternalTasksPage(target);
+            setTasks(normalizeTasks(response.results));
+            setCount(response.count);
         } catch {
             setTasks([]);
             setError("دریافت تیکت‌ها با خطا مواجه شد.");
@@ -82,8 +86,8 @@ export default function SentTicketsBoard() {
     };
 
     useEffect(() => {
-        void loadTasks();
-    }, []);
+        void loadTasks(page);
+    }, [page]);
 
     const sentTasks = useMemo(
         () => currentUsername
@@ -167,6 +171,8 @@ export default function SentTicketsBoard() {
                     ))}
                 </div>
             )}
+
+            <TicketPager page={page} count={count} onChange={setPage} />
 
             <CreateTicketModal isOpen={createOpen} onClose={() => setCreateOpen(false)} onCreated={handleCreated} />
         </div>

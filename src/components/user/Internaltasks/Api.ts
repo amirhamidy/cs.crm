@@ -1,5 +1,5 @@
 import axiosInstance from "@/lib/axiosInstance";
-import type { AxiosResponse } from "axios";
+import { internalTasksApi as api } from "@/lib/api/internalTasks";
 import type {
   EmployeeListItem,
   InternalTask,
@@ -23,43 +23,19 @@ export type InternalTaskDeadlineResponse = {
 
 export type UpdateInternalTaskPayload = { status: InternalTaskStatus };
 
-let internalTasksRequest: Promise<AxiosResponse<InternalTask[]>> | null = null;
+const wrap = async <T>(p: Promise<unknown[]>) => ({ data: (await p) as T[] });
 
-export function fetchInternalTasks() {
-  if (internalTasksRequest) return internalTasksRequest;
-  const request = axiosInstance.get<InternalTask[]>(
-    "/tasks/api/v1/internal_task/",
-  );
-  internalTasksRequest = request;
-  request.then(
-    () => {
-      if (internalTasksRequest === request) internalTasksRequest = null;
-    },
-    () => {
-      if (internalTasksRequest === request) internalTasksRequest = null;
-    },
-  );
-  return request;
-}
-
-export function fetchInternalTaskArchive() {
-  return axiosInstance.get<InternalTaskArchive[]>(
-    "/tasks/api/v1/internal_task_archive/",
-  );
-}
-
-export function fetchInternalTaskRoutines() {
-  return axiosInstance.get<InternalTaskRoutine[]>(
-    "/tasks/api/v1/internal_task_routine/",
-  );
-}
-
-export function fetchEmployeeList(signal?: AbortSignal) {
-  return axiosInstance.get<EmployeeListItem[]>(
-    "/accounts/api/v1/employee/list/",
-    { signal },
-  );
-}
+export const fetchInternalTasks = () => wrap<InternalTask>(api.allFull());
+export const fetchInternalTasksPage = async (page: number) => {
+  const r = await api.page({ page, page_size: 20 });
+  return { results: r.results as unknown as InternalTask[], count: r.count };
+};
+export const fetchInternalTaskArchive = () =>
+  wrap<InternalTaskArchive>(api.archiveAll());
+export const fetchInternalTaskRoutines = () =>
+  wrap<InternalTaskRoutine>(api.routinesAll());
+export const fetchEmployeeList = (_signal?: AbortSignal) =>
+  wrap<EmployeeListItem>(api.employeesAll());
 
 export function createInternalTask(data: {
   title: string;

@@ -5,7 +5,8 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Ban, CheckCircle2, ClipboardX, Clock3, Inbox, LayoutGrid, Loader, Loader2, MessageSquareText, Plus, RefreshCw, RotateCcw, Ticket, Trash2, Users, X } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useAuthStore } from "@/store/authStore";
-import { deleteInternalTask, fetchEmployeeList, fetchInternalTasks, reopenInternalTask, patchInternalTaskDeadline, fetchInternalTaskDeadline } from "./Api";
+import TicketPager from "./Ticketpager";
+import { deleteInternalTask, fetchEmployeeList, fetchInternalTasksPage, reopenInternalTask, patchInternalTaskDeadline } from "./Api";
 import InternalTaskActionModal from "./InternalTaskActionModal";
 import type { EmployeeListItem, InternalTask, InternalTaskStatus, EmployeeRef } from "./types";
 import dynamic from "next/dynamic";
@@ -140,7 +141,6 @@ const AdminInternalTaskCard = memo(function AdminInternalTaskCard({
 }) {
     const { resolvedTheme } = useTheme();
     const isDark = resolvedTheme === "dark";
-    const [hovered, setHovered] = useState(false);
     const [showConfirm, setShowConfirm] = useState(false);
     const [deleteError, setDeleteError] = useState<string | null>(null);
     const [actionModal, setActionModal] = useState<"complete" | "cancel" | null>(null);
@@ -152,22 +152,8 @@ const AdminInternalTaskCard = memo(function AdminInternalTaskCard({
     const [schedule, setSchedule] = useState({ started_at: task.started_at ?? null, deadline: task.deadline ?? null });
 
     useEffect(() => {
-        let cancelled = false;
-        async function loadDeadline() {
-            try {
-                const { data } = await fetchInternalTaskDeadline(task.id);
-                if (cancelled) return;
-                const started_at = data?.started_at ?? task.started_at ?? null;
-                const deadline = data?.deadline ?? task.deadline ?? null;
-                setSchedule({ started_at, deadline });
-                onStatusChange({ ...task, started_at, deadline });
-            } catch {
-                if (!cancelled && (task.started_at || task.deadline)) setSchedule({ started_at: task.started_at ?? null, deadline: task.deadline ?? null });
-            }
-        }
-        void loadDeadline();
-        return () => { cancelled = true; };
-    }, [task.id]);
+        setSchedule({ started_at: task.started_at ?? null, deadline: task.deadline ?? null });
+    }, [task.started_at, task.deadline]);
 
     const statusConfig = getStatusConfig(task.status);
     const isCompleted = task.status === "completed";
@@ -224,11 +210,7 @@ const AdminInternalTaskCard = memo(function AdminInternalTaskCard({
     const creatorName = resolveCreatorName(String(task.created_by ?? ""), employees);
 
     return (
-        <motion.div layout initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: .95 }} transition={{ duration: .22, delay: index * .04 }} onHoverStart={() => setHovered(true)} onHoverEnd={() => setHovered(false)} onClick={() => onOpen(task)} className="group relative flex min-h-[220px] cursor-pointer flex-col gap-3 overflow-hidden rounded-[2rem] p-4" style={{ border: isDark ? "1px solid rgba(255,255,255,.06)" : "1px solid rgba(0,0,0,.06)", background: isDark ? "rgba(255,255,255,.02)" : "#fafafa", boxShadow: isDark ? "0 2px 24px rgba(0,0,0,.2)" : "0 2px 16px rgba(0,0,0,.04)", transition: "border-color .4s ease,box-shadow .4s ease" }}>
-            <svg className="pointer-events-none absolute inset-0 h-full w-full" style={{ borderRadius: "2rem" }}>
-                <defs><linearGradient id={`admin-border-${task.id}`} x1="100%" y1="100%" x2="0%" y2="0%"><stop offset="0%" stopColor="#6366f1" /><stop offset="100%" stopColor="#8b5cf6" /></linearGradient></defs>
-                <motion.rect x="1" y="1" width="calc(100% - 2px)" height="calc(100% - 2px)" rx="30" fill="none" stroke={`url(#admin-border-${task.id})`} strokeWidth="1.5" pathLength="1" initial={{ pathLength: 0, opacity: 0 }} animate={hovered ? { pathLength: 1, opacity: 1 } : { pathLength: 0, opacity: 0 }} transition={{ duration: .55, ease: "easeInOut" }} />
-            </svg>
+        <div onClick={() => onOpen(task)} className="group relative flex min-h-[220px] cursor-pointer flex-col gap-3 overflow-hidden rounded-[2rem] p-4 transition-colors hover:border-indigo-500/40" style={{ border: isDark ? "1px solid rgba(255,255,255,.06)" : "1px solid rgba(0,0,0,.06)", background: isDark ? "rgba(255,255,255,.02)" : "#fafafa" }}>
 
             <div className="relative z-10 flex items-start justify-between gap-3">
                 <div className="flex min-w-0 items-center gap-2">
@@ -317,7 +299,7 @@ const AdminInternalTaskCard = memo(function AdminInternalTaskCard({
                     </motion.div>
                 </motion.div>}
             </AnimatePresence>
-        </motion.div>
+        </div>
     );
 }, (prev, next) => prev.task === next.task && prev.index === next.index && prev.employees === next.employees && prev.currentUsername === next.currentUsername && prev.isDeleting === next.isDeleting);
 
@@ -332,12 +314,15 @@ export default function AdminInternalTasksBoard(): JSX.Element {
     const [createOpen, setCreateOpen] = useState(false);
     const [deleteLoadingId, setDeleteLoadingId] = useState<number | null>(null);
 
+    const [page, setPage] = useState(1);
+    const [count, setCount] = useState(0);
     async function loadData(initial = false) {
         try {
             initial ? setLoading(true) : setRefreshing(true);
             setError(null);
-            const [tasksResponse, employeesResponse] = await Promise.all([fetchInternalTasks(), fetchEmployeeList()]);
-            setTasks(normalizeTasks(tasksResponse.data));
+            const [tasksResponse, employeesResponse] = await Promise.all([fetchInternalTasksPage(page), fetchEmployeeList()]);
+            setTasks(normalizeTasks(tasksResponse.results));
+            setCount(tasksResponse.count);
             setEmployees(Array.isArray(employeesResponse.data) ? employeesResponse.data : []);
         } catch {
             setError("دریافت گفتگوهای کارکنان با خطا مواجه شد.");
@@ -347,7 +332,7 @@ export default function AdminInternalTasksBoard(): JSX.Element {
         }
     }
 
-    useEffect(() => { void loadData(true); }, []);
+    useEffect(() => { void loadData(true); }, [page]);
 
     const sortedTasks = useMemo(() => [...tasks].sort((a, b) => new Date(b.updated_at || b.created_at || 0).getTime() - new Date(a.updated_at || a.created_at || 0).getTime()), [tasks]);
 
@@ -401,12 +386,12 @@ export default function AdminInternalTasksBoard(): JSX.Element {
             </div>
 
             {sortedTasks.length === 0 ? <div className="flex h-64 flex-col items-center justify-center gap-3 rounded-3xl border border-dashed border-gray-200 dark:border-white/[0.07]"><LayoutGrid size={28} className="text-gray-300 dark:text-gray-700" /><p className="text-[12px] text-gray-400">هنوز گفتگویی ثبت نشده است.</p></div> : (
-                <AnimatePresence mode="popLayout">
-                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
                         {sortedTasks.map((task, index) => <AdminInternalTaskCard key={task.id} task={task} index={index} employees={employees} currentUsername={currentUsername ?? ""} onOpen={setSelectedTask} onDelete={handleDelete} onStatusChange={handleUpdated} isDeleting={deleteLoadingId === task.id} />)}
                     </div>
-                </AnimatePresence>
             )}
+
+            <TicketPager page={page} count={count} onChange={setPage} />
 
             {selectedTask && <AdminInternalTaskChatModal open={true} task={selectedTask} employees={employees} onClose={() => setSelectedTask(null)} onUpdated={handleUpdated} />}
             <CreateTicketModal isOpen={createOpen} onClose={() => setCreateOpen(false)} employees={employees} onCreated={handleCreated} />
