@@ -5,8 +5,13 @@ import { motion } from "framer-motion";
 import { Clock3, History, MessageSquareText, UserRound } from "lucide-react";
 import { JALALI_MONTHS, pad2, toJalali, toPersianDigits } from "@/lib/jalali";
 import type { EmployeeListItem, InternalTask } from "./types";
-import InternalTaskChatModal from "./InternalTaskChatModal";
+import dynamic from "next/dynamic";
 import api from "@/lib/axiosInstance";
+
+const InternalTaskChatModal = dynamic(() => import("./InternalTaskChatModal"), {
+    ssr: false,
+    loading: () => null,
+});
 
 interface ReceivedTaskCardProps {
     task: InternalTask;

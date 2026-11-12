@@ -13,7 +13,6 @@ import { useEmployeeInfo } from "@/hooks/useEmployeeInfo";
 import AdminTaskNotesModal from "./TaskNotesModal";
 import TimeRangeModal from "@/components/tasks/TimeRangeModal";
 import TaskDeadlineModal, {
-    invalidateStepDeadline,
     type StepDeadline,
 } from "@/components/tasks/TaskDeadlineModal";
 import api from "@/lib/axiosInstance";
@@ -251,7 +250,6 @@ export default function TaskCard({
                 `/tasks/api/v1/tasks/${task.id}/steps/${stepId}/deadline/patch/`,
                 { started_at: startedAt, deadline }
             );
-            invalidateStepDeadline(task.id, stepId);
             setStepDeadline({
                 started_at: data?.started_at ?? startedAt,
                 deadline: data?.deadline ?? deadline,

@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
-import axiosInstance from "@/lib/axiosInstance";
-import { apiRoutes } from "@/lib/apiRoutes";
+import { accountsApi } from "@/lib/api";
 
 interface DirectoryEmployee {
     id: number | string;
@@ -8,50 +7,13 @@ interface DirectoryEmployee {
     full_name?: string;
 }
 
-interface PaginatedResponse<T> {
-    results?: T[];
-    next?: string | null;
-}
-
-async function fetchAllPages<T>(url: string): Promise<T[]> {
-    const results: T[] = [];
-    let nextUrl: string | null = url;
-
-    while (nextUrl) {
-        const res = await axiosInstance.get(nextUrl);
-        const data = res.data as T[] | PaginatedResponse<T>;
-        const items = Array.isArray(data) ? data : (data.results ?? []);
-        results.push(...items);
-
-        if (!Array.isArray(data) && data.next) {
-            const parsed = new URL(data.next);
-            nextUrl = parsed.pathname + parsed.search;
-        } else {
-            nextUrl = null;
-        }
-    }
-
-    return results;
-}
-
-let directoryPromise: Promise<Map<string, DirectoryEmployee>> | null = null;
-
-function loadDirectory() {
-    if (!directoryPromise) {
-        directoryPromise = fetchAllPages<DirectoryEmployee>(apiRoutes.employees)
-            .then((list) => {
-                const m = new Map<string, DirectoryEmployee>();
-                list.forEach((emp) => {
-                    if (emp.username) m.set(emp.username.trim().toLowerCase(), emp);
-                });
-                return m;
-            })
-            .catch((e) => {
-                directoryPromise = null;
-                throw e;
-            });
-    }
-    return directoryPromise;
+async function loadDirectory() {
+    const list = await accountsApi.employees.all();
+    const m = new Map<string, DirectoryEmployee>();
+    list.forEach((emp) => {
+        if (emp.username) m.set(emp.username.trim().toLowerCase(), emp);
+    });
+    return m;
 }
 
 export function useEmployeeDirectory() {

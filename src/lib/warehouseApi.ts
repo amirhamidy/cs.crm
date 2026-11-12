@@ -1,5 +1,6 @@
 import axiosInstance from "@/lib/axiosInstance";
 import { dedupe } from "@/lib/api/_core";
+import { listAllByStatus } from "@/lib/api";
 import { extractList } from "@/utils/warehouseEmployee";
 import type { ApiProduct, ApiStockInfo, ApiStockTransaction, ApiWarehouse, ApiWarehouseTask, CreateWarehousePayload, UpdateStockLimitsPayload } from "@/types/warehouse";
 
@@ -284,12 +285,6 @@ export async function fetchNewest<T extends { id: number; created_at?: string | 
 
 
 
-const warehouseClientFilterCache = new Map<
-  string,
-  { rows: unknown[]; expiresAt: number }
->();
-const WAREHOUSE_CLIENT_FILTER_TTL = 5_000;
-
 export async function fetchWarehousePage<T>(
   url: string,
   warehouseId: number,
@@ -322,33 +317,9 @@ export async function fetchWarehousePage<T>(
   
   
   const search = normalizeSearch(opts.search);
-  const queryParams = { ...params, search: search || undefined };
-  const cacheKey = JSON.stringify({ url, queryParams });
-  const cachedRows = warehouseClientFilterCache.get(cacheKey);
-  let rows: T[];
-
-  if (cachedRows && cachedRows.expiresAt > Date.now()) {
-    rows = cachedRows.rows as T[];
-  } else {
-    rows = await fetchAll<T>(url, queryParams, opts.signal);
-    if (!opts.signal?.aborted) {
-      const now = Date.now();
-      for (const [key, entry] of warehouseClientFilterCache) {
-        if (entry.expiresAt <= now) warehouseClientFilterCache.delete(key);
-      }
-      while (warehouseClientFilterCache.size >= 50) {
-        const oldestKey = warehouseClientFilterCache.keys().next().value;
-        if (oldestKey === undefined) break;
-        warehouseClientFilterCache.delete(oldestKey);
-      }
-      warehouseClientFilterCache.set(cacheKey, {
-        rows,
-        expiresAt: now + WAREHOUSE_CLIENT_FILTER_TTL,
-      });
-    }
-  }
-
-  const all = rows.filter(opts.clientFilter);
+  const all = (
+    await fetchAll<T>(url, { ...params, search: search || undefined }, opts.signal)
+  ).filter(opts.clientFilter);
   const pageSize = Math.min(MAX_PAGE_SIZE, Math.max(1, opts.pageSize ?? PAGE_SIZE));
   return sliceLocal(sortNewestFirst(all), Math.max(1, opts.page) || 1, pageSize);
 }
@@ -498,19 +469,14 @@ export async function fetchPendingQualityCount(
   }
 
   
-  const all = await fetchAll<ApiWarehouseTask>(
+  const all = await listAllByStatus<ApiWarehouseTask>(
     WAREHOUSE_ENDPOINTS.tasks,
-    {
-      ...warehouseParams(warehouseId),
-      status: "pending",
-    },
-    signal,
+    "pending",
+    warehouseParams(warehouseId),
   );
   return all.filter(
     (task) =>
-      (task.status == null || task.status === "pending") &&
-      task.quality_control_id != null &&
-      (clientFilter ? clientFilter(task) : true),
+      task.quality_control_id != null && (clientFilter ? clientFilter(task) : true),
   ).length;
 }
 

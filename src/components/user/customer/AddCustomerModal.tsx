@@ -1,28 +1,15 @@
 "use client";
 
-import {
-    useState,
-    useEffect,
-    useRef,
-    useCallback,
-    forwardRef,
-    InputHTMLAttributes,
-    TextareaHTMLAttributes,
-} from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import {
-    X,
-    UserPlus,
-    CheckCircle2,
-    Loader,
-    ChevronDown,
-    Check,
-    Plus,
-    AlertCircle,
-} from "lucide-react";
+import { useState, useEffect, useRef, useCallback, forwardRef, InputHTMLAttributes, TextareaHTMLAttributes } from "react";
+import { m, AnimatePresence, useReducedMotion } from "framer-motion";
+import { Backdrop } from "@/components/ui/Backdrop";
+import { panelMotion } from "@/lib/motion";
+import { X, UserPlus, CheckCircle2, ChevronDown, Check, Plus, AlertCircle } from "lucide-react";
 import { Customer, CustomerFormData } from "@/types/customer";
 import axiosInstance from "@/lib/axiosInstance";
 
+import { BusyContent } from "@/components/ui/Button";
+import { ListSkeleton } from "@/components/ui/skeletons";
 interface CaseResource {
     id: number;
     title: string;
@@ -114,7 +101,7 @@ const FloatingInput = forwardRef<HTMLInputElement, FloatingInputProps>(
                 />
                 <label
                     htmlFor={id}
-                    className={`absolute right-5 pointer-events-none transition-all duration-200 bg-white dark:bg-[#0f172a] px-1.5 rounded text-sm text-gray-400 peer-focus:-top-2.5 peer-focus:translate-y-0 peer-focus:text-xs peer-focus:text-gray-500 ${hasValue
+                    className={`absolute right-5 pointer-events-none transition-all duration-200 bg-white dark:bg-[#111827] px-1.5 rounded text-sm text-gray-400 peer-focus:-top-2.5 peer-focus:translate-y-0 peer-focus:text-xs peer-focus:text-gray-500 ${hasValue
                             ? "-top-2.5 translate-y-0 text-xs text-gray-500"
                             : "top-1/2 -translate-y-1/2"
                         }`}
@@ -146,7 +133,7 @@ const FloatingTextarea = forwardRef<HTMLTextAreaElement, FloatingTextareaProps>(
             />
             <label
                 htmlFor={id}
-                className="absolute right-5 top-4 text-sm text-gray-400 pointer-events-none transition-all duration-200 bg-white dark:bg-[#0f172a] px-1.5 rounded peer-focus:top-0 peer-focus:text-xs peer-focus:text-gray-500 peer-[:not(:placeholder-shown)]:top-0 peer-[:not(:placeholder-shown)]:text-xs peer-[:not(:placeholder-shown)]:text-gray-500"
+                className="absolute right-5 top-4 text-sm text-gray-400 pointer-events-none transition-all duration-200 bg-white dark:bg-[#111827] px-1.5 rounded peer-focus:top-0 peer-focus:text-xs peer-focus:text-gray-500 peer-[:not(:placeholder-shown)]:top-0 peer-[:not(:placeholder-shown)]:text-xs peer-[:not(:placeholder-shown)]:text-gray-500"
             >
                 {label}
             </label>
@@ -241,18 +228,18 @@ function NiceSelect({
                 >
                     {selected ? selected.label : placeholder}
                 </span>
-                <motion.span
+                <m.span
                     animate={{ rotate: open ? 180 : 0 }}
                     transition={{ duration: 0.2 }}
                     className="shrink-0 text-gray-400"
                 >
                     <ChevronDown size={15} />
-                </motion.span>
+                </m.span>
             </button>
 
             <AnimatePresence>
                 {open && (
-                    <motion.div
+                    <m.div
                         initial={{ opacity: 0, scale: 0.95, y: dropUp ? 8 : -8 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.95, y: dropUp ? 8 : -8 }}
@@ -292,12 +279,12 @@ function NiceSelect({
                                                     {opt.label}
                                                 </span>
                                                 {value === opt.id && (
-                                                    <motion.span
+                                                    <m.span
                                                         layoutId="check-icon"
                                                         className="text-white"
                                                     >
                                                         <Check size={14} />
-                                                    </motion.span>
+                                                    </m.span>
                                                 )}
                                             </div>
                                             {opt.sub && (
@@ -315,7 +302,7 @@ function NiceSelect({
                                 </div>
                             )}
                         </div>
-                    </motion.div>
+                    </m.div>
                 )}
             </AnimatePresence>
         </div>
@@ -405,18 +392,18 @@ function SourceSelect({
                 >
                     {selected ? selected.title : "انتخاب منبع آشنایی"}
                 </span>
-                <motion.span
+                <m.span
                     animate={{ rotate: open ? 180 : 0 }}
                     transition={{ duration: 0.2 }}
                     className="shrink-0 text-gray-400"
                 >
                     <ChevronDown size={15} />
-                </motion.span>
+                </m.span>
             </button>
 
             <AnimatePresence>
                 {open && (
-                    <motion.div
+                    <m.div
                         initial={{ opacity: 0, scale: 0.95, y: dropUp ? 8 : -8 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.95, y: dropUp ? 8 : -8 }}
@@ -460,13 +447,11 @@ function SourceSelect({
                                     type="button"
                                     onClick={onConfirmAdd}
                                     disabled={creating || !newTitle.trim()}
-                                    className="flex h-7 items-center justify-center rounded-xl bg-blue-600 px-3 text-[11px] font-bold text-white transition-opacity disabled:opacity-50 dark:bg-blue-500"
+                                    className="relative flex h-7 items-center justify-center rounded-xl bg-blue-600 px-3 text-[11px] font-bold text-white transition-opacity disabled:opacity-50 dark:bg-blue-500"
                                 >
-                                    {creating ? (
-                                        <Loader size={12} className="animate-spin" />
-                                    ) : (
-                                        "ثبت"
-                                    )}
+                                    <BusyContent busy={creating}>
+                                        ثبت
+                                    </BusyContent>
                                 </button>
                                 <button
                                     type="button"
@@ -480,12 +465,7 @@ function SourceSelect({
 
                         <div className="max-h-60 overflow-y-auto overflow-x-hidden custom-scrollbar">
                             {loading ? (
-                                <div className="flex items-center justify-center py-8">
-                                    <Loader
-                                        size={16}
-                                        className="animate-spin text-blue-500"
-                                    />
-                                </div>
+                                <ListSkeleton rows={3} />
                             ) : options.length === 0 ? (
                                 <div className="px-4 py-8 text-center">
                                     <p className="text-[12px] font-medium text-gray-400">
@@ -510,52 +490,47 @@ function SourceSelect({
                                                         : "hover:bg-gray-100 dark:hover:bg-white/[0.05]"
                                                     }`}
                                             >
-                                                <span
-                                                    className={`truncate text-sm font-bold ${active
-                                                            ? "text-white"
-                                                            : "text-gray-900 dark:text-white"
-                                                        }`}
-                                                >
-                                                    {opt.title}
-                                                </span>
-                                                <span className="flex shrink-0 items-center gap-1.5">
-                                                    {active && (
-                                                        <Check
-                                                            size={14}
-                                                            className="text-white"
-                                                        />
-                                                    )}
+                                                <BusyContent busy={isDeleting}>
                                                     <span
-                                                        role="button"
-                                                        tabIndex={0}
-                                                        onClick={(e) =>
-                                                            onDelete(e, opt.id)
-                                                        }
-                                                        className={`flex h-5 w-5 items-center justify-center rounded-full transition-all ${active
-                                                                ? "text-blue-100 hover:bg-white/20 hover:text-white"
-                                                                : "text-gray-400 hover:bg-gray-100 hover:text-red-500 dark:text-gray-500 dark:hover:bg-white/10 dark:hover:text-red-400"
+                                                        className={`truncate text-sm font-bold ${active
+                                                                ? "text-white"
+                                                                : "text-gray-900 dark:text-white"
                                                             }`}
                                                     >
-                                                        {isDeleting ? (
-                                                            <Loader
-                                                                size={10}
-                                                                className="animate-spin"
-                                                            />
-                                                        ) : (
-                                                            <X
-                                                                size={11}
-                                                                strokeWidth={2.5}
+                                                        {opt.title}
+                                                    </span>
+                                                    <span className="flex shrink-0 items-center gap-1.5">
+                                                        {active && (
+                                                            <Check
+                                                                size={14}
+                                                                className="text-white"
                                                             />
                                                         )}
+                                                        <span
+                                                            role="button"
+                                                            tabIndex={0}
+                                                            onClick={(e) =>
+                                                                onDelete(e, opt.id)
+                                                            }
+                                                            className={`flex h-5 w-5 items-center justify-center rounded-full transition-all ${active
+                                                                    ? "text-blue-100 hover:bg-white/20 hover:text-white"
+                                                                    : "text-gray-400 hover:bg-gray-100 hover:text-red-500 dark:text-gray-500 dark:hover:bg-white/10 dark:hover:text-red-400"
+                                                                }`}
+                                                        >
+                                                            <X
+                                                                    size={11}
+                                                                    strokeWidth={2.5}
+                                                                />
+                                                        </span>
                                                     </span>
-                                                </span>
+                                                </BusyContent>
                                             </button>
                                         );
                                     })}
                                 </div>
                             )}
                         </div>
-                    </motion.div>
+                    </m.div>
                 )}
             </AnimatePresence>
         </div>
@@ -566,13 +541,17 @@ interface AddCustomerModalProps {
     isOpen: boolean;
     onClose: () => void;
     onAdded: () => void;
+    
+    allowDuplicatePhone?: boolean;
 }
 
 export default function AddCustomerModal({
     isOpen,
     onClose,
     onAdded,
+    allowDuplicatePhone = false,
 }: AddCustomerModalProps) {
+    const reduced = useReducedMotion() ?? false;
     const [form, setForm] = useState<CustomerFormData>(EMPTY_FORM);
     const [loading, setLoading] = useState(false);
     const [success, setSuccess] = useState(false);
@@ -649,6 +628,8 @@ export default function AddCustomerModal({
             setForm((f) => ({ ...f, phone_number: val }));
             setError(null);
 
+            if (allowDuplicatePhone) return;
+
             if (phoneDebounceRef.current)
                 clearTimeout(phoneDebounceRef.current);
 
@@ -663,7 +644,7 @@ export default function AddCustomerModal({
                 checkPhoneAvailability(val);
             }, 600);
         },
-        [checkPhoneAvailability]
+        [allowDuplicatePhone, checkPhoneAvailability]
     );
 
     const handleSourceChange = useCallback((id: number) => {
@@ -738,32 +719,36 @@ export default function AddCustomerModal({
             return;
         }
 
-        if (phoneAvailability === "taken") {
-            setError("این شماره قبلاً ثبت شده است");
-            return;
-        }
+        if (!allowDuplicatePhone) {
+            if (phoneAvailability === "taken") {
+                setError("این شماره قبلاً ثبت شده است");
+                return;
+            }
 
-        if (phoneAvailability === "checking") {
-            setError("لطفاً صبر کن، در حال بررسی شماره...");
-            return;
+            if (phoneAvailability === "checking") {
+                setError("لطفاً صبر کن، در حال بررسی شماره...");
+                return;
+            }
         }
 
         setLoading(true);
         setError(null);
 
         try {
-            const customersList = await getCustomersList();
-            const taken = customersList.some(
-                (c) =>
-                    normalizePhoneNumber(c.phone_number ?? "") ===
-                    normalizedPhone
-            );
+            if (!allowDuplicatePhone) {
+                const customersList = await getCustomersList();
+                const taken = customersList.some(
+                    (c) =>
+                        normalizePhoneNumber(c.phone_number ?? "") ===
+                        normalizedPhone
+                );
 
-            if (taken) {
-                setPhoneAvailability("taken");
-                setError("این شماره قبلاً ثبت شده است");
-                setLoading(false);
-                return;
+                if (taken) {
+                    setPhoneAvailability("taken");
+                    setError("این شماره قبلاً ثبت شده است");
+                    setLoading(false);
+                    return;
+                }
             }
 
             await axiosInstance.post<Customer>(
@@ -796,8 +781,9 @@ export default function AddCustomerModal({
         setError(null);
     };
 
-    const phoneInputBorderClass =
-        phoneAvailability === "taken"
+    const phoneInputBorderClass = allowDuplicatePhone
+        ? ""
+        : phoneAvailability === "taken"
             ? "!border-red-400 dark:!border-red-500"
             : phoneAvailability === "available"
                 ? "!border-green-400 dark:!border-green-500"
@@ -806,24 +792,13 @@ export default function AddCustomerModal({
     return (
         <AnimatePresence>
             {isOpen && (
-                <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
+                <div
                     className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto px-4"
-                    style={{
-                        background: "rgba(0,0,0,0.5)",
-                        backdropFilter: "blur(4px)",
-                    }}
-                    onClick={handleClose}
                 >
-                    <motion.div
-                        initial={{ opacity: 0, y: 24, scale: 0.98 }}
-                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                        exit={{ opacity: 0, y: 24, scale: 0.98 }}
-                        transition={{ duration: 0.3, ease: "easeOut" }}
-                        className="my-8 w-full max-w-lg overflow-visible rounded-[2.5rem] border border-gray-100 bg-white shadow-2xl dark:border-white/[0.08] dark:bg-[#0f172a]"
-                        onClick={(e) => e.stopPropagation()}
+                    <Backdrop onClick={handleClose} />
+                    <m.div
+                        {...panelMotion(false, reduced)}
+                        className="relative my-8 w-full max-w-lg overflow-visible rounded-[2.5rem] border border-gray-100 bg-white dark:border-white/[0.08] dark:bg-[#111827]"
                         dir="rtl"
                     >
                         <div className="flex items-center justify-between px-8 pb-6 pt-8">
@@ -873,47 +848,46 @@ export default function AddCustomerModal({
                                         onChange={handlePhoneChange}
                                         className={`text-left ${phoneInputBorderClass}`}
                                     />
-                                    <AnimatePresence mode="wait">
-                                        {phoneAvailability === "checking" && (
-                                            <motion.span
-                                                key="checking"
-                                                initial={{ opacity: 0, y: -4 }}
-                                                animate={{ opacity: 1, y: 0 }}
-                                                exit={{ opacity: 0 }}
-                                                className="flex items-center gap-1.5 pr-1 text-[11px] text-gray-400"
-                                            >
-                                                <Loader
-                                                    size={10}
-                                                    className="animate-spin"
-                                                />
-                                                در حال بررسی...
-                                            </motion.span>
-                                        )}
-                                        {phoneAvailability === "taken" && (
-                                            <motion.span
-                                                key="taken"
-                                                initial={{ opacity: 0, y: -4 }}
-                                                animate={{ opacity: 1, y: 0 }}
-                                                exit={{ opacity: 0 }}
-                                                className="flex items-center gap-1.5 pr-1 text-[11px] font-semibold text-red-500 dark:text-red-400"
-                                            >
-                                                <AlertCircle size={11} />
-                                                این شماره قبلاً ثبت شده
-                                            </motion.span>
-                                        )}
-                                        {phoneAvailability === "available" && (
-                                            <motion.span
-                                                key="available"
-                                                initial={{ opacity: 0, y: -4 }}
-                                                animate={{ opacity: 1, y: 0 }}
-                                                exit={{ opacity: 0 }}
-                                                className="flex items-center gap-1.5 pr-1 text-[11px] font-semibold text-green-500 dark:text-green-400"
-                                            >
-                                                <CheckCircle2 size={11} />
-                                                شماره در دسترس است
-                                            </motion.span>
-                                        )}
-                                    </AnimatePresence>
+                                    {!allowDuplicatePhone && (
+                                        <AnimatePresence mode="wait">
+                                            {phoneAvailability === "checking" && (
+                                                <m.span
+                                                    key="checking"
+                                                    initial={{ opacity: 0, y: -4 }}
+                                                    animate={{ opacity: 1, y: 0 }}
+                                                    exit={{ opacity: 0 }}
+                                                    className="flex items-center gap-1.5 pr-1 text-[11px] text-gray-400"
+                                                >
+                                                    <span aria-hidden="true" className="h-2.5 w-2.5 animate-pulse rounded-full bg-gray-300 dark:bg-white/20" />
+                                                    در حال بررسی...
+                                                </m.span>
+                                            )}
+                                            {phoneAvailability === "taken" && (
+                                                <m.span
+                                                    key="taken"
+                                                    initial={{ opacity: 0, y: -4 }}
+                                                    animate={{ opacity: 1, y: 0 }}
+                                                    exit={{ opacity: 0 }}
+                                                    className="flex items-center gap-1.5 pr-1 text-[11px] font-semibold text-red-500 dark:text-red-400"
+                                                >
+                                                    <AlertCircle size={11} />
+                                                    این شماره قبلاً ثبت شده
+                                                </m.span>
+                                            )}
+                                            {phoneAvailability === "available" && (
+                                                <m.span
+                                                    key="available"
+                                                    initial={{ opacity: 0, y: -4 }}
+                                                    animate={{ opacity: 1, y: 0 }}
+                                                    exit={{ opacity: 0 }}
+                                                    className="flex items-center gap-1.5 pr-1 text-[11px] font-semibold text-green-500 dark:text-green-400"
+                                                >
+                                                    <CheckCircle2 size={11} />
+                                                    شماره در دسترس است
+                                                </m.span>
+                                            )}
+                                        </AnimatePresence>
+                                    )}
                                 </div>
                             </div>
 
@@ -974,7 +948,7 @@ export default function AddCustomerModal({
                             <div className="mt-2 min-h-[48px]">
                                 <AnimatePresence mode="wait">
                                     {error && (
-                                        <motion.div
+                                        <m.div
                                             initial={{ opacity: 0, y: 6 }}
                                             animate={{ opacity: 1, y: 0 }}
                                             exit={{ opacity: 0, y: 4 }}
@@ -983,10 +957,10 @@ export default function AddCustomerModal({
                                             <span className="text-[12px] font-bold">
                                                 {error}
                                             </span>
-                                        </motion.div>
+                                        </m.div>
                                     )}
                                     {success ? (
-                                        <motion.div
+                                        <m.div
                                             key="success"
                                             initial={{ opacity: 0, scale: 0.9 }}
                                             animate={{ opacity: 1, scale: 1 }}
@@ -994,38 +968,34 @@ export default function AddCustomerModal({
                                         >
                                             <CheckCircle2 size={16} />
                                             مشتری با موفقیت ثبت شد
-                                        </motion.div>
+                                        </m.div>
                                     ) : (
                                         !error && (
-                                            <motion.button
+                                            <m.button
                                                 key="submit"
                                                 type="submit"
                                                 disabled={
                                                     loading ||
-                                                    phoneAvailability ===
-                                                    "taken" ||
-                                                    phoneAvailability ===
-                                                    "checking"
+                                                    (!allowDuplicatePhone &&
+                                                        (phoneAvailability ===
+                                                            "taken" ||
+                                                            phoneAvailability ===
+                                                                "checking"))
                                                 }
                                                 whileTap={{ scale: 0.97 }}
-                                                className="flex w-full items-center justify-center gap-2 rounded-full bg-blue-600 py-3 text-sm font-bold text-white transition-colors hover:bg-blue-500 disabled:opacity-50"
+                                                className="relative flex w-full items-center justify-center gap-2 rounded-full bg-blue-600 py-3 text-sm font-bold text-white transition-colors hover:bg-blue-500 disabled:opacity-50"
                                             >
-                                                {loading ? (
-                                                    <Loader
-                                                        size={18}
-                                                        className="animate-spin"
-                                                    />
-                                                ) : (
-                                                    "ثبت مشتری"
-                                                )}
-                                            </motion.button>
+                                                <BusyContent busy={loading}>
+                                                    ثبت مشتری
+                                                </BusyContent>
+                                            </m.button>
                                         )
                                     )}
                                 </AnimatePresence>
                             </div>
                         </form>
-                    </motion.div>
-                </motion.div>
+                    </m.div>
+                </div>
             )}
         </AnimatePresence>
     );

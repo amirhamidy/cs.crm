@@ -210,13 +210,16 @@ function RoutineCard({
         }
 
         const target = new Date(routine.next_run_at).getTime();
-        const check = () => setIsReady(target <= Date.now());
+        let timer: number;
+        const check = () => {
+            const done = target <= Date.now();
+            setIsReady(done);
+            if (!done) timer = window.setTimeout(check, target - Date.now());
+        };
 
         check();
 
-        const timer = window.setInterval(check, 1000);
-
-        return () => window.clearInterval(timer);
+        return () => window.clearTimeout(timer);
     }, [task?.status, routine.next_run_at]);
 
     const statusBadge = getStatusBadge(task?.status);

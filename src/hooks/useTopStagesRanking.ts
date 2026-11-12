@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { apiRoutes } from "@/lib/apiRoutes";
-import axiosInstance from "@/lib/axiosInstance";
+import { getDepartmentSteps, getDepartments, getTasks } from "@/lib/api/analyticsData";
 
 export type TimeRange = "weekly" | "monthly" | "yearly";
 
@@ -42,11 +41,6 @@ interface RawDepartmentStep {
   [key: string]: unknown;
 }
 
-interface PaginatedResponse<T> {
-  results?: T[];
-  next?: string | null;
-}
-
 const norm = (value: unknown) =>
   value === null || value === undefined
     ? ""
@@ -76,27 +70,6 @@ const relationKey = (value: unknown): string | null => {
 };
 
 const statusOf = (task: RawTask) => norm(task.status);
-
-async function fetchAllPages<T>(url: string): Promise<T[]> {
-  const results: T[] = [];
-  let nextUrl: string | null = url;
-
-  while (nextUrl) {
-    const res = await axiosInstance.get(nextUrl);
-    const data = res.data as T[] | PaginatedResponse<T>;
-    const items = Array.isArray(data) ? data : (data.results ?? []);
-    results.push(...items);
-
-    if (!Array.isArray(data) && data.next) {
-      const parsed = new URL(data.next);
-      nextUrl = parsed.pathname + parsed.search;
-    } else {
-      nextUrl = null;
-    }
-  }
-
-  return results;
-}
 
 function getTimeCutoff(range: TimeRange) {
   const now = Date.now();
@@ -135,9 +108,9 @@ export function useTopStagesRanking() {
         setError(null);
 
         const [tasksRes, departmentsRes, stepsRes] = await Promise.all([
-          fetchAllPages<RawTask>(apiRoutes.tasks),
-          fetchAllPages<RawDepartment>(apiRoutes.departments),
-          fetchAllPages<RawDepartmentStep>(apiRoutes.departmentSteps),
+          getTasks<RawTask>(),
+          getDepartments<RawDepartment>(),
+          getDepartmentSteps<RawDepartmentStep>(),
         ]);
 
         if (cancelled) return;

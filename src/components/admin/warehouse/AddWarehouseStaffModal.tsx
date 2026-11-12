@@ -6,7 +6,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Check, CheckSquare, Square, UserPlus, X } from "lucide-react";
 import { useTheme } from "next-themes";
 import axiosInstance from "@/lib/axiosInstance";
-import { fetchPage } from "@/lib/api/_core";
+import { fetchPage } from "@/lib/api";
 import { useInfiniteOptions, type InfiniteFetcher } from "@/hooks/useInfiniteOptions";
 import { WAREHOUSE_ENDPOINTS, fetchAll } from "@/lib/warehouseApi";
 

@@ -1,8 +1,11 @@
 import { fetchAllPages, fetchPage } from "@/lib/api/_core";
 
+
+
+
 async function getList(url: string, signal: AbortSignal): Promise<unknown[]> {
-  return fetchAllPages<unknown>((params) =>
-    fetchPage<unknown>(url, { ...params, page_size: 100 }, signal, "low"),
+  return fetchAllPages<unknown>((p) =>
+    fetchPage<unknown>(url, { ...p, page_size: 100 }, signal, "low"),
   );
 }
 

@@ -104,8 +104,11 @@ export default function GlobalSearch() {
         setHasSearched(false);
     }, []);
 
+    const abortRef = useRef<AbortController | null>(null);
+
     const handleSearch = useCallback(
         async (value: string) => {
+            abortRef.current?.abort();
             const normalized =
                 normalizeSearchText(value);
 
@@ -121,14 +124,21 @@ export default function GlobalSearch() {
             setHasSearched(true);
             setOpen(true);
 
-            const data = await searchGlobal(
-                value,
-                userType,
-            );
+            const controller = new AbortController();
+            abortRef.current = controller;
 
-            setResults(data);
-            setSelectedIndex(-1);
-            setLoading(false);
+            try {
+                const data = await searchGlobal(
+                    value,
+                    userType,
+                    controller.signal,
+                );
+                setResults(data);
+                setSelectedIndex(-1);
+                setLoading(false);
+            } catch {
+                if (!controller.signal.aborted) setLoading(false);
+            }
         },
         [userType],
     );
@@ -140,6 +150,7 @@ export default function GlobalSearch() {
 
         return () => {
             window.clearTimeout(timer);
+            abortRef.current?.abort();
         };
     }, [query, handleSearch]);
 

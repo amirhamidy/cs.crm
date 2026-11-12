@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
     ClipboardList,
@@ -12,8 +12,9 @@ import {
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import axiosInstance from "@/lib/axiosInstance";
-import { apiRoutes } from "@/lib/apiRoutes";
-import { extractCaseId, fetchAllTasks } from "@/lib/fetchAllTasks";
+import { casesApi, customersApi, metaApi, fetchAllTasks, fetchTasksForCases, extractCaseId } from "@/lib/api";
+import Pagination from "@/components/ui/Pagination";
+import { usePaginatedList } from "@/hooks/usePaginatedList";
 import type { Department } from "@/types/department";
 import type { Employee } from "@/types/employee";
 import type { TaskItem } from "@/types/task";
@@ -25,28 +26,24 @@ import CaseCard from "@/components/user/cases/CaseCard";
 import EditTaskModal from "@/components/customcomponents/tasks/EditTaskModal";
 import CaseTasksModal from "@/components/customcomponents/cases/CaseTasksModal";
 
-type ListResponse<T> = T[] | { results?: T[]; data?: T[] };
-
-function extractList<T>(data: ListResponse<T> | undefined | null): T[] {
-    if (Array.isArray(data)) return data;
-    if (data && typeof data === "object") {
-        if (Array.isArray(data.results)) return data.results;
-        if (Array.isArray(data.data)) return data.data;
-    }
-    return [];
-}
+const PAGE_SIZE = 12;
 
 export default function UserCasesPage() {
     const { resolvedTheme } = useTheme();
     const isDark = resolvedTheme === "dark";
 
-    const [cases, setCases] = useState<CaseItem[]>([]);
     const [customers, setCustomers] = useState<Customer[]>([]);
     const [departments, setDepartments] = useState<Department[]>([]);
     const [employees, setEmployees] = useState<Employee[]>([]);
     const [tasks, setTasks] = useState<TaskItem[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState("");
+    const list = usePaginatedList<CaseItem>(
+        (params, signal) => casesApi.page(params, signal),
+        { pageSize: PAGE_SIZE, scrollTop: true }
+    );
+    const cases = list.data;
+    const loading = list.loading && list.data.length === 0;
+    const error = list.error ? "دریافت اطلاعات با خطا مواجه شد" : "";
+    const refetchCases = list.refetch;
     const [caseModalOpen, setCaseModalOpen] = useState(false);
     const [editingCase, setEditingCase] = useState<CaseItem | null>(null);
     const [editCaseModalOpen, setEditCaseModalOpen] = useState(false);
@@ -59,51 +56,37 @@ export default function UserCasesPage() {
         useState<CaseItem | null>(null);
     const [tasksRefreshKey, setTasksRefreshKey] = useState(0);
 
-    const fetchData = useCallback(async () => {
-        try {
-            setLoading(true);
-            setError("");
-            const [casesRes, customersRes, departmentsRes, employeesRes, allTasks] =
-                await Promise.all([
-                    axiosInstance.get<ListResponse<CaseItem>>(apiRoutes.cases),
-                    axiosInstance.get<ListResponse<Customer>>(apiRoutes.customers),
-                    axiosInstance.get<ListResponse<Department>>(apiRoutes.departments),
-                    axiosInstance.get<ListResponse<Employee>>(
-                        "/accounts/api/v1/employee/list/"
-                    ),
-                    fetchAllTasks(),
-                ]);
+    const casesRef = useRef<CaseItem[]>([]);
+    casesRef.current = cases;
+    const tasksRequestId = useRef(0);
 
-            const caseList = extractList<CaseItem>(casesRes.data);
-
-            const detailedCases = await Promise.all(
-                caseList.map(async (item) => {
-                    try {
-                        const detailRes = await axiosInstance.get<CaseItem>(
-                            `/tasks/api/v1/cases/${item.id}/`
-                        );
-                        return { ...item, ...detailRes.data };
-                    } catch {
-                        return item;
-                    }
-                })
-            );
-
-            setCases(detailedCases);
-            setCustomers(extractList(customersRes.data));
-            setDepartments(extractList(departmentsRes.data));
-            setEmployees(extractList(employeesRes.data));
-            setTasks(allTasks);
-        } catch {
-            setError("دریافت اطلاعات با خطا مواجه شد");
-        } finally {
-            setLoading(false);
+    const fetchTasks = useCallback((fresh = false, items: CaseItem[] = casesRef.current) => {
+        const id = ++tasksRequestId.current;
+        if (items.length === 0) {
+            setTasks([]);
+            return;
         }
+        fetchTasksForCases(items.map((c) => c.id), { fresh })
+            .then((grouped) => {
+                if (id !== tasksRequestId.current) return;
+                setTasks([...grouped.values()].flat());
+            })
+            .catch(() => undefined);
     }, []);
 
     useEffect(() => {
-        fetchData();
-    }, [fetchData]);
+        customersApi.listAll().then(setCustomers).catch(() => undefined);
+        metaApi.departments().then(setDepartments).catch(() => undefined);
+        metaApi.employees().then(setEmployees).catch(() => undefined);
+    }, []);
+
+    useEffect(() => {
+        fetchTasks(false, cases);
+    }, [cases, fetchTasks]);
+
+    const fetchData = useCallback(() => {
+        refetchCases();
+    }, [refetchCases]);
 
     const tasksByCase = useMemo(() => {
         const map = new Map<string, TaskItem[]>();
@@ -141,15 +124,15 @@ export default function UserCasesPage() {
             try {
                 setDeletingId(id);
                 await axiosInstance.delete(`/tasks/api/v1/cases/${id}/delete/`);
-                setCases((prev) => prev.filter((c) => Number(c.id) !== id));
+                refetchCases();
             } catch {
-                await fetchData();
+                refetchCases();
                 throw new Error("خطا در حذف پرونده");
             } finally {
                 setDeletingId(null);
             }
         },
-        [fetchData, syncCaseTasks]
+        [refetchCases, syncCaseTasks]
     );
 
     const handleEditCase = useCallback((item: CaseItem) => {
@@ -194,7 +177,6 @@ export default function UserCasesPage() {
 
     return (
         <div className="flex flex-col gap-5 p-3 sm:p-4 md:p-6" dir="rtl">
-            {/* Header */}
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-start gap-3">
                     <div className="min-w-0">
@@ -205,7 +187,7 @@ export default function UserCasesPage() {
                         <p className="mt-0.5 text-[11.5px] text-gray-500 dark:text-gray-400">
                             {loading
                                 ? "در حال بارگذاری..."
-                                : `${cases.length} پرونده و ${tasks.length} وظیفه`}
+                                : `${list.count} پرونده`}
                         </p>
                     </div>
                 </div>
@@ -241,7 +223,6 @@ export default function UserCasesPage() {
                 </div>
             </div>
 
-            {/* Error */}
             {error && !loading && (
                 <div className="flex flex-col items-start gap-3 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-[12.5px] text-rose-600 dark:border-rose-500/20 dark:bg-rose-500/10 dark:text-rose-300 sm:flex-row sm:items-center sm:justify-between">
                     <span>{error}</span>
@@ -256,7 +237,6 @@ export default function UserCasesPage() {
                 </div>
             )}
 
-            {/* Loading */}
             {loading && (
                 <div className="flex flex-col items-center justify-center gap-3 py-16">
                     <Loader size={24} className="animate-spin text-indigo-500" />
@@ -267,7 +247,6 @@ export default function UserCasesPage() {
                 </div>
             )}
 
-            {/* Empty State */}
             {!loading && cases.length === 0 && (
                 <div className="flex flex-col items-center justify-center gap-2 py-16">
                     <ClipboardList
@@ -281,7 +260,6 @@ export default function UserCasesPage() {
                 </div>
             )}
 
-            {/* Cases Grid */}
             {!loading && cases.length > 0 && (
                 <motion.div
                     layout
@@ -365,7 +343,14 @@ export default function UserCasesPage() {
                 </motion.div>
             )}
 
-            {/* Modals */}
+            {!loading && list.totalPages > 1 && (
+                <Pagination
+                    page={list.page}
+                    totalPages={list.totalPages}
+                    onChange={list.setPage}
+                />
+            )}
+
             <CreateCaseModal
                 open={caseModalOpen}
                 onClose={() => setCaseModalOpen(false)}

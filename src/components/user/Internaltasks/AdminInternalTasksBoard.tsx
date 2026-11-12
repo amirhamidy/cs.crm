@@ -8,9 +8,14 @@ import { useAuthStore } from "@/store/authStore";
 import { deleteInternalTask, fetchEmployeeList, fetchInternalTasks, reopenInternalTask, patchInternalTaskDeadline, fetchInternalTaskDeadline } from "./Api";
 import InternalTaskActionModal from "./InternalTaskActionModal";
 import type { EmployeeListItem, InternalTask, InternalTaskStatus, EmployeeRef } from "./types";
-import AdminInternalTaskChatModal from "./AdminInternalTaskChatModal";
+import dynamic from "next/dynamic";
 import CreateTicketModal from "./Createticketmodal";
 import InternalTimeRangeModal from "./InternalTimeRangeModal";
+
+const AdminInternalTaskChatModal = dynamic(() => import("./AdminInternalTaskChatModal"), {
+    ssr: false,
+    loading: () => null,
+});
 
 type AdminEmployee = EmployeeListItem & { id?: number; username?: string; full_name?: string };
 

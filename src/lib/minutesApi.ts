@@ -29,13 +29,13 @@ const unwrap = <T,>(data: T[] | { results?: T[] } | null | undefined): T[] =>
 
 export const minutesApi = {
   /* ---------- Meetings ---------- */
-  async listMeetings(params: { status?: MeetingStatus | ""; search?: string } = {}) {
+  async listMeetings(params: { status?: MeetingStatus | ""; search?: string } = {}, signal?: AbortSignal) {
     const query: Record<string, string> = {};
     if (params.status) query.status = params.status;
     if (params.search?.trim()) query.search = params.search.trim();
     const res = await axiosInstance.get<MeetingListItem[] | { results?: MeetingListItem[] }>(
       `${BASE}/meeting/list/`,
-      { params: query }
+      { params: query, signal }
     );
     return unwrap(res.data);
   },

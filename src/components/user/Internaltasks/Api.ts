@@ -54,9 +54,10 @@ export function fetchInternalTaskRoutines() {
   );
 }
 
-export function fetchEmployeeList() {
+export function fetchEmployeeList(signal?: AbortSignal) {
   return axiosInstance.get<EmployeeListItem[]>(
     "/accounts/api/v1/employee/list/",
+    { signal },
   );
 }
 

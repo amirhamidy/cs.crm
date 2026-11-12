@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import axiosInstance from "@/lib/axiosInstance";
+import { accountsApi, purchasingApi } from "@/lib/api";
 
 export interface AuthMe {
   id: number;
@@ -54,19 +54,6 @@ const initialState: AccessState = {
   error: null,
 };
 
-const normalizeList = <T>(value: unknown): T[] => {
-  if (Array.isArray(value)) return value as T[];
-  if (
-    value &&
-    typeof value === "object" &&
-    "results" in value &&
-    Array.isArray((value as { results?: unknown }).results)
-  ) {
-    return (value as { results: T[] }).results;
-  }
-  return [];
-};
-
 export function usePurchasingAccess() {
   const [state, setState] = useState<AccessState>(initialState);
 
@@ -74,18 +61,11 @@ export function usePurchasingAccess() {
     setState((prev) => ({ ...prev, loading: true, error: null }));
 
     try {
-      const meResponse = await axiosInstance.get<AuthMe>(
-        "/accounts/api/v1/auth/me/",
-      );
-      const me = meResponse.data;
+      const me = await accountsApi.me();
 
       if (me.type === 1) {
-        const purchasingResponse = await axiosInstance.get(
-          "/purchasing/api/v1/employees/",
-        );
-        const purchasingList = normalizeList<PurchasingEmployeeItem>(
-          purchasingResponse.data,
-        );
+        const purchasingList =
+          (await purchasingApi.employees()) as unknown as PurchasingEmployeeItem[];
 
         const adminAsPurchasing =
           purchasingList.find((item) => item.employee_name === me.username) ??
@@ -108,20 +88,10 @@ export function usePurchasingAccess() {
         return;
       }
 
-      const [employeeListResponse, purchasingListResponse] = await Promise.all([
-        axiosInstance.get("/accounts/api/v1/employee/list/"),
-        axiosInstance.get("/purchasing/api/v1/employees/"),
+      const [matchedEmployee, purchasingList] = await Promise.all([
+        accountsApi.employees.byUsername(me.username),
+        purchasingApi.employees() as unknown as Promise<PurchasingEmployeeItem[]>,
       ]);
-
-      const employeeList = normalizeList<EmployeeAccount>(
-        employeeListResponse.data,
-      );
-      const purchasingList = normalizeList<PurchasingEmployeeItem>(
-        purchasingListResponse.data,
-      );
-
-      const matchedEmployee =
-        employeeList.find((item) => item.username === me.username) ?? null;
 
       if (!matchedEmployee) {
         setState({

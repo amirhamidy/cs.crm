@@ -115,6 +115,7 @@ function normalizeResult(
 export async function searchGlobal(
   query: string,
   userType: number | null,
+  signal?: AbortSignal,
 ): Promise<GlobalSearchResult[]> {
   const normalizedQuery = normalizeText(query);
 
@@ -129,6 +130,7 @@ export async function searchGlobal(
         params: {
           q: query.trim(),
         },
+        signal,
       },
     );
 
@@ -141,7 +143,8 @@ export async function searchGlobal(
     return data.results
       .map((result) => normalizeResult(result, userType))
       .sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
-  } catch {
+  } catch (error) {
+    if (signal?.aborted) throw error;
     return [];
   }
 }

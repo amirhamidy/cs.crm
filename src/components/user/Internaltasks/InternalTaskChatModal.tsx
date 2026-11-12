@@ -146,8 +146,9 @@ export default function InternalTaskChatModal({ open, task, onClose, onUpdated }
         if (!open) return;
 
         let cancelled = false;
+        const controller = new AbortController();
 
-        fetchEmployeeList()
+        fetchEmployeeList(controller.signal)
             .then((response) => {
                 if (cancelled) return;
                 const list = parseEmployees(response.data);
@@ -160,7 +161,7 @@ export default function InternalTaskChatModal({ open, task, onClose, onUpdated }
                 setEmployeesLoaded(true);
             });
 
-        api.get<UserListItem[]>("/accounts/api/v1/user/list/")
+        api.get<UserListItem[]>("/accounts/api/v1/user/list/", { signal: controller.signal })
             .then((response) => {
                 if (cancelled) return;
                 setUsers(Array.isArray(response.data) ? response.data : []);
@@ -172,6 +173,7 @@ export default function InternalTaskChatModal({ open, task, onClose, onUpdated }
 
         return () => {
             cancelled = true;
+            controller.abort();
         };
     }, [open]);
 

@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import axiosInstance from "@/lib/axiosInstance";
-import { apiRoutes } from "@/lib/apiRoutes";
+import { getTasks } from "@/lib/api/analyticsData";
 import { useCurrentEmployee } from "@/hooks/usecurrentemployee";
 
 export type TimeRange = "weekly" | "monthly" | "yearly";
@@ -25,11 +24,6 @@ interface RawTask {
   assigned_employee_name?: unknown;
   created_at?: string;
   [key: string]: unknown;
-}
-
-interface PaginatedResponse<T> {
-  results?: T[];
-  next?: string | null;
 }
 
 const norm = (value: unknown) =>
@@ -57,32 +51,6 @@ const relationKey = (value: unknown): string | null => {
 };
 
 const statusOf = (task: RawTask) => norm(task.status);
-
-async function fetchAllPages<T>(url: string): Promise<T[]> {
-  const results: T[] = [];
-  let nextUrl: string | null = url;
-
-  while (nextUrl) {
-    const response = await axiosInstance.get(nextUrl);
-
-    const data = response.data as T[] | PaginatedResponse<T>;
-
-    const items = Array.isArray(data)
-      ? data
-      : data.results ?? [];
-
-    results.push(...items);
-
-    if (!Array.isArray(data) && data.next) {
-      const parsed = new URL(data.next);
-      nextUrl = parsed.pathname + parsed.search;
-    } else {
-      nextUrl = null;
-    }
-  }
-
-  return results;
-}
 
 function getTimeCutoff(range: TimeRange) {
   const now = Date.now();
@@ -145,7 +113,7 @@ export function useEmployeePerformance(
         setLoadingTasks(true);
         setError(null);
 
-        const data = await fetchAllPages<RawTask>(apiRoutes.tasks);
+        const data = await getTasks<RawTask>();
 
         if (!cancelled) {
           setTasks(data);

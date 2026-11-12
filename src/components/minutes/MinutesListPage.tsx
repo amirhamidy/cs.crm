@@ -23,21 +23,24 @@ export default function MinutesListPage({ basePath }: { basePath: string }) {
     return () => clearTimeout(t);
   }, [searchInput]);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (signal?: AbortSignal) => {
     setLoading(true);
     setError("");
     try {
-      setItems(await minutesApi.listMeetings({ status, search }));
+      setItems(await minutesApi.listMeetings({ status, search }, signal));
     } catch (err) {
+      if (signal?.aborted) return;
       setError(parseApiError(err, "خطا در دریافت صورت‌جلسه‌ها").message);
       setItems([]);
     } finally {
-      setLoading(false);
+      if (!signal?.aborted) setLoading(false);
     }
   }, [status, search]);
 
   useEffect(() => {
-    load();
+    const controller = new AbortController();
+    load(controller.signal);
+    return () => controller.abort();
   }, [load]);
 
   const filtered = status !== "" || search !== "";
@@ -59,7 +62,7 @@ export default function MinutesListPage({ basePath }: { basePath: string }) {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <button type="button" onClick={load} disabled={loading} title="بارگذاری مجدد" aria-label="بارگذاری مجدد" className="flex h-10 w-10 items-center justify-center rounded-2xl bg-black/5 text-slate-600 transition-colors hover:bg-black/10 disabled:opacity-50 dark:bg-white/5 dark:text-slate-300">
+          <button type="button" onClick={() => load()} disabled={loading} title="بارگذاری مجدد" aria-label="بارگذاری مجدد" className="flex h-10 w-10 items-center justify-center rounded-2xl bg-black/5 text-slate-600 transition-colors hover:bg-black/10 disabled:opacity-50 dark:bg-white/5 dark:text-slate-300">
             <RefreshCw size={15} className={loading ? "animate-spin" : ""} />
           </button>
           <Link href={`${basePath}/my-signatures`} className={BTN_GHOST}>
@@ -114,7 +117,7 @@ export default function MinutesListPage({ basePath }: { basePath: string }) {
       {!loading && error && (
         <div className="flex flex-col items-center gap-3 rounded-3xl border border-red-500/10 bg-red-500/[0.03] py-12">
           <p className="text-[12.5px] font-semibold text-red-500">{error}</p>
-          <button type="button" onClick={load} className="text-[12px] font-bold text-indigo-500 hover:underline">
+          <button type="button" onClick={() => load()} className="text-[12px] font-bold text-indigo-500 hover:underline">
             تلاش مجدد
           </button>
         </div>

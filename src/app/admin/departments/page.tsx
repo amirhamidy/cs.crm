@@ -155,19 +155,23 @@ export default function DepartmentsPage() {
         fetchAll();
     }, [fetchAll]);
 
-    const fetchTasks = async () => {
+    const fetchTasks = async (signal?: AbortSignal) => {
         try {
             const response = await axiosInstance.get(
-                "/tasks/api/v1/tasks/"
+                "/tasks/api/v1/tasks/",
+                { signal }
             );
             setTasks(extractTasks(response.data));
         } catch {
+            if (signal?.aborted) return;
             setTasks([]);
         }
     };
 
     useEffect(() => {
-        fetchTasks();
+        const controller = new AbortController();
+        fetchTasks(controller.signal);
+        return () => controller.abort();
     }, []);
 
     useEffect(() => {

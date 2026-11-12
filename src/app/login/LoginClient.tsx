@@ -1,14 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
-import { Eye, EyeOff, Loader } from "lucide-react";
+import { AnimatePresence, m } from "framer-motion";
+import { Eye, EyeOff } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
 import { useLogin } from "@/hooks/useLogin";
 import { useLogout } from "@/hooks/useLogout";
 import { Notification } from "@/components/Notification";
 import { FloatingInput } from "@/components/login/login";
 
+import { BusyContent } from "@/components/ui/Button";
 export default function LoginClient() {
     const [username, setUsername] = useState("");
     const [password, setPassword] = useState("");
@@ -72,7 +74,7 @@ export default function LoginClient() {
                 )}
             </AnimatePresence>
 
-            <motion.div
+            <m.div
                 initial={{ opacity: 0, y: 16 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.35, ease: "easeOut" }}
@@ -107,6 +109,7 @@ export default function LoginClient() {
                         label="نام کاربری"
                         id="username"
                         type="text"
+                        autoComplete="new-password"
                         value={username}
                         onChange={(e) => setUsername(e.target.value)}
                     />
@@ -116,6 +119,7 @@ export default function LoginClient() {
                             label="رمز عبور"
                             id="password"
                             type={showPassword ? "text" : "password"}
+                            autoComplete="new-password"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                             className="pl-12"
@@ -141,26 +145,23 @@ export default function LoginClient() {
                         </button>
                     </div>
 
-                    <motion.button
+                    <m.button
                         type="submit"
                         disabled={loading}
                         whileTap={
                             loading ? undefined : { scale: 0.97 }
                         }
-                        className="flex min-h-11 items-center justify-center rounded-full bg-blue-600 py-3 text-sm font-bold text-white transition-colors hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-70"
+                        className="relative flex min-h-11 items-center justify-center rounded-full bg-blue-600 py-3 text-sm font-bold text-white transition-colors hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-70"
                     >
-                        {loading ? (
-                            <Loader
-                                size={18}
-                                className="animate-spin"
-                                aria-label="در حال ورود"
-                            />
-                        ) : (
-                            "ورود"
-                        )}
-                    </motion.button>
+                        <BusyContent busy={loading}>
+                            ورود
+                        </BusyContent>
+                    </m.button>
+                    <Link href="/portal/login/" className="text-center text-xs font-semibold text-indigo-500 hover:text-indigo-600">
+                        ورود مشتریان
+                    </Link>
                 </form>
-            </motion.div>
+            </m.div>
         </div>
     );
 }

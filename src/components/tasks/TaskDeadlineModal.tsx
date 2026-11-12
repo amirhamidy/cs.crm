@@ -15,44 +15,16 @@ export interface StepDeadline {
 }
 
 
-const deadlineCache = new Map<string, { value: StepDeadline; expiresAt: number }>();
-const DEADLINE_CACHE_TTL = 15_000;
-
-const deadlineKey = (taskId: number, stepId: number) => `${taskId}:${stepId}`;
-
-export function invalidateStepDeadline(taskId: number, stepId: number) {
-    deadlineCache.delete(deadlineKey(taskId, stepId));
-}
-
 export async function fetchStepDeadline(
     taskId: number,
     stepId: number,
     signal?: AbortSignal
 ): Promise<StepDeadline> {
-    const key = deadlineKey(taskId, stepId);
-    const cached = deadlineCache.get(key);
-
-    if (cached && cached.expiresAt > Date.now()) {
-        return cached.value;
-    }
-
-    const request = api
-        .get(`/tasks/api/v1/tasks/${taskId}/steps/${stepId}/deadline/`, {
-            signal,
-        })
-        .then(({ data }) => {
-            const value = {
-                started_at: data?.started_at ?? null,
-                deadline: data?.deadline ?? null,
-            };
-            deadlineCache.set(key, {
-                value,
-                expiresAt: Date.now() + DEADLINE_CACHE_TTL,
-            });
-            return value;
-        });
-
-    return request;
+    const { data } = await api.get(`/tasks/api/v1/tasks/${taskId}/steps/${stepId}/deadline/`, { signal });
+    return {
+        started_at: data?.started_at ?? null,
+        deadline: data?.deadline ?? null,
+    };
 }
 
 function formatJalali(iso?: string | null) {
