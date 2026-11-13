@@ -120,6 +120,13 @@ export const adminMenuItems: MenuItem[] = [
   },
   {
     icon: Users,
+    image: 15,
+    label: "قراردادهای منابع انسانی",
+    description: "ارسال و امضای قراردادها",
+    href: "/admin/hr-contracts",
+  },
+  {
+    icon: Users,
     image: 7,
     label: "صورت جلسه",
     description: "ثبت جلسات، مصوبات و امضای صورت‌جلسه",
@@ -234,6 +241,13 @@ export const userMenuItems: MenuItem[] = [
     description: "جلسات و امضاهای شما",
     href: "/user/minutes/",
     permission: { section: "minutes", action: "view" },
+  },
+  {
+    icon: UserRound,
+    image: 15,
+    label: "قراردادهای من",
+    description: "قراردادهای منتظر امضا",
+    href: "/user/hr-contracts",
   },
   {
     icon: UserRound,

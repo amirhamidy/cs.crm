@@ -1,14 +1,18 @@
 import axios from "axios";
 import axiosInstance from "@/lib/axiosInstance";
 import { listAll } from "@/lib/api";
+import { getApiUrl } from "@/lib/config";
 import type { MeetingCreatePayload, MeetingDetail, MeetingListItem, MeetingStatus, MeetingUpdatePayload, PublicSigner, SignerCreatePayload, SignerItem, SignerUpdatePayload } from "@/types/minutes";
 
 const BASE = "/minutes/api/v1";
 
 
 const publicClient = axios.create({
-  baseURL: axiosInstance.defaults.baseURL,
   headers: { "Content-Type": "application/json" },
+});
+publicClient.interceptors.request.use((config) => {
+  config.baseURL = getApiUrl();
+  return config;
 });
 
 export const minutesApi = {
@@ -88,12 +92,12 @@ export const minutesApi = {
 
   
   async getPublicSigner(token: string) {
-    const res = await publicClient.get<PublicSigner>(`${BASE}/signer/public/${token}/`);
+    const res = await axios.get<PublicSigner>(`/api/public-sign/${encodeURIComponent(token)}`);
     return res.data;
   },
 
   async signPublic(token: string, signatureImage: string) {
-    const res = await publicClient.post<PublicSigner>(`${BASE}/signer/public/${token}/sign/`, {
+    const res = await axios.post<PublicSigner>(`/api/public-sign/${encodeURIComponent(token)}`, {
       signature_image: signatureImage,
     });
     return res.data;

@@ -1,7 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useState } from "react";
 import { CalendarDays, Check, CheckCircle2, Clock, FileSignature, Loader2, MapPin, PenLine, ShieldAlert } from "lucide-react";
 import { minutesApi } from "@/lib/minutesApi";
 import { formatDateTime, parseApiError, validateSignature } from "@/lib/minutesUtils";
@@ -11,39 +10,28 @@ import { BTN_PRIMARY, CARD } from "./ui";
 import type { PublicSigner } from "@/types/minutes";
 
 
-export default function PublicSignPage() {
-  const params = useParams<{ token: string }>();
-  const token = params?.token;
-
-  const [data, setData] = useState<PublicSigner | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [unavailable, setUnavailable] = useState(false);
-  const [loadError, setLoadError] = useState("");
+export default function PublicSignPage({
+  token,
+  initialData,
+  initialStatus,
+}: {
+  token: string;
+  initialData: PublicSigner | null;
+  initialStatus: number;
+}) {
+  const [data, setData] = useState<PublicSigner | null>(initialData);
+  const loading = false;
+  const [unavailable, setUnavailable] = useState(initialStatus === 404);
+  const loadError =
+    initialData || initialStatus === 404
+      ? ""
+      : initialStatus === 429
+        ? "تعداد درخواست‌ها زیاد است؛ کمی بعد دوباره تلاش کنید"
+        : "خطا در دریافت اطلاعات";
 
   const [signature, setSignature] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [signError, setSignError] = useState("");
-
-  useEffect(() => {
-    if (!token) return;
-    let alive = true;
-    (async () => {
-      try {
-        const res = await minutesApi.getPublicSigner(token);
-        if (alive) setData(res);
-      } catch (err) {
-        if (!alive) return;
-        const parsed = parseApiError(err);
-        if (parsed.status === 404) setUnavailable(true);
-        else setLoadError(parsed.message);
-      } finally {
-        if (alive) setLoading(false);
-      }
-    })();
-    return () => {
-      alive = false;
-    };
-  }, [token]);
 
   const handleSign = async () => {
     if (!token || submitting) return;

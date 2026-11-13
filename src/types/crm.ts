@@ -372,6 +372,8 @@ export interface SeasonalSupply {
   expected_quantity_kg: string | null;
   notes: string;
   created_at: string;
+  created_by?: number | null;
+  updated_at?: string;
 }
 
 export interface SeasonalSupplyPayload {
