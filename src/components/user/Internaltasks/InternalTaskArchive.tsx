@@ -1,24 +1,15 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import {
-    Archive,
-    CalendarDays,
-    CheckCircle2,
-    Layers,
-    LayoutGrid,
-    Loader,
-    RotateCcw,
-    Search,
-    Ticket,
-    XCircle,
-} from "lucide-react";
-import { fetchInternalTaskArchive, fetchInternalTaskRoutines } from "./Api";
-import type {
-    InternalTaskArchive as InternalTaskArchiveType,
-    InternalTaskRoutine,
-} from "./types";
+import PageHeader from "@/components/ui/PageHeader";
+import Pagination from "@/components/ui/Pagination";
+import { usePaginatedList } from "@/hooks/usePaginatedList";
+import { Archive, CalendarDays, CheckCircle2, Layers, LayoutGrid, RotateCcw, Ticket, XCircle } from "lucide-react";
+import { fetchInternalTaskRoutines } from "./Api";
+import { internalTasksApi } from "@/lib/api";
+import type { InternalTaskArchive as InternalTaskArchiveType, InternalTaskRoutine } from "./types";
 import InternalTaskArchiveCard from "./InternalTaskArchiveCard";
+import TicketBoardSkeleton from "./TicketBoardSkeleton";
 
 type ArchiveTypeFilter = "all" | "routine" | "ticket";
 type DateFilter = "all" | "today" | "week" | "month" | "three_months";
@@ -48,7 +39,7 @@ function toPersianDigits(value: string | number) {
     return String(value).replace(/\d/g, (digit) => "۰۱۲۳۴۵۶۷۸۹"[Number(digit)]);
 }
 
-/* ───────── کاشی وضعیت: عدد واقعی + فیلتر ───────── */
+
 const TILE_TONES = {
     all: {
         idle: "border-gray-200 bg-white text-gray-800 hover:border-gray-300 dark:border-white/[0.06] dark:bg-white/[0.03] dark:text-gray-100 dark:hover:border-white/[0.12]",
@@ -102,7 +93,7 @@ function StatusTile({
     );
 }
 
-/* ───────── کنترل انتخاب گروهی ───────── */
+
 function Segmented<T extends string>({
     icon,
     label,
@@ -153,12 +144,8 @@ function Segmented<T extends string>({
 }
 
 export default function InternalTaskArchive() {
-    const [tasks, setTasks] = useState<InternalTaskArchiveType[]>([]);
     const [routines, setRoutines] = useState<InternalTaskRoutine[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
 
-    const [search, setSearch] = useState("");
     const [typeFilter, setTypeFilter] =
         useState<ArchiveTypeFilter>("all");
     const [dateFilter, setDateFilter] =
@@ -166,48 +153,45 @@ export default function InternalTaskArchive() {
     const [statusFilter, setStatusFilter] =
         useState<StatusFilter>("all");
 
-    const loadArchive = useCallback(async () => {
+    
+    const list = usePaginatedList<InternalTaskArchiveType>(
+        (params, signal) => internalTasksApi.archive(params, signal),
+        { pageSize: 12, scrollTop: true },
+    );
+
+    const tasks = list.data;
+    const search = list.search;
+    const setSearch = list.setSearch;
+    const loading = list.loading && list.data.length === 0;
+    const error = list.error
+        ? "دریافت آرشیو تیکت‌ها با خطا مواجه شد."
+        : null;
+
+    
+    const loadRoutines = useCallback(async () => {
         try {
-            setLoading(true);
-            setError(null);
-
-            const [archiveResponse, routineResponse] =
-                await Promise.all([
-                    fetchInternalTaskArchive(),
-                    fetchInternalTaskRoutines(),
-                ]);
-
-            setTasks(
-                Array.isArray(archiveResponse.data)
-                    ? archiveResponse.data
-                    : [],
-            );
-
+            const routineResponse = await fetchInternalTaskRoutines();
             setRoutines(
                 Array.isArray(routineResponse.data)
                     ? routineResponse.data
                     : [],
             );
         } catch {
-            setTasks([]);
             setRoutines([]);
-            setError("دریافت آرشیو تیکت‌ها با خطا مواجه شد.");
-        } finally {
-            setLoading(false);
         }
     }, []);
 
     useEffect(() => {
-        void loadArchive();
-    }, [loadArchive]);
+        void loadRoutines();
+    }, [loadRoutines]);
+
+    const loadArchive = list.refetch;
 
     const routineTaskIds = useMemo(() => {
         return new Set(routines.map((routine) => routine.task));
     }, [routines]);
 
     const filteredTasks = useMemo(() => {
-        const normalizedSearch = search.trim().toLowerCase();
-
         const now = new Date();
         const todayStart = new Date(now);
         todayStart.setHours(0, 0, 0, 0);
@@ -277,29 +261,12 @@ export default function InternalTaskArchive() {
                     }
                 }
 
-                if (!normalizedSearch) {
-                    return true;
-                }
-
-                const searchableText = [
-                    task.title,
-                    task.id,
-                    task.task_id,
-                    task.created_by_username,
-                    task.created_by_full_name,
-                    task.final_action_by_username,
-                    task.final_action_by_full_name,
-                ]
-                    .join(" ")
-                    .toLowerCase();
-
-                return searchableText.includes(normalizedSearch);
+                
+                return true;
             });
     }, [
         tasks,
-        routines,
         routineTaskIds,
-        search,
         typeFilter,
         dateFilter,
         statusFilter,
@@ -330,6 +297,7 @@ export default function InternalTaskArchive() {
         setTypeFilter("all");
         setDateFilter("all");
         setStatusFilter("all");
+        list.setPage(1);
     };
 
     const hasFilters =
@@ -338,7 +306,7 @@ export default function InternalTaskArchive() {
         dateFilter !== "all" ||
         statusFilter !== "all";
 
-    /* توضیح دقیق فیلترهای فعال، به صورت متن ساده */
+    
     const activeFilterLabels = [
         search.trim() ? `جستجو: «${search.trim()}»` : null,
         statusFilter !== "all" ? `وضعیت: ${STATUS_LABELS[statusFilter]}` : null,
@@ -346,37 +314,16 @@ export default function InternalTaskArchive() {
         dateFilter !== "all" ? `زمان: ${DATE_LABELS[dateFilter]}` : null,
     ].filter(Boolean) as string[];
 
-    if (loading) {
-        return (
-            <div className="flex h-64 items-center justify-center">
-                <Loader
-                    size={22}
-                    className="animate-spin text-indigo-500"
-                />
-            </div>
-        );
-    }
+    if (loading) return <TicketBoardSkeleton count={5} />;
 
     return (
         <div dir="rtl" className="flex flex-col gap-5">
-            <div className="flex items-center gap-2.5">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-indigo-500/10">
-                    <Archive
-                        size={18}
-                        className="text-indigo-500"
-                    />
-                </div>
-
-                <div>
-                    <h3 className="text-[15px] font-extrabold text-gray-900 dark:text-white">
-                        بایگانی تیکت‌ها
-                    </h3>
-
-                    <p className="text-[11.5px] text-gray-500 dark:text-gray-400">
-                        تیکت‌ها و روتین‌هایی که انجام یا لغو شده‌اند. مجموع: {toPersianDigits(tasks.length)} مورد
-                    </p>
-                </div>
-            </div>
+            <PageHeader
+                icon={Archive}
+                title="بایگانی تیکت‌ها"
+                subtitle={`تیکت‌ها و روتین‌هایی که انجام یا لغو شده‌اند. مجموع: ${toPersianDigits(list.count)} مورد`}
+                search={{ value: search, onChange: setSearch, placeholder: "جستجو بر اساس عنوان، شماره یا نام فرد" }}
+            />
 
             {error && (
                 <div className="flex items-center justify-between gap-3 rounded-2xl border border-red-500/20 bg-red-500/5 px-4 py-3">
@@ -394,7 +341,7 @@ export default function InternalTaskArchive() {
                 </div>
             )}
 
-            {/* تعداد به تفکیک وضعیت (قابل کلیک برای فیلتر) */}
+            
             <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3">
                 <StatusTile
                     tone="all"
@@ -422,36 +369,9 @@ export default function InternalTaskArchive() {
                 />
             </div>
 
-            {/* جستجو و فیلترها */}
+            
             <div className="rounded-3xl border border-gray-200 bg-white p-3.5 shadow-sm dark:border-white/[0.06] dark:bg-white/[0.025]">
                 <div className="flex flex-col gap-4">
-                    <div className="relative">
-                        <Search
-                            size={16}
-                            className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400"
-                        />
-
-                        <input
-                            type="text"
-                            value={search}
-                            onChange={(event) =>
-                                setSearch(event.target.value)
-                            }
-                            placeholder="جستجو بر اساس عنوان، شماره یا نام فرد"
-                            className="h-12 w-full rounded-2xl border border-gray-200 bg-gray-50 pr-10 pl-4 text-[12.5px] font-medium text-gray-900 outline-none transition-all placeholder:text-gray-400 focus:border-indigo-500/40 focus:bg-white dark:border-white/[0.06] dark:bg-white/[0.03] dark:text-white dark:placeholder:text-gray-600 dark:focus:bg-white/[0.04]"
-                        />
-
-                        {search && (
-                            <button
-                                type="button"
-                                onClick={() => setSearch("")}
-                                className="absolute left-3 top-1/2 flex -translate-y-1/2 items-center justify-center rounded-lg p-1 text-gray-400 transition-colors hover:bg-gray-200 hover:text-gray-700 dark:hover:bg-white/[0.08] dark:hover:text-white"
-                            >
-                                <XCircle size={15} />
-                            </button>
-                        )}
-                    </div>
-
                     <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                         <Segmented<ArchiveTypeFilter>
                             icon={<Ticket size={13} className="text-indigo-500" />}
@@ -484,7 +404,7 @@ export default function InternalTaskArchive() {
                 </div>
             </div>
 
-            {/* خلاصه نتیجه: دقیقا چه چیزی نمایش داده می‌شود */}
+            { }
             <div className="flex flex-wrap items-center justify-between gap-2 px-1">
                 <div className="flex flex-wrap items-center gap-2">
                     <LayoutGrid
@@ -493,7 +413,7 @@ export default function InternalTaskArchive() {
                     />
 
                     <span className="text-[12px] font-bold text-gray-700 dark:text-gray-200">
-                        نمایش {toPersianDigits(filteredTasks.length)} مورد از {toPersianDigits(tasks.length)} مورد
+                        نمایش {toPersianDigits(filteredTasks.length)} مورد از {toPersianDigits(tasks.length)} مورد این صفحه (مجموع {toPersianDigits(list.count)} مورد)
                     </span>
 
                     {activeFilterLabels.map((text) => (
@@ -527,12 +447,12 @@ export default function InternalTaskArchive() {
 
                     <div className="text-center">
                         <p className="text-[12.5px] font-bold text-gray-500 dark:text-gray-400">
-                            {tasks.length === 0
+                            {list.count === 0
                                 ? "هنوز موردی در بایگانی ثبت نشده است."
                                 : "موردی با این فیلترها پیدا نشد."}
                         </p>
 
-                        {tasks.length > 0 && (
+                        {list.count > 0 && (
                             <button
                                 type="button"
                                 onClick={clearFilters}
@@ -557,6 +477,7 @@ export default function InternalTaskArchive() {
                     ))}
                 </div>
             )}
+            {list.totalPages > 1 && <Pagination page={list.page} totalPages={list.totalPages} onChange={list.setPage} />}
         </div>
     );
 }

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { CalendarClock, Clock, Loader2, UserRound } from "lucide-react";
+import { CalendarClock, Clock, Loader2, Ticket as TicketIcon, UserRound } from "lucide-react";
 import { useTheme } from "next-themes";
 import api from "@/lib/axiosInstance";
 import { fetchAllPages, fetchPage } from "@/lib/api/_core";
@@ -26,6 +26,31 @@ interface Employee {
 interface ExpiredTask extends Task {
     deadline: string;
     started_at: string | null;
+    kind: "task" | "ticket";
+    assigneeNames?: string[];
+}
+
+interface RawTicket {
+    id: number;
+    title?: string | null;
+    status?: string | null;
+    active?: boolean;
+    started_at?: string | null;
+    deadline?: string | { deadline?: string | null; started_at?: string | null } | null;
+    assigned_to?: Array<{ id: number; full_name?: string; username?: string } | number> | null;
+}
+
+function ticketDeadline(ticket: RawTicket): { deadline: string | null; started_at: string | null } {
+    const value = ticket.deadline;
+
+    if (value && typeof value === "object") {
+        return {
+            deadline: value.deadline ?? null,
+            started_at: value.started_at ?? ticket.started_at ?? null,
+        };
+    }
+
+    return { deadline: value || null, started_at: ticket.started_at ?? null };
 }
 
 
@@ -82,13 +107,17 @@ export default function MyTaskDeadlines() {
 
         async function load() {
             try {
-                const [source, employeeSource] = await Promise.all([
+                const [source, employeeSource, ticketSource] = await Promise.all([
                     fetchAll<Task>("/tasks/api/v1/tasks/", signal),
                     fetchAll<Employee>("/accounts/api/v1/employee/list/", signal),
+                    fetchAll<RawTicket>("/tasks/api/v1/internal_task/", signal).catch((error) => {
+                        if (signal.aborted) throw error;
+                        return [] as RawTicket[];
+                    }),
                 ]);
 
                 const activeTasks = source.filter((task) => task.current_step);
-                const results = await mapLimit(activeTasks, 4, async (task) => {
+                const results = await mapLimit<Task, ExpiredTask | null>(activeTasks, 4, async (task): Promise<ExpiredTask | null> => {
                     try {
                         const { data } = await api.get(
                             `/tasks/api/v1/tasks/${task.id}/steps/${task.current_step}/deadline/`,
@@ -103,6 +132,7 @@ export default function MyTaskDeadlines() {
                             ...task,
                             deadline: data.deadline,
                             started_at: data.started_at ?? null,
+                            kind: "task",
                         };
                     } catch (error) {
                         if (signal.aborted) throw error;
@@ -110,10 +140,39 @@ export default function MyTaskDeadlines() {
                     }
                 });
 
+                const expiredTickets: ExpiredTask[] = [];
+
+                for (const ticket of ticketSource) {
+                    if (ticket.status === "completed" || ticket.status === "cancelled") continue;
+                    if (ticket.active === false) continue;
+
+                    const { deadline, started_at } = ticketDeadline(ticket);
+
+                    if (!deadline || new Date(deadline).getTime() >= Date.now()) continue;
+
+                    const assignees = Array.isArray(ticket.assigned_to) ? ticket.assigned_to : [];
+
+                    expiredTickets.push({
+                        id: ticket.id,
+                        title: ticket.title ?? "",
+                        current_step: null,
+                        status: ticket.status ?? "",
+                        assigned_employee: assignees.map((a) => (typeof a === "object" ? a.id : a)),
+                        assigneeNames: assignees.map((a) =>
+                            typeof a === "object" ? a.full_name || a.username || `کاربر ${a.id}` : `کاربر ${a}`,
+                        ),
+                        deadline,
+                        started_at,
+                        kind: "ticket",
+                    });
+                }
+
                 if (!cancelled) {
                     setTasks(
-                        results
-                            .filter((task): task is ExpiredTask => task !== null)
+                        [
+                            ...results.filter((task): task is ExpiredTask => task !== null),
+                            ...expiredTickets,
+                        ]
                             .sort((a, b) => new Date(a.deadline).getTime() - new Date(b.deadline).getTime())
                     );
                     setEmployees(employeeSource);
@@ -154,7 +213,7 @@ export default function MyTaskDeadlines() {
                     </div>
                     <div>
                         <h2 className="text-[13px] font-extrabold text-gray-900 dark:text-white">
-                            تسک‌های دارای Deadline گذشته
+                            تسک‌ها و تیکت‌های دارای Deadline گذشته
                         </h2>
                         <p className="mt-0.5 text-[10.5px] text-gray-400">
                             وظایفی که مهلت انجام آن‌ها به پایان رسیده است
@@ -163,7 +222,7 @@ export default function MyTaskDeadlines() {
                 </div>
 
                 <span className="rounded-xl bg-red-500/10 px-2.5 py-1 text-[10px] font-bold text-red-400">
-                    {tasks.length.toLocaleString("fa-IR")} تسک
+                    {tasks.length.toLocaleString("fa-IR")} مورد
                 </span>
             </div>
 
@@ -174,13 +233,13 @@ export default function MyTaskDeadlines() {
                 </div>
             ) : !tasks.length ? (
                 <div className="flex min-h-32 items-center justify-center rounded-2xl border border-dashed border-gray-200 text-[11px] font-semibold text-gray-400 dark:border-white/[0.06]">
-                    هیچ تسکی با Deadline گذشته وجود ندارد.
+                    هیچ تسک یا تیکتی با Deadline گذشته وجود ندارد.
                 </div>
             ) : (
                 <div className="grid gap-2.5">
                     {tasks.map((task, index) => (
                         <motion.div
-                            key={task.id}
+                            key={`${task.kind}-${task.id}`}
                             initial={{ opacity: 0, y: 6 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: index * 0.025 }}
@@ -189,6 +248,14 @@ export default function MyTaskDeadlines() {
                             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                                 <div className="min-w-0">
                                     <div className="flex flex-wrap items-center gap-2">
+                                        {task.kind === "ticket" && (
+                                            <span
+                                                title="تیکت"
+                                                className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-indigo-500/10 text-indigo-400"
+                                            >
+                                                <TicketIcon size={12} />
+                                            </span>
+                                        )}
                                         <h3 className="truncate text-[12px] font-extrabold text-gray-900 dark:text-white">
                                             {task.title}
                                         </h3>
@@ -198,13 +265,15 @@ export default function MyTaskDeadlines() {
                                     </div>
 
                                     <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5">
-                                        {task.assigned_employee?.map((id) => (
+                                        {task.assigned_employee?.map((id, i) => (
                                             <span
                                                 key={id}
                                                 className="flex items-center gap-1.5 text-[10px] font-bold text-gray-500 dark:text-gray-400"
                                             >
                                                 <UserRound size={11} className="text-indigo-400" />
-                                                {getEmployeeName(id, employees)}
+                                                {task.kind === "ticket"
+                                                    ? task.assigneeNames?.[i] ?? `کاربر ${id}`
+                                                    : getEmployeeName(id, employees)}
                                             </span>
                                         ))}
 

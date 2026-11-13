@@ -174,6 +174,11 @@ export const userMenuItems: MenuItem[] = [
   },
   {
     icon: Archive,
+    label: "بایگانی تیکت‌ها",
+    href: "/user/Ticketarchive",
+  },
+  {
+    icon: Archive,
     label: "صورت جلسه",
     href: "/user/minutes/",
   },

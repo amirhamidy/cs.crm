@@ -2,7 +2,7 @@
 
 import { JSX, memo, useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Ban, CheckCircle2, ClipboardX, Clock3, Inbox, LayoutGrid, Loader, Loader2, MessageSquareText, Plus, RefreshCw, RotateCcw, Ticket, Trash2, Users, X } from "lucide-react";
+import { Ban, CalendarClock, CheckCircle2, ClipboardX, Clock3, Inbox, LayoutGrid, Loader, Loader2, MessageSquareText, Plus, RefreshCw, RotateCcw, Ticket, Trash2, Users, X } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useAuthStore } from "@/store/authStore";
 import TicketPager from "./Ticketpager";
@@ -12,6 +12,7 @@ import type { EmployeeListItem, InternalTask, InternalTaskStatus, EmployeeRef } 
 import dynamic from "next/dynamic";
 import CreateTicketModal from "./Createticketmodal";
 import InternalTimeRangeModal from "./InternalTimeRangeModal";
+import InternalTaskDeadlineModal from "./InternalTaskDeadlineModal";
 
 const AdminInternalTaskChatModal = dynamic(() => import("./AdminInternalTaskChatModal"), {
     ssr: false,
@@ -147,6 +148,7 @@ const AdminInternalTaskCard = memo(function AdminInternalTaskCard({
     const [reopening, setReopening] = useState(false);
     const [statusError, setStatusError] = useState<string | null>(null);
     const [timeModalOpen, setTimeModalOpen] = useState(false);
+    const [deadlineModalOpen, setDeadlineModalOpen] = useState(false);
     const [savingTime, setSavingTime] = useState(false);
     const [timeError, setTimeError] = useState<string | null>(null);
     const [schedule, setSchedule] = useState({ started_at: task.started_at ?? null, deadline: task.deadline ?? null });
@@ -221,6 +223,8 @@ const AdminInternalTaskCard = memo(function AdminInternalTaskCard({
 
                 <div className="flex shrink-0 items-center gap-1.5">
                     <button type="button" onClick={event => { event.stopPropagation(); onOpen(task); }} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-indigo-500/[0.08] text-indigo-500 transition-all hover:bg-indigo-500/[0.14] hover:text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-300 dark:hover:bg-indigo-500/15" title="مشاهده گفتگو"><MessageSquareText size={13} /></button>
+                    <button type="button" onClick={event => { event.stopPropagation(); setDeadlineModalOpen(true); }} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-indigo-500/[0.08] text-indigo-500 transition-all hover:bg-indigo-500/[0.14] hover:text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-300" title="مشاهده ددلاین"><CalendarClock size={13} /></button>
+                    {isSent && <button type="button" onClick={event => { event.stopPropagation(); setTimeError(null); setTimeModalOpen(true); }} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-indigo-500/[0.08] text-indigo-500 transition-all hover:bg-indigo-500/[0.14] hover:text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-300" title="تعیین بازه زمانی"><Clock3 size={13} /></button>}
                     {onDelete && <button type="button" onClick={event => { event.stopPropagation(); setDeleteError(null); setShowConfirm(true); }} disabled={isDeleting} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-red-500/[0.08] text-red-500 transition-all hover:bg-red-500/[0.14] hover:text-red-600 disabled:opacity-40 dark:bg-red-500/10 dark:text-red-400 dark:hover:bg-red-500/15" title="حذف تیکت">{isDeleting ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}</button>}
                 </div>
             </div>
@@ -250,19 +254,6 @@ const AdminInternalTaskCard = memo(function AdminInternalTaskCard({
                 </div>
             </div>
 
-            {(schedule.started_at || schedule.deadline) && (
-                <button type="button" onClick={event => { event.stopPropagation(); setTimeError(null); if (isSent) setTimeModalOpen(true); }} className="relative z-10 flex items-center gap-2 rounded-[1.15rem] border px-3 py-2 text-right transition-colors hover:bg-indigo-500/5" style={{ borderColor: isDark ? "rgba(99,102,241,.14)" : "rgba(99,102,241,.1)", background: isDark ? "rgba(99,102,241,.045)" : "rgba(99,102,241,.03)" }}>
-                    <Clock3 size={12} className="shrink-0 text-indigo-500" />
-                    <span className="truncate text-[10px] font-bold text-black/55 dark:text-white/55">
-                        {schedule.deadline ? `مهلت: ${formatDate(schedule.deadline)}` : `شروع: ${formatDate(schedule.started_at)}`}
-                    </span>
-                </button>
-            )}
-
-            {!schedule.started_at && !schedule.deadline && isSent && (
-                <button type="button" onClick={event => { event.stopPropagation(); setTimeError(null); setTimeModalOpen(true); }} className="relative z-10 flex items-center justify-center gap-1.5 rounded-[1.15rem] border border-dashed px-3 py-2 text-[10px] font-bold text-indigo-500 transition-colors hover:bg-indigo-500/5" style={{ borderColor: isDark ? "rgba(99,102,241,.18)" : "rgba(99,102,241,.14)" }}><Clock3 size={12} />تعیین ددلاین</button>
-            )}
-
             {timeError && <p onClick={event => event.stopPropagation()} className="relative z-10 rounded-xl bg-red-500/10 px-3 py-2 text-center text-[10px] font-bold text-red-500">{timeError}</p>}
 
             <div className="relative z-10 mt-auto flex items-center justify-between rounded-[1.15rem] px-3 py-2.5" style={{ background: isDark ? "rgba(99,102,241,.055)" : "rgba(99,102,241,.045)", border: isDark ? "1px solid rgba(99,102,241,.1)" : "1px solid rgba(99,102,241,.08)" }}>
@@ -279,6 +270,16 @@ const AdminInternalTaskCard = memo(function AdminInternalTaskCard({
                 </>}
                 {(isCompleted || isCancelled) && <button type="button" onClick={handleReopen} disabled={reopening} className="flex h-8 flex-1 items-center justify-center gap-1.5 rounded-xl bg-amber-500 text-[10px] font-extrabold text-white transition-opacity hover:opacity-90 disabled:opacity-50">{reopening ? <Loader2 size={12} className="animate-spin" /> : <RotateCcw size={12} />}بازگشایی تیکت</button>}
             </div>}
+
+            <div onClick={event => event.stopPropagation()}>
+                <InternalTaskDeadlineModal
+                    open={deadlineModalOpen}
+                    onClose={() => setDeadlineModalOpen(false)}
+                    taskId={task.id}
+                    taskTitle={task.title}
+                    onLoaded={(d) => setSchedule({ started_at: d.started_at, deadline: d.deadline })}
+                />
+            </div>
 
             {timeModalOpen && isSent && <div onClick={event => event.stopPropagation()}><InternalTimeRangeModal open={timeModalOpen} initialStartedAt={schedule.started_at} initialDeadline={schedule.deadline} onClose={() => { if (!savingTime) setTimeModalOpen(false); }} onSubmit={handleTimeSubmit} /></div>}
 
