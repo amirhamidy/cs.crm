@@ -172,7 +172,7 @@ export default function TaskDeadlineModal({
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0, pointerEvents: "none" }}
                     transition={{ duration: 0.15 }}
-                    className="backdrop-blur-layer fixed inset-0 z-[2147483647] flex items-center justify-center px-4"
+                    className="backdrop-blur-layer fixed inset-0 z-[1000] flex items-center justify-center px-4"
                     style={{ background: isDark ? "rgba(0,0,0,0.62)" : "rgba(15,23,42,0.38)" }}
                     onClick={onClose}
                 >

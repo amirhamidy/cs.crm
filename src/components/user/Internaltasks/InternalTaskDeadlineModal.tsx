@@ -168,7 +168,7 @@ export default function InternalTaskDeadlineModal({
             {open && (
                 <m.div
                     exit={{ pointerEvents: "none" }}
-                    className="fixed inset-0 z-[2147483647] flex items-center justify-center px-4"
+                    className="fixed inset-0 z-[1000] flex items-center justify-center px-4"
                 >
                     <Backdrop onClick={onClose} />
                     <m.div

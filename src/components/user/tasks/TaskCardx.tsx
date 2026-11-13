@@ -648,22 +648,18 @@ export default function TaskCard({
                 )}
             </AnimatePresence>
 
-            <AnimatePresence>
-                {timeModalOpen && (
-                    <TimeRangeModal
-                        open={timeModalOpen}
-                        initialStartedAt={stepDeadline?.started_at}
-                        initialDeadline={stepDeadline?.deadline}
-                        loading={savingTime}
-                        error={timeError}
-                        onClose={() => {
-                            setTimeModalOpen(false);
-                            setTimeError(null);
-                        }}
-                        onSubmit={handleTimeSubmit}
-                    />
-                )}
-            </AnimatePresence>
+            <TimeRangeModal
+                open={timeModalOpen}
+                initialStartedAt={stepDeadline?.started_at}
+                initialDeadline={stepDeadline?.deadline}
+                loading={savingTime}
+                error={timeError}
+                onClose={() => {
+                    setTimeModalOpen(false);
+                    setTimeError(null);
+                }}
+                onSubmit={handleTimeSubmit}
+            />
         </>
     );
 }
