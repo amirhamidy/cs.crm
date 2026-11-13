@@ -80,7 +80,7 @@ function NoDeadlineState() {
                     <X size={11} strokeWidth={3} />
                 </span>
             </span>
-            <p className="text-[13px] font-bold">موجود نیست</p>
+            <p className="text-[13px] font-bold">وجود ندارد</p>
         </div>
     );
 }
@@ -90,7 +90,7 @@ interface InternalTaskDeadlineModalProps {
     onClose: () => void;
     taskId: number;
     taskTitle?: string;
-
+    
     onLoaded?: (deadline: InternalDeadline) => void;
 }
 
@@ -110,7 +110,7 @@ export default function InternalTaskDeadlineModal({
     const [error, setError] = useState<string | null>(null);
     const [tick, setTick] = useState(0);
 
-
+    
     useEffect(() => {
         if (!open) return;
 
@@ -121,7 +121,7 @@ export default function InternalTaskDeadlineModal({
         fetchInternalDeadline(taskId, controller.signal)
             .then((res) => {
                 if (controller.signal.aborted) return;
-                setData(res);
+                setData(res); 
                 if (res) onLoaded?.(res);
             })
             .catch((err) => {
@@ -134,7 +134,7 @@ export default function InternalTaskDeadlineModal({
             });
 
         return () => controller.abort();
-
+        
     }, [open, taskId, tick]);
 
     useEffect(() => {
@@ -166,9 +166,8 @@ export default function InternalTaskDeadlineModal({
     return createPortal(
         <AnimatePresence>
             {open && (
-                <m.div
-                    exit={{ pointerEvents: "none" }}
-                    className="fixed inset-0 z-[1000] flex items-center justify-center px-4"
+                <div
+                    className="fixed inset-0 z-[2147483647] flex items-center justify-center px-4"
                 >
                     <Backdrop onClick={onClose} />
                     <m.div
@@ -191,7 +190,7 @@ export default function InternalTaskDeadlineModal({
                                     <CalendarClock size={18} />
                                 </div>
                                 <div className="min-w-0">
-                                    <h3 className="text-[14.5px] font-extrabold text-gray-900 dark:text-white">زمان‌بندی تیکت</h3>
+                                    <h3 className="text-[14.5px] font-extrabold text-gray-900 dark:text-white">زمان‌بندی تسک اینترنال</h3>
                                     {taskTitle && <p className="mt-0.5 truncate text-[11px] text-gray-400">{taskTitle}</p>}
                                 </div>
                             </div>
@@ -278,7 +277,7 @@ export default function InternalTaskDeadlineModal({
                             )}
                         </div>
                     </m.div>
-                </m.div>
+                </div>
             )}
         </AnimatePresence>,
         document.body

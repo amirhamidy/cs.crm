@@ -2,9 +2,9 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { GitBranch, Loader2, Plus, X } from "lucide-react";
+import { ExternalLink, FileText, GitBranch, Loader2, Plus, Upload, X } from "lucide-react";
 import HumanResourceStepRoadmap from "./HumanResourceStepRoadmap";
-import { HumanResource, HumanResourceStep, createStep, deleteStep, getDocumentSteps, updateStep } from "./humanResourceApi";
+import { HumanResource, HumanResourceStep, apiErrorMessage, createStep, deleteStep, deleteStepFile, getDocumentSteps, updateStep, uploadStepFile, validateFile } from "./humanResourceApi";
 
 interface Props {
     open: boolean;
@@ -22,12 +22,13 @@ export default function HumanResourceStepsModal({ open, document, canManage, onC
     const [saving, setSaving] = useState(false);
     const [editingInlineId, setEditingInlineId] = useState<number | null>(null);
     const [title, setTitle] = useState("");
+    const [uploadingId, setUploadingId] = useState<number | null>(null);
 
     const loadSteps = async () => {
         if (!document) return;
         try {
             setLoading(true);
-            setSteps((await getDocumentSteps(document.id)).data);
+            setSteps(await getDocumentSteps(document.id));
         } finally {
             setLoading(false);
         }
@@ -50,6 +51,8 @@ export default function HumanResourceStepsModal({ open, document, canManage, onC
             await createStep(document.id, { order, title: title.trim() });
             setTitle("");
             await refresh();
+        } catch (e) {
+            alert(apiErrorMessage(e, "ذخیره مرحله انجام نشد"));
         } finally {
             setSaving(false);
         }
@@ -68,13 +71,38 @@ export default function HumanResourceStepsModal({ open, document, canManage, onC
     const removeStep = async (id: number) => {
         if (!document || !confirm("آیا از حذف این مرحله مطمئن هستید؟")) return;
         await deleteStep(id);
-        const remaining = (await getDocumentSteps(document.id)).data.slice().sort(byOrder);
+        const remaining = (await getDocumentSteps(document.id)).slice().sort(byOrder);
         await Promise.all(
             remaining
                 .map((s, i) => (s.order !== i + 1 ? updateStep(s.id, { order: i + 1, title: s.title }) : null))
                 .filter(Boolean)
         );
         await refresh();
+    };
+
+    const handleStepFile = async (stepId: number, file: File | undefined) => {
+        if (!document || !file) return;
+        const err = validateFile(file);
+        if (err) return alert(err);
+        try {
+            setUploadingId(stepId);
+            await uploadStepFile(document.id, stepId, file, file.name);
+            await refresh();
+        } catch (e) {
+            alert(apiErrorMessage(e, "آپلود فایل انجام نشد"));
+        } finally {
+            setUploadingId(null);
+        }
+    };
+
+    const removeStepFile = async (stepId: number, fileId: number) => {
+        if (!document || !confirm("آیا از حذف این فایل مطمئن هستید؟")) return;
+        try {
+            await deleteStepFile(document.id, stepId, fileId);
+            await refresh();
+        } catch (e) {
+            alert(apiErrorMessage(e, "حذف فایل انجام نشد"));
+        }
     };
 
     const orderedSteps = useMemo(() => steps.slice().sort(byOrder), [steps]);
@@ -190,7 +218,21 @@ export default function HumanResourceStepsModal({ open, document, canManage, onC
                                                     <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-indigo-50 text-[10px] font-extrabold text-indigo-500 dark:bg-indigo-500/10 dark:text-indigo-400">
                                                         {step.order}
                                                     </span>
-                                                    <span className="min-w-0 flex-1 truncate text-[11.5px] font-bold text-gray-700 dark:text-gray-300">{step.title}</span>
+                                                    <div className="min-w-0 flex-1">
+                                                        <span className="block truncate text-[11.5px] font-bold text-gray-700 dark:text-gray-300">{step.title}</span>
+                                                        {(step.files ?? []).map((f) => (
+                                                            <div key={f.id} className="mt-1 flex items-center gap-1.5">
+                                                                <FileText size={11} className="shrink-0 text-indigo-500" />
+                                                                <a href={f.file} target="_blank" rel="noreferrer" className="min-w-0 flex-1 truncate text-[10.5px] font-semibold text-gray-500 hover:text-indigo-500">{f.title || "مشاهده فایل"}</a>
+                                                                <ExternalLink size={10} className="shrink-0 text-gray-300" />
+                                                                <button type="button" onClick={() => removeStepFile(step.id, f.id)} className="text-gray-400 hover:text-red-500"><X size={11} /></button>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                    <label className="flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded-lg text-gray-400 transition hover:bg-indigo-50 hover:text-indigo-500 dark:hover:bg-indigo-500/10" title="آپلود فایل">
+                                                        {uploadingId === step.id ? <Loader2 size={12} className="animate-spin" /> : <Upload size={12} />}
+                                                        <input type="file" className="hidden" disabled={uploadingId === step.id} onChange={(e) => { handleStepFile(step.id, e.target.files?.[0]); e.target.value = ""; }} />
+                                                    </label>
                                                 </div>
                                             ))}
                                         </div>

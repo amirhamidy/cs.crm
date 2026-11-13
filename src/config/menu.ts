@@ -90,6 +90,11 @@ export const adminMenuItems: MenuItem[] = [
     href: "/admin/human-resources",
   },
   {
+    icon: FileSignature,
+    label: "قراردادها",
+    href: "/admin/contracts",
+  },
+  {
     icon: Users,
     label: "صورت جلسه",
     href: "/admin/minutes/",
@@ -181,6 +186,11 @@ export const userMenuItems: MenuItem[] = [
     icon: Archive,
     label: "صورت جلسه",
     href: "/user/minutes/",
+  },
+  {
+    icon: FileSignature,
+    label: "قراردادها",
+    href: "/user/contracts",
   },
   {
     icon: UserRound,

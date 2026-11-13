@@ -195,7 +195,7 @@ export default function TaskCard({
     const openTimeModal = () => {
         setTimeModalOpen(true);
         if (stepId && !stepDeadline) {
-            fetchStepDeadline(task.id, stepId).then(setStepDeadline).catch(() => undefined);
+            fetchStepDeadline(task.id, stepId).then((d) => d && setStepDeadline(d)).catch(() => undefined);
         }
     };
 

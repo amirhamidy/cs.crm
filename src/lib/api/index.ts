@@ -43,3 +43,5 @@ export { rankingApi, commentsApi, scoresApi, casePathApi, productsApi, salesApi,
 export type { RankingParams } from "./crm";
 
 export { accessApi } from "./access";
+
+export { contractsApi, validateSignature as validateContractSignature } from "./contracts";

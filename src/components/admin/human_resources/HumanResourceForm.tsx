@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Check, ChevronDown, FileText, Loader2, Search, Upload, X } from "lucide-react";
-import { Department, HumanResource, createDocument, updateDocument, uploadDocumentFile } from "./humanResourceApi";
+import { Department, HumanResource, apiErrorMessage, createDocument, updateDocument, uploadDocumentFile, validateFile } from "./humanResourceApi";
 import { gradientOf, initialOf } from "./hrUtils";
 
 interface Props {
@@ -214,9 +214,7 @@ export default function HumanResourceForm({ open, document, departments, onClose
             onSaved();
             onClose();
         } catch (e) {
-            const d = (e as any)?.response?.data;
-            const msg = typeof d === "object" && d ? d.detail || d.title?.[0] : "";
-            alert(msg || "ذخیره‌سازی انجام نشد، دوباره تلاش کنید.");
+            alert(apiErrorMessage(e, "ذخیره‌سازی انجام نشد، دوباره تلاش کنید."));
         } finally {
             setSaving(false);
         }
@@ -297,7 +295,12 @@ export default function HumanResourceForm({ open, document, departments, onClose
                                         </span>
                                         <span className="mt-0.5 block text-[10px] text-gray-400">فایل موردنظر را انتخاب کنید</span>
                                     </span>
-                                    <input type="file" className="hidden" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
+                                    <input type="file" className="hidden" onChange={(e) => {
+                                        const f = e.target.files?.[0] ?? null;
+                                        const err = f ? validateFile(f) : null;
+                                        if (err) { alert(err); e.target.value = ""; setFile(null); return; }
+                                        setFile(f);
+                                    }} />
                                 </label>
                             </div>
                         </div>

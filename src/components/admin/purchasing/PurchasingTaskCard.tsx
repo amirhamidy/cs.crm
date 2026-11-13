@@ -11,7 +11,6 @@ import {
     MessageSquareText,
     Package,
     UserCheck,
-    UserRound,
 } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
 import { toPersianDigits } from "@/lib/jalali";
@@ -271,16 +270,50 @@ export default function PurchasingTaskCard({
 
                         <div className="min-w-0 rounded-xl border border-gray-100 bg-gray-50/80 px-2.5 py-2 dark:border-white/[0.04] dark:bg-white/[0.035]">
                             <div className="mb-1 flex items-center gap-1.5 text-gray-400">
-                                <UserRound size={11} />
-                                <span className="text-[8.5px] font-bold">
-                                    مسئول
-                                </span>
+                                <span className="text-[8.5px] font-bold">حداقل موجودی</span>
                             </div>
-
                             <p className="truncate text-[10.5px] font-extrabold text-gray-700 dark:text-gray-200">
-                                {task.assigned_to_name ||
-                                    task.assigned_to_username ||
-                                    "تعیین نشده"}
+                                {toPersianDigits(task.minimum_stock)}
+                            </p>
+                        </div>
+                        <div className="min-w-0 rounded-xl border border-gray-100 bg-gray-50/80 px-2.5 py-2 dark:border-white/[0.04] dark:bg-white/[0.035]">
+                            <div className="mb-1 flex items-center gap-1.5 text-gray-400">
+                                <span className="text-[8.5px] font-bold">حداکثر موجودی</span>
+                            </div>
+                            <p className="truncate text-[10.5px] font-extrabold text-gray-700 dark:text-gray-200">
+                                {toPersianDigits(task.maximum_stock)}
+                            </p>
+                        </div>
+                        <div className="min-w-0 rounded-xl border border-gray-100 bg-gray-50/80 px-2.5 py-2 dark:border-white/[0.04] dark:bg-white/[0.035]">
+                            <div className="mb-1 flex items-center gap-1.5 text-gray-400">
+                                <span className="text-[8.5px] font-bold">موجودی پس از عملیات</span>
+                            </div>
+                            <p className="truncate text-[10.5px] font-extrabold text-gray-700 dark:text-gray-200">
+                                {toPersianDigits(task.quantity_after)}
+                            </p>
+                        </div>
+                        <div className="min-w-0 rounded-xl border border-gray-100 bg-gray-50/80 px-2.5 py-2 dark:border-white/[0.04] dark:bg-white/[0.035]">
+                            <div className="mb-1 flex items-center gap-1.5 text-gray-400">
+                                <span className="text-[8.5px] font-bold">منبع</span>
+                            </div>
+                            <p className="truncate text-[10.5px] font-extrabold text-gray-700 dark:text-gray-200">
+                                {task.source_display || "—"}
+                            </p>
+                        </div>
+                        <div className="min-w-0 rounded-xl border border-gray-100 bg-gray-50/80 px-2.5 py-2 dark:border-white/[0.04] dark:bg-white/[0.035]">
+                            <div className="mb-1 flex items-center gap-1.5 text-gray-400">
+                                <span className="text-[8.5px] font-bold">ایجادکننده</span>
+                            </div>
+                            <p className="truncate text-[10.5px] font-extrabold text-gray-700 dark:text-gray-200">
+                                {task.created_by_name || "سیستم"}
+                            </p>
+                        </div>
+                        <div className="min-w-0 rounded-xl border border-gray-100 bg-gray-50/80 px-2.5 py-2 dark:border-white/[0.04] dark:bg-white/[0.035]">
+                            <div className="mb-1 flex items-center gap-1.5 text-gray-400">
+                                <span className="text-[8.5px] font-bold">تاریخ ایجاد</span>
+                            </div>
+                            <p className="truncate text-[10.5px] font-extrabold text-gray-700 dark:text-gray-200">
+                                {toPersianDigits(new Date(task.created_at).toLocaleDateString("fa-IR"))}
                             </p>
                         </div>
                     </div>

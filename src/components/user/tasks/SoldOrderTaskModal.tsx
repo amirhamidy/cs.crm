@@ -1,6 +1,6 @@
 "use client";
 import { FormSkeleton } from "@/components/ui/skeletons";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, m, useReducedMotion } from "framer-motion";
 import { Backdrop } from "@/components/ui/Backdrop";
@@ -8,7 +8,8 @@ import { panelMotion } from "@/lib/motion";
 import { AlertCircle, CalendarDays, Check, ChevronDown, ChevronRight, ClipboardList, Package, Paperclip, Pencil, Plus, Search, ShoppingBag, Star, Trash2, Upload, X } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
 import type { ApiStockInfo, ApiWarehouse } from "@/types/warehouse";
-import { fetchWarehouseStocks, fetchWarehouses } from "@/lib/warehouseApi";
+import { fetchPage as fetchWhPage, fetchWarehouses, warehouseParams, WAREHOUSE_ENDPOINTS } from "@/lib/warehouseApi";
+import AsyncSelect, { type AsyncOption } from "@/components/ui/AsyncSelect";
 import TimeRangeModal from "@/components/tasks/TimeRangeModal";
 
 import { BusyContent } from "@/components/ui/Button";
@@ -178,11 +179,11 @@ function formatJalaliDateTime(iso: string) {
 
 export default function SoldOrderTaskModal({ isOpen, onClose, taskId, staffId, onSubmit, submitting = false }: Props) {
     const reduced = useReducedMotion() ?? false;
-    const [products, setProducts] = useState<ApiStockInfo[]>([]);
+    const [selectedStock, setSelectedStock] = useState<ApiStockInfo | null>(null);
     const [warehouses, setWarehouses] = useState<ApiWarehouse[]>([]);
     const [warehouseId, setWarehouseId] = useState<number | null>(null);
     const [loading, setLoading] = useState(false);
-    const [stockLoading, setStockLoading] = useState(false);
+    const stockCache = useRef(new Map<number, ApiStockInfo>());
     const [error, setError] = useState("");
     const [items, setItems] = useState<OrderItem[]>([]);
     const [selectedProductId, setSelectedProductId] = useState<number | null>(null);
@@ -195,12 +196,12 @@ export default function SoldOrderTaskModal({ isOpen, onClose, taskId, staffId, o
     const [scoreReason, setScoreReason] = useState("");
     const [timeModalOpen, setTimeModalOpen] = useState(false);
 
-    const selectedProduct = useMemo(() => products.find((item) => item.product === selectedProductId) ?? null, [products, selectedProductId]);
+    const selectedProduct = selectedProductId != null && selectedStock?.product === selectedProductId ? selectedStock : null;
 
     useEffect(() => {
         if (!isOpen) return;
         let mounted = true;
-        setWarehouseId(null); setSelectedProductId(null); setQuantity(""); setItems([]); setNote(""); setFile(undefined); setStartedAt(""); setDeadline(""); setScore(0); setScoreReason(""); setError(""); setProducts([]); setWarehouses([]); setLoading(true);
+        setWarehouseId(null); setSelectedProductId(null); setSelectedStock(null); setQuantity(""); setItems([]); setNote(""); setFile(undefined); setStartedAt(""); setDeadline(""); setScore(0); setScoreReason(""); setError(""); setWarehouses([]); setLoading(true);
         fetchWarehouses()
             .then((list) => {
                 if (!mounted) return;
@@ -215,20 +216,35 @@ export default function SoldOrderTaskModal({ isOpen, onClose, taskId, staffId, o
 
     useEffect(() => {
         setSelectedProductId(null);
+        setSelectedStock(null);
+        stockCache.current.clear();
         setQuantity("");
-        setProducts([]);
-        if (!isOpen || warehouseId == null) return;
-        let mounted = true;
-        setStockLoading(true);
-        fetchWarehouseStocks(warehouseId)
-            .then((list) => {
-                if (!mounted) return;
-                setProducts(list);
-            })
-            .catch((e) => mounted && setError(parseError(e)))
-            .finally(() => mounted && setStockLoading(false));
-        return () => { mounted = false; };
-    }, [isOpen, warehouseId]);
+    }, [warehouseId]);
+
+    const fetchStocks = useCallback(
+        async (p: { page: number; page_size: number; search?: string }, signal: AbortSignal) => {
+            const r = await fetchWhPage<ApiStockInfo>(WAREHOUSE_ENDPOINTS.stock, {
+                page: p.page,
+                pageSize: p.page_size,
+                search: p.search,
+                params: warehouseParams(warehouseId as number),
+                signal,
+            });
+            r.items.forEach((it) => stockCache.current.set(it.product, it));
+            return {
+                count: r.total,
+                next: r.page < r.totalPages ? "next" : null,
+                previous: null,
+                results: r.items.map((it) => ({ ...it, id: it.product })),
+            };
+        },
+        [warehouseId],
+    );
+    const stockToOption = (item: ApiStockInfo): AsyncOption => ({
+        id: item.product,
+        label: item.product_name,
+        sub: `موجودی: ${formatNumber(item.current_quantity)} ${item.unit_label}`,
+    });
 
     useEffect(() => {
         if (!selectedProduct) return;
@@ -236,7 +252,6 @@ export default function SoldOrderTaskModal({ isOpen, onClose, taskId, staffId, o
         if (value > selectedProduct.current_quantity) setQuantity(String(selectedProduct.current_quantity));
     }, [selectedProduct]);
 
-    const productOptions: Option[] = useMemo(() => products.map((item) => ({ id: item.product, label: item.product_name, sub: `موجودی: ${formatNumber(item.current_quantity)} ${item.unit_label}` })), [products]);
     const warehouseOptions: Option[] = useMemo(() => warehouses.map((item) => ({ id: item.id, label: item.name, sub: `کد انبار: ${item.code}` })), [warehouses]);
     if (typeof document === "undefined") return null;
 
@@ -330,7 +345,7 @@ export default function SoldOrderTaskModal({ isOpen, onClose, taskId, staffId, o
 
                                         <div className="rounded-2xl border border-gray-100 bg-gray-50/60 p-4 dark:border-white/[0.06] dark:bg-white/[0.03]">
                                             <div className="mb-3 flex items-center gap-2 text-[11.5px] font-bold text-gray-500"><Package size={13} className="text-blue-500" /> افزودن کالا به لیست</div>
-                                            <NiceSelect label="کالا از موجودی انبار" placeholder={warehouseId == null ? "ابتدا انبار را انتخاب کنید" : stockLoading ? "در حال دریافت موجودی..." : "انتخاب کالا"} emptyText="کالایی یافت نشد" options={productOptions} value={selectedProductId} disabled={warehouseId == null || stockLoading} onChange={(id) => { setSelectedProductId(id); setError(""); }} />
+                                            <AsyncSelect label="کالا از موجودی انبار" placeholder={warehouseId == null ? "ابتدا انبار را انتخاب کنید" : "انتخاب کالا"} emptyText="کالایی یافت نشد" disabled={warehouseId == null} fetcher={fetchStocks} toOption={stockToOption} depsKey={warehouseId} value={selectedProductId} selected={selectedStock ? stockToOption(selectedStock) : null} onChange={(o) => { setSelectedStock(stockCache.current.get(o.id) ?? null); setSelectedProductId(o.id); setError(""); }} />
                                             <AnimatePresence>
                                                 {selectedProduct && (
                                                     <m.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }} className="mt-3 flex items-center justify-between rounded-xl border border-gray-100 bg-white px-3 py-2 dark:border-white/[0.06] dark:bg-white/[0.04]">

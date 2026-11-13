@@ -77,6 +77,11 @@ export default function CustomersPage() {
         }
     }, []);
 
+    useEffect(() => {
+        fetchCounts();
+        fetchCases();
+    }, [fetchCounts, fetchCases]);
+
     const refreshAll = useCallback(() => {
         customersApi.invalidate();
         casesApi.invalidate();
@@ -129,9 +134,9 @@ export default function CustomersPage() {
 
                     <div className="min-w-0">
                         <h1 className="text-[15px] font-extrabold text-gray-900 dark:text-white">مدیریت مشتریان</h1>
-                        <p className="mt-0.5 text-[11.5px] text-gray-500 dark:text-gray-400">
+                        <div className="mt-0.5 text-[11.5px] text-gray-500 dark:text-gray-400">
                             {loading ? <CountSkeleton /> : `${totalCount} مشتری ثبت شده`}
-                        </p>
+                        </div>
                     </div>
                 </div>
 

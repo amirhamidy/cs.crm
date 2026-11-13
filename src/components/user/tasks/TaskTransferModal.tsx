@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, m, useReducedMotion } from "framer-motion";
 import { Backdrop } from "@/components/ui/Backdrop";
@@ -9,6 +9,8 @@ import type { LucideIcon } from "lucide-react";
 import { AlertTriangle, ArrowLeft, ArrowLeftRight, Building2, Check, FileText, Layers3, Paperclip, Search, Trash2, UserRound, X } from "lucide-react";
 import { ListSkeleton } from "@/components/ui/skeletons";
 import { departmentsApi, tasksApi, parseTransferError } from "@/lib/api";
+import type { DepartmentChoice } from "@/lib/api/departments";
+import AsyncSelect, { type AsyncOption } from "@/components/ui/AsyncSelect";
 import { toast } from "@/components/notifications/toast";
 import { toPersianDigits } from "@/lib/jalali";
 import type { Department, DepartmentEmployee, DepartmentStep } from "@/types/department";
@@ -31,6 +33,8 @@ interface DepartmentOption {
     id: number;
     name: string;
     accent: string;
+    canReceive: boolean;
+    isCurrent: boolean;
     firstStep: DepartmentStep | null;
     stepsCount: number;
     managers: DepartmentEmployee[];
@@ -70,7 +74,7 @@ export default function TaskTransferModal({
     onTransferred,
 }: Props) {
     const reduced = useReducedMotion() ?? false;
-    const [departments, setDepartments] = useState<Department[]>([]);
+    const [departments, setDepartments] = useState<DepartmentChoice[]>([]);
     const [steps, setSteps] = useState<DepartmentStep[]>([]);
     const [members, setMembers] = useState<DepartmentEmployee[]>([]);
     const [loading, setLoading] = useState(false);
@@ -105,7 +109,7 @@ export default function TaskTransferModal({
         setLoadError("");
 
         Promise.allSettled([
-            departmentsApi.list(),
+            departmentsApi.choices(),
             departmentsApi.steps(),
             departmentsApi.employees(),
         ]).then(([deptRes, stepRes, memberRes]) => {
@@ -131,7 +135,6 @@ export default function TaskTransferModal({
     
     const options = useMemo<DepartmentOption[]>(() => {
         return departments
-            .filter((department) => Number(department.id) !== Number(currentDepartmentId))
             .map((department) => {
                 const deptSteps = steps
                     .filter((step) => Number(step.department) === Number(department.id))
@@ -141,6 +144,10 @@ export default function TaskTransferModal({
                     id: department.id,
                     name: department.name,
                     accent: accentForId(department.id),
+                    canReceive:
+                        department.can_receive_tasks !== false &&
+                        Number(department.id) !== Number(currentDepartmentId),
+                    isCurrent: Number(department.id) === Number(currentDepartmentId),
                     firstStep: deptSteps[0] ?? null,
                     stepsCount: deptSteps.length,
                     managers: members.filter(
@@ -157,6 +164,34 @@ export default function TaskTransferModal({
         if (!q) return options;
         return options.filter((option) => option.name.toLowerCase().includes(q));
     }, [options, query]);
+
+    const optionsRef = useRef<DepartmentOption[]>([]);
+    optionsRef.current = options;
+    const fetchDepartments = useCallback(
+        async (p: { page: number; page_size: number; search?: string }) => {
+            const q = (p.search ?? "").trim().toLowerCase();
+            const all = optionsRef.current.slice().sort((a, b) => Number(b.canReceive) - Number(a.canReceive)).filter((o) => !q || o.name.toLowerCase().includes(q));
+            const start = (p.page - 1) * p.page_size;
+            return {
+                count: all.length,
+                next: start + p.page_size < all.length ? "next" : null,
+                previous: null,
+                results: all.slice(start, start + p.page_size),
+            };
+        },
+        [],
+    );
+    const optionToAsync = (o: DepartmentOption): AsyncOption => ({
+        id: o.id,
+        label: o.name,
+        sub: o.isCurrent
+            ? "دپارتمان فعلی تسک"
+            : !o.canReceive
+            ? "امکان دریافت تسک ندارد"
+            : o.stepsCount > 0
+              ? `شروع از «${o.firstStep?.name}» · ${toPersianDigits(o.stepsCount)} مرحله`
+              : "بدون مرحله",
+    });
 
     const selected = useMemo(
         () => options.find((option) => option.id === selectedId) ?? null,
@@ -189,6 +224,10 @@ export default function TaskTransferModal({
     function goToConfirm() {
         if (!selected) {
             setError("لطفاً دپارتمان مقصد را انتخاب کنید");
+            return;
+        }
+        if (!selected.canReceive) {
+            setError("این دپارتمان امکان دریافت تسک ندارد");
             return;
         }
         setError("");
@@ -359,21 +398,6 @@ export default function TaskTransferModal({
                                         )}
                                     </div>
 
-                                    {options.length > 5 && (
-                                        <div className="relative mb-2">
-                                            <Search
-                                                size={13}
-                                                className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
-                                            />
-                                            <input
-                                                value={query}
-                                                onChange={(e) => setQuery(e.target.value)}
-                                                placeholder="جستجوی دپارتمان..."
-                                                className="h-10 w-full rounded-xl border border-gray-200 bg-gray-50 pr-9 pl-3 text-[11px] outline-none focus:border-indigo-400 dark:border-white/[.08] dark:bg-white/[.03] dark:text-white"
-                                            />
-                                        </div>
-                                    )}
-
                                     {loading ? (
                                         <ListSkeleton rows={3} />
                                     ) : loadError ? (
@@ -384,71 +408,31 @@ export default function TaskTransferModal({
                                         <p className="rounded-xl bg-amber-500/10 px-3 py-2.5 text-center text-[10.5px] font-bold text-amber-600">
                                             دپارتمان دیگری برای انتقال وجود ندارد.
                                         </p>
-                                    ) : visibleOptions.length === 0 ? (
-                                        <p className="rounded-xl bg-gray-100 px-3 py-3 text-center text-[10.5px] font-bold text-gray-400 dark:bg-white/[.04]">
-                                            دپارتمانی با این نام پیدا نشد
-                                        </p>
                                     ) : (
-                                        <div className="flex max-h-[220px] flex-col gap-2 overflow-y-auto pl-0.5">
-                                            {visibleOptions.map((option) => {
-                                                const active = option.id === selectedId;
-                                                return (
-                                                    <button
-                                                        key={option.id}
-                                                        type="button"
-                                                        disabled={submitting}
-                                                        onClick={() => {
-                                                            setSelectedId(option.id);
-                                                            setError("");
-                                                        }}
-                                                        className="flex items-center gap-3 rounded-xl border px-3 py-2.5 text-right transition-colors"
-                                                        style={{
-                                                            background: active
-                                                                ? `${option.accent}12`
-                                                                : undefined,
-                                                            borderColor: active
-                                                                ? option.accent
-                                                                : "rgba(148,163,184,.28)",
-                                                        }}
-                                                    >
-                                                        <span
-                                                            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-white"
-                                                            style={{ background: option.accent }}
-                                                        >
-                                                            <Building2 size={14} />
-                                                        </span>
-
-                                                        <span className="min-w-0 flex-1">
-                                                            <span
-                                                                className={`block truncate text-[11.5px] font-extrabold ${active ? "" : "text-gray-700 dark:text-gray-200"}`}
-                                                                style={active ? { color: option.accent } : undefined}
-                                                            >
-                                                                {option.name}
-                                                            </span>
-                                                            <span className="mt-0.5 block truncate text-[9.5px] font-semibold text-gray-400">
-                                                                {stepsKnown
-                                                                    ? option.stepsCount > 0
-                                                                        ? `شروع از «${option.firstStep?.name}» · ${toPersianDigits(option.stepsCount)} مرحله`
-                                                                        : "بدون مرحله"
-                                                                    : "—"}
-                                                            </span>
-                                                        </span>
-
-                                                        {active && (
-                                                            <span
-                                                                className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-white"
-                                                                style={{ background: option.accent }}
-                                                            >
-                                                                <Check size={11} strokeWidth={3} />
-                                                            </span>
-                                                        )}
-                                                    </button>
+                                        <AsyncSelect
+                                            label="دپارتمان مقصد"
+                                            placeholder="انتخاب دپارتمان"
+                                            emptyText="دپارتمانی پیدا نشد"
+                                            disabled={submitting}
+                                            fetcher={fetchDepartments}
+                                            toOption={optionToAsync}
+                                            depsKey={options.length}
+                                            value={selectedId}
+                                            selected={selected ? optionToAsync(selected) : null}
+                                            onChange={(o) => {
+                                                const opt = options.find((x) => x.id === o.id);
+                                                setSelectedId(o.id);
+                                                setError(
+                                                    opt && !opt.canReceive
+                                                        ? opt.isCurrent
+                                                            ? "تسک هم‌اکنون در همین دپارتمان است"
+                                                            : "این دپارتمان امکان دریافت تسک ندارد"
+                                                        : ""
                                                 );
-                                            })}
-                                        </div>
+                                            }}
+                                        />
                                     )}
 
-                                    
                                     {selected && (
                                         <div className="mt-3 flex flex-col gap-1.5 rounded-2xl bg-indigo-500/[.045] px-3.5 py-3">
                                             <SummaryRow

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence } from "framer-motion";
 import { Archive, ClipboardList, Loader, Plus, RefreshCw } from "lucide-react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
@@ -268,13 +268,11 @@ export default function UserTasksPage() {
                     <p className="text-[13px] text-gray-400 dark:text-gray-500">تسک در حال انجامی برای شما یافت نشد</p>
                 </div>
             ) : (
-                <motion.div layout className="grid grid-cols-1 gap-3 lg:grid-cols-2 xl:grid-cols-3">
-                    <AnimatePresence mode="popLayout">
-                        {tasks.map((task) => (
-                            <TaskCard key={task.id} task={task} onEdit={() => setEditingTask(task)} onDelete={handleDelete} />
-                        ))}
-                    </AnimatePresence>
-                </motion.div>
+                <div className="grid grid-cols-1 gap-3 lg:grid-cols-2 xl:grid-cols-3">
+                    {tasks.map((task) => (
+                        <TaskCard key={task.id} task={task} onEdit={() => setEditingTask(task)} onDelete={handleDelete} />
+                    ))}
+                </div>
             )}
 
             {list.totalPages > 1 && (

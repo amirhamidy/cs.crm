@@ -639,12 +639,13 @@ export default function EmployeeTaskRoutineBoard() {
     const myTasks = useMemo(() => {
         if (!userId) return [];
 
-        return tasks.filter((task) =>
-            Array.isArray(task.assigned_to)
-                ? task.assigned_to.some(
+        return tasks.filter(
+            (task) =>
+                task.status === "in_progress" &&
+                Array.isArray(task.assigned_to) &&
+                task.assigned_to.some(
                     (assigned) => Number(assigned.id) === Number(userId),
-                )
-                : false,
+                ),
         );
     }, [tasks, userId]);
 
@@ -794,7 +795,7 @@ export default function EmployeeTaskRoutineBoard() {
                     <button
                         type="button"
                         onClick={() => setCreateOpen(true)}
-                        disabled={loading || availableMyTasks.length === 0}
+                        disabled={loading}
                         title={
                             availableMyTasks.length === 0
                                 ? "تسکی بدون روتین برای انتخاب وجود ندارد"
@@ -868,7 +869,7 @@ export default function EmployeeTaskRoutineBoard() {
             <EmployeeCreateTaskRoutineModal
                 isOpen={createOpen}
                 onClose={() => setCreateOpen(false)}
-                tasks={availableMyTasks}
+                tasks={myTasks}
                 onCreated={handleCreated}
             />
         </div>

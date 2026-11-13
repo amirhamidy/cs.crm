@@ -1,4 +1,7 @@
 import axiosInstance from "@/lib/axiosInstance";
+import { internalTasksApi as pagedApi } from "@/lib/api/internalTasks";
+
+const wrapAll = async <T>(p: Promise<unknown[]>) => ({ data: (await p) as T[] });
 import type {
   EmployeeListItem,
   InternalTask,
@@ -22,15 +25,11 @@ export type UpdateInternalTaskPayload = {
   status: InternalTaskStatus;
 };
 
-export function fetchInternalTasks() {
-  return axiosInstance.get<InternalTask[]>("/tasks/api/v1/internal_task/");
-}
+export const fetchInternalTasks = () =>
+  wrapAll<InternalTask>(pagedApi.allFull());
 
-export function fetchEmployeeList() {
-  return axiosInstance.get<EmployeeListItem[]>(
-    "/accounts/api/v1/employee/list/",
-  );
-}
+export const fetchEmployeeList = () =>
+  wrapAll<EmployeeListItem>(pagedApi.employeesAll());
 
 export function createInternalTask(data: {
   title: string;
@@ -161,11 +160,8 @@ export type CreateInternalTaskRoutinePayload = {
   interval_days: number;
 };
 
-export function fetchInternalTaskRoutines() {
-  return axiosInstance.get<InternalTaskRoutine[]>(
-    "/tasks/api/v1/internal_task_routine/",
-  );
-}
+export const fetchInternalTaskRoutines = () =>
+  wrapAll<InternalTaskRoutine>(pagedApi.routinesAll());
 
 export async function reopenInternalTask(taskId: number) {
     return axiosInstance.post(

@@ -19,12 +19,18 @@ export async function fetchStepDeadline(
     taskId: number,
     stepId: number,
     signal?: AbortSignal
-): Promise<StepDeadline> {
-    const { data } = await api.get(`/tasks/api/v1/tasks/${taskId}/steps/${stepId}/deadline/`, { signal });
-    return {
-        started_at: data?.started_at ?? null,
-        deadline: data?.deadline ?? null,
-    };
+): Promise<StepDeadline | null> {
+    try {
+        const { data } = await api.get(`/tasks/api/v1/tasks/${taskId}/steps/${stepId}/deadline/`, { signal });
+        const value = data?.data ?? data;
+        return {
+            started_at: value?.started_at ?? null,
+            deadline: value?.deadline ?? null,
+        };
+    } catch (err) {
+        if ((err as { response?: { status?: number } })?.response?.status === 404) return null;
+        throw err;
+    }
 }
 
 function formatJalali(iso?: string | null) {
@@ -73,7 +79,7 @@ function NoDeadlineState() {
                     <X size={11} strokeWidth={3} />
                 </span>
             </span>
-            <p className="text-[13px] font-bold">موجود نیست</p>
+            <p className="text-[13px] font-bold">وجود ندارد</p>
         </div>
     );
 }
@@ -84,7 +90,7 @@ interface TaskDeadlineModalProps {
     taskId: number;
     taskTitle?: string;
     stepId: number | null;
-
+    
     onLoaded?: (deadline: StepDeadline) => void;
 }
 
@@ -104,7 +110,7 @@ export default function TaskDeadlineModal({
     const [error, setError] = useState<string | null>(null);
     const [tick, setTick] = useState(0);
 
-
+    
     useEffect(() => {
         if (!open) return;
 
@@ -123,7 +129,7 @@ export default function TaskDeadlineModal({
             .then((res) => {
                 if (controller.signal.aborted) return;
                 setData(res);
-                onLoaded?.(res);
+                if (res) onLoaded?.(res);
             })
             .catch((err) => {
                 if (controller.signal.aborted || err?.code === "ERR_CANCELED") return;
@@ -135,7 +141,7 @@ export default function TaskDeadlineModal({
             });
 
         return () => controller.abort();
-
+        
     }, [open, taskId, stepId, tick]);
 
     useEffect(() => {
@@ -170,9 +176,9 @@ export default function TaskDeadlineModal({
                 <m.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
-                    exit={{ opacity: 0, pointerEvents: "none" }}
+                    exit={{ opacity: 0 }}
                     transition={{ duration: 0.15 }}
-                    className="backdrop-blur-layer fixed inset-0 z-[1000] flex items-center justify-center px-4"
+                    className="backdrop-blur-layer fixed inset-0 z-[2147483647] flex items-center justify-center px-4"
                     style={{ background: isDark ? "rgba(0,0,0,0.62)" : "rgba(15,23,42,0.38)" }}
                     onClick={onClose}
                 >

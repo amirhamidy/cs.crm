@@ -4,7 +4,7 @@ import { ComponentType, useCallback, useEffect, useMemo, useRef, useState } from
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import PageHeader, { HEADER_BTN_BASE, HEADER_BTN_SECONDARY } from "@/components/ui/PageHeader";
-import { BellRing, Boxes, ClipboardList, Archive, FileText, Package, RefreshCw, PackagePlus, PackageSearch, Plus, ReceiptText, ShieldCheck, Power, PowerOff, ShieldAlert, ShoppingBag, UploadCloud, UsersRound, UserPlus } from "lucide-react";
+import { BellRing, Boxes, ClipboardList, Archive, FileText, Package, RefreshCw, PackagePlus, PackageSearch, ReceiptText, Power, PowerOff, ShieldAlert, ShoppingBag, UploadCloud, UsersRound, UserPlus } from "lucide-react";
 import { useTheme } from "next-themes";
 
 import AddCategoryModal from "@/components/admin/warehouse/AddCategoryModal";
@@ -15,7 +15,6 @@ import StockLimitsModal from "@/components/admin/warehouse/StockLimitsModal";
 import { WarehouseStatusModal } from "@/components/admin/warehouse/WarehouseFormModals";
 import WarehouseTaskArchiveCard from "@/components/admin/warehouse/WarehouseTaskArchiveCard";
 import { DeadlineCard, Pagination, StockCard, muted, cardBg, cardShadow } from "@/components/admin/warehouse/WarehouseCards";
-import CreateOrderTaskModal from "@/components/user/warehouse/CreateOrderTaskModal";
 import WarehouseEmployeeTransactionCard from "@/components/user/warehouse/WarehouseEmployeeTransactionCard";
 import dynamic from "next/dynamic";
 import WarehouseEmployeeProductCard from "@/components/user/warehouse/WarehouseEmployeeProductCard";
@@ -104,7 +103,6 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
 
     const [bulkImportOpen, setBulkImportOpen] = useState(false);
     const [productWizardOpen, setProductWizardOpen] = useState(false);
-    const [createOrderTaskOpen, setCreateOrderTaskOpen] = useState(false);
     const [showCategoryModal, setShowCategoryModal] = useState(false);
     const [selectedInvoice, setSelectedInvoice] = useState<SalesInvoice | null>(null);
     const [showAddStaffModal, setShowAddStaffModal] = useState(false);
@@ -227,7 +225,6 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
     );
 
     
-    const pendingQualityCount = data.pendingQualityCount;
 
     const shelfFilterActive = tab === "products" && shelfCode !== "";
 
@@ -266,11 +263,6 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
         setProductWizardOpen(false);
         setShelfReloadKey((key) => key + 1);
         goOrReload("products");
-    }, [goOrReload]);
-
-    const handleOrderTaskCreated = useCallback(async () => {
-        setCreateOrderTaskOpen(false);
-        goOrReload("orders");
     }, [goOrReload]);
 
     const handleViewLedger = useCallback(
@@ -497,14 +489,6 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
                                     {count}
                                 </span>
                             )}
-                            {id === "tasks" && pendingQualityCount > 0 && (
-                                <span
-                                    className="flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[9px] text-white"
-                                    style={{ background: "#8b5cf6" }}
-                                >
-                                    {pendingQualityCount}
-                                </span>
-                            )}
                         </button>
                     );
                 })}
@@ -613,33 +597,6 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
                                     <div>
                                         <h2 className={titleClass}>وظایف انبار</h2>
                                         <p className={subtitleClass}>وظایف دریافت کالا و درخواست‌های کنترل کیفیت</p>
-                                    </div>
-
-                                    <div className="flex flex-wrap items-center gap-2">
-                                        {hasFullWarehouseAccess && pendingQualityCount > 0 && (
-                                            <div
-                                                className="flex items-center gap-2 rounded-xl px-3 py-2"
-                                                style={{
-                                                    background: isDark ? "rgba(139,92,246,.08)" : "rgba(139,92,246,.06)",
-                                                    color: "#8b5cf6",
-                                                }}
-                                            >
-                                                <ShieldCheck size={15} />
-                                                <span className="text-[10.5px] font-extrabold">
-                                                    {pendingQualityCount} وظیفه کنترل کیفیت در انتظار
-                                                </span>
-                                            </div>
-                                        )}
-
-                                        <motion.button
-                                            type="button"
-                                            whileTap={{ scale: 0.97 }}
-                                            onClick={() => setCreateOrderTaskOpen(true)}
-                                            className={addButtonClass}
-                                        >
-                                            <Plus size={15} />
-                                            ثبت وظیفه برای انبار
-                                        </motion.button>
                                     </div>
                                 </div>
 
@@ -956,13 +913,6 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
                 stock={limitsStock}
                 onClose={() => setLimitsStock(null)}
                 onSaved={handleLimitsSaved}
-            />
-
-            <CreateOrderTaskModal
-                warehouseId={warehouseId}
-                isOpen={createOrderTaskOpen}
-                onClose={() => setCreateOrderTaskOpen(false)}
-                onCreated={handleOrderTaskCreated}
             />
 
             {hasFullWarehouseAccess && (

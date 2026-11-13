@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 
 export function useIsVisible(): boolean {
@@ -27,14 +27,21 @@ export function useVisibleInterval(
   enabled = true,
 ): void {
   const visible = useIsVisible();
+  const callbackRef = useRef(callback);
+
+  useEffect(() => {
+    callbackRef.current = callback;
+  }, [callback]);
 
   useEffect(() => {
     if (!enabled || !visible) return;
 
-    
-    callback();
+    callbackRef.current();
 
-    const timer = window.setInterval(callback, delayMs);
+    const timer = window.setInterval(() => {
+      callbackRef.current();
+    }, delayMs);
+
     return () => window.clearInterval(timer);
-  }, [callback, delayMs, enabled, visible]);
+  }, [delayMs, enabled, visible]);
 }

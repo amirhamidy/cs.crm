@@ -624,7 +624,6 @@ export default function EditTaskModal({
 
     const canSubmit =
         title.trim().length > 0 &&
-        selectedCase !== null &&
         selectedDepartment !== null &&
         selectedEmployees.length > 0 &&
         !submitting;
@@ -656,7 +655,7 @@ export default function EditTaskModal({
         try {
             const payload = {
                 title: title.trim(),
-                case: selectedCase,
+                ...(selectedCase !== null ? { case: selectedCase } : {}),
                 department: selectedDepartment,
                 assigned_employee: selectedEmployees,
             };
@@ -825,6 +824,7 @@ export default function EditTaskModal({
                                 }}
                             />
 
+                            {selectedCase !== null && (
                             <NiceSelect
                                 label="پرونده"
                                 placeholder="انتخاب پرونده"
@@ -834,6 +834,7 @@ export default function EditTaskModal({
                                 onChange={() => { }}
                                 disabled={true}
                             />
+                            )}
 
                             <NiceSelect
                                 label="دپارتمان"

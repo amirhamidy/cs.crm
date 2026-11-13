@@ -44,6 +44,13 @@ export interface ApiPurchasingTask {
   status_display: string;
   created_at: string;
   updated_at: string;
+  warehouse?: number | null;
+  warehouse_name?: string | null;
+  warehouse_code?: string | null;
+  source?: string;
+  source_display?: string;
+  created_by?: number | null;
+  created_by_name?: string | null;
   title?: string;
   description?: string;
   current_stock?: number;

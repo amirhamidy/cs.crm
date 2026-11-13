@@ -12,9 +12,7 @@ import type { Employee } from "@/types/employee";
 import { useEmployeeInfo } from "@/hooks/useEmployeeInfo";
 import AdminTaskNotesModal from "./TaskNotesModal";
 import TimeRangeModal from "@/components/tasks/TimeRangeModal";
-import TaskDeadlineModal, {
-    type StepDeadline,
-} from "@/components/tasks/TaskDeadlineModal";
+import TaskDeadlineModal, { fetchStepDeadline, type StepDeadline } from "@/components/tasks/TaskDeadlineModal";
 import api from "@/lib/axiosInstance";
 
 import { BusyContent } from "@/components/ui/Button";
@@ -216,6 +214,9 @@ export default function TaskCard({
     
     const openTimeModal = () => {
         setTimeModalOpen(true);
+        if (stepId && !stepDeadline) {
+            fetchStepDeadline(task.id, stepId).then(setStepDeadline).catch(() => undefined);
+        }
     };
 
     
@@ -648,18 +649,22 @@ export default function TaskCard({
                 )}
             </AnimatePresence>
 
-            <TimeRangeModal
-                open={timeModalOpen}
-                initialStartedAt={stepDeadline?.started_at}
-                initialDeadline={stepDeadline?.deadline}
-                loading={savingTime}
-                error={timeError}
-                onClose={() => {
-                    setTimeModalOpen(false);
-                    setTimeError(null);
-                }}
-                onSubmit={handleTimeSubmit}
-            />
+            <AnimatePresence>
+                {timeModalOpen && (
+                    <TimeRangeModal
+                        open={timeModalOpen}
+                        initialStartedAt={stepDeadline?.started_at}
+                        initialDeadline={stepDeadline?.deadline}
+                        loading={savingTime}
+                        error={timeError}
+                        onClose={() => {
+                            setTimeModalOpen(false);
+                            setTimeError(null);
+                        }}
+                        onSubmit={handleTimeSubmit}
+                    />
+                )}
+            </AnimatePresence>
         </>
     );
 }

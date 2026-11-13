@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import {
     Ban,
@@ -19,7 +20,6 @@ import {
 import { useTheme } from "next-themes";
 import type { InternalTask, InternalTaskRoutine } from "./Types";
 import { createInternalTaskRoutine } from "./Api";
-import { useAuthStore } from "@/store/authStore";
 import {
     JALALI_MONTHS,
     pad2,
@@ -321,7 +321,6 @@ export default function EmployeeCreateTaskRoutineModal({
 }: EmployeeCreateTaskRoutineModalProps) {
     const { resolvedTheme } = useTheme();
     const isDark = resolvedTheme === "dark";
-    const { userId } = useAuthStore();
 
     const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
     const [startField, setStartField] = useState<DateField>(nowToField);
@@ -335,16 +334,7 @@ export default function EmployeeCreateTaskRoutineModal({
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    const myTasks = useMemo(() => {
-        if (!userId) return [];
-        return tasks.filter((task) =>
-            Array.isArray(task.assigned_to)
-                ? task.assigned_to.some(
-                    (assigned) => Number(assigned.id) === Number(userId),
-                )
-                : false,
-        );
-    }, [tasks, userId]);
+    const myTasks = tasks;
 
     useEffect(() => {
         if (!isOpen) return;
@@ -488,7 +478,9 @@ export default function EmployeeCreateTaskRoutineModal({
         label: toPersianDigits(pad2(index)),
     }));
 
-    return (
+    if (typeof document === "undefined") return null;
+
+    return createPortal(
         <AnimatePresence>
             {isOpen && (
                 <motion.div
@@ -742,6 +734,7 @@ export default function EmployeeCreateTaskRoutineModal({
                     </motion.div>
                 </motion.div>
             )}
-        </AnimatePresence>
+        </AnimatePresence>,
+        document.body,
     );
 }

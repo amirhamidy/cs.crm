@@ -32,8 +32,8 @@ export default function HumanResourcesPage({ canManage = false }: { canManage?: 
     const load = useCallback(async () => {
         try {
             const [docs, deps] = await Promise.all([getDocuments(), getDepartments()]);
-            setDocuments(docs.data);
-            setDepartments(deps.data);
+            setDocuments(docs ?? []);
+            setDepartments(Array.isArray(deps.data) ? deps.data : (deps.data as any)?.results ?? []);
 
             if (!canManage) {
                 const [me, emps, depEmps] = await Promise.all([getMe(), getEmployees(), getDepartmentEmployees()]);
@@ -65,7 +65,7 @@ export default function HumanResourcesPage({ canManage = false }: { canManage?: 
         });
     }, [canManage, documents, departments, currentDepartmentIds, search]);
 
-    const filesCount = useMemo(() => documents.filter((i) => i.files.length > 0).length, [documents]);
+    const filesCount = useMemo(() => documents.filter((i) => i.files.some((x) => x.step === null)).length, [documents]);
 
     const handleDelete = useCallback(
         async (d: HumanResource) => {

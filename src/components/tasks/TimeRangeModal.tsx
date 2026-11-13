@@ -206,8 +206,7 @@ export default function TimeRangeModal({
         setViewJm(cur.jm);
     }, [activeField]);
 
-    if (embedded && !open) return null;
-    if (!embedded && typeof document === "undefined") return null;
+    if (!open || (!embedded && typeof document === "undefined")) return null;
 
     const current = activeField === "start" ? start : deadline;
     const setCurrent = activeField === "start" ? setStart : setDeadline;
@@ -502,7 +501,7 @@ export default function TimeRangeModal({
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0, pointerEvents: "none" }}
                     transition={{ duration: 0.18, ease: "easeOut" }}
-                    className="fixed inset-0 z-[1000] flex items-center justify-center px-4"
+                    className="fixed inset-0 z-[99999] flex items-center justify-center px-4"
                     style={{
                         isolation: "isolate",
                     }}

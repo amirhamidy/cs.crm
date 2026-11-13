@@ -9,6 +9,7 @@ const BASE = "/department/api/v1";
 
 const URLS = {
   list: `${BASE}/department/list/`,
+  choices: `${BASE}/department/choices/`,
   create: `${BASE}/department/create/`,
   detail: (id: number) => `${BASE}/department/${id}/`,
   update: (id: number) => `${BASE}/department/${id}/update/`,
@@ -24,6 +25,15 @@ const URLS = {
   employeeUpdate: (id: number) => `${BASE}/department_employee/${id}/update/`,
   employeeRemove: (id: number) => `${BASE}/department_employee/${id}/delete/`,
 } as const;
+
+export interface DepartmentChoice {
+  id: number;
+  name: string;
+  order: number;
+  has_steps: boolean;
+  has_manager: boolean;
+  can_receive_tasks: boolean;
+}
 
 export type DepartmentListParams = SearchParams;
 export type DepartmentStepListParams = SearchParams;
@@ -86,8 +96,15 @@ const page = <T>(url: string, name: string) =>
           fetchPage<T>(url, params),
         );
 
+async function choices(): Promise<DepartmentChoice[]> {
+  const { data } = await axiosInstance.get(URLS.choices);
+  const rows = Array.isArray(data) ? data : (data?.results ?? []);
+  return (rows as DepartmentChoice[]).slice().sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+}
+
 export const departmentsApi = {
   list,
+  choices,
   listPage: page<Department>(URLS.list, "list"),
 
   search: createSearch<Department>({

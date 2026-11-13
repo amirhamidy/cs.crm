@@ -21,6 +21,7 @@ const iconBtn = "flex h-7 w-7 items-center justify-center rounded-lg text-gray-4
 function HumanResourceCard({ document, departments, canManage, onEdit, onDelete, onSteps, onChange }: Props) {
     const dep = departments.find((d) => d.name === document.title);
 
+    const docFiles = document.files.filter((f) => f.step === null);
     const removeFile = async (id: number) => {
         if (!confirm("آیا از حذف فایل مطمئن هستید؟")) return;
         await deleteDocumentFile(id);
@@ -75,9 +76,9 @@ function HumanResourceCard({ document, departments, canManage, onEdit, onDelete,
                 <div className="mt-3 h-px bg-gray-100 dark:bg-white/[0.06]" />
 
                 <div className="mt-3">
-                    {document.files.length > 0 ? (
+                    {docFiles.length > 0 ? (
                         <div className="space-y-1.5">
-                            {document.files.map((f) => (
+                            {docFiles.map((f) => (
                                 <motion.div
                                     key={f.id}
                                     initial={{ opacity: 0, y: 4 }}
@@ -88,7 +89,7 @@ function HumanResourceCard({ document, departments, canManage, onEdit, onDelete,
                                         <FileText size={12} className="text-indigo-500" />
                                     </span>
                                     <a href={f.file} target="_blank" rel="noreferrer" className="min-w-0 flex-1 truncate text-[11px] font-bold text-gray-600 transition hover:text-indigo-500 dark:text-gray-300">
-                                        مشاهده فایل
+                                        {f.title || "مشاهده فایل"}
                                     </a>
                                     <ExternalLink size={11} className="shrink-0 text-gray-300" />
                                     {canManage && (
