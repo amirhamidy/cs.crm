@@ -90,7 +90,7 @@ interface InternalTaskDeadlineModalProps {
     onClose: () => void;
     taskId: number;
     taskTitle?: string;
-    
+
     onLoaded?: (deadline: InternalDeadline) => void;
 }
 
@@ -110,7 +110,7 @@ export default function InternalTaskDeadlineModal({
     const [error, setError] = useState<string | null>(null);
     const [tick, setTick] = useState(0);
 
-    
+
     useEffect(() => {
         if (!open) return;
 
@@ -121,7 +121,7 @@ export default function InternalTaskDeadlineModal({
         fetchInternalDeadline(taskId, controller.signal)
             .then((res) => {
                 if (controller.signal.aborted) return;
-                setData(res); 
+                setData(res);
                 if (res) onLoaded?.(res);
             })
             .catch((err) => {
@@ -134,7 +134,7 @@ export default function InternalTaskDeadlineModal({
             });
 
         return () => controller.abort();
-        
+
     }, [open, taskId, tick]);
 
     useEffect(() => {
@@ -166,7 +166,8 @@ export default function InternalTaskDeadlineModal({
     return createPortal(
         <AnimatePresence>
             {open && (
-                <div
+                <m.div
+                    exit={{ pointerEvents: "none" }}
                     className="fixed inset-0 z-[2147483647] flex items-center justify-center px-4"
                 >
                     <Backdrop onClick={onClose} />
@@ -277,7 +278,7 @@ export default function InternalTaskDeadlineModal({
                             )}
                         </div>
                     </m.div>
-                </div>
+                </m.div>
             )}
         </AnimatePresence>,
         document.body

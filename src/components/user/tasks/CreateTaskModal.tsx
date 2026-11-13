@@ -63,6 +63,13 @@ interface Props {
     employees?: DepartmentEmployee[];
 }
 
+interface DepartmentStep {
+    id: number;
+    department: number;
+    name: string;
+    order: number;
+}
+
 interface Option {
     id: number;
     label: string;
@@ -119,10 +126,6 @@ function extractList<T>(data: unknown): T[] {
 
     return [];
 }
-
-
-
-
 
 function FloatingInput({
     label,
@@ -246,8 +249,8 @@ function NiceSelect({
                 disabled={disabled}
                 onClick={() => setOpen((value) => !value)}
                 className={`flex h-[52px] w-full items-center gap-2.5 rounded-2xl border px-3 text-right transition-all duration-200 ${open
-                        ? "border-blue-500 bg-blue-50/50 dark:border-blue-500/50 dark:bg-blue-500/[0.06]"
-                        : "border-gray-100 bg-gray-50 hover:border-gray-200 dark:border-white/[0.06] dark:bg-white/[0.03] dark:hover:border-white/[0.12]"
+                    ? "border-blue-500 bg-blue-50/50 dark:border-blue-500/50 dark:bg-blue-500/[0.06]"
+                    : "border-gray-100 bg-gray-50 hover:border-gray-200 dark:border-white/[0.06] dark:bg-white/[0.03] dark:hover:border-white/[0.12]"
                     } ${disabled
                         ? "cursor-not-allowed opacity-40"
                         : "cursor-pointer"
@@ -274,8 +277,8 @@ function NiceSelect({
                 <span className="min-w-0 flex-1">
                     <span
                         className={`block truncate text-[12.5px] font-bold ${selectedOptions.length > 0
-                                ? "text-gray-900 dark:text-white"
-                                : "text-gray-400"
+                            ? "text-gray-900 dark:text-white"
+                            : "text-gray-400"
                             }`}
                     >
                         {displayText}
@@ -338,8 +341,8 @@ function NiceSelect({
                                             transition={{ delay: index * 0.02 }}
                                             onClick={() => handleSelect(option.id)}
                                             className={`flex w-full items-center gap-2.5 rounded-2xl px-2.5 py-2 text-right transition-colors ${active
-                                                    ? "bg-blue-50 dark:bg-blue-500/10"
-                                                    : "hover:bg-gray-50 dark:hover:bg-white/[0.04]"
+                                                ? "bg-blue-50 dark:bg-blue-500/10"
+                                                : "hover:bg-gray-50 dark:hover:bg-white/[0.04]"
                                                 }`}
                                         >
                                             <span
@@ -353,8 +356,8 @@ function NiceSelect({
                                             <span className="min-w-0 flex-1">
                                                 <span
                                                     className={`block truncate text-[12.5px] font-bold ${active
-                                                            ? "text-blue-600 dark:text-blue-400"
-                                                            : "text-gray-900 dark:text-white"
+                                                        ? "text-blue-600 dark:text-blue-400"
+                                                        : "text-gray-900 dark:text-white"
                                                         }`}
                                                 >
                                                     {option.label}
@@ -404,6 +407,9 @@ export default function CreateTaskModal({
     const [selectedCaseOpt, setSelectedCaseOpt] = useState<AsyncOption | null>(null);
     const [selectedCase, setSelectedCase] = useState<number | null>(null);
     const [selectedDepartment, setSelectedDepartment] = useState<number | null>(null);
+    const [departmentSteps, setDepartmentSteps] = useState<DepartmentStep[]>([]);
+    const [selectedStep, setSelectedStep] = useState<number | null>(null);
+
     const [selectedEmployees, setSelectedEmployees] = useState<number[]>([]);
     const [title, setTitle] = useState("");
     const [files, setFiles] = useState<File[]>([]);
@@ -433,6 +439,16 @@ export default function CreateTaskModal({
             setDepartmentList(initialDepartments);
         }
 
+        axiosInstance
+            .get("/department/api/v1/department_step/")
+            .then((r) => {
+                if (!isCurrentRequest()) return;
+                setDepartmentSteps(extractList<DepartmentStep>(r.data));
+            })
+            .catch(() => {
+                if (isCurrentRequest()) setDepartmentSteps([]);
+            });
+
         departmentsApi
             .employees()
             .then((response) => {
@@ -450,6 +466,7 @@ export default function CreateTaskModal({
 
     useEffect(() => {
         setSelectedEmployees([]);
+        setSelectedStep(null);
     }, [selectedDepartment]);
 
     useEffect(() => {
@@ -457,8 +474,6 @@ export default function CreateTaskModal({
         setSelectedCaseOpt(null);
     }, [selectedCustomer]);
 
-    
-    
     const fetchCustomers = useCallback(
         (p: { page: number; page_size: number; search?: string }, signal: AbortSignal) =>
             fetchPage<Customer>(apiRoutes.customers, p, signal),
@@ -478,6 +493,14 @@ export default function CreateTaskModal({
         );
     }, [employeeList, selectedDepartment]);
 
+    const filteredSteps = useMemo(() => {
+        if (!selectedDepartment) return [];
+
+        return departmentSteps
+            .filter((step) => Number(step.department) === Number(selectedDepartment))
+            .sort((a, b) => a.order - b.order);
+    }, [departmentSteps, selectedDepartment]);
+
     const canSubmit =
         title.trim().length > 0 &&
         selectedCase !== null &&
@@ -491,6 +514,7 @@ export default function CreateTaskModal({
         setSelectedCaseOpt(null);
         setSelectedCase(null);
         setSelectedDepartment(null);
+        setSelectedStep(null);
         setSelectedEmployees([]);
         setTitle("");
         setFiles([]);
@@ -530,6 +554,10 @@ export default function CreateTaskModal({
             formData.append("title", title);
             formData.append("case", String(selectedCase));
             formData.append("department", String(selectedDepartment));
+
+            if (selectedStep !== null) {
+                formData.append("current_step", String(selectedStep));
+            }
 
             selectedEmployees.forEach((id) => {
                 formData.append("assigned_employee", String(id));
@@ -683,6 +711,26 @@ export default function CreateTaskModal({
                                 />
 
                                 <NiceSelect
+                                    label="مرحله شروع وظیفه (اختیاری)"
+                                    placeholder={
+                                        selectedDepartment
+                                            ? "انتخاب مرحله شروع"
+                                            : "ابتدا دپارتمان را انتخاب کنید"
+                                    }
+                                    emptyText="مرحله‌ای برای این دپارتمان یافت نشد"
+                                    disabled={!selectedDepartment || filteredSteps.length === 0}
+                                    options={filteredSteps.map((step) => ({
+                                        id: step.id,
+                                        label: step.name,
+                                    }))}
+                                    value={selectedStep}
+                                    onChange={(id) => {
+                                        setSelectedStep(id as number);
+                                        setSubmitError("");
+                                    }}
+                                />
+
+                                <NiceSelect
                                     label="کارمندان مسئول"
                                     placeholder={
                                         selectedDepartment
@@ -787,9 +835,9 @@ export default function CreateTaskModal({
                             >
                                 <BusyContent busy={submitting}>
                                     <>
-                                            <Check size={14} strokeWidth={3} />
-                                            ثبت وظیفه
-                                        </>
+                                        <Check size={14} strokeWidth={3} />
+                                        ثبت وظیفه
+                                    </>
                                 </BusyContent>
                             </m.button>
                         </div>

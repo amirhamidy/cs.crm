@@ -794,7 +794,12 @@ export default function EmployeeTaskRoutineBoard() {
                     <button
                         type="button"
                         onClick={() => setCreateOpen(true)}
-                        disabled={myTasks.length === 0}
+                        disabled={loading || availableMyTasks.length === 0}
+                        title={
+                            availableMyTasks.length === 0
+                                ? "تسکی بدون روتین برای انتخاب وجود ندارد"
+                                : undefined
+                        }
                         className="flex items-center gap-1.5 rounded-2xl bg-indigo-600 px-3.5 py-2 text-[11.5px] font-bold text-white transition-colors hover:bg-indigo-500 disabled:opacity-40"
                     >
                         <Plus size={13} />

@@ -348,6 +348,16 @@ export default function EmployeeCreateTaskRoutineModal({
 
     useEffect(() => {
         if (!isOpen) return;
+        const onKey = (event: KeyboardEvent) => {
+            if (event.key === "Escape" && !isSubmitting) onClose();
+        };
+        window.addEventListener("keydown", onKey);
+        return () => window.removeEventListener("keydown", onKey);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isOpen, isSubmitting]);
+
+    useEffect(() => {
+        if (!isOpen) return;
         const field = nowToField();
         setSelectedTaskId(null);
         setStartField(field);
@@ -421,12 +431,14 @@ export default function EmployeeCreateTaskRoutineModal({
         }
         if (
             !neverRepeat &&
-            (!Number.isFinite(effectiveIntervalDays) ||
-                effectiveIntervalDays <= 0)
+            (!Number.isInteger(effectiveIntervalDays) ||
+                effectiveIntervalDays <= 0 ||
+                effectiveIntervalDays >= NEVER_REPEAT_VALUE)
         ) {
             setError("بازه تکرار باید یک عدد صحیح مثبت باشد.");
             return;
         }
+        if (isSubmitting) return;
         setIsSubmitting(true);
         setError(null);
         try {
@@ -533,7 +545,7 @@ export default function EmployeeCreateTaskRoutineModal({
                                 </label>
                                 {myTasks.length === 0 ? (
                                     <div className="rounded-2xl border border-dashed border-gray-200 px-4 py-5 text-center text-[11.5px] font-semibold text-gray-400 dark:border-white/[0.07]">
-                                        تسکی به شما ارجاع نشده است.
+                                        تسک بدون روتینی برای انتخاب وجود ندارد.
                                     </div>
                                 ) : (
                                     <TaskPicker
@@ -714,7 +726,7 @@ export default function EmployeeCreateTaskRoutineModal({
                             <button
                                 type="button"
                                 onClick={handleSubmit}
-                                disabled={isSubmitting || myTasks.length === 0}
+                                disabled={isSubmitting || myTasks.length === 0 || !selectedTaskId}
                                 className="flex h-11 flex-1 items-center justify-center gap-2 rounded-full bg-indigo-600 text-[12px] font-bold text-white transition-colors hover:bg-indigo-500 disabled:opacity-50"
                             >
                                 {isSubmitting ? (

@@ -84,7 +84,7 @@ interface TaskDeadlineModalProps {
     taskId: number;
     taskTitle?: string;
     stepId: number | null;
-    
+
     onLoaded?: (deadline: StepDeadline) => void;
 }
 
@@ -104,7 +104,7 @@ export default function TaskDeadlineModal({
     const [error, setError] = useState<string | null>(null);
     const [tick, setTick] = useState(0);
 
-    
+
     useEffect(() => {
         if (!open) return;
 
@@ -135,7 +135,7 @@ export default function TaskDeadlineModal({
             });
 
         return () => controller.abort();
-        
+
     }, [open, taskId, stepId, tick]);
 
     useEffect(() => {
@@ -170,7 +170,7 @@ export default function TaskDeadlineModal({
                 <m.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
+                    exit={{ opacity: 0, pointerEvents: "none" }}
                     transition={{ duration: 0.15 }}
                     className="backdrop-blur-layer fixed inset-0 z-[2147483647] flex items-center justify-center px-4"
                     style={{ background: isDark ? "rgba(0,0,0,0.62)" : "rgba(15,23,42,0.38)" }}
