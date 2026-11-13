@@ -494,7 +494,7 @@ export default function CreateTaskModal({
     const filteredSteps = useMemo(() => {
         if (!selectedDepartment) return [];
         return departmentSteps
-            .filter((step) => step.department === selectedDepartment)
+            .filter((step) => Number(step.department) === Number(selectedDepartment))
             .sort((a, b) => a.order - b.order);
     }, [departmentSteps, selectedDepartment]);
 

@@ -105,7 +105,7 @@ export default function TaskTransferModal({
         setLoadError("");
 
         Promise.allSettled([
-            departmentsApi.list(),
+            departmentsApi.choices() as Promise<Department[]>,
             departmentsApi.steps(),
             departmentsApi.employees(),
         ]).then(([deptRes, stepRes, memberRes]) => {

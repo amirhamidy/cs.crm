@@ -6,6 +6,7 @@ import type { Customer } from "@/types/customer";
 import type { Department } from "@/types/department";
 import type { TaskItem } from "@/types/task";
 import EditTaskView from "./EditTaskView";
+import EditTaskNoCaseView from "./EditTaskNoCaseView";
 
 interface EditTaskModalProps {
     task: TaskItem;
@@ -27,7 +28,7 @@ export default function EditTaskModal({ task, ...viewProps }: EditTaskModalProps
             presentation="center"
             maxWidth="max-w-md"
         >
-            <EditTaskView task={task} {...viewProps} />
+            {task.case ? <EditTaskView task={task} {...viewProps} /> : <EditTaskNoCaseView task={task} {...viewProps} />}
         </Modal>
     );
 }

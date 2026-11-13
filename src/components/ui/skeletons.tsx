@@ -177,7 +177,13 @@ const PULSE = "animate-pulse motion-reduce:animate-none";
 
 /** Small inline placeholder next to header counters (replaces "در حال بارگذاری..."). */
 export function CountSkeleton({ className }: { className?: string }) {
-    return <Skeleton className={cn("inline-block h-3 w-16 align-middle", PULSE, className)} />;
+    // <span> (not <div>) so it is valid inside <p> and avoids hydration errors.
+    return (
+        <span
+            aria-hidden="true"
+            className={cn("inline-block h-3 w-16 rounded-lg bg-gray-200/80 align-middle dark:bg-white/10", PULSE, className)}
+        />
+    );
 }
 
 const TASK_CARD =

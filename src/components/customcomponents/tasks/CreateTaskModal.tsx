@@ -253,12 +253,12 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess }: Props) {
     );
 
     const filteredEmployees = useMemo(
-        () => selectedDepartment ? employees.filter((e) => e.department === selectedDepartment) : employees,
+        () => selectedDepartment ? employees.filter((e) => Number(e.department) === Number(selectedDepartment)) : employees,
         [employees, selectedDepartment]
     );
 
     const filteredSteps = useMemo(
-        () => selectedDepartment ? departmentSteps.filter((step) => step.department === selectedDepartment).sort((a, b) => a.order - b.order) : [],
+        () => selectedDepartment ? departmentSteps.filter((step) => Number(step.department) === Number(selectedDepartment)).sort((a, b) => a.order - b.order) : [],
         [departmentSteps, selectedDepartment]
     );
 

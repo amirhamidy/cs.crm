@@ -20,7 +20,14 @@ export async function fetchStepDeadline(
     stepId: number,
     signal?: AbortSignal
 ): Promise<StepDeadline> {
-    const { data } = await api.get(`/tasks/api/v1/tasks/${taskId}/steps/${stepId}/deadline/`, { signal });
+    let data: any;
+    try {
+        ({ data } = await api.get(`/tasks/api/v1/tasks/${taskId}/steps/${stepId}/deadline/`, { signal }));
+    } catch (err) {
+        const st = (err as { response?: { status?: number } })?.response?.status;
+        if (st === 404 || st === 400) return { started_at: null, deadline: null };
+        throw err;
+    }
     return {
         started_at: data?.started_at ?? null,
         deadline: data?.deadline ?? null,
@@ -156,6 +163,7 @@ export default function TaskDeadlineModal({
                 <m.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
+                    exit={{ opacity: 0, pointerEvents: "none" }}
                     transition={{ duration: 0.15 }}
                     className="backdrop-blur-layer fixed inset-0 z-[2147483647] flex items-center justify-center px-4"
                     style={{ background: isDark ? "rgba(0,0,0,0.62)" : "rgba(15,23,42,0.38)" }}
@@ -226,7 +234,7 @@ export default function TaskDeadlineModal({
                             ) : !hasAny ? (
                                 <div className="flex flex-col items-center gap-2 py-8" style={{ color: muted }}>
                                     <Clock size={22} />
-                                    <p className="text-[12.5px] font-semibold">زمان‌بندی تعیین نشده</p>
+                                    <p className="text-[12.5px] font-semibold">ددلاین ندارد</p>
                                 </div>
                             ) : (
                                 <>

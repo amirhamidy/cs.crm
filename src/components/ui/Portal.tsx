@@ -33,7 +33,9 @@ function lockScroll() {
 }
 function unlockScroll() {
     if (lockCount > 0 && --lockCount === 0) {
-        document.body.style.overflow = prevOverflow;
+        document.body.style.overflow = prevOverflow === "hidden" ? "" : prevOverflow;
+        document.body.style.pointerEvents = "";
+        document.body.removeAttribute("data-scroll-locked");
     }
 }
 
