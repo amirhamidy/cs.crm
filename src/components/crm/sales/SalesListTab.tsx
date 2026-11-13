@@ -113,7 +113,7 @@ export default function SalesListTab() {
         }
     }
 
-    const pageTotal = list.data.reduce((a, x) => a + toNumber(x.profit ?? x.total_sell_amount ?? x.total_buy_amount), 0);
+    const pageTotal = list.data.filter((x) => x.status !== "returned").reduce((a, x) => a + toNumber(x.profit ?? x.total_sell_amount ?? x.total_buy_amount), 0);
     const pageKg = list.data.reduce((a, x) => a + toNumber(x.quantity_kg), 0);
     const pageIssues = list.data.reduce((a, x) => a + x.open_issues_count, 0);
 

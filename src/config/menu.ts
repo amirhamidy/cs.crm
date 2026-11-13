@@ -181,7 +181,7 @@ export const userMenuItems: MenuItem[] = [
   },
   {
     icon: Archive,
-    image: 4,
+    image: 16,
     label: "بایگانی وظایف",
     description: "وظایف تمام‌شده",
     href: "/user/archive",
@@ -221,7 +221,15 @@ export const userMenuItems: MenuItem[] = [
   },
   {
     icon: Archive,
-    image: 13,
+    image: 18,
+    label: "بایگانی تیکت‌ها",
+    description: "تیکت‌های بسته‌شده شما",
+    href: "/user/Ticketarchive",
+    permission: { section: "internal_tasks", action: "view" },
+  },
+  {
+    icon: Archive,
+    image: 7,
     label: "صورت جلسه",
     description: "جلسات و امضاهای شما",
     href: "/user/minutes/",
@@ -229,7 +237,7 @@ export const userMenuItems: MenuItem[] = [
   },
   {
     icon: UserRound,
-    image: 8,
+    image: 17,
     label: "مشتری",
     description: "مشتریان و سرنخ‌های شما",
     href: "/user/customer",
@@ -261,7 +269,7 @@ export const userMenuItems: MenuItem[] = [
   },
   {
     icon: CalendarCheck2,
-    image: 17,
+    image: 14,
     label: "تقویم",
     description: "رویدادها و ددلاین‌های شما",
     href: "/user/calendar",

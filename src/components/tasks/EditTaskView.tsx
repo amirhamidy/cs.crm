@@ -581,7 +581,6 @@ export default function EditTaskView({
 
     const canSubmit =
         title.trim().length > 0 &&
-        selectedCase !== null &&
         selectedDepartment !== null &&
         selectedEmployees.length > 0 &&
         !submitting;
@@ -613,7 +612,7 @@ export default function EditTaskView({
         try {
             const payload = {
                 title: title.trim(),
-                case: selectedCase,
+                ...(selectedCase !== null ? { case: selectedCase } : {}),
                 department: selectedDepartment,
                 assigned_employee: selectedEmployees,
             };
@@ -735,15 +734,17 @@ export default function EditTaskView({
                                 }}
                             />
 
-                            <NiceSelect
-                                label="پرونده"
-                                placeholder="انتخاب پرونده"
-                                emptyText="پرونده‌ای یافت نشد"
-                                options={caseOptions}
-                                value={selectedCase}
-                                onChange={() => { }}
-                                disabled={true}
-                            />
+                            {selectedCase !== null && (
+                                <NiceSelect
+                                    label="پرونده"
+                                    placeholder="انتخاب پرونده"
+                                    emptyText="پرونده‌ای یافت نشد"
+                                    options={caseOptions}
+                                    value={selectedCase}
+                                    onChange={() => { }}
+                                    disabled={true}
+                                />
+                            )}
 
                             <NiceSelect
                                 label="دپارتمان"

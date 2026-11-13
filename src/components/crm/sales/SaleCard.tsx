@@ -2,7 +2,7 @@
 
 import { memo } from "react";
 import { CalendarDays, Paperclip, Pencil, Undo2, Ban, Repeat, ShoppingBag, ShoppingCart, Trash2 } from "lucide-react";
-import { formatJalaliDate, formatMoney, formatTime, formatWeight } from "@/lib/crm/format";
+import { formatJalaliDate, formatJalaliDateTime, formatMoney, formatTime, formatWeight } from "@/lib/crm/format";
 import { cn } from "@/lib/utils";
 import type { Sale } from "@/types/crm";
 import { IssueChips, TRADE_LABEL } from "../shared/TradeBits";
@@ -37,9 +37,9 @@ function Party({ label, name, company, dot }: { label: string; name: string; com
             <span className={cn("relative z-10 mt-1 h-2.5 w-2.5 shrink-0 rounded-full ring-4 ring-white dark:ring-[#111827]", dot)} />
             <div className="min-w-0 flex-1">
                 <p className="text-[9.5px] font-semibold text-gray-400">{label}</p>
-                <p className="truncate text-[11.5px] font-extrabold text-gray-800 dark:text-gray-100">
-                    {name}
-                    {company && <span className="ms-1 text-[10px] font-semibold text-gray-400">{company}</span>}
+                <p className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-0.5 text-[11.5px] font-extrabold text-gray-800 dark:text-gray-100">
+                    <span className="truncate">{name}</span>
+                    {company && <span className="truncate text-[10px] font-semibold text-gray-400">{company}</span>}
                 </p>
             </div>
         </div>
@@ -112,6 +112,12 @@ function SaleCardBase({ sale, canEdit, canDelete, onEdit, onDelete, onDetails, o
             {sale.trader_name && (
                 <p className="mt-2 text-[10.5px] font-semibold text-gray-400">
                     معامله‌گر: <span className="text-gray-600 dark:text-gray-300">{sale.trader_name}</span>
+                </p>
+            )}
+
+            {sale.created_at && (
+                <p className="mt-1 text-[10.5px] font-semibold text-gray-400">
+                    ساخته شده در ساعت: <span className="text-gray-600 dark:text-gray-300">{formatJalaliDateTime(sale.created_at)}</span>
                 </p>
             )}
 

@@ -69,6 +69,10 @@ function CompanyBox({ label }: { label: string }) {
     );
 }
 
+const faDigits = (n: number) => String(n).padStart(2, "0").replace(/\d/g, (d) => "۰۱۲۳۴۵۶۷۸۹"[Number(d)]);
+const HOUR_OPTIONS = Array.from({ length: 24 }, (_, i) => ({ id: i, label: faDigits(i) }));
+const MINUTE_OPTIONS = Array.from({ length: 60 }, (_, i) => ({ id: i, label: faDigits(i) }));
+
 export default function SaleFormModal({ open, onClose, sale, fixedCustomer, onSaved }: Props) {
     const editing = !!sale;
     const { isManager, can } = usePermissions();
@@ -732,13 +736,20 @@ export default function SaleFormModal({ open, onClose, sale, fixedCustomer, onSa
                         disabled={isReturned}
                         onChange={setSaleDate}
                     />
-                    <div className="relative">
-                        <FloatingInput
-                            id="sale_form_time"
-                            label="ساعت معامله (HH:mm)"
-                            value={saleTime}
+                    <div className="grid grid-cols-2 gap-3">
+                        <NiceSelect
+                            label="ساعت"
+                            options={HOUR_OPTIONS}
+                            value={Number(saleTime.slice(0, 2)) || 0}
                             disabled={isReturned}
-                            onChange={(e) => setSaleTime(e.target.value)}
+                            onChange={(h) => setSaleTime(`${String(h).padStart(2, "0")}:${saleTime.slice(3, 5) || "00"}`)}
+                        />
+                        <NiceSelect
+                            label="دقیقه"
+                            options={MINUTE_OPTIONS}
+                            value={Number(saleTime.slice(3, 5)) || 0}
+                            disabled={isReturned}
+                            onChange={(m) => setSaleTime(`${saleTime.slice(0, 2) || "00"}:${String(m).padStart(2, "0")}`)}
                         />
                     </div>
                 </div>
