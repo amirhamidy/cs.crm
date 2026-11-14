@@ -35,12 +35,6 @@ export default function MachineSummaryPage() {
 
     const [summaryMachineId, setSummaryMachineId] = useState<number | null>(null);
     const [summaryGroupBy, setSummaryGroupBy] = useState<number | null>(0);
-    const [summaryDateFrom, setSummaryDateFrom] = useState(() => {
-        const d = new Date();
-        d.setDate(d.getDate() - 6);
-        return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
-    });
-    const [summaryDateTo, setSummaryDateTo] = useState(todayGregorian());
     const [summaryReport, setSummaryReport] = useState<MachineSummaryReport | null>(null);
     const [summaryLoading, setSummaryLoading] = useState(false);
     const [summaryError, setSummaryError] = useState("");
@@ -59,11 +53,19 @@ export default function MachineSummaryPage() {
         setSummaryLoading(true);
         setSummaryError("");
         try {
-            const groupByMap: Record<number, GroupBy> = { 0: "day", 1: "week", 2: "month", 3: "year" };
+            const fmt = (d: Date) =>
+                `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+            const today = new Date();
+            const from = new Date();
+            // روزانه: همان امروز | هفتگی: ۷ روز اخیر | ماهانه: ۳۰ روز اخیر | سالانه: ۳۶۵ روز اخیر
+            const spanDays: Record<number, number> = { 0: 0, 1: 6, 2: 29, 3: 364 };
+            const groupByMap: Record<number, GroupBy> = { 0: "day", 1: "day", 2: "day", 3: "month" };
+            const g = summaryGroupBy ?? 0;
+            from.setDate(from.getDate() - spanDays[g]);
             const params: Record<string, string> = {
-                date_from: summaryDateFrom,
-                date_to: summaryDateTo,
-                group_by: groupByMap[summaryGroupBy ?? 0],
+                date_from: fmt(from),
+                date_to: fmt(today),
+                group_by: groupByMap[g],
             };
             if (summaryMachineId !== null) params.machine_id = String(summaryMachineId);
             const res = await axiosInstance.get("/production/api/v1/report/machine/summary/", { params });
@@ -78,7 +80,7 @@ export default function MachineSummaryPage() {
 
     useEffect(() => {
         loadSummaryReport();
-    }, [summaryDateFrom, summaryDateTo, summaryGroupBy, summaryMachineId]);
+    }, [summaryGroupBy, summaryMachineId]);
 
     return (
         <>
@@ -91,19 +93,7 @@ export default function MachineSummaryPage() {
             </div>
 
             <div className="rounded-2xl border border-black/[0.06] bg-[#fafafa] p-4 dark:border-white/[0.06] dark:bg-white/[0.02]">
-                <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-4">
-                    <JalaliDatePicker
-                        label="از تاریخ"
-                        value={summaryDateFrom}
-                        onChange={setSummaryDateFrom}
-                        required
-                    />
-                    <JalaliDatePicker
-                        label="تا تاریخ"
-                        value={summaryDateTo}
-                        onChange={setSummaryDateTo}
-                        required
-                    />
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-2">
                     <NiceSelect
                         label="ماشین (اختیاری)"
                         placeholder="همه ماشین‌ها"

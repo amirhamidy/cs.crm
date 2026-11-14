@@ -251,9 +251,14 @@ export function parseBackendError(error: unknown, fallback: string): string {
         if (Array.isArray(nonField) && nonField.length > 0) return String(nonField[0]);
         const detail = (data as Record<string, unknown>).detail;
         if (typeof detail === "string") return detail;
-        const first = Object.values(data as Record<string, unknown>)[0];
-        if (Array.isArray(first)) return String(first[0]);
-        if (typeof first === "string") return first;
+        const FIELD_FA: Record<string, string> = {
+            date: "تاریخ", employee: "پرسنل", machine: "ماشین", start_time: "ساعت شروع",
+            end_time: "ساعت پایان", hours_worked: "ساعت کار", produced_qty: "تعداد تولید",
+            waste_qty: "ضایعات", note: "توضیحات",
+        };
+        const [k, first] = Object.entries(data as Record<string, unknown>)[0] ?? [];
+        const msg = Array.isArray(first) ? String(first[0]) : typeof first === "string" ? first : "";
+        if (msg) return k && FIELD_FA[k] ? `${FIELD_FA[k]}: ${msg}` : msg;
     }
     return fallback;
 }
@@ -269,6 +274,12 @@ export function isoToJalaliString(iso: string): string {
 export function jalaliToIso(jy: number, jm: number, jd: number): string {
     const [gy, gm, gd] = toGregorian(jy, jm, jd);
     return `${gy}-${pad2(gm)}-${pad2(gd)}`;
+}
+
+export function normalizeIsoDate(v: string): string {
+    const [y, m, d] = (v || "").slice(0, 10).split("-").map(Number);
+    if (!y || !m || !d) return v;
+    return `${y}-${pad2(m)}-${pad2(d)}`;
 }
 
 export function todayGregorian(): string {
@@ -1239,12 +1250,12 @@ export function LogModal({
 
         try {
             await axiosInstance.post("/production/api/v1/log/create/", {
-                date,
+                date: normalizeIsoDate(date),
                 employee: employeeId,
                 machine: machineId,
                 start_time: startTime,
                 end_time: endTime,
-                hours_worked: String(hours),
+                hours_worked: (hours as number).toFixed(2),
                 produced_qty: Number(produced),
                 waste_qty: Number(waste || 0),
                 note: note.trim(),

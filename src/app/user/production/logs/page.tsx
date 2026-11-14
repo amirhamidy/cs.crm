@@ -44,7 +44,7 @@ export default function UserProductionLogsPage() {
 
   // Modal
   const [showModal, setShowModal] = useState(false);
-  const [formDate, setFormDate] = useState(new Date().toISOString().split("T")[0]);
+  const [formDate, setFormDate] = useState(() => { const n = new Date(); return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, "0")}-${String(n.getDate()).padStart(2, "0")}`; });
   const [formMachine, setFormMachine] = useState<number | "">("");
   const [formStart, setFormStart] = useState("");
   const [formEnd, setFormEnd] = useState("");
@@ -94,7 +94,7 @@ export default function UserProductionLogsPage() {
         machine: Number(formMachine),
         start_time: formStart,
         end_time: formEnd,
-        hours_worked: String(hours),
+        hours_worked: (hours as number).toFixed(2),
         produced_qty: Number(formProduced),
         waste_qty: Number(formWaste),
         note: formNote.trim(),
@@ -106,7 +106,10 @@ export default function UserProductionLogsPage() {
       setFormNote("");
       fetchData();
     } catch (err: any) {
-      setError("خطا در ثبت لاگ. احتمالاً برای این ماشین در این تاریخ قبلاً رکورد ثبت شده است.");
+      const d = err?.response?.data;
+      const first = d && typeof d === "object" ? (Object.entries(d)[0] as [string, any] | undefined) : undefined;
+      const m = first ? (Array.isArray(first[1]) ? first[1][0] : first[1]) : "";
+      setError(typeof d === "string" && d.length < 200 ? d : m ? `${first![0]}: ${m}` : "خطا در ثبت لاگ. احتمالاً برای این ماشین در این تاریخ قبلاً رکورد ثبت شده است.");
     } finally {
       setSaving(false);
     }
