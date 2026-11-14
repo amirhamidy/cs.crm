@@ -13,17 +13,17 @@ import {
     Layers3,
     Loader2,
     Paperclip,
-    Search,
     Trash2,
     UserRound,
     X,
     type LucideIcon,
 } from "lucide-react";
+import { NiceSelect } from "@/components/admin/production/shared";
 import { departmentsApi, tasksApi, parseTransferError } from "@/lib/api";
 import { toast } from "@/components/notifications/toast";
 import { toPersianDigits } from "@/lib/jalali";
+import type { DepartmentChoice } from "@/lib/api/departments";
 import type {
-    Department,
     DepartmentEmployee,
     DepartmentStep,
 } from "@/types/department";
@@ -47,6 +47,9 @@ interface DepartmentOption {
     accent: string;
     firstStep: DepartmentStep | null;
     stepsCount: number;
+    hasSteps: boolean;
+    hasManager: boolean;
+    canReceive: boolean;
     managers: DepartmentEmployee[];
 }
 
@@ -83,13 +86,12 @@ export default function TaskTransferModal({
     currentDepartmentName,
     onTransferred,
 }: Props) {
-    const [departments, setDepartments] = useState<Department[]>([]);
+    const [departments, setDepartments] = useState<DepartmentChoice[]>([]);
     const [steps, setSteps] = useState<DepartmentStep[]>([]);
     const [members, setMembers] = useState<DepartmentEmployee[]>([]);
     const [loading, setLoading] = useState(false);
     const [loadError, setLoadError] = useState("");
 
-    const [query, setQuery] = useState("");
     const [selectedId, setSelectedId] = useState<number | null>(null);
     const [note, setNote] = useState("");
     const [files, setFiles] = useState<File[]>([]);
@@ -100,7 +102,6 @@ export default function TaskTransferModal({
     /* ───────── ریست هنگام بسته شدن ───────── */
     useEffect(() => {
         if (isOpen) return;
-        setQuery("");
         setSelectedId(null);
         setNote("");
         setFiles([]);
@@ -118,7 +119,7 @@ export default function TaskTransferModal({
         setLoadError("");
 
         Promise.allSettled([
-            departmentsApi.list(),
+            departmentsApi.choices(),
             departmentsApi.steps(),
             departmentsApi.employees(),
         ]).then(([deptRes, stepRes, memberRes]) => {
@@ -156,6 +157,9 @@ export default function TaskTransferModal({
                     accent: accentForId(department.id),
                     firstStep: deptSteps[0] ?? null,
                     stepsCount: deptSteps.length,
+                    hasSteps: department.has_steps,
+                    hasManager: department.has_manager,
+                    canReceive: department.can_receive_tasks,
                     managers: members.filter(
                         (member) =>
                             Number(member.department) === Number(department.id) &&
@@ -164,12 +168,6 @@ export default function TaskTransferModal({
                 };
             });
     }, [departments, steps, members, currentDepartmentId]);
-
-    const visibleOptions = useMemo(() => {
-        const q = query.trim().toLowerCase();
-        if (!q) return options;
-        return options.filter((option) => option.name.toLowerCase().includes(q));
-    }, [options, query]);
 
     const selected = useMemo(
         () => options.find((option) => option.id === selectedId) ?? null,
@@ -185,10 +183,8 @@ export default function TaskTransferModal({
 
     if (typeof document === "undefined") return null;
 
-    const stepsKnown = steps.length > 0;
-    const managersKnown = members.length > 0;
-    const noSteps = Boolean(selected) && stepsKnown && selected!.stepsCount === 0;
-    const noManagers = Boolean(selected) && managersKnown && selected!.managers.length === 0;
+    const noSteps = Boolean(selected) && !selected!.hasSteps;
+    const noManagers = Boolean(selected) && !selected!.hasManager;
 
     function handleFiles(list: FileList | null) {
         if (!list?.length) return;
@@ -368,109 +364,23 @@ export default function TaskTransferModal({
                             ) : (
                                 /* ═════════ مرحله‌ی فرم ═════════ */
                                 <>
-                                    <div className="mb-2 flex items-center justify-between">
-                                        <div className="flex items-center gap-1.5 text-[11px] font-extrabold text-gray-600 dark:text-gray-300">
-                                            <Building2 size={13} />
-                                            دپارتمان مقصد
-                                        </div>
-                                        {!loading && options.length > 0 && (
-                                            <span className="text-[10px] font-bold text-gray-400">
-                                                {toPersianDigits(options.length)} گزینه
-                                            </span>
-                                        )}
-                                    </div>
-
-                                    {options.length > 5 && (
-                                        <div className="relative mb-2">
-                                            <Search
-                                                size={13}
-                                                className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
-                                            />
-                                            <input
-                                                value={query}
-                                                onChange={(e) => setQuery(e.target.value)}
-                                                placeholder="جستجوی دپارتمان..."
-                                                className="h-10 w-full rounded-xl border border-gray-200 bg-gray-50 pr-9 pl-3 text-[11px] outline-none focus:border-indigo-400 dark:border-white/[.08] dark:bg-white/[.03] dark:text-white"
-                                            />
-                                        </div>
-                                    )}
-
-                                    {loading ? (
-                                        <div className="flex items-center gap-2 rounded-2xl border border-gray-200 px-3 py-4 text-[11px] text-gray-400 dark:border-white/[.08]">
-                                            <Loader2 size={15} className="animate-spin" />
-                                            در حال دریافت دپارتمان‌ها...
-                                        </div>
-                                    ) : loadError ? (
-                                        <p className="rounded-xl bg-red-500/10 px-3 py-2.5 text-center text-[10.5px] font-bold text-red-500">
-                                            {loadError}
-                                        </p>
-                                    ) : options.length === 0 ? (
-                                        <p className="rounded-xl bg-amber-500/10 px-3 py-2.5 text-center text-[10.5px] font-bold text-amber-600">
-                                            دپارتمان دیگری برای انتقال وجود ندارد.
-                                        </p>
-                                    ) : visibleOptions.length === 0 ? (
-                                        <p className="rounded-xl bg-gray-100 px-3 py-3 text-center text-[10.5px] font-bold text-gray-400 dark:bg-white/[.04]">
-                                            دپارتمانی با این نام پیدا نشد
-                                        </p>
-                                    ) : (
-                                        <div className="flex max-h-[220px] flex-col gap-2 overflow-y-auto pl-0.5">
-                                            {visibleOptions.map((option) => {
-                                                const active = option.id === selectedId;
-                                                return (
-                                                    <button
-                                                        key={option.id}
-                                                        type="button"
-                                                        disabled={submitting}
-                                                        onClick={() => {
-                                                            setSelectedId(option.id);
-                                                            setError("");
-                                                        }}
-                                                        className="flex items-center gap-3 rounded-xl border px-3 py-2.5 text-right transition-colors"
-                                                        style={{
-                                                            background: active
-                                                                ? `${option.accent}12`
-                                                                : undefined,
-                                                            borderColor: active
-                                                                ? option.accent
-                                                                : "rgba(148,163,184,.28)",
-                                                        }}
-                                                    >
-                                                        <span
-                                                            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-white"
-                                                            style={{ background: option.accent }}
-                                                        >
-                                                            <Building2 size={14} />
-                                                        </span>
-
-                                                        <span className="min-w-0 flex-1">
-                                                            <span
-                                                                className={`block truncate text-[11.5px] font-extrabold ${active ? "" : "text-gray-700 dark:text-gray-200"}`}
-                                                                style={active ? { color: option.accent } : undefined}
-                                                            >
-                                                                {option.name}
-                                                            </span>
-                                                            <span className="mt-0.5 block truncate text-[9.5px] font-semibold text-gray-400">
-                                                                {stepsKnown
-                                                                    ? option.stepsCount > 0
-                                                                        ? `شروع از «${option.firstStep?.name}» · ${toPersianDigits(option.stepsCount)} مرحله`
-                                                                        : "بدون مرحله"
-                                                                    : "—"}
-                                                            </span>
-                                                        </span>
-
-                                                        {active && (
-                                                            <span
-                                                                className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-white"
-                                                                style={{ background: option.accent }}
-                                                            >
-                                                                <Check size={11} strokeWidth={3} />
-                                                            </span>
-                                                        )}
-                                                    </button>
-                                                );
-                                            })}
-                                        </div>
-                                    )}
+                                    <NiceSelect
+                                        label="دپارتمان مقصد"
+                                        placeholder="انتخاب دپارتمان"
+                                        emptyText={loadError || "دپارتمان دیگری برای انتقال وجود ندارد."}
+                                        loading={loading}
+                                        disabled={submitting}
+                                        options={options.map((o) => ({
+                                            id: o.id,
+                                            label: o.name,
+                                            sub: [
+                                                o.hasSteps ? null : "بدون مرحله",
+                                                o.hasManager ? null : "بدون مدیر",
+                                            ].filter(Boolean).join(" · ") || undefined,
+                                        }))}
+                                        value={selectedId}
+                                        onChange={setSelectedId}
+                                    />
 
                                     {/* پیش‌نمایش مقصد انتخاب‌شده */}
                                     {selected && (

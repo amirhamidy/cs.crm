@@ -110,7 +110,7 @@ export const adminMenuItems: MenuItem[] = [
   {
     icon: Factory,
     label: "تولید",
-    href: "/admin/production/machines",
+    href: "/admin/production/dashboard",
   },
   {
     icon: CalendarCheck2,

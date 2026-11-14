@@ -22,6 +22,7 @@ const BASE = "/department/api/v1";
 
 const URLS = {
   list: `${BASE}/department/list/`,
+  choices: `${BASE}/department/choices/`,
   create: `${BASE}/department/create/`,
   detail: (id: number) => `${BASE}/department/${id}/`,
   update: (id: number) => `${BASE}/department/${id}/update/`,
@@ -77,6 +78,24 @@ const list = () =>
     TTL,
   );
 
+export interface DepartmentChoice {
+  id: number;
+  name: string;
+  order?: number;
+  has_steps: boolean;
+  has_manager: boolean;
+  can_receive_tasks: boolean;
+}
+
+const choices = async (): Promise<DepartmentChoice[]> => {
+  const res = await axiosInstance.get(URLS.choices);
+  const data = res.data;
+  const arr = Array.isArray(data) ? data : (data?.results ?? []);
+  return (arr as DepartmentChoice[]).sort(
+    (a, b) => (a.order ?? 0) - (b.order ?? 0),
+  );
+};
+
 const steps = () =>
   cached(
     `${KEY}steps`,
@@ -100,6 +119,7 @@ const page = <T>(url: string, name: string) =>
         );
 
 export const departmentsApi = {
+  choices,
   list,
   listPage: page<Department>(URLS.list, "list"),
 
