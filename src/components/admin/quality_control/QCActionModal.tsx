@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { AlertCircle, CheckCircle2, Loader2, Upload, X, XCircle } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
 import type { AxiosError } from "axios";
 import type { ApiQualityControlEmployee, ApiQualityControlItem, QualityControlActionResponse } from "@/types/quality_control";
+import { departmentsApi, type DepartmentChoice } from "@/lib/api/departments";
 
 interface Props {
     isOpen: boolean;
@@ -20,7 +21,7 @@ interface Props {
 function getErrorMessage(err: unknown, fallback: string) {
     const data = (err as AxiosError<Record<string, unknown>>).response?.data;
     if (!data) return fallback;
-    for (const key of ["detail", "checked_by", "note", "file", "message", "error", "non_field_errors"]) {
+    for (const key of ["detail", "checked_by", "department_id", "note", "file", "message", "error", "non_field_errors"]) {
         const value = data[key];
         if (typeof value === "string") return value;
         if (Array.isArray(value) && typeof value[0] === "string") return value[0];
@@ -33,27 +34,51 @@ export default function QCActionModal({ isOpen, mode, item, reviewer, reviewerNa
     const [file, setFile] = useState<File | null>(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
+    const [departments, setDepartments] = useState<DepartmentChoice[]>([]);
+    const [departmentId, setDepartmentId] = useState("");
+    const [loadingDepartments, setLoadingDepartments] = useState(false);
     const fileRef = useRef<HTMLInputElement | null>(null);
     const isApprove = mode === "approve";
+
+    // فقط دپارتمان‌هایی که مرحله و مدیر فعال دارند می‌توانند تسک دریافت کنند.
+    const selectableDepartments = useMemo(
+        () => departments.filter((d) => d.has_steps && d.has_manager),
+        [departments],
+    );
 
     useEffect(() => {
         if (!isOpen) return;
         setNote("");
         setFile(null);
         setError("");
+        setDepartmentId("");
         if (fileRef.current) fileRef.current.value = "";
-    }, [isOpen, item.id, mode]);
+        if (!isApprove) return;
+
+        let cancelled = false;
+        setLoadingDepartments(true);
+        departmentsApi
+            .choices()
+            .then((list) => !cancelled && setDepartments(list))
+            .catch(() => !cancelled && setError("لیست دپارتمان‌ها دریافت نشد"))
+            .finally(() => !cancelled && setLoadingDepartments(false));
+        return () => {
+            cancelled = true;
+        };
+    }, [isOpen, item.id, mode, isApprove]);
 
     const closeModal = () => !loading && onClose();
 
     async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
         event.preventDefault();
         if (!reviewer) return setError("کاربر فعلی عضو فعال تیم کنترل کیفی نیست");
+        if (isApprove && !departmentId) return setError("انتخاب دپارتمان الزامی است");
         setLoading(true);
         setError("");
         try {
             const formData = new FormData();
             formData.append("checked_by", String(reviewer.id));
+            if (isApprove) formData.append("department_id", departmentId);
             formData.append("note", note.trim());
             if (file) formData.append("file", file);
             const { data } = await axiosInstance.post<QualityControlActionResponse>(
@@ -133,6 +158,26 @@ export default function QCActionModal({ isOpen, mode, item, reviewer, reviewerNa
                                     </div>
                                 </div>
 
+                                {isApprove && (
+                                    <div>
+                                        <label className="mb-2 block text-[11.5px] font-bold text-gray-400">دپارتمان مقصد</label>
+                                        <select
+                                            value={departmentId}
+                                            onChange={(e) => setDepartmentId(e.target.value)}
+                                            disabled={loadingDepartments}
+                                            className="h-[52px] w-full rounded-2xl border border-gray-100 bg-gray-50 px-3.5 text-[12.5px] font-bold text-gray-900 outline-none focus:border-blue-500 disabled:opacity-50 dark:border-white/[0.06] dark:bg-white/[0.03] dark:text-white"
+                                        >
+                                            <option value="">{loadingDepartments ? "در حال بارگذاری..." : "انتخاب دپارتمان"}</option>
+                                            {selectableDepartments.map((d) => (
+                                                <option key={d.id} value={d.id}>{d.name}</option>
+                                            ))}
+                                        </select>
+                                        {!loadingDepartments && selectableDepartments.length === 0 && (
+                                            <p className="mt-2 text-[11px] text-amber-500">دپارتمانی با مرحله و مدیر فعال یافت نشد</p>
+                                        )}
+                                    </div>
+                                )}
+
                                 <div>
                                     <label className="mb-2 block text-[11.5px] font-bold text-gray-400">توضیحات</label>
                                     <textarea
@@ -163,7 +208,7 @@ export default function QCActionModal({ isOpen, mode, item, reviewer, reviewerNa
                                 <motion.button
                                     type="submit"
                                     whileTap={{ scale: 0.97 }}
-                                    disabled={loading || !reviewer}
+                                    disabled={loading || !reviewer || (isApprove && !departmentId)}
                                     className={`flex h-11 flex-1 items-center justify-center gap-2 rounded-full text-[13px] font-bold text-white transition disabled:cursor-not-allowed disabled:opacity-40 ${tone.btn}`}
                                 >
                                     {loading ? <Loader2 size={15} className="animate-spin" /> : <Icon size={14} />}

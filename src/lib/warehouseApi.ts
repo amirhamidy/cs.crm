@@ -27,6 +27,12 @@ export const WAREHOUSE_ENDPOINTS = {
   transactions: `${BASE}/process/transactions/`,
   tasks: `${BASE}/task/`,
   orderTasks: `${BASE}/order_task/`,
+  orderTasksAwaitingManager: `${BASE}/order_task/awaiting-manager/`,
+  orderTaskConfirm: (id: number) => `${BASE}/order_task/${id}/confirm/`,
+  orderTaskManagerApprove: (id: number) =>
+    `${BASE}/order_task/${id}/manager-approve/`,
+  orderTaskManagerReject: (id: number) =>
+    `${BASE}/order_task/${id}/manager-reject/`,
   deadlines: `${BASE}/order_task/deadlines/`,
   archive: `${BASE}/order_task_archive/`,
   staff: `${BASE}/staff/`,
@@ -483,3 +489,20 @@ export function apiErrorMessage(error: unknown, fallback: string): string {
 
   return fallback;
 }
+
+export interface ManagerDecisionPayload {
+  note?: string;
+  file?: File | null;
+}
+
+/** تایید مدیر: سفارش در وضعیت awaiting_manager به completed تبدیل می‌شود. */
+export const approveOrderTaskByManager = (id: number, payload: ManagerDecisionPayload = {}) => {
+  const form = new FormData();
+  if (payload.note?.trim()) form.append("note", payload.note.trim());
+  if (payload.file) form.append("file", payload.file);
+  return axiosInstance.post(WAREHOUSE_ENDPOINTS.orderTaskManagerApprove(id), form);
+};
+
+/** رد مدیر: note الزامی است و سفارش به in_progress برمی‌گردد. */
+export const rejectOrderTaskByManager = (id: number, note: string) =>
+  axiosInstance.post(WAREHOUSE_ENDPOINTS.orderTaskManagerReject(id), { note: note.trim() });

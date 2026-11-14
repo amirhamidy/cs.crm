@@ -76,6 +76,7 @@ const TABS: Array<[Tab, string, ComponentType<{ size?: number }>]> = [
     ["stock", "موجودی انبار", Boxes],
     ["transactions", "تراکنش‌ها", ReceiptText],
     ["orders", "درخواست‌های داخلی", PackageSearch],
+    ["manager-approval", "تایید مدیر", ClipboardList],
     ["deadlines", "مهلت‌ها", BellRing],
     ["ledger", "گردش محصول", BellRing],
     ["categories", "دسته‌بندی‌ها", Package],
@@ -84,7 +85,7 @@ const TABS: Array<[Tab, string, ComponentType<{ size?: number }>]> = [
     ["task-archive", "بایگانی وظایف", Archive],
 ];
 
-const LIMITED_TABS: Tab[] = ["orders", "stock", "tasks"];
+const LIMITED_TABS: Tab[] = ["orders", "stock", "tasks", "manager-approval"];
 
 export default function WarehouseTabPage({ tab }: { tab: Tab }) {
     const { resolvedTheme } = useTheme();
@@ -405,6 +406,7 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
         products: tab === "products" ? data.total : 0,
         tasks: tab === "tasks" ? data.total : 0,
         orders: tab === "orders" ? data.total : 0,
+        "manager-approval": tab === "manager-approval" ? data.total : 0,
         deadlines: tab === "deadlines" ? data.total : 0,
         categories: tab === "categories" ? data.total : 0,
         staff: tab === "staff" ? data.total : 0,
@@ -773,7 +775,7 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
                             </>
                         )}
 
-                        {tab === "orders" && (
+                        {(tab === "orders" || tab === "manager-approval") && (
                             <>
                                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                                     {paginatedOrders.items.length
@@ -790,7 +792,7 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
                                                 onRefresh={refresh}
                                             />
                                         ))
-                                        : renderEmpty("درخواست داخلی‌ای برای انبار ثبت نشده است")}
+                                        : renderEmpty(tab === "manager-approval" ? "سفارشی در انتظار تایید شما نیست" : "درخواست داخلی‌ای برای انبار ثبت نشده است")}
                                 </div>
 
                                 <Pagination

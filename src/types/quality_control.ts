@@ -19,6 +19,9 @@ export interface ApiQualityControlItem {
   checked_by_name: string | null;
   created_at: string;
   checked_at: string | null;
+  department: number | null;
+  department_name: string | null;
+  department_task: number | null;
 }
 
 export interface ApiQualityControlEmployee {
@@ -53,6 +56,8 @@ export interface QualityControlActionResponse {
   checked_by_name?: string | null;
   checked_at?: string | null;
   created_at?: string;
+  department_id?: number | null;
+  department_task_id?: number | null;
 }
 
 export const QC_STATUS_META: Record<

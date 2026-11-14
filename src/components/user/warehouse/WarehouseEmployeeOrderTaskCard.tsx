@@ -21,6 +21,7 @@ import {
 import { ApiOrderTask, ApiProduct } from "@/types/warehouse";
 import WarehouseEmployeeOrderTaskStatusModal from "./WarehouseEmployeeOrderTaskStatusModal";
 import OrderTaskAttachmentsModal from "./OrderTaskAttachmentsModal";
+import ManagerDecisionModal from "./ManagerDecisionModal";
 import AddItemsToOrderModal from "./AddItemsToOrderModal";
 import {
     formatQuantity,
@@ -142,6 +143,12 @@ export default function WarehouseEmployeeOrderTaskCard({
             icon: Clock3,
             gradient: ["#6366f1", "#3b82f6"],
         },
+        awaiting_manager: {
+            bg: isDark ? "rgba(245,158,11,0.12)" : "rgba(245,158,11,0.08)",
+            text: isDark ? "#fcd34d" : "#d97706",
+            icon: Clock3,
+            gradient: ["#f59e0b", "#d97706"],
+        },
         pending: {
             bg: isDark ? "rgba(59,130,246,0.12)" : "rgba(59,130,246,0.08)",
             text: isDark ? "#93c5fd" : "#2563eb",
@@ -164,8 +171,12 @@ export default function WarehouseEmployeeOrderTaskCard({
         }
     };
 
-    const canComplete = canChangeStatus && orderTask.status !== "completed" && orderTask.status !== "cancelled";
-    const canCancel = canChangeStatus && orderTask.status !== "completed" && orderTask.status !== "cancelled";
+    const isAwaitingManager = String(orderTask.status) === "awaiting_manager";
+    const isClosed = orderTask.status === "completed" || orderTask.status === "cancelled";
+    // تایید انباردار فقط از in_progress؛ در awaiting_manager فقط مدیر تصمیم می‌گیرد.
+    const canComplete = canChangeStatus && orderTask.status === "in_progress";
+    const canCancel = canChangeStatus && !isClosed;
+    const [managerAction, setManagerAction] = useState<"approve" | "reject" | null>(null);
 
     const visibleItems = orderItems.slice(0, 4);
     const hiddenItemsCount = Math.max(0, orderItems.length - visibleItems.length);
@@ -444,6 +455,29 @@ export default function WarehouseEmployeeOrderTaskCard({
                             </motion.button>
                         )}
 
+                        {isAwaitingManager && (
+                            <>
+                                <motion.button
+                                    type="button"
+                                    whileTap={{ scale: 0.96 }}
+                                    onClick={() => setManagerAction("approve")}
+                                    className="flex items-center gap-1 rounded-xl bg-emerald-600 px-2.5 py-1.5 text-[10.5px] font-extrabold text-white hover:bg-emerald-500"
+                                >
+                                    <CheckCircle2 size={11} />
+                                    تایید مدیر
+                                </motion.button>
+                                <motion.button
+                                    type="button"
+                                    whileTap={{ scale: 0.96 }}
+                                    onClick={() => setManagerAction("reject")}
+                                    className="flex items-center gap-1 rounded-xl bg-red-600 px-2.5 py-1.5 text-[10.5px] font-extrabold text-white hover:bg-red-500"
+                                >
+                                    <XCircle size={11} />
+                                    رد مدیر
+                                </motion.button>
+                            </>
+                        )}
+
                         {(canComplete || canCancel) && (
                             <motion.button
                                 type="button"
@@ -462,6 +496,13 @@ export default function WarehouseEmployeeOrderTaskCard({
                     </div>
                 </div>
             </motion.article>
+
+            <ManagerDecisionModal
+                action={managerAction}
+                orderTask={orderTask}
+                onClose={() => setManagerAction(null)}
+                onSuccess={refresh}
+            />
 
             <OrderTaskAttachmentsModal
                 isOpen={attachmentsOpen}

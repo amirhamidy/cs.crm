@@ -166,6 +166,7 @@ export const getStatusLabel = (status: unknown) => {
     created: "ایجاد شده",
     assigned: "اختصاص داده شده",
     in_progress: "در حال انجام",
+    awaiting_manager: "در انتظار تایید مدیر",
     processing: "در حال پردازش",
     completed: "تکمیل شده",
     done: "انجام شده",
@@ -191,7 +192,7 @@ export const getStatusTone = (status: unknown) => {
     return "danger";
   }
 
-  if (["in_progress", "processing", "assigned"].includes(value)) {
+  if (["in_progress", "awaiting_manager", "processing", "assigned"].includes(value)) {
     return "warning";
   }
 

@@ -178,7 +178,7 @@ export default function WarehouseEmployeeOrderTaskStatusModal({
                             <div className="flex items-center gap-2">
                                 <Package size={18} className="text-indigo-500" />
                                 <h3 className="text-[15px] font-extrabold text-gray-900 dark:text-white">
-                                    {status === "completed" ? "تایید و خروج کالا" : "لغو درخواست"}
+                                    {status === "completed" ? "تایید انباردار" : "لغو درخواست"}
                                 </h3>
                             </div>
                             <button
@@ -326,7 +326,7 @@ export default function WarehouseEmployeeOrderTaskStatusModal({
                                 ) : (
                                     <>
                                         <Check size={14} strokeWidth={3} />
-                                        {status === "completed" ? "تایید و ثبت خروج" : "ثبت لغو"}
+                                        {status === "completed" ? "ارسال برای تایید مدیر" : "ثبت لغو"}
                                     </>
                                 )}
                             </motion.button>

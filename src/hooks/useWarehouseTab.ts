@@ -37,6 +37,7 @@ export type WarehouseTab =
   | "stock"
   | "transactions"
   | "orders"
+  | "manager-approval"
   | "deadlines"
   | "ledger"
   | "categories"
@@ -51,6 +52,7 @@ export const WAREHOUSE_TABS: WarehouseTab[] = [
   "stock",
   "transactions",
   "orders",
+  "manager-approval",
   "deadlines",
   "ledger",
   "categories",
@@ -239,6 +241,16 @@ async function loadTab(args: LoadArgs): Promise<TabData> {
         warehouseId,
         { page },
       );
+      data.orderTasks = res.items;
+      setPaged(res);
+      break;
+    }
+
+    case "manager-approval": {
+      // سفارش‌های در انتظار تایید مدیر؛ فیلتر دسترسی سمت سرور انجام می‌شود
+      const res = await fetchPage<ApiOrderTask>(EP.orderTasksAwaitingManager, {
+        page,
+      });
       data.orderTasks = res.items;
       setPaged(res);
       break;

@@ -30,7 +30,23 @@ export const STOCK_OUT_REASON_OPTIONS: {
 
 export type WarehouseTaskStatus = "pending" | "in_progress" | "completed";
 
-export type OrderTaskStatus = "in_progress" | "completed" | "cancelled";
+export type OrderTaskStatus =
+  | "in_progress"
+  | "awaiting_manager"
+  | "completed"
+  | "cancelled";
+
+export const ORDER_TASK_STATUS_LABELS: Record<OrderTaskStatus, string> = {
+  in_progress: "در حال انجام",
+  awaiting_manager: "در انتظار تایید مدیر",
+  completed: "تکمیل‌شده",
+  cancelled: "لغو‌شده",
+};
+
+export interface ApiManagerRef {
+  id: number;
+  full_name: string;
+}
 
 export interface ApiCategory {
   id: number;
@@ -232,6 +248,9 @@ export interface ApiOrderTask {
   id: number;
   warehouse?: number | { id: number; name?: string } | null;
   warehouse_id?: number | null;
+  warehouse_name?: string;
+  warehouse_code?: string;
+  items?: ApiOrderTaskItem[];
   task: number;
   product: number;
   quantity: number;
@@ -253,6 +272,11 @@ export interface ApiOrderTask {
   performed_by: ApiOrderTaskPerformer | null;
   status: OrderTaskStatus;
   status_display: string;
+  warehouse_approved_at: string | null;
+  warehouse_approval_note: string | null;
+  manager_approved_by: ApiManagerRef | null;
+  manager_approved_at: string | null;
+  manager_note: string | null;
   deadline: string | null;
   attachments: ApiOrderTaskAttachment[];
   created_at: string;
@@ -348,6 +372,7 @@ export interface ApiOrderTaskItem {
     available_quantity: number | null;
     is_sufficient: boolean | null;
     completed_quantity: number;
+    approved_quantity: number | null;
     product_sale_price: string | number | null;
     status: string;
     status_display: string;
@@ -355,18 +380,4 @@ export interface ApiOrderTaskItem {
     stock_transaction_id: number | null;
     created_at: string;
     updated_at: string;
-}
-
-export interface ApiOrderTask {
-    id: number;
-    task: number;
-    warehouse_name: string;
-    warehouse_code: string;
-    items?: ApiOrderTaskItem[];
-    title: string;
-    description: string;
-    note: string | null;
-    file: string | null;
-    status_display: string;
-    created_at: string;
 }
