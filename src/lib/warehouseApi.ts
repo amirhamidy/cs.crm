@@ -603,6 +603,7 @@ export function apiErrorMessage(error: unknown, fallback: string): string {
 export interface ManagerDecisionPayload {
   note?: string;
   file?: File | null;
+  department_id?: number | null;
 }
 
 /** تایید مدیر: سفارش در وضعیت awaiting_manager به completed تبدیل می‌شود. */
@@ -610,6 +611,7 @@ export const approveOrderTaskByManager = (id: number, payload: ManagerDecisionPa
   const form = new FormData();
   if (payload.note?.trim()) form.append("note", payload.note.trim());
   if (payload.file) form.append("file", payload.file);
+  if (payload.department_id) form.append("department_id", String(payload.department_id));
   return axiosInstance.post(WAREHOUSE_ENDPOINTS.orderTaskManagerApprove(id), form);
 };
 

@@ -67,7 +67,7 @@ export default function QCOverview({ items, employees, onOpenItems, onOpenEmploy
                                 <ShieldCheck size={15} className="text-blue-500" />
                             </span>
                             <div>
-                                <h2 className="text-[13px] font-extrabold text-gray-900 dark:text-white">وضعیت کلی کنترل کیفی</h2>
+                                <h2 className="text-[13px] font-extrabold text-gray-900 dark:text-white">وضعیت کلی آزمایشگاه</h2>
                                 <p className="mt-0.5 text-[10.5px] font-semibold text-gray-400">خلاصه‌ی بررسی‌های ثبت‌شده</p>
                             </div>
                         </div>
@@ -101,7 +101,7 @@ export default function QCOverview({ items, employees, onOpenItems, onOpenEmploy
                         </button>
                         <button type="button" onClick={onOpenEmployees} className="flex h-9 flex-1 items-center justify-center gap-1.5 rounded-full bg-gray-100 text-[11.5px] font-extrabold text-gray-600 transition hover:bg-gray-200 dark:bg-white/[0.05] dark:text-gray-300 dark:hover:bg-white/[0.08]">
                             <Users size={13} />
-                            تیم کنترل کیفی
+                            تیم آزمایشگاه
                         </button>
                     </div>
                 </div>
@@ -112,7 +112,7 @@ export default function QCOverview({ items, employees, onOpenItems, onOpenEmploy
                             <Users size={15} className="text-emerald-500" />
                         </span>
                         <div>
-                            <h2 className="text-[13px] font-extrabold text-gray-900 dark:text-white">تیم کنترل کیفی</h2>
+                            <h2 className="text-[13px] font-extrabold text-gray-900 dark:text-white">تیم آزمایشگاه</h2>
                             <p className="mt-0.5 text-[10.5px] font-semibold text-gray-400">وضعیت فعلی نیروها</p>
                         </div>
                     </div>

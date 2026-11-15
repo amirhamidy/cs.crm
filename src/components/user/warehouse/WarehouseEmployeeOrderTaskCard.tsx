@@ -345,6 +345,11 @@ export default function WarehouseEmployeeOrderTaskCard({
                                             <p className="text-[11px] font-black text-gray-900 dark:text-white">
                                                 {formatQuantity(item.quantity)}
                                             </p>
+                                            {itemAny.approved_quantity != null && (
+                                                <p className="text-[9px] font-bold text-emerald-600">
+                                                    تاییدشده: {formatQuantity(itemAny.approved_quantity)}
+                                                </p>
+                                            )}
                                             {itemAny.display_status && (
                                                 <p className="text-[9px] font-semibold text-gray-400 dark:text-white/40">
                                                     {itemAny.display_status}
@@ -442,6 +447,16 @@ export default function WarehouseEmployeeOrderTaskCard({
                         )}
                     </div>
 
+                    {(orderTask.warehouse_approval_note || orderTask.manager_approved_by || orderTask.manager_note || orderTask.next_department_name) && (
+                        <div className="mt-2 space-y-1 rounded-xl bg-gray-50 px-3 py-2 text-[10.5px] font-bold text-gray-600 dark:bg-white/[0.03] dark:text-gray-300" dir="rtl">
+                            {orderTask.warehouse_approval_note && <p>توضیح انباردار: {orderTask.warehouse_approval_note}</p>}
+                            {orderTask.manager_approved_by && <p>تایید مدیر: {orderTask.manager_approved_by.full_name}</p>}
+                            {orderTask.manager_note && <p>توضیح مدیر: {orderTask.manager_note}</p>}
+                            {orderTask.next_department_name && (
+                                <p>دپارتمان مقصد: {orderTask.next_department_name}{orderTask.next_department_task ? ` (تسک #${orderTask.next_department_task})` : ""}</p>
+                            )}
+                        </div>
+                    )}
                     <div className="flex items-center gap-1.5">
                         {canAddItems && (
                             <motion.button

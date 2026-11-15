@@ -43,7 +43,7 @@ export default function PurchasingAccessGate({ children }: Props) {
 
                     <p className="mt-2 text-[11px] leading-6 text-gray-400">
                         {error ??
-                            "شما مجاز به مشاهده بخش فرآیند خرید نیستید. اگر فکر می‌کنید این یک خطا است، با مدیر سیستم تماس بگیرید."}
+                            "شما مجاز به مشاهده بخش فرایند تولید نیستید. اگر فکر می‌کنید این یک خطا است، با مدیر سیستم تماس بگیرید."}
                     </p>
                 </div>
             </div>

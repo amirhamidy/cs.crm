@@ -11,7 +11,7 @@ export default function QCEmployeeCard({ employee, index, onDeleted }: { employe
     const [loading, setLoading] = useState(false);
 
     async function remove() {
-        if (!confirm(`کاربر ${employee.username} از تیم کنترل کیفی حذف شود؟`)) return;
+        if (!confirm(`کاربر ${employee.username} از تیم آزمایشگاه حذف شود؟`)) return;
         setLoading(true);
         try {
             await axiosInstance.delete(`/quality_control/api/v1/employee/${employee.id}/delete/`);
@@ -54,7 +54,7 @@ export default function QCEmployeeCard({ employee, index, onDeleted }: { employe
                 className="mt-3 flex h-9 w-full items-center justify-center gap-2 rounded-full bg-red-50 text-[11.5px] font-extrabold text-red-500 transition hover:bg-red-100 disabled:opacity-40 dark:bg-red-500/10 dark:hover:bg-red-500/20"
             >
                 {loading ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
-                حذف از تیم کنترل کیفی
+                حذف از تیم آزمایشگاه
             </button>
         </motion.div>
     );

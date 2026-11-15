@@ -129,7 +129,7 @@ export default function StepFormModal({
                                         {isEditing ? "ویرایش مرحله" : "افزودن مرحله"}
                                     </h3>
                                     <p className="mt-0.5 text-[11px] text-gray-400">
-                                        تنظیم روند فرآیند خرید
+                                        تنظیم روند فرایند تولید
                                     </p>
                                 </div>
                             </div>

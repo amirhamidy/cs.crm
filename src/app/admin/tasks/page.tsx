@@ -18,6 +18,7 @@ import TaskCard from "@/components/customcomponents/tasks/TaskCard";
 import CreateTaskModal from "@/components/customcomponents/tasks/CreateTaskModal";
 import CreateNoCaseTaskModal from "@/components/customcomponents/tasks/CreateNoCaseTaskModal";
 import EditTaskModal from "@/components/customcomponents/tasks/EditTaskModal";
+import EditNoCaseTaskModal from "@/components/customcomponents/tasks/EditNoCaseTaskModal";
 
 const ACTIVE_STATUS = "in_progress" as TaskStatus;
 
@@ -275,9 +276,7 @@ function AdminTasksPageContent() {
             </AnimatePresence>
 
             <AnimatePresence>
-                {editingTask && (
-                    <EditTaskModal task={editingTask} departments={departments} onClose={() => setEditingTask(null)} onSuccess={handleEditSuccess} />
-                )}
+                {editingTask && (editingTask.case ? <EditTaskModal task={editingTask} departments={departments} onClose={() => setEditingTask(null)} onSuccess={handleEditSuccess} /> : <EditNoCaseTaskModal task={editingTask} departments={departments} onClose={() => setEditingTask(null)} onSuccess={handleEditSuccess} />)}
             </AnimatePresence>
         </div>
     );

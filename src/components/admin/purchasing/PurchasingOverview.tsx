@@ -120,7 +120,7 @@ export default function PurchasingOverview({
                                     فعالیت‌های اخیر
                                 </h3>
                                 <p className="mt-0.5 text-[10.5px] text-gray-400">
-                                    آخرین تغییرات فرآیند خرید
+                                    آخرین تغییرات فرایند تولید
                                 </p>
                             </div>
                         </div>

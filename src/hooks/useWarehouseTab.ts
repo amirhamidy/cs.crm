@@ -75,7 +75,7 @@ export interface TabData {
   staffList: ApiWarehouseStaff[];
   archived: ApiArchivedOrderTask[];
   taskArchive: ApiWarehouseTaskArchive[];
-  /** تعداد وظایف کنترل کیفیت در انتظار در تب وظایف */
+  /** تعداد وظایف آزمایشگاهت در انتظار در تب وظایف */
   pendingQualityCount: number;
   total: number;
   totalPages: number;
@@ -129,7 +129,7 @@ async function loadTab(args: LoadArgs): Promise<TabData> {
         task.assigned_to == null ||
         (employeeId != null && sameId(task.assigned_to, employeeId));
 
-  /** وظایف کنترل کیفیت در انتظار: فقط وظایف pending خوانده می‌شود (مجموعهٔ کوچک). */
+  /** وظایف آزمایشگاهت در انتظار: فقط وظایف pending خوانده می‌شود (مجموعهٔ کوچک). */
   const pendingQuality = async () =>
     (await cached(
       `warehouse-all:pending:${warehouseId}`,

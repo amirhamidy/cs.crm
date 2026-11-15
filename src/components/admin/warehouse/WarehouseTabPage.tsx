@@ -257,7 +257,7 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
         [products],
     );
 
-    // شمارندهٔ وظایف کنترل کیفیت در انتظار از کل انبار محاسبه می‌شود (نه فقط صفحهٔ جاری)
+    // شمارندهٔ وظایف آزمایشگاهت در انتظار از کل انبار محاسبه می‌شود (نه فقط صفحهٔ جاری)
     const pendingQualityCount = data.pendingQualityCount;
 
     const shelfFilterActive = tab === "products" && shelfCode !== "";
@@ -663,7 +663,7 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
                                 <div className={sectionHeaderClass}>
                                     <div>
                                         <h2 className={titleClass}>وظایف انبار</h2>
-                                        <p className={subtitleClass}>وظایف دریافت کالا و درخواست‌های کنترل کیفیت</p>
+                                        <p className={subtitleClass}>وظایف دریافت کالا و درخواست‌های آزمایشگاهت</p>
                                     </div>
 
                                     <div className="flex flex-wrap items-center gap-2">
@@ -677,7 +677,7 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
                                             >
                                                 <ShieldCheck size={15} />
                                                 <span className="text-[10.5px] font-extrabold">
-                                                    {pendingQualityCount} وظیفه کنترل کیفیت در انتظار
+                                                    {pendingQualityCount} وظیفه آزمایشگاهت در انتظار
                                                 </span>
                                             </div>
                                         )}

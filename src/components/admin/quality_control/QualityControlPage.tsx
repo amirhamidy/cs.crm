@@ -99,7 +99,7 @@ export default function QualityControlPage() {
             setEmployees(employeeList);
             setCounts(countList);
         } catch (err) {
-            setError(errorText(err, "دریافت اطلاعات کنترل کیفی انجام نشد"));
+            setError(errorText(err, "دریافت اطلاعات آزمایشگاه انجام نشد"));
         } finally {
             setLoading(false);
             setRefreshing(false);
@@ -172,7 +172,7 @@ export default function QualityControlPage() {
                         <ShieldCheck size={24} className="text-red-500" />
                     </div>
                     <h2 className="text-[14px] font-extrabold text-gray-900 dark:text-white">دسترسی مجاز نیست</h2>
-                    <p className="mt-1.5 text-[11px] font-semibold leading-5 text-gray-400">شما عضو تیم کنترل کیفی نیستید و دسترسی مدیر سیستم را نیز ندارید.</p>
+                    <p className="mt-1.5 text-[11px] font-semibold leading-5 text-gray-400">شما عضو تیم آزمایشگاه نیستید و دسترسی مدیر سیستم را نیز ندارید.</p>
                 </div>
             </div>
         );
@@ -191,8 +191,8 @@ export default function QualityControlPage() {
                             <ShieldCheck size={18} />
                         </div>
                         <div className="min-w-0">
-                            <h1 className="text-[15px] font-extrabold text-gray-900 dark:text-white">کنترل کیفی</h1>
-                            <p className="mt-0.5 truncate text-[10.5px] font-semibold text-gray-400">بررسی و تایید محصولات ارسال‌شده از فرآیند خرید</p>
+                            <h1 className="text-[15px] font-extrabold text-gray-900 dark:text-white">آزمایشگاه</h1>
+                            <p className="mt-0.5 truncate text-[10.5px] font-semibold text-gray-400">بررسی و تایید محصولات ارسال‌شده از فرایند تولید</p>
                         </div>
                     </div>
 
@@ -307,7 +307,7 @@ export default function QualityControlPage() {
             <QCDeleteModal
                 open={!!deleteTarget}
                 title={`حذف «${deleteTarget ? names[deleteTarget.username] || deleteTarget.username : ""}»`}
-                description="این عضو از تیم کنترل کیفی حذف می‌شود و دیگر نمی‌تواند کالایی را تایید یا رد کند."
+                description="این عضو از تیم آزمایشگاه حذف می‌شود و دیگر نمی‌تواند کالایی را تایید یا رد کند."
                 loading={deleting}
                 onConfirm={confirmDelete}
                 onCancel={() => setDeleteTarget(null)}

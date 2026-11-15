@@ -113,8 +113,8 @@ export default function PurchasingPage() {
     const deleteMeta = useMemo(() => {
         if (!deleteTarget) return { title: "", description: "" };
         if (deleteTarget.type === "step")
-            return { title: `حذف مرحله «${deleteTarget.step.title}»`, description: "این مرحله از فرآیند خرید حذف می‌شود." };
-        return { title: `حذف «${deleteTarget.employee.employee_name}» از تیم`, description: "این عضو از فرآیند خرید حذف می‌شود." };
+            return { title: `حذف مرحله «${deleteTarget.step.title}»`, description: "این مرحله از فرایند تولید حذف می‌شود." };
+        return { title: `حذف «${deleteTarget.employee.employee_name}» از تیم`, description: "این عضو از فرایند تولید حذف می‌شود." };
     }, [deleteTarget]);
 
     const confirmDelete = async () => {

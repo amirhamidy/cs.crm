@@ -79,7 +79,7 @@ export default function PurchasingStagesPanel({
                 <div className="flex min-w-0 items-center gap-2">
                     <div>
                         <h3 className="text-[13px] font-extrabold text-gray-900 dark:text-white">
-                            مراحل فرآیند خرید
+                            مراحل فرایند تولید
                         </h3>
                         <p className="mt-0.5 text-[9.5px] font-medium text-gray-400 dark:text-gray-500">
                             مراحل و وظایف فعال

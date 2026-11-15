@@ -375,7 +375,7 @@ export default function WarehouseEmployeeTaskCard({
                             {hasQualityControl && (
                                 <span className="inline-flex items-center gap-1 rounded-xl bg-violet-50 px-2 py-1 text-[10.5px] font-extrabold text-violet-600 dark:bg-violet-500/10 dark:text-violet-300">
                                     <ShieldCheck size={10} />
-                                    کنترل کیفیت
+                                    آزمایشگاهت
                                 </span>
                             )}
                         </div>

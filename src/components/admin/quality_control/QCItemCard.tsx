@@ -76,6 +76,8 @@ export default function QCItemCard({ item, index, reviewer, reviewerName, names,
                     <div className="mt-3 grid grid-cols-2 gap-2">
                         <Tile icon={UserRound} label="بررسی‌کننده">{checker}</Tile>
                         <Tile icon={Clock3} label="زمان بررسی">{formatDate(item.checked_at)}</Tile>
+                        {item.department_name && <Tile label="دپارتمان مقصد">{item.department_name}</Tile>}
+                        {item.department_task && <Tile label="تسک دپارتمان">#{toPersianDigits(item.department_task)}</Tile>}
                     </div>
 
                     {item.note && (

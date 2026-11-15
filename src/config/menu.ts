@@ -79,12 +79,12 @@ export const adminMenuItems: MenuItem[] = [
   },
   {
     icon: ShoppingCart,
-    label: "فرآیند تولید",
+    label: "فرایند تولید",
     href: "/admin/purchasing",
   },
   {
     icon: ShieldCheck,
-    label: "کنترل کیفی",
+    label: "آزمایشگاه",
     href: "/admin/qualityControl",
   },
   {
@@ -162,12 +162,12 @@ export const userMenuItems: MenuItem[] = [
   },
   {
     icon: ShoppingCart,
-    label: "فرآیند تولید",
+    label: "فرایند تولید",
     href: "/user/purchasing",
   },
   {
     icon: ShieldCheck,
-    label: "کنترل کیفی",
+    label: "آزمایشگاه",
     href: "/user/qualityControl",
   },
   {

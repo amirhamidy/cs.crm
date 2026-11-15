@@ -630,7 +630,7 @@ export default function PurchasingCreateTaskModal({
                                     </h3>
 
                                     <p className="mt-0.5 text-[11px] text-gray-400">
-                                        افزودن دستی کالا به فرآیند خرید
+                                        افزودن دستی کالا به فرایند تولید
                                     </p>
                                 </div>
                             </div>
@@ -805,7 +805,7 @@ export default function PurchasingCreateTaskModal({
                                                 (step) => ({
                                                     id: step.id,
                                                     label: `مرحله ${step.order} · ${step.title}`,
-                                                    sub: "شروع فرآیند خرید از این مرحله",
+                                                    sub: "شروع فرایند تولید از این مرحله",
                                                 })
                                             )}
                                             value={

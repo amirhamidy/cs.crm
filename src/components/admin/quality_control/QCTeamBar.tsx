@@ -24,7 +24,7 @@ export default function QCTeamBar({ employees, names, canManage, onAdd, onDelete
                     </span>
                     <div>
                         <div className="flex items-center gap-2">
-                            <h2 className="text-[13px] font-extrabold text-gray-900 dark:text-white">تیم کنترل کیفی</h2>
+                            <h2 className="text-[13px] font-extrabold text-gray-900 dark:text-white">تیم آزمایشگاه</h2>
                             <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-blue-50 px-1.5 text-[9.5px] font-extrabold text-blue-500 dark:bg-blue-500/10 dark:text-blue-400">
                                 {toPersianDigits(employees.length)}
                             </span>

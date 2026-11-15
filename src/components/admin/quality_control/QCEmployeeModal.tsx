@@ -94,7 +94,7 @@ export default function QCEmployeeModal({ isOpen, existingEmployees, names, onCl
                                     <UserPlus size={15} className="text-blue-500" />
                                 </div>
                                 <div>
-                                    <h2 className="text-[14px] font-extrabold text-gray-900 dark:text-white">افزودن عضو کنترل کیفی</h2>
+                                    <h2 className="text-[14px] font-extrabold text-gray-900 dark:text-white">افزودن عضو آزمایشگاه</h2>
                                     <p className="mt-0.5 text-[11px] text-gray-400">کاربر موردنظر را به تیم اضافه کنید</p>
                                 </div>
                             </div>

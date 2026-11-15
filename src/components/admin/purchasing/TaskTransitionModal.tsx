@@ -60,7 +60,7 @@ export default function TaskTransitionModal({ isOpen, onClose, mode, task, onCom
 
     const handleSubmit = async () => {
         if (accessLoading) return setError("در حال بررسی دسترسی، لطفاً صبر کنید.");
-        if (!currentPurchasingId || !Number.isFinite(currentPurchasingId)) return setError("شناسه شما در فرآیند خرید یافت نشد. لطفاً صفحه را رفرش کنید.");
+        if (!currentPurchasingId || !Number.isFinite(currentPurchasingId)) return setError("شناسه شما در فرایند تولید یافت نشد. لطفاً صفحه را رفرش کنید.");
         if (!isAdmin && (!isEmployee || !hasAccess)) return setError("شما مجاز به انجام این عملیات نیستید.");
 
         setSubmitting(true);

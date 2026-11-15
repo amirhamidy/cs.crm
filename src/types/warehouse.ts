@@ -277,6 +277,9 @@ export interface ApiOrderTask {
   manager_approved_by: ApiManagerRef | null;
   manager_approved_at: string | null;
   manager_note: string | null;
+  next_department?: number | null;
+  next_department_name?: string | null;
+  next_department_task?: number | null;
   deadline: string | null;
   attachments: ApiOrderTaskAttachment[];
   created_at: string;

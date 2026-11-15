@@ -6,6 +6,7 @@ import { AlertCircle, CheckCircle2, Loader2, Upload, X, XCircle } from "lucide-r
 import axiosInstance from "@/lib/axiosInstance";
 import type { AxiosError } from "axios";
 import type { ApiQualityControlEmployee, ApiQualityControlItem, QualityControlActionResponse } from "@/types/quality_control";
+import { NiceSelect } from "@/components/admin/production/shared";
 import { departmentsApi, type DepartmentChoice } from "@/lib/api/departments";
 
 interface Props {
@@ -71,7 +72,7 @@ export default function QCActionModal({ isOpen, mode, item, reviewer, reviewerNa
 
     async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
         event.preventDefault();
-        if (!reviewer) return setError("کاربر فعلی عضو فعال تیم کنترل کیفی نیست");
+        if (!reviewer) return setError("کاربر فعلی عضو فعال تیم آزمایشگاه نیست");
         if (isApprove && !departmentId) return setError("انتخاب دپارتمان الزامی است");
         setLoading(true);
         setError("");
@@ -126,7 +127,7 @@ export default function QCActionModal({ isOpen, mode, item, reviewer, reviewerNa
                                     <Icon size={15} className={tone.icon} />
                                 </div>
                                 <div className="min-w-0">
-                                    <h3 className="text-[14px] font-extrabold text-gray-900 dark:text-white">{isApprove ? "تایید کنترل کیفی" : "رد کنترل کیفی"}</h3>
+                                    <h3 className="text-[14px] font-extrabold text-gray-900 dark:text-white">{isApprove ? "تایید آزمایشگاه" : "رد آزمایشگاه"}</h3>
                                     <p className="mt-0.5 truncate text-[11px] text-gray-400">{item.product_name}</p>
                                 </div>
                             </div>
@@ -153,25 +154,22 @@ export default function QCActionModal({ isOpen, mode, item, reviewer, reviewerNa
                                             {(shownName || "؟").charAt(0)}
                                         </span>
                                         <span className="truncate text-[12.5px] font-bold text-gray-900 dark:text-white">
-                                            {reviewer ? shownName : "کارمند کنترل کیفی فعال یافت نشد"}
+                                            {reviewer ? shownName : "کارمند آزمایشگاه فعال یافت نشد"}
                                         </span>
                                     </div>
                                 </div>
 
                                 {isApprove && (
                                     <div>
-                                        <label className="mb-2 block text-[11.5px] font-bold text-gray-400">دپارتمان مقصد</label>
-                                        <select
-                                            value={departmentId}
-                                            onChange={(e) => setDepartmentId(e.target.value)}
-                                            disabled={loadingDepartments}
-                                            className="h-[52px] w-full rounded-2xl border border-gray-100 bg-gray-50 px-3.5 text-[12.5px] font-bold text-gray-900 outline-none focus:border-blue-500 disabled:opacity-50 dark:border-white/[0.06] dark:bg-white/[0.03] dark:text-white"
-                                        >
-                                            <option value="">{loadingDepartments ? "در حال بارگذاری..." : "انتخاب دپارتمان"}</option>
-                                            {selectableDepartments.map((d) => (
-                                                <option key={d.id} value={d.id}>{d.name}</option>
-                                            ))}
-                                        </select>
+                                        <NiceSelect
+                                            label="دپارتمان مقصد"
+                                            options={selectableDepartments.map((d) => ({ id: Number(d.id), label: d.name }))}
+                                            value={departmentId ? Number(departmentId) : null}
+                                            onChange={(id) => setDepartmentId(id ? String(id) : "")}
+                                            placeholder="انتخاب دپارتمان"
+                                            emptyText="دپارتمانی یافت نشد"
+                                            loading={loadingDepartments}
+                                        />
                                         {!loadingDepartments && selectableDepartments.length === 0 && (
                                             <p className="mt-2 text-[11px] text-amber-500">دپارتمانی با مرحله و مدیر فعال یافت نشد</p>
                                         )}

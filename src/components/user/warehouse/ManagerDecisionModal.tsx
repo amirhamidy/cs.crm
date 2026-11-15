@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { AlertCircle, CheckCircle2, Loader2, X, XCircle } from "lucide-react";
 import {
@@ -8,6 +8,8 @@ import {
     apiErrorMessage,
     rejectOrderTaskByManager,
 } from "@/lib/warehouseApi";
+import { NiceSelect } from "@/components/admin/production/shared";
+import { departmentsApi, type DepartmentChoice } from "@/lib/api/departments";
 import type { ApiOrderTask } from "@/types/warehouse";
 
 interface Props {
@@ -19,6 +21,14 @@ interface Props {
 
 export default function ManagerDecisionModal({ action, orderTask, onClose, onSuccess }: Props) {
     const [note, setNote] = useState("");
+    const [file, setFile] = useState<File | null>(null);
+    const [departments, setDepartments] = useState<DepartmentChoice[]>([]);
+    const [departmentId, setDepartmentId] = useState<number | null>(null);
+    const [loadingDeps, setLoadingDeps] = useState(false);
+    const selectable = useMemo(
+        () => departments.filter((d) => d.has_steps && d.has_manager),
+        [departments],
+    );
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState("");
     const isApprove = action === "approve";
@@ -27,7 +37,21 @@ export default function ManagerDecisionModal({ action, orderTask, onClose, onSuc
     useEffect(() => {
         if (isOpen) {
             setNote("");
+            setFile(null);
             setError("");
+            setDepartmentId(null);
+            if (isApprove) {
+                let cancelled = false;
+                setLoadingDeps(true);
+                departmentsApi
+                    .choices()
+                    .then((l) => !cancelled && setDepartments(l))
+                    .catch(() => {})
+                    .finally(() => !cancelled && setLoadingDeps(false));
+                return () => {
+                    cancelled = true;
+                };
+            }
         }
     }, [isOpen, orderTask.id]);
 
@@ -44,7 +68,7 @@ export default function ManagerDecisionModal({ action, orderTask, onClose, onSuc
         setError("");
         try {
             if (isApprove) {
-                await approveOrderTaskByManager(orderTask.id, { note });
+                await approveOrderTaskByManager(orderTask.id, { note, file: file ?? undefined, department_id: departmentId });
             } else {
                 await rejectOrderTaskByManager(orderTask.id, note);
             }
@@ -110,6 +134,28 @@ export default function ManagerDecisionModal({ action, orderTask, onClose, onSuc
                             placeholder={isApprove ? "توضیحات (اختیاری)" : "دلیل رد را وارد کنید..."}
                             className="w-full resize-none rounded-2xl border border-gray-100 bg-gray-50 p-3.5 text-[12.5px] font-bold text-gray-900 outline-none focus:border-blue-500 dark:border-white/[0.06] dark:bg-white/[0.03] dark:text-white"
                         />
+
+                        {isApprove && (
+                            <div className="mt-3">
+                                <NiceSelect
+                                    label="دپارتمان مقصد (اختیاری)"
+                                    options={selectable.map((d) => ({ id: Number(d.id), label: d.name }))}
+                                    value={departmentId}
+                                    onChange={(id) => setDepartmentId(id ? Number(id) : null)}
+                                    placeholder="بدون انتخاب دپارتمان"
+                                    emptyText="دپارتمانی یافت نشد"
+                                    loading={loadingDeps}
+                                />
+                            </div>
+                        )}
+
+                        {isApprove && (
+                            <input
+                                type="file"
+                                onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+                                className="mt-3 block w-full text-[11.5px] text-gray-600 file:ml-3 file:rounded-xl file:border-0 file:bg-indigo-500/10 file:px-3 file:py-2 file:text-[11.5px] file:font-bold file:text-indigo-600 dark:text-gray-300"
+                            />
+                        )}
 
                         <div className="mt-5 flex gap-2">
                             <button type="button" onClick={close} disabled={submitting} className="h-11 flex-1 rounded-full bg-gray-100 text-[13px] font-bold text-gray-600 dark:bg-white/[0.05] dark:text-gray-300">

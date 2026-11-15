@@ -40,7 +40,7 @@ export default function PurchasingEmployeesBar({ employees, canManage, onAdd, on
                                 {toPersianDigits(employees.length)}
                             </span>
                         </div>
-                        <p className="mt-0.5 text-[10.5px] font-semibold text-gray-400">اعضای مجاز به مدیریت فرآیند خرید</p>
+                        <p className="mt-0.5 text-[10.5px] font-semibold text-gray-400">اعضای مجاز به مدیریت فرایند تولید</p>
                     </div>
                 </div>
 

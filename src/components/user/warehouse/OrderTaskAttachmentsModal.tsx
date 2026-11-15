@@ -139,7 +139,7 @@ export default function OrderTaskAttachmentsModal({
                                     </div>
 
                                     <div className="flex shrink-0 items-center gap-1">
-                                        <a
+                                        {item.file && <a
                                             href={resolveMediaUrl(item.file)}
                                             target="_blank"
                                             rel="noreferrer"
@@ -147,7 +147,7 @@ export default function OrderTaskAttachmentsModal({
                                             className="flex h-8 w-8 items-center justify-center rounded-xl text-indigo-500 hover:bg-indigo-500/10"
                                         >
                                             <ExternalLink size={14} />
-                                        </a>
+                                        </a>}
                                         {canManage && (
                                             <button
                                                 type="button"

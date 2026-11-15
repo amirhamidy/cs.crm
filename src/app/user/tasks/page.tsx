@@ -16,6 +16,7 @@ import TaskCard from "@/components/user/tasks/TaskCardx";
 import CreateTaskModal from "@/components/user/tasks/CreateTaskModal";
 import CreateNoCaseTaskModal from "@/components/customcomponents/tasks/CreateNoCaseTaskModal";
 import EditTaskModal from "@/components/user/tasks/EditTaskModal";
+import EditNoCaseTaskModal from "@/components/user/tasks/EditNoCaseTaskModal";
 
 const ACTIVE_STATUS = "in_progress" as TaskStatus;
 
@@ -136,7 +137,7 @@ export default function UserTasksPage() {
                 {showCreateNoCase && <CreateNoCaseTaskModal isOpen={showCreateNoCase} onClose={() => setShowCreateNoCase(false)} onSuccess={handleCreateNoCaseSuccess} />}
             </AnimatePresence>
             <AnimatePresence>
-                {editingTask && <EditTaskModal task={editingTask} departments={departments} onClose={() => setEditingTask(null)} onSuccess={handleEditSuccess} />}
+                {editingTask && (editingTask.case ? <EditTaskModal task={editingTask} departments={departments} onClose={() => setEditingTask(null)} onSuccess={handleEditSuccess} /> : <EditNoCaseTaskModal task={editingTask} departments={departments} onClose={() => setEditingTask(null)} onSuccess={handleEditSuccess} />)}
             </AnimatePresence>
         </div>
     );
