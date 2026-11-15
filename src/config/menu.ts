@@ -33,6 +33,21 @@ export const adminMenuItems: MenuItem[] = [
     href: "/admin/dashboard",
   },
   {
+    icon: Users,
+    label: "کاربران",
+    href: "/admin/users",
+  },
+  {
+    icon: Building2,
+    label: "دپارتمان‌ها",
+    href: "/admin/departments",
+  },
+  {
+    icon: UserRound,
+    label: "مشتری",
+    href: "/admin/customer",
+  },
+  {
     icon: FolderKanban,
     label: "پرونده‌ها",
     href: "/admin/cases",
@@ -43,34 +58,24 @@ export const adminMenuItems: MenuItem[] = [
     href: "/admin/tasks",
   },
   {
-    icon: Archive,
-    label: "بایگانی وظایف",
-    href: "/admin/archive",
-  },
-  {
     icon: ClipboardList,
     label: "وظایف تکرارشونده",
     href: "/admin/taskroutine",
   },
   {
-    icon: MessageSquareText,
-    label: "تیکت به کاربران",
-    href: "/admin/staffConversation",
-  },
-  {
     icon: Archive,
-    label: "بایگانی تیکت‌ها",
-    href: "/admin/Ticketarchive",
-  },
-  {
-    icon: UserRound,
-    label: "مشتری",
-    href: "/admin/customer",
+    label: "بایگانی وظایف",
+    href: "/admin/archive",
   },
   {
     icon: Boxes,
     label: "انبار",
     href: "/admin/warehouse",
+  },
+  {
+    icon: Factory,
+    label: "تولید",
+    href: "/admin/production/dashboard",
   },
   {
     icon: ShoppingCart,
@@ -88,29 +93,24 @@ export const adminMenuItems: MenuItem[] = [
     href: "/admin/human-resources",
   },
   {
+    icon: MessageSquareText,
+    label: "تیکت به کاربران",
+    href: "/admin/staffConversation",
+  },
+  {
+    icon: Archive,
+    label: "بایگانی تیکت‌ها",
+    href: "/admin/Ticketarchive",
+  },
+  {
     icon: Users,
     label: "صورت جلسه",
     href: "/admin/minutes/",
   },
   {
-    icon: Building2,
-    label: "دپارتمان‌ها",
-    href: "/admin/departments",
-  },
-  {
-    icon: Users,
-    label: "کاربران",
-    href: "/admin/users",
-  },
-  {
     icon: BarChart3,
     label: "آمار و عملکرد",
     href: "/admin/performance",
-  },
-  {
-    icon: Factory,
-    label: "تولید",
-    href: "/admin/production/dashboard",
   },
   {
     icon: CalendarCheck2,
@@ -126,6 +126,11 @@ export const userMenuItems: MenuItem[] = [
     href: "/user/dashboard",
   },
   {
+    icon: UserRound,
+    label: "مشتری",
+    href: "/user/customer",
+  },
+  {
     icon: FolderKanban,
     label: "پرونده‌ها",
     href: "/user/cases",
@@ -134,11 +139,6 @@ export const userMenuItems: MenuItem[] = [
     icon: ListTodo,
     label: "وظایف",
     href: "/user/processes",
-  },
-  {
-    icon: Archive,
-    label: "بایگانی وظایف",
-    href: "/user/archive",
   },
   {
     icon: ClipboardList,
@@ -151,24 +151,9 @@ export const userMenuItems: MenuItem[] = [
     href: "/user/taskroutine",
   },
   {
-    icon: Ticket,
-    label: "تیکت ارسال شده",
-    href: "/user/Ticketsent",
-  },
-  {
-    icon: Ticket,
-    label: "تیکت دریافت شده",
-    href: "/user/Ticketreceipt",
-  },
-  {
     icon: Archive,
-    label: "صورت جلسه",
-    href: "/user/minutes/",
-  },
-  {
-    icon: UserRound,
-    label: "مشتری",
-    href: "/user/customer",
+    label: "بایگانی وظایف",
+    href: "/user/archive",
   },
   {
     icon: Boxes,
@@ -184,6 +169,21 @@ export const userMenuItems: MenuItem[] = [
     icon: ShieldCheck,
     label: "کنترل کیفی",
     href: "/user/qualityControl",
+  },
+  {
+    icon: Ticket,
+    label: "تیکت ارسال شده",
+    href: "/user/Ticketsent",
+  },
+  {
+    icon: Ticket,
+    label: "تیکت دریافت شده",
+    href: "/user/Ticketreceipt",
+  },
+  {
+    icon: Archive,
+    label: "صورت جلسه",
+    href: "/user/minutes/",
   },
   {
     icon: CalendarCheck2,
