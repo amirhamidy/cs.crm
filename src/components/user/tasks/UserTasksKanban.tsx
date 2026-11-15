@@ -8,6 +8,7 @@ import { FreeMode } from "swiper/modules";
 import "swiper/css";
 import "swiper/css/free-mode";
 import { tasksApi, departmentsApi, accountsApi } from "@/lib/api";
+import { listAll } from "@/lib/api/_core";
 import TaskCardSwiper from "./TaskCardSwiper";
 import type { UserTask, UserStage, EmployeeAPIItem, DepartmentAPIItem, DepartmentEmployeeAPIItem } from "./types";
 import { useCurrentEmployee } from "@/hooks/usecurrentemployee";
@@ -142,7 +143,8 @@ export default function UserTasksKanban() {
         let cancelled = false;
         setLoading(true);
 
-        tasksApi.listAll()
+        // فیلتر status سمت سرور؛ فیلتر کلاینتی پایین به‌عنوان پشتیبان باقی می‌ماند
+        listAll<UserTask>("/tasks/api/v1/tasks/", { status: "in_progress" })
             .then(async (res) => {
                 if (cancelled) return;
 

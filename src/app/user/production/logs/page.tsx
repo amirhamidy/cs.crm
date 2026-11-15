@@ -1,5 +1,6 @@
 "use client";
 
+import SearchInput from "@/components/ui/SearchInput";
 import TimePicker from "@/components/TimePicker";
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -10,6 +11,9 @@ import {
 import { useTheme } from "next-themes";
 import axiosInstance from "@/lib/axiosInstance";
 import { listAll } from "@/lib/api";
+import { fetchPage } from "@/lib/api/_core";
+import { usePaginatedList } from "@/hooks/usePaginatedList";
+import Pagination from "@/components/ui/Pagination";
 import { useCurrentEmployee } from "@/hooks/usecurrentemployee";
 import { toPersianDigits } from "@/lib/jalali";
 import { calcHoursWorked, formatHoursWorked, toHHMM } from "@/lib/productionTime";
@@ -38,9 +42,13 @@ export default function UserProductionLogsPage() {
   const isDark = resolvedTheme === "dark";
   const { employeeId } = useCurrentEmployee();
 
-  const [logs, setLogs] = useState<ProductionLog[]>([]);
+  const list = usePaginatedList<ProductionLog>(
+    (params, signal) => fetchPage<ProductionLog>("/production/api/v1/log/", params as never, signal as never),
+    { pageSize: 20, scrollTop: true }
+  );
+  const logs = list.data;
   const [machines, setMachines] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const loading = list.loading;
 
   // Modal
   const [showModal, setShowModal] = useState(false);
@@ -54,24 +62,9 @@ export default function UserProductionLogsPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
-  const fetchData = async () => {
-    try {
-      setLoading(true);
-      const [allLogs, allMachines] = await Promise.all([
-        listAll<ProductionLog>("/production/api/v1/log/"),
-        listAll<any>("/production/api/v1/machine/", { is_active: true }),
-      ]);
-      setLogs(allLogs);
-      setMachines(allMachines);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  const fetchData = () => list.refetch();
   useEffect(() => {
-    fetchData();
+    listAll<any>("/production/api/v1/machine/", { is_active: true }).then(setMachines).catch(console.error);
   }, []);
 
   const handleCreate = async () => {
@@ -139,6 +132,8 @@ export default function UserProductionLogsPage() {
             <p className="text-xs text-gray-400 mt-0.5">ثبت ساعت کارکرد، مقدار تولید واقعی و ضایعات</p>
           </div>
         </div>
+
+        <SearchInput value={list.search} onChange={list.setSearch} placeholder="جستجوی سوابق..." className="mx-4 w-full max-w-xs" />
 
         <button
           type="button"
@@ -221,6 +216,7 @@ export default function UserProductionLogsPage() {
               </tbody>
             </table>
           </div>
+          {list.totalPages > 1 && <Pagination page={list.page} totalPages={list.totalPages} onChange={list.setPage} />}
         </div>
       )}
 

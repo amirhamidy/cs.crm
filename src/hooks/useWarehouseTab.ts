@@ -5,17 +5,16 @@ import {
   PAGE_SIZE,
   PRODUCTS_PAGE_SIZE,
   WAREHOUSE_ENDPOINTS as EP,
-  fetchAll,
+  fetchAllCached,
   fetchNewest,
   fetchPage,
   fetchWarehousePage,
   fetchWarehouseProductsPage,
   fetchStocksForProducts,
-  fetchWarehouseStocks,
   warehouseParams,
 } from "@/lib/warehouseApi";
-import { cached } from "@/lib/api/_core";
 import { listAllByStatus } from "@/lib/api";
+import { cached } from "@/lib/api/_core";
 import { paginate, sameId } from "@/utils/warehouseEmployee";
 import type {
   ApiArchivedOrderTask,
@@ -31,7 +30,6 @@ import type {
 } from "@/types/warehouse";
 
 export type WarehouseTab =
-  | "overview"
   | "products"
   | "tasks"
   | "stock"
@@ -46,7 +44,6 @@ export type WarehouseTab =
   | "task-archive";
 
 export const WAREHOUSE_TABS: WarehouseTab[] = [
-  "overview",
   "products",
   "tasks",
   "stock",
@@ -78,7 +75,7 @@ export interface TabData {
   staffList: ApiWarehouseStaff[];
   archived: ApiArchivedOrderTask[];
   taskArchive: ApiWarehouseTaskArchive[];
-  /** تعداد وظایف کنترل کیفیت در انتظار (تب وظایف و نمای کلی) */
+  /** تعداد وظایف کنترل کیفیت در انتظار در تب وظایف */
   pendingQualityCount: number;
   total: number;
   totalPages: number;
@@ -108,13 +105,15 @@ interface LoadArgs {
   employeeId: number | string | null;
   /** فقط برای تب محصولات: فیلتر قفسه (سمت سرور) */
   shelfCode?: string;
+  /** جستجوی سمت سرور */
+  search?: string;
 }
 
 const byNewestId = <T extends { id: number }>(items: T[]): T[] =>
   [...items].sort((x, y) => y.id - x.id);
 
 async function loadTab(args: LoadArgs): Promise<TabData> {
-  const { tab, warehouseId, page, hasFullAccess, employeeId, shelfCode } = args;
+  const { tab, warehouseId, page, hasFullAccess, employeeId, shelfCode, search } = args;
   const data: TabData = { ...EMPTY_TAB_DATA };
   const wp = warehouseParams(warehouseId);
 
@@ -132,59 +131,38 @@ async function loadTab(args: LoadArgs): Promise<TabData> {
 
   /** وظایف کنترل کیفیت در انتظار: فقط وظایف pending خوانده می‌شود (مجموعهٔ کوچک). */
   const pendingQuality = async () =>
-    (await listAllByStatus<ApiWarehouseTask>(EP.tasks, "pending", wp)).filter(
+    (await cached(
+      `warehouse-all:pending:${warehouseId}`,
+      () => listAllByStatus<ApiWarehouseTask>(EP.tasks, "pending", { ...wp }),
+      15_000,
+    )).filter(
       (task) =>
         task.quality_control_id != null &&
         (taskFilter ? taskFilter(task) : true),
     ).length;
 
   if (tab === "categories") {
-    const res = await fetchPage<ApiCategory>(EP.categories, { page });
+    const res = await fetchPage<ApiCategory>(EP.categories, { page, search });
     data.categories = res.items;
     setPaged(res);
     return data;
   }
 
   if (tab === "staff") {
-    const res = await fetchPage<ApiWarehouseStaff>(EP.staff, { page });
+    const res = await fetchPage<ApiWarehouseStaff>(EP.staff, { page, search });
     data.staffList = res.items;
     setPaged(res);
     return data;
   }
 
   switch (tab) {
-    case "overview": {
-      // موجودی و محصولات برای آمار کلی لازم‌اند؛ کش کوتاه‌مدت از خواندن مجدد در هر ورود جلوگیری می‌کند
-      const [stocks, products] = await Promise.all([
-        cached(`wh:${warehouseId}:stocks`, () => fetchWarehouseStocks(warehouseId), 30_000),
-        cached(`wh:${warehouseId}:products`, () => fetchAll<ApiProduct>(EP.products, wp), 30_000),
-      ]);
-
-      const [tasks, orderTasks, transactions, pending] = await Promise.all([
-        fetchAll<ApiWarehouseTask>(EP.tasks, wp),
-        // فقط سفارش‌های اخیر لازم است (۲۰ مورد فعال نمایش داده می‌شود)
-        fetchNewest<ApiOrderTask>(EP.orderTasks, wp, 60),
-        fetchNewest<ApiStockTransaction>(EP.transactions, wp, 20),
-        pendingQuality(),
-      ]);
-
-      Object.assign(data, {
-        products,
-        stockInfos: stocks,
-        transactions,
-        tasks: tasks.filter((t) => (taskFilter ? taskFilter(t) : true)),
-        orderTasks,
-        pendingQualityCount: pending,
-      });
-      break;
-    }
-
     case "products": {
       const [categories, res] = await Promise.all([
-        fetchAll<ApiCategory>(EP.categories),
+        fetchAllCached<ApiCategory>(EP.categories),
         fetchWarehouseProductsPage(warehouseId, {
           page,
           shelfCode,
+          search,
           pageSize: PRODUCTS_PAGE_SIZE,
         }),
       ]);
@@ -203,6 +181,7 @@ async function loadTab(args: LoadArgs): Promise<TabData> {
       const [res, pending] = await Promise.all([
         fetchWarehousePage<ApiWarehouseTask>(EP.tasks, warehouseId, {
           page,
+          search,
           clientFilter: taskFilter,
         }),
         pendingQuality(),
@@ -217,6 +196,7 @@ async function loadTab(args: LoadArgs): Promise<TabData> {
     case "stock": {
       const res = await fetchWarehousePage<ApiStockInfo>(EP.stock, warehouseId, {
         page,
+        search,
       });
       data.stockInfos = res.items;
       setPaged(res);
@@ -227,7 +207,7 @@ async function loadTab(args: LoadArgs): Promise<TabData> {
       const res = await fetchWarehousePage<ApiStockTransaction>(
         EP.transactions,
         warehouseId,
-        { page },
+        { page, search },
       );
       data.transactions = res.items;
       setPaged(res);
@@ -239,7 +219,7 @@ async function loadTab(args: LoadArgs): Promise<TabData> {
       const res = await fetchWarehousePage<ApiOrderTask>(
         EP.orderTasks,
         warehouseId,
-        { page },
+        { page, search },
       );
       data.orderTasks = res.items;
       setPaged(res);
@@ -258,10 +238,12 @@ async function loadTab(args: LoadArgs): Promise<TabData> {
 
     case "deadlines": {
       // فقط یک صفحهٔ مهلت‌ها (فیلتر انبار سمت سرور) + سفارش‌های همان انبار برای عنوان کارت‌ها
+      // لیست سفارش‌ها فقط برای عنوان کارت است؛ بین صفحات کش می‌شود تا با هر تغییر صفحه دوباره درخواست نخورد
       const [orderTasks, res] = await Promise.all([
-        fetchNewest<ApiOrderTask>(EP.orderTasks, wp, 100),
+        cachedNewest<ApiOrderTask>(EP.orderTasks, wp, 100),
         fetchPage<ApiOrderTaskDeadline>(EP.deadlines, {
           page,
+          search,
           params: { order_task__warehouse: warehouseId },
         }),
       ]);
@@ -275,7 +257,7 @@ async function loadTab(args: LoadArgs): Promise<TabData> {
       const res = await fetchWarehousePage<ApiWarehouseTaskArchive>(
         EP.taskArchive,
         warehouseId,
-        { page },
+        { page, search },
       );
       data.taskArchive = res.items;
       setPaged(res);
@@ -286,7 +268,7 @@ async function loadTab(args: LoadArgs): Promise<TabData> {
       const res = await fetchWarehousePage<ApiArchivedOrderTask>(
         EP.archive,
         warehouseId,
-        { page },
+        { page, search },
       );
       data.archived = res.items;
       setPaged(res);
@@ -301,8 +283,16 @@ async function loadTab(args: LoadArgs): Promise<TabData> {
   return data;
 }
 
+const cachedNewest = <T extends { id: number; created_at?: string | null }>(
+  url: string,
+  params: Record<string, unknown>,
+  limit: number,
+) =>
+  cached(`warehouse-all:newest:${url}:${JSON.stringify(params)}:${limit}`, () =>
+    fetchNewest<T>(url, params as never, limit), 30_000);
+
 export default function useWarehouseTab(args: LoadArgs & { enabled: boolean }) {
-  const { enabled, tab, warehouseId, page, hasFullAccess, employeeId, shelfCode } =
+  const { enabled, tab, warehouseId, page, hasFullAccess, employeeId, shelfCode, search } =
     args;
 
   const [data, setData] = useState<TabData>(EMPTY_TAB_DATA);
@@ -328,6 +318,7 @@ export default function useWarehouseTab(args: LoadArgs & { enabled: boolean }) {
           hasFullAccess,
           employeeId,
           shelfCode,
+          search,
         });
         if (id === requestId.current) setData(next);
       } catch {
@@ -342,7 +333,7 @@ export default function useWarehouseTab(args: LoadArgs & { enabled: boolean }) {
         }
       }
     },
-    [enabled, tab, warehouseId, page, hasFullAccess, employeeId, shelfCode],
+    [enabled, tab, warehouseId, page, hasFullAccess, employeeId, shelfCode, search],
   );
 
   useEffect(() => {

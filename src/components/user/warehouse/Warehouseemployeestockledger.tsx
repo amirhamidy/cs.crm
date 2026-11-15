@@ -18,13 +18,12 @@ import {
 import {
     formatDate,
     formatNumber,
-    paginate,
     PAGE_SIZE,
 } from "@/utils/warehouseEmployee";
 import Pagination from "@/components/ui/Pagination";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import {
-    fetchProductTransactions,
+    fetchProductTransactionsPage,
     fetchWarehouseProductsPage,
     fetchWarehouseStocks,
 } from "@/lib/warehouseApi";
@@ -67,6 +66,11 @@ interface Transaction {
 }
 
 type EventKind = "initial" | "in" | "out";
+const KIND_TO_TYPE: Record<EventKind, string> = {
+    initial: "initial",
+    in: "stock_in",
+    out: "stock_out",
+};
 
 interface LedgerEvent {
     id: string;
@@ -207,6 +211,7 @@ export default function WarehouseEmployeeStockLedger({
     const [stocks, setStocks] = useState<ApiStockInfo[]>([]);
     const [stocksLoaded, setStocksLoaded] = useState(false);
     const [transactions, setTransactions] = useState<Transaction[]>([]);
+    const [txTotalPages, setTxTotalPages] = useState(1);
     const [txLoading, setTxLoading] = useState(false);
     const [txError, setTxError] = useState(false);
 
@@ -287,10 +292,16 @@ export default function WarehouseEmployeeStockLedger({
         setTxLoading(true);
         setTxError(false);
 
-        fetchProductTransactions(warehouseId, selectedProductId, controller.signal)
-            .then((rows) => {
+        fetchProductTransactionsPage(warehouseId, selectedProductId, {
+            page: currentPage,
+            pageSize: PAGE_SIZE,
+            type: kindFilter === "all" ? undefined : KIND_TO_TYPE[kindFilter],
+            signal: controller.signal,
+        })
+            .then((res) => {
                 if (!controller.signal.aborted) {
-                    setTransactions(rows as unknown as Transaction[]);
+                    setTransactions(res.items as unknown as Transaction[]);
+                    setTxTotalPages(res.totalPages);
                 }
             })
             .catch(() => {
@@ -303,7 +314,7 @@ export default function WarehouseEmployeeStockLedger({
             });
 
         return () => controller.abort();
-    }, [warehouseId, selectedProductId]);
+    }, [warehouseId, selectedProductId, currentPage, kindFilter]);
 
     const stockByProduct = useMemo(
         () => new Map<number, StockInfo>(stocks.map((s) => [s.product, s])),
@@ -365,10 +376,8 @@ export default function WarehouseEmployeeStockLedger({
         return allEvents.filter((e) => e.kind === kindFilter);
     }, [allEvents, kindFilter]);
 
-    const paginatedEvents = useMemo(
-        () => paginate(filteredEvents, currentPage, PAGE_SIZE),
-        [filteredEvents, currentPage]
-    );
+    // صفحه‌بندی سمت سرور است؛ filteredEvents همان صفحهٔ جاری است
+    const paginatedEvents = { items: filteredEvents, totalPages: txTotalPages };
 
     return (
         <div

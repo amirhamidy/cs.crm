@@ -23,7 +23,7 @@ import { useTheme } from "next-themes";
 import type { Task, TaskStatus, TaskEmployeeRef } from "@/types/task";
 import AdminTaskNotesModal from "./AdminTaskNotesModal";
 import TimeRangeModal from "./TimeRangeModal";
-import TaskDeadlineModal, { fetchStepDeadline, type StepDeadline } from "./TaskDeadlineModal";
+import TaskDeadlineModal, { fetchStepDeadline, invalidateStepDeadline, type StepDeadline } from "./TaskDeadlineModal";
 import api from "@/lib/axiosInstance";
 import { useEmployeeInfo } from "@/hooks/useEmployeeInfo";
 import type { Employee } from "@/types/employee";
@@ -243,6 +243,7 @@ export default function TaskCard({
                 `/tasks/api/v1/tasks/${task.id}/steps/${stepId}/deadline/patch/`,
                 { started_at: startedAt, deadline }
             );
+            invalidateStepDeadline(task.id, stepId);
             setStepDeadline({
                 started_at: data?.started_at ?? startedAt,
                 deadline: data?.deadline ?? deadline,

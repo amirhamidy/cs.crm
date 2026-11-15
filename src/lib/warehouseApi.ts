@@ -1,5 +1,5 @@
 import axiosInstance from "@/lib/axiosInstance";
-import { dedupe } from "@/lib/api/_core";
+import { cached, dedupe, invalidate } from "@/lib/api/_core";
 import { extractList } from "@/utils/warehouseEmployee";
 import type {
   ApiProduct,
@@ -42,7 +42,7 @@ export const WAREHOUSE_QUERY_KEY = "warehouse_id";
 
 export const PAGE_SIZE = 8;
 /** تعداد محصول در هر صفحه (ادمین و یوزر) */
-export const PRODUCTS_PAGE_SIZE = 40;
+export const PRODUCTS_PAGE_SIZE = 15;
 
 /** سقف page_size در بک‌اند (بیشتر از این را بک‌اند خودش ۱۰۰ می‌کند). */
 export const MAX_PAGE_SIZE = 100;
@@ -383,20 +383,130 @@ export async function fetchStocksForProducts(
   signal?: AbortSignal,
 ): Promise<ApiStockInfo[]> {
   if (!productIds.length) return [];
-  const rows = await Promise.all(
-    productIds.map((id) =>
-      fetchPage<ApiStockInfo>(WAREHOUSE_ENDPOINTS.stock, {
-        page: 1,
-        pageSize: 5,
-        params: { ...warehouseParams(warehouseId), product: id },
+
+  const wanted = new Set(productIds);
+  const collected = new Map<number, ApiStockInfo>();
+
+  const productKeyOf = (row: ApiStockInfo): number | null => {
+    const raw = (row as unknown as { product?: number | { id: number } | null })
+      .product;
+    if (raw == null) return null;
+    return typeof raw === "object" ? raw.id : raw;
+  };
+
+  try {
+    const first = await fetchPage<ApiStockInfo>(WAREHOUSE_ENDPOINTS.stock, {
+      page: 1,
+      pageSize: MAX_PAGE_SIZE,
+      params: {
+        ...warehouseParams(warehouseId),
+        product: Array.from(wanted).join(","),
+      },
+      signal,
+    });
+
+    
+    
+    for (const row of first.items) {
+      const key = productKeyOf(row);
+      if (key != null && wanted.has(key)) collected.set(key, row);
+    }
+
+    const maxPages = Math.min(first.totalPages, 5);
+    for (let p = 2; p <= maxPages && collected.size < wanted.size; p += 1) {
+      const next = await fetchPage<ApiStockInfo>(WAREHOUSE_ENDPOINTS.stock, {
+        page: p,
+        pageSize: MAX_PAGE_SIZE,
+        params: {
+          ...warehouseParams(warehouseId),
+          product: Array.from(wanted).join(","),
+        },
         signal,
-      }),
-    ),
+      });
+      for (const row of next.items) {
+        const key = productKeyOf(row);
+        if (key != null && wanted.has(key)) collected.set(key, row);
+      }
+    }
+  } catch {
+    
+  }
+
+  const missing = Array.from(wanted).filter((id) => !collected.has(id));
+  if (!missing.length) return Array.from(collected.values());
+
+  
+  const rows = await mapLimit(missing, CONCURRENCY, (id) =>
+    fetchPage<ApiStockInfo>(WAREHOUSE_ENDPOINTS.stock, {
+      page: 1,
+      pageSize: 5,
+      params: { ...warehouseParams(warehouseId), product: id },
+      signal,
+    }),
   );
-  return rows.flatMap((r) => r.items);
+
+  for (const row of rows.flatMap((r) => r.items)) {
+    const key = productKeyOf(row);
+    if (key != null && wanted.has(key)) collected.set(key, row);
+  }
+
+  return Array.from(collected.values());
+}
+/** نسخهٔ کش‌دار fetchAll برای لیست‌های مرجع (دسته‌بندی، انباردار...). پیش‌فرض ۳۰ ثانیه. */
+export function fetchAllCached<T>(
+  url: string,
+  params: Params = {},
+  ttl = 30_000,
+): Promise<T[]> {
+  return cached(`warehouse-all:${url}:${JSON.stringify(params)}`, () => fetchAll<T>(url, params), ttl);
 }
 
-/** تراکنش‌های یک محصول در یک انبار (برای گردش کالا). */
+export const invalidateWarehouseLists = () => invalidate("warehouse-all:");
+
+/** نوع تراکنش برای فیلتر دفتر موجودی: initial | stock_in | stock_out */
+const txFallback = new Set<string>();
+
+/**
+ * یک صفحه از گردش کالای یک محصول (صفحه‌بندی سمت سرور).
+ * اگر بک‌اند فیلتر transaction_type را نادیده بگیرد (ردیف ناهمخوان برگردد)،
+ * برای همان نوع به‌صورت خودکار به دریافت کامل + صفحه‌بندی کلاینتی برمی‌گردد.
+ */
+export async function fetchProductTransactionsPage(
+  warehouseId: number,
+  productId: number,
+  opts: { page: number; pageSize: number; type?: string; signal?: AbortSignal },
+): Promise<PageResult<ApiStockTransaction>> {
+  const { page, pageSize, type, signal } = opts;
+  const base = { ...warehouseParams(warehouseId), product: productId };
+
+  const clientSide = async () => {
+    let all = await fetchAll<ApiStockTransaction>(WAREHOUSE_ENDPOINTS.transactions, base, signal);
+    if (type) all = all.filter((t) => t.transaction_type === type);
+    all = sortNewestFirst(all);
+    const start = (page - 1) * pageSize;
+    return {
+      items: all.slice(start, start + pageSize),
+      total: all.length,
+      totalPages: Math.max(1, Math.ceil(all.length / pageSize)),
+      page,
+    };
+  };
+
+  if (type && txFallback.has(type)) return clientSide();
+
+  const res = await fetchPage<ApiStockTransaction>(WAREHOUSE_ENDPOINTS.transactions, {
+    page,
+    pageSize,
+    params: { ...base, transaction_type: type },
+    signal,
+  });
+  if (type && res.items.some((t) => t.transaction_type !== type)) {
+    txFallback.add(type);
+    return clientSide();
+  }
+  return res;
+}
+
 export async function fetchProductTransactions(
   warehouseId: number,
   productId: number,

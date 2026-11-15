@@ -3,8 +3,12 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import {
+    AlarmClockOff,
     BellRing,
     Boxes,
+    CheckCircle2,
+    Clock3,
+    Hourglass,
     ChevronLeft,
     ChevronRight,
     Package,
@@ -484,6 +488,22 @@ export function StockCard({
     );
 }
 
+function getDeadlineStatus(deadline: ApiOrderTaskDeadline) {
+    const end = new Date(getDeadlineDate(deadline) as string).getTime();
+    if (!Number.isFinite(end)) {
+        return { label: "نامشخص", remaining: "—", color: "#9ca3af", Icon: Clock3 };
+    }
+    const diff = end - Date.now();
+    const abs = Math.abs(diff);
+    const days = Math.floor(abs / 86_400_000);
+    const hours = Math.floor((abs % 86_400_000) / 3_600_000);
+    const mins = Math.floor((abs % 3_600_000) / 60_000);
+    const text = days > 0 ? `${formatNumber(days)} روز` : hours > 0 ? `${formatNumber(hours)} ساعت` : `${formatNumber(mins)} دقیقه`;
+    if (diff < 0) return { label: "منقضی شده", remaining: `${text} گذشته`, color: "#ef4444", Icon: AlarmClockOff };
+    if (diff < 86_400_000) return { label: "رو به پایان", remaining: text, color: "#f59e0b", Icon: Hourglass };
+    return { label: "در مهلت", remaining: text, color: "#10b981", Icon: CheckCircle2 };
+}
+
 export function DeadlineCard({
     deadline,
     orderTitle,
@@ -498,6 +518,8 @@ export function DeadlineCard({
     const [hovered, setHovered] = useState(false);
     const [start, end] =
         AVATAR_GRADIENTS[deadline.id % AVATAR_GRADIENTS.length];
+    const status = getDeadlineStatus(deadline);
+    const StatusIcon = status.Icon;
 
     return (
         <motion.div
@@ -603,15 +625,15 @@ export function DeadlineCard({
                                 : "rgba(99,102,241,0.1)",
                         }}
                     >
-                        <BellRing size={12} className="text-indigo-500" />
+                        <StatusIcon size={12} style={{ color: status.color }} />
                     </div>
 
                     <div>
                         <p className="text-[9.5px] font-bold text-gray-400 dark:text-white/40">
                             زمان باقی‌مانده
                         </p>
-                        <p className="text-[12px] font-black text-gray-900 dark:text-white">
-                            {formatDate(getDeadlineDate(deadline))}
+                        <p className="text-[12px] font-black" style={{ color: status.color }}>
+                            {status.remaining}
                         </p>
                     </div>
                 </div>
@@ -620,8 +642,9 @@ export function DeadlineCard({
                     <p className="text-[9.5px] font-bold text-gray-400 dark:text-white/40">
                         وضعیت
                     </p>
-                    <p className="text-[11.5px] font-extrabold text-indigo-500">
-                        در انتظار
+                    <p className="flex items-center gap-1 text-[11.5px] font-extrabold" style={{ color: status.color }}>
+                        <StatusIcon size={11} />
+                        {status.label}
                     </p>
                 </div>
             </div>

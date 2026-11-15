@@ -14,16 +14,52 @@ export interface StepDeadline {
 }
 
 /** درخواست ددلاین مرحلهٔ فعلی تسک: GET /tasks/api/v1/tasks/{id}/steps/{step}/deadline/ */
+const DEADLINE_CACHE_TTL = 30_000;
+const deadlineCache = new Map<string, { value: StepDeadline; expiresAt: number }>();
+const deadlineRequests = new Map<string, Promise<StepDeadline>>();
+
+const deadlineKey = (taskId: number, stepId: number) => `${taskId}:${stepId}`;
+
+export function invalidateStepDeadline(taskId: number, stepId: number) {
+    const key = deadlineKey(taskId, stepId);
+    deadlineCache.delete(key);
+    deadlineRequests.delete(key);
+}
+
 export async function fetchStepDeadline(
     taskId: number,
     stepId: number,
     signal?: AbortSignal
 ): Promise<StepDeadline> {
-    const { data } = await api.get(`/tasks/api/v1/tasks/${taskId}/steps/${stepId}/deadline/`, { signal });
-    return {
-        started_at: data?.started_at ?? null,
-        deadline: data?.deadline ?? null,
-    };
+    const key = deadlineKey(taskId, stepId);
+    const cached = deadlineCache.get(key);
+    if (cached && cached.expiresAt > Date.now()) return cached.value;
+
+    // Calls without a caller-owned AbortSignal can safely share one in-flight request.
+    if (!signal) {
+        const pending = deadlineRequests.get(key);
+        if (pending) return pending;
+    }
+
+    const request = api
+        .get(`/tasks/api/v1/tasks/${taskId}/steps/${stepId}/deadline/`, { signal })
+        .then(({ data }) => {
+            const value = {
+                started_at: data?.started_at ?? null,
+                deadline: data?.deadline ?? null,
+            };
+            deadlineCache.set(key, { value, expiresAt: Date.now() + DEADLINE_CACHE_TTL });
+            return value;
+        });
+
+    if (!signal) {
+        deadlineRequests.set(key, request);
+        request.finally(() => {
+            if (deadlineRequests.get(key) === request) deadlineRequests.delete(key);
+        }).catch(() => undefined);
+    }
+
+    return request;
 }
 
 function formatJalali(iso?: string | null) {

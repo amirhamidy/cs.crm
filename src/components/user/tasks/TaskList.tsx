@@ -1,55 +1,66 @@
 "use client";
 
+import { useCallback, useState } from "react";
 import TaskCard, { ApiTask } from "@/components/user/tasks/TaskCard";
 import { tasksApi } from "@/lib/api";
-import { useEffect, useState } from "react";
+import { usePaginatedList } from "@/hooks/usePaginatedList";
+import Pagination from "@/components/ui/Pagination";
+import type { Paginated, SearchParams } from "@/types/pagination";
+
+const PAGE_SIZE = 12;
 
 export default function TaskList({ initialTasks = [] }: { initialTasks?: ApiTask[] }) {
-    const [tasks, setTasks] = useState<ApiTask[]>(initialTasks);
-    const [loading, setLoading] = useState(initialTasks.length === 0);
-    const [error, setError] = useState<string | null>(null);
+    const [seedTasks, setSeedTasks] = useState<ApiTask[]>(initialTasks);
 
-    useEffect(() => {
-        if (initialTasks.length > 0) return;
-        const fetchTasks = async () => {
-            try {
-                const data = (await tasksApi.listAll()) as unknown as ApiTask[];
-                setTasks(data);
-            } catch {
-                setError("دریافت تسک‌ها با خطا مواجه شد");
-            } finally {
-                setLoading(false);
-            }
-        };
-        fetchTasks();
-    }, []);
+    const fetchPage = useCallback(
+        (params: SearchParams, signal: AbortSignal) =>
+            tasksApi.page(params, signal) as unknown as Promise<Paginated<ApiTask>>,
+        [],
+    );
+
+    const list = usePaginatedList<ApiTask>(fetchPage, {
+        pageSize: PAGE_SIZE,
+        enabled: initialTasks.length === 0,
+    });
+
+    const tasks = initialTasks.length > 0 ? initialTasks : list.data;
+    const loading = initialTasks.length === 0 && list.loading;
 
     if (loading)
         return (
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
                 {Array.from({ length: 6 }).map((_, i) => (
-                    <div key={i} className="h-48 rounded-2xl bg-muted animate-pulse" />
+                    <div key={i} className="h-48 animate-pulse rounded-2xl bg-muted" />
                 ))}
             </div>
         );
 
-    if (error) return <div className="text-center text-destructive py-12">{error}</div>;
+    if (list.error) return <div className="py-12 text-center text-destructive">دریافت تسک‌ها با خطا مواجه شد</div>;
 
     if (tasks.length === 0)
-        return <div className="text-center text-muted-foreground py-12">تسکی وجود ندارد</div>;
+        return <div className="py-12 text-center text-muted-foreground">تسکی وجود ندارد</div>;
 
     return (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-            {tasks.map((task, index) => (
-                <TaskCard
-                    key={task.id}
-                    task={task}
-                    index={index}
-                    onUpdated={(updated) =>
-                        setTasks((prev) => prev.map((t) => (t.id === updated.id ? updated : t)))
-                    }
-                />
-            ))}
+        <div className="space-y-5">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+                {tasks.map((task, index) => (
+                    <TaskCard
+                        key={task.id}
+                        task={task}
+                        index={index}
+                        onUpdated={(updated) => {
+                            if (initialTasks.length > 0) {
+                                setSeedTasks((prev) => prev.map((item) => item.id === updated.id ? updated : item));
+                            } else {
+                                list.refetch();
+                            }
+                        }}
+                    />
+                ))}
+            </div>
+            {initialTasks.length === 0 && list.totalPages > 1 && (
+                <Pagination page={list.page} totalPages={list.totalPages} onChange={list.setPage} />
+            )}
         </div>
     );
 }

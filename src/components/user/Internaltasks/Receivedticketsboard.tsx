@@ -1,5 +1,6 @@
 "use client";
 
+import SearchInput from "@/components/ui/SearchInput";
 import { useEffect, useMemo, useState } from "react";
 import Pagination from "@/components/ui/Pagination";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
@@ -70,7 +71,7 @@ export default function ReceivedTicketsBoard() {
     );
     const [local, setLocal] = useState<Map<number, InternalTask>>(new Map());
     const tasks = useMemo(() => normalizeTasks(list.data), [list.data]);
-    const loading = list.loading && list.data.length === 0;
+    const loading = list.loading && list.data.length === 0 && !list.search;
     const error = list.error ? "دریافت تیکت‌ها با خطا مواجه شد." : null;
 
     useEffect(() => {
@@ -136,6 +137,7 @@ export default function ReceivedTicketsBoard() {
                     <h3 className="text-[14px] font-extrabold text-gray-900 dark:text-white">تیکت‌های دریافت شده</h3>
                     <p className="text-[11px] text-gray-400 dark:text-gray-600">{list.count} تیکت</p>
                 </div>
+                <SearchInput value={list.search} onChange={list.setSearch} placeholder="جستجوی تیکت..." className="mr-auto w-40 sm:w-52" />
             </div>
 
             {error && (

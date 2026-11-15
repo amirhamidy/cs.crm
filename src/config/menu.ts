@@ -79,7 +79,7 @@ export const adminMenuItems: MenuItem[] = [
   },
   {
     icon: ShoppingCart,
-    label: "فرآیند خرید و تولید",
+    label: "فرآیند تولید",
     href: "/admin/purchasing",
   },
   {
@@ -162,7 +162,7 @@ export const userMenuItems: MenuItem[] = [
   },
   {
     icon: ShoppingCart,
-    label: "فرآیند خرید و تولید",
+    label: "فرآیند تولید",
     href: "/user/purchasing",
   },
   {

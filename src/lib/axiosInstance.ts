@@ -1,5 +1,6 @@
 import axios, { type InternalAxiosRequestConfig } from "axios";
 import { getApiUrl } from "@/lib/config";
+import { installRequestGovernor } from "@/lib/requestGovernor";
 import {
   clearSession,
   getAccessToken,
@@ -116,5 +117,7 @@ axiosInstance.interceptors.response.use(
     return axiosInstance(original);
   },
 );
+
+installRequestGovernor(axiosInstance, { maxConcurrent: 6, maxBackground: 2 });
 
 export default axiosInstance;

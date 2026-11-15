@@ -31,6 +31,7 @@ type CaseRef =
 
 export interface TaskListParams extends PageParams {
   case?: number | string;
+  status?: string;
 }
 
 export interface FetchAllTasksOptions {

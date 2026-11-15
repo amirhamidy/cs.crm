@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type MouseEvent } from "react";
 import { motion } from "framer-motion";
 import { useTheme } from "next-themes";
 import {
@@ -418,58 +418,23 @@ export default function CaseTaskViewCard({
         };
     }, [assignedEmployeeIds.join(",")]);
 
-    useEffect(() => {
-        let active = true;
-
-        async function fetchStepDeadline() {
-            if (directDeadline || !step?.id || !task.id) {
-                setStepDeadline(null);
-                return;
-            }
-
-            try {
-                setLoadingDeadline(true);
-
-                const response = await axiosInstance.get(
-                    `/tasks/api/v1/tasks/${task.id}/steps/${step.id}/deadline/`
-                );
-
-                if (!active) {
-                    return;
-                }
-
-                const data = response.data;
-
-                const value =
-                    data?.deadline ??
-                    data?.due_date ??
-                    data?.date ??
-                    data?.deadline_date ??
-                    data?.end_date ??
-                    null;
-
-                if (typeof value === "string" && value.trim()) {
-                    setStepDeadline(value);
-                } else {
-                    setStepDeadline(null);
-                }
-            } catch {
-                if (active) {
-                    setStepDeadline(null);
-                }
-            } finally {
-                if (active) {
-                    setLoadingDeadline(false);
-                }
-            }
+    // ددلاین فقط با کلیک کاربر گرفته می‌شود
+    const loadStepDeadline = async (e?: MouseEvent) => {
+        e?.stopPropagation();
+        if (directDeadline || stepDeadline || loadingDeadline || !step?.id || !task.id) return;
+        try {
+            setLoadingDeadline(true);
+            const { data } = await axiosInstance.get(
+                `/tasks/api/v1/tasks/${task.id}/steps/${step.id}/deadline/`
+            );
+            const value = data?.deadline ?? data?.due_date ?? data?.date ?? data?.deadline_date ?? data?.end_date ?? null;
+            setStepDeadline(typeof value === "string" && value.trim() ? value : null);
+        } catch {
+            setStepDeadline(null);
+        } finally {
+            setLoadingDeadline(false);
         }
-
-        fetchStepDeadline();
-
-        return () => {
-            active = false;
-        };
-    }, [task.id, step?.id, directDeadline]);
+    };
 
     return (
         <motion.div
@@ -585,12 +550,24 @@ export default function CaseTaskViewCard({
                         <Calendar size={11} style={{ color: urgency.color }} />
                     )}
 
-                    <span
-                        className="text-[10px] font-medium"
-                        style={{ color: urgency.color }}
-                    >
-                        {formatJalaliDate(deadline)}
-                    </span>
+                    {deadline || directDeadline || !step?.id ? (
+                        <span
+                            className="text-[10px] font-medium"
+                            style={{ color: urgency.color }}
+                        >
+                            {formatJalaliDate(deadline)}
+                        </span>
+                    ) : (
+                        <button
+                            type="button"
+                            onClick={loadStepDeadline}
+                            disabled={loadingDeadline}
+                            className="text-[10px] font-medium underline"
+                            style={{ color: urgency.color }}
+                        >
+                            مشاهده ددلاین
+                        </button>
+                    )}
                 </div>
             </div>
         </motion.div>

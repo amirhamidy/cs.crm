@@ -26,7 +26,7 @@ import { Department } from "@/components/admin/departments/types";
 import DepartmentCard from "@/components/admin/departments/DepartmentCard";
 import DeleteModal from "@/components/admin/departments/DeleteModal";
 import AddDepartmentModal from "@/components/admin/departments/AddDepartmentDrawer";
-import { listAll } from "@/lib/api";
+import { fetchPage } from "@/lib/api/_core";
 
 interface FloatingInputProps
     extends InputHTMLAttributes<HTMLInputElement> {
@@ -148,25 +148,26 @@ export default function DepartmentsPage() {
     const [editName, setEditName] = useState("");
     const [editLoading, setEditLoading] = useState(false);
     const [editSuccess, setEditSuccess] = useState(false);
-    const [tasks, setTasks] = useState<TaskDependency[]>([]);
     const editInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
         fetchAll();
     }, [fetchAll]);
 
-    const fetchTasks = async () => {
+    // وابستگی تسک فقط هنگام درخواست حذف و فقط برای همان دپارتمان بررسی می‌شود (بدون دریافت همه تسک‌ها)
+    const departmentHasTasks = async (departmentId: number) => {
         try {
-            const all = await listAll<unknown>("/tasks/api/v1/tasks/");
-            setTasks(extractTasks(all));
+            const res = await fetchPage<unknown>("/tasks/api/v1/tasks/", {
+                department: departmentId,
+                page_size: 100,
+            });
+            return extractTasks(res.results).some(
+                (task) => task.department === Number(departmentId)
+            );
         } catch {
-            setTasks([]);
+            return false;
         }
     };
-
-    useEffect(() => {
-        fetchTasks();
-    }, []);
 
     useEffect(() => {
         if (editDept) {
@@ -184,7 +185,6 @@ export default function DepartmentsPage() {
     const handleAddDepartment = async (data: { name: string }) => {
         await addDepartment(data.name);
         await fetchAll();
-        await fetchTasks();
     };
 
     const handleEditDepartment = async () => {
@@ -220,7 +220,6 @@ export default function DepartmentsPage() {
         try {
             await deleteDepartment(deleteTarget.id);
             await fetchAll();
-            await fetchTasks();
         } finally {
             setDeleteLoading(false);
             setDeleteTarget(null);
@@ -230,9 +229,7 @@ export default function DepartmentsPage() {
     const getDepartmentDependencies = (department: Department) => {
         const hasEmployees = (department.employees?.length ?? 0) > 0;
         const hasStages = (department.stages?.length ?? 0) > 0;
-        const hasTasks = tasks.some(
-            (task) => task.department === Number(department.id)
-        );
+        const hasTasks = false;
 
         return {
             hasDependencies:
@@ -541,7 +538,6 @@ export default function DepartmentsPage() {
                         <button
                             onClick={async () => {
                                 await fetchAll();
-                                await fetchTasks();
                             }}
                             disabled={loading}
                             className="flex h-10 w-10 items-center justify-center rounded-2xl transition-colors disabled:opacity-50"
@@ -640,10 +636,15 @@ export default function DepartmentsPage() {
                                                             ? "این دپارتمان فرآیند دارد"
                                                             : "این دپارتمان عضو دارد"
                                                 }
-                                                onDelete={() => {
+                                                onDelete={async () => {
                                                     if (
                                                         dependencies.hasDependencies
                                                     ) {
+                                                        return;
+                                                    }
+
+                                                    if (await departmentHasTasks(Number(dept.id))) {
+                                                        alert("این دپارتمان وظیفه دارد و قابل حذف نیست");
                                                         return;
                                                     }
 

@@ -1,5 +1,6 @@
 "use client";
 
+import SearchInput from "@/components/ui/SearchInput";
 import { useMemo, useState } from "react";
 import Pagination from "@/components/ui/Pagination";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
@@ -70,7 +71,7 @@ export default function SentTicketsBoard() {
         { pageSize: 12 },
     );
     const tasks = useMemo(() => normalizeTasks(list.data), [list.data]);
-    const loading = list.loading && list.data.length === 0;
+    const loading = list.loading && list.data.length === 0 && !list.search;
     const [actionError, setActionError] = useState<string | null>(null);
     const error = actionError ?? (list.error ? "دریافت تیکت‌ها با خطا مواجه شد." : null);
     const [createOpen, setCreateOpen] = useState(false);
@@ -125,6 +126,7 @@ export default function SentTicketsBoard() {
                         <p className="text-[11px] text-gray-400 dark:text-gray-600">{list.count} تیکت</p>
                     </div>
                 </div>
+                <SearchInput value={list.search} onChange={list.setSearch} placeholder="جستجوی تیکت..." className="mr-auto w-40 sm:w-52" />
                 <button type="button" onClick={() => setCreateOpen(true)} className="flex shrink-0 items-center gap-1.5 rounded-2xl bg-indigo-600 px-3.5 py-2 text-[11.5px] font-bold text-white transition-colors hover:bg-indigo-500">
                     <Plus size={13} />تیکت جدید
                 </button>

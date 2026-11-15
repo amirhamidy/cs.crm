@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "next-themes";
-import { Users, Plus, Loader, RefreshCw, Filter, FileSpreadsheet } from "lucide-react";
+import { Users, Plus, Loader, RefreshCw, Filter, Search, FileSpreadsheet } from "lucide-react";
 import CustomerCard from "./CustomerCard";
 import AddCustomerModal from "./AddCustomerModal";
 import ImportExcelModal from "./ImportExcelModal";
@@ -42,6 +42,19 @@ export default function CustomersPage() {
     const [filter, setFilter] = useState<FilterType>("all");
     const [page, setPage] = useState(1);
 
+    const [search, setSearch] = useState("");
+    const [appliedSearch, setAppliedSearch] = useState("");
+
+    useEffect(() => {
+        const q = search.trim().replace(/\s+/g, " ");
+        if (q === appliedSearch) return;
+        const t = setTimeout(() => {
+            setAppliedSearch(q);
+            setPage(1);
+        }, 300);
+        return () => clearTimeout(t);
+    }, [search, appliedSearch]);
+
     const requestId = useRef(0);
 
     const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
@@ -72,6 +85,7 @@ export default function CustomersPage() {
                 page,
                 page_size: PAGE_SIZE,
                 status: STATUS_BY_FILTER[filter],
+                search: appliedSearch || undefined,
             });
 
             if (id !== requestId.current) return;
@@ -85,7 +99,7 @@ export default function CustomersPage() {
         } finally {
             if (id === requestId.current) setLoading(false);
         }
-    }, [page, filter]);
+    }, [page, filter, appliedSearch]);
 
     useEffect(() => {
         fetchCustomers();
@@ -164,6 +178,20 @@ export default function CustomersPage() {
                 </div>
 
                 <div className="flex items-center gap-2">
+                    <div className="relative">
+                        <Search size={14} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                        <input
+                            type="text"
+                            value={search}
+                            onChange={(event) => setSearch(event.target.value)}
+                            placeholder="جستجوی مشتری..."
+                            className="h-10 w-40 rounded-2xl border-0 pl-3 pr-9 text-[12.5px] outline-none sm:w-52"
+                            style={{
+                                background: isDark ? "rgba(255,255,255,0.05)" : "rgba(15,23,42,0.05)",
+                                color: isDark ? "#e2e8f0" : "#0f172a",
+                            }}
+                        />
+                    </div>
                     <button
                         onClick={refreshAll}
                         disabled={loading}
@@ -257,7 +285,9 @@ export default function CustomersPage() {
                         >
                             <Users size={28} className="text-gray-300 dark:text-gray-700" />
                             <p className="text-[12.5px] text-gray-500 dark:text-gray-400">
-                                {filter === "all"
+                                {appliedSearch
+                                    ? "نتیجه‌ای برای جستجو یافت نشد"
+                                    : filter === "all"
                                     ? "هنوز مشتری‌ای ثبت نشده"
                                     : filter === "potential"
                                         ? "مشتری بالقوه‌ای یافت نشد"

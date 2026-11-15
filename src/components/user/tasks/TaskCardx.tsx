@@ -23,7 +23,7 @@ import type { Employee } from "@/types/employee";
 import { useEmployeeInfo } from "@/hooks/useEmployeeInfo";
 import AdminTaskNotesModal from "./TaskNotesModal";
 import TimeRangeModal from "./TimeRangeModal";
-import TaskDeadlineModal, { fetchStepDeadline, type StepDeadline } from "@/components/customcomponents/tasks/TaskDeadlineModal";
+import TaskDeadlineModal, { fetchStepDeadline, invalidateStepDeadline, type StepDeadline } from "@/components/customcomponents/tasks/TaskDeadlineModal";
 import api from "@/lib/axiosInstance";
 
 const AVATAR_GRADIENTS = [
@@ -259,6 +259,7 @@ export default function TaskCard({
                 `/tasks/api/v1/tasks/${task.id}/steps/${stepId}/deadline/patch/`,
                 { started_at: startedAt, deadline }
             );
+            invalidateStepDeadline(task.id, stepId);
             setStepDeadline({
                 started_at: data?.started_at ?? startedAt,
                 deadline: data?.deadline ?? deadline,

@@ -1,5 +1,6 @@
 "use client";
 
+import SearchInput from "@/components/ui/SearchInput";
 import { useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Archive, ArrowRight, Ban, CheckCircle2, ClipboardList, Layers3, Loader, RefreshCw, ShoppingBag } from "lucide-react";
@@ -50,6 +51,7 @@ export default function AdminArchivedTasksPage() {
                 </div>
 
                 <div className="flex items-center gap-2">
+                    <SearchInput value={list.search} onChange={list.setSearch} placeholder="جستجوی آرشیو..." className="w-40 sm:w-52" />
                     <button
                         type="button"
                         onClick={() => router.push("/admin/tasks")}

@@ -2,8 +2,9 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, m } from "framer-motion";
 import { Boxes, Loader2, Lock, Pencil, Plus, Power, PowerOff, X } from "lucide-react";
+import WarehouseSelectorSkeleton from "./WarehouseSelectorSkeleton";
 import { useTheme } from "next-themes";
 
 import useWarehouses from "@/hooks/useWarehouses";
@@ -13,7 +14,7 @@ import {
     WAREHOUSE_ENDPOINTS,
     apiErrorMessage,
     createWarehouse,
-    fetchAll,
+    fetchAllCached,
 } from "@/lib/warehouseApi";
 import { cardBg, cardBorder, cardShadow, muted } from "@/components/admin/warehouse/WarehouseCards";
 import { EditWarehouseModal, WarehouseStatusModal } from "@/components/admin/warehouse/WarehouseFormModals";
@@ -76,7 +77,7 @@ function CreateWarehouseModal({
     return (
         <AnimatePresence>
             {isOpen && (
-                <motion.div
+                <m.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
@@ -84,7 +85,7 @@ function CreateWarehouseModal({
                     onClick={() => !loading && onClose()}
                     dir="rtl"
                 >
-                    <motion.form
+                    <m.form
                         initial={{ opacity: 0, scale: 0.95, y: 10 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.95, y: 10 }}
@@ -158,8 +159,8 @@ function CreateWarehouseModal({
                             {loading && <Loader2 size={15} className="animate-spin" />}
                             ایجاد انبار
                         </button>
-                    </motion.form>
-                </motion.div>
+                    </m.form>
+                </m.div>
             )}
         </AnimatePresence>
     );
@@ -196,7 +197,7 @@ export default function WarehouseSelector() {
         let active = true;
         setStaffLoading(true);
 
-        fetchAll<StaffItem>(WAREHOUSE_ENDPOINTS.staff)
+        fetchAllCached<StaffItem>(WAREHOUSE_ENDPOINTS.staff)
             .then((staffList) => {
                 if (!active) return;
                 const currentStaff = staffList.find(
@@ -234,7 +235,7 @@ export default function WarehouseSelector() {
             setBlockedId(warehouse.id);
             return;
         }
-        router.push(`${basePath}/overview?warehouse=${warehouse.id}`);
+        router.push(`${basePath}/stock?warehouse=${warehouse.id}`);
     };
 
     const isPageLoading = warehousesLoading || (!isAdmin && (empLoading || staffLoading));
@@ -265,7 +266,7 @@ export default function WarehouseSelector() {
                 </div>
 
                 {isAdmin && (
-                    <motion.button
+                    <m.button
                         type="button"
                         whileTap={{ scale: 0.97 }}
                         onClick={() => setShowCreate(true)}
@@ -273,7 +274,7 @@ export default function WarehouseSelector() {
                     >
                         <Plus size={15} />
                         ایجاد انبار
-                    </motion.button>
+                    </m.button>
                 )}
             </div>
 
@@ -284,14 +285,12 @@ export default function WarehouseSelector() {
             )}
 
             {isPageLoading ? (
-                <div className="flex items-center justify-center py-20">
-                    <Loader2 size={22} className="animate-spin text-indigo-500" />
-                </div>
+                <WarehouseSelectorSkeleton count={8} />
             ) : (
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                     {visibleWarehouses.length ? (
                         visibleWarehouses.map((warehouse, index) => (
-                            <motion.div
+                            <m.div
                                 key={warehouse.id}
                                 role="button"
                                 tabIndex={0}
@@ -379,7 +378,7 @@ export default function WarehouseSelector() {
 
                                 <AnimatePresence>
                                     {blockedId === warehouse.id && !warehouse.is_active && !isAdmin && (
-                                        <motion.div
+                                        <m.div
                                             initial={{ opacity: 0, height: 0 }}
                                             animate={{ opacity: 1, height: "auto" }}
                                             exit={{ opacity: 0, height: 0 }}
@@ -389,10 +388,10 @@ export default function WarehouseSelector() {
                                                 <Lock size={13} className="shrink-0" />
                                                 این انبار از دسترس خارج است
                                             </div>
-                                        </motion.div>
+                                        </m.div>
                                     )}
                                 </AnimatePresence>
-                            </motion.div>
+                            </m.div>
                         ))
                     ) : (
                         <p

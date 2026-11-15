@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { WAREHOUSE_ENDPOINTS, fetchAll } from "@/lib/warehouseApi";
+import { WAREHOUSE_ENDPOINTS, fetchAllCached } from "@/lib/warehouseApi";
 import { useCurrentEmployee } from "@/hooks/usecurrentemployee";
 import { useAuthStore } from "@/store/authStore";
 import type { ApiWarehouseStaff } from "@/types/warehouse";
@@ -29,7 +29,7 @@ export default function useWarehouseAccess() {
     setStaffLoading(true);
 
     // همهٔ صفحات: اگر انباردار بیشتر از یک صفحه باشد، رکورد کاربر جاری ممکن است در صفحهٔ اول نباشد
-    fetchAll<ApiWarehouseStaff>(WAREHOUSE_ENDPOINTS.staff)
+    fetchAllCached<ApiWarehouseStaff>(WAREHOUSE_ENDPOINTS.staff)
       .then((list) => {
         if (alive) setStaff(list);
       })
