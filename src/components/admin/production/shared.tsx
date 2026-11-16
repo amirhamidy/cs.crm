@@ -67,6 +67,11 @@ export interface ProductionLog {
     machine: number;
     machine_name: string;
     machine_code: string;
+    product?: number | null;
+    product_name?: string | null;
+    product_code?: string | null;
+    discrepancy?: number | null;
+    discrepancy_name?: string | null;
     hours_worked: string;
     start_time?: string | null;
     end_time?: string | null;
@@ -76,6 +81,20 @@ export interface ProductionLog {
     expected_production: string;
     expected_waste: string;
     efficiency: number | null;
+}
+
+export interface Product {
+    id: number;
+    name: string;
+    code: string;
+    is_active: boolean;
+}
+
+export interface Discrepancy {
+    id: number;
+    name: string;
+    description: string;
+    is_active: boolean;
 }
 
 export interface EmployeeItem {
@@ -155,6 +174,18 @@ export interface MachineMonthlyOperator {
     efficiency: number | null;
 }
 
+export interface MachineMonthlyProduct {
+    product_id: number | null;
+    product_name: string | null;
+    product_code: string | null;
+    hours: string;
+    produced: number;
+    waste: number;
+    expected_production: string;
+    expected_waste: string;
+    efficiency: number | null;
+}
+
 export interface MachineMonthlyItem {
     machine_id: number;
     machine_name: string;
@@ -167,6 +198,7 @@ export interface MachineMonthlyItem {
     expected_production: string;
     expected_waste: string;
     efficiency: number | null;
+    products: MachineMonthlyProduct[];
     operators: MachineMonthlyOperator[];
 }
 
@@ -1183,6 +1215,10 @@ export function LogModal({
     const [date, setDate] = useState(() => todayGregorian());
     const [employeeId, setEmployeeId] = useState<number | null>(null);
     const [machineId, setMachineId] = useState<number | null>(null);
+    const [products, setProducts] = useState<Product[]>([]);
+    const [discrepancies, setDiscrepancies] = useState<Discrepancy[]>([]);
+    const [productId, setProductId] = useState<number | null>(null);
+    const [discrepancyId, setDiscrepancyId] = useState<number | null>(null);
     const [startTime, setStartTime] = useState("");
     const [endTime, setEndTime] = useState("");
     const [produced, setProduced] = useState("");
@@ -1190,6 +1226,27 @@ export function LogModal({
     const [note, setNote] = useState("");
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState("");
+
+    useEffect(() => {
+        listAll<Product>("/production/api/v1/product/", { is_active: true })
+            .then(setProducts)
+            .catch(() => setError("دریافت لیست محصولات انجام نشد"));
+        listAll<Discrepancy>("/production/api/v1/discrepancy/", { is_active: true })
+            .then(setDiscrepancies)
+            .catch(() => setError("دریافت لیست مغایرت‌ها انجام نشد"));
+    }, []);
+
+    const productOptions = useMemo<Option[]>(
+        () => products.map((p) => ({ id: p.id, label: p.name, sub: `کد: ${p.code}` })),
+        [products]
+    );
+    const discrepancyOptions = useMemo<Option[]>(
+        () => [
+            { id: null as unknown as number, label: "بدون مغایرت", sub: "" },
+            ...discrepancies.map((d) => ({ id: d.id, label: d.name, sub: d.description || "" })),
+        ],
+        [discrepancies]
+    );
 
     useEffect(() => {
         let alive = true;
@@ -1235,6 +1292,7 @@ export function LogModal({
     const canSubmit =
         employeeId !== null &&
         machineId !== null &&
+        productId !== null &&
         produced !== "" &&
         hours !== null &&
         startTime !== "" &&
@@ -1253,6 +1311,8 @@ export function LogModal({
                 date: normalizeIsoDate(date),
                 employee: employeeId,
                 machine: machineId,
+                product: productId,
+                discrepancy: discrepancyId,
                 start_time: startTime,
                 end_time: endTime,
                 hours_worked: (hours as number).toFixed(2),
@@ -1265,7 +1325,7 @@ export function LogModal({
             setError(
                 parseBackendError(
                     err,
-                    "خطا در ثبت لاگ. احتمالاً برای این تاریخ و ماشین، رکوردی از این کارمند ثبت شده است."
+                    "خطا در ثبت لاگ. احتمالاً برای این تاریخ و ماشین، رکوردی از این کارمند برای همین محصول ثبت شده است."
                 )
             );
         } finally {
@@ -1337,6 +1397,27 @@ export function LogModal({
                     setMachineId(id);
                     setError("");
                 }}
+            />
+
+            <NiceSelect
+                label="محصول"
+                placeholder="انتخاب محصول"
+                emptyText="محصول فعالی وجود ندارد"
+                options={productOptions}
+                value={productId}
+                onChange={(id) => {
+                    setProductId(id);
+                    setError("");
+                }}
+            />
+
+            <NiceSelect
+                label="مغایرت (اختیاری)"
+                placeholder="بدون مغایرت"
+                emptyText="مغایرتی یافت نشد"
+                options={discrepancyOptions}
+                value={discrepancyId}
+                onChange={setDiscrepancyId}
             />
 
             <div className="grid grid-cols-2 gap-3">
@@ -1475,6 +1556,16 @@ export function ViewNoteModal({
                     </span>
                 </div>
                 <div className="flex items-center justify-between text-[12px]">
+                    <span className="text-gray-500">محصول:</span>
+                    <span className="font-bold text-gray-900 dark:text-white">
+                        {log.product_name ? `${log.product_name} (${log.product_code})` : "—"}
+                    </span>
+                </div>
+                <div className="flex items-center justify-between text-[12px]">
+                    <span className="text-gray-500">مغایرت:</span>
+                    <span className="font-bold text-gray-900 dark:text-white">{log.discrepancy_name || "—"}</span>
+                </div>
+                <div className="flex items-center justify-between text-[12px]">
                     <span className="text-gray-500">تاریخ:</span>
                     <span className="font-bold text-gray-900 dark:text-white">
                         {toPersianDigits(isoToJalaliString(log.date))}
@@ -1561,3 +1652,90 @@ export function EfficiencyBadge({ value }: { value: number | null }) {
     );
 }
 
+
+
+export function CatalogModal({
+    kind,
+    item,
+    onClose,
+    onSaved,
+}: {
+    kind: "product" | "discrepancy";
+    item: Product | Discrepancy | null;
+    onClose: () => void;
+    onSaved: () => void;
+}) {
+    const isProduct = kind === "product";
+    const [name, setName] = useState(item?.name ?? "");
+    const [code, setCode] = useState((item as Product | null)?.code ?? "");
+    const [description, setDescription] = useState((item as Discrepancy | null)?.description ?? "");
+    const [isActive, setIsActive] = useState(item?.is_active ?? true);
+    const [saving, setSaving] = useState(false);
+    const [error, setError] = useState("");
+
+    const canSubmit = name.trim() !== "" && (!isProduct || code.trim() !== "") && !saving;
+
+    async function handleSave() {
+        if (!canSubmit) return;
+        setSaving(true);
+        setError("");
+        const payload = isProduct
+            ? { name: name.trim(), code: code.trim(), is_active: isActive }
+            : { name: name.trim(), description: description.trim(), is_active: isActive };
+        try {
+            if (item) {
+                await axiosInstance.patch(`/production/api/v1/${kind}/${item.id}/update/`, payload);
+            } else {
+                await axiosInstance.post(`/production/api/v1/${kind}/create/`, payload);
+            }
+            onSaved();
+        } catch (err) {
+            setError(parseBackendError(err, isProduct ? "خطا در ذخیره محصول. احتمالاً کد تکراری است." : "خطا در ذخیره مغایرت. احتمالاً نام تکراری است."));
+        } finally {
+            setSaving(false);
+        }
+    }
+
+    return (
+        <ModalShell
+            icon={<Factory size={15} className="text-blue-500" />}
+            title={item ? (isProduct ? "ویرایش محصول" : "ویرایش مغایرت") : isProduct ? "تعریف محصول جدید" : "تعریف مغایرت جدید"}
+            subtitle={isProduct ? "محصولات تولیدشده با دستگاه‌ها" : "دلایل ضایعات بیشتر از استاندارد"}
+            locked={saving}
+            onClose={onClose}
+            footer={
+                <>
+                    <motion.button
+                        type="button"
+                        whileTap={{ scale: 0.97 }}
+                        onClick={handleSave}
+                        disabled={!canSubmit}
+                        className="flex h-11 flex-1 items-center justify-center gap-2 rounded-full bg-blue-600 text-[13px] font-bold text-white transition-colors hover:bg-blue-500 disabled:opacity-40"
+                    >
+                        {saving ? <Loader2 size={15} className="animate-spin" /> : (<><Check size={14} strokeWidth={3} />ذخیره اطلاعات</>)}
+                    </motion.button>
+                    <button type="button" onClick={onClose} disabled={saving} className={`h-11 px-6 ${SOFT_BUTTON}`}>
+                        انصراف
+                    </button>
+                </>
+            }
+        >
+            <ErrorBanner message={error} onClose={() => setError("")} />
+            <FloatingInput id={`${kind}_name`} label={isProduct ? "نام محصول" : "عنوان مغایرت"} value={name} onChange={setName} />
+            {isProduct ? (
+                <FloatingInput id="product_code" label="کد یکتا (مثلاً P-01)" value={code} onChange={setCode} ltr />
+            ) : (
+                <FloatingInput id="discrepancy_desc" label="توضیحات (اختیاری)" value={description} onChange={setDescription} />
+            )}
+            <div className="flex items-center justify-between rounded-2xl border border-gray-100 bg-gray-50 px-4 py-3 dark:border-white/[0.06] dark:bg-white/[0.03]">
+                <div>
+                    <p className="text-[12.5px] font-bold text-gray-800 dark:text-gray-100">وضعیت</p>
+                    <p className="mt-0.5 text-[10.5px] text-gray-400">
+                        {isActive ? "فعال است و در فرم ثبت لاگ نمایش داده می‌شود" : "غیرفعال است"}
+                    </p>
+                </div>
+                <StatusSwitch isActive={isActive} onToggle={() => setIsActive((v) => !v)} />
+            </div>
+        </ModalShell>
+    );
+}

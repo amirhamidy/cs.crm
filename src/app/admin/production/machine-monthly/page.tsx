@@ -61,6 +61,28 @@ export default function MachineMonthlyPage() {
         loadMachineMonthlyReport();
     }, [reportYear, reportMonth]);
 
+    const productTotals = useMemo(() => {
+        const map = new Map<string, { name: string; produced: number; expected_production: number; waste: number; expected_waste: number }>();
+        for (const m of machineMonthlyReport?.machines ?? []) {
+            for (const p of m.products) {
+                const key = String(p.product_id ?? "none");
+                const cur = map.get(key) ?? {
+                    name: p.product_name ?? "بدون محصول",
+                    produced: 0,
+                    expected_production: 0,
+                    waste: 0,
+                    expected_waste: 0,
+                };
+                cur.produced += Number(p.produced);
+                cur.expected_production += Number(p.expected_production);
+                cur.waste += Number(p.waste);
+                cur.expected_waste += Number(p.expected_waste);
+                map.set(key, cur);
+            }
+        }
+        return Array.from(map.values());
+    }, [machineMonthlyReport]);
+
     return (
         <>
         <section className="space-y-4">
@@ -157,7 +179,7 @@ export default function MachineMonthlyPage() {
                         />
                     </div>
 
-                    <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                    <div className="grid grid-cols-1 gap-4">
                         <ProductionBarChart
                             title="تولید ماهانه ماشین‌ها"
                             subtitle="واقعی در برابر انتظاری"
@@ -180,6 +202,23 @@ export default function MachineMonthlyPage() {
                             }))}
                             seriesA={{ label: "انحراف تولید", color: "#3b82f6" }}
                             seriesB={{ label: "انحراف ضایعات", color: "#8b5cf6" }}
+                        />
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-4">
+                        <ProductionBarChart
+                            title="تولید به تفکیک محصول"
+                            subtitle="واقعی در برابر انتظاری"
+                            data={productTotals.map((p) => ({ name: p.name, a: p.produced, b: p.expected_production }))}
+                            seriesA={{ label: "تولید واقعی", color: "#3b82f6" }}
+                            seriesB={{ label: "تولید انتظاری", color: "#8b5cf6" }}
+                        />
+                        <ProductionBarChart
+                            title="ضایعات به تفکیک محصول"
+                            subtitle="واقعی در برابر انتظاری"
+                            data={productTotals.map((p) => ({ name: p.name, a: p.waste, b: p.expected_waste }))}
+                            seriesA={{ label: "ضایعات واقعی", color: "#ef4444" }}
+                            seriesB={{ label: "ضایعات انتظاری", color: "#f59e0b" }}
                         />
                     </div>
 
@@ -231,6 +270,36 @@ export default function MachineMonthlyPage() {
                                             : `${toPersianDigits(mch.efficiency.toFixed(1))}٪`}
                                     </span>
                                 </div>
+
+                                {mch.products.length > 0 && (
+                                    <div className="overflow-x-auto border-b border-black/5 dark:border-white/5">
+                                        <table className="w-full border-collapse text-right text-[11.5px]">
+                                            <thead>
+                                                <tr className="border-b border-black/5 text-[10.5px] text-gray-400 dark:border-white/5">
+                                                    {["محصول", "ساعت", "تولید", "انتظاری", "ضایعات", "انتظاری", "راندمان"].map((h, i) => (
+                                                        <th key={i} className="whitespace-nowrap px-3 py-2 font-bold">{h}</th>
+                                                    ))}
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-black/5 dark:divide-white/5">
+                                                {mch.products.map((pr) => (
+                                                    <tr key={pr.product_id ?? "none"} className="hover:bg-black/[0.02] dark:hover:bg-white/[0.02]">
+                                                        <td className="whitespace-nowrap px-3 py-2 font-extrabold text-gray-800 dark:text-gray-100">
+                                                            {pr.product_name ?? "بدون محصول"}
+                                                            {pr.product_code && <span className="mr-1 font-mono text-[10px] font-normal text-gray-400">({pr.product_code})</span>}
+                                                        </td>
+                                                        <td className="whitespace-nowrap px-3 py-2 text-gray-500">{toPersianDigits(pr.hours)}</td>
+                                                        <td className="px-3 py-2 font-bold text-emerald-600 dark:text-emerald-400">{toPersianDigits(pr.produced.toLocaleString())}</td>
+                                                        <td className="px-3 py-2 text-gray-400">{toPersianDigits(Number(pr.expected_production).toFixed(0))}</td>
+                                                        <td className="px-3 py-2 font-bold text-red-500">{toPersianDigits(pr.waste)}</td>
+                                                        <td className="px-3 py-2 text-gray-400">{toPersianDigits(Number(pr.expected_waste).toFixed(0))}</td>
+                                                        <td className="px-3 py-2"><EfficiencyBadge value={pr.efficiency} /></td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                )}
 
                                 {mch.operators.length === 0 ? (
                                     <div className="px-4 py-6 text-center text-[11.5px] text-gray-400">

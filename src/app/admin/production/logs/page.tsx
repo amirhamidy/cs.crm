@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
     X,
     ClipboardList,
@@ -11,12 +11,16 @@ import {
 } from "lucide-react";
 import { toHHMM } from "@/lib/productionTime";
 import { toPersianDigits } from "@/lib/jalali";
+import { listAll } from "@/lib/api";
 import {
     isoToJalaliString,
     currentJalaliYearMonth,
     JalaliDatePicker,
     NiceSelect,
     EfficiencyBadge,
+    Option,
+    Product,
+    Discrepancy,
 } from "@/components/admin/production/shared";
 import { useProductionData } from "@/components/admin/production/ProductionContext";
 
@@ -25,6 +29,18 @@ export default function LogsPage() {
 
     const [filterEmployeeId, setFilterEmployeeId] = useState<number | null>(null);
     const [filterMachineId, setFilterMachineId] = useState<number | null>(null);
+    const [filterProductId, setFilterProductId] = useState<number | null>(null);
+    const [filterDiscrepancyId, setFilterDiscrepancyId] = useState<number | null>(null);
+    const [productOptions, setProductOptions] = useState<Option[]>([]);
+    const [discrepancyOptions, setDiscrepancyOptions] = useState<Option[]>([]);
+    useEffect(() => {
+        listAll<Product>("/production/api/v1/product/")
+            .then((a) => setProductOptions(a.map((p) => ({ id: p.id, label: p.name, sub: `کد: ${p.code}` }))))
+            .catch(() => {});
+        listAll<Discrepancy>("/production/api/v1/discrepancy/")
+            .then((a) => setDiscrepancyOptions(a.map((d) => ({ id: d.id, label: d.name, sub: "" }))))
+            .catch(() => {});
+    }, []);
     const [filterDateFrom, setFilterDateFrom] = useState("");
     const [filterDateTo, setFilterDateTo] = useState("");
 
@@ -32,11 +48,13 @@ export default function LogsPage() {
         return logs.filter((l) => {
             if (filterEmployeeId !== null && l.employee !== filterEmployeeId) return false;
             if (filterMachineId !== null && l.machine !== filterMachineId) return false;
+            if (filterProductId !== null && l.product !== filterProductId) return false;
+            if (filterDiscrepancyId !== null && l.discrepancy !== filterDiscrepancyId) return false;
             if (filterDateFrom && l.date < filterDateFrom) return false;
             if (filterDateTo && l.date > filterDateTo) return false;
             return true;
         });
-    }, [logs, filterEmployeeId, filterMachineId, filterDateFrom, filterDateTo]);
+    }, [logs, filterEmployeeId, filterMachineId, filterProductId, filterDiscrepancyId, filterDateFrom, filterDateTo]);
 
     return (
         <>
@@ -70,6 +88,22 @@ export default function LogsPage() {
                         value={filterMachineId}
                         onChange={setFilterMachineId}
                     />
+                    <NiceSelect
+                        label="محصول"
+                        placeholder="همه محصولات"
+                        emptyText="محصولی یافت نشد"
+                        options={productOptions}
+                        value={filterProductId}
+                        onChange={setFilterProductId}
+                    />
+                    <NiceSelect
+                        label="مغایرت"
+                        placeholder="همه مغایرت‌ها"
+                        emptyText="مغایرتی یافت نشد"
+                        options={discrepancyOptions}
+                        value={filterDiscrepancyId}
+                        onChange={setFilterDiscrepancyId}
+                    />
                     <JalaliDatePicker
                         label="از تاریخ"
                         value={filterDateFrom}
@@ -85,6 +119,8 @@ export default function LogsPage() {
                 </div>
                 {(filterEmployeeId !== null ||
                     filterMachineId !== null ||
+                    filterProductId !== null ||
+                    filterDiscrepancyId !== null ||
                     filterDateFrom ||
                     filterDateTo) && (
                         <button
@@ -92,6 +128,8 @@ export default function LogsPage() {
                             onClick={() => {
                                 setFilterEmployeeId(null);
                                 setFilterMachineId(null);
+                                setFilterProductId(null);
+                                setFilterDiscrepancyId(null);
                                 setFilterDateFrom("");
                                 setFilterDateTo("");
                             }}
@@ -112,6 +150,8 @@ export default function LogsPage() {
                                     "تاریخ",
                                     "پرسنل",
                                     "ماشین",
+                                    "محصول",
+                                    "مغایرت",
                                     "ساعت کار",
                                     "تولید",
                                     "انتظاری",
@@ -147,6 +187,12 @@ export default function LogsPage() {
                                             <span className="font-mono text-[10px] text-gray-400">
                                                 ({log.machine_code})
                                             </span>
+                                        </td>
+                                        <td className="whitespace-nowrap px-4 py-3 text-gray-600 dark:text-gray-300">
+                                            {log.product_name || "—"}
+                                        </td>
+                                        <td className="whitespace-nowrap px-4 py-3 text-gray-500 dark:text-gray-400">
+                                            {log.discrepancy_name || "—"}
                                         </td>
                                         <td className="whitespace-nowrap px-4 py-3 text-gray-500 dark:text-gray-400">
                                             {toPersianDigits(log.hours_worked)} ساعت
@@ -199,7 +245,7 @@ export default function LogsPage() {
 
                             {!loading && filteredLogs.length === 0 && (
                                 <tr>
-                                    <td colSpan={10} className="py-12 text-center text-[12px] text-gray-400">
+                                    <td colSpan={12} className="py-12 text-center text-[12px] text-gray-400">
                                         {logs.length === 0
                                             ? "هنوز رکوردی ثبت نشده. با «ثبت لاگ جدید» اولین رکورد را اضافه کنید."
                                             : "رکوردی با این فیلترها یافت نشد."}
