@@ -179,6 +179,18 @@ export default function MonthlyPage() {
                         seriesB={{ label: "تولید انتظاری", hint: "مقدار مورد انتظار طبق استاندارد", color: "#8b5cf6" }}
                     />
 
+                    <ProductionBarChart
+                        title="ضایعات واقعی در برابر انتظاری (نیرو)"
+                        subtitle="گزارش ماهانه به تفکیک کارمند"
+                        data={monthlyReport.employees.map((e) => ({
+                            name: e.employee_name,
+                            a: Number(e.waste),
+                            b: Number(e.expected_waste),
+                        }))}
+                        seriesA={{ label: "ضایعات واقعی", hint: "تعداد واقعی ضایعات", color: "#c47d09" }}
+                        seriesB={{ label: "ضایعات انتظاری", hint: "مقدار ضایعات مجاز طبق استاندارد", color: "#74a909" }}
+                    />
+
                     {monthlyReport.employees.length === 0 ? (
                         <div className="rounded-2xl border border-dashed border-gray-200 py-10 text-center text-[12px] text-gray-400 dark:border-white/[0.1]">
                             در این ماه هیچ رکوردی ثبت نشده است.

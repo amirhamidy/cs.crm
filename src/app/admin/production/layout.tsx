@@ -28,7 +28,6 @@ const TABS: { href: string; label: string; icon: ReactNode }[] = [
     { href: "/admin/production/discrepancy-report", label: "گزارش علت‌ها", icon: <AlertTriangle size={14} /> },
     { href: "/admin/production/monthly", label: "عملکرد نیرو", icon: <Users size={14} /> },
     { href: "/admin/production/machine-summary", label: "عملکرد ماشین", icon: <CalendarCogIcon size={14} /> },
-    { href: "/admin/production/machine-monthly", label: " عملکرد ماهانه ماشین ", icon: <CalendarCogIcon size={14} /> },
 ];
 
 function Shell({ children }: { children: ReactNode }) {
@@ -43,6 +42,8 @@ function Shell({ children }: { children: ReactNode }) {
         setShowLogModal,
         logToDelete,
         setLogToDelete,
+        logToEdit,
+        setLogToEdit,
         logToView,
         setLogToView,
         ensure,
@@ -51,8 +52,8 @@ function Shell({ children }: { children: ReactNode }) {
 
     // LogModal needs the machine list
     useEffect(() => {
-        if (showLogModal) ensure(["machines"]);
-    }, [showLogModal, ensure]);
+        if (showLogModal || logToEdit) ensure(["machines"]);
+    }, [showLogModal, logToEdit, ensure]);
 
     return (
         <div className="mx-auto max-w-7xl space-y-6 p-6" dir="rtl">
@@ -138,6 +139,21 @@ function Shell({ children }: { children: ReactNode }) {
                         onClose={() => setShowLogModal(false)}
                         onSaved={() => {
                             setShowLogModal(false);
+                            refresh();
+                        }}
+                    />
+                )}
+            </AnimatePresence>
+
+            <AnimatePresence>
+                {logToEdit && (
+                    <LogModal
+                        key={`edit-log-${logToEdit.id}`}
+                        machines={machines}
+                        log={logToEdit}
+                        onClose={() => setLogToEdit(null)}
+                        onSaved={() => {
+                            setLogToEdit(null);
                             refresh();
                         }}
                     />

@@ -9,6 +9,7 @@ import {
     X,
     ClipboardList,
     Trash2,
+    Pencil,
     CalendarDays,
     Filter,
     Eye,
@@ -33,7 +34,7 @@ import {
 import { useProductionData } from "@/components/admin/production/ProductionContext";
 
 export default function LogsPage() {
-    const { setLogToDelete, setLogToView, employeeOptions, machineOptions, refreshVersion } = useProductionData(["machines", "employees"]);
+    const { setLogToDelete, setLogToEdit, setLogToView, employeeOptions, machineOptions, refreshVersion } = useProductionData(["machines", "employees"]);
     const [logs, setLogs] = useState<ProductionLog[]>([]);
     const [totalLogs, setTotalLogs] = useState(0);
     const [loading, setLoading] = useState(true);
@@ -295,6 +296,15 @@ export default function LogsPage() {
                                                     className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-500/10 text-blue-500 transition-colors hover:bg-blue-500 hover:text-white"
                                                 >
                                                     <Eye size={13} />
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setLogToEdit(log)}
+                                                    aria-label="ویرایش رکورد"
+                                                    title="ویرایش"
+                                                    className="flex h-8 w-8 items-center justify-center rounded-full bg-amber-500/10 text-amber-500 transition-colors hover:bg-amber-500 hover:text-white"
+                                                >
+                                                    <Pencil size={13} />
                                                 </button>
                                                 <button
                                                     type="button"

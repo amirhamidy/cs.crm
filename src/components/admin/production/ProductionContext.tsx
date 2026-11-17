@@ -41,6 +41,8 @@ interface ProductionContextValue {
     setShowLogModal: (v: boolean) => void;
     logToDelete: ProductionLog | null;
     setLogToDelete: (v: ProductionLog | null) => void;
+    logToEdit: ProductionLog | null;
+    setLogToEdit: (v: ProductionLog | null) => void;
     logToView: ProductionLog | null;
     setLogToView: (v: ProductionLog | null) => void;
     ensure: (keys: DataKey[]) => void;
@@ -69,6 +71,7 @@ export function ProductionProvider({ children }: { children: ReactNode }) {
     });
     const [showLogModal, setShowLogModal] = useState(false);
     const [logToDelete, setLogToDelete] = useState<ProductionLog | null>(null);
+    const [logToEdit, setLogToEdit] = useState<ProductionLog | null>(null);
     const [logToView, setLogToView] = useState<ProductionLog | null>(null);
 
     const loadKey = useCallback(async (key: DataKey) => {
@@ -154,6 +157,8 @@ export function ProductionProvider({ children }: { children: ReactNode }) {
         setShowLogModal,
         logToDelete,
         setLogToDelete,
+        logToEdit,
+        setLogToEdit,
         logToView,
         setLogToView,
         ensure,

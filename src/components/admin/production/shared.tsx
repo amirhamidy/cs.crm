@@ -1271,39 +1271,41 @@ export function MachineModal({
 
 export function LogModal({
     machines,
+    log = null,
     onClose,
     onSaved,
 }: {
     machines: Machine[];
+    log?: ProductionLog | null;
     onClose: () => void;
     onSaved: () => void;
 }) {
     const [employees, setEmployees] = useState<EmployeeItem[]>([]);
     const [loadingEmployees, setLoadingEmployees] = useState(true);
 
-    const [date, setDate] = useState(() => todayGregorian());
-    const [employeeId, setEmployeeId] = useState<number | null>(null);
-    const [machineId, setMachineId] = useState<number | null>(null);
+    const [date, setDate] = useState(() => (log ? log.date.slice(0, 10) : todayGregorian()));
+    const [employeeId, setEmployeeId] = useState<number | null>(log?.employee ?? null);
+    const [machineId, setMachineId] = useState<number | null>(log?.machine ?? null);
     const [products, setProducts] = useState<Product[]>([]);
     const [causes, setCauses] = useState<Cause[]>([]);
-    const [productId, setProductId] = useState<number | null>(null);
-    const [wasteCauseId, setWasteCauseId] = useState<number | null>(null);
-    const [breakdownCauseId, setBreakdownCauseId] = useState<number | null>(null);
-    const [downtime, setDowntime] = useState("0");
-    const [startTime, setStartTime] = useState("");
-    const [endTime, setEndTime] = useState("");
-    const [produced, setProduced] = useState("");
-    const [waste, setWaste] = useState("0");
-    const [note, setNote] = useState("");
+    const [productId, setProductId] = useState<number | null>(log?.product ?? null);
+    const [wasteCauseId, setWasteCauseId] = useState<number | null>(log?.waste_cause ?? null);
+    const [breakdownCauseId, setBreakdownCauseId] = useState<number | null>(log?.breakdown_cause ?? null);
+    const [downtime, setDowntime] = useState(String(log?.downtime_minutes ?? 0));
+    const [startTime, setStartTime] = useState(toHHMM(log?.start_time) || "");
+    const [endTime, setEndTime] = useState(toHHMM(log?.end_time) || "");
+    const [produced, setProduced] = useState(log ? String(log.produced_qty) : "");
+    const [waste, setWaste] = useState(log ? String(log.waste_qty) : "0");
+    const [note, setNote] = useState(log?.note ?? "");
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState("");
 
     useEffect(() => {
-        listAll<Product>("/production/api/v1/product/", { is_active: true })
-            .then(setProducts)
+        listAll<Product>("/production/api/v1/product/", log ? undefined : { is_active: true })
+            .then((all) => setProducts(all.filter((p) => p.is_active || p.id === log?.product)))
             .catch(() => setError("دریافت لیست محصولات انجام نشد"));
-        listAll<Cause>("/production/api/v1/cause/", { is_active: true })
-            .then(setCauses)
+        listAll<Cause>("/production/api/v1/cause/", log ? undefined : { is_active: true })
+            .then((all) => setCauses(all.filter((c) => c.is_active || c.id === log?.waste_cause || c.id === log?.breakdown_cause)))
             .catch(() => setError("دریافت لیست علت‌ها انجام نشد"));
     }, []);
 
@@ -1360,7 +1362,7 @@ export function LogModal({
     const machineOptions = useMemo<Option[]>(
         () =>
             machines
-                .filter((m) => m.is_active)
+                .filter((m) => m.is_active || m.id === log?.machine)
                 .map((m) => ({ id: m.id, label: m.name, sub: `کد: ${m.code}` })),
         [machines]
     );
@@ -1385,7 +1387,7 @@ export function LogModal({
         setError("");
 
         try {
-            await axiosInstance.post("/production/api/v1/log/create/", {
+            const payload = {
                 date: normalizeIsoDate(date),
                 employee: employeeId,
                 machine: machineId,
@@ -1398,7 +1400,9 @@ export function LogModal({
                 produced_qty: Number(produced),
                 waste_qty: Number(waste || 0),
                 note: note.trim(),
-            });
+            };
+            if (log) await axiosInstance.patch(`/production/api/v1/log/${log.id}/update/`, payload);
+            else await axiosInstance.post("/production/api/v1/log/create/", payload);
             onSaved();
         } catch (err) {
             setError(
@@ -1416,8 +1420,8 @@ export function LogModal({
         <ModalShell
             icon={<ClipboardList size={15} className="text-emerald-500" />}
             iconTone="emerald"
-            title="ثبت لاگ تولید"
-            subtitle="ثبت رکورد تولید روزانه"
+            title={log ? "ویرایش رکورد تولید" : "ثبت لاگ تولید"}
+            subtitle={log ? "اصلاح اطلاعات ثبت‌شده" : "ثبت رکورد تولید روزانه"}
             maxWidth="max-w-lg"
             locked={saving}
             onClose={onClose}
@@ -1435,7 +1439,7 @@ export function LogModal({
                         ) : (
                             <>
                                 <Check size={14} strokeWidth={3} />
-                                ثبت نهایی
+                                {log ? "ذخیره تغییرات" : "ثبت نهایی"}
                             </>
                         )}
                     </motion.button>
