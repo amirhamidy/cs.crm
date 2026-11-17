@@ -37,7 +37,8 @@ import axiosInstance from "@/lib/axiosInstance";
 import TimePicker from "@/components/TimePicker";
 import ProductionBarChart from "@/components/charts/ProductionBarChart";
 import { listAll } from "@/lib/api";
-import { calcHoursWorked, toHHMM } from "@/lib/productionTime";
+import { isValidTimeRange, formatHoursWorked, toHHMM } from "@/lib/productionTime";
+import { formatProductionPercent, formatProductionLogHours } from "@/lib/productionFormat";
 import {
     toPersianDigits,
     toJalali,
@@ -122,6 +123,8 @@ export interface MonthlyReportDay {
     date: string;
     jalali_date: string;
     hours: string;
+    start_time?: string | null;
+    end_time?: string | null;
     produced: number;
     waste: number;
     expected_production: string;
@@ -335,6 +338,37 @@ export function currentJalaliYearMonth(): { jy: number; jm: number } {
     const n = new Date();
     const [jy, jm] = toJalali(n.getFullYear(), n.getMonth() + 1, n.getDate());
     return { jy, jm };
+}
+
+export type PeriodUnit = "day" | "week" | "month" | "year";
+
+/** Snap a Gregorian ISO date to the start/end of its Jalali day/week/month/year. */
+export function alignToPeriod(iso: string, unit: PeriodUnit, edge: "start" | "end"): string {
+    if (!iso || unit === "day") return iso;
+    const [gy, gm, gd] = iso.split("-").map(Number);
+    if (!gy || !gm || !gd) return iso;
+    let [jy, jm, jd] = toJalali(gy, gm, gd);
+    if (unit === "year") {
+        jm = edge === "start" ? 1 : 12;
+        jd = edge === "start" ? 1 : jalaliMonthLength(jy, 12);
+    } else if (unit === "month") {
+        jd = edge === "start" ? 1 : jalaliMonthLength(jy, jm);
+    } else {
+        const wd = jalaliWeekday(jy, jm, jd); // Saturday = 0
+        const [y2, m2, d2] = toGregorian(jy, jm, jd);
+        const dt = new Date(y2, m2 - 1, d2);
+        dt.setDate(dt.getDate() + (edge === "start" ? -wd : 6 - wd));
+        return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}-${String(dt.getDate()).padStart(2, "0")}`;
+    }
+    const [y, m, d] = toGregorian(jy, jm, jd);
+    return `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+}
+
+/** Start/end (Gregorian ISO) of the current Jalali month. */
+export function currentMonthRange(): { from: string; to: string } {
+    const n = new Date();
+    const iso = `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, "0")}-${String(n.getDate()).padStart(2, "0")}`;
+    return { from: alignToPeriod(iso, "month", "start"), to: alignToPeriod(iso, "month", "end") };
 }
 
 export const INPUT_CLS =
@@ -595,11 +629,11 @@ export function JalaliDatePicker({
                                                 ? "invisible"
                                                 : outOfRange
                                                     ? "cursor-not-allowed text-gray-300 line-through dark:text-white/15"
-                                                : isSelected
-                                                    ? "bg-blue-600 text-white shadow-sm"
-                                                    : isToday
-                                                        ? "border border-blue-400 bg-blue-50 text-blue-600 dark:border-blue-500/40 dark:bg-blue-500/10 dark:text-blue-300"
-                                                        : "text-gray-600 hover:bg-gray-100 dark:text-white/70 dark:hover:bg-white/[0.06] dark:hover:text-white"
+                                                    : isSelected
+                                                        ? "bg-blue-600 text-white shadow-sm"
+                                                        : isToday
+                                                            ? "border border-blue-400 bg-blue-50 text-blue-600 dark:border-blue-500/40 dark:bg-blue-500/10 dark:text-blue-300"
+                                                            : "text-gray-600 hover:bg-gray-100 dark:text-white/70 dark:hover:bg-white/[0.06] dark:hover:text-white"
                                                 }`}
                                         >
                                             {day !== null ? toPersianDigits(day) : ""}
@@ -689,6 +723,7 @@ export function NumberField({
     step,
     min,
     max,
+    displayValue,
 }: {
     label: string;
     value: string;
@@ -696,18 +731,19 @@ export function NumberField({
     step?: string;
     min?: string;
     max?: string;
+    displayValue?: string;
 }) {
     return (
         <Field label={label}>
             <input
                 type="number"
-                inputMode="decimal"
+                inputMode="numeric"
                 dir="ltr"
-                step={step}
+                step={step ?? "1"}
                 min={min}
                 max={max}
-                value={value}
-                onChange={(e) => onChange(e.target.value)}
+                value={displayValue ?? value}
+                onChange={(e) => onChange(e.target.value.replace(/[^0-9]/g, ""))}
                 className={`${INPUT_CLS} text-left`}
             />
         </Field>
@@ -784,7 +820,7 @@ export function NiceSelect({
             <button
                 type="button"
                 disabled={disabled}
-                onClick={() => setOpen((v) => !v)}
+                onClick={() => { if (!loading && options.length === 0) return; setOpen((v) => !v); }}
                 className={`flex h-[52px] w-full items-center gap-2.5 rounded-2xl border px-3 text-right transition-all duration-200 ${open
                     ? "border-blue-500 bg-blue-50/50 dark:border-blue-500/50 dark:bg-blue-500/[0.06]"
                     : "border-gray-100 bg-gray-50 hover:border-gray-200 dark:border-white/[0.06] dark:bg-white/[0.03] dark:hover:border-white/[0.12]"
@@ -1205,15 +1241,17 @@ export function MachineModal({
                 <NumberField
                     label="تولید استاندارد در ساعت"
                     value={stdProd}
+                    displayValue={Number.isFinite(Number(stdProd)) && stdProd !== "" ? String(Math.round(Number(stdProd))) : ""}
                     onChange={setStdProd}
-                    step="0.01"
+                    step="1"
                     min="0"
                 />
                 <NumberField
                     label="ضایعات استاندارد در ساعت"
                     value={stdWaste}
+                    displayValue={Number.isFinite(Number(stdWaste)) && stdWaste !== "" ? String(Math.round(Number(stdWaste))) : ""}
                     onChange={setStdWaste}
-                    step="0.01"
+                    step="1"
                     min="0"
                 />
             </div>
@@ -1327,18 +1365,14 @@ export function LogModal({
         [machines]
     );
 
-    const selectedMachine = machines.find((m) => m.id === machineId);
-    const hours = calcHoursWorked(startTime, endTime);
-    const expectedProd = selectedMachine && hours !== null ? hours * Number(selectedMachine.std_production_per_hour || 0) : null;
-    const expectedWasteVal = selectedMachine && hours !== null ? hours * Number(selectedMachine.std_waste_per_hour || 0) : null;
-    const liveEff = expectedProd && produced !== "" ? Math.round((Number(produced) / expectedProd) * 1000) / 10 : null;
+    const validTimeRange = isValidTimeRange(startTime, endTime);
 
     const canSubmit =
         employeeId !== null &&
         machineId !== null &&
         productId !== null &&
         produced !== "" &&
-        hours !== null &&
+        validTimeRange &&
         startTime !== "" &&
         endTime !== "" &&
         date !== "" &&
@@ -1361,7 +1395,6 @@ export function LogModal({
                 downtime_minutes: Number(downtime || 0),
                 start_time: startTime,
                 end_time: endTime,
-                hours_worked: (hours as number).toFixed(2),
                 produced_qty: Number(produced),
                 waste_qty: Number(waste || 0),
                 note: note.trim(),
@@ -1487,18 +1520,17 @@ export function LogModal({
                 <TimeField label="ساعت شروع" value={startTime} onChange={setStartTime} required />
                 <TimeField label="ساعت پایان" value={endTime} onChange={setEndTime} required />
             </div>
+            {validTimeRange && (
+                <p className="text-[11.5px] font-bold text-indigo-500">
+                    مدت کار: {toPersianDigits(formatHoursWorked(startTime, endTime))}
+                </p>
+            )}
 
             <div className="grid grid-cols-2 gap-3">
                 <NumberField label="تعداد تولید شده" value={produced} onChange={setProduced} min="0" />
                 <NumberField label="مقدار ضایعات" value={waste} onChange={setWaste} min="0" />
                 <NumberField label="مدت خرابی/توقف (دقیقه)" value={downtime} onChange={setDowntime} min="0" />
             </div>
-
-            {expectedProd !== null && (
-                <div className="rounded-2xl border border-blue-500/20 bg-blue-500/[0.06] px-4 py-3 text-[12px] font-bold text-blue-600 dark:text-blue-300">
-                    تولید مورد انتظار: {toPersianDigits(expectedProd.toFixed(2))} | ضایعات مورد انتظار: {toPersianDigits((expectedWasteVal ?? 0).toFixed(2))} | راندمان: {liveEff === null ? "—" : toPersianDigits(String(liveEff)) + "٪"}
-                </div>
-            )}
 
             <FloatingInput
                 id="log_note"
@@ -1633,7 +1665,7 @@ export function ViewNoteModal({
                 <div className="flex items-center justify-between text-[12px]">
                     <span className="text-gray-500">ساعت کار:</span>
                     <span className="font-bold text-gray-900 dark:text-white">
-                        {toPersianDigits(log.hours_worked)} ساعت
+                        {formatProductionLogHours(log.hours_worked, log.start_time, log.end_time)}
                     </span>
                 </div>
                 <div className="flex items-center justify-between text-[12px]">
@@ -1709,7 +1741,7 @@ export function EfficiencyBadge({ value }: { value: number | null }) {
                 : "border-red-500/25 bg-red-500/10 text-red-600 dark:text-red-400";
     return (
         <span className={`rounded-lg border px-2 py-0.5 text-[10.5px] font-bold ${effClass}`}>
-            {toPersianDigits(value.toFixed(1))}٪
+            {formatProductionPercent(value)}٪
         </span>
     );
 }

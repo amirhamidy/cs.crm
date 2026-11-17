@@ -1,5 +1,6 @@
 "use client";
 
+
 import { useDebounced, useServerSearch } from "@/components/admin/production/useServerSearch";
 import SearchInput from "@/components/admin/production/SearchInput";
 import { useMemo, useState } from "react";
@@ -13,6 +14,7 @@ import {
     Gauge,
 } from "lucide-react";
 import { toPersianDigits } from "@/lib/jalali";
+import { formatProductionInteger } from "@/lib/productionFormat";
 import {
     Option,
     gradientOf,
@@ -151,7 +153,7 @@ export default function MachinesPage() {
                                         تولید در ساعت
                                     </span>
                                     <span className="mt-0.5 block text-[13px] font-extrabold text-gray-800 dark:text-gray-100">
-                                        {toPersianDigits(m.std_production_per_hour)}
+                                        {formatProductionInteger(m.std_production_per_hour)}
                                     </span>
                                 </div>
                                 <div className="rounded-xl bg-black/[0.03] px-3 py-2 dark:bg-white/[0.03]">
@@ -160,7 +162,7 @@ export default function MachinesPage() {
                                         ضایعات در ساعت
                                     </span>
                                     <span className="mt-0.5 block text-[13px] font-extrabold text-red-500">
-                                        {toPersianDigits(m.std_waste_per_hour)}
+                                        {formatProductionInteger(m.std_waste_per_hour)}
                                     </span>
                                 </div>
                             </div>

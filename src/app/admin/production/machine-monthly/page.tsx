@@ -1,5 +1,7 @@
 "use client";
 
+import { formatProductionInteger, formatProductionPercent, formatProductionHours } from "@/lib/productionFormat";
+
 import { useEffect, useMemo, useState } from "react";
 import {
     Loader2,
@@ -28,6 +30,28 @@ import {
     EfficiencyBadge,
 } from "@/components/admin/production/shared";
 
+type ProductTotal = {
+    name: string;
+    produced: number;
+    expected_production: number;
+    waste: number;
+    expected_waste: number;
+};
+
+type ProductVarianceResponse = {
+    products?: {
+        items: Array<{
+            product_name?: string | null;
+            totals: {
+                produced: number;
+                expected_production: number;
+                waste: number;
+                expected_waste: number;
+            };
+        }>;
+    };
+};
+
 export default function MachineMonthlyPage() {
     const { jy: currentJy, jm: currentJm } = useMemo(() => currentJalaliYearMonth(), []);
     const [reportYear, setReportYear] = useState(currentJy);
@@ -35,6 +59,7 @@ export default function MachineMonthlyPage() {
     const [machineMonthlyReport, setMachineMonthlyReport] = useState<MachineMonthlyReport | null>(null);
     const [machineMonthlyLoading, setMachineMonthlyLoading] = useState(false);
     const [machineMonthlyError, setMachineMonthlyError] = useState("");
+    const [productTotals, setProductTotals] = useState<ProductTotal[]>([]);
 
     const monthOptions = useMemo<Option[]>(
         () => JALALI_MONTHS.map((name, idx) => ({ id: idx + 1, label: name, sub: "" })),
@@ -45,13 +70,32 @@ export default function MachineMonthlyPage() {
         setMachineMonthlyLoading(true);
         setMachineMonthlyError("");
         try {
-            const res = await axiosInstance.get("/production/api/v1/report/machine/monthly/", {
-                params: { year: reportYear, month: reportMonth },
-            });
-            setMachineMonthlyReport(res.data as MachineMonthlyReport);
+            const [machineResult, productResult] = await Promise.allSettled([
+                axiosInstance.get("/production/api/v1/report/machine/monthly/", {
+                    params: { year: reportYear, month: reportMonth },
+                }),
+                axiosInstance.get("/production/api/v1/report/variance/", {
+                    params: { year: reportYear, month: reportMonth, group_by: "month", entity: "product" },
+                }),
+            ]);
+            if (machineResult.status === "rejected") throw machineResult.reason;
+            setMachineMonthlyReport(machineResult.value.data as MachineMonthlyReport);
+            if (productResult.status === "fulfilled") {
+                const productData = productResult.value.data as ProductVarianceResponse;
+                setProductTotals((productData.products?.items ?? []).map((item) => ({
+                    name: item.product_name ?? "بدون محصول",
+                    produced: item.totals.produced,
+                    expected_production: item.totals.expected_production,
+                    waste: item.totals.waste,
+                    expected_waste: item.totals.expected_waste,
+                })));
+            } else {
+                setProductTotals([]);
+            }
         } catch (err) {
             setMachineMonthlyError(parseBackendError(err, "دریافت گزارش ماهانه ماشین با خطا مواجه شد"));
             setMachineMonthlyReport(null);
+            setProductTotals([]);
         } finally {
             setMachineMonthlyLoading(false);
         }
@@ -60,28 +104,6 @@ export default function MachineMonthlyPage() {
     useEffect(() => {
         loadMachineMonthlyReport();
     }, [reportYear, reportMonth]);
-
-    const productTotals = useMemo(() => {
-        const map = new Map<string, { name: string; produced: number; expected_production: number; waste: number; expected_waste: number }>();
-        for (const m of machineMonthlyReport?.machines ?? []) {
-            for (const p of m.products) {
-                const key = String(p.product_id ?? "none");
-                const cur = map.get(key) ?? {
-                    name: p.product_name ?? "بدون محصول",
-                    produced: 0,
-                    expected_production: 0,
-                    waste: 0,
-                    expected_waste: 0,
-                };
-                cur.produced += Number(p.produced);
-                cur.expected_production += Number(p.expected_production);
-                cur.waste += Number(p.waste);
-                cur.expected_waste += Number(p.expected_waste);
-                map.set(key, cur);
-            }
-        }
-        return Array.from(map.values());
-    }, [machineMonthlyReport]);
 
     return (
         <>
@@ -133,8 +155,7 @@ export default function MachineMonthlyPage() {
                     <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
                         <StatCard
                             label="کل ساعت کار"
-                            value={toPersianDigits(machineMonthlyReport.totals.hours)}
-                            unit="ساعت"
+                            value={formatProductionHours(machineMonthlyReport.totals.hours)}
                             tone="indigo"
                             icon={<CalendarDays size={16} />}
                         />
@@ -147,9 +168,7 @@ export default function MachineMonthlyPage() {
                         />
                         <StatCard
                             label="تولید انتظاری"
-                            value={toPersianDigits(
-                                Number(machineMonthlyReport.totals.expected_production).toFixed(0)
-                            )}
+                            value={formatProductionInteger(machineMonthlyReport.totals.expected_production)}
                             unit="عدد"
                             tone="indigo"
                             icon={<Gauge size={16} />}
@@ -163,9 +182,7 @@ export default function MachineMonthlyPage() {
                         />
                         <StatCard
                             label="ضایعات انتظاری"
-                            value={toPersianDigits(
-                                Number(machineMonthlyReport.totals.expected_waste).toFixed(0)
-                            )}
+                            value={formatProductionInteger(machineMonthlyReport.totals.expected_waste)}
                             unit="عدد"
                             tone="amber"
                             icon={<AlertTriangle size={16} />}
@@ -175,7 +192,7 @@ export default function MachineMonthlyPage() {
                             value={
                                 machineMonthlyReport.totals.efficiency === null
                                     ? "—"
-                                    : `${toPersianDigits(machineMonthlyReport.totals.efficiency.toFixed(1))}٪`
+                                    : `${formatProductionPercent(machineMonthlyReport.totals.efficiency)}٪`
                             }
                             tone="emerald"
                             icon={<BarChart3 size={16} />}
@@ -200,8 +217,8 @@ export default function MachineMonthlyPage() {
                             signed
                             data={machineMonthlyReport.machines.map((m) => ({
                                 name: m.machine_name,
-                                a: Number((Number(m.produced) - Number(m.expected_production)).toFixed(1)),
-                                b: Number((Number(m.waste) - Number(m.expected_waste)).toFixed(1)),
+                                a: Math.round(Number(m.produced) - Number(m.expected_production)),
+                                b: Math.round(Number(m.waste) - Number(m.expected_waste)),
                             }))}
                             seriesA={{ label: "انحراف تولید", hint: "واقعی − انتظاری؛ منفی یعنی کمتر از انتظار", color: "#3b82f6" }}
                             seriesB={{ label: "انحراف ضایعات", hint: "ضایعات واقعی − انتظاری؛ مثبت یعنی بدتر", color: "#8b5cf6" }}
@@ -267,10 +284,10 @@ export default function MachineMonthlyPage() {
                                         </div>
                                     </div>
                                     <span className="text-[10.5px] font-bold text-gray-500">
-                                        {toPersianDigits(mch.hours)} ساعت · راندمان{" "}
+                                        {formatProductionHours(mch.hours)} · راندمان{" "}
                                         {mch.efficiency === null
                                             ? "—"
-                                            : `${toPersianDigits(mch.efficiency.toFixed(1))}٪`}
+                                            : `${formatProductionPercent(mch.efficiency)}٪`}
                                     </span>
                                 </div>
 
@@ -291,11 +308,11 @@ export default function MachineMonthlyPage() {
                                                             {pr.product_name ?? "بدون محصول"}
                                                             {pr.product_code && <span className="mr-1 font-mono text-[10px] font-normal text-gray-400">({pr.product_code})</span>}
                                                         </td>
-                                                        <td className="whitespace-nowrap px-3 py-2 text-gray-500">{toPersianDigits(pr.hours)}</td>
+                                                        <td className="whitespace-nowrap px-3 py-2 text-gray-500">{formatProductionHours(pr.hours)}</td>
                                                         <td className="px-3 py-2 font-bold text-emerald-600 dark:text-emerald-400">{toPersianDigits(pr.produced.toLocaleString())}</td>
-                                                        <td className="px-3 py-2 text-gray-400">{toPersianDigits(Number(pr.expected_production).toFixed(0))}</td>
+                                                        <td className="px-3 py-2 text-gray-400">{formatProductionInteger(pr.expected_production)}</td>
                                                         <td className="px-3 py-2 font-bold text-red-500">{toPersianDigits(pr.waste)}</td>
-                                                        <td className="px-3 py-2 text-gray-400">{toPersianDigits(Number(pr.expected_waste).toFixed(0))}</td>
+                                                        <td className="px-3 py-2 text-gray-400">{formatProductionInteger(pr.expected_waste)}</td>
                                                         <td className="px-3 py-2"><EfficiencyBadge value={pr.efficiency} /></td>
                                                     </tr>
                                                 ))}
@@ -338,19 +355,19 @@ export default function MachineMonthlyPage() {
                                                             {op.employee_name}
                                                         </td>
                                                         <td className="whitespace-nowrap px-3 py-2 text-gray-500">
-                                                            {toPersianDigits(op.hours)}
+                                                            {formatProductionHours(op.hours)}
                                                         </td>
                                                         <td className="px-3 py-2 font-bold text-emerald-600 dark:text-emerald-400">
                                                             {toPersianDigits(op.produced.toLocaleString())}
                                                         </td>
                                                         <td className="px-3 py-2 text-gray-400">
-                                                            {toPersianDigits(Number(op.expected_production).toFixed(0))}
+                                                            {formatProductionInteger(op.expected_production)}
                                                         </td>
                                                         <td className="px-3 py-2 font-bold text-red-500">
                                                             {toPersianDigits(op.waste)}
                                                         </td>
                                                         <td className="px-3 py-2 text-gray-400">
-                                                            {toPersianDigits(Number(op.expected_waste).toFixed(0))}
+                                                            {formatProductionInteger(op.expected_waste)}
                                                         </td>
                                                         <td className="px-3 py-2">
                                                             <EfficiencyBadge value={op.efficiency} />

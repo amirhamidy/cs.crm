@@ -1,18 +1,22 @@
 "use client";
 
+import { formatProductionInteger, formatProductionPercent, formatProductionLogHours } from "@/lib/productionFormat";
+
 import TimePicker from "@/components/TimePicker";
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   ClipboardList, Plus, Trash2, X, AlertCircle, 
-  Loader2, CheckCircle2, TrendingUp, Filter 
+  Loader2 
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import axiosInstance from "@/lib/axiosInstance";
-import { listAll } from "@/lib/api";
+import { listAll, fetchPage } from "@/lib/api";
 import { useCurrentEmployee } from "@/hooks/usecurrentemployee";
 import { toPersianDigits } from "@/lib/jalali";
-import { calcHoursWorked, formatHoursWorked, toHHMM } from "@/lib/productionTime";
+import type { Machine, Product } from "@/components/admin/production/shared";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { isValidTimeRange, formatHoursWorked, toHHMM } from "@/lib/productionTime";
 
 interface ProductionLog {
   id: number;
@@ -22,6 +26,8 @@ interface ProductionLog {
   machine: number;
   machine_name: string;
   machine_code: string;
+  product?: number | null;
+  product_name?: string | null;
   hours_worked: string;
   start_time?: string | null;
   end_time?: string | null;
@@ -39,13 +45,19 @@ export default function UserProductionLogsPage() {
   const { employeeId } = useCurrentEmployee();
 
   const [logs, setLogs] = useState<ProductionLog[]>([]);
-  const [machines, setMachines] = useState<any[]>([]);
+  const [machines, setMachines] = useState<Machine[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+  const [totalLogs, setTotalLogs] = useState(0);
+  const [page, setPage] = useState(1);
+  const pageSize = 20;
+  const pageCount = Math.max(1, Math.ceil(totalLogs / pageSize));
 
   // Modal
   const [showModal, setShowModal] = useState(false);
   const [formDate, setFormDate] = useState(() => { const n = new Date(); return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, "0")}-${String(n.getDate()).padStart(2, "0")}`; });
   const [formMachine, setFormMachine] = useState<number | "">("");
+  const [formProduct, setFormProduct] = useState<number | "">("");
   const [formStart, setFormStart] = useState("");
   const [formEnd, setFormEnd] = useState("");
   const [formProduced, setFormProduced] = useState("");
@@ -54,15 +66,18 @@ export default function UserProductionLogsPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
-  const fetchData = async () => {
+  const fetchData = async (targetPage = page) => {
+    if (!employeeId) return;
     try {
       setLoading(true);
-      const [allLogs, allMachines] = await Promise.all([
-        listAll<ProductionLog>("/production/api/v1/log/"),
-        listAll<any>("/production/api/v1/machine/", { is_active: true }),
-      ]);
-      setLogs(allLogs);
-      setMachines(allMachines);
+      const logsResponse = await fetchPage<ProductionLog>("/production/api/v1/log/", {
+        employee_id: employeeId,
+        page: targetPage,
+        page_size: pageSize,
+      });
+      setLogs(logsResponse.results);
+      setTotalLogs(logsResponse.count);
+      setPage(targetPage);
     } catch (err) {
       console.error(err);
     } finally {
@@ -71,16 +86,27 @@ export default function UserProductionLogsPage() {
   };
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    if (!employeeId) return;
+    fetchData(1);
+    Promise.all([
+      listAll<Machine>("/production/api/v1/machine/", { is_active: true }),
+      listAll<Product>("/production/api/v1/product/", { is_active: true }),
+    ]).then(([machineRows, productRows]) => {
+      setMachines(machineRows);
+      setProducts(productRows);
+    }).catch(() => {
+      setMachines([]);
+      setProducts([]);
+    });
+  }, [employeeId]);
 
   const handleCreate = async () => {
-    const hours = calcHoursWorked(formStart, formEnd);
-    if (!employeeId || !formMachine || !formProduced) {
-      setError("لطفاً ماشین و تعداد تولید را به طور صحیح وارد کنید.");
+    const validTimeRange = isValidTimeRange(formStart, formEnd);
+    if (!employeeId || !formMachine || !formProduct || formProduced === "") {
+      setError("لطفاً ماشین، محصول و تعداد تولید را به طور صحیح وارد کنید.");
       return;
     }
-    if (!formStart || !formEnd || hours === null) {
+    if (!formStart || !formEnd || !validTimeRange) {
       setError("ساعت شروع و پایان کار را وارد کنید.");
       return;
     }
@@ -92,24 +118,28 @@ export default function UserProductionLogsPage() {
         date: formDate,
         employee: employeeId,
         machine: Number(formMachine),
+        product: Number(formProduct),
         start_time: formStart,
         end_time: formEnd,
-        hours_worked: (hours as number).toFixed(2),
         produced_qty: Number(formProduced),
         waste_qty: Number(formWaste),
         note: formNote.trim(),
       });
 
       setShowModal(false);
+      setFormProduct("");
       setFormProduced("");
       setFormWaste("0");
       setFormNote("");
-      fetchData();
-    } catch (err: any) {
-      const d = err?.response?.data;
-      const first = d && typeof d === "object" ? (Object.entries(d)[0] as [string, any] | undefined) : undefined;
-      const m = first ? (Array.isArray(first[1]) ? first[1][0] : first[1]) : "";
-      setError(typeof d === "string" && d.length < 200 ? d : m ? `${first![0]}: ${m}` : "خطا در ثبت لاگ. احتمالاً برای این ماشین در این تاریخ قبلاً رکورد ثبت شده است.");
+      fetchData(1);
+    } catch (err: unknown) {
+      const data = (err as { response?: { data?: unknown } })?.response?.data;
+      const first = data && typeof data === "object"
+        ? Object.entries(data as Record<string, unknown>)[0]
+        : undefined;
+      const detail = first ? (Array.isArray(first[1]) ? first[1][0] : first[1]) : "";
+      const fallback = "خطا در ثبت لاگ. احتمالاً برای این ماشین در این تاریخ قبلاً رکورد ثبت شده است.";
+      setError(typeof data === "string" && data.length < 200 ? data : detail ? `${first?.[0]}: ${String(detail)}` : fallback);
     } finally {
       setSaving(false);
     }
@@ -119,7 +149,7 @@ export default function UserProductionLogsPage() {
     if (!confirm("آیا از حذف این رکورد اطمینان دارید؟")) return;
     try {
       await axiosInstance.delete(`/production/api/v1/log/${id}/delete/`);
-      fetchData();
+      fetchData(logs.length === 1 && page > 1 ? page - 1 : page);
     } catch {
       alert("خطا در حذف رکورد");
     }
@@ -156,6 +186,15 @@ export default function UserProductionLogsPage() {
         </button>
       </div>
 
+      <div className="flex items-center justify-between text-xs text-gray-500">
+        <span>{toPersianDigits(totalLogs)} رکورد</span>
+        <div className="flex items-center gap-2">
+          <button type="button" disabled={page <= 1 || loading} onClick={() => fetchData(Math.max(1, page - 1))} className="flex h-9 items-center gap-1 rounded-lg border border-gray-200 px-3 disabled:opacity-40 dark:border-white/10"><ChevronRight size={14} /> قبلی</button>
+          <span>صفحه {toPersianDigits(page)} از {toPersianDigits(pageCount)}</span>
+          <button type="button" disabled={page >= pageCount || loading} onClick={() => fetchData(Math.min(pageCount, page + 1))} className="flex h-9 items-center gap-1 rounded-lg border border-gray-200 px-3 disabled:opacity-40 dark:border-white/10">بعدی <ChevronLeft size={14} /></button>
+        </div>
+      </div>
+
       {/* Logs Table / Grid */}
       {loading ? (
         <div className="flex justify-center py-20 text-gray-400 text-xs">در حال بارگذاری سوابق تولید...</div>
@@ -184,7 +223,7 @@ export default function UserProductionLogsPage() {
                     <td className="p-4 text-gray-600 dark:text-gray-300">
                       {log.machine_name} <span className="text-[10px] text-gray-400 font-mono">({log.machine_code})</span>
                     </td>
-                    <td className="p-4">{toPersianDigits(log.hours_worked)} ساعت
+                    <td className="p-4">{formatProductionLogHours(log.hours_worked, log.start_time, log.end_time)}
                       {toHHMM(log.start_time) && (
                         <div className="font-mono text-[10px] text-gray-400" dir="ltr">
                           {toPersianDigits(toHHMM(log.start_time))} → {toPersianDigits(toHHMM(log.end_time))}
@@ -192,7 +231,7 @@ export default function UserProductionLogsPage() {
                       )}
                     </td>
                     <td className="p-4 font-black text-emerald-600">{toPersianDigits(log.produced_qty.toLocaleString())}</td>
-                    <td className="p-4 text-gray-400">{toPersianDigits(Number(log.expected_production).toFixed(1))}</td>
+                    <td className="p-4 text-gray-400">{formatProductionInteger(log.expected_production)}</td>
                     <td className="p-4 font-bold text-red-500">{toPersianDigits(log.waste_qty)}</td>
                     <td className="p-4">
                       {log.efficiency !== null ? (
@@ -200,7 +239,7 @@ export default function UserProductionLogsPage() {
                           log.efficiency >= 90 ? "bg-emerald-500/10 text-emerald-600" :
                           log.efficiency >= 70 ? "bg-amber-500/10 text-amber-600" : "bg-red-500/10 text-red-600"
                         }`}>
-                          {toPersianDigits(log.efficiency.toFixed(1))}%
+                          {formatProductionPercent(log.efficiency)}%
                         </span>
                       ) : "—"}
                     </td>
@@ -274,6 +313,21 @@ export default function UserProductionLogsPage() {
                   </select>
                 </div>
 
+                <div>
+                  <label className="block text-[11.5px] font-bold text-gray-400 mb-1">انتخاب محصول *</label>
+                  <select
+                    value={formProduct}
+                    onChange={(e) => setFormProduct(e.target.value ? Number(e.target.value) : "")}
+                    className="h-11 w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 text-xs font-bold text-gray-900 outline-none focus:border-indigo-500 dark:border-white/[0.08] dark:bg-white/[0.03] dark:text-white"
+                  >
+                    <option value="">انتخاب محصول...</option>
+                    {products.map((product) => (
+                      <option key={product.id} value={product.id}>
+                        {product.name} ({product.code})
+                      </option>
+                    ))}
+                  </select>
+                </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block text-[11.5px] font-bold text-gray-400 mb-1">ساعت شروع *</label>
@@ -285,16 +339,18 @@ export default function UserProductionLogsPage() {
                   </div>
                   {formStart && formEnd && (
                     <p className="col-span-2 text-[11.5px] font-bold text-indigo-500">
-                      مدت کار: {toPersianDigits(formatHoursWorked(formStart, formEnd))} ساعت
+                      مدت کار: {toPersianDigits(formatHoursWorked(formStart, formEnd))}
                     </p>
                   )}
                   <div>
                     <label className="block text-[11.5px] font-bold text-gray-400 mb-1">تعداد تولید شده</label>
                     <input
                       type="number"
+                      inputMode="numeric"
+                      step="1"
                       min="0"
                       value={formProduced}
-                      onChange={(e) => setFormProduced(e.target.value)}
+                      onChange={(e) => setFormProduced(e.target.value.replace(/[^0-9]/g, ""))}
                       className="h-11 w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 text-xs font-bold text-gray-900 outline-none focus:border-indigo-500 dark:border-white/[0.08] dark:bg-white/[0.03] dark:text-white"
                     />
                   </div>
@@ -305,9 +361,11 @@ export default function UserProductionLogsPage() {
                     <label className="block text-[11.5px] font-bold text-gray-400 mb-1">مقدار ضایعات</label>
                     <input
                       type="number"
+                      inputMode="numeric"
+                      step="1"
                       min="0"
                       value={formWaste}
-                      onChange={(e) => setFormWaste(e.target.value)}
+                      onChange={(e) => setFormWaste(e.target.value.replace(/[^0-9]/g, ""))}
                       className="h-11 w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 text-xs font-bold text-gray-900 outline-none focus:border-indigo-500 dark:border-white/[0.08] dark:bg-white/[0.03] dark:text-white"
                     />
                   </div>

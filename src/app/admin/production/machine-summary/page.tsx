@@ -1,5 +1,7 @@
 "use client";
 
+import { formatProductionInteger, formatProductionPercent, formatProductionHours, sumProductionDecimals } from "@/lib/productionFormat";
+
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
     Loader2,
@@ -127,8 +129,7 @@ export default function MachineSummaryPage() {
                     <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
                         <StatCard
                             label="کل ساعت کار"
-                            value={toPersianDigits(summaryReport.totals.hours)}
-                            unit="ساعت"
+                            value={formatProductionHours(summaryReport.totals.hours)}
                             tone="indigo"
                             icon={<CalendarDays size={16} />}
                         />
@@ -141,7 +142,7 @@ export default function MachineSummaryPage() {
                         />
                         <StatCard
                             label="تولید انتظاری"
-                            value={toPersianDigits(Number(summaryReport.totals.expected_production).toFixed(0))}
+                            value={formatProductionInteger(summaryReport.totals.expected_production)}
                             unit="عدد"
                             tone="indigo"
                             icon={<Gauge size={16} />}
@@ -155,7 +156,7 @@ export default function MachineSummaryPage() {
                         />
                         <StatCard
                             label="ضایعات انتظاری"
-                            value={toPersianDigits(Number(summaryReport.totals.expected_waste).toFixed(0))}
+                            value={formatProductionInteger(summaryReport.totals.expected_waste)}
                             unit="عدد"
                             tone="amber"
                             icon={<AlertTriangle size={16} />}
@@ -165,7 +166,7 @@ export default function MachineSummaryPage() {
                             value={
                                 summaryReport.totals.efficiency === null
                                     ? "—"
-                                    : `${toPersianDigits(summaryReport.totals.efficiency.toFixed(1))}٪`
+                                    : `${formatProductionPercent(summaryReport.totals.efficiency)}٪`
                             }
                             tone="emerald"
                             icon={<BarChart3 size={16} />}
@@ -179,16 +180,23 @@ export default function MachineSummaryPage() {
                         title="روند تولید واقعی و انتظاری"
                         subtitle="مجموع همه ماشین‌ها در هر دوره"
                         data={(() => {
-                            const map = new Map<string, { name: string; a: number; b: number }>();
-                            summaryReport.machines.forEach((m) =>
-                                m.periods.forEach((p) => {
-                                    const cur = map.get(p.key) ?? { name: p.label, a: 0, b: 0 };
-                                    cur.a += Number(p.produced);
-                                    cur.b += Number(p.expected_production);
-                                    map.set(p.key, cur);
+                            const map = new Map<string, { name: string; a: number; expectedValues: string[] }>();
+                            summaryReport.machines.forEach((machine) =>
+                                machine.periods.forEach((period) => {
+                                    const current = map.get(period.key) ?? {
+                                        name: period.label,
+                                        a: 0,
+                                        expectedValues: [],
+                                    };
+                                    current.a += period.produced;
+                                    current.expectedValues.push(period.expected_production);
+                                    map.set(period.key, current);
                                 }),
                             );
-                            return Array.from(map.values());
+                            return Array.from(map.values()).map(({ expectedValues, ...period }) => ({
+                                ...period,
+                                b: sumProductionDecimals(expectedValues),
+                            }));
                         })()}
                         seriesA={{ label: "تولید واقعی", hint: "تعداد واقعی تولید شده", color: "#3b82f6" }}
                         seriesB={{ label: "تولید انتظاری", hint: "مقدار مورد انتظار طبق استاندارد", color: "#a66cff" }}
@@ -223,10 +231,10 @@ export default function MachineSummaryPage() {
                                         </div>
                                     </div>
                                     <span className="text-[10.5px] font-bold text-gray-500">
-                                        {toPersianDigits(mch.hours)} ساعت · راندمان{" "}
+                                        {formatProductionHours(mch.hours)} · راندمان{" "}
                                         {mch.efficiency === null
                                             ? "—"
-                                            : `${toPersianDigits(mch.efficiency.toFixed(1))}٪`}
+                                            : `${formatProductionPercent(mch.efficiency)}٪`}
                                     </span>
                                 </div>
 
@@ -259,19 +267,19 @@ export default function MachineSummaryPage() {
                                                         {toPersianDigits(p.label)}
                                                     </td>
                                                     <td className="whitespace-nowrap px-3 py-2 text-gray-500">
-                                                        {toPersianDigits(p.hours)}
+                                                        {formatProductionHours(p.hours)}
                                                     </td>
                                                     <td className="px-3 py-2 font-bold text-emerald-600 dark:text-emerald-400">
                                                         {toPersianDigits(p.produced.toLocaleString())}
                                                     </td>
                                                     <td className="px-3 py-2 text-gray-400">
-                                                        {toPersianDigits(Number(p.expected_production).toFixed(0))}
+                                                        {formatProductionInteger(p.expected_production)}
                                                     </td>
                                                     <td className="px-3 py-2 font-bold text-red-500">
                                                         {toPersianDigits(p.waste)}
                                                     </td>
                                                     <td className="px-3 py-2 text-gray-400">
-                                                        {toPersianDigits(Number(p.expected_waste).toFixed(0))}
+                                                        {formatProductionInteger(p.expected_waste)}
                                                     </td>
                                                     <td className="px-3 py-2">
                                                         <EfficiencyBadge value={p.efficiency} />

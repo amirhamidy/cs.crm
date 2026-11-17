@@ -1,5 +1,7 @@
 "use client";
 
+import { formatProductionInteger, formatProductionPercent, formatProductionHours, sumProductionDecimals } from "@/lib/productionFormat";
+
 import { useEffect, useMemo, useState } from "react";
 import { Loader2, AlertTriangle, BarChart3, Gauge } from "lucide-react";
 import { useTheme } from "next-themes";
@@ -18,26 +20,31 @@ import {
 } from "@/components/admin/production/shared";
 import { useProductionData } from "@/components/admin/production/ProductionContext";
 
-interface DiscrepancyTotals {
+interface CauseMetrics {
     logs: number;
-    produced: number;
-    waste: number;
-    expected_waste: number;
-    waste_diff: number;
-    waste_diff_percent: number | null;
+    hours?: number | string;
+    produced?: number;
+    waste?: number;
+    expected_waste?: number;
+    waste_diff?: number;
+    waste_diff_percent?: number | null;
+    downtime_minutes?: number;
+    downtime_hours?: number;
+    downtime_percent?: number | null;
 }
 
 interface DiscrepancyItem {
     cause_id: number | null;
     cause_name: string;
-    waste_share_percent: number | null;
-    totals: DiscrepancyTotals;
+    share_percent: number | null;
+    totals: CauseMetrics;
 }
 
 interface DiscrepancyReport {
+    kind: "waste" | "breakdown";
     date_from: string;
     date_to: string;
-    totals: DiscrepancyTotals;
+    totals: CauseMetrics;
     items: DiscrepancyItem[];
 }
 
@@ -98,20 +105,19 @@ export default function DiscrepancyReportPage() {
         })();
     }, [span, machineId, productId, causeKind]);
 
-    // پارتو: مرتب بر اساس ضایعات (بک‌اند مرتب می‌کند)، درصد تجمعی نسبت به کل ضایعات
     const data = useMemo(() => {
-        const items = report?.items ?? [];
-        const total = report?.totals.waste ?? 0;
-        let acc = 0;
-        return items.map((i) => {
-            acc += i.totals.waste;
+        const shares: number[] = [];
+        return (report?.items ?? []).map((item) => {
+            shares.push(item.share_percent ?? 0);
             return {
-                name: i.cause_name,
-                waste: i.totals.waste,
-                cumulative: total ? Math.round((acc / total) * 1000) / 10 : 0,
+                name: item.cause_name,
+                waste: causeKind === "waste"
+                    ? item.totals.waste ?? 0
+                    : item.totals.downtime_minutes ?? 0,
+                cumulative: Math.round(sumProductionDecimals(shares)),
             };
         });
-    }, [report]);
+    }, [report, causeKind]);
 
     return (
         <section className="space-y-4">
@@ -186,52 +192,82 @@ export default function DiscrepancyReportPage() {
                 </div>
             ) : report ? (
                 <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-                        <StatCard label="کل ضایعات" value={toPersianDigits(report.totals.waste.toLocaleString())} unit="عدد" tone="red" icon={<AlertTriangle size={16} />} />
-                        <StatCard label="ضایعات استاندارد" value={toPersianDigits(Number(report.totals.expected_waste).toFixed(0))} unit="عدد" tone="indigo" icon={<Gauge size={16} />} />
-                        <StatCard label="اختلاف از استاندارد" value={toPersianDigits(Number(report.totals.waste_diff).toFixed(0))} unit="عدد" tone="red" icon={<BarChart3 size={16} />} />
-                        <StatCard label="تعداد ثبت" value={toPersianDigits(report.totals.logs)} unit="" tone="emerald" icon={<BarChart3 size={16} />} />
-                    </div>
-
-                    <ParetoChart data={data} />
-
-                    <ProductionBarChart
-                        title="ضایعات واقعی در برابر استاندارد"
-                        subtitle="به تفکیک علت"
-                        data={report.items.map((i) => ({
-                            name: i.cause_name,
-                            a: Number(i.totals.waste),
-                            b: Number(i.totals.expected_waste),
-                        }))}
-                        seriesA={{ label: "ضایعات واقعی", color: "#ef4444" }}
-                        seriesB={{ label: "ضایعات استاندارد", color: "#8b5cf6" }}
-                    />
-
-                    <div className="overflow-x-auto rounded-2xl border border-black/[0.06] bg-white dark:border-white/[0.06] dark:bg-white/[0.02]">
-                        <table className="w-full border-collapse text-right text-[11.5px]">
-                            <thead>
-                                <tr className="border-b border-black/5 text-[10.5px] text-gray-400 dark:border-white/5">
-                                    {["علت", "تعداد ثبت", "ضایعات", "استاندارد", "اختلاف", "سهم از کل"].map((h) => (
-                                        <th key={h} className="whitespace-nowrap px-3 py-2 font-bold">{h}</th>
-                                    ))}
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-black/5 dark:divide-white/5">
-                                {report.items.map((i) => (
-                                    <tr key={i.cause_id ?? "none"}>
-                                        <td className="px-3 py-2 font-bold text-gray-700 dark:text-gray-200">{i.cause_name}</td>
-                                        <td className="px-3 py-2 text-gray-500">{toPersianDigits(i.totals.logs)}</td>
-                                        <td className="px-3 py-2 font-bold text-red-500">{toPersianDigits(i.totals.waste)}</td>
-                                        <td className="px-3 py-2 text-gray-400">{toPersianDigits(Number(i.totals.expected_waste).toFixed(0))}</td>
-                                        <td className="px-3 py-2 text-gray-500">{toPersianDigits(Number(i.totals.waste_diff).toFixed(0))}</td>
-                                        <td className="px-3 py-2 text-gray-500">
-                                            {i.waste_share_percent == null ? "—" : `${toPersianDigits(Number(i.waste_share_percent).toFixed(1))}٪`}
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
+                    {causeKind === "waste" ? (
+                        <>
+                            <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+                                <StatCard label="کل ضایعات" value={formatProductionInteger(report.totals.waste)} unit="عدد" tone="red" icon={<AlertTriangle size={16} />} />
+                                <StatCard label="ضایعات استاندارد" value={formatProductionInteger(report.totals.expected_waste)} unit="عدد" tone="indigo" icon={<Gauge size={16} />} />
+                                <StatCard label="اختلاف از استاندارد" value={formatProductionInteger(report.totals.waste_diff)} unit="عدد" tone="red" icon={<BarChart3 size={16} />} />
+                                <StatCard label="تعداد ثبت" value={formatProductionInteger(report.totals.logs)} unit="" tone="emerald" icon={<BarChart3 size={16} />} />
+                            </div>
+                            <ParetoChart data={data} valueLabel="ضایعات" />
+                            <ProductionBarChart
+                                title="ضایعات واقعی در برابر استاندارد"
+                                subtitle="به تفکیک علت"
+                                data={report.items.map((item) => ({
+                                    name: item.cause_name,
+                                    a: Number(item.totals.waste ?? 0),
+                                    b: Number(item.totals.expected_waste ?? 0),
+                                }))}
+                                seriesA={{ label: "ضایعات واقعی", color: "#ef4444" }}
+                                seriesB={{ label: "ضایعات استاندارد", color: "#8b5cf6" }}
+                            />
+                            <div className="overflow-x-auto rounded-2xl border border-black/[0.06] bg-white dark:border-white/[0.06] dark:bg-white/[0.02]">
+                                <table className="w-full border-collapse text-right text-[11.5px]">
+                                    <thead>
+                                        <tr className="border-b border-black/5 text-[10.5px] text-gray-400 dark:border-white/5">
+                                            {["علت", "تعداد ثبت", "ضایعات", "استاندارد", "اختلاف", "سهم از کل"].map((heading) => (
+                                                <th key={heading} className="whitespace-nowrap px-3 py-2 font-bold">{heading}</th>
+                                            ))}
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-black/5 dark:divide-white/5">
+                                        {report.items.map((item) => (
+                                            <tr key={item.cause_id ?? "none"}>
+                                                <td className="px-3 py-2 font-bold text-gray-700 dark:text-gray-200">{item.cause_name}</td>
+                                                <td className="px-3 py-2 text-gray-500">{formatProductionInteger(item.totals.logs)}</td>
+                                                <td className="px-3 py-2 font-bold text-red-500">{formatProductionInteger(item.totals.waste)}</td>
+                                                <td className="px-3 py-2 text-gray-400">{formatProductionInteger(item.totals.expected_waste)}</td>
+                                                <td className="px-3 py-2 text-gray-500">{formatProductionInteger(item.totals.waste_diff)}</td>
+                                                <td className="px-3 py-2 text-gray-500">{item.share_percent == null ? "—" : `${formatProductionPercent(item.share_percent)}٪`}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </>
+                    ) : (
+                        <>
+                            <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+                                <StatCard label="کل زمان توقف" value={formatProductionHours((report.totals.downtime_minutes ?? 0) / 60)} tone="red" icon={<AlertTriangle size={16} />} />
+                                <StatCard label="ساعت کار مرتبط" value={formatProductionHours(report.totals.hours)} tone="indigo" icon={<Gauge size={16} />} />
+                                <StatCard label="درصد توقف" value={report.totals.downtime_percent == null ? "—" : formatProductionPercent(report.totals.downtime_percent)} unit="٪" tone="amber" icon={<BarChart3 size={16} />} />
+                                <StatCard label="تعداد ثبت" value={formatProductionInteger(report.totals.logs)} tone="emerald" icon={<BarChart3 size={16} />} />
+                            </div>
+                            <ParetoChart data={data} title="نمودار پارتو زمان توقف" subtitle="زمان توقف دستگاه به تفکیک علت و درصد تجمعی" valueLabel="توقف (دقیقه)" />
+                            <div className="overflow-x-auto rounded-2xl border border-black/[0.06] bg-white dark:border-white/[0.06] dark:bg-white/[0.02]">
+                                <table className="w-full border-collapse text-right text-[11.5px]">
+                                    <thead>
+                                        <tr className="border-b border-black/5 text-[10.5px] text-gray-400 dark:border-white/5">
+                                            {["علت خرابی", "تعداد ثبت", "مدت توقف", "سهم از کل توقف"].map((heading) => (
+                                                <th key={heading} className="whitespace-nowrap px-3 py-2 font-bold">{heading}</th>
+                                            ))}
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-black/5 dark:divide-white/5">
+                                        {report.items.map((item) => (
+                                            <tr key={item.cause_id ?? "none"}>
+                                                <td className="px-3 py-2 font-bold text-gray-700 dark:text-gray-200">{item.cause_name}</td>
+                                                <td className="px-3 py-2 text-gray-500">{formatProductionInteger(item.totals.logs)}</td>
+                                                <td className="px-3 py-2 font-bold text-red-500">{formatProductionInteger(item.totals.downtime_minutes)} دقیقه</td>
+                                                <td className="px-3 py-2 text-gray-500">{item.share_percent == null ? "—" : `${formatProductionPercent(item.share_percent)}٪`}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </>
+                    )}
                 </div>
             ) : null}
         </section>

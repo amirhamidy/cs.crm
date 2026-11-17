@@ -13,7 +13,7 @@ const short = (s: string) => (s.length > 9 ? `${s.slice(0, 8)}…` : s);
 const BAR = "#ef4444";
 const LINE = "#6366f1";
 
-export default function ParetoChart({ data, title = "نمودار پارتو ضایعات", subtitle = "ضایعات به تفکیک علت و درصد تجمعی" }: { data: ParetoPoint[]; title?: string; subtitle?: string }) {
+export default function ParetoChart({ data, title = "نمودار پارتو ضایعات", subtitle = "ضایعات به تفکیک علت و درصد تجمعی", valueLabel = "ضایعات" }: { data: ParetoPoint[]; title?: string; subtitle?: string; valueLabel?: string }) {
   const { resolvedTheme } = useTheme();
   const dark = resolvedTheme === "dark";
   const uid = useId().replace(/:/g, "");
@@ -31,7 +31,7 @@ export default function ParetoChart({ data, title = "نمودار پارتو ض�
     return (
       <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm dark:border-white/5 dark:bg-slate-950" dir="rtl">
         <h3 className="text-[14px] font-semibold text-gray-900 dark:text-white">{title}</h3>
-        <p className="mt-0.5 text-[13px] text-gray-500 dark:text-gray-400">فقط یک علت ثبت شده؛ ۱۰۰٪ ضایعات مربوط به آن است.</p>
+        <p className="mt-0.5 text-[13px] text-gray-500 dark:text-gray-400">فقط یک علت ثبت شده؛ ۱۰۰٪ مقدار مربوط به آن است.</p>
         <div className="mt-4 flex items-center justify-between rounded-xl bg-red-50/70 px-4 py-3 dark:bg-red-500/10">
           <span className="text-[13px] font-semibold text-gray-800 dark:text-gray-100">{d.name}</span>
           <span className="text-[22px] font-extrabold tabular-nums text-red-500">{toPersianDigits(String(d.waste))}</span>
@@ -62,12 +62,12 @@ export default function ParetoChart({ data, title = "نمودار پارتو ض�
         </div>
         {data.length > 0 && (
           <span className="shrink-0 rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-semibold text-amber-600 dark:bg-amber-500/10 dark:text-amber-400">
-            {toPersianDigits(vital)} علت = ۸۰٪ ضایعات
+            {toPersianDigits(vital)} علت = ۸۰٪ مقدار
           </span>
         )}
       </div>
       <div className="mb-2 flex items-center gap-4" dir="rtl">
-        {[{ l: "ضایعات", c: BAR }, { l: "درصد تجمعی", c: LINE }].map((s) => (
+        {[{ l: valueLabel, c: BAR }, { l: "درصد تجمعی", c: LINE }].map((s) => (
           <div key={s.l} className="flex items-center gap-1.5">
             <span className="h-2 w-2 rounded-full" style={{ backgroundColor: s.c }} />
             <span className="text-[11px] text-gray-500 dark:text-gray-400">{s.l}</span>
@@ -85,7 +85,7 @@ export default function ParetoChart({ data, title = "نمودار پارتو ض�
             colorKey="pareto"
             glowColor={`${BAR}55`}
             rows={[
-              { dotStyle: "square", label: "ضایعات", value: toPersianDigits(String(p?.waste ?? 0)), color: BAR },
+              { dotStyle: "square", label: valueLabel, value: toPersianDigits(String(p?.waste ?? 0)), color: BAR },
               { dotStyle: "circle", label: "درصد تجمعی", value: `${toPersianDigits(String(p?.cumulative ?? 0))}٪`, color: LINE },
             ]}
           />
@@ -100,7 +100,7 @@ export default function ParetoChart({ data, title = "نمودار پارتو ض�
             </defs>
             <CartesianGrid strokeDasharray="3 3" vertical={false} className="[&_line]:stroke-gray-100 dark:[&_line]:stroke-white/[0.04]" />
             <XAxis dataKey="name" tick={tick} className="[&_text]:fill-gray-500 dark:[&_text]:fill-gray-400" axisLine={false} tickLine={false} dy={5} minTickGap={12} tickFormatter={short} />
-            <YAxis yAxisId="l" tick={tick} className="[&_text]:fill-gray-500 dark:[&_text]:fill-gray-400" axisLine={false} tickLine={false} tickFormatter={(v: number) => toPersianDigits(String(v))} />
+            <YAxis yAxisId="l" tick={tick} className="[&_text]:fill-gray-500 dark:[&_text]:fill-gray-400" axisLine={false} tickLine={false} tickFormatter={(v: number) => toPersianDigits(String(Math.round(v)))} />
             <YAxis yAxisId="r" orientation="right" domain={[0, 100]} ticks={[0, 25, 50, 80, 100]} tick={tick} className="[&_text]:fill-gray-500 dark:[&_text]:fill-gray-400" axisLine={false} tickLine={false} width={36} tickFormatter={(v: number) => `${toPersianDigits(String(v))}٪`} />
             <ReferenceLine yAxisId="r" y={80} stroke="#f59e0b" strokeDasharray="4 4" strokeOpacity={0.6} />
             <Tooltip cursor={{ fill: dark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.04)" }} content={() => null} />

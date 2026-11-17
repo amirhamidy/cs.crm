@@ -11,19 +11,22 @@ export function timeToMinutes(t: string): number | null {
   return h * 60 + min;
 }
 
-/** Returns worked hours (rounded to 2 decimals) or null if the times are invalid. */
-export function calcHoursWorked(start: string, end: string): number | null {
-  const s = timeToMinutes(start);
-  const e = timeToMinutes(end);
-  if (s === null || e === null) return null;
-  let diff = e - s;
-  if (diff <= 0) diff += 24 * 60;
-  return Math.round((diff / 60) * 100) / 100;
+export function isValidTimeRange(start: string, end: string): boolean {
+  const startMinutes = timeToMinutes(start);
+  const endMinutes = timeToMinutes(end);
+  return startMinutes !== null && endMinutes !== null && startMinutes !== endMinutes;
 }
 
 export function formatHoursWorked(start: string, end: string): string {
-  const h = calcHoursWorked(start, end);
-  return h === null ? "" : String(h);
+  const startMinutes = timeToMinutes(start);
+  const endMinutes = timeToMinutes(end);
+  if (startMinutes === null || endMinutes === null) return "";
+  const duration = endMinutes > startMinutes ? endMinutes - startMinutes : endMinutes + 1440 - startMinutes;
+  const hours = Math.floor(duration / 60);
+  const minutes = duration % 60;
+  if (!hours) return `${minutes} دقیقه`;
+  if (!minutes) return `${hours} ساعت`;
+  return `${hours} ساعت و ${minutes} دقیقه`;
 }
 
 /** Normalises API value ("08:30:00", "08:30:00.000Z", "08:30") to "HH:MM". */

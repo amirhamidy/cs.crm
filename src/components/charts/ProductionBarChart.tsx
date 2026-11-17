@@ -7,6 +7,7 @@ import { useCallback, useId, useMemo, useState } from "react";
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { AnimatedChartTooltip } from "@/components/charts/ChartTooltip";
 import { toPersianDigits } from "@/lib/jalali";
+import { sumProductionDecimals, formatProductionInteger, formatProductionPercent } from "@/lib/productionFormat";
 
 export type ProductionBarPoint = { name: string; a: number; b: number };
 type Series = { label: string; color: string; hint?: string };
@@ -24,13 +25,12 @@ type Props = {
   onTab?: (id: number) => void;
 };
 
-const fmt = (v: number) =>
-  toPersianDigits(Number.isInteger(v) ? v.toLocaleString("en-US") : v.toFixed(1));
+const fmt = (v: number) => formatProductionInteger(v);
 const compact = (v: number) => {
   const a = Math.abs(v);
-  if (a >= 1_000_000) return `${toPersianDigits((v / 1_000_000).toFixed(1))}M`;
-  if (a >= 1000) return `${toPersianDigits((v / 1000).toFixed(1))}K`;
-  return toPersianDigits(String(v));
+  if (a >= 1_000_000) return `${formatProductionInteger(v / 1_000_000)}M`;
+  if (a >= 1000) return `${formatProductionInteger(v / 1000)}K`;
+  return formatProductionInteger(v);
 };
 const short = (s: string) => (s.length > 9 ? `${s.slice(0, 8)}…` : s);
 
@@ -46,8 +46,8 @@ export default function ProductionBarChart({
 
   const hasData = useMemo(() => data.some((d) => d.a !== 0 || d.b !== 0), [data]);
   const totals = useMemo(() => {
-    const a = data.reduce((s, d) => s + d.a, 0);
-    const b = data.reduce((s, d) => s + d.b, 0);
+    const a = sumProductionDecimals(data.map((point) => point.a));
+    const b = sumProductionDecimals(data.map((point) => point.b));
     return { a, b, pct: b ? (a / b) * 100 : null };
   }, [data]);
 
@@ -115,7 +115,7 @@ export default function ProductionBarChart({
         {[
           { label: seriesA.label, value: fmt(totals.a), color: seriesA.color },
           { label: seriesB.label, value: fmt(totals.b), color: seriesB.color },
-          { label: "تحقق", value: totals.pct === null ? "—" : `${toPersianDigits(totals.pct.toFixed(1))}٪`, color: pctTone },
+          { label: "تحقق", value: totals.pct === null ? "—" : `${formatProductionPercent(totals.pct)}٪`, color: pctTone },
         ].map((s) => (
           <div key={s.label} className="rounded-xl bg-gray-50/80 px-3 py-2 dark:bg-white/[0.03]">
             <div className="flex items-center gap-1.5">
@@ -145,7 +145,7 @@ export default function ProductionBarChart({
               <div>
                 <p className="text-[12px] text-gray-500 dark:text-gray-400">{d.name}</p>
                 <p className="text-[32px] font-extrabold leading-tight tabular-nums" style={{ color: pctTone }}>
-                  {totals.pct === null ? "—" : `${toPersianDigits(totals.pct.toFixed(1))}٪`}
+                  {totals.pct === null ? "—" : `${formatProductionPercent(totals.pct)}٪`}
                 </p>
                 <p className="text-[11px] text-gray-400">تحقق نسبت به مبنا</p>
               </div>
@@ -169,7 +169,7 @@ export default function ProductionBarChart({
       })()}
 
       {(mode === "bars" || mode === "area") && (
-      <div className="relative h-[220px] w-full" dir="ltr">
+      <div className="relative h-[220px] w-full [&_.pbc-a]:-translate-y-1 [&_.pbc-b]:translate-y-1" dir="ltr">
         <div dir="rtl">
           <AnimatedChartTooltip
             visible={!!point}
@@ -216,8 +216,8 @@ export default function ProductionBarChart({
             <YAxis domain={[(m: number) => Math.min(0, m - Math.abs(m) * 0.15 - 1), (m: number) => m + Math.abs(m) * 0.2 + 1]} tick={tick} className="[&_text]:fill-gray-500 dark:[&_text]:fill-gray-400" axisLine={false} tickLine={false} tickFormatter={compact} />
             {signed && <ReferenceLine y={0} stroke={dark ? "#475569" : "#cbd5e1"} />}
             <Tooltip cursor={{ stroke: dark ? "#475569" : "#cbd5e1", strokeDasharray: "4 4" }} content={() => null} />
-            <Area type="monotone" dataKey="b" stroke={seriesB.color} strokeWidth={2} strokeDasharray="5 4" fill={`url(#g-${uid}-1)`} dot={false} activeDot={{ r: 4, strokeWidth: 0, fill: seriesB.color }} isAnimationActive={false} />
-            <Area type="monotone" dataKey="a" stroke={seriesA.color} strokeWidth={2.5} fill={`url(#g-${uid}-0)`} dot={false} activeDot={{ r: 5, strokeWidth: 0, fill: seriesA.color }} isAnimationActive={false} />
+            <Area className="pbc-b" type="monotone" dataKey="b" stroke={seriesB.color} strokeWidth={2} strokeDasharray="5 4" fill={`url(#g-${uid}-1)`} dot={false} activeDot={{ r: 4, strokeWidth: 0, fill: seriesB.color }} isAnimationActive={false} />
+            <Area className="pbc-a" type="monotone" dataKey="a" stroke={seriesA.color} strokeWidth={2.5} fill={`url(#g-${uid}-0)`} dot={false} activeDot={{ r: 5, strokeWidth: 0, fill: seriesA.color }} isAnimationActive={false} />
           </AreaChart>
           )}
         </ResponsiveContainer>

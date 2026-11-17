@@ -1,8 +1,10 @@
 "use client";
 
-import { useDebounced, useServerSearch } from "@/components/admin/production/useServerSearch";
+import { formatProductionInteger, formatProductionLogHours } from "@/lib/productionFormat";
+
+import { useDebounced } from "@/components/admin/production/useServerSearch";
 import SearchInput from "@/components/admin/production/SearchInput";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import {
     X,
     ClipboardList,
@@ -10,13 +12,15 @@ import {
     CalendarDays,
     Filter,
     Eye,
+    ChevronLeft,
+    ChevronRight,
+    Loader2,
 } from "lucide-react";
 import { toHHMM } from "@/lib/productionTime";
 import { toPersianDigits } from "@/lib/jalali";
-import { listAll } from "@/lib/api";
+import { listAll, fetchPage } from "@/lib/api";
 import {
     isoToJalaliString,
-    currentJalaliYearMonth,
     JalaliDatePicker,
     NiceSelect,
     EfficiencyBadge,
@@ -24,11 +28,18 @@ import {
     Product,
     Cause,
     ProductionLog,
+    parseBackendError,
 } from "@/components/admin/production/shared";
 import { useProductionData } from "@/components/admin/production/ProductionContext";
 
 export default function LogsPage() {
-    const { logs, loading, setLogToDelete, setLogToView, employeeOptions, machineOptions } = useProductionData(["logs", "machines", "employees"]);
+    const { setLogToDelete, setLogToView, employeeOptions, machineOptions, refreshVersion } = useProductionData(["machines", "employees"]);
+    const [logs, setLogs] = useState<ProductionLog[]>([]);
+    const [totalLogs, setTotalLogs] = useState(0);
+    const [loading, setLoading] = useState(true);
+    const [loadError, setLoadError] = useState("");
+    const [page, setPage] = useState(1);
+    const pageSize = 20;
 
     const [filterEmployeeId, setFilterEmployeeId] = useState<number | null>(null);
     const [filterMachineId, setFilterMachineId] = useState<number | null>(null);
@@ -54,20 +65,41 @@ export default function LogsPage() {
     const [search, setSearch] = useState("");
 
     const debouncedSearch = useDebounced(search);
-    const searched = useServerSearch<ProductionLog>("/production/api/v1/log/", debouncedSearch, logs);
 
-    const filteredLogs = useMemo(() => {
-        return searched.items.filter((l) => {
-            if (filterEmployeeId !== null && l.employee !== filterEmployeeId) return false;
-            if (filterMachineId !== null && l.machine !== filterMachineId) return false;
-            if (filterProductId !== null && l.product !== filterProductId) return false;
-            if (filterWasteCauseId !== null && l.waste_cause !== filterWasteCauseId) return false;
-            if (filterBreakdownCauseId !== null && l.breakdown_cause !== filterBreakdownCauseId) return false;
-            if (filterDateFrom && l.date < filterDateFrom) return false;
-            if (filterDateTo && l.date > filterDateTo) return false;
-            return true;
-        });
-    }, [searched.items, filterEmployeeId, filterMachineId, filterProductId, filterWasteCauseId, filterBreakdownCauseId, filterDateFrom, filterDateTo]);
+    useEffect(() => {
+        const controller = new AbortController();
+        setLoading(true);
+        setLoadError("");
+        fetchPage<ProductionLog>("/production/api/v1/log/", {
+            page,
+            page_size: pageSize,
+            search: debouncedSearch.trim() || undefined,
+            employee_id: filterEmployeeId ?? undefined,
+            machine_id: filterMachineId ?? undefined,
+            product_id: filterProductId ?? undefined,
+            waste_cause_id: filterWasteCauseId ?? undefined,
+            breakdown_cause_id: filterBreakdownCauseId ?? undefined,
+            date_from: filterDateFrom || undefined,
+            date_to: filterDateTo || undefined,
+        }, controller.signal)
+            .then((response) => {
+                setLogs(response.results);
+                setTotalLogs(response.count);
+            })
+            .catch((error) => {
+                if (controller.signal.aborted) return;
+                setLoadError(parseBackendError(error, "دریافت سوابق تولید انجام نشد"));
+                setLogs([]);
+                setTotalLogs(0);
+            })
+            .finally(() => {
+                if (!controller.signal.aborted) setLoading(false);
+            });
+        return () => controller.abort();
+    }, [page, debouncedSearch, filterEmployeeId, filterMachineId, filterProductId, filterWasteCauseId, filterBreakdownCauseId, filterDateFrom, filterDateTo, refreshVersion]);
+
+    const pageCount = Math.max(1, Math.ceil(totalLogs / pageSize));
+
 
     return (
         <>
@@ -76,7 +108,7 @@ export default function LogsPage() {
                 <div>
                     <h2 className="flex items-center gap-2 text-[13px] font-extrabold text-gray-900 dark:text-white">
                     <ClipboardList size={15} className="text-emerald-500" />
-                    سوابق تولید ({toPersianDigits(filteredLogs.length)} از {toPersianDigits(logs.length)})
+                    سوابق تولید ({toPersianDigits(totalLogs)})
                 </h2>
                     <p className="mt-1 text-[10.5px] text-gray-400">(فهرست ثبت‌های روزانه تولید؛ هر ردیف یک شیفت کاری است)</p>
                 </div>
@@ -86,7 +118,7 @@ export default function LogsPage() {
                 <div className="mb-3 flex items-center gap-2 text-[11.5px] font-bold text-gray-500">
                     <Filter size={13} />
                     فیلترها
-                    <div className="mr-auto flex"><SearchInput value={search} onChange={setSearch} placeholder="جستجو در ثبت‌ها..." /></div>
+                    <div className="mr-auto flex"><SearchInput value={search} onChange={(value) => { setSearch(value); setPage(1); }} placeholder="جستجو در ثبت‌ها..." /></div>
                 </div>
                 <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-4">
                     <NiceSelect
@@ -95,7 +127,7 @@ export default function LogsPage() {
                         emptyText="کارمندی یافت نشد"
                         options={employeeOptions}
                         value={filterEmployeeId}
-                        onChange={setFilterEmployeeId}
+                        onChange={(value) => { setFilterEmployeeId(value); setPage(1); }}
                     />
                     <NiceSelect
                         label="ماشین"
@@ -103,7 +135,7 @@ export default function LogsPage() {
                         emptyText="ماشینی یافت نشد"
                         options={machineOptions}
                         value={filterMachineId}
-                        onChange={setFilterMachineId}
+                        onChange={(value) => { setFilterMachineId(value); setPage(1); }}
                     />
                     <NiceSelect
                         label="محصول"
@@ -111,7 +143,7 @@ export default function LogsPage() {
                         emptyText="محصولی یافت نشد"
                         options={productOptions}
                         value={filterProductId}
-                        onChange={setFilterProductId}
+                        onChange={(value) => { setFilterProductId(value); setPage(1); }}
                     />
                     <NiceSelect
                         label="علت ضایعات"
@@ -119,7 +151,7 @@ export default function LogsPage() {
                         emptyText="علتی یافت نشد"
                         options={wasteOptions}
                         value={filterWasteCauseId}
-                        onChange={setFilterWasteCauseId}
+                        onChange={(value) => { setFilterWasteCauseId(value); setPage(1); }}
                     />
                     <NiceSelect
                         label="علت خرابی ماشین"
@@ -127,19 +159,19 @@ export default function LogsPage() {
                         emptyText="علتی یافت نشد"
                         options={breakdownOptions}
                         value={filterBreakdownCauseId}
-                        onChange={setFilterBreakdownCauseId}
+                        onChange={(value) => { setFilterBreakdownCauseId(value); setPage(1); }}
                     />
                     <JalaliDatePicker
                         label="از تاریخ"
                         value={filterDateFrom}
-                        onChange={setFilterDateFrom}
+                        onChange={(value) => { setFilterDateFrom(value); setPage(1); }}
                         max={filterDateTo || undefined}
                         placeholder="بدون محدودیت"
                     />
                     <JalaliDatePicker
                         label="تا تاریخ"
                         value={filterDateTo}
-                        onChange={setFilterDateTo}
+                        onChange={(value) => { setFilterDateTo(value); setPage(1); }}
                         min={filterDateFrom || undefined}
                         placeholder="بدون محدودیت"
                     />
@@ -161,6 +193,7 @@ export default function LogsPage() {
                                 setFilterBreakdownCauseId(null);
                                 setFilterDateFrom("");
                                 setFilterDateTo("");
+                                setPage(1);
                             }}
                             className="mt-3 flex items-center gap-1.5 rounded-full bg-gray-100 px-3 py-1.5 text-[11px] font-bold text-gray-600 transition-colors hover:bg-gray-200 dark:bg-white/[0.05] dark:text-gray-300 dark:hover:bg-white/[0.08]"
                         >
@@ -170,6 +203,7 @@ export default function LogsPage() {
                     )}
             </div>
 
+            {loadError && <p className="rounded-xl bg-red-500/10 px-3 py-2 text-[11px] font-bold text-red-600">{loadError}</p>}
             <div className="overflow-hidden rounded-2xl border border-black/[0.06] bg-[#fafafa] dark:border-white/[0.06] dark:bg-white/[0.02]">
                 <div className="overflow-x-auto">
                     <table className="w-full border-collapse text-right text-[12px]">
@@ -196,7 +230,9 @@ export default function LogsPage() {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-black/5 dark:divide-white/5">
-                            {filteredLogs.map((log) => {
+                            {loading ? (
+                                <tr><td colSpan={12} className="py-12 text-center text-gray-400"><Loader2 size={20} className="mx-auto animate-spin" /></td></tr>
+                            ) : logs.map((log) => {
                                 return (
                                     <tr
                                         key={log.id}
@@ -227,7 +263,7 @@ export default function LogsPage() {
                                             )}
                                         </td>
                                         <td className="whitespace-nowrap px-4 py-3 text-gray-500 dark:text-gray-400">
-                                            {toPersianDigits(log.hours_worked)} ساعت
+                                            {formatProductionLogHours(log.hours_worked, log.start_time, log.end_time)}
                                             {toHHMM(log.start_time) && (
                                                 <div className="font-mono text-[10px] text-gray-400" dir="ltr">
                                                     {toPersianDigits(toHHMM(log.start_time))} → {toPersianDigits(toHHMM(log.end_time))}
@@ -238,13 +274,13 @@ export default function LogsPage() {
                                             {toPersianDigits(log.produced_qty.toLocaleString())}
                                         </td>
                                         <td className="px-4 py-3 text-gray-400">
-                                            {toPersianDigits(Number(log.expected_production).toFixed(1))}
+                                            {formatProductionInteger(log.expected_production)}
                                         </td>
                                         <td className="px-4 py-3 font-bold text-red-500">
                                             {toPersianDigits(log.waste_qty)}
                                         </td>
                                         <td className="px-4 py-3 text-gray-400">
-                                            {toPersianDigits(Number(log.expected_waste).toFixed(1))}
+                                            {formatProductionInteger(log.expected_waste)}
                                         </td>
                                         <td className="px-4 py-3">
                                             <EfficiencyBadge value={log.efficiency} />
@@ -275,17 +311,22 @@ export default function LogsPage() {
                                 );
                             })}
 
-                            {!loading && filteredLogs.length === 0 && (
+                            {!loading && logs.length === 0 && (
                                 <tr>
                                     <td colSpan={12} className="py-12 text-center text-[12px] text-gray-400">
-                                        {logs.length === 0
-                                            ? "هنوز رکوردی ثبت نشده. با «ثبت لاگ جدید» اولین رکورد را اضافه کنید."
-                                            : "رکوردی با این فیلترها یافت نشد."}
+                                        هیچ رکوردی با این فیلترها یافت نشد."
                                     </td>
                                 </tr>
                             )}
                         </tbody>
                     </table>
+                </div>
+            </div>
+            <div className="flex items-center justify-between gap-3 text-[11px] text-gray-500">
+                <span>صفحه {toPersianDigits(page)} از {toPersianDigits(pageCount)}</span>
+                <div className="flex items-center gap-2">
+                    <button type="button" disabled={page <= 1 || loading} onClick={() => setPage((value) => Math.max(1, value - 1))} className="flex h-9 items-center gap-1 rounded-lg border border-black/10 px-3 disabled:opacity-40 dark:border-white/10"><ChevronRight size={14} /> قبلی</button>
+                    <button type="button" disabled={page >= pageCount || loading} onClick={() => setPage((value) => Math.min(pageCount, value + 1))} className="flex h-9 items-center gap-1 rounded-lg border border-black/10 px-3 disabled:opacity-40 dark:border-white/10">بعدی <ChevronLeft size={14} /></button>
                 </div>
             </div>
         </section>

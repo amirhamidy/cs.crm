@@ -1,5 +1,7 @@
 "use client";
 
+import { formatProductionInteger, formatProductionPercent, formatProductionHours, formatProductionLogHours } from "@/lib/productionFormat";
+
 import { useEffect, useMemo, useState } from "react";
 import {
     Factory,
@@ -121,8 +123,7 @@ export default function MonthlyPage() {
                     <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
                         <StatCard
                             label="کل ساعت کار"
-                            value={toPersianDigits(monthlyReport.totals.hours)}
-                            unit="ساعت"
+                            value={formatProductionHours(monthlyReport.totals.hours)}
                             tone="indigo"
                             icon={<CalendarDays size={16} />}
                         />
@@ -135,7 +136,7 @@ export default function MonthlyPage() {
                         />
                         <StatCard
                             label="تولید انتظاری"
-                            value={toPersianDigits(Number(monthlyReport.totals.expected_production).toFixed(0))}
+                            value={formatProductionInteger(monthlyReport.totals.expected_production)}
                             unit="عدد"
                             tone="indigo"
                             icon={<Gauge size={16} />}
@@ -149,7 +150,7 @@ export default function MonthlyPage() {
                         />
                         <StatCard
                             label="ضایعات انتظاری"
-                            value={toPersianDigits(Number(monthlyReport.totals.expected_waste).toFixed(0))}
+                            value={formatProductionInteger(monthlyReport.totals.expected_waste)}
                             unit="عدد"
                             tone="amber"
                             icon={<AlertTriangle size={16} />}
@@ -159,7 +160,7 @@ export default function MonthlyPage() {
                             value={
                                 monthlyReport.totals.efficiency === null
                                     ? "—"
-                                    : `${toPersianDigits(monthlyReport.totals.efficiency.toFixed(1))}٪`
+                                    : `${formatProductionPercent(monthlyReport.totals.efficiency)}٪`
                             }
                             tone="emerald"
                             icon={<BarChart3 size={16} />}
@@ -202,10 +203,10 @@ export default function MonthlyPage() {
                                                 {emp.employee_name}
                                             </p>
                                             <p className="text-[10.5px] text-gray-400">
-                                                {toPersianDigits(emp.hours)} ساعت · راندمان{" "}
+                                                {formatProductionHours(emp.hours)} · راندمان{" "}
                                                 {emp.efficiency === null
                                                     ? "—"
-                                                    : `${toPersianDigits(emp.efficiency.toFixed(1))}٪`}
+                                                    : `${formatProductionPercent(emp.efficiency)}٪`}
                                             </p>
                                         </div>
                                     </div>
@@ -227,10 +228,10 @@ export default function MonthlyPage() {
                                                 </span>
                                             </div>
                                             <span className="text-[10.5px] font-bold text-gray-500">
-                                                {toPersianDigits(mch.hours)} ساعت · راندمان{" "}
+                                                {formatProductionHours(mch.hours)} · راندمان{" "}
                                                 {mch.efficiency === null
                                                     ? "—"
-                                                    : `${toPersianDigits(mch.efficiency.toFixed(1))}٪`}
+                                                    : `${formatProductionPercent(mch.efficiency)}٪`}
                                             </span>
                                         </div>
 
@@ -271,19 +272,19 @@ export default function MonthlyPage() {
                                                                 {d.product_name || "—"}
                                                             </td>
                                                             <td className="whitespace-nowrap px-2 py-2 text-gray-500">
-                                                                {toPersianDigits(d.hours)}
+                                                                {formatProductionLogHours(d.hours, d.start_time, d.end_time)}
                                                             </td>
                                                             <td className="px-2 py-2 font-bold text-emerald-600 dark:text-emerald-400">
                                                                 {toPersianDigits(d.produced.toLocaleString())}
                                                             </td>
                                                             <td className="px-2 py-2 text-gray-400">
-                                                                {toPersianDigits(Number(d.expected_production).toFixed(0))}
+                                                                {formatProductionInteger(d.expected_production)}
                                                             </td>
                                                             <td className="px-2 py-2 font-bold text-red-500">
                                                                 {toPersianDigits(d.waste)}
                                                             </td>
                                                             <td className="px-2 py-2 text-gray-400">
-                                                                {toPersianDigits(Number(d.expected_waste).toFixed(0))}
+                                                                {formatProductionInteger(d.expected_waste)}
                                                             </td>
                                                             <td className="px-2 py-2">
                                                                 <EfficiencyBadge value={d.efficiency} />

@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import {
     Factory,
@@ -11,6 +12,9 @@ import {
     Gauge,
 } from "lucide-react";
 import { toPersianDigits } from "@/lib/jalali";
+import axiosInstance from "@/lib/axiosInstance";
+import { currentJalaliYearMonth, parseBackendError } from "@/components/admin/production/shared";
+import { formatProductionInteger, formatProductionPercent } from "@/lib/productionFormat";
 import {
     gradientOf,
     initialOf,
@@ -19,8 +23,27 @@ import {
 } from "@/components/admin/production/shared";
 import { useProductionData } from "@/components/admin/production/ProductionContext";
 
+type DashboardTotals = { produced: number; waste: number; efficiency: number | null };
+
 export default function DashboardPage() {
-    const { machines, loading, togglingId, setMachineModal, stats, handleToggleActive } = useProductionData(["machines", "logs"]);
+    const { machines, loading, togglingId, setMachineModal, handleToggleActive } = useProductionData(["machines"]);
+    const [totals, setTotals] = useState<DashboardTotals | null>(null);
+    const [reportError, setReportError] = useState("");
+
+    useEffect(() => {
+        const { jy, jm } = currentJalaliYearMonth();
+        let active = true;
+        axiosInstance.get("/production/api/v1/report/monthly/", { params: { year: jy, month: jm } })
+            .then((response) => {
+                if (!active) return;
+                setTotals(response.data?.totals ?? null);
+            })
+            .catch((error) => {
+                if (!active) return;
+                setReportError(parseBackendError(error, "دریافت آمار ماهانه تولید انجام نشد"));
+            });
+        return () => { active = false; };
+    }, []);
 
     return (
         <>
@@ -28,25 +51,27 @@ export default function DashboardPage() {
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                 <StatCard
                     label="کل تولید واقعی"
-                    value={toPersianDigits(stats.produced.toLocaleString())}
+                    value={totals ? formatProductionInteger(totals.produced) : "—"}
                     unit="عدد"
                     tone="emerald"
                     icon={<TrendingUp size={16} />}
                 />
                 <StatCard
-                    label="میانگین راندمان"
-                    value={`${toPersianDigits(stats.avgEfficiency.toFixed(1))}٪`}
+                    label="راندمان کل"
+                    value={totals?.efficiency == null ? "—" : `${formatProductionPercent(totals.efficiency)}٪`}
                     tone="indigo"
                     icon={<BarChart3 size={16} />}
                 />
                 <StatCard
                     label="کل ضایعات ثبت‌شده"
-                    value={toPersianDigits(stats.waste.toLocaleString())}
+                    value={totals ? formatProductionInteger(totals.waste) : "—"}
                     unit="عدد"
                     tone="red"
                     icon={<AlertTriangle size={16} />}
                 />
             </div>
+
+            {reportError && <p className="rounded-xl bg-red-500/10 px-3 py-2 text-[11px] font-bold text-red-600">{reportError}</p>}
 
             <section className="space-y-4">
                 <div>
@@ -112,7 +137,7 @@ export default function DashboardPage() {
                                             تولید در ساعت
                                         </span>
                                         <span className="mt-0.5 block text-[13px] font-extrabold text-gray-800 dark:text-gray-100">
-                                            {toPersianDigits(m.std_production_per_hour)}
+                                            {formatProductionInteger(m.std_production_per_hour)}
                                         </span>
                                     </div>
                                     <div className="rounded-xl bg-black/[0.03] px-3 py-2 dark:bg-white/[0.03]">
@@ -121,7 +146,7 @@ export default function DashboardPage() {
                                             ضایعات در ساعت
                                         </span>
                                         <span className="mt-0.5 block text-[13px] font-extrabold text-red-500">
-                                            {toPersianDigits(m.std_waste_per_hour)}
+                                            {formatProductionInteger(m.std_waste_per_hour)}
                                         </span>
                                     </div>
                                 </div>

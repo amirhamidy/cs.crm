@@ -20,19 +20,18 @@ import {
     type ProductionLog,
 } from "@/components/admin/production/shared";
 
-export type DataKey = "machines" | "logs" | "employees";
+export type DataKey = "machines" | "employees";
 
 const ENDPOINTS: Record<DataKey, string> = {
     machines: "/production/api/v1/machine/",
-    logs: "/production/api/v1/log/",
     employees: "/accounts/api/v1/employee/list/",
 };
 
 interface ProductionContextValue {
     machines: Machine[];
-    logs: ProductionLog[];
     employees: EmployeeItem[];
     loaded: Record<DataKey, boolean>;
+    refreshVersion: number;
     pageError: string;
     setPageError: (v: string) => void;
     togglingId: number | null;
@@ -54,16 +53,15 @@ const Ctx = createContext<ProductionContextValue | null>(null);
 
 export function ProductionProvider({ children }: { children: ReactNode }) {
     const [machines, setMachines] = useState<Machine[]>([]);
-    const [logs, setLogs] = useState<ProductionLog[]>([]);
     const [employees, setEmployees] = useState<EmployeeItem[]>([]);
     const [loaded, setLoaded] = useState<Record<DataKey, boolean>>({
         machines: false,
-        logs: false,
         employees: false,
     });
     const requested = useRef<Set<DataKey>>(new Set());
 
     const [pageError, setPageError] = useState("");
+    const [refreshVersion, setRefreshVersion] = useState(0);
     const [togglingId, setTogglingId] = useState<number | null>(null);
     const [machineModal, setMachineModal] = useState<{ open: boolean; machine: Machine | null }>({
         open: false,
@@ -75,10 +73,11 @@ export function ProductionProvider({ children }: { children: ReactNode }) {
 
     const loadKey = useCallback(async (key: DataKey) => {
         try {
-            const data = await listAll<any>(ENDPOINTS[key]);
-            if (key === "machines") setMachines(data as Machine[]);
-            else if (key === "logs") setLogs(data as ProductionLog[]);
-            else setEmployees(data as EmployeeItem[]);
+            if (key === "machines") {
+                setMachines(await listAll<Machine>(ENDPOINTS[key]));
+            } else {
+                setEmployees(await listAll<EmployeeItem>(ENDPOINTS[key]));
+            }
         } catch (err) {
             setPageError(parseBackendError(err, "دریافت اطلاعات تولید با خطا مواجه شد"));
         } finally {
@@ -98,6 +97,7 @@ export function ProductionProvider({ children }: { children: ReactNode }) {
     );
 
     const refresh = useCallback(async () => {
+        setRefreshVersion((version) => version + 1);
         await Promise.all(Array.from(requested.current).map((k) => loadKey(k)));
     }, [loadKey]);
 
@@ -142,9 +142,9 @@ export function ProductionProvider({ children }: { children: ReactNode }) {
 
     const value: ProductionContextValue = {
         machines,
-        logs,
         employees,
         loaded,
+        refreshVersion,
         pageError,
         setPageError,
         togglingId,
@@ -174,7 +174,7 @@ export function useProductionContext() {
 /** Each page declares which datasets it needs; only those are fetched (once, then shared). */
 export function useProductionData(needs: DataKey[]) {
     const ctx = useProductionContext();
-    const { ensure, loaded, logs, employees, machines } = ctx;
+    const { ensure, loaded, employees, machines } = ctx;
     const key = needs.join(",");
 
     useEffect(() => {
@@ -183,22 +183,6 @@ export function useProductionData(needs: DataKey[]) {
     }, [key, ensure]);
 
     const loading = needs.some((n) => !loaded[n]);
-
-    const stats = useMemo(() => {
-        let produced = 0;
-        let waste = 0;
-        let effSum = 0;
-        let effCount = 0;
-        logs.forEach((l) => {
-            produced += Number(l.produced_qty || 0);
-            waste += Number(l.waste_qty || 0);
-            if (l.efficiency !== null && l.efficiency !== undefined) {
-                effSum += Number(l.efficiency);
-                effCount++;
-            }
-        });
-        return { produced, waste, avgEfficiency: effCount > 0 ? effSum / effCount : 0 };
-    }, [logs]);
 
     const employeeOptions = useMemo<Option[]>(
         () =>
@@ -220,5 +204,5 @@ export function useProductionData(needs: DataKey[]) {
         [machines]
     );
 
-    return { ...ctx, loading, stats, employeeOptions, machineOptions };
+    return { ...ctx, loading, employeeOptions, machineOptions };
 }

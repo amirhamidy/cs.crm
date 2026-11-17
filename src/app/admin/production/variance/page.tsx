@@ -1,5 +1,7 @@
 "use client";
 
+import { formatProductionInteger, formatProductionPercent, formatProductionHours } from "@/lib/productionFormat";
+
 import { useEffect, useMemo, useState } from "react";
 import { toPersianDigits } from "@/lib/jalali";
 import { Loader2, Scale, Factory, Target, TrendingUp, Trash2, RotateCcw } from "lucide-react";
@@ -7,7 +9,7 @@ import axiosInstance from "@/lib/axiosInstance";
 import { useProductionData } from "@/components/admin/production/ProductionContext";
 import { listAll } from "@/lib/api/_core";
 import type { Product, Option } from "@/components/admin/production/shared";
-import { parseBackendError, NiceSelect, JalaliDatePicker, currentJalaliYearMonth } from "@/components/admin/production/shared";
+import { parseBackendError, NiceSelect, JalaliDatePicker, currentJalaliYearMonth, alignToPeriod, currentMonthRange } from "@/components/admin/production/shared";
 import { JALALI_MONTHS } from "@/lib/jalali";
 
 type Totals = {
@@ -44,7 +46,7 @@ const GROUP_OPTS: Option[] = [
     { id: 4, label: "سالانه", sub: "year" },
 ];
 const MONTH_OPTS: Option[] = JALALI_MONTHS.map((m, i) => ({ id: i + 1, label: m, sub: "" }));
-const fmt = (n: number | undefined) => (n === undefined || n === null ? "—" : Number(n).toLocaleString("fa-IR", { maximumFractionDigits: 1 }));
+const fmt = (n: number | undefined) => formatProductionInteger(n);
 
 export default function VariancePage() {
     const { machineOptions, employeeOptions } = useProductionData(["machines", "employees"]);
@@ -52,8 +54,8 @@ export default function VariancePage() {
     useEffect(() => {
         listAll<Product>("/production/api/v1/product/", { is_active: true }).then(setProducts).catch(() => setProducts([]));
     }, []);
-    const [from, setFrom] = useState("");
-    const [to, setTo] = useState("");
+    const [from, setFrom] = useState(() => currentMonthRange().from);
+    const [to, setTo] = useState(() => currentMonthRange().to);
     const [groupBy, setGroupBy] = useState<number | null>(3);
     const [entity, setEntity] = useState<number | null>(1);
     const [year, setYear] = useState<number | null>(null);
@@ -72,6 +74,16 @@ export default function VariancePage() {
     const productOptions: Option[] = useMemo(() => products.map((p) => ({ id: p.id, label: p.name, sub: "" })), [products]);
 
     const usingYear = year !== null;
+    const unit = (GROUP_OPTS.find((o) => o.id === groupBy)?.sub || "month") as "day" | "week" | "month" | "year";
+    const changeFrom = (v: string) => setFrom(v ? alignToPeriod(v, unit, "start") : "");
+    const changeTo = (v: string) => setTo(v ? alignToPeriod(v, unit, "end") : "");
+    const changeGroup = (v: number | null) => {
+        const g = v ?? 3;
+        const u = (GROUP_OPTS.find((o) => o.id === g)?.sub || "month") as "day" | "week" | "month" | "year";
+        setGroupBy(g);
+        if (from) setFrom(alignToPeriod(from, u, "start"));
+        if (to) setTo(alignToPeriod(to, u, "end"));
+    };
 
     useEffect(() => {
         const params: Record<string, string | number> = {
@@ -101,7 +113,7 @@ export default function VariancePage() {
     }, [from, to, groupBy, entity, year, month, productId, machineId, employeeId]);
 
     function reset() {
-        setFrom(""); setTo(""); setGroupBy(3); setEntity(1); setYear(null); setMonth(null);
+        { const r = currentMonthRange(); setFrom(r.from); setTo(r.to); } setGroupBy(3); setEntity(1); setYear(null); setMonth(null);
         setProductId(null); setMachineId(null); setEmployeeId(null);
     }
 
@@ -123,20 +135,21 @@ export default function VariancePage() {
             </div>
 
             <div className="rounded-3xl border border-black/[0.06] bg-white/60 p-4 dark:border-white/[0.06] dark:bg-white/[0.02]">
-                <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-                    <NiceSelect label="نوع گزارش" options={ENTITY_OPTS} value={entity} onChange={(v) => setEntity(v ?? 1)} placeholder="انتخاب" {...sel} />
-                    <NiceSelect label="بازه‌بندی" options={GROUP_OPTS} value={groupBy} onChange={(v) => setGroupBy(v ?? 3)} placeholder="انتخاب" {...sel} />
-                    <NiceSelect label="سال شمسی" options={yearOptions} value={year} onChange={(v) => { setYear(v); if (!v) setMonth(null); }} placeholder="همه (بازه دلخواه)" {...sel} />
-                    <NiceSelect label="ماه شمسی" options={MONTH_OPTS} value={month} onChange={setMonth} placeholder="همه ماه‌ها" disabled={!usingYear} {...sel} />
-                    <NiceSelect label="محصول" options={productOptions} value={productId} onChange={setProductId} placeholder="همه محصولات" {...sel} />
-                    <NiceSelect label="ماشین" options={machineOptions} value={machineId} onChange={setMachineId} placeholder="همه ماشین‌ها" {...sel} />
-                    <NiceSelect label="نیرو" options={employeeOptions} value={employeeId} onChange={setEmployeeId} placeholder="همه نیروها" {...sel} />
-                    <div className="hidden lg:block" />
-                    <div className={`col-span-1 lg:col-span-2 ${usingYear ? "pointer-events-none opacity-40" : ""}`}>
-                        <JalaliDatePicker label="از تاریخ" value={from} onChange={setFrom} max={to || undefined} placeholder="شروع بازه" />
+                <div className="flex flex-wrap gap-3">
+                    <div className="min-w-[170px] flex-1 basis-[170px]"><NiceSelect label="نوع گزارش" options={ENTITY_OPTS} value={entity} onChange={(v) => setEntity(v ?? 1)} placeholder="انتخاب" {...sel} /></div>
+                    <div className="min-w-[170px] flex-1 basis-[170px]"><NiceSelect label="بازه‌بندی" options={GROUP_OPTS} value={groupBy} onChange={changeGroup} placeholder="انتخاب" {...sel} /></div>
+                    <div className="min-w-[170px] flex-1 basis-[170px]"><NiceSelect label="سال شمسی" options={yearOptions} value={year} onChange={(v) => { setYear(v); if (!v) setMonth(null); }} placeholder="همه (بازه دلخواه)" {...sel} /></div>
+                    <div className="min-w-[170px] flex-1 basis-[170px]"><NiceSelect label="ماه شمسی" options={MONTH_OPTS} value={month} onChange={setMonth} placeholder="همه ماه‌ها" disabled={!usingYear} {...sel} /></div>
+                    <div className="min-w-[170px] flex-1 basis-[170px]"><NiceSelect label="محصول" options={productOptions} value={productId} onChange={setProductId} placeholder="همه محصولات" {...sel} /></div>
+                    <div className="min-w-[170px] flex-1 basis-[170px]"><NiceSelect label="ماشین" options={machineOptions} value={machineId} onChange={setMachineId} placeholder="همه ماشین‌ها" {...sel} /></div>
+                    <div className="min-w-[170px] flex-1 basis-[170px]"><NiceSelect label="نیرو" options={employeeOptions} value={employeeId} onChange={setEmployeeId} placeholder="همه نیروها" {...sel} /></div>
+                </div>
+                <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <div className={`${usingYear ? "pointer-events-none opacity-40" : ""}`}>
+                        <JalaliDatePicker label="از تاریخ" value={from} onChange={changeFrom} max={to || undefined} placeholder="شروع بازه" />
                     </div>
-                    <div className={`col-span-1 lg:col-span-2 ${usingYear ? "pointer-events-none opacity-40" : ""}`}>
-                        <JalaliDatePicker label="تا تاریخ" value={to} onChange={setTo} min={from || undefined} placeholder="پایان بازه" />
+                    <div className={`${usingYear ? "pointer-events-none opacity-40" : ""}`}>
+                        <JalaliDatePicker label="تا تاریخ" value={to} onChange={changeTo} min={from || undefined} placeholder="پایان بازه" />
                     </div>
                 </div>
                 {usingYear && <p className="mt-3 text-[11px] text-amber-600">با انتخاب سال، بازه‌ی تاریخ نادیده گرفته می‌شود.</p>}
@@ -183,13 +196,13 @@ export default function VariancePage() {
                                         {section.items.map((it, idx) => (
                                             <tr key={idx} className="border-t border-black/[0.04] dark:border-white/[0.04]">
                                                 <td className="px-3 py-2.5 font-bold">{it.product_name ?? it.machine_name ?? it.operator_name ?? it.name ?? "—"}</td>
-                                                <td className="px-3 py-2.5">{fmt(it.totals.hours)}</td>
+                                                <td className="px-3 py-2.5">{formatProductionHours(it.totals.hours)}</td>
                                                 <td className="px-3 py-2.5">{fmt(it.totals.produced)}</td>
                                                 <td className="px-3 py-2.5">{fmt(it.totals.expected_production)}</td>
-                                                <td className={`px-3 py-2.5 font-bold ${it.totals.production_diff < 0 ? "text-red-600" : "text-emerald-600"}`}>{fmt(it.totals.production_diff)} ({fmt(it.totals.production_diff_percent)}٪)</td>
+                                                <td className={`px-3 py-2.5 font-bold ${it.totals.production_diff < 0 ? "text-red-600" : "text-emerald-600"}`}>{fmt(it.totals.production_diff)} ({formatProductionPercent(it.totals.production_diff_percent)}٪)</td>
                                                 <td className="px-3 py-2.5">{fmt(it.totals.waste)}</td>
                                                 <td className="px-3 py-2.5">{fmt(it.totals.expected_waste)}</td>
-                                                <td className={`px-3 py-2.5 font-bold ${it.totals.waste_diff > 0 ? "text-red-600" : "text-emerald-600"}`}>{fmt(it.totals.waste_diff)} ({fmt(it.totals.waste_diff_percent)}٪)</td>
+                                                <td className={`px-3 py-2.5 font-bold ${it.totals.waste_diff > 0 ? "text-red-600" : "text-emerald-600"}`}>{fmt(it.totals.waste_diff)} ({formatProductionPercent(it.totals.waste_diff_percent)}٪)</td>
                                             </tr>
                                         ))}
                                     </tbody>
