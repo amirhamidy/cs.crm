@@ -202,6 +202,7 @@ export default function DiscrepancyReportPage() {
                             </div>
                             <ParetoChart data={data} valueLabel="ضایعات" />
                             <ProductionBarChart
+                        allLabels
                                 title="ضایعات واقعی در برابر استاندارد"
                                 subtitle="به تفکیک علت"
                                 data={report.items.map((item) => ({

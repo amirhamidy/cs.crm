@@ -201,6 +201,7 @@ export default function MachineMonthlySection() {
 
                     <div className="grid grid-cols-1 gap-4">
                         <ProductionBarChart
+                        allLabels
                             title="تولید ماهانه ماشین‌ها"
                             subtitle="واقعی در برابر انتظاری"
                             data={machineMonthlyReport.machines.map((m) => ({
@@ -212,6 +213,7 @@ export default function MachineMonthlySection() {
                             seriesB={{ label: "تولید انتظاری", hint: "مقدار مورد انتظار طبق استاندارد", color: "#8b5cf6" }}
                         />
                         <ProductionBarChart
+                        allLabels
                             title="انحراف از مقدار انتظاری"
                             subtitle="تفاوت تولید و ضایعات با مقدار انتظاری (واقعی − انتظاری)"
                             signed
@@ -227,6 +229,7 @@ export default function MachineMonthlySection() {
 
                     <div className="grid grid-cols-1 gap-4">
                         <ProductionBarChart
+                        allLabels
                             title="تولید به تفکیک محصول"
                             subtitle="واقعی در برابر انتظاری"
                             data={productTotals.map((p) => ({ name: p.name, a: p.produced, b: p.expected_production }))}
@@ -234,6 +237,7 @@ export default function MachineMonthlySection() {
                             seriesB={{ label: "تولید انتظاری", hint: "مقدار مورد انتظار طبق استاندارد", color: "#8b5cf6" }}
                         />
                         <ProductionBarChart
+                        allLabels
                             title="ضایعات به تفکیک محصول"
                             subtitle="واقعی در برابر انتظاری"
                             data={productTotals.map((p) => ({ name: p.name, a: p.waste, b: p.expected_waste }))}

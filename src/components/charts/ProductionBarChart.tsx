@@ -20,6 +20,8 @@ type Props = {
   seriesB: Series;
   emptyText?: string;
   signed?: boolean;
+  /** نمایش همه‌ی برچسب‌های محور (برای مقایسه‌ی نیرو/ماشین/محصول) */
+  allLabels?: boolean;
   tabs?: { id: number; label: string }[];
   activeTab?: number | null;
   onTab?: (id: number) => void;
@@ -33,11 +35,12 @@ const compact = (v: number) => {
   return formatProductionInteger(v);
 };
 const short = (s: string) => (s.length > 9 ? `${s.slice(0, 8)}…` : s);
+const mid = (s: string) => (s.length > 16 ? `${s.slice(0, 15)}…` : s);
 
 export default function ProductionBarChart({
   title, subtitle, data, seriesA, seriesB,
   emptyText = "داده‌ای برای نمایش وجود ندارد.",
-  signed = false, tabs, activeTab, onTab,
+  signed = false, allLabels = false, tabs, activeTab, onTab,
 }: Props) {
   const { resolvedTheme } = useTheme();
   const dark = resolvedTheme === "dark";
@@ -57,7 +60,7 @@ export default function ProductionBarChart({
   }, []);
 
   const mode: "empty" | "single" | "bars" | "area" =
-    !hasData ? "empty" : data.length === 1 ? "single" : data.length <= 4 ? "bars" : "area";
+    !hasData ? "empty" : data.length === 1 ? "single" : (data.length <= 4 || allLabels) ? "bars" : "area";
   const point = active !== null ? data[active] : undefined;
   const diff = point ? point.a - point.b : 0;
   const pctTone = totals.pct === null ? "#9ca3af" : totals.pct >= 100 ? "#10b981" : totals.pct >= 80 ? "#f59e0b" : "#ef4444";
@@ -169,7 +172,7 @@ export default function ProductionBarChart({
       })()}
 
       {(mode === "bars" || mode === "area") && (
-      <div className="relative h-[220px] w-full [&_.pbc-a]:-translate-y-1 [&_.pbc-b]:translate-y-1" dir="ltr">
+      <div className={`relative ${allLabels ? "h-[270px]" : "h-[220px]"} w-full [&_.pbc-a]:-translate-y-1 [&_.pbc-b]:translate-y-1`} dir="ltr">
         <div dir="rtl">
           <AnimatedChartTooltip
             visible={!!point}
@@ -192,9 +195,9 @@ export default function ProductionBarChart({
         </div>
         <ResponsiveContainer width="100%" height="100%">
           {mode === "bars" ? (
-          <BarChart data={data} margin={{ top: 24, right: 8, left: -16, bottom: 12 }} barGap={4} onMouseMove={onMove} onMouseLeave={() => setActive(null)}>
+          <BarChart data={data} margin={{ top: 24, right: 8, left: -16, bottom: allLabels ? 4 : 12 }} barGap={4} onMouseMove={onMove} onMouseLeave={() => setActive(null)}>
             <CartesianGrid strokeDasharray="3 3" vertical={false} className="[&_line]:stroke-gray-100 dark:[&_line]:stroke-white/[0.04]" />
-            <XAxis dataKey="name" tick={tick} className="[&_text]:fill-gray-500 dark:[&_text]:fill-gray-400" axisLine={false} tickLine={false} dy={5} tickFormatter={short} />
+            <XAxis dataKey="name" tick={tick} className="[&_text]:fill-gray-500 dark:[&_text]:fill-gray-400" axisLine={false} tickLine={false} dy={5} tickFormatter={allLabels ? mid : short} {...(allLabels ? { interval: 0, angle: -30, textAnchor: "end", height: 64 } : {})} />
             <YAxis domain={[(m: number) => Math.min(0, m - Math.abs(m) * 0.15 - 1), (m: number) => m + Math.abs(m) * 0.2 + 1]} tick={tick} className="[&_text]:fill-gray-500 dark:[&_text]:fill-gray-400" axisLine={false} tickLine={false} tickFormatter={compact} />
             {signed && <ReferenceLine y={0} stroke={dark ? "#475569" : "#cbd5e1"} />}
             <Tooltip cursor={{ fill: dark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.04)" }} content={() => null} />
@@ -202,7 +205,7 @@ export default function ProductionBarChart({
             <Bar dataKey="b" fill={seriesB.color} fillOpacity={0.35} radius={[6, 6, 0, 0]} maxBarSize={36} isAnimationActive={false} />
           </BarChart>
           ) : (
-          <AreaChart data={data} margin={{ top: 24, right: 8, left: -16, bottom: 12 }} onMouseMove={onMove} onMouseLeave={() => setActive(null)}>
+          <AreaChart data={data} margin={{ top: 24, right: 8, left: -16, bottom: allLabels ? 4 : 12 }} onMouseMove={onMove} onMouseLeave={() => setActive(null)}>
             <defs>
               {[seriesA, seriesB].map((s, i) => (
                 <linearGradient key={i} id={`g-${uid}-${i}`} x1="0" y1="0" x2="0" y2="1">
@@ -212,7 +215,7 @@ export default function ProductionBarChart({
               ))}
             </defs>
             <CartesianGrid strokeDasharray="3 3" vertical={false} className="[&_line]:stroke-gray-100 dark:[&_line]:stroke-white/[0.04]" />
-            <XAxis dataKey="name" tick={tick} className="[&_text]:fill-gray-500 dark:[&_text]:fill-gray-400" axisLine={false} tickLine={false} dy={5} minTickGap={16} tickFormatter={short} />
+            <XAxis dataKey="name" tick={tick} className="[&_text]:fill-gray-500 dark:[&_text]:fill-gray-400" axisLine={false} tickLine={false} dy={5} minTickGap={16} tickFormatter={allLabels ? mid : short} {...(allLabels ? { interval: 0, angle: -30, textAnchor: "end", height: 64 } : {})} />
             <YAxis domain={[(m: number) => Math.min(0, m - Math.abs(m) * 0.15 - 1), (m: number) => m + Math.abs(m) * 0.2 + 1]} tick={tick} className="[&_text]:fill-gray-500 dark:[&_text]:fill-gray-400" axisLine={false} tickLine={false} tickFormatter={compact} />
             {signed && <ReferenceLine y={0} stroke={dark ? "#475569" : "#cbd5e1"} />}
             <Tooltip cursor={{ stroke: dark ? "#475569" : "#cbd5e1", strokeDasharray: "4 4" }} content={() => null} />

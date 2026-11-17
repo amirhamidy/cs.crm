@@ -24,7 +24,7 @@ type Totals = {
     waste_diff: number;
     waste_diff_percent: number;
 };
-type Item = { product_id?: number; machine_id?: number; employee_id?: number; product_name?: string; machine_name?: string; operator_name?: string; name?: string; totals: Totals };
+type Item = { product_id?: number; machine_id?: number; employee_id?: number; product_name?: string; machine_name?: string; employee_name?: string; name?: string; totals: Totals };
 type Section = { totals: Totals; items: Item[] };
 type VarianceReport = { labels: string[]; machines?: Section; operators?: Section; products?: Section };
 
@@ -112,7 +112,7 @@ export default function VariancePage() {
     const selectedName = selectedId ? focusOptions.find((o) => o.id === selectedId)?.label : undefined;
     // با انتخاب یک مورد، تفکیک بر اساس دو بخش دیگر؛ بدون انتخاب، مقایسه‌ی همه‌ی موارد همان بخش
     const shownKeys: Focus[] = selectedId ? FOCUS_OPTS.filter((f) => f.key !== focus).map((f) => f.key) : [focus];
-    const itemName = (it: Item) => it.product_name ?? it.machine_name ?? it.operator_name ?? it.name ?? "—";
+    const itemName = (it: Item) => it.product_name || it.machine_name || it.employee_name || it.name || "—";
 
     const sel = { emptyText: "موردی نیست" };
 
@@ -205,6 +205,7 @@ export default function VariancePage() {
                                 <div key={key} className="space-y-3">
                                     <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
                                         <ProductionBarChart
+                                            allLabels
                                             title={`تولید واقعی در برابر انتظاری (${label})`}
                                             subtitle={sub}
                                             data={section.items.map((it) => ({ name: itemName(it), a: Number(it.totals.produced), b: Number(it.totals.expected_production) }))}
@@ -212,6 +213,7 @@ export default function VariancePage() {
                                             seriesB={{ label: "تولید انتظاری", hint: "مقدار مورد انتظار طبق استاندارد", color: "#8b5cf6" }}
                                         />
                                         <ProductionBarChart
+                                            allLabels
                                             title={`ضایعات واقعی در برابر انتظاری (${label})`}
                                             subtitle={sub}
                                             data={section.items.map((it) => ({ name: itemName(it), a: Number(it.totals.waste), b: Number(it.totals.expected_waste) }))}

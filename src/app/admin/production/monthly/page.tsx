@@ -168,6 +168,7 @@ export default function MonthlyPage() {
                     </div>
 
                     <ProductionBarChart
+                        allLabels
                         title="تولید واقعی در برابر انتظاری (نیرو)"
                         subtitle="گزارش ماهانه به تفکیک کارمند"
                         data={monthlyReport.employees.map((e) => ({
@@ -180,6 +181,7 @@ export default function MonthlyPage() {
                     />
 
                     <ProductionBarChart
+                        allLabels
                         title="ضایعات واقعی در برابر انتظاری (نیرو)"
                         subtitle="گزارش ماهانه به تفکیک کارمند"
                         data={monthlyReport.employees.map((e) => ({
