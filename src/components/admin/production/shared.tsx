@@ -1,4 +1,5 @@
 "use client";
+import { STAT_HINTS } from "./glossary";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
@@ -348,12 +349,16 @@ export function JalaliDatePicker({
     onChange,
     placeholder = "انتخاب تاریخ",
     required = false,
+    min,
+    max,
 }: {
     label: string;
     value: string;
     onChange: (iso: string) => void;
     placeholder?: string;
     required?: boolean;
+    min?: string;
+    max?: string;
 }) {
     const [open, setOpen] = useState(false);
     const ref = useRef<HTMLDivElement>(null);
@@ -390,11 +395,19 @@ export function JalaliDatePicker({
                 setViewJm(jm);
             }
         } else {
-            const { jy, jm } = currentJalaliYearMonth();
-            setViewJy(jy);
-            setViewJm(jm);
+            const hint = min || max;
+            const hp = hint ? hint.split("-").map(Number) : [];
+            if (hp[0] && hp[1] && hp[2]) {
+                const [jy, jm] = toJalali(hp[0], hp[1], hp[2]);
+                setViewJy(jy);
+                setViewJm(jm);
+            } else {
+                const { jy, jm } = currentJalaliYearMonth();
+                setViewJy(jy);
+                setViewJm(jm);
+            }
         }
-    }, [open, value]);
+    }, [open, value, min, max]);
 
     useEffect(() => {
         const handler = (event: MouseEvent) => {
@@ -443,6 +456,8 @@ export function JalaliDatePicker({
     }
 
     function goToday() {
+        const t0 = todayGregorian();
+        if ((min && t0 < min) || (max && t0 > max)) return;
         const { jy, jm } = currentJalaliYearMonth();
         setViewJy(jy);
         setViewJm(jm);
@@ -567,14 +582,19 @@ export function JalaliDatePicker({
                                         tm === viewJm &&
                                         td === day;
 
+                                    const dayIso = day !== null ? jalaliToIso(viewJy, viewJm, day) : "";
+                                    const outOfRange = day !== null && ((!!min && dayIso < min) || (!!max && dayIso > max));
+
                                     return (
                                         <button
                                             key={idx}
                                             type="button"
-                                            disabled={day === null}
+                                            disabled={day === null || outOfRange}
                                             onClick={() => day && handleSelectDay(day)}
                                             className={`aspect-square rounded-lg text-[11.5px] font-bold transition-colors ${day === null
                                                 ? "invisible"
+                                                : outOfRange
+                                                    ? "cursor-not-allowed text-gray-300 line-through dark:text-white/15"
                                                 : isSelected
                                                     ? "bg-blue-600 text-white shadow-sm"
                                                     : isToday
@@ -1670,6 +1690,9 @@ export function StatCard({
                 {value}
                 {unit && <span className="mr-1 text-[11px] font-bold text-gray-400">{unit}</span>}
             </p>
+            {STAT_HINTS[label] && (
+                <p className="-mt-3 text-[10px] leading-4 text-gray-400 dark:text-gray-500">({STAT_HINTS[label]})</p>
+            )}
         </div>
     );
 }

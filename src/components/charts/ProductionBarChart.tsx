@@ -9,7 +9,7 @@ import { AnimatedChartTooltip } from "@/components/charts/ChartTooltip";
 import { toPersianDigits } from "@/lib/jalali";
 
 export type ProductionBarPoint = { name: string; a: number; b: number };
-type Series = { label: string; color: string };
+type Series = { label: string; color: string; hint?: string };
 
 type Props = {
   title: string;
@@ -73,7 +73,7 @@ export default function ProductionBarChart({
       <div className="mb-3 flex items-start justify-between gap-3" dir="rtl">
         <div className="min-w-0">
           <h3 className="text-[14px] font-semibold text-gray-900 dark:text-white">{title}</h3>
-          {subtitle && <p className="mt-0.5 text-[13px] text-gray-500 dark:text-gray-400">{subtitle}</p>}
+          {subtitle && <p className="mt-0.5 text-[11px] text-gray-400 dark:text-gray-500">({subtitle})</p>}
         </div>
         {tabs && (
           <div className="flex shrink-0 items-center gap-1 rounded-xl border border-gray-100 bg-gray-50/80 p-1 dark:border-white/5 dark:bg-slate-900/50">
@@ -94,6 +94,20 @@ export default function ProductionBarChart({
           </div>
         )}
       </div>
+
+      {mode !== "empty" && (seriesA.hint || seriesB.hint) && (
+        <div className="mb-3 flex flex-wrap gap-x-5 gap-y-1.5" dir="rtl">
+          {[seriesA, seriesB].map((s, i) => (
+            <div key={s.label} className="flex items-start gap-1.5">
+              <span className="mt-1.5 h-0.5 w-5 shrink-0 rounded" style={i === 0 ? { backgroundColor: s.color } : { backgroundImage: `repeating-linear-gradient(90deg, ${s.color} 0 4px, transparent 4px 7px)` }} />
+              <span className="text-[11.5px] font-semibold" style={{ color: s.color }}>
+                {s.label}
+                {s.hint && <span className="mr-1 text-[10px] font-normal text-gray-400">({s.hint})</span>}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* summary strip */}
       {mode !== "empty" && mode !== "single" && (
@@ -178,17 +192,17 @@ export default function ProductionBarChart({
         </div>
         <ResponsiveContainer width="100%" height="100%">
           {mode === "bars" ? (
-          <BarChart data={data} margin={{ top: 4, right: 4, left: -16, bottom: 0 }} barGap={4} onMouseMove={onMove} onMouseLeave={() => setActive(null)}>
+          <BarChart data={data} margin={{ top: 24, right: 8, left: -16, bottom: 12 }} barGap={4} onMouseMove={onMove} onMouseLeave={() => setActive(null)}>
             <CartesianGrid strokeDasharray="3 3" vertical={false} className="[&_line]:stroke-gray-100 dark:[&_line]:stroke-white/[0.04]" />
             <XAxis dataKey="name" tick={tick} className="[&_text]:fill-gray-500 dark:[&_text]:fill-gray-400" axisLine={false} tickLine={false} dy={5} tickFormatter={short} />
-            <YAxis tick={tick} className="[&_text]:fill-gray-500 dark:[&_text]:fill-gray-400" axisLine={false} tickLine={false} tickFormatter={compact} />
+            <YAxis domain={[(m: number) => Math.min(0, m - Math.abs(m) * 0.15 - 1), (m: number) => m + Math.abs(m) * 0.2 + 1]} tick={tick} className="[&_text]:fill-gray-500 dark:[&_text]:fill-gray-400" axisLine={false} tickLine={false} tickFormatter={compact} />
             {signed && <ReferenceLine y={0} stroke={dark ? "#475569" : "#cbd5e1"} />}
             <Tooltip cursor={{ fill: dark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.04)" }} content={() => null} />
             <Bar dataKey="a" fill={seriesA.color} radius={[6, 6, 0, 0]} maxBarSize={36} isAnimationActive={false} />
             <Bar dataKey="b" fill={seriesB.color} fillOpacity={0.35} radius={[6, 6, 0, 0]} maxBarSize={36} isAnimationActive={false} />
           </BarChart>
           ) : (
-          <AreaChart data={data} margin={{ top: 4, right: 4, left: -16, bottom: 0 }} onMouseMove={onMove} onMouseLeave={() => setActive(null)}>
+          <AreaChart data={data} margin={{ top: 24, right: 8, left: -16, bottom: 12 }} onMouseMove={onMove} onMouseLeave={() => setActive(null)}>
             <defs>
               {[seriesA, seriesB].map((s, i) => (
                 <linearGradient key={i} id={`g-${uid}-${i}`} x1="0" y1="0" x2="0" y2="1">
@@ -199,7 +213,7 @@ export default function ProductionBarChart({
             </defs>
             <CartesianGrid strokeDasharray="3 3" vertical={false} className="[&_line]:stroke-gray-100 dark:[&_line]:stroke-white/[0.04]" />
             <XAxis dataKey="name" tick={tick} className="[&_text]:fill-gray-500 dark:[&_text]:fill-gray-400" axisLine={false} tickLine={false} dy={5} minTickGap={16} tickFormatter={short} />
-            <YAxis tick={tick} className="[&_text]:fill-gray-500 dark:[&_text]:fill-gray-400" axisLine={false} tickLine={false} tickFormatter={compact} />
+            <YAxis domain={[(m: number) => Math.min(0, m - Math.abs(m) * 0.15 - 1), (m: number) => m + Math.abs(m) * 0.2 + 1]} tick={tick} className="[&_text]:fill-gray-500 dark:[&_text]:fill-gray-400" axisLine={false} tickLine={false} tickFormatter={compact} />
             {signed && <ReferenceLine y={0} stroke={dark ? "#475569" : "#cbd5e1"} />}
             <Tooltip cursor={{ stroke: dark ? "#475569" : "#cbd5e1", strokeDasharray: "4 4" }} content={() => null} />
             <Area type="monotone" dataKey="b" stroke={seriesB.color} strokeWidth={2} strokeDasharray="5 4" fill={`url(#g-${uid}-1)`} dot={false} activeDot={{ r: 4, strokeWidth: 0, fill: seriesB.color }} isAnimationActive={false} />

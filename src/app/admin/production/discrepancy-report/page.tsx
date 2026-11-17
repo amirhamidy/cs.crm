@@ -115,10 +115,13 @@ export default function DiscrepancyReportPage() {
 
     return (
         <section className="space-y-4">
-            <h2 className="flex items-center gap-2 text-[13px] font-extrabold text-gray-900 dark:text-white">
+            <div>
+                <h2 className="flex items-center gap-2 text-[13px] font-extrabold text-gray-900 dark:text-white">
                 <AlertTriangle size={15} className="text-indigo-500" />
                 گزارش علت‌ها (پارتو)
             </h2>
+                <p className="mt-1 text-[10.5px] text-gray-400">(علت‌های ضایعات و توقف؛ نمودار پارتو نشان می‌دهد کدام علت‌ها بیشترین سهم را دارند (قانون ۸۰/۲۰))</p>
+            </div>
             <p className="text-[12px] text-gray-500">
                 {causeKind === "waste"
                     ? "علت‌های ضایعات: کدام علت بیشترین ضایعات اضافه بر استاندارد را ایجاد کرده است."
@@ -222,7 +225,7 @@ export default function DiscrepancyReportPage() {
                                         <td className="px-3 py-2 text-gray-400">{toPersianDigits(Number(i.totals.expected_waste).toFixed(0))}</td>
                                         <td className="px-3 py-2 text-gray-500">{toPersianDigits(Number(i.totals.waste_diff).toFixed(0))}</td>
                                         <td className="px-3 py-2 text-gray-500">
-                                            {i.waste_share_percent === null ? "—" : `${toPersianDigits(i.waste_share_percent.toFixed(1))}٪`}
+                                            {i.waste_share_percent == null ? "—" : `${toPersianDigits(Number(i.waste_share_percent).toFixed(1))}٪`}
                                         </td>
                                     </tr>
                                 ))}

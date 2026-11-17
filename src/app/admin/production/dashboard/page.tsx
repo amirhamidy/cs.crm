@@ -49,10 +49,13 @@ export default function DashboardPage() {
             </div>
 
             <section className="space-y-4">
-                <h2 className="flex items-center gap-2 text-[13px] font-extrabold text-gray-900 dark:text-white">
+                <div>
+                    <h2 className="flex items-center gap-2 text-[13px] font-extrabold text-gray-900 dark:text-white">
                     <Factory size={15} className="text-indigo-500" />
                     ماشین‌آلات خط تولید ({toPersianDigits(machines.length)})
                 </h2>
+                    <p className="mt-1 text-[10.5px] text-gray-400">(نمای کلی تولید (اعداد مجموع ثبت‌های همین ماه‌اند))</p>
+                </div>
 
                 {loading ? (
                     <div className="flex justify-center py-10">

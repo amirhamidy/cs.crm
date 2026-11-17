@@ -52,10 +52,13 @@ export default function MachinesPage() {
         <>
         <section className="space-y-4">
             <div className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
-                <h2 className="flex items-center gap-2 text-[13px] font-extrabold text-gray-900 dark:text-white">
+                <div>
+                    <h2 className="flex items-center gap-2 text-[13px] font-extrabold text-gray-900 dark:text-white">
                     <Factory size={15} className="text-indigo-500" />
                     ماشین‌آلات ({toPersianDigits(filteredMachines.length)})
                 </h2>
+                    <p className="mt-1 text-[10.5px] text-gray-400">(ماشین‌های کارخانه و ظرفیت استاندارد هر کدام)</p>
+                </div>
                 <div className="flex w-full items-center gap-2 sm:w-auto">
                 <SearchInput value={search} onChange={setSearch} placeholder="جستجوی ماشین یا کد..." />
                 <div className="w-48">

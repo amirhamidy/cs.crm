@@ -86,10 +86,13 @@ export default function MachineSummaryPage() {
         <>
         <section className="space-y-4">
             <div className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
-                <h2 className="flex items-center gap-2 text-[13px] font-extrabold text-gray-900 dark:text-white">
+                <div>
+                    <h2 className="flex items-center gap-2 text-[13px] font-extrabold text-gray-900 dark:text-white">
                     <LineChart size={15} className="text-indigo-500" />
                     روند تولید ماشین
                 </h2>
+                    <p className="mt-1 text-[10.5px] text-gray-400">(جمع تولید و ضایعات همه ماشین‌ها در بازه‌ی انتخابی)</p>
+                </div>
             </div>
 
             <div className="rounded-2xl border border-black/[0.06] bg-[#fafafa] p-4 dark:border-white/[0.06] dark:bg-white/[0.02]">
@@ -187,8 +190,8 @@ export default function MachineSummaryPage() {
                             );
                             return Array.from(map.values());
                         })()}
-                        seriesA={{ label: "تولید واقعی", color: "#3b82f6" }}
-                        seriesB={{ label: "تولید انتظاری", color: "#a66cff" }}
+                        seriesA={{ label: "تولید واقعی", hint: "تعداد واقعی تولید شده", color: "#3b82f6" }}
+                        seriesB={{ label: "تولید انتظاری", hint: "مقدار مورد انتظار طبق استاندارد", color: "#a66cff" }}
                     />
 
                     {summaryReport.machines.length === 0 ? (

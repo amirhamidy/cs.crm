@@ -87,10 +87,13 @@ export default function MachineMonthlyPage() {
         <>
         <section className="space-y-4">
             <div className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
-                <h2 className="flex items-center gap-2 text-[13px] font-extrabold text-gray-900 dark:text-white">
+                <div>
+                    <h2 className="flex items-center gap-2 text-[13px] font-extrabold text-gray-900 dark:text-white">
                     <Users size={15} className="text-indigo-500" />
                     گزارش ماهانه ماشین‌ها
                 </h2>
+                    <p className="mt-1 text-[10.5px] text-gray-400">(عملکرد ماهانه ماشین‌ها؛ تولید واقعی در برابر مقدار استاندارد)</p>
+                </div>
             </div>
 
             <div className="rounded-2xl border border-black/[0.06] bg-[#fafafa] p-4 dark:border-white/[0.06] dark:bg-white/[0.02]">
@@ -188,8 +191,8 @@ export default function MachineMonthlyPage() {
                                 a: Number(m.produced),
                                 b: Number(m.expected_production),
                             }))}
-                            seriesA={{ label: "تولید واقعی", color: "#3b82f6" }}
-                            seriesB={{ label: "تولید انتظاری", color: "#8b5cf6" }}
+                            seriesA={{ label: "تولید واقعی", hint: "تعداد واقعی تولید شده", color: "#3b82f6" }}
+                            seriesB={{ label: "تولید انتظاری", hint: "مقدار مورد انتظار طبق استاندارد", color: "#8b5cf6" }}
                         />
                         <ProductionBarChart
                             title="انحراف از مقدار انتظاری"
@@ -200,8 +203,8 @@ export default function MachineMonthlyPage() {
                                 a: Number((Number(m.produced) - Number(m.expected_production)).toFixed(1)),
                                 b: Number((Number(m.waste) - Number(m.expected_waste)).toFixed(1)),
                             }))}
-                            seriesA={{ label: "انحراف تولید", color: "#3b82f6" }}
-                            seriesB={{ label: "انحراف ضایعات", color: "#8b5cf6" }}
+                            seriesA={{ label: "انحراف تولید", hint: "واقعی − انتظاری؛ منفی یعنی کمتر از انتظار", color: "#3b82f6" }}
+                            seriesB={{ label: "انحراف ضایعات", hint: "ضایعات واقعی − انتظاری؛ مثبت یعنی بدتر", color: "#8b5cf6" }}
                         />
                     </div>
 
@@ -210,8 +213,8 @@ export default function MachineMonthlyPage() {
                             title="تولید به تفکیک محصول"
                             subtitle="واقعی در برابر انتظاری"
                             data={productTotals.map((p) => ({ name: p.name, a: p.produced, b: p.expected_production }))}
-                            seriesA={{ label: "تولید واقعی", color: "#3b82f6" }}
-                            seriesB={{ label: "تولید انتظاری", color: "#8b5cf6" }}
+                            seriesA={{ label: "تولید واقعی", hint: "تعداد واقعی تولید شده", color: "#3b82f6" }}
+                            seriesB={{ label: "تولید انتظاری", hint: "مقدار مورد انتظار طبق استاندارد", color: "#8b5cf6" }}
                         />
                         <ProductionBarChart
                             title="ضایعات به تفکیک محصول"

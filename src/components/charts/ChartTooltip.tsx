@@ -78,7 +78,7 @@ export function ChartTooltip({ title, rows, footer, dark, colorKey, glowColor }:
                                 {row.label}
                             </span>
                         </div>
-                        <span className={`text-[11px] font-bold tabular-nums ${dark ? "text-gray-100" : "text-gray-800"}`}>
+                        <span className="text-[11px] font-bold tabular-nums" style={{ color: row.color }}>
                             {row.value}
                         </span>
                     </div>

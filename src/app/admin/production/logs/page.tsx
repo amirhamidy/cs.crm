@@ -73,10 +73,13 @@ export default function LogsPage() {
         <>
         <section className="space-y-4">
             <div className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
-                <h2 className="flex items-center gap-2 text-[13px] font-extrabold text-gray-900 dark:text-white">
+                <div>
+                    <h2 className="flex items-center gap-2 text-[13px] font-extrabold text-gray-900 dark:text-white">
                     <ClipboardList size={15} className="text-emerald-500" />
                     سوابق تولید ({toPersianDigits(filteredLogs.length)} از {toPersianDigits(logs.length)})
                 </h2>
+                    <p className="mt-1 text-[10.5px] text-gray-400">(فهرست ثبت‌های روزانه تولید؛ هر ردیف یک شیفت کاری است)</p>
+                </div>
             </div>
 
             <div className="rounded-2xl border border-black/[0.06] bg-[#fafafa] p-4 dark:border-white/[0.06] dark:bg-white/[0.02]">
@@ -130,12 +133,14 @@ export default function LogsPage() {
                         label="از تاریخ"
                         value={filterDateFrom}
                         onChange={setFilterDateFrom}
+                        max={filterDateTo || undefined}
                         placeholder="بدون محدودیت"
                     />
                     <JalaliDatePicker
                         label="تا تاریخ"
                         value={filterDateTo}
                         onChange={setFilterDateTo}
+                        min={filterDateFrom || undefined}
                         placeholder="بدون محدودیت"
                     />
                 </div>
