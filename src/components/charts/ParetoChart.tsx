@@ -13,7 +13,7 @@ const short = (s: string) => (s.length > 9 ? `${s.slice(0, 8)}…` : s);
 const BAR = "#ef4444";
 const LINE = "#6366f1";
 
-export default function ParetoChart({ data, title = "نمودار پارتو ضایعات", subtitle = "ضایعات به تفکیک مغایرت و درصد تجمعی" }: { data: ParetoPoint[]; title?: string; subtitle?: string }) {
+export default function ParetoChart({ data, title = "نمودار پارتو ضایعات", subtitle = "ضایعات به تفکیک علت و درصد تجمعی" }: { data: ParetoPoint[]; title?: string; subtitle?: string }) {
   const { resolvedTheme } = useTheme();
   const dark = resolvedTheme === "dark";
   const uid = useId().replace(/:/g, "");
@@ -31,7 +31,7 @@ export default function ParetoChart({ data, title = "نمودار پارتو ض�
     return (
       <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm dark:border-white/5 dark:bg-slate-950" dir="rtl">
         <h3 className="text-[14px] font-semibold text-gray-900 dark:text-white">{title}</h3>
-        <p className="mt-0.5 text-[13px] text-gray-500 dark:text-gray-400">فقط یک مغایرت ثبت شده؛ ۱۰۰٪ ضایعات مربوط به آن است.</p>
+        <p className="mt-0.5 text-[13px] text-gray-500 dark:text-gray-400">فقط یک علت ثبت شده؛ ۱۰۰٪ ضایعات مربوط به آن است.</p>
         <div className="mt-4 flex items-center justify-between rounded-xl bg-red-50/70 px-4 py-3 dark:bg-red-500/10">
           <span className="text-[13px] font-semibold text-gray-800 dark:text-gray-100">{d.name}</span>
           <span className="text-[22px] font-extrabold tabular-nums text-red-500">{toPersianDigits(String(d.waste))}</span>
@@ -62,7 +62,7 @@ export default function ParetoChart({ data, title = "نمودار پارتو ض�
         </div>
         {data.length > 0 && (
           <span className="shrink-0 rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-semibold text-amber-600 dark:bg-amber-500/10 dark:text-amber-400">
-            {toPersianDigits(vital)} مغایرت = ۸۰٪ ضایعات
+            {toPersianDigits(vital)} علت = ۸۰٪ ضایعات
           </span>
         )}
       </div>

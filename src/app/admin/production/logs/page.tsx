@@ -1,5 +1,7 @@
 "use client";
 
+import { useDebounced, useServerSearch } from "@/components/admin/production/useServerSearch";
+import SearchInput from "@/components/admin/production/SearchInput";
 import { useEffect, useMemo, useState } from "react";
 import {
     X,
@@ -20,7 +22,8 @@ import {
     EfficiencyBadge,
     Option,
     Product,
-    Discrepancy,
+    Cause,
+    ProductionLog,
 } from "@/components/admin/production/shared";
 import { useProductionData } from "@/components/admin/production/ProductionContext";
 
@@ -30,31 +33,41 @@ export default function LogsPage() {
     const [filterEmployeeId, setFilterEmployeeId] = useState<number | null>(null);
     const [filterMachineId, setFilterMachineId] = useState<number | null>(null);
     const [filterProductId, setFilterProductId] = useState<number | null>(null);
-    const [filterDiscrepancyId, setFilterDiscrepancyId] = useState<number | null>(null);
+    const [filterWasteCauseId, setFilterWasteCauseId] = useState<number | null>(null);
+    const [filterBreakdownCauseId, setFilterBreakdownCauseId] = useState<number | null>(null);
     const [productOptions, setProductOptions] = useState<Option[]>([]);
-    const [discrepancyOptions, setDiscrepancyOptions] = useState<Option[]>([]);
+    const [wasteOptions, setWasteOptions] = useState<Option[]>([]);
+    const [breakdownOptions, setBreakdownOptions] = useState<Option[]>([]);
     useEffect(() => {
         listAll<Product>("/production/api/v1/product/")
             .then((a) => setProductOptions(a.map((p) => ({ id: p.id, label: p.name, sub: `کد: ${p.code}` }))))
             .catch(() => {});
-        listAll<Discrepancy>("/production/api/v1/discrepancy/")
-            .then((a) => setDiscrepancyOptions(a.map((d) => ({ id: d.id, label: d.name, sub: "" }))))
+        listAll<Cause>("/production/api/v1/cause/", { is_active: true })
+            .then((a) => {
+                setWasteOptions(a.filter((c) => c.kind === "waste").map((c) => ({ id: c.id, label: c.name, sub: "" })));
+                setBreakdownOptions(a.filter((c) => c.kind === "breakdown").map((c) => ({ id: c.id, label: c.name, sub: "" })));
+            })
             .catch(() => {});
     }, []);
     const [filterDateFrom, setFilterDateFrom] = useState("");
     const [filterDateTo, setFilterDateTo] = useState("");
+    const [search, setSearch] = useState("");
+
+    const debouncedSearch = useDebounced(search);
+    const searched = useServerSearch<ProductionLog>("/production/api/v1/log/", debouncedSearch, logs);
 
     const filteredLogs = useMemo(() => {
-        return logs.filter((l) => {
+        return searched.items.filter((l) => {
             if (filterEmployeeId !== null && l.employee !== filterEmployeeId) return false;
             if (filterMachineId !== null && l.machine !== filterMachineId) return false;
             if (filterProductId !== null && l.product !== filterProductId) return false;
-            if (filterDiscrepancyId !== null && l.discrepancy !== filterDiscrepancyId) return false;
+            if (filterWasteCauseId !== null && l.waste_cause !== filterWasteCauseId) return false;
+            if (filterBreakdownCauseId !== null && l.breakdown_cause !== filterBreakdownCauseId) return false;
             if (filterDateFrom && l.date < filterDateFrom) return false;
             if (filterDateTo && l.date > filterDateTo) return false;
             return true;
         });
-    }, [logs, filterEmployeeId, filterMachineId, filterProductId, filterDiscrepancyId, filterDateFrom, filterDateTo]);
+    }, [searched.items, filterEmployeeId, filterMachineId, filterProductId, filterWasteCauseId, filterBreakdownCauseId, filterDateFrom, filterDateTo]);
 
     return (
         <>
@@ -70,6 +83,7 @@ export default function LogsPage() {
                 <div className="mb-3 flex items-center gap-2 text-[11.5px] font-bold text-gray-500">
                     <Filter size={13} />
                     فیلترها
+                    <div className="mr-auto flex"><SearchInput value={search} onChange={setSearch} placeholder="جستجو در ثبت‌ها..." /></div>
                 </div>
                 <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-4">
                     <NiceSelect
@@ -97,12 +111,20 @@ export default function LogsPage() {
                         onChange={setFilterProductId}
                     />
                     <NiceSelect
-                        label="مغایرت"
-                        placeholder="همه مغایرت‌ها"
-                        emptyText="مغایرتی یافت نشد"
-                        options={discrepancyOptions}
-                        value={filterDiscrepancyId}
-                        onChange={setFilterDiscrepancyId}
+                        label="علت ضایعات"
+                        placeholder="همه علت‌های ضایعات"
+                        emptyText="علتی یافت نشد"
+                        options={wasteOptions}
+                        value={filterWasteCauseId}
+                        onChange={setFilterWasteCauseId}
+                    />
+                    <NiceSelect
+                        label="علت خرابی ماشین"
+                        placeholder="همه علت‌های خرابی"
+                        emptyText="علتی یافت نشد"
+                        options={breakdownOptions}
+                        value={filterBreakdownCauseId}
+                        onChange={setFilterBreakdownCauseId}
                     />
                     <JalaliDatePicker
                         label="از تاریخ"
@@ -120,7 +142,8 @@ export default function LogsPage() {
                 {(filterEmployeeId !== null ||
                     filterMachineId !== null ||
                     filterProductId !== null ||
-                    filterDiscrepancyId !== null ||
+                    filterWasteCauseId !== null ||
+                    filterBreakdownCauseId !== null ||
                     filterDateFrom ||
                     filterDateTo) && (
                         <button
@@ -129,7 +152,8 @@ export default function LogsPage() {
                                 setFilterEmployeeId(null);
                                 setFilterMachineId(null);
                                 setFilterProductId(null);
-                                setFilterDiscrepancyId(null);
+                                setFilterWasteCauseId(null);
+                                setFilterBreakdownCauseId(null);
                                 setFilterDateFrom("");
                                 setFilterDateTo("");
                             }}
@@ -151,7 +175,7 @@ export default function LogsPage() {
                                     "پرسنل",
                                     "ماشین",
                                     "محصول",
-                                    "مغایرت",
+                                    "علت",
                                     "ساعت کار",
                                     "تولید",
                                     "انتظاری",
@@ -192,7 +216,10 @@ export default function LogsPage() {
                                             {log.product_name || "—"}
                                         </td>
                                         <td className="whitespace-nowrap px-4 py-3 text-gray-500 dark:text-gray-400">
-                                            {log.discrepancy_name || "—"}
+                                            <span className="block">{log.waste_cause_name || "—"}</span>
+                                            {log.breakdown_cause_name && (
+                                                <span className="block text-[11px] text-gray-500">خرابی: {log.breakdown_cause_name}</span>
+                                            )}
                                         </td>
                                         <td className="whitespace-nowrap px-4 py-3 text-gray-500 dark:text-gray-400">
                                             {toPersianDigits(log.hours_worked)} ساعت

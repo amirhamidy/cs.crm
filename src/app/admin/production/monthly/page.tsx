@@ -237,12 +237,16 @@ export default function MonthlyPage() {
                                                     <tr className="border-b border-black/5 text-[10.5px] text-gray-400 dark:border-white/5">
                                                         {[
                                                             "تاریخ",
+                                                            "محصول",
                                                             "ساعت",
                                                             "تولید",
                                                             "انتظاری",
                                                             "ضایعات",
                                                             "انتظاری",
                                                             "راندمان",
+                                                            "علت ضایعات",
+                                                            "علت خرابی",
+                                                            "توقف (دقیقه)",
                                                             "توضیحات",
                                                         ].map((h, i) => (
                                                             <th key={i} className="whitespace-nowrap px-2 py-2 font-bold">
@@ -259,6 +263,9 @@ export default function MonthlyPage() {
                                                         >
                                                             <td className="whitespace-nowrap px-2 py-2 text-gray-500 dark:text-gray-400">
                                                                 {toPersianDigits(d.jalali_date)}
+                                                            </td>
+                                                            <td className="whitespace-nowrap px-2 py-2 text-gray-700 dark:text-gray-300">
+                                                                {d.product_name || "—"}
                                                             </td>
                                                             <td className="whitespace-nowrap px-2 py-2 text-gray-500">
                                                                 {toPersianDigits(d.hours)}
@@ -278,6 +285,9 @@ export default function MonthlyPage() {
                                                             <td className="px-2 py-2">
                                                                 <EfficiencyBadge value={d.efficiency} />
                                                             </td>
+                                                            <td className="whitespace-nowrap px-2 py-2 text-gray-500">{d.waste_cause_name || "—"}</td>
+                                                            <td className="whitespace-nowrap px-2 py-2 text-gray-500">{d.breakdown_cause_name || "—"}</td>
+                                                            <td className="px-2 py-2 text-gray-500">{toPersianDigits(d.downtime_minutes ?? 0)}</td>
                                                             <td className="px-2 py-2 text-gray-400">
                                                                 {d.note || "—"}
                                                             </td>

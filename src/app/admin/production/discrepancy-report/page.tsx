@@ -28,8 +28,8 @@ interface DiscrepancyTotals {
 }
 
 interface DiscrepancyItem {
-    discrepancy_id: number | null;
-    discrepancy_name: string;
+    cause_id: number | null;
+    cause_name: string;
     waste_share_percent: number | null;
     totals: DiscrepancyTotals;
 }
@@ -56,6 +56,7 @@ export default function DiscrepancyReportPage() {
     const dark = resolvedTheme === "dark";
 
     const [span, setSpan] = useState<number | null>(30);
+    const [causeKind, setCauseKind] = useState<"waste" | "breakdown">("waste");
     const [machineId, setMachineId] = useState<number | null>(null);
     const [productId, setProductId] = useState<number | null>(null);
     const [productOptions, setProductOptions] = useState<Option[]>([]);
@@ -85,16 +86,17 @@ export default function DiscrepancyReportPage() {
                 };
                 if (machineId !== null) params.machine_id = String(machineId);
                 if (productId !== null) params.product_id = String(productId);
-                const res = await axiosInstance.get("/production/api/v1/report/discrepancy/", { params });
+                params.kind = causeKind;
+                const res = await axiosInstance.get("/production/api/v1/report/cause/", { params });
                 setReport(res.data as DiscrepancyReport);
             } catch (err) {
-                setError(parseBackendError(err, "دریافت گزارش مغایرت‌ها با خطا مواجه شد"));
+                setError(parseBackendError(err, "دریافت گزارش علت‌ها با خطا مواجه شد"));
                 setReport(null);
             } finally {
                 setLoading(false);
             }
         })();
-    }, [span, machineId, productId]);
+    }, [span, machineId, productId, causeKind]);
 
     // پارتو: مرتب بر اساس ضایعات (بک‌اند مرتب می‌کند)، درصد تجمعی نسبت به کل ضایعات
     const data = useMemo(() => {
@@ -104,7 +106,7 @@ export default function DiscrepancyReportPage() {
         return items.map((i) => {
             acc += i.totals.waste;
             return {
-                name: i.discrepancy_name,
+                name: i.cause_name,
                 waste: i.totals.waste,
                 cumulative: total ? Math.round((acc / total) * 1000) / 10 : 0,
             };
@@ -115,8 +117,34 @@ export default function DiscrepancyReportPage() {
         <section className="space-y-4">
             <h2 className="flex items-center gap-2 text-[13px] font-extrabold text-gray-900 dark:text-white">
                 <AlertTriangle size={15} className="text-indigo-500" />
-                گزارش مغایرت‌ها (پارتو)
+                گزارش علت‌ها (پارتو)
             </h2>
+            <p className="text-[12px] text-gray-500">
+                {causeKind === "waste"
+                    ? "علت‌های ضایعات: کدام علت بیشترین ضایعات اضافه بر استاندارد را ایجاد کرده است."
+                    : "علت‌های خرابی ماشین: کدام علت بیشترین زمان توقف را داشته است."}
+            </p>
+            <div className="flex gap-2">
+                {(
+                    [
+                        ["waste", "علت ضایعات"],
+                        ["breakdown", "علت خرابی ماشین"],
+                    ] as const
+                ).map(([v, label]) => (
+                    <button
+                        key={v}
+                        type="button"
+                        onClick={() => setCauseKind(v)}
+                        className={`h-8 rounded-full px-3.5 text-[12px] font-bold transition-colors ${
+                            causeKind === v
+                                ? "bg-blue-600 text-white"
+                                : "bg-black/[0.04] text-gray-600 hover:bg-black/[0.07] dark:bg-white/[0.06] dark:text-gray-300"
+                        }`}
+                    >
+                        {label}
+                    </button>
+                ))}
+            </div>
 
             <div className="rounded-2xl border border-black/[0.06] bg-[#fafafa] p-4 dark:border-white/[0.06] dark:bg-white/[0.02]">
                 <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
@@ -166,9 +194,9 @@ export default function DiscrepancyReportPage() {
 
                     <ProductionBarChart
                         title="ضایعات واقعی در برابر استاندارد"
-                        subtitle="به تفکیک مغایرت"
+                        subtitle="به تفکیک علت"
                         data={report.items.map((i) => ({
-                            name: i.discrepancy_name,
+                            name: i.cause_name,
                             a: Number(i.totals.waste),
                             b: Number(i.totals.expected_waste),
                         }))}
@@ -180,15 +208,15 @@ export default function DiscrepancyReportPage() {
                         <table className="w-full border-collapse text-right text-[11.5px]">
                             <thead>
                                 <tr className="border-b border-black/5 text-[10.5px] text-gray-400 dark:border-white/5">
-                                    {["مغایرت", "تعداد ثبت", "ضایعات", "استاندارد", "اختلاف", "سهم از کل"].map((h) => (
+                                    {["علت", "تعداد ثبت", "ضایعات", "استاندارد", "اختلاف", "سهم از کل"].map((h) => (
                                         <th key={h} className="whitespace-nowrap px-3 py-2 font-bold">{h}</th>
                                     ))}
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-black/5 dark:divide-white/5">
                                 {report.items.map((i) => (
-                                    <tr key={i.discrepancy_id ?? "none"}>
-                                        <td className="px-3 py-2 font-bold text-gray-700 dark:text-gray-200">{i.discrepancy_name}</td>
+                                    <tr key={i.cause_id ?? "none"}>
+                                        <td className="px-3 py-2 font-bold text-gray-700 dark:text-gray-200">{i.cause_name}</td>
                                         <td className="px-3 py-2 text-gray-500">{toPersianDigits(i.totals.logs)}</td>
                                         <td className="px-3 py-2 font-bold text-red-500">{toPersianDigits(i.totals.waste)}</td>
                                         <td className="px-3 py-2 text-gray-400">{toPersianDigits(Number(i.totals.expected_waste).toFixed(0))}</td>

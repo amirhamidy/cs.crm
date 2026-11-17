@@ -70,8 +70,11 @@ export interface ProductionLog {
     product?: number | null;
     product_name?: string | null;
     product_code?: string | null;
-    discrepancy?: number | null;
-    discrepancy_name?: string | null;
+    waste_cause?: number | null;
+    waste_cause_name?: string | null;
+    breakdown_cause?: number | null;
+    breakdown_cause_name?: string | null;
+    downtime_minutes?: number;
     hours_worked: string;
     start_time?: string | null;
     end_time?: string | null;
@@ -90,8 +93,12 @@ export interface Product {
     is_active: boolean;
 }
 
-export interface Discrepancy {
+export type CauseKind = "waste" | "breakdown";
+
+export interface Cause {
     id: number;
+    kind: CauseKind;
+    kind_display?: string;
     name: string;
     description: string;
     is_active: boolean;
@@ -120,6 +127,10 @@ export interface MonthlyReportDay {
     expected_waste: string;
     efficiency: number | null;
     note: string;
+    product_name?: string | null;
+    waste_cause_name?: string | null;
+    breakdown_cause_name?: string | null;
+    downtime_minutes?: number | null;
 }
 
 export interface MonthlyReportMachine {
@@ -1216,9 +1227,11 @@ export function LogModal({
     const [employeeId, setEmployeeId] = useState<number | null>(null);
     const [machineId, setMachineId] = useState<number | null>(null);
     const [products, setProducts] = useState<Product[]>([]);
-    const [discrepancies, setDiscrepancies] = useState<Discrepancy[]>([]);
+    const [causes, setCauses] = useState<Cause[]>([]);
     const [productId, setProductId] = useState<number | null>(null);
-    const [discrepancyId, setDiscrepancyId] = useState<number | null>(null);
+    const [wasteCauseId, setWasteCauseId] = useState<number | null>(null);
+    const [breakdownCauseId, setBreakdownCauseId] = useState<number | null>(null);
+    const [downtime, setDowntime] = useState("0");
     const [startTime, setStartTime] = useState("");
     const [endTime, setEndTime] = useState("");
     const [produced, setProduced] = useState("");
@@ -1231,21 +1244,32 @@ export function LogModal({
         listAll<Product>("/production/api/v1/product/", { is_active: true })
             .then(setProducts)
             .catch(() => setError("دریافت لیست محصولات انجام نشد"));
-        listAll<Discrepancy>("/production/api/v1/discrepancy/", { is_active: true })
-            .then(setDiscrepancies)
-            .catch(() => setError("دریافت لیست مغایرت‌ها انجام نشد"));
+        listAll<Cause>("/production/api/v1/cause/", { is_active: true })
+            .then(setCauses)
+            .catch(() => setError("دریافت لیست علت‌ها انجام نشد"));
     }, []);
 
     const productOptions = useMemo<Option[]>(
         () => products.map((p) => ({ id: p.id, label: p.name, sub: `کد: ${p.code}` })),
         [products]
     );
-    const discrepancyOptions = useMemo<Option[]>(
+    const wasteCauseOptions = useMemo<Option[]>(
         () => [
-            { id: null as unknown as number, label: "بدون مغایرت", sub: "" },
-            ...discrepancies.map((d) => ({ id: d.id, label: d.name, sub: d.description || "" })),
+            { id: null as unknown as number, label: "بدون علت ضایعات", sub: "" },
+            ...causes
+                .filter((c) => c.kind === "waste")
+                .map((c) => ({ id: c.id, label: c.name, sub: c.description || "" })),
         ],
-        [discrepancies]
+        [causes]
+    );
+    const breakdownCauseOptions = useMemo<Option[]>(
+        () => [
+            { id: null as unknown as number, label: "بدون علت خرابی", sub: "" },
+            ...causes
+                .filter((c) => c.kind === "breakdown")
+                .map((c) => ({ id: c.id, label: c.name, sub: c.description || "" })),
+        ],
+        [causes]
     );
 
     useEffect(() => {
@@ -1312,7 +1336,9 @@ export function LogModal({
                 employee: employeeId,
                 machine: machineId,
                 product: productId,
-                discrepancy: discrepancyId,
+                waste_cause: wasteCauseId,
+                breakdown_cause: breakdownCauseId,
+                downtime_minutes: Number(downtime || 0),
                 start_time: startTime,
                 end_time: endTime,
                 hours_worked: (hours as number).toFixed(2),
@@ -1411,14 +1437,24 @@ export function LogModal({
                 }}
             />
 
-            <NiceSelect
-                label="مغایرت (اختیاری)"
-                placeholder="بدون مغایرت"
-                emptyText="مغایرتی یافت نشد"
-                options={discrepancyOptions}
-                value={discrepancyId}
-                onChange={setDiscrepancyId}
-            />
+            <div className="grid grid-cols-2 gap-3">
+                <NiceSelect
+                    label="علت ضایعات (اختیاری)"
+                    placeholder="بدون علت ضایعات"
+                    emptyText="علت ضایعاتی یافت نشد"
+                    options={wasteCauseOptions}
+                    value={wasteCauseId}
+                    onChange={setWasteCauseId}
+                />
+                <NiceSelect
+                    label="علت خرابی ماشین (اختیاری)"
+                    placeholder="بدون علت خرابی"
+                    emptyText="علت خرابی یافت نشد"
+                    options={breakdownCauseOptions}
+                    value={breakdownCauseId}
+                    onChange={setBreakdownCauseId}
+                />
+            </div>
 
             <div className="grid grid-cols-2 gap-3">
                 <JalaliDatePicker
@@ -1435,6 +1471,7 @@ export function LogModal({
             <div className="grid grid-cols-2 gap-3">
                 <NumberField label="تعداد تولید شده" value={produced} onChange={setProduced} min="0" />
                 <NumberField label="مقدار ضایعات" value={waste} onChange={setWaste} min="0" />
+                <NumberField label="مدت خرابی/توقف (دقیقه)" value={downtime} onChange={setDowntime} min="0" />
             </div>
 
             {expectedProd !== null && (
@@ -1562,8 +1599,10 @@ export function ViewNoteModal({
                     </span>
                 </div>
                 <div className="flex items-center justify-between text-[12px]">
-                    <span className="text-gray-500">مغایرت:</span>
-                    <span className="font-bold text-gray-900 dark:text-white">{log.discrepancy_name || "—"}</span>
+                    <span className="text-gray-500">علت:</span>
+                    <span className="font-bold text-gray-900 dark:text-white">
+                        ضایعات: {log.waste_cause_name || "—"} · خرابی: {log.breakdown_cause_name || "—"}
+                    </span>
                 </div>
                 <div className="flex items-center justify-between text-[12px]">
                     <span className="text-gray-500">تاریخ:</span>
@@ -1660,15 +1699,16 @@ export function CatalogModal({
     onClose,
     onSaved,
 }: {
-    kind: "product" | "discrepancy";
-    item: Product | Discrepancy | null;
+    kind: "product" | "cause";
+    item: Product | Cause | null;
     onClose: () => void;
     onSaved: () => void;
 }) {
     const isProduct = kind === "product";
     const [name, setName] = useState(item?.name ?? "");
     const [code, setCode] = useState((item as Product | null)?.code ?? "");
-    const [description, setDescription] = useState((item as Discrepancy | null)?.description ?? "");
+    const [description, setDescription] = useState((item as Cause | null)?.description ?? "");
+    const [causeKind, setCauseKind] = useState<CauseKind>((item as Cause | null)?.kind ?? "waste");
     const [isActive, setIsActive] = useState(item?.is_active ?? true);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState("");
@@ -1681,7 +1721,7 @@ export function CatalogModal({
         setError("");
         const payload = isProduct
             ? { name: name.trim(), code: code.trim(), is_active: isActive }
-            : { name: name.trim(), description: description.trim(), is_active: isActive };
+            : { kind: causeKind, name: name.trim(), description: description.trim(), is_active: isActive };
         try {
             if (item) {
                 await axiosInstance.patch(`/production/api/v1/${kind}/${item.id}/update/`, payload);
@@ -1690,7 +1730,7 @@ export function CatalogModal({
             }
             onSaved();
         } catch (err) {
-            setError(parseBackendError(err, isProduct ? "خطا در ذخیره محصول. احتمالاً کد تکراری است." : "خطا در ذخیره مغایرت. احتمالاً نام تکراری است."));
+            setError(parseBackendError(err, isProduct ? "خطا در ذخیره محصول. احتمالاً کد تکراری است." : "خطا در ذخیره علت. احتمالاً نام تکراری است."));
         } finally {
             setSaving(false);
         }
@@ -1699,7 +1739,7 @@ export function CatalogModal({
     return (
         <ModalShell
             icon={<Factory size={15} className="text-blue-500" />}
-            title={item ? (isProduct ? "ویرایش محصول" : "ویرایش مغایرت") : isProduct ? "تعریف محصول جدید" : "تعریف مغایرت جدید"}
+            title={item ? (isProduct ? "ویرایش محصول" : "ویرایش علت") : isProduct ? "تعریف محصول جدید" : "تعریف علت جدید"}
             subtitle={isProduct ? "محصولات تولیدشده با دستگاه‌ها" : "دلایل ضایعات بیشتر از استاندارد"}
             locked={saving}
             onClose={onClose}
@@ -1721,11 +1761,24 @@ export function CatalogModal({
             }
         >
             <ErrorBanner message={error} onClose={() => setError("")} />
-            <FloatingInput id={`${kind}_name`} label={isProduct ? "نام محصول" : "عنوان مغایرت"} value={name} onChange={setName} />
+            <FloatingInput id={`${kind}_name`} label={isProduct ? "نام محصول" : "عنوان علت"} value={name} onChange={setName} />
             {isProduct ? (
                 <FloatingInput id="product_code" label="کد یکتا (مثلاً P-01)" value={code} onChange={setCode} ltr />
             ) : (
-                <FloatingInput id="discrepancy_desc" label="توضیحات (اختیاری)" value={description} onChange={setDescription} />
+                <>
+                    <NiceSelect
+                        label="نوع علت"
+                        placeholder="نوع علت"
+                        emptyText=""
+                        options={[
+                            { id: "waste" as unknown as number, label: "علت ضایعات", sub: "در ثبت تولید به‌عنوان علت ضایعات انتخاب می‌شود" },
+                            { id: "breakdown" as unknown as number, label: "علت خرابی ماشین", sub: "در ثبت تولید به‌عنوان علت خرابی انتخاب می‌شود" },
+                        ]}
+                        value={causeKind as unknown as number}
+                        onChange={(v) => setCauseKind(v as unknown as CauseKind)}
+                    />
+                    <FloatingInput id="cause_desc" label="توضیحات (اختیاری)" value={description} onChange={setDescription} />
+                </>
             )}
             <div className="flex items-center justify-between rounded-2xl border border-gray-100 bg-gray-50 px-4 py-3 dark:border-white/[0.06] dark:bg-white/[0.03]">
                 <div>

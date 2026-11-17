@@ -1,5 +1,7 @@
 "use client";
 
+import { useDebounced, useServerSearch } from "@/components/admin/production/useServerSearch";
+import SearchInput from "@/components/admin/production/SearchInput";
 import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import {
@@ -17,19 +19,25 @@ import {
     initialOf,
     NiceSelect,
     StatusSwitch,
+    Machine,
 } from "@/components/admin/production/shared";
 import { useProductionData } from "@/components/admin/production/ProductionContext";
 
 export default function MachinesPage() {
     const { machines, loading, togglingId, setMachineModal, handleToggleActive, handleDeleteMachine } = useProductionData(["machines"]);
 
+    const [search, setSearch] = useState("");
+    const debouncedSearch = useDebounced(search);
+    const searched = useServerSearch<Machine>("/production/api/v1/machine/", debouncedSearch, machines);
     const [machineStatusFilter, setMachineStatusFilter] = useState<number | null>(null);
 
     const filteredMachines = useMemo(() => {
-        if (machineStatusFilter === null) return machines;
-        if (machineStatusFilter === 1) return machines.filter((m) => m.is_active);
-        return machines.filter((m) => !m.is_active);
-    }, [machines, machineStatusFilter]);
+        return searched.items.filter((m) => {
+            if (machineStatusFilter === 1 && !m.is_active) return false;
+            if (machineStatusFilter === 0 && m.is_active) return false;
+            return true;
+        });
+    }, [searched.items, machineStatusFilter]);
 
     const machineStatusOptions = useMemo<Option[]>(
         () => [
@@ -48,6 +56,8 @@ export default function MachinesPage() {
                     <Factory size={15} className="text-indigo-500" />
                     ماشین‌آلات ({toPersianDigits(filteredMachines.length)})
                 </h2>
+                <div className="flex w-full items-center gap-2 sm:w-auto">
+                <SearchInput value={search} onChange={setSearch} placeholder="جستجوی ماشین یا کد..." />
                 <div className="w-48">
                     <NiceSelect
                         label="فیلتر وضعیت"
@@ -57,6 +67,7 @@ export default function MachinesPage() {
                         value={machineStatusFilter}
                         onChange={setMachineStatusFilter}
                     />
+                </div>
                 </div>
             </div>
 

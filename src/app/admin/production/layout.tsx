@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect } from "react";
 import type { ReactNode } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Factory, Plus, BarChart3, ClipboardList, Users, CalendarCogIcon, Package, AlertTriangle } from "lucide-react";
+import { Factory, Plus, BarChart3, ClipboardList, Users, CalendarCogIcon, Package, AlertTriangle, Scale } from "lucide-react";
 import {
     ProductionProvider,
     useProductionContext,
@@ -22,9 +22,10 @@ const TABS: { href: string; label: string; icon: ReactNode }[] = [
     { href: "/admin/production/dashboard", label: "داشبورد", icon: <BarChart3 size={14} /> },
     { href: "/admin/production/machines", label: "ماشین‌آلات", icon: <Factory size={14} /> },
     { href: "/admin/production/products", label: "محصولات", icon: <Package size={14} /> },
-    { href: "/admin/production/discrepancies", label: "مغایرت‌ها", icon: <AlertTriangle size={14} /> },
+    { href: "/admin/production/causes", label: "علت‌ها", icon: <AlertTriangle size={14} /> },
+    { href: "/admin/production/variance", label: "اختلاف تولید", icon: <Scale size={14} /> },
     { href: "/admin/production/logs", label: "سوابق تولید", icon: <ClipboardList size={14} /> },
-    { href: "/admin/production/discrepancy-report", label: "گزارش مغایرت", icon: <AlertTriangle size={14} /> },
+    { href: "/admin/production/discrepancy-report", label: "گزارش علت‌ها", icon: <AlertTriangle size={14} /> },
     { href: "/admin/production/monthly", label: "عملکرد نیرو", icon: <Users size={14} /> },
     { href: "/admin/production/machine-summary", label: "عملکرد ماشین", icon: <CalendarCogIcon size={14} /> },
     { href: "/admin/production/machine-monthly", label: " عملکرد ماهانه ماشین ", icon: <CalendarCogIcon size={14} /> },
