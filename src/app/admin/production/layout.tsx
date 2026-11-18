@@ -50,13 +50,12 @@ function Shell({ children }: { children: ReactNode }) {
         refresh,
     } = useProductionContext();
 
-    // LogModal needs the machine list
     useEffect(() => {
         if (showLogModal || logToEdit) ensure(["machines"]);
     }, [showLogModal, logToEdit, ensure]);
 
     return (
-        <div className="mx-auto max-w-7xl space-y-6 p-6" dir="rtl">
+        <div className="mx-auto space-y-6 px-2" dir="rtl">
             <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
                 <div className="flex items-center gap-3">
                     <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-indigo-500/10 text-indigo-500">

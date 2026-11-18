@@ -23,7 +23,7 @@ export default function AppShell({
                     isOpen ? "md:mr-64" : "md:mr-0",
                 )}
             >
-                <div className="mx-auto max-w-[1600px] p-6">{children}</div>
+                <div className="mx-auto">{children}</div>
             </main>
         </div>
     );
