@@ -234,7 +234,7 @@ export default function WarehouseSelector() {
             setBlockedId(warehouse.id);
             return;
         }
-        router.push(`${basePath}/overview?warehouse=${warehouse.id}`);
+        router.push(`${basePath}/stock?warehouse=${warehouse.id}`);
     };
 
     const isPageLoading = warehousesLoading || (!isAdmin && (empLoading || staffLoading));

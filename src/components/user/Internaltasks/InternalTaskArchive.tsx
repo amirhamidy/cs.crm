@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Pagination from "@/components/ui/Pagination";
-import { usePagination } from "@/hooks/usePagination";
+import { usePaginatedList } from "@/hooks/usePaginatedList";
+import { internalTasksApi } from "@/lib/api";
 import {
     Archive,
     CalendarDays,
@@ -15,7 +16,7 @@ import {
     Ticket,
     XCircle,
 } from "lucide-react";
-import { fetchInternalTaskArchive, fetchInternalTaskRoutines } from "./Api";
+import { fetchInternalTaskRoutines } from "./Api";
 import type {
     InternalTaskArchive as InternalTaskArchiveType,
     InternalTaskRoutine,
@@ -155,61 +156,40 @@ function Segmented<T extends string>({
 }
 
 export default function InternalTaskArchive() {
-    const [tasks, setTasks] = useState<InternalTaskArchiveType[]>([]);
     const [routines, setRoutines] = useState<InternalTaskRoutine[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+    const [typeFilter, setTypeFilter] = useState<ArchiveTypeFilter>("all");
+    const [dateFilter, setDateFilter] = useState<DateFilter>("all");
+    const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
 
-    const [search, setSearch] = useState("");
-    const [typeFilter, setTypeFilter] =
-        useState<ArchiveTypeFilter>("all");
-    const [dateFilter, setDateFilter] =
-        useState<DateFilter>("all");
-    const [statusFilter, setStatusFilter] =
-        useState<StatusFilter>("all");
+    const list = usePaginatedList<InternalTaskArchiveType>(
+        (params, signal) => internalTasksApi.archive(params, signal),
+        { pageSize: 12, scrollTop: true },
+    );
+    const tasks = list.data;
+    const search = list.search;
+    const setSearch = list.setSearch;
+    const loading = list.loading && list.data.length === 0;
+    const error = list.error ? "دریافت آرشیو تیکت‌ها با خطا مواجه شد." : null;
+    const loadArchive = list.refetch;
 
-    const loadArchive = useCallback(async () => {
+    const loadRoutines = useCallback(async () => {
         try {
-            setLoading(true);
-            setError(null);
-
-            const [archiveResponse, routineResponse] =
-                await Promise.all([
-                    fetchInternalTaskArchive(),
-                    fetchInternalTaskRoutines(),
-                ]);
-
-            setTasks(
-                Array.isArray(archiveResponse.data)
-                    ? archiveResponse.data
-                    : [],
-            );
-
-            setRoutines(
-                Array.isArray(routineResponse.data)
-                    ? routineResponse.data
-                    : [],
-            );
+            const response = await fetchInternalTaskRoutines();
+            setRoutines(Array.isArray(response.data) ? response.data : []);
         } catch {
-            setTasks([]);
             setRoutines([]);
-            setError("دریافت آرشیو تیکت‌ها با خطا مواجه شد.");
-        } finally {
-            setLoading(false);
         }
     }, []);
 
     useEffect(() => {
-        void loadArchive();
-    }, [loadArchive]);
+        void loadRoutines();
+    }, [loadRoutines]);
 
     const routineTaskIds = useMemo(() => {
         return new Set(routines.map((routine) => routine.task));
     }, [routines]);
 
     const filteredTasks = useMemo(() => {
-        const normalizedSearch = search.trim().toLowerCase();
-
         const now = new Date();
         const todayStart = new Date(now);
         todayStart.setHours(0, 0, 0, 0);
@@ -279,34 +259,16 @@ export default function InternalTaskArchive() {
                     }
                 }
 
-                if (!normalizedSearch) {
-                    return true;
-                }
-
-                const searchableText = [
-                    task.title,
-                    task.id,
-                    task.task_id,
-                    task.created_by_username,
-                    task.created_by_full_name,
-                    task.final_action_by_username,
-                    task.final_action_by_full_name,
-                ]
-                    .join(" ")
-                    .toLowerCase();
-
-                return searchableText.includes(normalizedSearch);
+                return true;
             });
     }, [
         tasks,
         routines,
         routineTaskIds,
-        search,
         typeFilter,
         dateFilter,
         statusFilter,
     ]);
-    const pager = usePagination(filteredTasks, 12, `${search}|${typeFilter}|${dateFilter}|${statusFilter}`);
 
     const routineCount = useMemo(
         () =>
@@ -333,6 +295,7 @@ export default function InternalTaskArchive() {
         setTypeFilter("all");
         setDateFilter("all");
         setStatusFilter("all");
+        list.setPage(1);
     };
 
     const hasFilters =
@@ -376,7 +339,7 @@ export default function InternalTaskArchive() {
                     </h3>
 
                     <p className="text-[11.5px] text-gray-500 dark:text-gray-400">
-                        تیکت‌ها و روتین‌هایی که انجام یا لغو شده‌اند. مجموع: {toPersianDigits(tasks.length)} مورد
+                        تیکت‌ها و روتین‌هایی که انجام یا لغو شده‌اند. مجموع: {toPersianDigits(list.count)} مورد
                     </p>
                 </div>
             </div>
@@ -463,7 +426,7 @@ export default function InternalTaskArchive() {
                             onChange={setTypeFilter}
                             activeClass="bg-indigo-600 text-white"
                             options={[
-                                { value: "all", label: "همه", count: tasks.length },
+                                { value: "all", label: "همه", count: list.count },
                                 { value: "routine", label: "روتین", count: routineCount },
                                 { value: "ticket", label: "تیکت", count: ticketCount },
                             ]}
@@ -496,7 +459,7 @@ export default function InternalTaskArchive() {
                     />
 
                     <span className="text-[12px] font-bold text-gray-700 dark:text-gray-200">
-                        نمایش {toPersianDigits(filteredTasks.length)} مورد از {toPersianDigits(tasks.length)} مورد
+                        نمایش {toPersianDigits(filteredTasks.length)} مورد از {toPersianDigits(list.count)} مورد
                     </span>
 
                     {activeFilterLabels.map((text) => (
@@ -548,7 +511,7 @@ export default function InternalTaskArchive() {
                 </div>
             ) : (
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                    {pager.pageItems.map((task, index) => (
+                    {filteredTasks.map((task, index) => (
                         <InternalTaskArchiveCard
                             key={task.id}
                             task={task}
@@ -560,7 +523,7 @@ export default function InternalTaskArchive() {
                     ))}
                 </div>
             )}
-            {pager.totalPages > 1 && <Pagination page={pager.page} totalPages={pager.totalPages} onChange={pager.setPage} />}
+            {list.totalPages > 1 && <Pagination page={list.page} totalPages={list.totalPages} onChange={list.setPage} />}
         </div>
     );
 }

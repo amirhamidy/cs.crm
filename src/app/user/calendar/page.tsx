@@ -1,7 +1,8 @@
 "use client";
 
 import { Suspense } from "react";
-import PersianCalendar from "./PersianCalendar";
+import dynamic from "next/dynamic";
+const PersianCalendar = dynamic(() => import("./PersianCalendar"), { ssr: false, loading: () => null });
 
 export default function CalendarPage() {
   return (

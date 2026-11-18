@@ -4,7 +4,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { AnimatePresence } from "framer-motion";
 import { ClipboardList, Plus, RefreshCw } from "lucide-react";
 import { useTheme } from "next-themes";
-import { casesApi, customersApi, metaApi, tasksApi, fetchAllTasks } from "@/lib/api";
+import { casesApi, customersApi, metaApi, tasksApi, fetchAllTasks, fetchTasksForCases } from "@/lib/api";
 import type { Paginated } from "@/types/pagination";
 import type { Department } from "@/types/department";
 import type { Employee } from "@/types/employee";
@@ -34,6 +34,8 @@ export default function UserCasesPage() {
     const [cases, setCases] = useState<CaseItem[]>([]);
     const [totalCount, setTotalCount] = useState(0);
     const [page, setPage] = useState(1);
+    const [searchInput, setSearchInput] = useState("");
+    const [search, setSearch] = useState("");
     const [customers, setCustomers] = useState<Customer[]>([]);
     const [departments, setDepartments] = useState<Department[]>([]);
     const [employees, setEmployees] = useState<Employee[]>([]);
@@ -55,9 +57,21 @@ export default function UserCasesPage() {
 
     const requestId = useRef(0);
     const pageCache = useRef(new Map<number, CachedPage>());
+    const searchRef = useRef(search);
+    searchRef.current = search;
     const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
 
     const clearPageCache = useCallback(() => pageCache.current.clear(), []);
+
+    useEffect(() => {
+        const timer = window.setTimeout(() => setSearch(searchInput.trim().replace(/\s+/g, " ")), 300);
+        return () => window.clearTimeout(timer);
+    }, [searchInput]);
+
+    useEffect(() => {
+        clearPageCache();
+        setPage(1);
+    }, [search, clearPageCache]);
 
     /** مشتری‌ها و وظایف پرونده‌های همین صفحه — بدون بلاک کردن نمایش کارت‌ها */
     const hydratePage = useCallback((items: CaseItem[], id: number, fresh: boolean) => {
@@ -70,25 +84,26 @@ export default function UserCasesPage() {
             })
             .catch(() => undefined);
 
-        Promise.allSettled(items.map((c) => fetchAllTasks({ caseId: c.id, fresh }))).then((results) => {
+        fetchTasksForCases(items.map((item) => item.id), { fresh }).then((grouped) => {
             if (id !== requestId.current) return;
             setTasksByCase((prev) => {
                 const next = new Map(prev);
-                results.forEach((res, i) => {
-                    if (res.status === "fulfilled") next.set(String(items[i].id), res.value);
-                });
+                grouped.forEach((tasks, caseId) => next.set(caseId, tasks));
                 return next;
             });
-        });
+        }).catch(() => undefined);
     }, []);
 
     const prefetch = useCallback((target: number) => {
         if (target < 1 || pageCache.current.has(target)) return;
+        const query = search;
         casesApi
-            .list({ page: target, page_size: PAGE_SIZE })
-            .then((data) => pageCache.current.set(target, { data, at: Date.now() }))
+            .list({ page: target, page_size: PAGE_SIZE, search: query || undefined })
+            .then((data) => {
+                if (searchRef.current === query) pageCache.current.set(target, { data, at: Date.now() });
+            })
             .catch(() => undefined);
-    }, []);
+    }, [search]);
 
     const fetchCases = useCallback(
         async (opts: { silent?: boolean; fresh?: boolean } = {}) => {
@@ -105,7 +120,7 @@ export default function UserCasesPage() {
             setError("");
 
             try {
-                const data = useCache ? cached!.data : await casesApi.list({ page, page_size: PAGE_SIZE });
+                const data = useCache ? cached!.data : await casesApi.list({ page, page_size: PAGE_SIZE, search: search || undefined });
                 if (id !== requestId.current) return;
 
                 pageCache.current.set(page, { data, at: Date.now() });
@@ -123,7 +138,7 @@ export default function UserCasesPage() {
                 setIsFetching(false);
             }
         },
-        [page, hydratePage, prefetch, clearPageCache],
+        [page, search, hydratePage, prefetch, clearPageCache],
     );
 
     useEffect(() => {
@@ -257,6 +272,12 @@ export default function UserCasesPage() {
                 </div>
 
                 <div className="flex items-center gap-2">
+                    <input
+                        value={searchInput}
+                        onChange={(event) => setSearchInput(event.target.value)}
+                        placeholder="جستجو در پرونده‌ها..."
+                        className="h-10 w-44 rounded-xl border border-gray-200 bg-white px-3 text-[12px] text-gray-700 outline-none focus:border-indigo-400 dark:border-white/10 dark:bg-white/[0.03] dark:text-gray-200"
+                    />
                     <button
                         onClick={refreshAll}
                         disabled={loading}

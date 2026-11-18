@@ -1,11 +1,11 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Users, Plus, Loader, RefreshCw, Filter, FileSpreadsheet } from "lucide-react";
 import { useTheme } from "next-themes";
 import CustomerCard from "@/components/user/customer/CustomerCard";
-import AddCustomerModal from "@/components/user/customer/AddCustomerModal";
 import ImportExcelModal from "@/components/user/customer/ImportExcelModal";
 import { Customer } from "@/types/customer";
 import type { Employee } from "@/types/employee";
@@ -15,6 +15,8 @@ import axiosInstance from "@/lib/axiosInstance";
 import { listAll } from "@/lib/api";
 import { apiRoutes } from "@/lib/apiRoutes";
 import { useAuthStore } from "@/store/authStore";
+
+const AddCustomerModal = dynamic(() => import("@/components/user/customer/AddCustomerModal"), { ssr: false, loading: () => null });
 
 type FilterType = "all" | "potential" | "active";
 

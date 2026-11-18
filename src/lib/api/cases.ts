@@ -1,9 +1,10 @@
 import axiosInstance from "@/lib/axiosInstance";
 import type { CaseItem } from "@/types/case";
-import type { PageParams } from "@/types/pagination";
+import type { SearchParams } from "@/types/pagination";
 import {
   dedupe,
   fetchAllPages,
+  fetchPage,
   getOne,
   invalidate,
   toPaginated,
@@ -14,7 +15,7 @@ import {
 const KEY = "cases:";
 const BASE = "/tasks/api/v1/cases/";
 
-export interface CaseListParams extends PageParams {
+export interface CaseListParams extends SearchParams {
   customer?: number;
   active?: boolean;
 }
@@ -34,6 +35,8 @@ const list = (params: CaseListParams = {}): Promise<Paginated<CaseItem>> =>
 
 export const casesApi = {
   list,
+  page: (params: CaseListParams = {}, signal?: AbortSignal) =>
+    fetchPage<CaseItem>(BASE, params, signal),
 
   listAll: () => fetchAllPages<CaseItem>((p) => list({ ...p, page_size: 100 })),
 

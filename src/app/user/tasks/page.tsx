@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Archive, ClipboardList, Plus, RefreshCw } from "lucide-react";
@@ -13,9 +14,10 @@ import CardSkeletonGrid from "@/components/ui/CardSkeletonGrid";
 import type { Task, TaskStatus } from "@/types/task";
 import type { Department } from "@/types/department";
 import TaskCard from "@/components/user/tasks/TaskCardx";
-import CreateTaskModal from "@/components/user/tasks/CreateTaskModal";
-import CreateNoCaseTaskModal from "@/components/customcomponents/tasks/CreateNoCaseTaskModal";
-import EditTaskModal from "@/components/user/tasks/EditTaskModal";
+
+const CreateTaskModal = dynamic(() => import("@/components/user/tasks/CreateTaskModal"), { ssr: false, loading: () => null });
+const CreateNoCaseTaskModal = dynamic(() => import("@/components/customcomponents/tasks/CreateNoCaseTaskModal"), { ssr: false, loading: () => null });
+const EditTaskModal = dynamic(() => import("@/components/user/tasks/EditTaskModal"), { ssr: false, loading: () => null });
 
 const ACTIVE_STATUS = "in_progress" as TaskStatus;
 

@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useEffect, useState, useRef, useCallback } from "react";
 import { motion, AnimatePresence, animate } from "framer-motion";
 import { useTheme } from "next-themes";
@@ -19,9 +20,10 @@ import {
 import type { Customer } from "@/types/customer";
 import { useEmployeeDirectory } from "@/hooks/useEmployeeDirectory";
 import CustomerDeleteModal from "./DeleteModal";
-import CustomerEditModal from "./CustomerEditModal";
 import CustomerScoresModal from "./CustomerScoresModal";
 import axiosInstance from "@/lib/axiosInstance";
+
+const CustomerEditModal = dynamic(() => import("./CustomerEditModal"), { ssr: false, loading: () => null });
 
 interface ScoreItem {
     id: number;

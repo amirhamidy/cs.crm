@@ -4,7 +4,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { AnimatePresence, motion } from "framer-motion";
 import { ClipboardList, Loader, Plus, RefreshCw } from "lucide-react";
 import { useTheme } from "next-themes";
-import { casesApi, customersApi, metaApi, tasksApi, fetchAllTasks, extractCaseId } from "@/lib/api";
+import { casesApi, customersApi, metaApi, tasksApi, fetchAllTasks, fetchTasksForCases, extractCaseId } from "@/lib/api";
 import type { Department } from "@/types/department";
 import type { Employee } from "@/types/employee";
 import type { TaskItem } from "@/types/task";
@@ -26,10 +26,13 @@ export default function UserCasesPage() {
     const [cases, setCases] = useState<CaseItem[]>([]);
     const [totalCount, setTotalCount] = useState(0);
     const [page, setPage] = useState(1);
+    const [searchInput, setSearchInput] = useState("");
+    const [search, setSearch] = useState("");
     const [customers, setCustomers] = useState<Customer[]>([]);
     const [departments, setDepartments] = useState<Department[]>([]);
     const [employees, setEmployees] = useState<Employee[]>([]);
     const [tasks, setTasks] = useState<TaskItem[]>([]);
+    const [taskTotal, setTaskTotal] = useState(0);
     const [loading, setLoading] = useState(true);
     const [isFetching, setIsFetching] = useState(false);
     const [error, setError] = useState("");
@@ -45,6 +48,16 @@ export default function UserCasesPage() {
     const [tasksRefreshKey, setTasksRefreshKey] = useState(0);
 
     const requestId = useRef(0);
+    const tasksRequestId = useRef(0);
+
+    useEffect(() => {
+        const timer = window.setTimeout(() => setSearch(searchInput.trim().replace(/\s+/g, " ")), 300);
+        return () => window.clearTimeout(timer);
+    }, [searchInput]);
+
+    useEffect(() => {
+        setPage(1);
+    }, [search]);
     const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
 
     const fetchCases = useCallback(
@@ -55,7 +68,7 @@ export default function UserCasesPage() {
             setError("");
 
             try {
-                const data = await casesApi.list({ page, page_size: PAGE_SIZE });
+                const data = await casesApi.list({ page, page_size: PAGE_SIZE, search: search || undefined });
                 const pageCustomers = await customersApi.getMany(data.results.map((c) => Number(c.customer)));
 
                 if (id !== requestId.current) return;
@@ -73,14 +86,21 @@ export default function UserCasesPage() {
                 }
             }
         },
-        [page],
+        [page, search],
     );
 
     const fetchTasks = useCallback((fresh = false) => {
-        fetchAllTasks({ fresh })
-            .then(setTasks)
+        const id = ++tasksRequestId.current;
+        if (cases.length === 0) {
+            setTasks([]);
+            return;
+        }
+        fetchTasksForCases(cases.map((item) => item.id), { fresh })
+            .then((grouped) => {
+                if (id === tasksRequestId.current) setTasks([...grouped.values()].flat());
+            })
             .catch(() => undefined);
-    }, []);
+    }, [cases]);
 
     const fetchMeta = useCallback(() => {
         metaApi.departments().then(setDepartments).catch(() => undefined);
@@ -93,8 +113,17 @@ export default function UserCasesPage() {
 
     useEffect(() => {
         fetchMeta();
+    }, [fetchMeta]);
+
+    useEffect(() => {
         fetchTasks();
-    }, [fetchMeta, fetchTasks]);
+    }, [fetchTasks]);
+
+    useEffect(() => {
+        tasksApi.page({ page: 1, page_size: 1 })
+            .then((result) => setTaskTotal(result.count))
+            .catch(() => setTaskTotal(0));
+    }, []);
 
     const refreshAll = useCallback(() => {
         fetchCases();
@@ -206,12 +235,18 @@ export default function UserCasesPage() {
                     <div className="min-w-0">
                         <h1 className="text-[15px] font-extrabold text-gray-900 dark:text-white">پرونده‌ها</h1>
                         <p className="mt-0.5 text-[11.5px] text-gray-500 dark:text-gray-400">
-                            {loading ? "در حال بارگذاری..." : `${totalCount} پرونده و ${tasks.length} وظیفه`}
+                            {loading ? "در حال بارگذاری..." : `${totalCount} پرونده و ${taskTotal} وظیفه`}
                         </p>
                     </div>
                 </div>
 
                 <div className="flex items-center gap-2">
+                    <input
+                        value={searchInput}
+                        onChange={(event) => setSearchInput(event.target.value)}
+                        placeholder="جستجو در پرونده‌ها..."
+                        className="h-10 w-44 rounded-xl border border-gray-200 bg-white px-3 text-[12px] text-gray-700 outline-none focus:border-indigo-400 dark:border-white/10 dark:bg-white/[0.03] dark:text-gray-200"
+                    />
                     <button
                         onClick={refreshAll}
                         disabled={loading}

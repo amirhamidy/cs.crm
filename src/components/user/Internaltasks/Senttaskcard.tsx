@@ -1,6 +1,7 @@
 "use client";
 
 import { memo, useEffect, useState } from "react";
+import dynamic from "next/dynamic";
 import { AnimatePresence, motion } from "framer-motion";
 import {
     Ban, CalendarClock, CheckCircle2, ClipboardX, Clock, Loader, Loader2,
@@ -12,9 +13,10 @@ import type { InternalTask, InternalTaskStatus, EmployeeRef } from "./types";
 import api from "@/lib/axiosInstance";
 import InternalTimeRangeModal from "./InternalTimeRangeModal";
 import InternalTaskDeadlineModal from "./InternalTaskDeadlineModal";
-import InternalTaskChatModal from "./InternalTaskChatModal";
 import InternalTaskActionModal from "./InternalTaskActionModal";
 import { reopenInternalTask } from "./Api";
+
+const InternalTaskChatModal = dynamic(() => import("./InternalTaskChatModal"), { ssr: false, loading: () => null });
 
 const AVATAR_GRADIENTS = [
     ["#6366f1", "#8b5cf6"], ["#3b82f6", "#6366f1"], ["#8b5cf6", "#ec4899"],

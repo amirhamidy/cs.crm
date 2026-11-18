@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Archive, Check, ClipboardList, Eye, Plus, RefreshCw } from "lucide-react";
@@ -15,9 +16,10 @@ import { Task, TaskStatus } from "@/types/task";
 import { Department } from "@/types/department";
 import SuspenseWrapper from "@/components/SuspenseWrapper";
 import TaskCard from "@/components/customcomponents/tasks/TaskCard";
-import CreateTaskModal from "@/components/customcomponents/tasks/CreateTaskModal";
-import CreateNoCaseTaskModal from "@/components/customcomponents/tasks/CreateNoCaseTaskModal";
-import EditTaskModal from "@/components/customcomponents/tasks/EditTaskModal";
+
+const CreateTaskModal = dynamic(() => import("@/components/customcomponents/tasks/CreateTaskModal"), { ssr: false, loading: () => null });
+const CreateNoCaseTaskModal = dynamic(() => import("@/components/customcomponents/tasks/CreateNoCaseTaskModal"), { ssr: false, loading: () => null });
+const EditTaskModal = dynamic(() => import("@/components/customcomponents/tasks/EditTaskModal"), { ssr: false, loading: () => null });
 
 const ACTIVE_STATUS = "in_progress" as TaskStatus;
 

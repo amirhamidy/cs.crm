@@ -1,10 +1,12 @@
 "use client";
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Check, CheckSquare, Loader, Square, UserPlus, Warehouse as WarehouseIcon, X } from "lucide-react";
 import { useTheme } from "next-themes";
 import axiosInstance from "@/lib/axiosInstance";
 import { WAREHOUSE_ENDPOINTS, fetchAll } from "@/lib/warehouseApi";
+import { fetchPage } from "@/lib/api";
+import { useInfiniteOptions, type InfiniteFetcher } from "@/hooks/useInfiniteOptions";
 
 interface Employee {
     id: number;
@@ -33,39 +35,46 @@ export default function AddWarehouseStaffModal({
     const { resolvedTheme } = useTheme();
     const isDark = resolvedTheme === "dark";
 
-    const [employees, setEmployees] = useState<Employee[]>([]);
     const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
 
     const [selectedEmployee, setSelectedEmployee] = useState<number | null>(null);
     const [selectedWarehouses, setSelectedWarehouses] = useState<number[]>([]);
 
-    const [fetching, setFetching] = useState(false);
+    const [fetchingWarehouses, setFetchingWarehouses] = useState(false);
+    const listRef = useRef<HTMLDivElement>(null);
+
+    const employeeFetcher = useCallback<InfiniteFetcher<Employee>>(
+        (params, signal) => fetchPage<Employee>("/accounts/api/v1/employee/list/", params, signal),
+        [],
+    );
+    const { items: employees, loading: fetching, loadingMore, hasMore, loadMore } =
+        useInfiniteOptions<Employee>(employeeFetcher, { enabled: isOpen, pageSize: 25 });
+    const initialLoading = fetchingWarehouses || (fetching && employees.length === 0);
+
+    const onListScroll = () => {
+        const element = listRef.current;
+        if (!element || !hasMore || loadingMore) return;
+        if (element.scrollTop + element.clientHeight >= element.scrollHeight - 80) loadMore();
+    };
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
 
     useEffect(() => {
-        if (isOpen) {
-            fetchInitialData();
-        }
+        if (!isOpen) return;
+        let cancelled = false;
+        setFetchingWarehouses(true);
+        fetchAll<Warehouse>(WAREHOUSE_ENDPOINTS.warehouses)
+            .then((warehouseList) => {
+                if (!cancelled) setWarehouses(warehouseList);
+            })
+            .catch(() => {
+                if (!cancelled) setWarehouses([]);
+            })
+            .finally(() => {
+                if (!cancelled) setFetchingWarehouses(false);
+            });
+        return () => { cancelled = true; };
     }, [isOpen]);
-
-    const fetchInitialData = async () => {
-        setFetching(true);
-        try {
-            const [employeeList, warehouseList] = await Promise.all([
-                fetchAll<Employee>("/accounts/api/v1/employee/list/"),
-                fetchAll<Warehouse>(WAREHOUSE_ENDPOINTS.warehouses),
-            ]);
-
-            setEmployees(employeeList);
-            setWarehouses(warehouseList);
-        } catch {
-            setEmployees([]);
-            setWarehouses([]);
-        } finally {
-            setFetching(false);
-        }
-    };
 
     const toggleWarehouse = (id: number) => {
         setSelectedWarehouses((prev) =>
@@ -159,7 +168,7 @@ export default function AddWarehouseStaffModal({
                     </div>
 
                     <form onSubmit={handleSubmit} className="flex flex-col gap-4 px-8 pb-8">
-                        {fetching ? (
+                        {initialLoading ? (
                             <div className="flex flex-col items-center justify-center py-10 text-gray-400">
                                 <Loader size={22} className="animate-spin mb-2 text-blue-500" />
                                 <span className="text-[12px]">در حال دریافت اطلاعات...</span>
@@ -171,7 +180,7 @@ export default function AddWarehouseStaffModal({
                                     <label className="mb-2 block text-[11.5px] font-bold text-gray-500 dark:text-gray-400">
                                         انتخاب کارمند <span className="text-red-500">*</span>
                                     </label>
-                                    <div className="max-h-[140px] overflow-y-auto space-y-1.5 pr-0.5 scrollbar-thin">
+                                    <div ref={listRef} onScroll={onListScroll} className="max-h-[140px] overflow-y-auto space-y-1.5 pr-0.5 scrollbar-thin">
                                         {employees.length === 0 ? (
                                             <p className="text-[11px] text-gray-400 py-2">کارمندی یافت نشد</p>
                                         ) : (
@@ -208,6 +217,11 @@ export default function AddWarehouseStaffModal({
                                                     </button>
                                                 );
                                             })
+                                        )}
+                                        {loadingMore && (
+                                            <div className="py-2 text-center text-[10px] text-gray-400">
+                                                در حال دریافت ادامه فهرست...
+                                            </div>
                                         )}
                                     </div>
                                 </div>
@@ -279,7 +293,7 @@ export default function AddWarehouseStaffModal({
 
                         <motion.button
                             type="submit"
-                            disabled={loading || fetching || !selectedEmployee || selectedWarehouses.length === 0}
+                            disabled={loading || initialLoading || !selectedEmployee || selectedWarehouses.length === 0}
                             whileTap={{ scale: 0.98 }}
                             className="mt-1 flex items-center justify-center gap-2 rounded-2xl bg-blue-600 py-3 text-[13px] font-bold text-white shadow-md shadow-blue-500/20 transition-colors hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
                         >

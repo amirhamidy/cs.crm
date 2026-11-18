@@ -1,6 +1,7 @@
 "use client";
 
-import { ComponentType, useCallback, useEffect, useMemo, useState } from "react";
+import { ComponentType, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import {
@@ -9,7 +10,6 @@ import {
     ClipboardList,
     Archive,
     FileText,
-    LayoutGrid,
     Loader2,
     Package,
     PackagePlus,
@@ -27,7 +27,6 @@ import {
 } from "lucide-react";
 import { useTheme } from "next-themes";
 
-import WarehouseOverview from "@/components/admin/warehouse/Warehouseoverview";
 import AddCategoryModal from "@/components/admin/warehouse/AddCategoryModal";
 import WarehouseCategoryCard from "@/components/admin/warehouse/WarehouseCategoryCard";
 import WarehouseStaffCard, { type WarehouseStaff } from "@/components/admin/warehouse/WarehouseStaffCard";
@@ -46,7 +45,6 @@ import {
 import CreateOrderTaskModal from "@/components/user/warehouse/CreateOrderTaskModal";
 import WarehouseEmployeeTransactionCard from "@/components/user/warehouse/WarehouseEmployeeTransactionCard";
 import WarehouseEmployeeProductCard from "@/components/user/warehouse/WarehouseEmployeeProductCard";
-import WarehouseEmployeeProductWizardModal from "@/components/user/warehouse/WarehouseEmployeeProductWizardModal";
 import WarehouseEmployeeBulkImportModal from "@/components/admin/warehouse/WarehouseEmployeeBulkImportModal";
 import WarehouseEmployeeTaskCard from "@/components/user/warehouse/WarehouseEmployeeTaskCard";
 import WarehouseEmployeeOrderTaskCard from "@/components/user/warehouse/WarehouseEmployeeOrderTaskCard";
@@ -64,13 +62,17 @@ import useWarehouseTab from "@/hooks/useWarehouseTab";
 import type { WarehouseTab as Tab } from "@/hooks/useWarehouseTab";
 import type { ApiStockInfo, ApiWarehouseTask } from "@/types/warehouse";
 
+const WarehouseEmployeeProductWizardModal = dynamic(
+    () => import("@/components/user/warehouse/WarehouseEmployeeProductWizardModal"),
+    { ssr: false, loading: () => null },
+);
+
 interface AdminCategory {
     id: number;
     name: string;
 }
 
 const TABS: Array<[Tab, string, ComponentType<{ size?: number }>]> = [
-    ["overview", "نمای کلی", LayoutGrid],
     ["products", "محصولات", ShoppingBag],
     ["tasks", "وظایف انبار", ClipboardList],
     ["stock", "موجودی انبار", Boxes],
@@ -133,6 +135,14 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
     const [limitsStock, setLimitsStock] = useState<ApiStockInfo | null>(null);
     const [statusOpen, setStatusOpen] = useState(false);
     const [shelfReloadKey, setShelfReloadKey] = useState(0);
+    const SEARCHABLE_TABS: Tab[] = ["products", "stock", "tasks", "task-archive", "transactions", "orders", "invoices"];
+    const searchable = SEARCHABLE_TABS.includes(tab);
+    const [searchInput, setSearchInput] = useState("");
+    const [search, setSearch] = useState("");
+    useEffect(() => {
+        const timer = window.setTimeout(() => setSearch(searchInput.trim().replace(/\s+/g, " ")), 300);
+        return () => window.clearTimeout(timer);
+    }, [searchInput]);
 
     const tabAllowed = tab === "staff" ? isAdmin : hasFullWarehouseAccess || LIMITED_TABS.includes(tab);
 
@@ -151,6 +161,7 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
         hasFullAccess: hasFullWarehouseAccess,
         employeeId,
         shelfCode,
+        search: searchable ? search : "",
     });
 
     const buildUrl = useCallback(
@@ -163,6 +174,18 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
         () => (shelfCode ? `&shelf=${encodeURIComponent(shelfCode)}` : ""),
         [shelfCode],
     );
+
+    const firstSearchRun = useRef(true);
+    useEffect(() => {
+        if (firstSearchRun.current) {
+            firstSearchRun.current = false;
+            return;
+        }
+        if (currentPage > 1) {
+            const shelf = tab === "products" && shelfCode ? `&shelf=${encodeURIComponent(shelfCode)}` : "";
+            router.push(buildUrl(tab, 1, shelf));
+        }
+    }, [search, currentPage, router, buildUrl, tab, shelfCode]);
 
     const goToPage = useCallback(
         (page: number) => router.push(buildUrl(tab, page, tab === "products" ? shelfQuery : "")),
@@ -195,7 +218,7 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
 
     useEffect(() => {
         if (ready && warehouseId !== null && !tabAllowed) {
-            router.replace(buildUrl(isAdmin ? "overview" : "stock"));
+            router.replace(buildUrl("stock"));
         }
     }, [ready, warehouseId, tabAllowed, isAdmin, router, buildUrl]);
 
@@ -446,6 +469,14 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
                 </div>
 
                 <div className="flex items-center gap-2">
+                    {searchable && (
+                        <input
+                            value={searchInput}
+                            onChange={(event) => setSearchInput(event.target.value)}
+                            placeholder="جستجو..."
+                            className="h-10 w-44 rounded-xl border border-gray-200 bg-white px-3 text-[12px] text-gray-700 outline-none focus:border-indigo-400 dark:border-white/10 dark:bg-white/[0.03] dark:text-gray-200"
+                        />
+                    )}
                     <motion.button
                         type="button"
                         whileTap={{ scale: 0.96 }}
@@ -553,45 +584,6 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
                         exit={{ opacity: 0, y: -8 }}
                         transition={{ duration: 0.2 }}
                     >
-                        {tab === "overview" && hasFullWarehouseAccess && (
-                            <div className="space-y-6">
-                                <WarehouseOverview
-                                    products={products}
-                                    stockInfos={stockInfos}
-                                    transactions={transactions}
-                                    tasks={taskItems}
-                                    orderTasks={orderTasks}
-                                />
-
-                                {pendingQualityCount > 0 && (
-                                    <div
-                                        className="rounded-3xl border p-4"
-                                        style={{
-                                            background: isDark ? "rgba(139,92,246,.06)" : "rgba(139,92,246,.04)",
-                                            borderColor: "rgba(139,92,246,.12)",
-                                        }}
-                                    >
-                                        <div className="flex items-center gap-3">
-                                            <div
-                                                className="flex h-10 w-10 items-center justify-center rounded-xl"
-                                                style={{ background: "rgba(139,92,246,.1)", color: "#8b5cf6" }}
-                                            >
-                                                <ShieldCheck size={18} />
-                                            </div>
-                                            <div>
-                                                <p className="text-[12px] font-extrabold text-gray-900 dark:text-white">
-                                                    وظایف کنترل کیفیت
-                                                </p>
-                                                <p className="mt-1 text-[10.5px] text-gray-500 dark:text-gray-400">
-                                                    {pendingQualityCount} وظیفه کنترل کیفیت در انتظار انجام است
-                                                </p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                        )}
-
                         {tab === "products" && hasFullWarehouseAccess && (
                             <div className="space-y-5">
                                 <div className={sectionHeaderClass}>
