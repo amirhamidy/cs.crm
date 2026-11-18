@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Archive, ArrowRight, Ban, CheckCircle2, ClipboardList, Layers3, Loader, RefreshCw, ShoppingBag } from "lucide-react";
+import { Archive, ArrowRight, Ban, CheckCircle2, ClipboardList, Layers3, Loader, RefreshCw, Search, ShoppingBag, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import { tasksApi } from "@/lib/api";
@@ -25,15 +25,15 @@ export default function AdminArchivedTasksPage() {
     const { resolvedTheme } = useTheme();
     const isDark = resolvedTheme === "dark";
 
-    const [filter, setFilter] = useState<ArchiveFilter>("all");
-    const list = usePaginatedList<Task>((params, signal) => tasksApi.archivePage<Task>(params, signal), { pageSize: 12 });
+    const list = usePaginatedList<Task, { status?: string }>(
+        (params, signal) => tasksApi.archivePage<Task>(params, signal),
+        { pageSize: 12, filters: { status: undefined } },
+    );
     const loading = list.loading;
     const tasks = list.data;
     const fetchAll = list.refetch;
-
-    const filteredTasks = useMemo(() => (filter === "all" ? tasks : tasks.filter((task) => task.status === filter)), [tasks, filter]);
-
-    const getCount = (id: ArchiveFilter) => (id === "all" ? list.count : tasks.filter((task) => task.status === id).length);
+    const filter: ArchiveFilter = (list.filters.status as ArchiveFilter | undefined) ?? "all";
+    const setFilter = (id: ArchiveFilter) => list.setFilters({ status: id === "all" ? undefined : id });
 
     return (
         <div className="flex flex-col gap-5 p-3 sm:p-4 md:p-6" dir="rtl">
@@ -73,10 +73,25 @@ export default function AdminArchivedTasksPage() {
                 </div>
             </div>
 
+            <div className="relative w-full sm:w-64">
+                <Search size={14} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <input
+                    value={list.search}
+                    onChange={(e) => list.setSearch(e.target.value)}
+                    placeholder="جستجوی بایگانی..."
+                    className="h-9 w-full rounded-full border border-gray-100 bg-gray-50 pr-9 pl-9 text-[11px] font-semibold text-gray-800 outline-none transition focus:border-indigo-400 dark:border-white/[0.06] dark:bg-white/[0.03] dark:text-white"
+                />
+                {list.search && (
+                    <button type="button" onClick={() => list.setSearch("")} className="absolute left-2.5 top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded-full text-gray-400 hover:text-gray-600">
+                        <X size={11} />
+                    </button>
+                )}
+            </div>
+
             <div className="flex flex-wrap items-center gap-2">
                 {archiveFilters.map(({ id, label, icon: Icon, color }) => {
                     const isActive = filter === id;
-                    const count = getCount(id);
+                    const count = id === "all" ? list.count : undefined;
 
                     return (
                         <button
@@ -92,9 +107,11 @@ export default function AdminArchivedTasksPage() {
                         >
                             <Icon size={13} style={{ color: isActive ? color : "rgb(148 163 184)" }} />
                             <span className={isActive ? "" : "text-gray-500 dark:text-gray-400"}>{label}</span>
-                            <span className="rounded-full px-1.5 py-0.5 text-[9.5px] font-extrabold tabular-nums" style={{ color, backgroundColor: `${color}18` }}>
-                                {count}
-                            </span>
+                            {count !== undefined && (
+                                <span className="rounded-full px-1.5 py-0.5 text-[9.5px] font-extrabold tabular-nums" style={{ color, backgroundColor: `${color}18` }}>
+                                    {count}
+                                </span>
+                            )}
                         </button>
                     );
                 })}
@@ -107,17 +124,17 @@ export default function AdminArchivedTasksPage() {
                 </div>
             )}
 
-            {!loading && !list.error && filteredTasks.length === 0 && (
+            {!loading && !list.error && tasks.length === 0 && (
                 <div className="flex flex-col items-center justify-center gap-2 py-16">
                     <ClipboardList size={28} className="text-gray-300 dark:text-gray-700" />
                     <p className="text-[12.5px] text-gray-500 dark:text-gray-400">تسکی در این وضعیت یافت نشد</p>
                 </div>
             )}
 
-            {!loading && filteredTasks.length > 0 && (
+            {!loading && tasks.length > 0 && (
                 <motion.div layout className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
                     <AnimatePresence mode="popLayout">
-                        {filteredTasks.map((task, index) => (
+                        {tasks.map((task, index) => (
                             <motion.div key={task.id} layout initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}>
                                 <TaskCard task={task} index={index} readOnly />
                             </motion.div>

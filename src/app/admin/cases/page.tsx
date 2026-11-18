@@ -16,6 +16,7 @@ import CaseCard from "@/components/user/cases/CaseCard";
 import EditTaskModal from "@/components/customcomponents/tasks/EditTaskModal";
 import CaseTasksModal from "@/components/customcomponents/cases/CaseTasksModal";
 import Pagination from "@/components/ui/Pagination";
+import SearchInput from "@/components/admin/production/SearchInput";
 
 const PAGE_SIZE = 12;
 
@@ -241,12 +242,7 @@ export default function UserCasesPage() {
                 </div>
 
                 <div className="flex items-center gap-2">
-                    <input
-                        value={searchInput}
-                        onChange={(event) => setSearchInput(event.target.value)}
-                        placeholder="جستجو در پرونده‌ها..."
-                        className="h-10 w-44 rounded-xl border border-gray-200 bg-white px-3 text-[12px] text-gray-700 outline-none focus:border-indigo-400 dark:border-white/10 dark:bg-white/[0.03] dark:text-gray-200"
-                    />
+                    <SearchInput value={searchInput} onChange={setSearchInput} placeholder="جستجوی پرونده‌ها..." />
                     <button
                         onClick={refreshAll}
                         disabled={loading}

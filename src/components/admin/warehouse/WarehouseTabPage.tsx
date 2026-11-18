@@ -175,17 +175,17 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
         [shelfCode],
     );
 
-    const firstSearchRun = useRef(true);
+    // فقط وقتی جستجو عوض می‌شود به صفحه ۱ برگرد (نه با هر تغییر صفحه، که باعث گیر کردن روی صفحه ۱ می‌شد)
+    const prevSearch = useRef(search);
     useEffect(() => {
-        if (firstSearchRun.current) {
-            firstSearchRun.current = false;
-            return;
-        }
+        if (prevSearch.current === search) return;
+        prevSearch.current = search;
         if (currentPage > 1) {
             const shelf = tab === "products" && shelfCode ? `&shelf=${encodeURIComponent(shelfCode)}` : "";
             router.push(buildUrl(tab, 1, shelf));
         }
-    }, [search, currentPage, router, buildUrl, tab, shelfCode]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [search]);
 
     const goToPage = useCallback(
         (page: number) => router.push(buildUrl(tab, page, tab === "products" ? shelfQuery : "")),
@@ -227,10 +227,10 @@ export default function WarehouseTabPage({ tab }: { tab: Tab }) {
     const totalPages = data.totalPages;
 
     useEffect(() => {
-        if (!loading && warehouseId !== null && currentPage > totalPages) {
+        if (!loading && !error && warehouseId !== null && currentPage > totalPages) {
             router.replace(buildUrl(tab, totalPages));
         }
-    }, [loading, warehouseId, currentPage, totalPages, router, buildUrl, tab]);
+    }, [loading, error, warehouseId, currentPage, totalPages, router, buildUrl, tab]);
 
     const products = data.products;
     const stockInfos = data.stockInfos;

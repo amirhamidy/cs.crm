@@ -3,7 +3,6 @@
 import React, {
     useCallback,
     useEffect,
-    useRef,
     useState,
     forwardRef,
 } from "react";
@@ -18,6 +17,8 @@ import {
     X,
 } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
+import { usePaginatedList } from "@/hooks/usePaginatedList";
+import Pagination from "@/components/ui/Pagination";
 import { casesApi, customersApi } from "@/lib/api";
 import type { Customer } from "@/types/customer";
 
@@ -27,7 +28,7 @@ type CreateCaseModalProps = {
     onCreated: () => Promise<void> | void;
 };
 
-const CUSTOMER_PAGE_SIZE = 20;
+const CUSTOMER_PAGE_SIZE = 5;
 
 function customerDisplayName(c: Customer) {
     return (
@@ -111,108 +112,48 @@ export default function CreateCaseModal({
     onCreated,
 }: CreateCaseModalProps) {
     const [step, setStep] = useState(0);
-    const [customers, setCustomers] = useState<Customer[]>([]);
-    const [customerPage, setCustomerPage] = useState(1);
-    const [hasMore, setHasMore] = useState(false);
-    const [totalCustomers, setTotalCustomers] = useState(0);
-    const [loadingFirst, setLoadingFirst] = useState(false);
-    const [loadingMore, setLoadingMore] = useState(false);
     const [customerQuery, setCustomerQuery] = useState("");
-    const [debouncedQuery, setDebouncedQuery] = useState("");
     const [selected, setSelected] = useState<Customer | null>(null);
     const [title, setTitle] = useState("");
     const [description, setDescription] = useState("");
     const [submitting, setSubmitting] = useState(false);
     const [submitError, setSubmitError] = useState("");
 
-    const reqId = useRef(0);
-    const fetchingRef = useRef(false);
-
-    /* debounce جستجو */
-    useEffect(() => {
-        const t = setTimeout(() => setDebouncedQuery(customerQuery.trim()), 300);
-        return () => clearTimeout(t);
-    }, [customerQuery]);
-
-    /* لود یک صفحه از مشتری‌ها */
-    const loadPage = useCallback(async (p: number, q: string) => {
-        const id = ++reqId.current;
-        fetchingRef.current = true;
-        if (p === 1) setLoadingFirst(true);
-        else setLoadingMore(true);
-
-        try {
-            const data = await customersApi.list({
-                page: p,
-                page_size: CUSTOMER_PAGE_SIZE,
-                search: q || undefined,
-            });
-            if (id !== reqId.current) return;
-
-            setCustomers((prev) => {
-                if (p === 1) return data.results;
-                // جلوگیری از آیتم تکراری (مثلاً وقتی مشتری جدید ثبت شده)
-                const seen = new Set(prev.map((c) => c.id));
-                return [...prev, ...data.results.filter((c) => !seen.has(c.id))];
-            });
-            setCustomerPage(p);
-            setTotalCustomers(data.count);
-            setHasMore(Boolean(data.next));
-        } catch {
-            if (id !== reqId.current) return;
-            if (p === 1) {
-                setCustomers([]);
-                setTotalCustomers(0);
-                setHasMore(false);
-            }
-        } finally {
-            if (id === reqId.current) {
-                fetchingRef.current = false;
-                setLoadingFirst(false);
-                setLoadingMore(false);
-            }
-        }
-    }, []);
-
-    /* با باز شدن مودال یا تغییر جستجو، از صفحه ۱ شروع کن */
-    useEffect(() => {
-        if (!open) return;
-        loadPage(1, debouncedQuery);
-    }, [open, debouncedQuery, loadPage]);
-
-    /* اسکرول بی‌نهایت */
-    const handleListScroll = useCallback(
-        (e: React.UIEvent<HTMLDivElement>) => {
-            if (!hasMore || fetchingRef.current) return;
-            const el = e.currentTarget;
-            const nearBottom =
-                el.scrollHeight - el.scrollTop - el.clientHeight < 120;
-            if (nearBottom) loadPage(customerPage + 1, debouncedQuery);
-        },
-        [hasMore, customerPage, debouncedQuery, loadPage]
+    /* صفحه‌بندی سمت سرور (۵ مشتری در هر صفحه) + جستجوی سمت سرور با debounce */
+    const customerList = usePaginatedList<Customer>(
+        (params, signal) =>
+            customersApi.list({
+                page: params.page,
+                page_size: params.page_size,
+                search: params.search,
+            }),
+        { pageSize: CUSTOMER_PAGE_SIZE, enabled: open }
     );
+    const customers = customerList.data;
+    const totalCustomers = customerList.count;
+    const loadingFirst = customerList.loading;
+    const { setSearch: setCustomerSearch, setPage: setCustomerPage, totalPages: customerTotalPages, page: customerPage } = customerList;
+
+    useEffect(() => {
+        setCustomerSearch(customerQuery);
+    }, [customerQuery, setCustomerSearch]);
 
     /* ریست بعد از بسته شدن */
     useEffect(() => {
         if (open) return;
         const timer = setTimeout(() => {
-            reqId.current++;
-            fetchingRef.current = false;
             setStep(0);
-            setCustomers([]);
-            setCustomerPage(1);
             setCustomerQuery("");
-            setDebouncedQuery("");
+            setCustomerSearch("");
+            setCustomerPage(1);
             setSelected(null);
             setTitle("");
             setDescription("");
             setSubmitError("");
             setSubmitting(false);
-            setHasMore(false);
-            setTotalCustomers(0);
         }, 250);
         return () => clearTimeout(timer);
-    }, [open]);
+    }, [open, setCustomerSearch, setCustomerPage]);
 
     useEffect(() => {
         if (!open) return;
@@ -343,12 +284,11 @@ export default function CreateCaseModal({
                                         {!loadingFirst && totalCustomers > 0 && (
                                             <p className="px-1 text-[10.5px] text-gray-400">
                                                 {totalCustomers} مشتری
-                                                {debouncedQuery ? " یافت شد" : ""}
+                                                {customerQuery.trim() ? " یافت شد" : ""}
                                             </p>
                                         )}
 
                                         <div
-                                            onScroll={handleListScroll}
                                             className="custom-scrollbar max-h-[320px] space-y-1.5 overflow-y-auto pr-0.5"
                                         >
                                             {loadingFirst && customers.length === 0 ? (
@@ -410,11 +350,13 @@ export default function CreateCaseModal({
                                                         );
                                                     })}
 
-                                                    {loadingMore && (
-                                                        <div className="flex justify-center py-3">
-                                                            <Loader
-                                                                size={16}
-                                                                className="animate-spin text-blue-500"
+                                                    {customerTotalPages > 1 && (
+                                                        <div className="pt-2">
+                                                            <Pagination
+                                                                page={customerPage}
+                                                                totalPages={customerTotalPages}
+                                                                onChange={setCustomerPage}
+                                                                compact
                                                             />
                                                         </div>
                                                     )}

@@ -5,7 +5,7 @@ import type {
   TransferTaskPayload,
   TransferTaskResponse,
 } from "@/types/task";
-import type { PageParams } from "@/types/pagination";
+import type { PageParams, SearchParams } from "@/types/pagination";
 import {
   cached,
   dedupe,
@@ -29,7 +29,7 @@ type CaseRef =
   | null
   | undefined;
 
-export interface TaskListParams extends PageParams {
+export interface TaskListParams extends SearchParams {
   case?: number | string;
 }
 

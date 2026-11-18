@@ -523,16 +523,19 @@ export async function fetchPendingQualityCount(
   ).length;
 }
 
-export async function fetchProductTransactions(
+export function fetchProductTransactionsPage(
   warehouseId: number,
   productId: number,
+  page: number,
+  pageSize: number,
   signal?: AbortSignal,
-): Promise<ApiStockTransaction[]> {
-  return fetchAll<ApiStockTransaction>(
-    WAREHOUSE_ENDPOINTS.transactions,
-    { ...warehouseParams(warehouseId), product: productId },
+): Promise<PageResult<ApiStockTransaction>> {
+  return fetchPage<ApiStockTransaction>(WAREHOUSE_ENDPOINTS.transactions, {
+    page,
+    pageSize,
+    params: { ...warehouseParams(warehouseId), product: productId },
     signal,
-  );
+  });
 }
 
 export async function fetchWarehouses(): Promise<ApiWarehouse[]> {

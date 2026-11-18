@@ -1,13 +1,14 @@
 "use client";
 
-import { useDebounced } from "@/components/admin/production/useServerSearch";
 import SearchInput from "@/components/admin/production/SearchInput";
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import { Loader2, Package, AlertTriangle, SquarePen, Trash2, Plus } from "lucide-react";
 import { AnimatePresence } from "framer-motion";
 import { toPersianDigits } from "@/lib/jalali";
 import { formatProductionInteger } from "@/lib/productionFormat";
-import { listAll } from "@/lib/api";
+import { fetchPage } from "@/lib/api/_core";
+import { usePaginatedList } from "@/hooks/usePaginatedList";
+import Pagination from "@/components/ui/Pagination";
 import axiosInstance from "@/lib/axiosInstance";
 import {
     CatalogModal,
@@ -21,30 +22,28 @@ import {
 
 type Item = Product | Cause;
 
+type CatalogFilters = { kind?: string };
+
+const PAGE_SIZE = 12;
+
 export default function CatalogPage({ kind }: { kind: "product" | "cause" }) {
     const isProduct = kind === "product";
-    const [items, setItems] = useState<Item[]>([]);
     const [causeFilter, setCauseFilter] = useState<"all" | CauseKind>("all");
-    const [search, setSearch] = useState("");
-    const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
     const [busyId, setBusyId] = useState<number | null>(null);
     const [modal, setModal] = useState<{ open: boolean; item: Item | null }>({ open: false, item: null });
 
-    const debouncedSearch = useDebounced(search);
-    const load = useCallback(async () => {
-        try {
-            setItems(await listAll<Item>(`/production/api/v1/${kind}/`, { search: debouncedSearch.trim() || undefined }));
-        } catch (e) {
-            setError(parseBackendError(e, "دریافت اطلاعات انجام نشد"));
-        } finally {
-            setLoading(false);
-        }
-    }, [kind, debouncedSearch]);
+    const list = usePaginatedList<Item, CatalogFilters>(
+        (params, signal) => fetchPage<Item>(`/production/api/v1/${kind}/`, params, signal),
+        { pageSize: PAGE_SIZE },
+    );
+    const { data: items, count, page, totalPages, search, loading, setSearch, setPage, refetch } = list;
+    const load = refetch;
 
-    useEffect(() => {
-        load();
-    }, [load]);
+    function changeCauseFilter(v: "all" | CauseKind) {
+        setCauseFilter(v);
+        list.setFilters({ kind: v === "all" ? undefined : v });
+    }
 
     async function toggle(it: Item) {
         setBusyId(it.id);
@@ -72,17 +71,13 @@ export default function CatalogPage({ kind }: { kind: "product" | "cause" }) {
     }
 
     const Icon = isProduct ? Package : AlertTriangle;
-    const visible = items.filter((it) => {
-        if (!isProduct && causeFilter !== "all" && (it as Cause).kind !== causeFilter) return false;
-        return true;
-    });
 
     return (
         <section className="space-y-4">
             <div className="flex items-center justify-between gap-3">
                 <h2 className="flex items-center gap-2 text-[13px] font-extrabold text-gray-900 dark:text-white">
                     <Icon size={15} className="text-indigo-500" />
-                    {isProduct ? "محصولات" : "علت‌ها"} ({toPersianDigits(visible.length)})
+                    {isProduct ? "محصولات" : "علت‌ها"} ({toPersianDigits(count)})
                 </h2>
                 <SearchInput value={search} onChange={setSearch} placeholder={isProduct ? "جستجوی نام یا کد محصول..." : "جستجوی علت..."} />
                 <button
@@ -95,7 +90,7 @@ export default function CatalogPage({ kind }: { kind: "product" | "cause" }) {
                 </button>
             </div>
 
-            <ErrorBanner message={error} onClose={() => setError("")} />
+            <ErrorBanner message={error || (list.error ? parseBackendError(list.error, "دریافت اطلاعات انجام نشد") : "")} onClose={() => setError("")} />
 
             {!isProduct && (
                 <div className="flex flex-wrap gap-2">
@@ -109,7 +104,7 @@ export default function CatalogPage({ kind }: { kind: "product" | "cause" }) {
                         <button
                             key={v}
                             type="button"
-                            onClick={() => setCauseFilter(v)}
+                            onClick={() => changeCauseFilter(v)}
                             className={`h-8 rounded-full px-3.5 text-[12px] font-bold transition-colors ${
                                 causeFilter === v
                                     ? "bg-blue-600 text-white"
@@ -127,7 +122,7 @@ export default function CatalogPage({ kind }: { kind: "product" | "cause" }) {
                     <div className="flex justify-center py-12">
                         <Loader2 className="animate-spin text-gray-400" />
                     </div>
-                ) : visible.length === 0 ? (
+                ) : items.length === 0 ? (
                     <p className="py-12 text-center text-[12px] text-gray-400">موردی ثبت نشده است</p>
                 ) : (
                     <table className="w-full border-collapse text-right text-[12px]">
@@ -142,7 +137,7 @@ export default function CatalogPage({ kind }: { kind: "product" | "cause" }) {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-black/5 dark:divide-white/5">
-                            {visible.map((it) => (
+                            {items.map((it) => (
                                 <tr key={it.id} className="hover:bg-black/[0.02] dark:hover:bg-white/[0.02]">
                                     <td className="px-4 py-3 font-extrabold text-gray-800 dark:text-gray-100">{it.name}</td>
                                     <td className="px-4 py-3 text-gray-500 dark:text-gray-400">
@@ -191,6 +186,8 @@ export default function CatalogPage({ kind }: { kind: "product" | "cause" }) {
                     </table>
                 )}
             </div>
+
+            {totalPages > 1 && <Pagination page={page} totalPages={totalPages} onChange={setPage} />}
 
             <AnimatePresence>
                 {modal.open && (

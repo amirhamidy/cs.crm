@@ -257,7 +257,12 @@ export default function useWarehouseTab(args: LoadArgs & { enabled: boolean }) {
         if (id === requestId.current) setData(next);
       } catch {
         if (id === requestId.current) {
-          setData(EMPTY_TAB_DATA);
+          // صفحه‌بندی را حفظ کن؛ وگرنه totalPages=1 می‌شود و کاربر به صفحه ۱ برگردانده می‌شود
+          setData((current) => ({
+            ...EMPTY_TAB_DATA,
+            total: current.total,
+            totalPages: current.totalPages,
+          }));
           setError("دریافت اطلاعات انبار با خطا مواجه شد.");
         }
       } finally {

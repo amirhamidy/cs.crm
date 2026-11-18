@@ -8,8 +8,9 @@ import CustomerCard from "./CustomerCard";
 import AddCustomerModal from "./AddCustomerModal";
 import ImportExcelModal from "./ImportExcelModal";
 import Pagination from "@/components/ui/Pagination";
+import SearchInput from "@/components/admin/production/SearchInput";
 import type { Customer, CustomerStatus } from "@/types/customer";
-import { customersApi, casesApi, type CustomerCounts } from "@/lib/api";
+import { customersApi, type CustomerCounts } from "@/lib/api";
 
 type FilterType = "all" | "potential" | "active";
 
@@ -35,12 +36,13 @@ export default function CustomersPage() {
     const [customers, setCustomers] = useState<Customer[]>([]);
     const [totalCount, setTotalCount] = useState(0);
     const [counts, setCounts] = useState<CustomerCounts>(EMPTY_COUNTS);
-    const [customersWithCase, setCustomersWithCase] = useState<Set<number>>(new Set());
     const [loading, setLoading] = useState(true);
     const [showAdd, setShowAdd] = useState(false);
     const [showImport, setShowImport] = useState(false);
     const [filter, setFilter] = useState<FilterType>("all");
     const [page, setPage] = useState(1);
+    const [search, setSearch] = useState("");
+    const [debouncedSearch, setDebouncedSearch] = useState("");
 
     const requestId = useRef(0);
 
@@ -54,15 +56,6 @@ export default function CustomersPage() {
         }
     }, []);
 
-    const fetchCases = useCallback(async () => {
-        try {
-            const cases = await casesApi.listAll();
-            setCustomersWithCase(new Set(cases.map((c) => Number(c.customer))));
-        } catch {
-            setCustomersWithCase(new Set());
-        }
-    }, []);
-
     const fetchCustomers = useCallback(async () => {
         const id = ++requestId.current;
         setLoading(true);
@@ -72,6 +65,7 @@ export default function CustomersPage() {
                 page,
                 page_size: PAGE_SIZE,
                 status: STATUS_BY_FILTER[filter],
+                search: debouncedSearch || undefined,
             });
 
             if (id !== requestId.current) return;
@@ -85,23 +79,29 @@ export default function CustomersPage() {
         } finally {
             if (id === requestId.current) setLoading(false);
         }
-    }, [page, filter]);
+    }, [page, filter, debouncedSearch]);
 
     useEffect(() => {
         fetchCustomers();
     }, [fetchCustomers]);
 
     useEffect(() => {
-        fetchCases();
+        const t = setTimeout(() => {
+            setDebouncedSearch(search.trim());
+            setPage(1);
+        }, 300);
+        return () => clearTimeout(t);
+    }, [search]);
+
+    useEffect(() => {
         fetchCounts();
-    }, [fetchCases, fetchCounts]);
+    }, [fetchCounts]);
 
     const refreshAll = useCallback(() => {
         customersApi.invalidate();
         fetchCustomers();
-        fetchCases();
         fetchCounts();
-    }, [fetchCustomers, fetchCases, fetchCounts]);
+    }, [fetchCustomers, fetchCounts]);
 
     const handleDeleted = useCallback(() => {
         customersApi.invalidate();
@@ -199,6 +199,8 @@ export default function CustomersPage() {
             </div>
 
             <div className="flex items-center gap-2">
+                <SearchInput value={search} onChange={setSearch} placeholder="جستجوی مشتری..." />
+
                 <div
                     className="flex h-9 items-center gap-1.5 rounded-xl px-3"
                     style={{ background: isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)" }}
@@ -276,7 +278,7 @@ export default function CustomersPage() {
                                         key={customer.id}
                                         customer={customer}
                                         index={i}
-                                        hasActiveCase={customersWithCase.has(customer.id)}
+                                        hasActiveCase={Boolean(customer.has_case)}
                                         onDeleted={handleDeleted}
                                         onEdited={handleEdited}
                                     />

@@ -14,6 +14,8 @@ export interface CustomerSummary {
   status_display: string;
   created_by_username: string;
   created_at: string;
+  /** فقط در لیست سمت سرور: آیا پرونده‌ای برای کاربر جاری دارد */
+  has_case?: boolean;
 }
 
 export interface CustomerDetail extends CustomerSummary {

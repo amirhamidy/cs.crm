@@ -452,10 +452,15 @@ export default function EditTaskModal({
             setExistingFiles([]);
         }
 
-        casesApi
-            .listAll()
-            .then((res) => setCases(res as unknown as CaseItem[]))
-            .catch(() => { });
+        /* فقط پرونده‌ی فعلی تسک لازم است (انتخاب پرونده غیرفعال است) */
+        if (caseId) {
+            casesApi
+                .get(caseId)
+                .then((res) => setCases([res as unknown as CaseItem]))
+                .catch(() => setCases([]));
+        } else {
+            setCases([]);
+        }
 
         departmentsApi
             .employees()

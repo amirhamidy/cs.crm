@@ -2,6 +2,7 @@
 
 import { formatProductionInteger, formatProductionLogHours } from "@/lib/productionFormat";
 
+import Pagination from "@/components/ui/Pagination";
 import { useDebounced } from "@/components/admin/production/useServerSearch";
 import SearchInput from "@/components/admin/production/SearchInput";
 import { useEffect, useState } from "react";
@@ -13,8 +14,6 @@ import {
     CalendarDays,
     Filter,
     Eye,
-    ChevronLeft,
-    ChevronRight,
     Loader2,
 } from "lucide-react";
 import { toHHMM } from "@/lib/productionTime";
@@ -332,13 +331,7 @@ export default function LogsPage() {
                     </table>
                 </div>
             </div>
-            <div className="flex items-center justify-between gap-3 text-[11px] text-gray-500">
-                <span>صفحه {toPersianDigits(page)} از {toPersianDigits(pageCount)}</span>
-                <div className="flex items-center gap-2">
-                    <button type="button" disabled={page <= 1 || loading} onClick={() => setPage((value) => Math.max(1, value - 1))} className="flex h-9 items-center gap-1 rounded-lg border border-black/10 px-3 disabled:opacity-40 dark:border-white/10"><ChevronRight size={14} /> قبلی</button>
-                    <button type="button" disabled={page >= pageCount || loading} onClick={() => setPage((value) => Math.min(pageCount, value + 1))} className="flex h-9 items-center gap-1 rounded-lg border border-black/10 px-3 disabled:opacity-40 dark:border-white/10">بعدی <ChevronLeft size={14} /></button>
-                </div>
-            </div>
+            {pageCount > 1 && <Pagination page={page} totalPages={pageCount} onChange={setPage} />}
         </section>
         </>
     );

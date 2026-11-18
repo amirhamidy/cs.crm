@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useTheme } from "next-themes";
 import {
@@ -16,6 +16,13 @@ import {
 import type { CaseItem } from "@/types/case";
 import type { TaskItem } from "@/types/task";
 import { fetchAllTasks } from "@/lib/fetchAllTasks";
+import { tasksApi } from "@/lib/api";
+import { usePaginatedList } from "@/hooks/usePaginatedList";
+import Pagination from "@/components/ui/Pagination";
+import SearchInput from "@/components/ui/SearchInput";
+
+/** تعداد وظیفه در هر صفحه‌ی این مودال */
+const TASK_PAGE_SIZE = 8;
 
 interface CaseTasksModalProps {
     isOpen: boolean;
@@ -81,11 +88,7 @@ export default function CaseTasksModal({
     const { resolvedTheme } = useTheme();
     const isDark = resolvedTheme === "dark";
 
-    const [tasks, setTasks] = useState<TaskItem[]>([]);
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState("");
     const [reloadTick, setReloadTick] = useState(0);
-    const [statusFilter, setStatusFilter] = useState<string>("all");
     const [confirmId, setConfirmId] = useState<number | null>(null);
     const [deleteError, setDeleteError] = useState("");
 
@@ -96,63 +99,49 @@ export default function CaseTasksModal({
 
     const caseId = caseItem?.id !== undefined ? String(caseItem.id) : null;
 
+    const list = usePaginatedList<TaskItem>(
+        (params, signal) =>
+            tasksApi.page(
+                { page: params.page, page_size: params.page_size, search: params.search, case: caseId ?? undefined },
+                signal,
+            ),
+        { pageSize: TASK_PAGE_SIZE, enabled: isOpen && !!caseId },
+    );
+    const tasks = list.data;
+    const loading = list.loading;
+    const error = list.error ? "دریافت وظیفه‌ها از سرور با خطا مواجه شد" : "";
+
+    // همگام‌سازی کامل وظیفه‌های پرونده با والد (برای شمارش/حذف پرونده در صفحه‌ی اصلی)
     useEffect(() => {
         if (!isOpen || !caseId) return;
-
         const controller = new AbortController();
-        let active = true;
-
-        setLoading(true);
-        setError("");
-
         fetchAllTasks({ caseId, signal: controller.signal })
-            .then((list) => {
-                if (!active) return;
-                setTasks(list);
-                onTasksLoadedRef.current?.(caseId, list);
-            })
-            .catch((err: any) => {
-                if (!active) return;
-                if (err?.code === "ERR_CANCELED" || err?.name === "CanceledError") {
-                    return;
-                }
-                setError("دریافت وظیفه‌ها از سرور با خطا مواجه شد");
-            })
-            .finally(() => {
-                if (active) setLoading(false);
-            });
-
-        return () => {
-            active = false;
-            controller.abort();
-        };
+            .then((all) => onTasksLoadedRef.current?.(caseId, all))
+            .catch(() => { });
+        return () => controller.abort();
     }, [isOpen, caseId, refreshKey, reloadTick]);
+
+    // بارگذاری مجدد صفحه‌ی فعلی بعد از تغییر والد یا حذف (بدون درخواست تکراری در اولین اجرا)
+    const firstRunRef = useRef(true);
+    useEffect(() => {
+        if (firstRunRef.current) {
+            firstRunRef.current = false;
+            return;
+        }
+        if (isOpen && caseId) list.refetch();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [refreshKey, reloadTick]);
 
     useEffect(() => {
         if (!isOpen) {
-            setTasks([]);
-            setError("");
-            setStatusFilter("all");
+            list.setSearch("");
             setConfirmId(null);
             setDeleteError("");
         }
     }, [isOpen]);
 
-    const stats = useMemo(() => {
-        const byStatus = new Map<string, number>();
-        tasks.forEach((t) => {
-            const s = String((t as any).status ?? "unknown");
-            byStatus.set(s, (byStatus.get(s) ?? 0) + 1);
-        });
-        return { total: tasks.length, byStatus };
-    }, [tasks]);
-
-    const visibleTasks = useMemo(() => {
-        if (statusFilter === "all") return tasks;
-        return tasks.filter(
-            (t) => String((t as any).status ?? "unknown") === statusFilter
-        );
-    }, [tasks, statusFilter]);
+    const stats = { total: list.count };
+    const visibleTasks = tasks;
 
     const assigneeNames = useCallback(
         (task: TaskItem): string => {
@@ -274,65 +263,14 @@ export default function CaseTasksModal({
                             </div>
                         </div>
 
-                        {/* Stats / filters */}
-                        {!loading && !error && stats.total > 0 && (
-                            <div
-                                className="flex flex-wrap items-center gap-2 border-b px-5 py-3"
-                                style={{ borderColor: border }}
-                            >
-                                <button
-                                    type="button"
-                                    onClick={() => setStatusFilter("all")}
-                                    className="flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-bold transition-colors"
-                                    style={{
-                                        background:
-                                            statusFilter === "all"
-                                                ? "rgba(99,102,241,0.15)"
-                                                : softBg,
-                                        color:
-                                            statusFilter === "all"
-                                                ? isDark
-                                                    ? "#a5b4fc"
-                                                    : "#4f46e5"
-                                                : textMuted,
-                                    }}
-                                >
-                                    همه
-                                    <span className="font-extrabold">
-                                        {formatNumber(stats.total)}
-                                    </span>
-                                </button>
-
-                                {Array.from(stats.byStatus.entries()).map(
-                                    ([status, count]) => {
-                                        const meta = getStatusMeta(status);
-                                        const active = statusFilter === status;
-                                        return (
-                                            <button
-                                                key={status}
-                                                type="button"
-                                                onClick={() =>
-                                                    setStatusFilter(active ? "all" : status)
-                                                }
-                                                className="flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-bold transition-colors"
-                                                style={{
-                                                    background: active
-                                                        ? `${meta.color}33`
-                                                        : `${meta.color}1a`,
-                                                    color: meta.color,
-                                                    outline: active
-                                                        ? `1.5px solid ${meta.color}`
-                                                        : "none",
-                                                }}
-                                            >
-                                                {meta.label}
-                                                <span className="font-extrabold">
-                                                    {formatNumber(count)}
-                                                </span>
-                                            </button>
-                                        );
-                                    }
-                                )}
+                        {/* Search */}
+                        {caseId && (
+                            <div className="border-b px-5 py-3" style={{ borderColor: border }}>
+                                <SearchInput
+                                    value={list.search}
+                                    onChange={list.setSearch}
+                                    placeholder="جستجوی وظیفه..."
+                                />
                             </div>
                         )}
 
@@ -363,7 +301,7 @@ export default function CaseTasksModal({
                                 </div>
                             )}
 
-                            {!loading && !error && stats.total === 0 && (
+                            {!loading && !error && stats.total === 0 && !list.search && (
                                 <div className="flex flex-col items-center justify-center gap-2 py-14">
                                     <Layers
                                         size={28}
@@ -518,10 +456,27 @@ export default function CaseTasksModal({
                                     })}
                                 </div>
                             )}
+
+                            {!loading && !error && stats.total === 0 && list.search && (
+                                <p className="py-10 text-center text-[12.5px]" style={{ color: textMuted }}>
+                                    وظیفه‌ای با این جستجو پیدا نشد
+                                </p>
+                            )}
+
+                            {!loading && !error && list.totalPages > 1 && (
+                                <div className="mt-4">
+                                    <Pagination
+                                        page={list.page}
+                                        totalPages={list.totalPages}
+                                        onChange={list.setPage}
+                                        compact
+                                    />
+                                </div>
+                            )}
                         </div>
                     </motion.div>
                 </motion.div>
             )}
         </AnimatePresence>
     );
-}
+}

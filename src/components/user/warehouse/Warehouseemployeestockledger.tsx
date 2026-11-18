@@ -18,13 +18,12 @@ import {
 import {
     formatDate,
     formatNumber,
-    paginate,
     PAGE_SIZE,
 } from "@/utils/warehouseEmployee";
 import Pagination from "@/components/ui/Pagination";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import {
-    fetchProductTransactions,
+    fetchProductTransactionsPage,
     fetchWarehouseProductsPage,
     fetchWarehouseStocks,
 } from "@/lib/warehouseApi";
@@ -201,8 +200,9 @@ export default function WarehouseEmployeeStockLedger({
     const [selectedProductId, setSelectedProductId] = useState<number | null>(
         defaultProductId
     );
-    const [kindFilter, setKindFilter] = useState<"all" | EventKind>("all");
-    const [currentPage, setCurrentPage] = useState(1);
+    const [txPage, setTxPage] = useState(1);
+    const [txTotal, setTxTotal] = useState(0);
+    const [txTotalPages, setTxTotalPages] = useState(1);
 
     const [stocks, setStocks] = useState<ApiStockInfo[]>([]);
     const [stocksLoaded, setStocksLoaded] = useState(false);
@@ -271,13 +271,15 @@ export default function WarehouseEmployeeStockLedger({
     }, [list.data, selectedProductId]);
 
     useEffect(() => {
-        setCurrentPage(1);
-    }, [selectedProductId, kindFilter]);
+        setTxPage(1);
+    }, [selectedProductId]);
 
-    // گردش کالای محصول انتخاب‌شده (همهٔ صفحات همان محصول؛ فیلتر ورودی/خروجی و صفحه‌بندی جدول روی همین مجموعه)
+    // گردش کالای محصول انتخاب‌شده: صفحه‌بندی سمت سرور
     useEffect(() => {
         if (warehouseId == null || selectedProductId == null) {
             setTransactions([]);
+            setTxTotal(0);
+            setTxTotalPages(1);
             setTxLoading(false);
             setTxError(false);
             return;
@@ -287,11 +289,18 @@ export default function WarehouseEmployeeStockLedger({
         setTxLoading(true);
         setTxError(false);
 
-        fetchProductTransactions(warehouseId, selectedProductId, controller.signal)
-            .then((rows) => {
-                if (!controller.signal.aborted) {
-                    setTransactions(rows as unknown as Transaction[]);
-                }
+        fetchProductTransactionsPage(
+            warehouseId,
+            selectedProductId,
+            txPage,
+            PAGE_SIZE,
+            controller.signal,
+        )
+            .then((res) => {
+                if (controller.signal.aborted) return;
+                setTransactions(res.items as unknown as Transaction[]);
+                setTxTotal(res.total);
+                setTxTotalPages(res.totalPages);
             })
             .catch(() => {
                 if (controller.signal.aborted) return;
@@ -303,7 +312,7 @@ export default function WarehouseEmployeeStockLedger({
             });
 
         return () => controller.abort();
-    }, [warehouseId, selectedProductId]);
+    }, [warehouseId, selectedProductId, txPage]);
 
     const stockByProduct = useMemo(
         () => new Map<number, StockInfo>(stocks.map((s) => [s.product, s])),
@@ -327,11 +336,10 @@ export default function WarehouseEmployeeStockLedger({
             ? stockByProduct.get(selectedProductId) ?? null
             : null;
 
-    const allEvents = useMemo<LedgerEvent[]>(() => {
+    const events = useMemo<LedgerEvent[]>(() => {
         if (selectedProductId == null) return [];
 
         return transactions
-            .filter((t) => t.product === selectedProductId)
             .map((t) => {
                 const kind: EventKind =
                     t.transaction_type === "initial"
@@ -352,23 +360,8 @@ export default function WarehouseEmployeeStockLedger({
                     performedByName: t.performed_by_name ?? null,
                     customerName: getCustomerName(t),
                 };
-            })
-            .sort((a, b) => {
-                const da = a.date ? new Date(a.date).getTime() : 0;
-                const db = b.date ? new Date(b.date).getTime() : 0;
-                return db - da;
             });
     }, [selectedProductId, transactions]);
-
-    const filteredEvents = useMemo(() => {
-        if (kindFilter === "all") return allEvents;
-        return allEvents.filter((e) => e.kind === kindFilter);
-    }, [allEvents, kindFilter]);
-
-    const paginatedEvents = useMemo(
-        () => paginate(filteredEvents, currentPage, PAGE_SIZE),
-        [filteredEvents, currentPage]
-    );
 
     return (
         <div
@@ -495,35 +488,9 @@ export default function WarehouseEmployeeStockLedger({
                                     </h3>
 
                                     <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
-                                        {allEvents.length} رویداد ثبت شده
+                                        {formatNumber(txTotal)} رویداد ثبت شده
                                     </p>
                                 </div>
-                            </div>
-
-                            <div className="flex items-center gap-1.5 rounded-lg bg-slate-100 p-1 dark:bg-white/5">
-                                {(
-                                    [
-                                        ["all", "همه"],
-                                        ["in", "ورودی"],
-                                        ["out", "خروجی"],
-                                    ] as const
-                                ).map(([key, label]) => {
-                                    const active = kindFilter === key;
-
-                                    return (
-                                        <button
-                                            key={key}
-                                            type="button"
-                                            onClick={() => setKindFilter(key)}
-                                            className={`rounded-md px-3 py-1.5 text-xs font-bold transition-all duration-200 ${active
-                                                    ? "bg-white text-indigo-600 shadow-sm dark:bg-slate-800 dark:text-indigo-400"
-                                                    : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
-                                                }`}
-                                        >
-                                            {label}
-                                        </button>
-                                    );
-                                })}
                             </div>
                         </div>
 
@@ -547,7 +514,7 @@ export default function WarehouseEmployeeStockLedger({
 
                                 <tbody className="divide-y divide-slate-200 dark:divide-white/10">
                                     <AnimatePresence mode="popLayout">
-                                        {paginatedEvents.items.length === 0 ? (
+                                        {events.length === 0 ? (
                                             <tr>
                                                 <td
                                                     colSpan={5}
@@ -561,7 +528,7 @@ export default function WarehouseEmployeeStockLedger({
                                                 </td>
                                             </tr>
                                         ) : (
-                                            paginatedEvents.items.map(
+                                            events.map(
                                                 (
                                                     event: LedgerEvent,
                                                     index: number
@@ -692,19 +659,19 @@ export default function WarehouseEmployeeStockLedger({
                             </table>
                         </div>
 
-                        {paginatedEvents.totalPages > 1 && (
+                        {txTotalPages > 1 && (
                             <div className="flex items-center justify-between border-t border-slate-200 px-5 py-4 dark:border-white/10">
                                 <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
-                                    صفحه {formatNumber(currentPage)} از{" "}
-                                    {formatNumber(paginatedEvents.totalPages)}
+                                    صفحه {formatNumber(txPage)} از{" "}
+                                    {formatNumber(txTotalPages)}
                                 </span>
 
                                 <div className="flex items-center gap-2">
                                     <button
                                         type="button"
-                                        disabled={currentPage === 1}
+                                        disabled={txPage === 1 || txLoading}
                                         onClick={() =>
-                                            setCurrentPage((p) => p - 1)
+                                            setTxPage((p) => p - 1)
                                         }
                                         className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 transition-all hover:bg-slate-50 disabled:opacity-40 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10"
                                     >
@@ -714,11 +681,10 @@ export default function WarehouseEmployeeStockLedger({
                                     <button
                                         type="button"
                                         disabled={
-                                            currentPage ===
-                                            paginatedEvents.totalPages
+                                            txPage >= txTotalPages || txLoading
                                         }
                                         onClick={() =>
-                                            setCurrentPage((p) => p + 1)
+                                            setTxPage((p) => p + 1)
                                         }
                                         className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 transition-all hover:bg-slate-50 disabled:opacity-40 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10"
                                     >
