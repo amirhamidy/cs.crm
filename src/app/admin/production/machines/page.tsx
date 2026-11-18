@@ -9,12 +9,9 @@ import {
     Factory,
     SquarePen,
     Loader2,
-    AlertTriangle,
     Trash2,
-    Gauge,
 } from "lucide-react";
 import { toPersianDigits } from "@/lib/jalali";
-import { formatProductionInteger } from "@/lib/productionFormat";
 import {
     Option,
     gradientOf,
@@ -59,7 +56,7 @@ export default function MachinesPage() {
                     <Factory size={15} className="text-indigo-500" />
                     ماشین‌آلات ({toPersianDigits(filteredMachines.length)})
                 </h2>
-                    <p className="mt-1 text-[10.5px] text-gray-400">(ماشین‌های کارخانه و ظرفیت استاندارد هر کدام)</p>
+                    <p className="mt-1 text-[10.5px] text-gray-400">(ماشین‌های کارخانه؛ استاندارد تولید و ضایعات روی هر محصول تعریف می‌شود)</p>
                 </div>
                 <div className="flex w-full items-center gap-2 sm:w-auto">
                 <SearchInput value={search} onChange={setSearch} placeholder="جستجوی ماشین یا کد..." />
@@ -143,27 +140,6 @@ export default function MachinesPage() {
                                     >
                                         <Trash2 size={15} />
                                     </button>
-                                </div>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-2 border-t border-black/5 pt-3 dark:border-white/5">
-                                <div className="rounded-xl bg-black/[0.03] px-3 py-2 dark:bg-white/[0.03]">
-                                    <span className="flex items-center gap-1 text-[10px] text-gray-400">
-                                        <Gauge size={11} />
-                                        تولید در ساعت
-                                    </span>
-                                    <span className="mt-0.5 block text-[13px] font-extrabold text-gray-800 dark:text-gray-100">
-                                        {formatProductionInteger(m.std_production_per_hour)}
-                                    </span>
-                                </div>
-                                <div className="rounded-xl bg-black/[0.03] px-3 py-2 dark:bg-white/[0.03]">
-                                    <span className="flex items-center gap-1 text-[10px] text-gray-400">
-                                        <AlertTriangle size={11} />
-                                        ضایعات در ساعت
-                                    </span>
-                                    <span className="mt-0.5 block text-[13px] font-extrabold text-red-500">
-                                        {formatProductionInteger(m.std_waste_per_hour)}
-                                    </span>
                                 </div>
                             </div>
 

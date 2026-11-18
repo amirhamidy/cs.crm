@@ -4,12 +4,11 @@ import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import {
     Factory,
+    AlertTriangle,
     SquarePen,
     Loader2,
     TrendingUp,
     BarChart3,
-    AlertTriangle,
-    Gauge,
 } from "lucide-react";
 import { toPersianDigits } from "@/lib/jalali";
 import axiosInstance from "@/lib/axiosInstance";
@@ -128,27 +127,6 @@ export default function DashboardPage() {
                                     >
                                         <SquarePen size={15} />
                                     </button>
-                                </div>
-
-                                <div className="grid grid-cols-2 gap-2 border-t border-black/5 pt-3 dark:border-white/5">
-                                    <div className="rounded-xl bg-black/[0.03] px-3 py-2 dark:bg-white/[0.03]">
-                                        <span className="flex items-center gap-1 text-[10px] text-gray-400">
-                                            <Gauge size={11} />
-                                            تولید در ساعت
-                                        </span>
-                                        <span className="mt-0.5 block text-[13px] font-extrabold text-gray-800 dark:text-gray-100">
-                                            {formatProductionInteger(m.std_production_per_hour)}
-                                        </span>
-                                    </div>
-                                    <div className="rounded-xl bg-black/[0.03] px-3 py-2 dark:bg-white/[0.03]">
-                                        <span className="flex items-center gap-1 text-[10px] text-gray-400">
-                                            <AlertTriangle size={11} />
-                                            ضایعات در ساعت
-                                        </span>
-                                        <span className="mt-0.5 block text-[13px] font-extrabold text-red-500">
-                                            {formatProductionInteger(m.std_waste_per_hour)}
-                                        </span>
-                                    </div>
                                 </div>
 
                                 <div className="flex items-center justify-between">

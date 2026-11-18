@@ -6,6 +6,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Loader2, Package, AlertTriangle, SquarePen, Trash2, Plus } from "lucide-react";
 import { AnimatePresence } from "framer-motion";
 import { toPersianDigits } from "@/lib/jalali";
+import { formatProductionInteger } from "@/lib/productionFormat";
 import { listAll } from "@/lib/api";
 import axiosInstance from "@/lib/axiosInstance";
 import {
@@ -134,6 +135,8 @@ export default function CatalogPage({ kind }: { kind: "product" | "cause" }) {
                             <tr className="border-b border-black/5 text-[11px] text-gray-400 dark:border-white/5">
                                 <th className="px-4 py-3 font-bold">نام</th>
                                 <th className="px-4 py-3 font-bold">{isProduct ? "کد" : "نوع / توضیحات"}</th>
+                                {isProduct && <th className="px-4 py-3 font-bold">تولید استاندارد/ساعت</th>}
+                                {isProduct && <th className="px-4 py-3 font-bold">ضایعات استاندارد/ساعت</th>}
                                 <th className="px-4 py-3 font-bold">وضعیت</th>
                                 <th className="px-4 py-3" />
                             </tr>
@@ -154,6 +157,16 @@ export default function CatalogPage({ kind }: { kind: "product" | "cause" }) {
                                             </>
                                         )}
                                     </td>
+                                    {isProduct && (
+                                        <td className="px-4 py-3 font-bold text-gray-700 dark:text-gray-200">
+                                            {formatProductionInteger((it as Product).std_production_per_hour)}
+                                        </td>
+                                    )}
+                                    {isProduct && (
+                                        <td className="px-4 py-3 font-bold text-red-500">
+                                            {formatProductionInteger((it as Product).std_waste_per_hour)}
+                                        </td>
+                                    )}
                                     <td className="px-4 py-3">
                                         <StatusSwitch isActive={it.is_active} onToggle={() => toggle(it)} />
                                     </td>

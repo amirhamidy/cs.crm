@@ -38,7 +38,7 @@ import TimePicker from "@/components/TimePicker";
 import ProductionBarChart from "@/components/charts/ProductionBarChart";
 import { listAll } from "@/lib/api";
 import { isValidTimeRange, formatHoursWorked, toHHMM } from "@/lib/productionTime";
-import { formatProductionPercent, formatProductionLogHours } from "@/lib/productionFormat";
+import { formatProductionPercent, formatProductionLogHours, formatProductionInteger } from "@/lib/productionFormat";
 import {
     toPersianDigits,
     toJalali,
@@ -55,8 +55,6 @@ export interface Machine {
     id: number;
     name: string;
     code: string;
-    std_production_per_hour: string;
-    std_waste_per_hour: string;
     is_active: boolean;
     created_at: string;
 }
@@ -92,6 +90,8 @@ export interface Product {
     id: number;
     name: string;
     code: string;
+    std_production_per_hour: string;
+    std_waste_per_hour: string;
     is_active: boolean;
 }
 
@@ -1161,13 +1161,11 @@ export function MachineModal({
 }) {
     const [name, setName] = useState(machine?.name ?? "");
     const [code, setCode] = useState(machine?.code ?? "");
-    const [stdProd, setStdProd] = useState(machine?.std_production_per_hour ?? "");
-    const [stdWaste, setStdWaste] = useState(machine?.std_waste_per_hour ?? "0");
     const [isActive, setIsActive] = useState(machine?.is_active ?? true);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState("");
 
-    const canSubmit = name.trim() !== "" && code.trim() !== "" && stdProd !== "" && !saving;
+    const canSubmit = name.trim() !== "" && code.trim() !== "" && !saving;
 
     async function handleSave() {
         if (!canSubmit) return;
@@ -1177,8 +1175,6 @@ export function MachineModal({
         const payload = {
             name: name.trim(),
             code: code.trim(),
-            std_production_per_hour: stdProd,
-            std_waste_per_hour: stdWaste || "0",
             is_active: isActive,
         };
 
@@ -1200,7 +1196,7 @@ export function MachineModal({
         <ModalShell
             icon={<Factory size={15} className="text-blue-500" />}
             title={machine ? "ویرایش ماشین" : "تعریف ماشین جدید"}
-            subtitle="مشخصات و استانداردهای تولید"
+            subtitle="مشخصات ماشین (استاندارد تولید و ضایعات روی محصول تعریف می‌شود)"
             locked={saving}
             onClose={onClose}
             footer={
@@ -1237,24 +1233,6 @@ export function MachineModal({
             <FloatingInput id="machine_name" label="نام ماشین" value={name} onChange={setName} />
             <FloatingInput id="machine_code" label="کد یکتا (مثلاً M-01)" value={code} onChange={setCode} ltr />
 
-            <div className="grid grid-cols-2 gap-3">
-                <NumberField
-                    label="تولید استاندارد در ساعت"
-                    value={stdProd}
-                    displayValue={Number.isFinite(Number(stdProd)) && stdProd !== "" ? String(Math.round(Number(stdProd))) : ""}
-                    onChange={setStdProd}
-                    step="1"
-                    min="0"
-                />
-                <NumberField
-                    label="ضایعات استاندارد در ساعت"
-                    value={stdWaste}
-                    displayValue={Number.isFinite(Number(stdWaste)) && stdWaste !== "" ? String(Math.round(Number(stdWaste))) : ""}
-                    onChange={setStdWaste}
-                    step="1"
-                    min="0"
-                />
-            </div>
 
             <div className="flex items-center justify-between rounded-2xl border border-gray-100 bg-gray-50 px-4 py-3 dark:border-white/[0.06] dark:bg-white/[0.03]">
                 <div>
@@ -1310,7 +1288,7 @@ export function LogModal({
     }, []);
 
     const productOptions = useMemo<Option[]>(
-        () => products.map((p) => ({ id: p.id, label: p.name, sub: `کد: ${p.code}` })),
+        () => products.map((p) => ({ id: p.id, label: p.name, sub: `کد: ${p.code} · استاندارد: ${formatProductionInteger(p.std_production_per_hour)} تولید / ${formatProductionInteger(p.std_waste_per_hour)} ضایعات در ساعت` })),
         [products]
     );
     const wasteCauseOptions = useMemo<Option[]>(
@@ -1767,19 +1745,21 @@ export function CatalogModal({
     const [name, setName] = useState(item?.name ?? "");
     const [code, setCode] = useState((item as Product | null)?.code ?? "");
     const [description, setDescription] = useState((item as Cause | null)?.description ?? "");
+    const [stdProd, setStdProd] = useState((item as Product | null)?.std_production_per_hour ?? "");
+    const [stdWaste, setStdWaste] = useState((item as Product | null)?.std_waste_per_hour ?? "0");
     const [causeKind, setCauseKind] = useState<CauseKind>((item as Cause | null)?.kind ?? "waste");
     const [isActive, setIsActive] = useState(item?.is_active ?? true);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState("");
 
-    const canSubmit = name.trim() !== "" && (!isProduct || code.trim() !== "") && !saving;
+    const canSubmit = name.trim() !== "" && (!isProduct || (code.trim() !== "" && stdProd !== "")) && !saving;
 
     async function handleSave() {
         if (!canSubmit) return;
         setSaving(true);
         setError("");
         const payload = isProduct
-            ? { name: name.trim(), code: code.trim(), is_active: isActive }
+            ? { name: name.trim(), code: code.trim(), std_production_per_hour: stdProd, std_waste_per_hour: stdWaste || "0", is_active: isActive }
             : { kind: causeKind, name: name.trim(), description: description.trim(), is_active: isActive };
         try {
             if (item) {
@@ -1799,7 +1779,7 @@ export function CatalogModal({
         <ModalShell
             icon={<Factory size={15} className="text-blue-500" />}
             title={item ? (isProduct ? "ویرایش محصول" : "ویرایش علت") : isProduct ? "تعریف محصول جدید" : "تعریف علت جدید"}
-            subtitle={isProduct ? "محصولات تولیدشده با دستگاه‌ها" : "دلایل ضایعات بیشتر از استاندارد"}
+            subtitle={isProduct ? "محصول و استانداردهای تولید و ضایعات آن" : "دلایل ضایعات بیشتر از استاندارد"}
             locked={saving}
             onClose={onClose}
             footer={
@@ -1822,7 +1802,27 @@ export function CatalogModal({
             <ErrorBanner message={error} onClose={() => setError("")} />
             <FloatingInput id={`${kind}_name`} label={isProduct ? "نام محصول" : "عنوان علت"} value={name} onChange={setName} />
             {isProduct ? (
-                <FloatingInput id="product_code" label="کد یکتا (مثلاً P-01)" value={code} onChange={setCode} ltr />
+                <>
+                    <FloatingInput id="product_code" label="کد یکتا (مثلاً P-01)" value={code} onChange={setCode} ltr />
+                    <div className="grid grid-cols-2 gap-3">
+                        <NumberField
+                            label="تولید استاندارد در ساعت"
+                            value={stdProd}
+                            displayValue={Number.isFinite(Number(stdProd)) && stdProd !== "" ? String(Math.round(Number(stdProd))) : ""}
+                            onChange={setStdProd}
+                            step="1"
+                            min="0"
+                        />
+                        <NumberField
+                            label="ضایعات استاندارد در ساعت"
+                            value={stdWaste}
+                            displayValue={Number.isFinite(Number(stdWaste)) && stdWaste !== "" ? String(Math.round(Number(stdWaste))) : ""}
+                            onChange={setStdWaste}
+                            step="1"
+                            min="0"
+                        />
+                    </div>
+                </>
             ) : (
                 <>
                     <NiceSelect
