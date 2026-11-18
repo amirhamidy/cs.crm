@@ -15,6 +15,8 @@ import type {
   RankingOrdering,
   Sale,
   SaleAttachment,
+  SaleHistoryEntry,
+  SaleHistoryParams,
   SaleListParams,
   SalePayload,
   TradeOption,
@@ -171,6 +173,17 @@ export const productsApi = {
 
 
 export const salesApi = {
+  /** فقط مدیر؛ بدون صفحه‌بندی، جدیدترین اول؛ برای معامله حذف‌شده هم کار می‌کند */
+  history: async (id: number, signal?: AbortSignal) =>
+    (await axiosInstance.get<SaleHistoryEntry[]>(`${SALES}sales/${id}/history/`, { signal })).data,
+
+  /** فقط مدیر؛ فهرست کلی تاریخچه با فیلتر و صفحه‌بندی */
+  historyPage: (
+    params: SaleHistoryParams = {},
+    signal?: AbortSignal,
+  ): Promise<Paginated<SaleHistoryEntry>> =>
+    fetchPage<SaleHistoryEntry>(`${SALES}sales/history/`, { ...params }, signal),
+
   get: async (id: number, signal?: AbortSignal) =>
     (await axiosInstance.get<Sale>(`${SALES}sales/${id}/`, { signal })).data,
 

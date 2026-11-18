@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, type ReactNode } from "react";
-import { BarChart3, Package, Repeat, ShoppingBag, TriangleAlert } from "lucide-react";
+import { BarChart3, Package, Repeat, ShoppingBag, TriangleAlert, History } from "lucide-react";
 import { usePermissions } from "@/hooks/usePermissions";
 import type { RouteTabItem } from "../shared/RouteTabs";
 import { TabbedPageShell } from "../shared/TabbedPageShell";
@@ -15,7 +15,7 @@ export default function SalesShell({
     basePath: BasePath;
     children: ReactNode;
 }) {
-    const { can } = usePermissions();
+    const { can, isManager } = usePermissions();
     const canViewSales = can("sales", "view");
     const canViewProducts = can("products", "view");
 
@@ -32,6 +32,9 @@ export default function SalesShell({
                       },
                   ]
                 : []),
+            ...(isManager
+                ? [{ href: `${basePath}/sales/history`, label: "تاریخچه تغییرات", icon: <History size={14} /> }]
+                : []),
             ...(canViewProducts
                 ? [
                       {
@@ -47,7 +50,7 @@ export default function SalesShell({
                   ]
                 : []),
         ],
-        [basePath, canViewSales, canViewProducts],
+        [basePath, canViewSales, canViewProducts, isManager],
     );
 
     return (

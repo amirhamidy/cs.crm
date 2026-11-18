@@ -22,6 +22,8 @@ import { apiMessage } from "@/lib/apiMessage";
 import {
     cleanDecimal,
     formatMoney,
+    formatRialInput,
+    parseRial,
     formatTon,
     hasAtMostDecimals,
     isPositiveNumber,
@@ -147,16 +149,16 @@ export default function SaleFormModal({ open, onClose, sale, fixedCustomer, onSa
 
         setQuantityTon(sale ? String(kgToTon(sale.quantity_kg)) : "");
         setBilledTon(sale?.billed_quantity_kg ? String(kgToTon(sale.billed_quantity_kg)) : "");
-        setBuyPrice(sale?.buy_price ? String(toNumber(sale.buy_price)) : "");
-        setSellPrice(sale?.sell_price ? String(toNumber(sale.sell_price)) : "");
+        setBuyPrice(sale?.buy_price ? formatRialInput(String(sale.buy_price)) : "");
+        setSellPrice(sale?.sell_price ? formatRialInput(String(sale.sell_price)) : "");
 
         setDealTypeId(sale?.deal_type ?? null);
         setLoadTypeId(sale?.load_type ?? null);
         setFreightStatus(sale?.freight_status ?? "");
 
-        setLoadingCost(sale?.loading_cost ? String(toNumber(sale.loading_cost)) : "");
-        setWeighbridgeCost(sale?.weighbridge_cost ? String(toNumber(sale.weighbridge_cost)) : "");
-        setFreightCost(sale?.freight_cost ? String(toNumber(sale.freight_cost)) : "");
+        setLoadingCost(sale?.loading_cost ? formatRialInput(String(sale.loading_cost)) : "");
+        setWeighbridgeCost(sale?.weighbridge_cost ? formatRialInput(String(sale.weighbridge_cost)) : "");
+        setFreightCost(sale?.freight_cost ? formatRialInput(String(sale.freight_cost)) : "");
 
         setTraderId(sale?.trader ?? null);
         setSaleDate(sale?.sale_date ?? todayIso());
@@ -356,14 +358,14 @@ export default function SaleFormModal({ open, onClose, sale, fixedCustomer, onSa
                 ...(caseOption ? { case: caseOption.id } : {}),
                 description: description.trim(),
                 ...(needsBilledQty && billedKg ? { billed_quantity_kg: billedKg } : {}),
-                ...(needBuyPrice && buyPrice ? { buy_price: cleanDecimal(buyPrice) } : {}),
-                ...(needSellPrice && sellPrice ? { sell_price: cleanDecimal(sellPrice) } : {}),
+                ...(needBuyPrice && buyPrice ? { buy_price: parseRial(buyPrice) ?? 0 } : {}),
+                ...(needSellPrice && sellPrice ? { sell_price: parseRial(sellPrice) ?? 0 } : {}),
                 ...(dealTypeId != null ? { deal_type: dealTypeId } : {}),
                 ...(loadTypeId != null ? { load_type: loadTypeId } : {}),
                 ...(freightStatus ? { freight_status: freightStatus } : {}),
-                ...(loadingCost ? { loading_cost: cleanDecimal(loadingCost) } : {}),
-                ...(weighbridgeCost ? { weighbridge_cost: cleanDecimal(weighbridgeCost) } : {}),
-                ...(freightCost ? { freight_cost: cleanDecimal(freightCost) } : {}),
+                ...(loadingCost ? { loading_cost: parseRial(loadingCost) ?? 0 } : {}),
+                ...(weighbridgeCost ? { weighbridge_cost: parseRial(weighbridgeCost) ?? 0 } : {}),
+                ...(freightCost ? { freight_cost: parseRial(freightCost) ?? 0 } : {}),
                 ...(isManager && traderId != null ? { trader: traderId } : {}),
             };
 
@@ -608,48 +610,52 @@ export default function SaleFormModal({ open, onClose, sale, fixedCustomer, onSa
                     {needBuyPrice && (
                         <FloatingInput
                             id="sale_form_buy_price"
-                            label="فی خرید (تومان/کیلو)"
-                            inputMode="decimal"
+                            label="فی خرید (ریال/کیلو)"
+                            inputMode="numeric"
                             value={buyPrice}
                             disabled={isReturned}
-                            onChange={(e) => setBuyPrice(e.target.value)}
+                            onChange={(e) => setBuyPrice(formatRialInput(e.target.value))}
                         />
                     )}
                     {needSellPrice && (
                         <FloatingInput
                             id="sale_form_sell_price"
-                            label="فی فروش (تومان/کیلو)"
-                            inputMode="decimal"
+                            label="فی فروش (ریال/کیلو)"
+                            inputMode="numeric"
                             value={sellPrice}
                             disabled={isReturned}
-                            onChange={(e) => setSellPrice(e.target.value)}
+                            onChange={(e) => setSellPrice(formatRialInput(e.target.value))}
                         />
                     )}
                 </div>
 
-                {needBuyPrice && buyPrice && toNumber(cleanDecimal(buyPrice)) > 0 && (
+                {needBuyPrice && buyPrice && (parseRial(buyPrice) ?? 0) > 0 && (
                     <div className="flex items-center justify-between rounded-2xl bg-blue-50 px-4 py-2.5 dark:bg-blue-500/10">
                         <span className="text-[11.5px] font-bold text-blue-600 dark:text-blue-400">
                             مبلغ خرید
                         </span>
                         <span className="text-[12.5px] font-black text-blue-700 dark:text-blue-300">
                             {formatMoney(
-                                toNumber(cleanDecimal(buyPrice)) *
-                                    toNumber(needsBilledQty && billedKg ? billedKg : qtyKg),
+                                Math.round(
+                                    (parseRial(buyPrice) ?? 0) *
+                                        toNumber(needsBilledQty && billedKg ? billedKg : qtyKg),
+                                ),
                             )}
                         </span>
                     </div>
                 )}
 
-                {needSellPrice && sellPrice && toNumber(cleanDecimal(sellPrice)) > 0 && (
+                {needSellPrice && sellPrice && (parseRial(sellPrice) ?? 0) > 0 && (
                     <div className="flex items-center justify-between rounded-2xl bg-green-50 px-4 py-2.5 dark:bg-green-500/10">
                         <span className="text-[11.5px] font-bold text-green-600 dark:text-green-400">
                             مبلغ فروش
                         </span>
                         <span className="text-[12.5px] font-black text-green-700 dark:text-green-300">
                             {formatMoney(
-                                toNumber(cleanDecimal(sellPrice)) *
-                                    toNumber(needsBilledQty && billedKg ? billedKg : qtyKg),
+                                Math.round(
+                                    (parseRial(sellPrice) ?? 0) *
+                                        toNumber(needsBilledQty && billedKg ? billedKg : qtyKg),
+                                ),
                             )}
                         </span>
                     </div>
@@ -693,27 +699,27 @@ export default function SaleFormModal({ open, onClose, sale, fixedCustomer, onSa
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                     <FloatingInput
                         id="sale_form_loading_cost"
-                        label="هزینه بارگیری"
-                        inputMode="decimal"
+                        label="هزینه بارگیری (ریال)"
+                        inputMode="numeric"
                         value={loadingCost}
                         disabled={isReturned}
-                        onChange={(e) => setLoadingCost(e.target.value)}
+                        onChange={(e) => setLoadingCost(formatRialInput(e.target.value))}
                     />
                     <FloatingInput
                         id="sale_form_weighbridge_cost"
-                        label="هزینه باسکول"
-                        inputMode="decimal"
+                        label="هزینه باسکول (ریال)"
+                        inputMode="numeric"
                         value={weighbridgeCost}
                         disabled={isReturned}
-                        onChange={(e) => setWeighbridgeCost(e.target.value)}
+                        onChange={(e) => setWeighbridgeCost(formatRialInput(e.target.value))}
                     />
                     <FloatingInput
                         id="sale_form_freight_cost"
-                        label="هزینه حمل"
-                        inputMode="decimal"
+                        label="هزینه حمل (ریال)"
+                        inputMode="numeric"
                         value={freightCost}
                         disabled={isReturned}
-                        onChange={(e) => setFreightCost(e.target.value)}
+                        onChange={(e) => setFreightCost(formatRialInput(e.target.value))}
                     />
                 </div>
 

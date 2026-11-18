@@ -134,7 +134,7 @@ function SaleCardBase({ sale, canEdit, canDelete, onEdit, onDelete, onDetails, o
 
             <div className="mt-1.5 flex items-center justify-between gap-2 rounded-xl bg-indigo-50/70 px-3 py-2 dark:bg-indigo-500/[0.07]">
                 <span className="text-[9.5px] font-semibold text-indigo-400">{sale.profit != null ? "سود" : "مبلغ کل"}</span>
-                <span className="truncate text-[13px] font-extrabold text-indigo-600 dark:text-indigo-400">{formatMoney(sale.profit ?? sale.total_sell_amount ?? sale.total_buy_amount ?? "0")}</span>
+                <span className="truncate text-[13px] font-extrabold text-indigo-600 dark:text-indigo-400">{formatMoney(sale.profit ?? sale.total_sell_amount ?? sale.total_buy_amount ?? 0)}</span>
             </div>
 
             {onDetails && (

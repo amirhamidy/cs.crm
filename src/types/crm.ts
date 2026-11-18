@@ -15,7 +15,7 @@ export interface RankedCustomer {
   scores_count: number;
   comments_count: number;
   
-  total_sales: string;
+  total_sales: number;
   last_sale_date: string | null;
 }
 
@@ -107,15 +107,15 @@ export interface Sale {
   billed_quantity_kg: string | null;
   effective_quantity_kg: string;
   weight_difference_kg: string | null;
-  buy_price: string | null;
-  sell_price: string | null;
-  total_buy_amount: string | null;
-  total_sell_amount: string | null;
-  loading_cost: string;
-  weighbridge_cost: string;
-  freight_cost: string;
-  total_costs: string;
-  profit: string | null;
+  buy_price: number | null;
+  sell_price: number | null;
+  total_buy_amount: number | null;
+  total_sell_amount: number | null;
+  loading_cost: number;
+  weighbridge_cost: number;
+  freight_cost: number;
+  total_costs: number;
+  profit: number | null;
   deal_type: number | null;
   deal_type_name: string | null;
   load_type: number | null;
@@ -148,11 +148,11 @@ export interface SalePayload {
   product: number;
   quantity_kg: string;
   billed_quantity_kg?: string | null;
-  buy_price?: string | null;
-  sell_price?: string | null;
-  loading_cost?: string;
-  weighbridge_cost?: string;
-  freight_cost?: string;
+  buy_price?: number | null;
+  sell_price?: number | null;
+  loading_cost?: number;
+  weighbridge_cost?: number;
+  freight_cost?: number;
   deal_type?: number | null;
   load_type?: number | null;
   freight_status?: FreightStatus;
@@ -184,7 +184,7 @@ export interface TopProduct {
   id: number;
   name: string;
   quantity_kg: string;
-  amount: string;
+  amount: number;
 }
 
 export interface TopCustomerRow {
@@ -194,7 +194,7 @@ export interface TopCustomerRow {
   company_name: string;
   sales_count: number;
   total_quantity_kg: string;
-  total_amount: string;
+  total_amount: number;
   last_sale_date: string | null;
   top_product: TopProduct | null;
 }
@@ -217,7 +217,7 @@ export interface CustomerSalesByProduct {
   product_name: string;
   sales_count: number;
   quantity_kg: string;
-  amount: string;
+  amount: number;
 }
 
 export interface CustomerSalesSummary {
@@ -226,7 +226,7 @@ export interface CustomerSalesSummary {
   company_name: string;
   sales_count: number;
   total_quantity_kg: string;
-  total_amount: string;
+  total_amount: number;
   first_sale_date: string | null;
   last_sale_date: string | null;
   top_product: CustomerSalesByProduct | null;
@@ -274,7 +274,7 @@ export interface PathCase {
   created_at: string | null;
   tasks: PathTask[];
   sales_count: number;
-  sales_total: string;
+  sales_total: number;
 }
 
 export interface PathTimelineEvent {
@@ -335,7 +335,7 @@ export interface LoadIssue {
   issue_type: IssueType;
   issue_type_display: string;
   quantity_kg: string;
-  loss_amount: string;
+  loss_amount: number;
   status: IssueStatus;
   status_display: string;
   issue_date: string;
@@ -450,3 +450,37 @@ export interface MarketplaceAccountUpdatePayload {
 }
 
 export type MarketplaceAccountPayload = MarketplaceAccountUpdatePayload;
+
+/** تاریخچه تغییرات معامله (فقط مدیر) */
+export interface SaleChangeItem {
+  field: string;
+  label: string;
+  old: string | null;
+  new: string | null;
+}
+
+export interface SaleHistoryEntry {
+  id: number;
+  sale: number | null;
+  sale_ref: number;
+  sale_label: string;
+  sale_deleted: boolean;
+  action: string;
+  action_display: string;
+  changes: SaleChangeItem[];
+  note: string;
+  user: number | null;
+  user_name: string;
+  /** UTC؛ هنگام نمایش به وقت تهران تبدیل شود */
+  created_at: string;
+}
+
+export interface SaleHistoryParams {
+  sale?: number;
+  user?: number;
+  action?: string;
+  date_from?: string;
+  date_to?: string;
+  search?: string;
+  page?: number;
+}

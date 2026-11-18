@@ -1,7 +1,10 @@
 import { toJalali, toPersianDigits, JALALI_MONTHS, pad2 } from "@/lib/jalali";
 
-/** واحد پول در کل پنل؛ طبق API.md قیمت‌ها «تومان» هستند. */
-export const CURRENCY_LABEL = "تومان";
+/** واحد پول در کل پنل؛ همه مبالغ عدد صحیح «ریال» هستند. */
+export const CURRENCY_LABEL = "ریال";
+
+/** re-export از jalali برای راحتی استفاده */
+export { toPersianDigits };
 
 const nf = new Intl.NumberFormat("fa-IR", { maximumFractionDigits: 0 });
 const nf2 = new Intl.NumberFormat("fa-IR", { maximumFractionDigits: 2 });
@@ -18,8 +21,25 @@ export const formatNumber = (v: string | number | null | undefined) =>
 export const formatScore = (v: number | null | undefined) =>
   v == null ? "—" : nf2.format(v);
 
+/** مبلغ ریال با جداکننده سه‌رقمی و بدون اعشار: 420000000 → "420,000,000" */
+export const formatRial = (n: number | string | null | undefined) =>
+  n == null || n === "" ? "—" : Math.round(toNumber(n)).toLocaleString("en-US");
+
+/** ورودی کاربر (ارقام فارسی/عربی، ویرگول) → عدد صحیح ریال؛ نامعتبر = null */
+export function parseRial(raw: string | null | undefined): number | null {
+  if (!raw) return null;
+  const t = cleanDecimal(raw).replace(/[^\d]/g, "");
+  return t ? Number(t) : null;
+}
+
+/** مقدار ورودی را هنگام تایپ با ویرگول سه‌رقمی نشان می‌دهد */
+export const formatRialInput = (raw: string) => {
+  const n = parseRial(raw);
+  return n == null ? "" : n.toLocaleString("en-US");
+};
+
 export const formatMoney = (v: string | number | null | undefined) =>
-  `${nf.format(toNumber(v))} ${CURRENCY_LABEL}`;
+  v == null || v === "" ? "—" : `${formatRial(v)} ${CURRENCY_LABEL}`;
 
 /** مقدار به کیلوگرم؛ از ۱۰۰۰ به بالا به «تن» نمایش داده می‌شود. */
 export function formatWeight(kg: string | number | null | undefined) {

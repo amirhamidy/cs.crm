@@ -12,7 +12,9 @@ import { apiMessage } from "@/lib/apiMessage";
 import {
     cleanDecimal,
     formatMoney,
+    formatRialInput,
     formatWeight,
+    parseRial,
     isPositiveNumber,
     todayIso,
     toNumber,
@@ -22,7 +24,7 @@ import type { FeedProduct } from "@/types/crm";
 export interface SoldSaleData {
     product: number;
     quantity_kg: string;
-    sell_price: string;
+    sell_price: number;
     sale_date: string;
     description: string;
     score: number;
@@ -83,11 +85,11 @@ export default function SoldSaleModal({
         [products],
     );
 
-    const total = toNumber(cleanDecimal(quantity)) * toNumber(cleanDecimal(price));
+    const total = toNumber(cleanDecimal(quantity)) * (parseRial(price) ?? 0);
     const valid =
         productId != null &&
         isPositiveNumber(quantity) &&
-        isPositiveNumber(price) &&
+        (parseRial(price) ?? 0) > 0 &&
         !!saleDate &&
         score >= 1 &&
         !!scoreReason.trim();
@@ -99,7 +101,7 @@ export default function SoldSaleModal({
             await onSubmit({
                 product: productId,
                 quantity_kg: cleanDecimal(quantity),
-                sell_price: cleanDecimal(price),
+                sell_price: parseRial(price) ?? 0,
                 sale_date: saleDate,
                 description: description.trim(),
                 score,
@@ -164,10 +166,10 @@ export default function SoldSaleModal({
                     />
                     <FloatingInput
                         id="sale_price"
-                        label="قیمت هر کیلوگرم"
-                        inputMode="decimal"
+                        label="قیمت هر کیلوگرم (ریال)"
+                        inputMode="numeric"
                         value={price}
-                        onChange={(e) => setPrice(e.target.value)}
+                        onChange={(e) => setPrice(formatRialInput(e.target.value))}
                     />
                 </div>
 
@@ -177,7 +179,7 @@ export default function SoldSaleModal({
                             {formatWeight(cleanDecimal(quantity))}
                         </span>
                         <span className="text-[13px] font-black text-brand">
-                            مبلغ کل: {formatMoney(total)}
+                            مبلغ کل: {formatMoney(Math.round(total))}
                         </span>
                     </div>
                 )}
