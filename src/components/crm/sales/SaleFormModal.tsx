@@ -610,7 +610,7 @@ export default function SaleFormModal({ open, onClose, sale, fixedCustomer, onSa
                     {needBuyPrice && (
                         <FloatingInput
                             id="sale_form_buy_price"
-                            label="فی خرید (ریال/کیلو)"
+                            label="فی خرید"
                             inputMode="numeric"
                             value={buyPrice}
                             disabled={isReturned}
@@ -620,7 +620,7 @@ export default function SaleFormModal({ open, onClose, sale, fixedCustomer, onSa
                     {needSellPrice && (
                         <FloatingInput
                             id="sale_form_sell_price"
-                            label="فی فروش (ریال/کیلو)"
+                            label="فی فروش"
                             inputMode="numeric"
                             value={sellPrice}
                             disabled={isReturned}

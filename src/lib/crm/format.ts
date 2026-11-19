@@ -44,8 +44,20 @@ export const formatMoney = (v: string | number | null | undefined) =>
 /** مقدار به کیلوگرم؛ از ۱۰۰۰ به بالا به «تن» نمایش داده می‌شود. */
 export function formatWeight(kg: string | number | null | undefined) {
   const n = toNumber(kg);
-  if (Math.abs(n) >= 1000) return `${nf2.format(n / 1000)} تن`;
-  return `${nf3.format(n)} کیلوگرم`;
+  return splitTonKg(n);
+}
+
+/** ۱۴۳۰۰ → «۱۴ تن و ۳۰۰ کیلوگرم»؛ بخش صفر حذف می‌شود. */
+function splitTonKg(n: number) {
+  if (!Number.isFinite(n)) return "—";
+  const sign = n < 0 ? "−" : "";
+  // گرد کردن به ۳ رقم اعشار (گرم) برای جلوگیری از خطای ممیز شناور
+  const abs = Math.round(Math.abs(n) * 1000) / 1000;
+  const tons = Math.floor(abs / 1000);
+  const kg = Math.round((abs - tons * 1000) * 1000) / 1000;
+  if (tons === 0) return `${sign}${nf3.format(kg)} کیلوگرم`;
+  if (kg === 0) return `${sign}${nf3.format(tons)} تن`;
+  return `${sign}${nf3.format(tons)} تن و ${nf3.format(kg)} کیلوگرم`;
 }
 
 /** YYYY-MM-DD (میلادی) → «۱۴ آبان ۱۴۰۵» بدون جابه‌جایی منطقه زمانی */
@@ -107,7 +119,7 @@ export const tonToKg = (ton: string | number): string => {
 
 /** نمایش وزن به تن با حداکثر ۳ رقم اعشار */
 export const formatTon = (kg: string | number | null | undefined) =>
-  `${nf3.format(kgToTon(kg))} تن`;
+  splitTonKg(toNumber(kg));
 
 /** «HH:mm» یا «HH:mm:ss» → «HH:mm» با ارقام فارسی */
 export const formatTime = (value: string | null | undefined) =>

@@ -21,7 +21,7 @@ interface FloatingInputProps extends InputHTMLAttributes<HTMLInputElement> { lab
 const FloatingInput = forwardRef<HTMLInputElement, FloatingInputProps>(({ label, id, className = "", ...props }, ref) => (
     <div className="relative">
         <input ref={ref} id={id} placeholder=" " className={`peer w-full border border-gray-200 rounded-4xl px-5 py-3 text-sm text-black outline-none transition-all duration-200 focus:border-gray-400 dark:bg-white/[0.04] dark:border-white/[0.08] dark:text-white dark:focus:border-blue-500 ${className}`} {...props} />
-        <label htmlFor={id} className="absolute right-5 top-1/2 -translate-y-1/2 text-sm text-gray-400 pointer-events-none transition-all duration-200 bg-white dark:bg-[#111827] px-1.5 rounded peer-focus:top-0 peer-focus:text-xs peer-focus:text-gray-500 peer-[:not(:placeholder-shown)]:top-0 peer-[:not(:placeholder-shown)]:text-xs peer-[:not(:placeholder-shown)]:text-gray-500">{label}</label>
+        <label htmlFor={id} className="absolute right-5 top-1/2 -translate-y-1/2 text-sm text-gray-400 pointer-events-none transition-all duration-200 floating-notch px-1.5 rounded peer-focus:top-0 peer-focus:text-xs peer-focus:text-gray-500 peer-[:not(:placeholder-shown)]:top-0 peer-[:not(:placeholder-shown)]:text-xs peer-[:not(:placeholder-shown)]:text-gray-500">{label}</label>
     </div>
 ));
 FloatingInput.displayName = "FloatingInput";

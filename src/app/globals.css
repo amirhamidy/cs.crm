@@ -364,3 +364,24 @@ body {
     opacity: 0.6;
   }
 }
+
+/* ───────── Floating label notch ─────────
+   برچسب شناور: وقتی بالا می‌رود نیمه‌ی بالایی هم‌رنگ سطح والد (--float-bg)
+   و نیمه‌ی پایینی هم‌رنگ پر شدگی فیلد (--float-fill) است. در حالت عادی شفاف است.
+   کانتینرهایی با پس‌زمینه‌ی متفاوت می‌توانند --float-bg / --float-bg-dark را تنظیم کنند. */
+:root {
+  --float-bg: #ffffff;
+  --float-fill: var(--float-bg);
+}
+.dark {
+  --float-bg: var(--float-bg-dark, var(--surface-dark));
+  --float-fill: color-mix(in srgb, #ffffff 4%, var(--float-bg));
+}
+.floating-notch {
+  background: transparent;
+}
+:is(input, textarea):focus ~ .floating-notch,
+:is(input, textarea):not(:placeholder-shown) ~ .floating-notch,
+.floating-notch[data-floated="true"] {
+  background: linear-gradient(to bottom, var(--float-bg) 50%, var(--float-fill) 50%);
+}

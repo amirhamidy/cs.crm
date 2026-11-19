@@ -44,7 +44,7 @@ const FloatingInput = forwardRef<HTMLInputElement, FloatingInputProps>(
                 />
                 <label
                     htmlFor={id}
-                    className={`absolute right-5 pointer-events-none transition-all duration-200 bg-white dark:bg-[#111827] px-1.5 rounded text-sm text-gray-400 peer-focus:-top-2.5 peer-focus:translate-y-0 peer-focus:text-xs peer-focus:text-gray-500 ${
+                    className={`absolute right-5 pointer-events-none transition-all duration-200 floating-notch px-1.5 rounded text-sm text-gray-400 peer-focus:-top-2.5 peer-focus:translate-y-0 peer-focus:text-xs peer-focus:text-gray-500 ${
                         hasValue
                             ? "-top-2.5 translate-y-0 text-xs text-gray-500"
                             : "top-1/2 -translate-y-1/2"
@@ -85,7 +85,7 @@ const FloatingTextarea = forwardRef<
             />
             <label
                 htmlFor={id}
-                className={`absolute right-5 pointer-events-none transition-all duration-200 bg-white dark:bg-[#111827] px-1.5 rounded text-sm text-gray-400 peer-focus:top-0 peer-focus:text-xs peer-focus:text-gray-500 ${hasValue ? "top-0 text-xs text-gray-500" : "top-4"
+                className={`absolute right-5 pointer-events-none transition-all duration-200 floating-notch px-1.5 rounded text-sm text-gray-400 peer-focus:top-0 peer-focus:text-xs peer-focus:text-gray-500 ${hasValue ? "top-0 text-xs text-gray-500" : "top-4"
                     }`}
             >
                 {label}
