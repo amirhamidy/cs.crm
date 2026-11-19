@@ -6,7 +6,11 @@
     "dev": "next dev --turbopack",
     "build": "next build --webpack",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "sync:modules": "node scripts/sync-modules.mjs",
+    "check:modules": "node scripts/check-boundaries.mjs",
+    "predev": "npm run sync:modules",
+    "prebuild": "npm run sync:modules && npm run check:modules"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
