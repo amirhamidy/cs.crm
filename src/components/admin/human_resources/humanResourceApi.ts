@@ -1,4 +1,4 @@
-import axios from "axios";
+import axiosInstance from "@/lib/axiosInstance";
 
 export interface HumanResourceFile {
   id: number;
@@ -55,17 +55,7 @@ export interface CurrentUser {
   type: number;
 }
 
-const api = axios.create({
-  baseURL: "https://api.radcosys.ir/",
-});
-
-api.interceptors.request.use((config) => {
-  if (typeof window !== "undefined") {
-    const token = localStorage.getItem("crm-access");
-    if (token) config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
+const api = axiosInstance;
 
 export const getDocuments = () => api.get<HumanResource[]>("/document/");
 
