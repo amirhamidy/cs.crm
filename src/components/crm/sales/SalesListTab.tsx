@@ -62,6 +62,7 @@ export default function SalesListTab() {
     const [deleting, setDeleting] = useState(false);
     const [deleteError, setDeleteError] = useState<string | null>(null);
     const [retTarget, setRetTarget] = useState<{ sale: Sale; undo: boolean } | null>(null);
+    const [returnNote, setReturnNote] = useState("");
     const [retBusy, setRetBusy] = useState(false);
     const [retError, setRetError] = useState<string | null>(null);
 
@@ -71,7 +72,7 @@ export default function SalesListTab() {
         setRetError(null);
         try {
             if (retTarget.undo) await salesApi.undoReturn(retTarget.sale.id);
-            else await salesApi.markReturned(retTarget.sale.id, "");
+            else await salesApi.markReturned(retTarget.sale.id, returnNote.trim());
             setRetTarget(null);
             refetch();
             toast.success(retTarget.undo ? "برگشت لغو شد" : "معامله برگشت خورد");
@@ -113,7 +114,7 @@ export default function SalesListTab() {
         }
     }
 
-    const pageTotal = list.data.filter((x) => x.status !== "returned").reduce((a, x) => a + toNumber(x.profit ?? x.total_sell_amount ?? x.total_buy_amount), 0);
+    const pageTotal = list.data.filter((x) => x.status !== "returned").reduce((a, x) => a + (x.profit ?? x.total_sell_amount ?? x.total_buy_amount ?? 0), 0);
     const pageKg = list.data.reduce((a, x) => a + toNumber(x.quantity_kg), 0);
     const pageIssues = list.data.reduce((a, x) => a + x.open_issues_count, 0);
 
@@ -183,7 +184,7 @@ export default function SalesListTab() {
                         onDetails={setDetails}
                         onEdit={openForm}
                         onDelete={askDelete}
-                        onReturn={(sale) => { setRetError(null); setRetTarget({ sale, undo: false }); }}
+                        onReturn={(sale) => { setRetError(null); setReturnNote(""); setRetTarget({ sale, undo: false }); }}
                         onUndoReturn={(sale) => { setRetError(null); setRetTarget({ sale, undo: true }); }}
                     />
                     {list.totalPages > 1 && (
@@ -218,12 +219,25 @@ export default function SalesListTab() {
             <ConfirmDialog
                 open={retTarget != null}
                 title={retTarget?.undo ? "لغو برگشت معامله" : "برگشت معامله"}
-                message={retTarget?.undo ? "معامله دوباره فعال می‌شود. ادامه می‌دهید؟" : "معامله از محاسبات حذف و برگشتی علامت‌گذاری می‌شود. ادامه می‌دهید؟"}
+                message={retTarget?.undo ? "معامله دوباره فعال می‌شود. ادامه می‌دهید؟" : (
+                    <div className="space-y-2">
+                        <p>معامله از محاسبات حذف و برگشتی علامت‌گذاری می‌شود. در صورت نیاز دلیل برگشت را بنویسید.</p>
+                        <textarea
+                            value={returnNote}
+                            onChange={(event) => setReturnNote(event.target.value)}
+                            maxLength={2000}
+                            rows={3}
+                            placeholder="دلیل برگشت (اختیاری)"
+                            autoComplete="off"
+                            className="w-full resize-none rounded-xl border border-gray-200 bg-white px-3 py-2 text-[12px] outline-none focus:border-indigo-400 dark:border-white/10 dark:bg-white/[0.04] dark:text-white"
+                        />
+                    </div>
+                )}
                 confirmLabel="تأیید"
                 loading={retBusy}
                 error={retError}
                 onConfirm={confirmReturn}
-                onCancel={() => setRetTarget(null)}
+                onCancel={() => { setRetTarget(null); setReturnNote(""); }}
             />
 
             <ConfirmDialog

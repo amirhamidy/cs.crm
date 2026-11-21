@@ -11,7 +11,7 @@ import { EmptyState, ErrorState, PageHeader, SearchInput } from "@/components/ui
 import { ListSkeleton } from "@/components/ui/skeletons";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import { rankingApi } from "@/lib/api";
-import { formatJalaliDate, formatMoney, formatNumber, toNumber } from "@/lib/crm/format";
+import { formatJalaliDate, formatMoney, formatNumber } from "@/lib/crm/format";
 import { cn } from "@/lib/utils";
 import type { RankedCustomer, RankingOrdering } from "@/types/crm";
 import StarRating from "./StarRating";
@@ -110,7 +110,7 @@ function Row({
   medal: boolean;
   onOpen: () => void;
 }) {
-  const hasSales = toNumber(customer.total_sales) > 0;
+  const hasSales = customer.total_sales > 0;
   const important = customer.rank <= 3 && customer.avg_score != null;
   return (
     <m.button

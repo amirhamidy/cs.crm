@@ -109,6 +109,12 @@ function SaleCardBase({ sale, canEdit, canDelete, onEdit, onDelete, onDetails, o
                 <Party label="خریدار" name={sale.buyer_name} company={sale.buyer_company} dot="bg-indigo-500" />
             </div>
 
+            {returned && sale.return_note && (
+                <p className="mt-2 rounded-xl bg-rose-50 px-3 py-2 text-[10.5px] font-semibold leading-5 text-rose-700 dark:bg-rose-500/10 dark:text-rose-300">
+                    دلیل برگشت: {sale.return_note}
+                </p>
+            )}
+
             {sale.trader_name && (
                 <p className="mt-2 text-[10.5px] font-semibold text-gray-400">
                     معامله‌گر: <span className="text-gray-600 dark:text-gray-300">{sale.trader_name}</span>
@@ -124,8 +130,8 @@ function SaleCardBase({ sale, canEdit, canDelete, onEdit, onDelete, onDetails, o
             <div className="mt-3 grid grid-cols-2 gap-1.5">
                 <MiniStat label="مقدار" value={formatWeight(sale.quantity_kg)} />
                 <MiniStat label="مقدار مؤثر" value={formatWeight(sale.effective_quantity_kg)} />
-                {sale.buy_price && <MiniStat label="فی خرید" value={formatMoney(sale.buy_price)} />}
-                {sale.sell_price && <MiniStat label="فی فروش" value={formatMoney(sale.sell_price)} />}
+                {sale.buy_price != null && <MiniStat label="فی خرید (ریال/کیلوگرم)" value={formatMoney(sale.buy_price)} />}
+                {sale.sell_price != null && <MiniStat label="فی فروش (ریال/کیلوگرم)" value={formatMoney(sale.sell_price)} />}
                 {sale.deal_type_name && <MiniStat label="نوع معامله" value={sale.deal_type_name} />}
                 {sale.load_type_name && <MiniStat label="نوع بار" value={sale.load_type_name} />}
             </div>

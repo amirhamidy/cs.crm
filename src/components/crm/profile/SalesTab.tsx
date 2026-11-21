@@ -43,6 +43,7 @@ export default function SalesTab({ customerId, customerName, onChanged }: Props)
     const [deleting, setDeleting] = useState(false);
     const [deleteError, setDeleteError] = useState<string | null>(null);
     const [returnTarget, setReturnTarget] = useState<{ sale: Sale; undo: boolean } | null>(null);
+    const [returnNote, setReturnNote] = useState("");
     const [returning, setReturning] = useState(false);
     const [returnError, setReturnError] = useState<string | null>(null);
 
@@ -71,7 +72,7 @@ export default function SalesTab({ customerId, customerName, onChanged }: Props)
         setReturnError(null);
         try {
             if (returnTarget.undo) await salesApi.undoReturn(returnTarget.sale.id);
-            else await salesApi.markReturned(returnTarget.sale.id);
+            else await salesApi.markReturned(returnTarget.sale.id, returnNote.trim());
             setReturnTarget(null);
             list.refetch();
             onChanged?.();
@@ -133,6 +134,7 @@ export default function SalesTab({ customerId, customerName, onChanged }: Props)
                         }}
                         onReturn={(sale) => {
                             setReturnError(null);
+                            setReturnNote("");
                             setReturnTarget({ sale, undo: false });
                         }}
                         onUndoReturn={(sale) => {
@@ -179,12 +181,25 @@ export default function SalesTab({ customerId, customerName, onChanged }: Props)
             <ConfirmDialog
                 open={returnTarget != null}
                 title={returnTarget?.undo ? "لغو برگشت معامله" : "برگشت معامله"}
-                message={returnTarget?.undo ? "معامله دوباره در محاسبات فعال می‌شود. ادامه می‌دهید؟" : "این معامله برگشت‌خورده علامت‌گذاری می‌شود و از گزارش‌ها کنار می‌رود. ادامه می‌دهید؟"}
+                message={returnTarget?.undo ? "معامله دوباره در محاسبات فعال می‌شود. ادامه می‌دهید؟" : (
+                    <div className="space-y-2">
+                        <p>این معامله برگشت‌خورده علامت‌گذاری می‌شود و از گزارش‌ها کنار می‌رود. در صورت نیاز دلیل برگشت را بنویسید.</p>
+                        <textarea
+                            value={returnNote}
+                            onChange={(event) => setReturnNote(event.target.value)}
+                            maxLength={2000}
+                            rows={3}
+                            placeholder="دلیل برگشت (اختیاری)"
+                            autoComplete="off"
+                            className="w-full resize-none rounded-xl border border-gray-200 bg-white px-3 py-2 text-[12px] outline-none focus:border-indigo-400 dark:border-white/10 dark:bg-white/[0.04] dark:text-white"
+                        />
+                    </div>
+                )}
                 confirmLabel="تأیید"
                 loading={returning}
                 error={returnError}
                 onConfirm={confirmReturn}
-                onCancel={() => setReturnTarget(null)}
+                onCancel={() => { setReturnTarget(null); setReturnNote(""); }}
             />
 
             <ConfirmDialog

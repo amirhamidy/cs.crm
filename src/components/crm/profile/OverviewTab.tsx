@@ -13,7 +13,6 @@ import {
     formatNumber,
     formatJalaliDate,
     formatWeight,
-    toNumber,
 } from "@/lib/crm/format";
 import type { CustomerScore, CustomerSalesSummary } from "@/types/crm";
 import StarRating from "../shared/StarRating";
@@ -69,7 +68,7 @@ export default function OverviewTab({ customerId, onAverage, refreshKey = 0 }: P
     }, [customerId, refreshKey, canViewSales]);
 
     const maxAmount = useMemo(
-        () => Math.max(1, ...(summary?.by_product ?? []).map((p) => toNumber(p.amount))),
+        () => Math.max(1, ...(summary?.by_product ?? []).map((p) => p.amount)),
         [summary],
     );
 
@@ -135,7 +134,7 @@ export default function OverviewTab({ customerId, onAverage, refreshKey = 0 }: P
                     <SectionTitle icon={<BarChart3 size={16} />} title="سهم هر کالا از فروش" />
                     <ul className="flex flex-col gap-3">
                         {summary.by_product.map((p) => {
-                            const pct = Math.round((toNumber(p.amount) / maxAmount) * 100);
+                            const pct = Math.round((p.amount / maxAmount) * 100);
                             return (
                                 <li key={p.product_id}>
                                     <div className="mb-1 flex items-center justify-between gap-2 text-[13px]">

@@ -123,7 +123,7 @@ const IssueCard = memo(function IssueCard({
                 <MiniStat
                     label="زیان"
                     value={formatMoney(issue.loss_amount)}
-                    tone={toNumber(issue.loss_amount) > 0 ? "rose" : "gray"}
+                    tone={issue.loss_amount > 0 ? "rose" : "gray"}
                 />
             </div>
 
@@ -159,7 +159,7 @@ export default function IssuesTab() {
     const saleFetcher = (params: { page: number; page_size: number; search?: string }, signal: AbortSignal) =>
         salesApi.page(params, signal);
 
-    const pageLoss = list.data.reduce((a, x) => a + toNumber(x.loss_amount), 0);
+    const pageLoss = list.data.reduce((a, x) => a + x.loss_amount, 0);
     const pageKg = list.data.reduce((a, x) => a + toNumber(x.quantity_kg), 0);
     const openCount = list.data.filter((x) => x.status !== "resolved").length;
 

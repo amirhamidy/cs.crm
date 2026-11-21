@@ -41,10 +41,10 @@ export default function TopCustomersTab() {
     const { by } = query;
     const stats = useMemo(() => {
         const valueOf = (r: (typeof rows)[number]) =>
-            toNumber(by === "amount" ? r.total_amount : r.total_quantity_kg);
+            by === "amount" ? r.total_amount : toNumber(r.total_quantity_kg);
         return {
             maxValue: Math.max(1, ...rows.map(valueOf)),
-            totalAmount: rows.reduce((sum, r) => sum + toNumber(r.total_amount), 0),
+            totalAmount: rows.reduce((sum, r) => sum + r.total_amount, 0),
             totalKg: rows.reduce((sum, r) => sum + toNumber(r.total_quantity_kg), 0),
             valueOf,
         };

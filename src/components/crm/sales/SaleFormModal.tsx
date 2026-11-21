@@ -136,7 +136,9 @@ export default function SaleFormModal({ open, onClose, sale, fixedCustomer, onSa
         [loadTypes, loadTypeId],
     );
     const needsBilledQty =
-        selectedLoadType?.uses_declared_weight ?? Boolean(sale?.load_type_uses_declared_weight);
+        loadTypeId == null
+            ? false
+            : selectedLoadType?.uses_declared_weight ?? Boolean(sale?.load_type_uses_declared_weight);
 
     useEffect(() => {
         if (!open) return;
@@ -149,16 +151,16 @@ export default function SaleFormModal({ open, onClose, sale, fixedCustomer, onSa
 
         setQuantityTon(sale ? String(kgToTon(sale.quantity_kg)) : "");
         setBilledTon(sale?.billed_quantity_kg ? String(kgToTon(sale.billed_quantity_kg)) : "");
-        setBuyPrice(sale?.buy_price ? formatRialInput(String(sale.buy_price)) : "");
-        setSellPrice(sale?.sell_price ? formatRialInput(String(sale.sell_price)) : "");
+        setBuyPrice(sale?.buy_price != null ? formatRialInput(String(sale.buy_price)) : "");
+        setSellPrice(sale?.sell_price != null ? formatRialInput(String(sale.sell_price)) : "");
 
         setDealTypeId(sale?.deal_type ?? null);
         setLoadTypeId(sale?.load_type ?? null);
         setFreightStatus(sale?.freight_status ?? "");
 
-        setLoadingCost(sale?.loading_cost ? formatRialInput(String(sale.loading_cost)) : "");
-        setWeighbridgeCost(sale?.weighbridge_cost ? formatRialInput(String(sale.weighbridge_cost)) : "");
-        setFreightCost(sale?.freight_cost ? formatRialInput(String(sale.freight_cost)) : "");
+        setLoadingCost(sale?.loading_cost != null && sale.loading_cost > 0 ? formatRialInput(String(sale.loading_cost)) : "");
+        setWeighbridgeCost(sale?.weighbridge_cost != null && sale.weighbridge_cost > 0 ? formatRialInput(String(sale.weighbridge_cost)) : "");
+        setFreightCost(sale?.freight_cost != null && sale.freight_cost > 0 ? formatRialInput(String(sale.freight_cost)) : "");
 
         setTraderId(sale?.trader ?? null);
         setSaleDate(sale?.sale_date ?? todayIso());
@@ -326,8 +328,8 @@ export default function SaleFormModal({ open, onClose, sale, fixedCustomer, onSa
             hasAtMostDecimals(billedKg, 3));
 
     const pricesOk =
-        (!needBuyPrice || isPositiveNumber(buyPrice)) &&
-        (!needSellPrice || isPositiveNumber(sellPrice));
+        (!needBuyPrice || parseRial(buyPrice) !== null) &&
+        (!needSellPrice || parseRial(sellPrice) !== null);
 
     const valid =
         partiesOk &&
@@ -353,20 +355,20 @@ export default function SaleFormModal({ open, onClose, sale, fixedCustomer, onSa
                 buyer: needBuyer && buyer ? buyer.id : null,
                 product: productId,
                 quantity_kg: qtyKg,
+                billed_quantity_kg: needsBilledQty && billedKg ? billedKg : null,
+                buy_price: needBuyPrice ? parseRial(buyPrice) : null,
+                sell_price: needSellPrice ? parseRial(sellPrice) : null,
+                loading_cost: parseRial(loadingCost) ?? 0,
+                weighbridge_cost: parseRial(weighbridgeCost) ?? 0,
+                freight_cost: parseRial(freightCost) ?? 0,
+                deal_type: dealTypeId,
+                load_type: loadTypeId,
+                freight_status: freightStatus,
+                ...(isManager ? { trader: traderId } : {}),
                 sale_date: saleDate,
                 sale_time: saleTime,
-                ...(caseOption ? { case: caseOption.id } : {}),
+                case: caseOption?.id ?? null,
                 description: description.trim(),
-                ...(needsBilledQty && billedKg ? { billed_quantity_kg: billedKg } : {}),
-                ...(needBuyPrice && buyPrice ? { buy_price: parseRial(buyPrice) ?? 0 } : {}),
-                ...(needSellPrice && sellPrice ? { sell_price: parseRial(sellPrice) ?? 0 } : {}),
-                ...(dealTypeId != null ? { deal_type: dealTypeId } : {}),
-                ...(loadTypeId != null ? { load_type: loadTypeId } : {}),
-                ...(freightStatus ? { freight_status: freightStatus } : {}),
-                ...(loadingCost ? { loading_cost: parseRial(loadingCost) ?? 0 } : {}),
-                ...(weighbridgeCost ? { weighbridge_cost: parseRial(weighbridgeCost) ?? 0 } : {}),
-                ...(freightCost ? { freight_cost: parseRial(freightCost) ?? 0 } : {}),
-                ...(isManager && traderId != null ? { trader: traderId } : {}),
             };
 
             const saved = sale
@@ -570,6 +572,7 @@ export default function SaleFormModal({ open, onClose, sale, fixedCustomer, onSa
                             id="sale_form_quantity"
                             label="مقدار (تن)"
                             inputMode="decimal"
+                            autoComplete="off"
                             value={quantityTon}
                             disabled={isReturned}
                             onChange={(e) => setQuantityTon(e.target.value)}
@@ -593,6 +596,7 @@ export default function SaleFormModal({ open, onClose, sale, fixedCustomer, onSa
                                 id="sale_form_billed"
                                 label="وزن اعلامی (تن) — الزامی"
                                 inputMode="decimal"
+                                autoComplete="off"
                                 value={billedTon}
                                 disabled={isReturned}
                                 onChange={(e) => setBilledTon(e.target.value)}
@@ -610,8 +614,9 @@ export default function SaleFormModal({ open, onClose, sale, fixedCustomer, onSa
                     {needBuyPrice && (
                         <FloatingInput
                             id="sale_form_buy_price"
-                            label="فی خرید"
+                            label="فی خرید (ریال/کیلوگرم)"
                             inputMode="numeric"
+                            autoComplete="off"
                             value={buyPrice}
                             disabled={isReturned}
                             onChange={(e) => setBuyPrice(formatRialInput(e.target.value))}
@@ -620,8 +625,9 @@ export default function SaleFormModal({ open, onClose, sale, fixedCustomer, onSa
                     {needSellPrice && (
                         <FloatingInput
                             id="sale_form_sell_price"
-                            label="فی فروش"
+                            label="فی فروش (ریال/کیلوگرم)"
                             inputMode="numeric"
+                            autoComplete="off"
                             value={sellPrice}
                             disabled={isReturned}
                             onChange={(e) => setSellPrice(formatRialInput(e.target.value))}
@@ -662,24 +668,34 @@ export default function SaleFormModal({ open, onClose, sale, fixedCustomer, onSa
                 )}
 
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                    <NiceSelect
-                        label="نوع معامله"
-                        placeholder="انتخاب نوع معامله"
-                        emptyText="موردی تعریف نشده"
-                        options={dealOptions}
-                        value={dealTypeId}
-                        disabled={isReturned || !canViewProducts}
-                        onChange={setDealTypeId}
-                    />
-                    <NiceSelect
-                        label="نوع بار"
-                        placeholder="انتخاب نوع بار"
-                        emptyText="موردی تعریف نشده"
-                        options={loadOptions}
-                        value={loadTypeId}
-                        disabled={isReturned || !canViewProducts}
-                        onChange={setLoadTypeId}
-                    />
+                    <div className="min-w-0">
+                        <NiceSelect
+                            label="نوع معامله"
+                            placeholder="انتخاب نوع معامله"
+                            emptyText="موردی تعریف نشده"
+                            options={dealOptions}
+                            value={dealTypeId}
+                            disabled={isReturned || !canViewProducts}
+                            onChange={setDealTypeId}
+                        />
+                        {dealTypeId != null && !isReturned && canViewProducts && (
+                            <button type="button" onClick={() => setDealTypeId(null)} className="mt-1 text-[10px] font-bold text-gray-400 hover:text-rose-500">پاک کردن نوع معامله</button>
+                        )}
+                    </div>
+                    <div className="min-w-0">
+                        <NiceSelect
+                            label="نوع بار"
+                            placeholder="انتخاب نوع بار"
+                            emptyText="موردی تعریف نشده"
+                            options={loadOptions}
+                            value={loadTypeId}
+                            disabled={isReturned || !canViewProducts}
+                            onChange={(id) => setLoadTypeId(id)}
+                        />
+                        {loadTypeId != null && !isReturned && canViewProducts && (
+                            <button type="button" onClick={() => { setLoadTypeId(null); setBilledTon(""); }} className="mt-1 text-[10px] font-bold text-gray-400 hover:text-rose-500">پاک کردن نوع بار</button>
+                        )}
+                    </div>
                 </div>
 
                 <div>
@@ -701,6 +717,7 @@ export default function SaleFormModal({ open, onClose, sale, fixedCustomer, onSa
                         id="sale_form_loading_cost"
                         label="هزینه بارگیری (ریال)"
                         inputMode="numeric"
+                        autoComplete="off"
                         value={loadingCost}
                         disabled={isReturned}
                         onChange={(e) => setLoadingCost(formatRialInput(e.target.value))}
@@ -709,6 +726,7 @@ export default function SaleFormModal({ open, onClose, sale, fixedCustomer, onSa
                         id="sale_form_weighbridge_cost"
                         label="هزینه باسکول (ریال)"
                         inputMode="numeric"
+                        autoComplete="off"
                         value={weighbridgeCost}
                         disabled={isReturned}
                         onChange={(e) => setWeighbridgeCost(formatRialInput(e.target.value))}
@@ -717,6 +735,7 @@ export default function SaleFormModal({ open, onClose, sale, fixedCustomer, onSa
                         id="sale_form_freight_cost"
                         label="هزینه حمل (ریال)"
                         inputMode="numeric"
+                        autoComplete="off"
                         value={freightCost}
                         disabled={isReturned}
                         onChange={(e) => setFreightCost(formatRialInput(e.target.value))}
@@ -724,15 +743,20 @@ export default function SaleFormModal({ open, onClose, sale, fixedCustomer, onSa
                 </div>
 
                 {isManager && traders.length > 0 && (
-                    <NiceSelect
-                        label="معامله‌گر (مدیر)"
-                        placeholder="انتخاب معامله‌گر"
-                        emptyText="کاربری یافت نشد"
-                        options={traderOptions}
-                        value={traderId}
-                        disabled={isReturned}
-                        onChange={setTraderId}
-                    />
+                    <div>
+                        <NiceSelect
+                            label="معامله‌گر (مدیر)"
+                            placeholder="انتخاب معامله‌گر"
+                            emptyText="کاربری یافت نشد"
+                            options={traderOptions}
+                            value={traderId}
+                            disabled={isReturned}
+                            onChange={setTraderId}
+                        />
+                        {traderId != null && !isReturned && (
+                            <button type="button" onClick={() => setTraderId(null)} className="mt-1 text-[10px] font-bold text-gray-400 hover:text-rose-500">پاک کردن معامله‌گر</button>
+                        )}
+                    </div>
                 )}
 
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">

@@ -2,7 +2,7 @@
 
 import { Bar, BarChart, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import type { TopCustomerRow } from "@/types/crm";
-import { toNumber } from "@/lib/crm/format";
+import { formatRial, toNumber } from "@/lib/crm/format";
 
 const COLORS = ["#60a5fa", "#818cf8", "#a78bfa", "#2dd4bf", "#34d399", "#fbbf24", "#fb923c", "#fb7185", "#f472b6", "#9ca3af"];
 
@@ -28,11 +28,11 @@ export default function TopCustomersCharts({ rows, by }: { rows: TopCustomerRow[
     const unit = by === "amount" ? "ریال" : "کیلوگرم";
     const data = rows.map((r) => ({
         name: r.full_name || r.company_name,
-        value: toNumber(by === "amount" ? r.total_amount : r.total_quantity_kg),
+        value: by === "amount" ? r.total_amount : toNumber(r.total_quantity_kg),
         count: r.sales_count,
     }));
     const total = data.reduce((s, d) => s + d.value, 0) || 1;
-    const fmt = (v: number) => v.toLocaleString("fa-IR");
+    const fmt = (v: number) => by === "amount" ? formatRial(v) : v.toLocaleString("fa-IR");
 
     return (
         <div className="mb-4 grid grid-cols-1 gap-4 lg:grid-cols-3" dir="rtl">
@@ -42,7 +42,7 @@ export default function TopCustomersCharts({ rows, by }: { rows: TopCustomerRow[
                         <BarChart data={data} layout="vertical" margin={{ left: 10, right: 10 }}>
                             <XAxis type="number" hide />
                             <YAxis type="category" dataKey="name" width={110} tick={{ fontSize: 11, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
-                            <Tooltip contentStyle={tipStyle} cursor={{ fill: "rgba(255,255,255,0.04)" }} formatter={(v) => [`${fmt(Number(v))} ${unit}`, "مجموع"]} />
+                            <Tooltip contentStyle={tipStyle} cursor={{ fill: "rgba(255,255,255,0.04)" }} formatter={(v) => [`${fmt(typeof v === "number" ? v : 0)} ${unit}`, "مجموع"]} />
                             <Bar dataKey="value" radius={[0, 8, 8, 0]} animationDuration={700}>
                                 {data.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
                             </Bar>
@@ -53,7 +53,7 @@ export default function TopCustomersCharts({ rows, by }: { rows: TopCustomerRow[
             <Panel title="سهم از مجموع" hint="هر برش نشان‌دهنده سهم مشتری از کل فهرست است.">
                 <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
-                        <Tooltip contentStyle={tipStyle} formatter={(v) => [`${Math.round((Number(v) / total) * 100).toLocaleString("fa-IR")}٪`, "سهم"]} />
+                        <Tooltip contentStyle={tipStyle} formatter={(v) => [`${Math.round(((typeof v === "number" ? v : 0) / total) * 100).toLocaleString("fa-IR")}٪`, "سهم"]} />
                         <Pie data={data} dataKey="value" nameKey="name" innerRadius="55%" outerRadius="85%" paddingAngle={2} stroke="none" animationDuration={700}>
                             {data.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
                         </Pie>

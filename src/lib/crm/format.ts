@@ -22,24 +22,32 @@ export const formatScore = (v: number | null | undefined) =>
   v == null ? "—" : nf2.format(v);
 
 /** مبلغ ریال با جداکننده سه‌رقمی و بدون اعشار: 420000000 → "420,000,000" */
-export const formatRial = (n: number | string | null | undefined) =>
-  n == null || n === "" ? "—" : Math.round(toNumber(n)).toLocaleString("en-US");
+export const formatRial = (n: number | null | undefined) =>
+  n == null ? "—" : Math.round(n).toLocaleString("en-US");
 
-/** ورودی کاربر (ارقام فارسی/عربی، ویرگول) → عدد صحیح ریال؛ نامعتبر = null */
+/** ورودی مبلغ ریالی؛ فقط عدد صحیح و جداکننده‌های سه‌رقمی پذیرفته می‌شوند. */
 export function parseRial(raw: string | null | undefined): number | null {
-  if (!raw) return null;
-  const t = cleanDecimal(raw).replace(/[^\d]/g, "");
-  return t ? Number(t) : null;
+  if (raw == null) return null;
+  const normalized = raw
+    .replace(/[۰-۹]/g, (d) => String("۰۱۲۳۴۵۶۷۸۹".indexOf(d)))
+    .replace(/[٠-٩]/g, (d) => String("٠١٢٣٤٥٦٧٨٩".indexOf(d)))
+    .replace(/[,٬،\s]/g, "");
+
+  if (normalized === "") return null;
+  if (!/^\d+(?:\.0+)?$/.test(normalized)) return null;
+
+  const value = Number(normalized);
+  return Number.isSafeInteger(value) ? value : null;
 }
 
-/** مقدار ورودی را هنگام تایپ با ویرگول سه‌رقمی نشان می‌دهد */
+/** مقدار ورودی را هنگام تایپ با جداکننده سه‌رقمی نشان می‌دهد؛ اعشار غیرصفر و منفی پذیرفته نمی‌شود. */
 export const formatRialInput = (raw: string) => {
-  const n = parseRial(raw);
-  return n == null ? "" : n.toLocaleString("en-US");
+  const value = parseRial(raw);
+  return value == null ? "" : value.toLocaleString("en-US");
 };
 
-export const formatMoney = (v: string | number | null | undefined) =>
-  v == null || v === "" ? "—" : `${formatRial(v)} ${CURRENCY_LABEL}`;
+export const formatMoney = (v: number | null | undefined) =>
+  v == null ? "—" : `${formatRial(v)} ${CURRENCY_LABEL}`;
 
 /** مقدار به کیلوگرم؛ از ۱۰۰۰ به بالا به «تن» نمایش داده می‌شود. */
 export function formatWeight(kg: string | number | null | undefined) {
@@ -86,6 +94,18 @@ export function formatJalaliDateTime(value: string | null | undefined) {
   const d = new Date(value);
   if (Number.isNaN(d.getTime())) return "—";
   return `${formatJalaliDate(value)} — ${toPersianDigits(pad2(d.getHours()))}:${toPersianDigits(pad2(d.getMinutes()))}`;
+}
+
+/** زمان UTC تاریخچه فروش را به ساعت رسمی تهران و تقویم شمسی تبدیل می‌کند. */
+export function formatTehranDateTime(value: string | null | undefined) {
+  if (!value) return "—";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "—";
+
+  const tehran = new Date(date.getTime() + 210 * 60 * 1000);
+  const dateOnly = `${tehran.getUTCFullYear()}-${pad2(tehran.getUTCMonth() + 1)}-${pad2(tehran.getUTCDate())}`;
+  const time = `${pad2(tehran.getUTCHours())}:${pad2(tehran.getUTCMinutes())}`;
+  return `${formatJalaliDate(dateOnly)} — ${toPersianDigits(time)}`;
 }
 
 /** تبدیل مقدار تایپ‌شده (با ارقام فارسی و ویرگول) به رشته‌ی عددی انگلیسی */

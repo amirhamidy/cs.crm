@@ -2,14 +2,15 @@
 
 import { memo, useEffect, useState } from "react";
 import AsyncSelect, { type AsyncOption } from "@/components/ui/AsyncSelect";
-import { salesApi } from "@/lib/api";
+import { accountsApi, salesApi } from "@/lib/api";
 import { usePermissions } from "@/hooks/usePermissions";
-import { History, User } from "lucide-react";
+import { Eye, History, User } from "lucide-react";
 import Pagination from "@/components/ui/Pagination";
 import { HumanResourceCardSkeleton } from "@/components/ui/skeletons";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
-import { formatJalaliDate, formatNumber, toPersianDigits } from "@/lib/crm/format";
+import { formatRial, formatTehranDateTime, formatNumber, toPersianDigits } from "@/lib/crm/format";
 import type { Sale, SaleHistoryEntry } from "@/types/crm";
+import type { ApiUser } from "@/types/users";
 import type { SearchParams } from "@/types/pagination";
 import {
     CARD_HOVER,
@@ -24,6 +25,7 @@ import {
 } from "../shared/kit";
 import { cn } from "@/lib/utils";
 import { DateRangeField } from "./DateRangeField";
+import SaleDetailsModal from "./SaleDetailsModal";
 
 type ActionFilter = "created" | "updated" | "returned" | "return_undone" | "deleted" | "issue_added" | "issue_updated" | "issue_deleted" | "file_added" | "file_deleted" | "all";
 type HistoryFilters = {
@@ -53,6 +55,7 @@ async function fetchHistory(params: SearchParams & HistoryFilters, signal: Abort
     return salesApi.historyPage(
         {
             page,
+            page_size,
             search,
             action: action === "all" ? undefined : action,
             user,
@@ -64,21 +67,30 @@ async function fetchHistory(params: SearchParams & HistoryFilters, signal: Abort
     );
 }
 
-/** UTC → وقت تهران (UTC+3:30) */
-function formatTehranDateTime(utc: string | null | undefined) {
-    if (!utc) return "—";
-    const d = new Date(utc);
-    if (Number.isNaN(d.getTime())) return "—";
-    // +3:30 = +210 دقیقه
-    const tehran = new Date(d.getTime() + 210 * 60 * 1000);
-    const iso = tehran.toISOString();
-    const datePart = formatJalaliDate(iso);
-    const hh = toPersianDigits(String(tehran.getUTCHours()).padStart(2, "0"));
-    const mm = toPersianDigits(String(tehran.getUTCMinutes()).padStart(2, "0"));
-    return `${datePart} — ${hh}:${mm}`;
+const MONEY_FIELDS = new Set([
+    "buy_price",
+    "sell_price",
+    "total_buy_amount",
+    "total_sell_amount",
+    "loading_cost",
+    "weighbridge_cost",
+    "freight_cost",
+]);
+
+function formatChangeValue(field: string, value: string | null) {
+    if (value == null || value === "") return "—";
+    if (!MONEY_FIELDS.has(field)) return value;
+    const amount = Number(value);
+    return Number.isFinite(amount) ? formatRial(amount) : value;
 }
 
-const HistoryCard = memo(({ entry }: { entry: SaleHistoryEntry }) => {
+const HistoryCard = memo(({
+    entry,
+    onOpenSale,
+}: {
+    entry: SaleHistoryEntry;
+    onOpenSale: (id: number, title: string) => void;
+}) => {
     return (
         <div className={cn(SURFACE, CARD_HOVER, "flex flex-col gap-3 p-4")}>
             <div className="flex items-start gap-2.5">
@@ -93,6 +105,15 @@ const HistoryCard = memo(({ entry }: { entry: SaleHistoryEntry }) => {
                     <div className="mt-0.5 text-[11px] text-gray-500 dark:text-gray-400">
                         شماره: {toPersianDigits(entry.sale_ref)} · {entry.action_display}
                     </div>
+                    {!entry.sale_deleted && entry.sale != null && (
+                        <button
+                            type="button"
+                            onClick={() => onOpenSale(entry.sale as number, entry.sale_label)}
+                            className="mt-1.5 inline-flex items-center gap-1 text-[10.5px] font-bold text-indigo-600 hover:text-indigo-700 dark:text-indigo-400"
+                        >
+                            <Eye size={12} /> مشاهده معامله
+                        </button>
+                    )}
                 </div>
                 <Chip tone="indigo" className="shrink-0 text-[10px]">
                     {entry.action_display}
@@ -105,11 +126,11 @@ const HistoryCard = memo(({ entry }: { entry: SaleHistoryEntry }) => {
                         <div key={idx} className="text-[11.5px]">
                             <span className="font-bold text-gray-700 dark:text-gray-200">{ch.label}:</span>{" "}
                             <span className="text-gray-500 line-through dark:text-gray-400">
-                                {ch.old ?? "—"}
+                                {formatChangeValue(ch.field, ch.old)}
                             </span>{" "}
                             →{" "}
                             <span className="font-semibold text-emerald-600 dark:text-emerald-400">
-                                {ch.new ?? "—"}
+                                {formatChangeValue(ch.field, ch.new)}
                             </span>
                         </div>
                     ))}
@@ -139,20 +160,26 @@ HistoryCard.displayName = "HistoryCard";
 
 export default function SaleHistoryTab() {
     const [selectedSale, setSelectedSale] = useState<AsyncOption | null>(null);
+    const [selectedUser, setSelectedUser] = useState<AsyncOption | null>(null);
+    const [openedSale, setOpenedSale] = useState<{ id: number; title: string } | null>(null);
     const { isManager } = usePermissions();
 
     const list = usePaginatedList<SaleHistoryEntry, HistoryFilters>(fetchHistory, {
         pageSize: 20,
+        enabled: isManager,
         filters: { action: "all", user: undefined, sale: undefined, dateFrom: undefined, dateTo: undefined },
     });
-    const { action, sale, dateFrom, dateTo } = list.filters;
+    const { action, sale, user, dateFrom, dateTo } = list.filters;
 
     useEffect(() => {
         if (!sale) setSelectedSale(null);
-    }, [sale]);
+        if (!user) setSelectedUser(null);
+    }, [sale, user]);
 
     const saleFetcher = (params: { page: number; page_size: number; search?: string }, signal: AbortSignal) =>
         salesApi.page(params, signal);
+    const userFetcher = (params: { page: number; page_size: number; search?: string }, signal: AbortSignal) =>
+        accountsApi.users.list(params, signal);
 
     if (!isManager) {
         return (
@@ -175,6 +202,17 @@ export default function SaleHistoryTab() {
                     { label: "کل رکوردها", value: formatNumber(list.count) },
                     { label: "این صفحه", value: formatNumber(list.data.length), tone: "indigo" },
                 ]}
+                search={
+                    <input
+                        type="search"
+                        value={list.search}
+                        onChange={(event) => list.setSearch(event.target.value)}
+                        placeholder="جستجو در معامله، کاربر و توضیحات"
+                        aria-label="جستجو در تاریخچه فروش"
+                        autoComplete="off"
+                        className="h-10 w-full min-w-0 rounded-xl border border-gray-200 bg-gray-50 px-3 text-[12px] outline-none transition focus:border-indigo-400 dark:border-white/10 dark:bg-white/[0.04] sm:w-64"
+                    />
+                }
                 footer={
                     <div className="flex flex-col gap-3">
                         <FilterChips
@@ -218,6 +256,38 @@ export default function SaleHistoryTab() {
                                 )}
                             </div>
                         </div>
+                        <div className="flex min-w-0 items-end gap-1.5">
+                            <div className="min-w-0 flex-1">
+                                <AsyncSelect<ApiUser>
+                                    label="کاربر انجام‌دهنده"
+                                    placeholder="همه کاربران"
+                                    emptyText="کاربری یافت نشد"
+                                    value={user ?? null}
+                                    selected={selectedUser}
+                                    fetcher={userFetcher}
+                                    toOption={(item) => ({
+                                        id: item.id,
+                                        label: item.username,
+                                    })}
+                                    onChange={(option) => {
+                                        setSelectedUser(option);
+                                        list.setFilters({ user: option.id });
+                                    }}
+                                />
+                            </div>
+                            {user != null && (
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setSelectedUser(null);
+                                        list.setFilters({ user: undefined });
+                                    }}
+                                    className="mb-0.5 h-9 shrink-0 rounded-lg px-2 text-[10px] font-bold text-gray-400 hover:bg-gray-100 dark:hover:bg-white/[0.06]"
+                                >
+                                    پاک کردن
+                                </button>
+                            )}
+                        </div>
                         <DateRangeField
                             from={dateFrom}
                             to={dateTo}
@@ -246,7 +316,10 @@ export default function SaleHistoryTab() {
                 <div className={GRID}>
                     {list.data.map((entry, i) => (
                         <Stagger key={entry.id} index={i}>
-                            <HistoryCard entry={entry} />
+                            <HistoryCard
+                                entry={entry}
+                                onOpenSale={(id, title) => setOpenedSale({ id, title })}
+                            />
                         </Stagger>
                     ))}
                 </div>
@@ -255,6 +328,13 @@ export default function SaleHistoryTab() {
             {list.totalPages > 1 && (
                 <Pagination page={list.page} totalPages={list.totalPages} onChange={list.setPage} />
             )}
+
+            <SaleDetailsModal
+                open={openedSale != null}
+                saleId={openedSale?.id ?? null}
+                title={openedSale?.title ?? ""}
+                onClose={() => setOpenedSale(null)}
+            />
         </>
     );
 }

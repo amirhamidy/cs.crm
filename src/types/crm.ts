@@ -94,9 +94,9 @@ export interface Sale {
   buyer_company: string;
   
   summary_label: string;
-  shortage_kg: number;
-  spillage_kg: number;
-  returned_kg: number;
+  shortage_kg: string;
+  spillage_kg: string;
+  returned_kg: string;
   open_issues_count: number;
   attachments_count: number;
   case: number | null;
@@ -451,6 +451,19 @@ export interface MarketplaceAccountUpdatePayload {
 
 export type MarketplaceAccountPayload = MarketplaceAccountUpdatePayload;
 
+/** انواع عملیات ثبت‌شده در تاریخچه فروش */
+export type SaleAction =
+  | "created"
+  | "updated"
+  | "returned"
+  | "return_undone"
+  | "deleted"
+  | "issue_added"
+  | "issue_updated"
+  | "issue_deleted"
+  | "file_added"
+  | "file_deleted";
+
 /** تاریخچه تغییرات معامله (فقط مدیر) */
 export interface SaleChangeItem {
   field: string;
@@ -465,7 +478,7 @@ export interface SaleHistoryEntry {
   sale_ref: number;
   sale_label: string;
   sale_deleted: boolean;
-  action: string;
+  action: SaleAction;
   action_display: string;
   changes: SaleChangeItem[];
   note: string;
@@ -478,9 +491,10 @@ export interface SaleHistoryEntry {
 export interface SaleHistoryParams {
   sale?: number;
   user?: number;
-  action?: string;
+  action?: SaleAction;
   date_from?: string;
   date_to?: string;
   search?: string;
   page?: number;
+  page_size?: number;
 }
